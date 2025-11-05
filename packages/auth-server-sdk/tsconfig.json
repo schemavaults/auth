@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "declaration": true,
+    "moduleResolution": "Bundler",
+    "target": "esnext",
+    "module": "ESNext",
+    "outDir": "dist",
+    "lib": ["ESNext"],
+    "skipLibCheck": true,
+    "noEmit": false,
+    "allowJs": false,
+    "strictNullChecks": true,
+    "sourceMap": true,
+    "types": ["bun-types"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/middlewares/*": ["./src/middleware/middlewares/*"],
+      "@/middleware_chain": ["./src/middleware/middleware_chain"],
+      "@/middleware_types": ["./src/middleware/middleware_types"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

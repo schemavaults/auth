@@ -1,0 +1,12 @@
+dist/
+node_modules/
+old_ui/
+.turbo/
+**/.DS_Store
+
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging

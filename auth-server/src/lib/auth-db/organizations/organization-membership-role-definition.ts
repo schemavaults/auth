@@ -1,0 +1,24 @@
+import { organizationIdSchema } from "@schemavaults/auth";
+import { z } from "zod";
+import { organizationMembershipRoleTypeSchema } from "./organization-membership-role-types";
+
+export const organizationMembershipRoleDefinitionSchema = z
+  .object({
+    membership_declaration_id: z.string().uuid(),
+    organization_id: organizationIdSchema,
+    uid: z.string().uuid(),
+    created_at: z.number().positive(),
+    role: organizationMembershipRoleTypeSchema,
+  })
+  .required({
+    membership_declaration_id: true,
+    organization_id: true,
+    uid: true,
+    created_at: true,
+    role: true,
+  })
+  .strict();
+
+export type OrganizationMembershipRoleDefinition = z.infer<
+  typeof organizationMembershipRoleDefinitionSchema
+>;

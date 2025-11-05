@@ -1,0 +1,41 @@
+{
+  "name": "@schemavaults/jwt",
+  "description": "Utility functions for authentication and authorization for use from the auth server or a resource server",
+  "version": "0.5.7",
+  "license": "UNLICENSED",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schemavaults/jwt.git"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "zod": "3.23.8",
+    "jose": "5.9.6",
+    "@schemavaults/auth": "0.7.7",
+    "@schemavaults/app-definitions": "0.4.10"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",
+    "test": "SCHEMAVAULTS_APP_ENVIRONMENT=test bun test",
+    "cleanup:compiled-tests-output": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
+    "cleanup:delete-tests-dir": "rm -rf ./dist/tests",
+    "cleanup": "bun run cleanup:delete-tests-dir && bun run cleanup:compiled-tests-output",
+    "postbuild": "bun run cleanup"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "bun-types": "1.2.17",
+    "tsc-alias": "1.8.16"
+  },
+  "browser": {
+    "crypto": false
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "packageManager": "bun@1.2.17"
+}

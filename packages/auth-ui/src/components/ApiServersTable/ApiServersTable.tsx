@@ -1,0 +1,56 @@
+
+"use client";
+
+import type { ReactElement } from "react";
+import type { SWRResponse} from "swr";
+import { useToast } from "@schemavaults/ui";
+import { Datatable } from "@schemavaults/ui";
+import { columns } from "./columns";
+import type { ListApiServersQueryType, SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
+import { Loader2 } from "lucide-react";
+import { clearUseApiServersCache, useApiServersList } from "./useApiServersList";
+import { CreateApiServerDialog } from "../CreateApiServerDialog";
+import { ConnectAppToApiDialog } from "../ConnectAppToApiDialog";
+
+export interface ApiServersDatatableProps {
+  queryType: ListApiServersQueryType;
+}
+
+export function ApiServersTable({ queryType }: ApiServersDatatableProps): ReactElement {
+  const {toast} = useToast()
+  const apis: SWRResponse<SchemaVaultsApiServerDefinition[], Error> = useApiServersList({ toast, queryType });
+  const { isLoading, data, error } = apis;
+
+  if (!data && isLoading) {
+    return (
+      <div className="min-h-48 w-full flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <Datatable<SchemaVaultsApiServerDefinition>
+      data={data ? (data.length > 0 ? data : []) : []}
+      columns={columns}
+      initialVisibleColumns={{
+        actions: true,
+        select: true,
+        id: false,
+        api_server_id: false,
+        api_server_name: true,
+        name: true,
+        api_server_description: true,
+      }}
+      HeaderButtons={(): ReactElement => {
+        return (
+          <>
+            { queryType === 'all' && <CreateApiServerDialog clearApiServersCache={clearUseApiServersCache} />}
+            { queryType === 'all' && <ConnectAppToApiDialog />}
+          </>
+        );
+      }}
+      datatypeLabel="Server"
+    />
+  )
+}

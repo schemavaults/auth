@@ -1,0 +1,488 @@
+import {
+  type SchemaVaultsApp,
+  listAppsQueryTypeSchema,
+  type ListAppsQueryType,
+  type SchemaVaultsAppDomainRef,
+  schemaVaultsAppDefinitionSchema,
+  schemaVaultsAppDomainRefSchema,
+  HARDCODED_CORE_SCHEMAVAULTS_APPS,
+  HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP,
+  appIdSchema,
+  HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
+  SchemaVaultsAppEnvironment,
+  getAppEnvironment,
+} from "@schemavaults/app-definitions";
+import type { UserData } from "@schemavaults/auth";
+import { type Kysely, sql } from "@schemavaults/dbh";
+import type { AuthDatabase } from "../../auth-database-types";
+import { z } from "zod";
+
+/**
+ * @name SchemaVaultsAppRegistry
+ * @description Manage available frontend client applications which can access SchemaVaults APIs
+ * @see AuthorizedAppsRegistry To manage which apps a user has actually authorized
+ * @see SchemaVaultsApiServerRegistry Backend API servers which frontend applications can actually access
+ */
+export class SchemaVaultsAppRegistry {
+  private readonly env: SchemaVaultsAppEnvironment;
+  private readonly debug: boolean;
+
+  private hardcodedApps: Map<string, SchemaVaultsApp>;
+
+  public async getApp(app_id: string): Promise<SchemaVaultsApp | null> {
+    if (this.debug)
+      console.log(
+        `[SchemaVaultsAppRegistry] Attempting to load app with ID: "${app_id}"`,
+      );
+
+    if (this.hardcodedApps.has(app_id)) {
+      if (this.debug) {
+        console.log(
+          `[SchemaVaultsAppRegistry] App ID '${app_id}' exists in hardcoded apps map`,
+        );
+      }
+      const hardcoded_app: SchemaVaultsApp | undefined | null =
+        this.hardcodedApps.get(app_id);
+      if (hardcoded_app) {
+        if (this.debug) {
+          console.log(
+            `[SchemaVaultsAppRegistry] Found hardcoded app with ID "${hardcoded_app.app_id}":`,
+            hardcoded_app,
+          );
+        }
+        return hardcoded_app;
+      } else {
+        throw new Error(
+          "[SchemaVaultsAppRegistry] Value is falsy from hardcoded apps map",
+        );
+      }
+    } else {
+      if (this.debug) {
+        console.log(
+          "[SchemaVaultsAppRegistry] " +
+            `App_id "${app_id}" was not found in hardcoded apps list, looking up in database...`,
+        );
+      }
+    }
+
+    if (
+      this.env === "development" ||
+      this.env === "test" ||
+      this.env === "staging"
+    ) {
+      console.log(
+        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
+      );
+      try {
+        await this.setup();
+      } catch (e: unknown) {
+        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
+        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
+      }
+    }
+
+    let rows: object[];
+    try {
+      const query = this.db
+        .selectFrom("apps")
+        .where("app_id", "=", app_id)
+        .limit(1)
+        .selectAll();
+      if (this.debug) {
+        console.log(
+          "[SchemaVaultsAppRegistry] " +
+            `Executing query for app_id: "${app_id}"`,
+        );
+      }
+      const result: object[] = await query.execute();
+      if (this.debug) {
+        console.log("[SchemaVaultsAppRegistry] getApp query result: ", result);
+      }
+      rows = result;
+    } catch (e: unknown) {
+      console.error("Failed to execute query for app in apps table: ", e);
+      throw new Error("Error querying apps table of database");
+    }
+    if (rows.length === 0) {
+      if (this.debug) {
+        console.error("Requested app not found in apps table");
+      }
+      return null;
+    } else if (rows.length > 1) {
+      throw new Error("Multiple apps found with the same app_id");
+    }
+    console.assert(
+      rows.length === 1,
+      "Expected exactly one app record to have been retrieved from the database if this point was reached!",
+    );
+
+    const first_row = rows[0]!;
+    if (!first_row.hasOwnProperty("created_at")) {
+      throw new Error("App row missing creation timestamp");
+    }
+
+    const createdAt: number = parseInt(
+      (first_row as { created_at: string }).created_at,
+    );
+    if (isNaN(createdAt)) {
+      throw new Error("Failed to parse created_at from database");
+    }
+
+    const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
+      ...first_row,
+      created_at: createdAt,
+      hardcoded: false,
+    });
+    if (!parsed_app.success) {
+      console.error(parsed_app.error.errors);
+      if (this.debug) {
+        console.error("Row that could not be parsed: ", first_row);
+      }
+      throw new Error("Failed to parse app definition from database");
+    }
+    return parsed_app.data;
+  }
+
+  private static async parseAppDomainFromDb(
+    row: object,
+  ): Promise<SchemaVaultsAppDomainRef> {
+    if (!row.hasOwnProperty("created_at") || !("created_at" in row)) {
+      throw new Error("Missing app domain creation time");
+    }
+
+    const created_at: number =
+      typeof row.created_at === "string"
+        ? parseInt(row.created_at)
+        : Number(row.created_at);
+    if (isNaN(created_at)) {
+      throw new Error("Failed to parse app creation time from database");
+    }
+
+    const parsed_app_domain =
+      await schemaVaultsAppDomainRefSchema.safeParseAsync({
+        ...row,
+        created_at,
+      } as const);
+    if (!parsed_app_domain.success) {
+      console.error(parsed_app_domain.error);
+      throw new Error("Failed to parse app domain from database!");
+    }
+    return parsed_app_domain.data satisfies SchemaVaultsAppDomainRef;
+  }
+
+  private static getHardcodedAppDomains(
+    hardcoded_app_id: string,
+  ): SchemaVaultsAppDomainRef[] {
+    if (
+      !HARDCODED_CORE_SCHEMAVAULTS_APPS.some(
+        (app) => app.app_id === hardcoded_app_id,
+      )
+    ) {
+      throw new Error(
+        "Failed to find hardcoded SchemaVault app definition for specified app ID",
+      );
+    }
+
+    return HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS.filter(
+      (domain) => domain.app_id === hardcoded_app_id,
+    );
+  }
+
+  public async getAppDomains(
+    app_id: string,
+  ): Promise<SchemaVaultsAppDomainRef[]> {
+    if (
+      this.env === "development" ||
+      this.env === "test" ||
+      this.env === "staging"
+    ) {
+      console.log(
+        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
+      );
+      try {
+        await this.setup();
+      } catch (e: unknown) {
+        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
+        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
+      }
+    }
+
+    const isValidAppId: boolean = (await appIdSchema.safeParseAsync(app_id))
+      .success;
+    if (!isValidAppId) {
+      throw new Error("Invalid app ID to list domains for!");
+    }
+
+    const isUuid: boolean = (await z.string().uuid().safeParseAsync(app_id))
+      .success;
+    const isHardcodedAppId: boolean = isValidAppId && !isUuid;
+
+    if (isHardcodedAppId) {
+      return SchemaVaultsAppRegistry.getHardcodedAppDomains(app_id);
+    }
+
+    const query = this.db
+      .selectFrom("app_domains")
+      .where("app_id", "=", app_id)
+      .limit(50)
+      .selectAll();
+    const rows = await query.execute();
+
+    const parse_domains_promises: Promise<SchemaVaultsAppDomainRef>[] =
+      rows.map(SchemaVaultsAppRegistry.parseAppDomainFromDb);
+
+    const parsed_domains: SchemaVaultsAppDomainRef[] = await Promise.all(
+      parse_domains_promises,
+    );
+
+    return parsed_domains;
+  }
+
+  public async registerApp(
+    app_id: string,
+    app_name: string,
+    app_description: string,
+    publicly_listed?: boolean,
+  ): Promise<void> {
+    if (
+      this.env === "development" ||
+      this.env === "test" ||
+      this.env === "staging"
+    ) {
+      console.log(
+        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
+      );
+      try {
+        await this.setup();
+      } catch (e: unknown) {
+        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
+        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
+      }
+    }
+
+    const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
+      app_id,
+      app_name,
+      app_description,
+      created_at: Date.now(),
+      public: publicly_listed ?? false,
+    });
+    if (!parsed_app.success) {
+      console.error(parsed_app.error.errors);
+      throw new Error("Failed to parse app");
+    }
+    const app: SchemaVaultsApp = parsed_app.data;
+
+    const insertAppQuery = this.db.insertInto("apps").values(app);
+
+    await insertAppQuery.execute();
+  }
+
+  private static async setupAppRegistrySQLTables(
+    db: Kysely<AuthDatabase>,
+  ): Promise<void> {
+    const createAppSql = sql`
+      CREATE TABLE IF NOT EXISTS APPS (
+        app_id UUID PRIMARY KEY,
+        app_name TEXT NOT NULL,
+        app_description TEXT NOT NULL,
+        environment TEXT NOT NULL,
+        created_at BIGINT NOT NULL,
+        hardcoded BOOLEAN DEFAULT FALSE
+      );
+    `;
+    const createAppDomainsSql = sql`
+      CREATE TABLE IF NOT EXISTS APP_DOMAINS (
+        app_domain_ref_id UUID PRIMARY KEY,
+        app_id UUID NOT NULL,
+        domain TEXT NOT NULL,
+        environment TEXT NOT NULL,
+        created_at BIGINT NOT NULL,
+        hardcoded BOOLEAN DEFAULT FALSE,
+        CONSTRAINT fk_app FOREIGN KEY (app_id) REFERENCES APPS(app_id) ON DELETE CASCADE
+      );
+    `;
+    await createAppSql.execute(db);
+    await createAppDomainsSql.execute(db);
+  }
+
+  public async listApps(
+    type: Exclude<ListAppsQueryType, "authorized">,
+    user: UserData,
+  ): Promise<SchemaVaultsApp[]> {
+    if (
+      this.env === "development" ||
+      this.env === "test" ||
+      this.env === "staging"
+    ) {
+      console.log(
+        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
+      );
+      try {
+        await this.setup();
+      } catch (e: unknown) {
+        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
+        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
+      }
+    }
+
+    if (!user) {
+      throw new Error("You must be logged in to list SchemaVaults apps");
+    }
+    if (type === "all" && !user.admin) {
+      throw new Error("You must be an admin to list all SchemaVaults apps");
+    }
+    if (!(await listAppsQueryTypeSchema.safeParseAsync(type)).success) {
+      throw new Error("Invalid apps query type");
+    }
+    if (type !== "all" && type !== "public") {
+      throw new Error("Invalid apps query type for listing available apps");
+    }
+
+    if (this.debug) {
+      console.log("[SchemaVaultsAppRegistry] Attempting to list apps...");
+    }
+
+    const MAX_PAGE_SIZE: number = 50;
+
+    let query = this.db.selectFrom("apps");
+
+    if (type === "public") {
+      query = query.where("public", "=", true);
+    }
+
+    query = query.limit(MAX_PAGE_SIZE);
+
+    let result: SchemaVaultsApp[] = await query.selectAll().execute();
+
+    if (!Array.isArray(result)) {
+      throw new Error("Expected database query result to be an array of rows");
+    }
+
+    // result => transformed_output => transform => (actually) transformed_output
+    let transformed_output: SchemaVaultsApp[] = [...result];
+
+    // Add hardcoded apps to query result
+    if (type === "all") {
+      transformed_output.push(...HARDCODED_CORE_SCHEMAVAULTS_APPS);
+    } else if (type === "public") {
+      const hardcodedAppsLength: number =
+        HARDCODED_CORE_SCHEMAVAULTS_APPS.length;
+      const resultLength = result.length;
+      transformed_output.push(
+        ...HARDCODED_CORE_SCHEMAVAULTS_APPS.filter((a) => a.public),
+      );
+      if (this.debug) {
+        console.log(
+          `[SchemaVaultsAppRegistry] Number of public apps from database: ${resultLength}`,
+        );
+        console.log(
+          `[SchemaVaultsAppRegistry] Number of public hardcoded apps: ${hardcodedAppsLength}`,
+        );
+        console.log(
+          `[SchemaVaultsAppRegistry] Number of apps after adding hardcoded apps : ${hardcodedAppsLength}`,
+        );
+      }
+    } else {
+      if (this.debug) {
+        console.log("[SchemaVaultsAppRegistry] query type", type);
+      }
+    }
+
+    try {
+      const parsed = await schemaVaultsAppDefinitionSchema
+        .array()
+        .safeParseAsync(
+          transformed_output.map(
+            function parseAppDefinitionDatabaseRow(row) {
+              if (typeof row !== "object")
+                throw new Error("Expected row to be an object");
+              if (!row.hasOwnProperty("created_at")) {
+                throw new Error("Missing app creation timestamp");
+              }
+              const created_at: number =
+                typeof row.created_at === "string"
+                  ? parseInt(row.created_at)
+                  : Number(row.created_at);
+              if (isNaN(created_at)) {
+                throw new Error("Failed to parse created_at from database");
+              }
+
+              return {
+                ...row,
+                created_at,
+              };
+            }, // end of parseAppDefinitionDatabaseRow()
+          ),
+        ); // end parsing app definitions array
+      if (!parsed.success) throw parsed.error;
+      return parsed.data;
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error("Failed to parse the apps data received from database");
+    }
+  }
+
+  public async setup(): Promise<void> {
+    try {
+      await SchemaVaultsAppRegistry.setupAppRegistrySQLTables(this.db);
+    } catch (e: unknown) {
+      console.error("Failed to set up app registry SQL tables: ", e);
+      throw new Error("Failed to set up app registry SQL tables");
+    }
+  }
+
+  public constructor(private db: Kysely<AuthDatabase>) {
+    this.env = getAppEnvironment();
+    this.debug =
+      this.env === "development" ||
+      this.env === "staging" ||
+      this.env === "test";
+
+    this.hardcodedApps = HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP;
+    if (this.debug) {
+      console.log(
+        "[SchemaVaultsAppRegistry] Initialize hardcoded apps:",
+        this.hardcodedApps,
+      );
+    }
+  }
+
+  public async addAppDomain(
+    app_id: string,
+    new_app_domain: SchemaVaultsAppDomainRef,
+  ) {
+    if (
+      this.env === "development" ||
+      this.env === "test" ||
+      this.env === "staging"
+    ) {
+      console.log(
+        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
+      );
+      try {
+        await this.setup();
+      } catch (e: unknown) {
+        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
+        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
+      }
+    }
+
+    const parsed =
+      await schemaVaultsAppDomainRefSchema.safeParseAsync(new_app_domain);
+    if (!parsed.success) {
+      throw new Error("Received invalid app domain to associate with app");
+    }
+    const app_domain = parsed.data;
+
+    if (app_id !== app_domain.app_id) {
+      throw new Error("App ID mismatch");
+    }
+
+    try {
+      await this.db.insertInto("app_domains").values(app_domain).execute();
+    } catch (e: unknown) {
+      throw new Error("Failed to add new app domain; db insert failed");
+    }
+  }
+}

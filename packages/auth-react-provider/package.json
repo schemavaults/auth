@@ -1,0 +1,42 @@
+{
+  "name": "@schemavaults/auth-react-provider",
+  "description": "React hooks and components to make using the @schemavaults/auth-client-sdk a breeze",
+  "version": "0.4.40",
+  "license": "UNLICENSED",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schemavaults/auth-react-provider.git"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "zod": "3.23.8",
+    "@schemavaults/auth-client-sdk": "0.3.23",
+    "@schemavaults/app-definitions": "0.4.10",
+    "cookies-next": "4.1.1",
+    "uuid": "11.0.3",
+    "swr": "2.3.4"
+  },
+  "peerDependencies": {
+    "next": "15.5.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
+    "test": "NODE_ENV=test bun test"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2",
+    "tsc-alias": "1.8.16",
+    "bun-types": "1.2.21",
+    "@types/react": "19.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "packageManager": "bun@1.2.21"
+}

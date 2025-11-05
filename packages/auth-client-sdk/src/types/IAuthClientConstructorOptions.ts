@@ -1,0 +1,35 @@
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import type { ISchemaVaultsAuthClientAdapter } from "./framework-adapter-interface";
+
+export interface IAuthClientConstructorOptions {
+  adapter: ISchemaVaultsAuthClientAdapter;
+
+  // The URL of the auth server
+  auth_server_uri: string;
+
+  // The URI to redirect to after successful authentication
+  successful_authentication_redirect_uri: string;
+
+  // The URI to redirect to after successful logout
+  successful_logout_redirect_uri?: string;
+
+  // The URI to redirect to with an authorization code in Oauth2 PKCE flow
+  authorize_uri?: string;
+
+  // The app ID of the frontend client app
+  // This is either:
+  //    A.) the UUID of the frontend client application
+  //    B.) the URL of the authentication server
+  app_id: string;
+
+  // A list of API server IDs for which access tokens should be "preloaded" for
+  default_audiences?: string[];
+
+  // Enable additional logging
+  debug?: boolean;
+
+  // SchemaVaults App Environment ('development', 'test', 'staging', 'production')
+  app_env: SchemaVaultsAppEnvironment;
+}
+
+export type { IAuthClientConstructorOptions as InitializeAuthClientOptions };

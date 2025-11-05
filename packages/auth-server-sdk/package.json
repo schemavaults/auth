@@ -1,0 +1,38 @@
+{
+  "name": "@schemavaults/auth-server-sdk",
+  "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
+  "version": "0.16.7",
+  "license": "UNLICENSED",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schemavaults/auth-server-sdk.git"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "zod": "3.23.8",
+    "@schemavaults/jwt": "0.5.6",
+    "@schemavaults/auth": "0.7.7",
+    "@schemavaults/app-definitions": "0.4.10"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",
+    "test": "NODE_ENV=test bun test",
+    "cleanup:compiled-tests-output": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
+    "cleanup": "bun run cleanup:compiled-tests-output",
+    "postbuild": "bun run cleanup"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "bun-types": "1.2.17",
+    "tsc-alias": "1.8.15",
+    "next": "15.3.3"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "packageManager": "bun@1.2.17"
+}

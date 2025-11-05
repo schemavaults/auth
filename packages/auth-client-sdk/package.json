@@ -1,0 +1,35 @@
+{
+  "name": "@schemavaults/auth-client-sdk",
+  "description": "TypeScript SDK for interacting with SchemaVaults Auth server or protected resources",
+  "version": "0.3.23",
+  "license": "UNLICENSED",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schemavaults/auth-client-sdk.git"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "zod": "3.23.8",
+    "@schemavaults/auth": "0.7.7",
+    "@schemavaults/app-definitions": "0.4.10"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",
+    "postbuild": "bun run cleanup",
+    "test": "NODE_ENV=test bun test",
+    "cleanup:compiled_tests_in_dist_directory": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
+    "cleanup": "bun run cleanup:compiled_tests_in_dist_directory"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2",
+    "bun-types": "1.2.21",
+    "tsc-alias": "1.8.16"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "packageManager": "bun@1.2.21"
+}

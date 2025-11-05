@@ -1,0 +1,16 @@
+src/
+
+turbo.json
+.turbo/
+
+.env
+.env.example
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+
+dist/**/*.test.d.ts
+
+.github/
