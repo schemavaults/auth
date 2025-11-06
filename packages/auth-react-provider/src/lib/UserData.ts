@@ -1,3 +1,3 @@
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 
 export type { UserData };

@@ -13,8 +13,8 @@
   "types": "dist/index.d.ts",
   "dependencies": {
     "zod": "3.23.8",
-    "@schemavaults/auth": "0.7.7",
-    "@schemavaults/app-definitions": "0.4.10"
+    "@schemavaults/auth-common": "workspace:*",
+    "@schemavaults/app-definitions": "workspace:*"
   },
   "scripts": {
     "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",
@@ -24,12 +24,12 @@
     "cleanup": "bun run cleanup:compiled_tests_in_dist_directory"
   },
   "devDependencies": {
-    "typescript": "5.9.2",
-    "bun-types": "1.2.21",
+    "typescript": "5.9.3",
+    "bun-types": "1.3.1",
     "tsc-alias": "1.8.16"
   },
   "publishConfig": {
     "access": "restricted"
   },
-  "packageManager": "bun@1.2.21"
+  "packageManager": "bun@1.3.1"
 }

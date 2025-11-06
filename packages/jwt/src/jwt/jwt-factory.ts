@@ -7,7 +7,7 @@ import {
   type RequestTokensResult,
   audienceRefSchema,
   type OrganizationID,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import {
   appIdSchema,
   type AppId,

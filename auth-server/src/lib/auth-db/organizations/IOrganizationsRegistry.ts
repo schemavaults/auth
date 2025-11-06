@@ -1,7 +1,7 @@
 import type {
   OrganizationDefinition,
   OrganizationID,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import type { OrganizationMembershipRoleType } from "./organization-membership-role-types";
 
 export interface IOrganizationsRegistry {

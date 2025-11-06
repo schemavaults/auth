@@ -5,7 +5,7 @@ import type {
   ISchemaVaultsMiddlewareFactory,
   ISchemaVaultsMiddlewareFnInputs,
 } from "@/middleware_types";
-import type { AuthenticateResult } from "@schemavaults/auth";
+import type { AuthenticateResult } from "@schemavaults/auth-common";
 import { BaseMiddleware } from "@/middlewares/BaseMiddleware";
 
 export interface IMiddlewareChainInitOptions {

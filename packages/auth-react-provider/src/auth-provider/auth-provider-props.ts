@@ -2,7 +2,7 @@ import type {
   AppId,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import type { AuthMiddlewareRules } from "@schemavaults/auth";
+import type { AuthMiddlewareRules } from "@schemavaults/auth-common";
 import type { InitializeAuthClientOptions } from "@schemavaults/auth-client-sdk";
 import type { useRouter } from "next/navigation";
 import type { PropsWithChildren } from "react";

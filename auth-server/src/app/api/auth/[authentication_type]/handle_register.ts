@@ -5,13 +5,13 @@ import type {
   AuthenticateResult,
   InviteCode,
   InviteCodeDefinition,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { z } from "zod";
 import {
   emailCredentialsSchema,
   inviteCodeFormatSchema,
   PKCE_ProofKeyManager,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import {
   ServerlessDatabase,
   UserRegistry,

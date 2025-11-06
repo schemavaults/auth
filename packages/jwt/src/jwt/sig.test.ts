@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 import { signJWT } from "./sign";
 import { JWT_Keys } from "./jwt_keys";
 import { verifyJWTSignature } from "./verify_signature";
-import type { AuthTokenTypes } from "@schemavaults/auth";
+import type { AuthTokenTypes } from "@schemavaults/auth-common";
 import {
   getAppEnvironment,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,

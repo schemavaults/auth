@@ -5,7 +5,7 @@ import {
   ServerlessDatabase,
   UserRegistry,
 } from "@/lib/auth-db";
-import type { InviteCodeDefinition, UserData } from "@schemavaults/auth";
+import type { InviteCodeDefinition, UserData } from "@schemavaults/auth-common";
 import {
   type IRouteGuard,
   RouteGuardFactory,

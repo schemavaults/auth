@@ -10,7 +10,7 @@ import {
   inviteCodeDefinitionSchema,
   type InviteCodeDefinition,
   type UserData,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import {
   type IRouteGuard,
   RouteGuardFactory,

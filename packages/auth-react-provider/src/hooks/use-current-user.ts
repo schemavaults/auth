@@ -1,6 +1,6 @@
 "use client";
 
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 import useAuth from "@/hooks/use-auth";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import useAppEnvironment from "@/hooks/use-app-environment";

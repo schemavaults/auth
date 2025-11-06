@@ -13,3 +13,5 @@
 **/.env.development
 **/.env.production
 **/.env.staging
+
+node_modules/

@@ -19,7 +19,7 @@ import InviteCodesTable from "@/components/InviteCodesTable";
 import {
   inviteCodeDefinitionSchema,
   type InviteCodeDefinition,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import useSWR from "swr";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 

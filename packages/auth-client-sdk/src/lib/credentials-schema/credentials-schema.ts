@@ -2,7 +2,7 @@ import {
   emailCredentialsSchema,
   inviteCodeFormatSchema,
   passwordSchema,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 
 export const credentialsSchema = emailCredentialsSchema
   .extend({

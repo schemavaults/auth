@@ -1,7 +1,7 @@
 import "server-only";
 
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth";
+import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth-common";
 import {
   type IRouteGuard,
   RouteGuardFactory,

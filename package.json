@@ -1,0 +1,12 @@
+{
+  "name": "@schemavaults/auth",
+  "description": "Monorepo for the SchemaVaults Auth platform",
+  "dependencies": {
+    "turbo": "2.6.0"
+  },
+  "workspaces": [
+    "auth-server",
+    "packages/*"
+  ],
+  "packageManager": "bun@1.3.1"
+}

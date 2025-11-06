@@ -5,7 +5,7 @@ import {
   type ResourceCreationResponse,
   ServerlessDatabase,
 } from "@/lib/auth-db";
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 import {
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDefinitionSchema,

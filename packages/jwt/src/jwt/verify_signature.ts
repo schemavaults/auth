@@ -1,7 +1,7 @@
 import { jwtVerify } from "jose";
 import type { JWT_Keys } from "./jwt_keys";
 import { issuer } from "./iss";
-import type { AuthTokenTypes } from "@schemavaults/auth";
+import type { AuthTokenTypes } from "@schemavaults/auth-common";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
 export interface VerifyJWTSignatureInputOptions {

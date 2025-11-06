@@ -1,7 +1,7 @@
 import { useAuth } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
 import useSWR, { useSWRConfig } from "swr";
-import type { AccessToken } from "@schemavaults/auth";
+import type { AccessToken } from "@schemavaults/auth-common";
 import { type ListApiServersQueryResponse, type ListApiServersQueryType, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 
 export interface UseApiServersListOptions {

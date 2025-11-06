@@ -1,0 +1,14 @@
+node_modules
+dist/
+dist-types/
+types/
+build/
+.turbo
+**/.DS_Store
+
+.env
+.env.local
+.env.development
+.env.test
+.env.staging
+.env.production

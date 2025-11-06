@@ -16,7 +16,7 @@ import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import type { SchemaVaultsAuthProviderProps } from "./auth-provider-props";
 
 // Auth Middleware Imports/Exports
-import { type AuthMiddlewareRules } from "@schemavaults/auth";
+import { type AuthMiddlewareRules } from "@schemavaults/auth-common";
 export type { AuthMiddlewareRules };
 import useAuthClientInitialization, {
   type UseAuthClientInitializationOptions,

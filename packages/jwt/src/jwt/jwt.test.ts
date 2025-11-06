@@ -6,7 +6,7 @@ import {
   isValidOrganizationID,
   type OrganizationID,
   type UserData,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,

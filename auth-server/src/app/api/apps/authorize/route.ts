@@ -5,7 +5,7 @@ import {
   ServerlessDatabase,
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";

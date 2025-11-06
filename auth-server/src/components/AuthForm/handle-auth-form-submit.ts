@@ -13,7 +13,7 @@ import {
   CodeVerifier,
   type CodeVerifierWithDetails,
   PKCE_ProofKeyManager,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import {
   type OnSuccessfulAuthenticateAction,
   onSuccessfulAuthenticateActionSchema,

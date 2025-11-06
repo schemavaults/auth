@@ -1,4 +1,4 @@
-import type { AccessToken, RefreshToken, UserData } from "@schemavaults/auth";
+import type { AccessToken, RefreshToken, UserData } from "@schemavaults/auth-common";
 import type { Credentials } from "@/types/credentials";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";

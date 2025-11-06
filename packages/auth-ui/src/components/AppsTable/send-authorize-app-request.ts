@@ -1,5 +1,5 @@
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import type { AccessToken } from "@schemavaults/auth";
+import type { AccessToken } from "@schemavaults/auth-common";
 import { useAuth } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
 

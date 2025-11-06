@@ -2,7 +2,7 @@ import "server-only";
 
 import redirectWithError from "@/lib/redirect-with-error";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import type { PotentiallyValidTokenSource } from "@schemavaults/auth";
+import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import { RouteGuardFactory } from "@schemavaults/auth-server-sdk";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";

@@ -10,7 +10,7 @@ import {
   type RequestTokensResult,
   type UserData,
   type refreshTokenPOSTbody,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { validateAudience } from "./validate-audience";

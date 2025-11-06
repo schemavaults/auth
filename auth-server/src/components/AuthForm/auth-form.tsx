@@ -4,7 +4,7 @@ import { type ReactElement, useCallback, useState } from "react";
 import {
   emailCredentialsSchema,
   emailRegistrationCredentialsSchema,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 
 // Login / Register functions
 

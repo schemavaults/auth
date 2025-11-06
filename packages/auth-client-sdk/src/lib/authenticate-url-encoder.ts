@@ -2,7 +2,7 @@ import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type {
   CodeChallenge,
   CodeChallengeWithDetails,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 
 export interface AuthenticateOptions {
   // The type of authentication to perform

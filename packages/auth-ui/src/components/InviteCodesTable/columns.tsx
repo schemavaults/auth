@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
-import type { InviteCodeDefinition } from "@schemavaults/auth";
+import type { InviteCodeDefinition } from "@schemavaults/auth-common";
 import printDateTime from "@/lib/printDateTime";
 
 export const columns: ColumnDef<InviteCodeDefinition>[] = [

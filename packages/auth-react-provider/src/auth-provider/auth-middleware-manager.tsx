@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import { useAuthClientMiddleware } from "@/hooks/use-auth-client-middleware";
 import type { SchemaVaultsAuthProviderProps } from "./auth-provider-props";
-import { defaultAuthMiddlewareRules } from "@schemavaults/auth";
+import { defaultAuthMiddlewareRules } from "@schemavaults/auth-common";
 import { useRouter } from "next/navigation";
 import {
   useAppEnvironment,

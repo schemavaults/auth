@@ -4,7 +4,7 @@ import {
   ServerlessDatabase,
   SchemaVaultsApiServerRegistry,
 } from "@/lib/auth-db";
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 import {
   type ListApiServersQueryResponse,
   listApiServersQueryTypeSchema,

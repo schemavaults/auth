@@ -8,7 +8,7 @@ import {
 } from "@/lib/withAdminRouteGuard";
 import { cookies } from "next/headers";
 import { ServerlessDatabase, UserRegistry } from "@/lib/auth-db";
-import { InviteCodeDefinition } from "@schemavaults/auth";
+import { InviteCodeDefinition } from "@schemavaults/auth-common";
 import { ServerRuntime } from "next";
 
 async function PreloadedInviteCodesPage({

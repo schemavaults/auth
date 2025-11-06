@@ -4,7 +4,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { SchemaVaultsServerMiddleware } from "./server-middleware";
 import { test, describe, expect } from "bun:test";
-import { baseStorageRegionIdSchema, StorageRegionID } from "@schemavaults/auth";
+import { baseStorageRegionIdSchema, StorageRegionID } from "@schemavaults/auth-common";
 
 describe("SchemaVaultsServerMiddleware Initialization", () => {
   test("can initialize the SchemaVaults server middleware for auth server", () => {

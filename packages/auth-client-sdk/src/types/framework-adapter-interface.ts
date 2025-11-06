@@ -1,4 +1,4 @@
-import type { AccessToken, RefreshToken, UserData } from "@schemavaults/auth";
+import type { AccessToken, RefreshToken, UserData } from "@schemavaults/auth-common";
 
 interface AuthClientCodeVerifierActions {
   storeCodeVerifier: (codeVerifier: string, challenge_time: number) => void;

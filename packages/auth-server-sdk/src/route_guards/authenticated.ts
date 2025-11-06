@@ -1,4 +1,4 @@
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 import { BaseRouteGuard, type IRouteGuard } from "./base-route-guard";
 
 export class AuthenticationRequiredRouteGuard extends BaseRouteGuard implements IRouteGuard {

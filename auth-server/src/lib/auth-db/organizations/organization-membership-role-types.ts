@@ -1,4 +1,4 @@
-import { organizationIdSchema } from "@schemavaults/auth";
+import { organizationIdSchema } from "@schemavaults/auth-common";
 import { z } from "zod";
 
 export const organizationMembershipRoleTypes = [

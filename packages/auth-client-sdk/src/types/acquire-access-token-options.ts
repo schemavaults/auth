@@ -1,4 +1,4 @@
-import type { RefreshToken } from "@schemavaults/auth";
+import type { RefreshToken } from "@schemavaults/auth-common";
 
 export type AcquireAccessTokenOptions = {
   refresh_token?: RefreshToken;

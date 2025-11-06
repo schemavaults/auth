@@ -2,7 +2,7 @@ import {
   type RequestTokensResult,
   grantTypePOSTbodySchemaMap,
   grant_types,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { handleRefreshTokenGrant } from "./refresh_token_grant";

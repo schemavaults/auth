@@ -1,4 +1,4 @@
-import { type UserData, userDataSchema } from "@schemavaults/auth";
+import { type UserData, userDataSchema } from "@schemavaults/auth-common";
 import type { UserRegistry } from "./user-registry";
 
 export async function loadUserData(uid: string, userRegistry: UserRegistry): Promise<UserData> {

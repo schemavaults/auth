@@ -31,7 +31,7 @@ import {
   type InviteCodeDefinition,
   inviteCodeDefinitionSchema,
   type AccessToken,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SwatchBook } from "lucide-react";

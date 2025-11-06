@@ -12,7 +12,7 @@ import {
   SchemaVaultsAppEnvironment,
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 import { type Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../../auth-database-types";
 import { z } from "zod";

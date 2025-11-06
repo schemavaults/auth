@@ -9,7 +9,7 @@ import {
   accessTokenDataSchema,
   refreshTokenDataSchema,
   userDataSchema,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import {
   type ISchemaVaultsAuthClientAdapter,
   IAuthClientPOSTResultType,

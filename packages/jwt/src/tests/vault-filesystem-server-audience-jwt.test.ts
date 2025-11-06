@@ -6,7 +6,7 @@ import {
 import { describe, test, expect } from "bun:test";
 import { MockUser } from "@/tests/MockUser";
 import { generateJWT, GenerateJWTOptions } from "@/jwt/generate";
-import { baseStorageRegionIdSchema, StorageRegionID } from "@schemavaults/auth";
+import { baseStorageRegionIdSchema, StorageRegionID } from "@schemavaults/auth-common";
 
 const env: SchemaVaultsAppEnvironment = "test";
 

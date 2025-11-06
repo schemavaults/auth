@@ -1,5 +1,5 @@
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
-import type { CodeChallengeWithDetails } from "@schemavaults/auth";
+import type { CodeChallengeWithDetails } from "@schemavaults/auth-common";
 
 export interface SuccessRedirectInputOptions {
   redirect_uri: string,

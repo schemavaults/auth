@@ -19,7 +19,7 @@ import {
   type IRouteGuard,
   RouteGuardFactory,
 } from "@schemavaults/auth-server-sdk";
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 
 /**
  * List available SchemaVaults apps

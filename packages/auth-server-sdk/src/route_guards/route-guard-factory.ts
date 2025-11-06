@@ -8,7 +8,7 @@ import {
   type PotentiallyValidTokenSource,
   type UserData,
   type DecodeTokenFn,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { decodeJWT, type JWT_Keys } from "@schemavaults/jwt";
 import {
   getAppEnvironment,

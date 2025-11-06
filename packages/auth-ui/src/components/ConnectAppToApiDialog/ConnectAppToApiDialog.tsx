@@ -26,7 +26,7 @@ import {
 } from "@schemavaults/ui";
 import { useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
-import type { AccessToken } from "@schemavaults/auth";
+import type { AccessToken } from "@schemavaults/auth-common";
 import {
   type AppToApiPermission,
   appToApiPermissionSchema,

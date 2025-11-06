@@ -3,7 +3,7 @@ import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import type { AuthenticateResult } from "@schemavaults/auth";
+import type { AuthenticateResult } from "@schemavaults/auth-common";
 import type { NextRequest, NextResponse } from "next/server";
 
 function isHttpsOrigin(origin: string): origin is `https://${string}` {

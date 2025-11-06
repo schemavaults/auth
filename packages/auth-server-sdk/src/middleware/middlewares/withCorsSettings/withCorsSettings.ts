@@ -1,5 +1,5 @@
 import type { NextResponse } from "next/server";
-import { type AuthenticateResult } from "@schemavaults/auth";
+import { type AuthenticateResult } from "@schemavaults/auth-common";
 import { applyCorsHeaders } from "./applyCorsHeaders";
 import {
   type SchemaVaultsCORSEnforcementPolicy,

@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 export interface InviteCodesDatatableProps {
   invite_codes: SWRResponse<readonly InviteCodeDefinition[], Error>;
 }
-import type { InviteCodeDefinition } from "@schemavaults/auth";
+import type { InviteCodeDefinition } from "@schemavaults/auth-common";
 import CreateInviteCodeDialog from "@/components/CreateInviteCodeDialog";
 
 export function InviteCodesTable({

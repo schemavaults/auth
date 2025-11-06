@@ -9,7 +9,7 @@ import {
   apiServerIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
 } from "@schemavaults/app-definitions";
-import { audienceRefSchema } from "@schemavaults/auth";
+import { audienceRefSchema } from "@schemavaults/auth-common";
 
 export type ValidateAudienceOutput =
   | "auth-server-only"

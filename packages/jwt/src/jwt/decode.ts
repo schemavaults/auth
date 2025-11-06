@@ -8,7 +8,7 @@ import type {
   AuthTokenTypes,
   OrganizationID,
   UserData,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,

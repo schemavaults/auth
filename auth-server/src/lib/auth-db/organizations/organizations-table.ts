@@ -1,4 +1,4 @@
-import type { OrganizationDefinition } from "@schemavaults/auth";
+import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import type {
   ColumnType,
   Generated,

@@ -13,7 +13,7 @@ import {
   audienceRefSchema,
   audienceSchema,
   appRefIdSchema,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import type {
   IAuthClientPOSTResultType,
   ISchemaVaultsAuthClientAdapter,

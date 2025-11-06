@@ -10,7 +10,7 @@ import {
   audienceSchema,
   type DecodeTokenFn,
   type AuthMiddlewareError,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { cookies, headers } from "next/headers";
 import {
   type CustomJWTPayload,

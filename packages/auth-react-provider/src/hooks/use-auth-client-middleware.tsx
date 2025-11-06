@@ -8,7 +8,7 @@ import {
   type RefreshToken,
   type PotentiallyValidTokenSource,
   type UserData,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import type { useRouter } from "next/navigation";
 import {
   type OnAuthStateChangedHandlerInput,

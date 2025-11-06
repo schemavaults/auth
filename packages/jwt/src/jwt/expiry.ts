@@ -1,4 +1,4 @@
-import type { AuthTokenTypes } from "@schemavaults/auth";
+import type { AuthTokenTypes } from "@schemavaults/auth-common";
 
 /** Time Variables (seconds) */
 const oneMinute: number = 60 as const;

@@ -7,7 +7,7 @@ import {
 import { type ServerRuntime } from "next";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { AuthenticateResult } from "@schemavaults/auth";
+import type { AuthenticateResult } from "@schemavaults/auth-common";
 import { handleLogin } from "./handle_login";
 import { handleRegister } from "./handle_register";
 

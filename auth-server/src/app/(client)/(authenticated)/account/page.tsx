@@ -2,7 +2,7 @@ import "server-only";
 import type { ReactElement } from "react";
 
 import AccountPageView from "./auth-dashboard-account-page-view";
-import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth";
+import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth-common";
 import { cookies } from "next/headers";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";

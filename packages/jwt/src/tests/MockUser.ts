@@ -1,4 +1,4 @@
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 
 export class MockUser implements UserData {
   public uid: string;

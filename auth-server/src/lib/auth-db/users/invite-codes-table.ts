@@ -1,4 +1,4 @@
-import type { InviteCodeDefinition } from "@schemavaults/auth";
+import type { InviteCodeDefinition } from "@schemavaults/auth-common";
 
 import {
   ColumnType,

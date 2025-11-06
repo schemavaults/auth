@@ -4,7 +4,7 @@ import {
   appRefIdSchema,
   baseStorageRegionIdSchema,
   fsServerAudienceIdSchema,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import {
   type IMiddlewareChainInitOptions,
   MiddlewareChain,

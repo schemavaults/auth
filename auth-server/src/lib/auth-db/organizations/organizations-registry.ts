@@ -11,7 +11,7 @@ import {
   OrganizationID,
   organizationIdSchema,
   SCHEMAVAULTS_ORGANIZATION_ID,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { OrganizationRow } from "./organizations-table";
 import isValidUuid from "@/lib/is-valid-uuid";
 import {

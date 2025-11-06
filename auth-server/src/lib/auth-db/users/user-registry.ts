@@ -6,7 +6,7 @@ import {
   InviteCodeDefinition,
   inviteCodeDefinitionSchema,
   InviteCode,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { type Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
 import { type PasswordRecord, passwordRecordSchema } from "./passwords-table";

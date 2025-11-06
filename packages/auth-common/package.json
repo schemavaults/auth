@@ -13,8 +13,7 @@
   "types": "dist/index.d.ts",
   "dependencies": {
     "zod": "3.23.8",
-    "@schemavaults/app-definitions": "0.4.10",
-    "@schemavaults/storage-regions": "0.4.3",
+    "@schemavaults/app-definitions": "workspace:*",
     "crypto-js": "4.2.0"
   },
   "scripts": {

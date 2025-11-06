@@ -3,7 +3,7 @@ import {
   type CodeChallengeWithDetails,
   PKCE_ProofKeyManager,
   authenticateResultSchema,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import type {
   IAuthClientPOSTResultType,
   ISchemaVaultsAuthClientAdapter,

@@ -1,4 +1,4 @@
-import type { AccessToken } from "@schemavaults/auth";
+import type { AccessToken } from "@schemavaults/auth-common";
 import { HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS, type HardcodedAppId, isHardcodedAppId, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsApp, type SchemaVaultsAppDomainRef, schemaVaultsAppDomainRefSchema } from "@schemavaults/app-definitions";
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { toast } from "@schemavaults/ui";

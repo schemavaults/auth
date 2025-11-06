@@ -4,7 +4,7 @@ import {
   appIdSchema,
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
-import { audienceRefSchema, organizationIdSchema } from "@schemavaults/auth";
+import { audienceRefSchema, organizationIdSchema } from "@schemavaults/auth-common";
 
 // Data to hold in the JWT
 export const jwtPayloadSchema = z

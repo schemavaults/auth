@@ -1,7 +1,7 @@
 import {
   defaultAuthMiddlewareRules,
   type AuthMiddlewareRules,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 
 /**
  * @name loadAuthServerMiddlewareRules

@@ -1,5 +1,5 @@
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 
 export interface InitRouteGuardCheckOptions {
   user: UserData | null;

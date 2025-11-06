@@ -1,7 +1,7 @@
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/framework-adapter-interface";
 import type { Credentials } from "./credentials";
-import type { CodeChallengeWithDetails } from "@schemavaults/auth";
+import type { CodeChallengeWithDetails } from "@schemavaults/auth-common";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
 export interface ISendAuthenticateRequestOptions {

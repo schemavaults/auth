@@ -1,4 +1,4 @@
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import type { SchemaVaultsAppRegistry } from "./app-registry";
 import type {

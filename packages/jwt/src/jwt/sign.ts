@@ -2,7 +2,7 @@ import { JWTPayload, SignJWT } from "jose";
 import { JWT_Keys } from "./jwt_keys";
 import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
-import { AuthTokenTypes } from "@schemavaults/auth";
+import { AuthTokenTypes } from "@schemavaults/auth-common";
 import { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
 export interface SignJSONWebTokenInputOptions<

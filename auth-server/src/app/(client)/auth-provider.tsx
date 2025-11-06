@@ -5,7 +5,7 @@ import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { defaultAuthMiddlewareRules } from "@schemavaults/auth";
+import { defaultAuthMiddlewareRules } from "@schemavaults/auth-common";
 import {
   AuthProvider,
   useAppEnvironment,

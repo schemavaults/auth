@@ -6,7 +6,7 @@ import {
   UserRegistry,
 } from "@/lib/auth-db";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import type { UserData } from "@schemavaults/auth";
+import type { UserData } from "@schemavaults/auth-common";
 import {
   type IRouteGuard,
   RouteGuardFactory,

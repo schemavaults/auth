@@ -5,7 +5,7 @@ import {
   type RequestTokensResult,
   type UserData,
   type authorizationCodePOSTbody,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { JWT_Factory, JWT_Keys } from "@schemavaults/jwt";
 import {
   type ServerlessDatabase,

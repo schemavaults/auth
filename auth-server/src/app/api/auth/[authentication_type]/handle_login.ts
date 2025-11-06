@@ -8,10 +8,10 @@ import {
 import {
   emailCredentialsSchema,
   PKCE_ProofKeyManager,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import type { AuthenticateResult } from "@schemavaults/auth";
+import type { AuthenticateResult } from "@schemavaults/auth-common";
 import { getAppEnvironment } from "@schemavaults/app-definitions";
 
 interface HandleLoginOptions {

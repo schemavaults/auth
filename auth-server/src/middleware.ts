@@ -7,7 +7,7 @@ import {
   NextResponse,
 } from "next/server";
 import { SchemaVaultsServerMiddleware } from "@schemavaults/auth-server-sdk";
-import type { AuthenticateResult } from "@schemavaults/auth";
+import type { AuthenticateResult } from "@schemavaults/auth-common";
 import {
   getAppEnvironment,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,

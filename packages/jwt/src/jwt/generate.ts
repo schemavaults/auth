@@ -13,7 +13,7 @@ import {
   type RefreshToken,
   type OrganizationID,
   organizationIdSchema,
-} from "@schemavaults/auth";
+} from "@schemavaults/auth-common";
 import { signJWT } from "./sign";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
