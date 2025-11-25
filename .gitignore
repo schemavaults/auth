@@ -15,3 +15,5 @@
 **/.env.staging
 
 node_modules/
+
+postgres-data/

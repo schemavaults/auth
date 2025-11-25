@@ -1,0 +1,22 @@
+{
+  "name": "@schemavaults/auth-server Dev Environment",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "auth-server",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [6767],
+  "shutdownAction": "stopCompose",
+  "portsAttributes": {
+    "6767": {
+      "label": "@schemavaults/auth-server Next.js Dev Server",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["README.md"]
+    },
+    "vscode": {
+      "extensions": []
+    }
+  }
+}

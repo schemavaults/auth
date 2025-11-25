@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  auth-server:
+    build:
+      context: .
+      dockerfile: auth-server/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+    network_mode: service:postgres-db
+    depends_on:
+      - postgres-db
+
+  postgres-db:
+    image: postgres:16.8
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: schemavaults-auth-server-dev
+      POSTGRES_PASSWORD: schemavaults-auth-server-dev
+      POSTGRES_DB: schemavaults-auth-server
+
+volumes:
+  postgres-data:
