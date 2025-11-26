@@ -57,6 +57,3 @@ COPY --chown=bun:bun packages/jwt/tsconfig.json packages/jwt/tsconfig.json
 RUN bun install --frozen-lockfile
 
 FROM deps AS development
-
-WORKDIR /schemavaults/auth
-CMD [ "bun", "run", "dev", "--filter", "@schemavaults/auth-server" ]

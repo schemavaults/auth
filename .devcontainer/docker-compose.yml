@@ -19,6 +19,7 @@ services:
       - ../packages/auth-server-sdk/src:/schemavaults/auth/packages/auth-server-sdk/src
       - ../packages/auth-ui/src:/schemavaults/auth/packages/auth-ui/src
       - ../packages/jwt/src:/schemavaults/auth/packages/jwt/src
+    command: "bun run dev --filter @schemavaults/auth-server"
 
   postgres-db:
     image: postgres:16.8
