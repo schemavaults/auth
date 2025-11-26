@@ -4,7 +4,8 @@
   "service": "auth-server",
   "forwardPorts": [6767],
   "shutdownAction": "stopCompose",
-  "workspaceFolder": "/schemavaults/auth",
+  "postCreateCommand": "bun install",
+  "postAttachCommand": "bun run dev",
   "portsAttributes": {
     "6767": {
       "label": "@schemavaults/auth-server Next.js Dev Server",

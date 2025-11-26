@@ -1,4 +1,4 @@
-# Dockerfile for @schemavaults/auth-server
+# Dockerfile for @schemavaults/auth-server (production)
 
 ARG BUN_VERSION
 
