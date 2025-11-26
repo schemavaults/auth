@@ -11,6 +11,16 @@ services:
     network_mode: service:postgres-db
     depends_on:
       - postgres-db
+    volumes:
+      - auth-server/public:/schemavaults/auth/auth-server/public
+      - auth-server/src:/schemavaults/auth/auth-server/src
+      - packages/app-definitions/src:/schemavaults/auth/packages/app-definitions/src
+      - packages/auth-client-sdk/src:/schemavaults/auth/packages/auth-client-sdk/src
+      - packages/auth-common/src:/schemavaults/auth/packages/auth-common/src
+      - packages/auth-react-provider/src:/schemavaults/auth/packages/auth-react-provider/src
+      - packages/auth-server-sdk/src:/schemavaults/auth/packages/auth-server-sdk/src
+      - packages/auth-ui/src:/schemavaults/auth/packages/auth-ui/src
+      - packages/jwt/src:/schemavaults/auth/packages/jwt/src
 
   postgres-db:
     image: postgres:16.8
