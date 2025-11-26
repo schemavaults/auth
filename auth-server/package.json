@@ -8,10 +8,10 @@
   },
   "description": "Server for authenticating users and generating tokens",
   "dependencies": {
-    "next": "16.0.1",
+    "next": "16.0.4",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "@schemavaults/ui": "0.11.130",
+    "@schemavaults/ui": "0.11.131",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-ui": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
@@ -21,7 +21,7 @@
     "@schemavaults/theme": "0.22.18",
     "zod": "3.23.8",
     "swr": "2.3.4",
-    "@schemavaults/dbh": "0.5.0",
+    "@schemavaults/dbh": "0.5.1",
     "server-only": "0.0.1"
   },
   "devDependencies": {
@@ -34,9 +34,10 @@
     "autoprefixer": "10.4.21"
   },
   "scripts": {
-    "dev": "next --port 6767",
-    "build": "next build",
-    "lint": "next lint"
+    "dev": "NEXT_TELEMETRY_DISABLED=1 bun --bun next dev --port 6767",
+    "build": "NEXT_TELEMETRY_DISABLED=1 bun --bun next build",
+    "start": "NEXT_TELEMETRY_DISABLED=1 bun --bun next start",
+    "lint": "bun --bun next lint"
   },
   "browser": {
     "crypto": false

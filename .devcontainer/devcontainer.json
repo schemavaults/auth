@@ -2,7 +2,6 @@
   "name": "@schemavaults/auth-server Dev Environment",
   "dockerComposeFile": "docker-compose.yml",
   "service": "auth-server",
-  "workspaceFolder": "/workspace",
   "forwardPorts": [6767],
   "shutdownAction": "stopCompose",
   "portsAttributes": {

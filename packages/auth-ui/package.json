@@ -9,7 +9,7 @@
     "url": "https://github.com/schemavaults/auth-ui.git"
   },
   "dependencies": {
-    "@schemavaults/ui": "0.11.130",
+    "@schemavaults/ui": "0.11.131",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@hookform/resolvers": "3.9.0"
@@ -27,7 +27,7 @@
     "lucide-react": "0.544.0",
     "swr": "2.3.0",
     "@tanstack/react-table": "8.20.1",
-    "next": "15.5.0",
+    "next": "16.0.4",
     "postcss": "8.5.3",
     "tailwindcss": "3.4.17"
   },
