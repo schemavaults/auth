@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { userDataSchema } from "./user_data";
 import { accessTokenDataSchema, refreshTokenDataSchema } from "./token-data";
-import { apiServerIdSchema } from '@schemavaults/app-definitions';
-import { fsServerAudienceIdSchema } from "./fs-server-audience-id-schema";
 import { audienceRefSchema } from "./audience-schema";
 
 export const requestTokensResultSchema = z.object({

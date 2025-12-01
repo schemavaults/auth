@@ -5,7 +5,7 @@ import {
   ServerlessDatabase,
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
 import {
   type AppToApiPermission,
@@ -27,7 +27,8 @@ export async function POST(
   req: NextRequest,
   props: { params: Promise<{ client_app_id: string; api_server_id: string }> },
 ): Promise<NextResponse> {
-  if (process.env.NODE_ENV === "development") {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+  if (environment === "development") {
     console.log("[/api/apis/connect_app] GET request received");
   }
 

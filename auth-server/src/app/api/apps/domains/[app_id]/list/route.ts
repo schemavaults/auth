@@ -5,7 +5,9 @@ import type { UserData } from "@schemavaults/auth-common";
 import {
   type SchemaVaultsApp,
   type SchemaVaultsAppDomainRef,
+  type SchemaVaultsAppEnvironment,
   appIdSchema,
+  getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
@@ -35,6 +37,7 @@ export async function POST(
   req: NextRequest,
   input: { params: Promise<{ app_id: string }> },
 ): Promise<NextResponse> {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const parsed_app_id = await appIdSchema.safeParseAsync(
     (await input.params).app_id,
   );
@@ -52,7 +55,7 @@ export async function POST(
   }
   const app_id: string = parsed_app_id.data;
 
-  if (process.env.NODE_ENV === "development") {
+  if (environment === "development") {
     console.log(`[/api/apps/domains/${app_id}/list] Received POST request`);
   }
 

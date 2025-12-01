@@ -1,8 +1,9 @@
-import { RedirectType, redirect as nextRedirect } from "next/navigation";
+import { type RedirectType, redirect as nextRedirect } from "next/navigation";
 import {
   isValidErrorId,
   type SchemaVaultsAuthErrorId,
 } from "./error-message-catalog";
+import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
 const errorEndpoint = "/error" as const;
 
@@ -11,6 +12,7 @@ export function redirectWithError(
   error_code: number = 500,
   error_id: SchemaVaultsAuthErrorId = "unknown",
 ): never {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (!isValidErrorId(error_id)) {
     throw new Error("Invalid error ID to redirect to error page with!");
   }
@@ -22,7 +24,7 @@ export function redirectWithError(
 
   const errorPageUrl = `${errorEndpoint}?${searchParams.toString()}` as const;
 
-  if (process.env.NODE_ENV === "development") {
+  if (environment === "development") {
     console.log("[redirectWithError] Redirecting to URL: ", errorPageUrl);
   }
   redirect(errorPageUrl);

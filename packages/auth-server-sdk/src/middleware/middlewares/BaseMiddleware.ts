@@ -79,3 +79,5 @@ export abstract class BaseMiddleware implements ISchemaVaultsMiddleware {
     }
   }
 }
+
+export default BaseMiddleware;

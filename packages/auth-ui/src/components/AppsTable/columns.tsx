@@ -13,10 +13,6 @@ export function getAppsTableColumns(
   queryType: ListAppsQueryType,
   preloaded?: PreloadedAppsTableDataWithDomainRefs
 ): ColumnDef<SchemaVaultsApp>[] {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[getAppsTableColumns] Preloaded: ', preloaded);
-  }
-
   const columns: ColumnDef<SchemaVaultsApp>[] = [
     {
       id: "select",

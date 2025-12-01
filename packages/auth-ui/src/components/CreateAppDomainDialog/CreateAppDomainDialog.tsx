@@ -28,7 +28,7 @@ import {
   Label,
   useForm,
 } from "@schemavaults/ui";
-import { useAuth } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import type { AccessToken } from "@schemavaults/auth-common";
 import {
@@ -75,9 +75,10 @@ export function CreateAppDomainDialog({
   const auth = useAuth();
   const { mutate } = useSWRConfig();
   const [submitting, startSubmitting] = useTransition();
+  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
   async function onSubmit(values: SchemaVaultsAppDomainRef): Promise<void> {
-    if (process.env.NODE_ENV === "development") {
+    if (environment === "development") {
       console.log("Submitting frontend app creation form...");
       toast({
         variant: "default",
@@ -153,8 +154,9 @@ export function CreateAppDomainDialog({
         );
       }
 
-      if (process.env.NODE_ENV === "development")
+      if (environment === "development") {
         console.log("Received response: ", body);
+      }
     } catch (e: unknown) {
       toast({
         variant: "destructive",

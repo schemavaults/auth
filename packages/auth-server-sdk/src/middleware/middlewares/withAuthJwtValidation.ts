@@ -326,3 +326,5 @@ export class AuthJwtValidationMiddlewareFactory
     });
   }
 }
+
+export default AuthJwtValidationMiddlewareFactory;

@@ -48,3 +48,5 @@ export class RequestLoggingMiddlewareFactory
     return new RequestLoggingMiddleware(next);
   }
 }
+
+export default RequestLoggingMiddlewareFactory;

@@ -42,21 +42,12 @@ async function validateOneAudience(
   const parsed_aud = await audienceRefSchema.safeParseAsync(audience);
   const isSemanticallyValidAudience = parsed_aud.success satisfies boolean;
   if (!isSemanticallyValidAudience || !parsed_aud.data) {
-    if (process.env.NODE_ENV === "development") {
-      console.error(
-        `[validateAudience] Invalid audience ref. ` +
-          `Instead received: \"${audience}\"`,
-        parsed_aud.error,
-      );
-    }
+    console.error(
+      `[validateAudience] Invalid audience ref. ` +
+        `Instead received: \"${audience}\"`,
+      parsed_aud.error,
+    );
     return false;
-  } else {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        `[validateAudience] Audience appears semantically valid: `,
-        parsed_aud.data,
-      );
-    }
   }
 
   const aud: string = parsed_aud.data;

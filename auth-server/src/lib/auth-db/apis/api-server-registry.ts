@@ -6,6 +6,8 @@ import {
   type SchemaVaultsApiServerDomainRef,
   ListApiServersQueryType,
   listApiServersQueryTypeSchema,
+  SchemaVaultsAppEnvironment,
+  getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
@@ -17,10 +19,12 @@ import type { AuthDatabase } from "../auth-database-types";
  * @see AuthorizedAppsRegistry To manage which frontend apps a user has actually authorized
  */
 export class SchemaVaultsApiServerRegistry {
+  private readonly environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+
   public async getApiServer(
     api_server_id: string,
   ): Promise<SchemaVaultsApiServerDefinition> {
-    if (process.env.NODE_ENV === "development") {
+    if (this.environment === "development") {
       try {
         await this.setup();
       } catch (e: unknown) {
@@ -76,7 +80,7 @@ export class SchemaVaultsApiServerRegistry {
   public async getApiServerDomains(
     api_server_id: string,
   ): Promise<SchemaVaultsApiServerDomainRef[]> {
-    if (process.env.NODE_ENV === "development") {
+    if (this.environment === "development") {
       try {
         await this.setup();
       } catch (e: unknown) {
@@ -111,7 +115,7 @@ export class SchemaVaultsApiServerRegistry {
     api_server_description: string,
     publicly_listed?: boolean,
   ): Promise<void> {
-    if (process.env.NODE_ENV === "development") {
+    if (this.environment === "development") {
       try {
         await this.setup();
       } catch (e: unknown) {
@@ -171,7 +175,7 @@ export class SchemaVaultsApiServerRegistry {
     type: ListApiServersQueryType,
     user: UserData,
   ): Promise<SchemaVaultsApiServerDefinition[]> {
-    if (process.env.NODE_ENV === "development") {
+    if (this.environment === "development") {
       try {
         await this.setup();
       } catch (e: unknown) {

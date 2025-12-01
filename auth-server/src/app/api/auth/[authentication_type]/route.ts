@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
 import { handleLogin } from "./handle_login";
 import { handleRegister } from "./handle_register";
+import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
 // /api/auth/[authentication_type]
 const authenticatePOSTparams = z
@@ -27,6 +28,7 @@ export async function POST(
   req: NextRequest,
   input: { params: Promise<{ authentication_type: string }> },
 ): Promise<NextResponse> {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const parsed_params = await authenticatePOSTparams.safeParseAsync(
     await input.params,
   );
@@ -42,7 +44,7 @@ export async function POST(
   try {
     body_json = await req.json();
   } catch (e: unknown) {
-    if (process.env.NODE_ENV === "development") {
+    if (environment === "development") {
       console.error(e);
     }
     return NextResponse.json(
@@ -83,7 +85,7 @@ export async function POST(
         );
 
       default:
-        if (process.env.NODE_ENV === "development") {
+        if (environment === "development") {
           console.error(`Invalid authentication type: ${authentication_type}`);
         }
         return NextResponse.json(

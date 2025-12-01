@@ -1,3 +1,4 @@
+import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { z } from "zod";
 
 const MIN_CODE_VERIFIER_LENGTH = 43 as const;
@@ -17,6 +18,7 @@ function secureContextRandomCharacters(): string {
 // Create code verifier for Oauth2 PKCE
 // https://datatracker.ietf.org/doc/html/rfc7636#section-4.1
 export function create_code_verifier({ challenge_time, generateRandomCodeVerifier }: CreateCodeVerifierInputOptions): CodeVerifierWithDetails {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   try {
     let code_verifier: string = typeof generateRandomCodeVerifier === 'function' ? generateRandomCodeVerifier() : (
       ((): string => {
@@ -56,7 +58,7 @@ export function create_code_verifier({ challenge_time, generateRandomCodeVerifie
     );
     const base64url_encoded_verifier: string = code_verifier.replace(/[^A-Za-z0-9_-]/g, '_');
 
-    if (process.env.NODE_ENV === 'development') {
+    if (environment === 'development') {
       console.log("Created new code_verifier: ", base64url_encoded_verifier);
     }
 

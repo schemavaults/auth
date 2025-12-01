@@ -1,8 +1,8 @@
-import { getHardcodedClientWebAppDomain, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { getAppEnvironment, getHardcodedClientWebAppDomain, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
 export function getAuthServerUri(): string {
   return getHardcodedClientWebAppDomain(
     SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-    process.env.NODE_ENV
+    getAppEnvironment() satisfies SchemaVaultsAppEnvironment
   );
 }

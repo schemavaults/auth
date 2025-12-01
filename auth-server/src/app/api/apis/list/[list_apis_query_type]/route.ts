@@ -10,6 +10,8 @@ import {
   listApiServersQueryTypeSchema,
   type ListApiServersQueryType,
   type SchemaVaultsApiServerDefinition,
+  type SchemaVaultsAppEnvironment,
+  getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 
@@ -29,7 +31,8 @@ export async function POST(
   req: NextRequest,
   props: { params: Promise<{ list_apis_query_type: string }> },
 ): Promise<NextResponse> {
-  if (process.env.NODE_ENV === "development") {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+  if (environment === "development") {
     console.log("[/api/apis/list/[list_apis_query_type]] GET request received");
   }
 
@@ -37,7 +40,7 @@ export async function POST(
     (await props.params).list_apis_query_type,
   );
   if (!parsed_query_type.success) {
-    if (process.env.NODE_ENV === "development")
+    if (environment === "development")
       console.log("Invalid list API servers query type, not a string");
     return NextResponse.json(
       {
@@ -51,7 +54,7 @@ export async function POST(
   }
   const list_apis_query_type: ListApiServersQueryType = parsed_query_type.data;
 
-  if (process.env.NODE_ENV === "development") {
+  if (environment === "development") {
     console.log(
       `[/api/apis/list/${list_apis_query_type}] Received GET request`,
     );

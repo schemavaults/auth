@@ -9,6 +9,8 @@ import {
   SCHEMAVAULTS_WEB,
   SCHEMAVAULTS_CLI,
   SCHEMAVAULTS_REGISTRY_SERVER,
+  type SchemaVaultsAppEnvironment,
+  getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 
@@ -20,6 +22,8 @@ import isValidUuid from "@/lib/is-valid-uuid";
  * @see SchemaVaultsApiServerRegistry To manage the list of backend API servers
  */
 export class SchemaVaultsAppToApiPermissionsRegistry {
+  private readonly environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+
   private createHardcodedAppToApiAuthorization(
     client_app_id: string,
     api_server_id: string,
@@ -161,7 +165,7 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
         api_server_id,
       );
       const isAllowedResult: boolean = perm ? true : false;
-      if (process.env.NODE_ENV === "development") {
+      if (this.environment === "development") {
         console.log(
           "[SchemaVaultsAppToApiPermissionsRegistry] isAllowed() -> ",
           isAllowedResult,

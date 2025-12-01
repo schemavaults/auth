@@ -6,7 +6,7 @@ import {
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
 import type { UserData } from "@schemavaults/auth-common";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -28,7 +28,8 @@ const authorizeAppEndpointRequestBodySchema = z
  * @returns The response
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  if (process.env.NODE_ENV === "development")
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+  if (environment === "development")
     console.log("[/api/apps/authorize] GET request received");
 
   // Load user data and make sure they're authorized to do things!

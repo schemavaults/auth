@@ -1,7 +1,7 @@
 import "server-only";
 
 import redirectWithError from "@/lib/redirect-with-error";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import { RouteGuardFactory } from "@schemavaults/auth-server-sdk";
 import { cookies } from "next/headers";
@@ -11,7 +11,8 @@ import type { PropsWithChildren } from "react";
 export default async function AdminPathsRouteGuardServerComponent({
   children,
 }: PropsWithChildren) {
-  if (process.env.NODE_ENV === "development") {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+  if (environment === "development") {
     console.log("[AdminPathsRouteGuardServerComponent] Preparing admin page!");
   }
 

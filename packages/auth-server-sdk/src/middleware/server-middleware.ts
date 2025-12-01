@@ -1,9 +1,8 @@
+// server-middleware.ts
+
 import {
   type AuthMiddlewareRules,
-  StorageRegionID,
   appRefIdSchema,
-  baseStorageRegionIdSchema,
-  fsServerAudienceIdSchema,
 } from "@schemavaults/auth-common";
 import {
   type IMiddlewareChainInitOptions,
@@ -11,28 +10,28 @@ import {
 } from "@/middleware_chain";
 import type { NextResponse } from "next/server";
 import {
+  type ApiServerId,
+  apiServerIdSchema,
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
 /** Middlewares Imports */
-import { AuthJwtValidationMiddlewareFactory } from "@/middlewares/withAuthJwtValidation";
-import {
+import AuthJwtValidationMiddlewareFactory from "@/middlewares/withAuthJwtValidation";
+import CorsMiddlewareFactory, {
   type SchemaVaultsCORSEnforcementPolicy,
-  CorsMiddlewareFactory,
   SchemaVaultsCORSEnforcementPolicies as cors_policies,
 } from "@/middlewares/withCorsSettings";
-import { RequestLoggingMiddlewareFactory } from "@/middlewares/withLogging";
+import RequestLoggingMiddlewareFactory from "@/middlewares/withLogging";
 import type {
   ISchemaVaultsMiddleware,
   ISchemaVaultsMiddlewareFactory,
   ISchemaVaultsMiddlewareFnInputs,
 } from "./middleware_types";
-import { BaseMiddleware } from "@/middlewares/BaseMiddleware";
+import BaseMiddleware from "@/middlewares/BaseMiddleware";
 
 export interface IServerMiddlewareInitializationOptions {
   api_server_id?: string;
-  vault_fs_server_region_id?: string;
   auth_middleware_rules?: AuthMiddlewareRules;
   debug?: boolean;
   cors_policy?: SchemaVaultsCORSEnforcementPolicy;
@@ -43,90 +42,33 @@ export class SchemaVaultsServerMiddleware
   extends BaseMiddleware
   implements ISchemaVaultsMiddleware
 {
-  private static assertEitherAndNotBothApiServerAndFsServerOpts(
-    opts: IServerMiddlewareInitializationOptions,
-  ): void {
-    // assert not both
-    if (!!opts.api_server_id && !!opts.vault_fs_server_region_id) {
-      throw new Error(
-        "You may not supply both 'api_server_id' and 'vault_fs_server_region_id' options to SchemaVaultsServerMiddleware!",
-      );
-    }
-    // assert at least one supplied
-    if (!opts.api_server_id && !opts.vault_fs_server_region_id) {
-      throw new Error(
-        "You must supply either an 'api_server_id' or 'vault_fs_server_region_id' option to SchemaVaultsServerMiddleware!",
-      );
-    }
 
-    if (!!opts.api_server_id && typeof opts.api_server_id !== "string") {
-      throw new Error("Expected 'api_server_id' option to be a string!");
-    } else if (
-      !!opts.vault_fs_server_region_id &&
-      typeof opts.vault_fs_server_region_id !== "string"
-    ) {
-      throw new Error(
-        "Expected 'vault_fs_server_region_id' option to be a string!",
+  private static isValidApiServerId(api_server_id: unknown): api_server_id is ApiServerId {
+    if (!api_server_id) {
+      console.error("[SchemaVaultsServerMiddleware] Did not receive a 'api_server_id' (falsy!) to initialize middleware with!")
+      throw new TypeError("Did not receive a valid API server ID!")
+    }
+    const parsed_api_server_id = apiServerIdSchema.safeParse(api_server_id);
+    if (!parsed_api_server_id.success) {
+      console.error(
+        "Error parsing API server ID to initialize SchemaVaultsServerMiddleware with: ",
+        parsed_api_server_id.error,
+      );
+      throw new TypeError(
+        "Error parsing API server ID to initialize SchemaVaultsServerMiddleware with!",
       );
     }
+    return parsed_api_server_id.success
   }
 
   private static determineJwtAudienceFromConstructorOptions(
     opts: IServerMiddlewareInitializationOptions,
   ): string {
-    SchemaVaultsServerMiddleware.assertEitherAndNotBothApiServerAndFsServerOpts(
-      opts,
-    );
-    console.assert(
-      (!!opts.api_server_id || !!opts.vault_fs_server_region_id) &&
-        !(!!opts.api_server_id && !!opts.vault_fs_server_region_id),
-      "Expected either 'api_server_id' or 'vault_fs_server_region_id' to be defined if this point was reached",
-    );
-    if (!!opts.api_server_id) {
-      const parsed_api_server_id = appRefIdSchema.safeParse(opts.api_server_id);
-      if (!parsed_api_server_id.success) {
-        console.error(
-          "Error parsing API server ID to initialize SchemaVaultsServerMiddleware with: ",
-          parsed_api_server_id.error,
-        );
-        throw new Error(
-          "Error parsing API server ID to initialize SchemaVaultsServerMiddleware with!",
-        );
-      }
-      const api_server_id: string = parsed_api_server_id.data;
-      return api_server_id;
-    } else if (!!opts.vault_fs_server_region_id) {
-      const parsed_storage_region_id = baseStorageRegionIdSchema.safeParse(
-        opts.vault_fs_server_region_id,
-      );
-      if (!parsed_storage_region_id.success) {
-        console.error(
-          "Error parsing vault filesystem server storage region ID to initialize SchemaVaultsServerMiddleware with: ",
-          parsed_storage_region_id.error,
-        );
-        throw new Error(
-          "Error parsing vault filesystem server storage region ID to initialize SchemaVaultsServerMiddleware with!",
-        );
-      }
-      const storage_region_id: StorageRegionID = parsed_storage_region_id.data;
-
-      const jwt_audience_for_storage_region_id: string = `schemavaults-fs:${storage_region_id}`;
-      if (
-        !fsServerAudienceIdSchema.safeParse(jwt_audience_for_storage_region_id)
-          .success
-      ) {
-        throw new Error(
-          "Failed to determine JWT audience for vault filesystem server from 'vault_fs_server_region_id' input option to SchemaVaultsServerMiddleware!",
-        );
-      }
-
-      return jwt_audience_for_storage_region_id;
-    } else {
-      // this should not be reached-- already asserted that either api server id or storage region id was passed
-      throw new Error(
-        "Error in determineJwtAudienceFromConstructorOptions logic!",
-      );
+    if (!SchemaVaultsServerMiddleware.isValidApiServerId(opts.api_server_id)) {
+      throw new TypeError("Invalid 'api_server_id' for server middleware!")
     }
+
+    return opts.api_server_id satisfies ApiServerId;
   }
 
   private static getDefaultCorsPolicy(
@@ -141,7 +83,7 @@ export class SchemaVaultsServerMiddleware
   private static setupMiddlewareChain(
     opts: IServerMiddlewareInitializationOptions,
   ): ISchemaVaultsMiddleware {
-    const audience: string =
+    const audience: ApiServerId =
       SchemaVaultsServerMiddleware.determineJwtAudienceFromConstructorOptions(
         opts,
       );

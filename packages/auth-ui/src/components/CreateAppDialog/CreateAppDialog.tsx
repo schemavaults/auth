@@ -26,13 +26,14 @@ import {
   DialogTrigger,
   useForm,
 } from "@schemavaults/ui";
-import { useAuth } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import type { AccessToken } from "@schemavaults/auth-common";
 import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsApp,
   schemaVaultsAppDefinitionSchema,
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AppWindow } from "lucide-react";
@@ -64,11 +65,12 @@ export function CreateAppDialog({
     },
   });
   const auth = useAuth();
+  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const { mutate } = useSWRConfig();
   const [submitting, startSubmitting] = useTransition();
 
   async function onSubmit(values: SchemaVaultsApp): Promise<void> {
-    if (process.env.NODE_ENV === "development") {
+    if (environment === "development") {
       console.log("Submitting frontend app creation form...");
       toast({
         variant: "default",
@@ -140,8 +142,9 @@ export function CreateAppDialog({
         );
       }
 
-      if (process.env.NODE_ENV === "development")
+      if (environment === "development") {
         console.log("Received response: ", body);
+      }
     } catch (e: unknown) {
       toast({
         variant: "destructive",

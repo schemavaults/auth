@@ -1,3 +1,4 @@
+import { getAppEnvironment, SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { comparePath } from "./compare-path";
 import type { NavigationPath } from "./parse-navigation-path";
 import { z } from "zod";
@@ -40,9 +41,11 @@ export function evaluateAuthMiddlewareRules(
   // The current authentication status of the user (logged in or logged out)
   authStatus: AuthenticationStatus,
   // The rules for the middleware to follow, given the current path and authentication status
-  rules: AuthMiddlewareRules
+  rules: AuthMiddlewareRules,
+  // App Environment (enables additional debug logging)
+  environment: SchemaVaultsAppEnvironment = getAppEnvironment()
 ): AuthMiddlewareResult {
-  if (process.env.NODE_ENV === 'development') {
+  if (environment === 'development') {
     console.log("[AuthMiddleware] Evaluating current path against redirect rules...")
   }
 
@@ -54,7 +57,7 @@ export function evaluateAuthMiddlewareRules(
   const defaultPageSecurityLevel = 'authed' as const satisfies PageSecurityLevel;
   let pageSecurityLevel: PageSecurityLevel = defaultPageSecurityLevel;
   try {
-    if (process.env.NODE_ENV === 'development') {
+    if (environment === 'development') {
       console.log("[AuthMiddleware] Current path: ", currentPath);
       try {
         console.log("[AuthMiddleware] Rules: ", rules)
@@ -63,7 +66,7 @@ export function evaluateAuthMiddlewareRules(
     if (rules.public.some(
       (route: NavigationPath): boolean => {
         const isMatch: boolean = comparePath(currentPath, route);
-        if (process.env.NODE_ENV === 'test' && isMatch) {
+        if (environment === 'test' && isMatch) {
           console.log(`[AuthMiddleware] Current path \"${currentPath.join("/")}\" matches public route: `, route);
         }
         return isMatch;
@@ -74,7 +77,7 @@ export function evaluateAuthMiddlewareRules(
     } else if (rules.unauthed.some(
       (route: NavigationPath): boolean => {
         const isMatch: boolean = comparePath(currentPath, route);
-        if (process.env.NODE_ENV === 'test' && isMatch) {
+        if (environment === 'test' && isMatch) {
           console.log(`[AuthMiddleware] Current path \"${currentPath.join("/")}\" matches unauthed route: `, route);
         }
         return isMatch;
@@ -85,7 +88,7 @@ export function evaluateAuthMiddlewareRules(
     } else if (rules.authed?.some(
       (route: NavigationPath): boolean => {
         const isMatch: boolean = comparePath(currentPath, route);
-        if (process.env.NODE_ENV === 'test' && isMatch) {
+        if (environment === 'test' && isMatch) {
           console.log(`[AuthMiddleware] Current path \"${currentPath.join("/")}\" matches authed route: `, route);
         }
         return isMatch;
@@ -96,7 +99,7 @@ export function evaluateAuthMiddlewareRules(
     } else if (rules.api.some(
       (route: NavigationPath): boolean => {
         const isMatch: boolean = comparePath(currentPath, route);
-        if (process.env.NODE_ENV === 'test' && isMatch) {
+        if (environment === 'test' && isMatch) {
           console.log(`[AuthMiddleware] Current path \"${currentPath.join("/")}\" matches api route: `, route);
         }
         return isMatch;
@@ -104,7 +107,7 @@ export function evaluateAuthMiddlewareRules(
     )) {
       pageSecurityLevel = 'api';
     } else {
-      if (process.env.NODE_ENV === 'development') {
+      if (environment === 'development') {
         console.log(`[AuthMiddleware] Current path \"${currentPath.join("/")}\" does not match any route rule-- treating as 'authed' by default`);
       }
       pageSecurityLevel = 'authed';
@@ -114,6 +117,6 @@ export function evaluateAuthMiddlewareRules(
     console.error(e);
     pageSecurityLevel = defaultPageSecurityLevel satisfies 'authed';
   }
-  
+
   return [authStatus.status, 'on', pageSecurityLevel] as const;
 };

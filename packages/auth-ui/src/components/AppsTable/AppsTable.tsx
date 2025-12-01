@@ -21,10 +21,6 @@ export interface AppsDatatableProps {
 export function AppsTable(
   { queryType, preloaded }: AppsDatatableProps
 ): ReactElement {
-  if (process.env.NODE_ENV === 'development') {
-    console.log("[AppsTable] Received preloaded data: ", preloaded);
-  }
-
   const {toast} = useToast()
   const apps: SWRResponse<SchemaVaultsApp[], Error> = useAppsList({
     toast,

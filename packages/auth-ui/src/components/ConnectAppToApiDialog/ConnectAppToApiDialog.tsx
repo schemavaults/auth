@@ -24,13 +24,14 @@ import {
   DialogTrigger,
   useForm,
 } from "@schemavaults/ui";
-import { useAuth } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import type { AccessToken } from "@schemavaults/auth-common";
 import {
   type AppToApiPermission,
   appToApiPermissionSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlugZap } from "lucide-react";
@@ -49,9 +50,10 @@ export function ConnectAppToApiDialog({}: ConnectAppToApiDialogProps): ReactElem
   });
   const auth = useAuth();
   const { mutate } = useSWRConfig();
+  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
   async function onSubmit(values: AppToApiPermission): Promise<void> {
-    if (process.env.NODE_ENV === "development") {
+    if (environment === "development") {
       console.log("Submitting App-to-API Permission creation form...");
       toast({
         variant: "default",
@@ -125,8 +127,9 @@ export function ConnectAppToApiDialog({}: ConnectAppToApiDialogProps): ReactElem
         );
       }
 
-      if (process.env.NODE_ENV === "development")
+      if (environment === "development") {
         console.log("Received response: ", body);
+      }
     } catch (e: unknown) {
       toast({
         variant: "destructive",

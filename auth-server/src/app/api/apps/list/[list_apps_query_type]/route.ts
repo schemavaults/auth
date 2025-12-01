@@ -13,6 +13,8 @@ import {
   listAppsQueryTypeSchema,
   type ListAppsQueryResponse,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  type SchemaVaultsAppEnvironment,
+  getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import {
@@ -31,7 +33,8 @@ export async function POST(
   req: NextRequest,
   input: { params: Promise<{ list_apps_query_type: string }> },
 ): Promise<NextResponse> {
-  if (process.env.NODE_ENV === "development") {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+  if (environment === "development") {
     console.log("[/api/apps/list/[list_apps_query_type]] GET request received");
   }
 
@@ -39,7 +42,7 @@ export async function POST(
     (await input.params).list_apps_query_type,
   );
   if (!parsed_query_type.success) {
-    if (process.env.NODE_ENV === "development")
+    if (environment === "development")
       console.log("Invalid list apps query type, not a string");
     return NextResponse.json(
       {
@@ -54,7 +57,7 @@ export async function POST(
   const list_apps_query_type: ListAppsQueryType = parsed_query_type.data;
   const type: ListAppsQueryType = list_apps_query_type;
 
-  if (process.env.NODE_ENV === "development") {
+  if (environment === "development") {
     console.log(
       `[/api/apps/list/${list_apps_query_type}] Received GET request`,
     );
@@ -175,14 +178,14 @@ export async function POST(
         );
 
       case "authorized":
-        if (process.env.NODE_ENV === "development") {
+        if (environment === "development") {
           console.log("Attempting to list authorized applications...");
         }
 
         const user_authorized_apps: AuthorizedAppDeclaration[] =
           await authorizedAppsRegistry.listAuthorizedAppsForUser(userData.uid);
 
-        if (process.env.NODE_ENV === "development") {
+        if (environment === "development") {
           console.log(
             "Received list of authorization applications: ",
             user_authorized_apps,

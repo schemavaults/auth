@@ -6,7 +6,7 @@ import {
 import { describe, test, expect } from "bun:test";
 import { MockUser } from "@/tests/MockUser";
 import { generateJWT, GenerateJWTOptions } from "@/jwt/generate";
-import { baseStorageRegionIdSchema, StorageRegionID } from "@schemavaults/auth-common";
+import { audienceRefSchema } from "@schemavaults/auth-common";
 
 const env: SchemaVaultsAppEnvironment = "test";
 
@@ -51,15 +51,15 @@ async function isGenerateAndDecodeTokenForStorageRegionSuccess(
 
 describe("JWTs for Vault FileSystem", () => {
   test("Access JWT with a fs server audience can be generated and decoded", async () => {
-    const region_ids: readonly StorageRegionID[] = [
+    const region_ids = [
       "alpha-fs",
       "us-east1",
       "my-region",
-    ];
+    ] as const satisfies readonly string[];
 
     expect(
       region_ids.every((region_id): boolean => {
-        return baseStorageRegionIdSchema.safeParse(region_id).success;
+        return audienceRefSchema.safeParse(region_id).success;
       }),
       "Expected every example storage region IDs to be valid",
     ).toBeTrue();
@@ -82,7 +82,7 @@ describe("JWTs for Vault FileSystem", () => {
 
     expect(
       invalid_region_ids.every((region_id): boolean => {
-        return !baseStorageRegionIdSchema.safeParse(region_id).success;
+        return !audienceRefSchema.safeParse(region_id).success;
       }),
       "Expected every example storage region ID to be invalid",
     ).toBeTrue();

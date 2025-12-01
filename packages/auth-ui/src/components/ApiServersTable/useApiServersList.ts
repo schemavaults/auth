@@ -1,4 +1,4 @@
-import { useAuth } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment, useAuth, type SchemaVaultsAppEnvironment } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
 import useSWR, { useSWRConfig } from "swr";
 import type { AccessToken } from "@schemavaults/auth-common";
@@ -23,6 +23,7 @@ export function clearUseApiServersCache(mutate: ReturnType<typeof useSWRConfig>[
 
 export function useApiServersList({ toast, queryType }: UseApiServersListOptions) {
   const auth = useAuth();
+  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
   const endpoint = getApiServersListEndpoint(queryType);
 
@@ -65,10 +66,12 @@ export function useApiServersList({ toast, queryType }: UseApiServersListOptions
 
     try {
       const origin = window.location.origin;
-      if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+      if (environment !== 'development' && environment !== 'test') {
         if (!origin.startsWith('https://')) throw new Error("Origin must use HTTPS in production")
       }
-      if (process.env.NODE_ENV === 'development') console.log(`[useApiServersList] Sending request to endpoint \"${endpoint}\" from origin \"${origin}\"`)
+      if (environment === 'development') {
+        console.log(`[useApiServersList] Sending request to endpoint \"${endpoint}\" from origin \"${origin}\"`)
+      }
       const listAppsResponse = await fetch(endpoint, {
         headers: new Headers({
           Authorization: `Bearer ${auth_access_jwt.token satisfies string}`

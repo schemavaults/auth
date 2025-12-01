@@ -50,10 +50,3 @@ export {
   SCHEMAVAULTS_ORGANIZATION_ID,
 } from "./organizations";
 export type { OrganizationID, OrganizationDefinition } from "./organizations";
-
-// Vault FS Server Audience IDs
-export {
-  type StorageRegionID,
-  baseStorageRegionIdSchema,
-  fsServerAudienceIdSchema,
-} from "./fs-server-audience-id-schema";

@@ -7,8 +7,10 @@ import {
 } from "@/lib/auth-db";
 import type { UserData } from "@schemavaults/auth-common";
 import {
+    getAppEnvironment,
   type SchemaVaultsAppDomainRef,
   schemaVaultsAppDomainRefSchema,
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
@@ -24,7 +26,8 @@ import {
  * @returns The response
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  if (process.env.NODE_ENV === "development") {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+  if (environment === "development") {
     console.log("[/api/apps/domains/create] POST request received");
   }
 

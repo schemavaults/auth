@@ -27,9 +27,6 @@ function getValidDuration(type: AuthTokenTypes): number {
     default:
       throw new Error("Invalid token type");
   }
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[getValidDuration] Token of type \"${type}\" valid for ${tokenValidDuration} seconds`);
-  }
   return tokenValidDuration;
 }
 
@@ -37,7 +34,7 @@ function getValidDuration(type: AuthTokenTypes): number {
 // Expiration time (in seconds) for the JWT token. After the "issued at" time + this time, the token will be invalid.
 
 /**
- * 
+ *
  * @param type Access or refresh token -- determines the expiry time
  * @param iat The time the token was issued at (in milliseconds)
  * @returns The unix timestamp the token will expire at (in milliseconds)
@@ -50,7 +47,7 @@ export function getExpiryTime(type: AuthTokenTypes, iat: number): number {
 }
 
 /**
- * 
+ *
  * @param type Access or refresh token -- determines the expiry time
  * @returns A string representing the duration that the token is valid for, parsed by the jose library
  */

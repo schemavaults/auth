@@ -1,8 +1,7 @@
-import type { AccessToken, RefreshToken, UserData } from "@schemavaults/auth-common";
+import type { AccessToken, RefreshToken, UserData, CodeChallengeWithDetails } from "@schemavaults/auth-common";
 import type { Credentials } from "@/types/credentials";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
-import type { CodeChallengeWithDetails } from "@schemavaults/auth/dist/pkce/code_challenge";
 import type { AppId } from "@schemavaults/app-definitions";
 
 export interface ISchemaVaultsAuthClient {

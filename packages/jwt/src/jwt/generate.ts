@@ -136,7 +136,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
 
     const expiryTime: number = getExpiryTime(type, iat);
 
-    if (process.env.NODE_ENV === "development") {
+    if (env === "development") {
       console.log(`[generateJWT] Generated ${type} JWT: `, jwt);
     }
 

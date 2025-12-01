@@ -5,11 +5,13 @@ import type {
   AuthorizedAppDeclaration,
   AuthorizedAppsRegistry,
 } from "./authorized-apps-registry";
-import type {
-  AppId,
-  ListAppsQueryType,
-  SchemaVaultsApp,
-  SchemaVaultsAppDomainRef,
+import {
+    getAppEnvironment,
+  type AppId,
+  type ListAppsQueryType,
+  type SchemaVaultsApp,
+  type SchemaVaultsAppDomainRef,
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { getDefinitionForAuthorizedDeclaration } from "./get-app-from-authorized-declaration";
 
@@ -66,6 +68,7 @@ async function returnAppsWithDomains(
 export async function preloadAppsTable(
   opts: QueryAppsInputOptions,
 ): Promise<PreloadedAppsTableDataWithDomainRefs> {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const userData: UserData = opts.user;
 
   try {
@@ -92,7 +95,7 @@ export async function preloadAppsTable(
         return await returnAppsWithDomains(public_apps, opts.appsRegistry);
 
       case "authorized":
-        if (process.env.NODE_ENV === "development") {
+        if (environment === "development") {
           console.log("Attempting to list authorized applications...");
         }
 
@@ -101,7 +104,7 @@ export async function preloadAppsTable(
             userData.uid,
           );
 
-        if (process.env.NODE_ENV === "development") {
+        if (environment === "development") {
           console.log(
             "Received list of authorization applications: ",
             user_authorized_apps,

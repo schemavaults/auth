@@ -26,13 +26,14 @@ import {
   DialogTrigger,
   useForm,
 } from "@schemavaults/ui";
-import { useAuth } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import type { AccessToken } from "@schemavaults/auth-common";
 import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDefinitionSchema,
+  type SchemaVaultsAppEnvironment
 } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Server } from "lucide-react";
@@ -64,12 +65,13 @@ export function CreateApiServerDialog({
     },
   });
   const auth = useAuth();
+  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const { mutate } = useSWRConfig();
 
   async function onSubmit(
     values: SchemaVaultsApiServerDefinition,
   ): Promise<void> {
-    if (process.env.NODE_ENV === "development") {
+    if (environment === "development") {
       console.log("Submitting API creation form...");
       toast({
         variant: "default",
@@ -93,7 +95,9 @@ export function CreateApiServerDialog({
         token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
         audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
       });
-      if (!auth_jwt) throw new Error("Failed to acquire auth access token");
+      if (!auth_jwt) {
+        throw new Error("Failed to acquire auth access token");
+      }
       auth_access_jwt = auth_jwt;
     } catch (e: unknown) {
       toast({
@@ -141,8 +145,9 @@ export function CreateApiServerDialog({
         );
       }
 
-      if (process.env.NODE_ENV === "development")
+      if (environment === "development") {
         console.log("Received response: ", body);
+      }
     } catch (e: unknown) {
       toast({
         variant: "destructive",
