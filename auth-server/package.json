@@ -18,7 +18,7 @@
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/auth-server-sdk": "workspace:*",
-    "@schemavaults/theme": "0.22.18",
+    "@schemavaults/theme": "0.24.0",
     "zod": "3.23.8",
     "swr": "2.3.4",
     "@schemavaults/dbh": "0.5.1",
