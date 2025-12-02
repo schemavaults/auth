@@ -25,14 +25,14 @@ import {
   DialogTrigger,
   useForm,
 } from "@schemavaults/ui";
-import { useAuth } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
   type InviteCodeDefinition,
   inviteCodeDefinitionSchema,
   type AccessToken,
 } from "@schemavaults/auth-common";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SwatchBook } from "lucide-react";
 
@@ -51,6 +51,7 @@ export function CreateInviteCodeDialog({}: CreateInviteCodeDialogProps): ReactEl
   });
   const auth = useAuth();
   const { mutate } = useSWRConfig();
+  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
   const clearInviteCodesCache = useCallback((): void => {
     mutate(
@@ -62,7 +63,7 @@ export function CreateInviteCodeDialog({}: CreateInviteCodeDialogProps): ReactEl
   }, [mutate]);
 
   async function onSubmit(values: InviteCodeDefinition): Promise<void> {
-    if (process.env.NODE_ENV === "development") {
+    if (environment === "development") {
       console.log("Submitting invite code creation form with values: ", values);
       toast({
         variant: "default",
@@ -138,8 +139,9 @@ export function CreateInviteCodeDialog({}: CreateInviteCodeDialogProps): ReactEl
         );
       }
 
-      if (process.env.NODE_ENV === "development")
+      if (environment === "development") {
         console.log("Received response: ", body);
+      }
     } catch (e: unknown) {
       toast({
         variant: "destructive",
