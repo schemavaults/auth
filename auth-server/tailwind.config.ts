@@ -7,13 +7,12 @@ import SchemaVaultsTailwindConfigFactory from "@schemavaults/theme";
 let config: Config;
 try {
   // Initialize the config factory
-  const configFactory = new SchemaVaultsTailwindConfigFactory();
+  const configFactory = new SchemaVaultsTailwindConfigFactory({ debug: true });
 
   // Generate and export the config
   config = configFactory.createConfig({
     content: [
       "./src/**/*.{tsx,jsx,js,ts}",
-      "./app/**/*.{tsx,jsx,js,ts}",
       "@schemavaults/ui",
       "@schemavaults/auth-ui",
     ],
