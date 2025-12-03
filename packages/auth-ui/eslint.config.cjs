@@ -1,4 +1,3 @@
-const { FlatCompat } = require("@eslint/eslintrc");
 const js = require("@eslint/js");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
@@ -6,11 +5,6 @@ const reactPlugin = require("eslint-plugin-react");
 const reactHooksPlugin = require("eslint-plugin-react-hooks");
 const jsxA11yPlugin = require("eslint-plugin-jsx-a11y");
 const globals = require("globals");
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-});
 
 module.exports = [
   // Base recommended configs
