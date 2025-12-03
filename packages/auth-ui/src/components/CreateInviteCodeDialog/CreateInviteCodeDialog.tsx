@@ -270,3 +270,5 @@ export function CreateInviteCodeDialog(): ReactElement {
     </Dialog>
   );
 }
+
+export default CreateInviteCodeDialog
