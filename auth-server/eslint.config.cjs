@@ -1,14 +1,16 @@
 const js = require("@eslint/js");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
-const reactPlugin = require("eslint-plugin-react");
-const reactHooksPlugin = require("eslint-plugin-react-hooks");
-const jsxA11yPlugin = require("eslint-plugin-jsx-a11y");
 const globals = require("globals");
+const nextVitals = require('eslint-config-next/core-web-vitals')
+
 
 module.exports = [
   // Base recommended configs
   js.configs.recommended,
+
+  // NextJS Web Vitals recommended rules
+  ...nextVitals,
 
   // Main config
   {
@@ -33,9 +35,6 @@ module.exports = [
 
     plugins: {
       "@typescript-eslint": tsPlugin,
-      "react": reactPlugin,
-      "react-hooks": reactHooksPlugin,
-      "jsx-a11y": jsxA11yPlugin,
     },
 
     settings: {
@@ -47,16 +46,6 @@ module.exports = [
     rules: {
       // TypeScript recommended rules
       ...tsPlugin.configs.recommended.rules,
-
-      // React recommended rules
-      ...reactPlugin.configs.recommended.rules,
-
-      // JSX a11y recommended rules
-      ...jsxA11yPlugin.configs.recommended.rules,
-
-      // React Hooks rules
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
 
       // Custom overrides
       "react/react-in-jsx-scope": "off",
@@ -79,6 +68,6 @@ module.exports = [
 
   // Ignore patterns
   {
-    ignores: ["dist/**", "node_modules/**", "*.config.js"],
+    ignores: ["dist/**", "node_modules/**", "*.config.js", ".next/**", "out/**", "build/**", "next-env.d.ts"],
   },
 ];
