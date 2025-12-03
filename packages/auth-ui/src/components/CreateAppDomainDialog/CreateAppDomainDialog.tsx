@@ -2,7 +2,6 @@
 
 import {
   Button,
-  Checkbox,
   Form,
   FormControl,
   FormDescription,
@@ -11,10 +10,9 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Textarea,
   useToast,
 } from "@schemavaults/ui";
-import { type ReactElement, useTransition } from "react";
+import { type ReactElement, useMemo, useTransition } from "react";
 
 import {
   Dialog,
@@ -50,10 +48,14 @@ interface CreateFrontendAppDialogProps {
   onOpenChange: (value: boolean) => void;
 }
 
-let default_app_domain_ref_id: string = "";
-try {
-  default_app_domain_ref_id = crypto.randomUUID();
-} catch (e: unknown) {}
+function generateDefaultAppDomainRefId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch (e: unknown) {
+    console.error("Failed to generate random UUID as new app domain ref ID: ", e);
+    return ""
+  }
+}
 
 export function CreateAppDomainDialog({
   clearFrontendWebAppDomainsCache,
@@ -62,20 +64,25 @@ export function CreateAppDomainDialog({
   onOpenChange,
 }: CreateFrontendAppDialogProps): ReactElement {
   const { toast } = useToast();
-  const form = useForm<SchemaVaultsAppDomainRef>({
-    resolver: zodResolver(schemaVaultsAppDomainRefSchema),
-    defaultValues: {
+  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
+
+  const defaultValues: Partial<SchemaVaultsAppDomainRef> = useMemo(() => {
+    return {
       app_id,
       domain: "",
-      app_domain_ref_id: default_app_domain_ref_id,
-      environment: "development",
+      app_domain_ref_id: generateDefaultAppDomainRefId(),
+      environment,
       created_at: Date.now(),
-    },
+    }
+  }, [environment, app_id])
+
+  const form = useForm<SchemaVaultsAppDomainRef>({
+    resolver: zodResolver(schemaVaultsAppDomainRefSchema),
+    defaultValues,
   });
   const auth = useAuth();
   const { mutate } = useSWRConfig();
   const [submitting, startSubmitting] = useTransition();
-  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
   async function onSubmit(values: SchemaVaultsAppDomainRef): Promise<void> {
     if (environment === "development") {
@@ -139,8 +146,10 @@ export function CreateAppDomainDialog({
         );
       }
 
-      if (!body.hasOwnProperty("success"))
+      if (!Object.hasOwn(body, "success")) {
         throw new Error("No success field in response");
+      }
+
 
       if (
         !(
@@ -234,12 +243,18 @@ export function CreateAppDomainDialog({
                 <FormItem className="flex flex-row gap-2 items-center flex-wrap">
                   <FormLabel className="w-full">Environment</FormLabel>
                   <FormControl>
-                    <RadioGroup>
+                    <RadioGroup
+                      onBlur={field.onBlur}
+                      onChange={field.onChange}
+                      value={field.value}
+                      disabled={field.disabled}
+                      name={field.name}
+                    >
                       {schemaVaultsAppEnvironments.map(
                         (app_env: SchemaVaultsAppEnvironment) => {
                           const environment_radio_button_id: string = `environment-radio-item-${app_env}`;
                           return (
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2" key={app_env}>
                               <RadioGroupItem
                                 value={app_env}
                                 id={environment_radio_button_id}

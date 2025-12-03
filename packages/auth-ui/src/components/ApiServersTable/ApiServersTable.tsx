@@ -19,7 +19,7 @@ export interface ApiServersDatatableProps {
 export function ApiServersTable({ queryType }: ApiServersDatatableProps): ReactElement {
   const {toast} = useToast()
   const apis: SWRResponse<SchemaVaultsApiServerDefinition[], Error> = useApiServersList({ toast, queryType });
-  const { isLoading, data, error } = apis;
+  const { isLoading, data } = apis;
 
   if (!data && isLoading) {
     return (

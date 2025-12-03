@@ -14,7 +14,7 @@ import {
   Textarea,
   useToast,
 } from "@schemavaults/ui";
-import { type ReactElement, useTransition } from "react";
+import { type ReactElement, useMemo, useTransition } from "react";
 
 import {
   Dialog,
@@ -44,25 +44,24 @@ interface CreateFrontendAppDialogProps {
   ) => void;
 }
 
-let default_app_id: string = "";
-try {
-  default_app_id = crypto.randomUUID();
-} catch (e: unknown) {}
-
 export function CreateAppDialog({
   clearFrontendAppsCache,
 }: CreateFrontendAppDialogProps): ReactElement {
   const { toast } = useToast();
 
-  const form = useForm<SchemaVaultsApp>({
-    resolver: zodResolver(schemaVaultsAppDefinitionSchema),
-    defaultValues: {
+  const defaultValues: Partial<SchemaVaultsApp> = useMemo(() => {
+    return {
       app_name: "My Web App",
       app_id: crypto.randomUUID(),
       app_description: "Interact with my API",
       public: false,
       created_at: Date.now(),
-    },
+    }
+  }, [])
+
+  const form = useForm<SchemaVaultsApp>({
+    resolver: zodResolver(schemaVaultsAppDefinitionSchema),
+    defaultValues,
   });
   const auth = useAuth();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
@@ -78,88 +77,92 @@ export function CreateAppDialog({
       });
     }
 
-    const authClient = auth.ready ? auth.client.current : undefined;
-    if (!authClient) {
+    startSubmitting(async () => {
+      const authClient = auth.ready ? auth.client.current : undefined;
+      if (!authClient) {
+        toast({
+          variant: "destructive",
+          title: "Auth client not ready!",
+          description: `Cannot acquire an access token to create app yet.`,
+        });
+        return;
+      }
+
+      let auth_access_jwt: AccessToken;
+      try {
+        const auth_jwt = await authClient.acquireAccessToken({
+          token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+          audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+        });
+        if (!auth_jwt) throw new Error("Failed to acquire auth access token");
+        auth_access_jwt = auth_jwt;
+      } catch (e: unknown) {
+        toast({
+          variant: "destructive",
+          title: "Error loading authentication access token",
+          description:
+            e instanceof Error ? e.message : `Failed to prepare network request`,
+        });
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/apps/create", {
+          method: "POST",
+          body: JSON.stringify(values),
+          headers: {
+            Authorization: `Bearer ${auth_access_jwt.token}}`,
+          },
+        });
+        if (!response.ok || response.status !== 200) {
+          throw new Error(
+            `Frontend app creation request has bad status: ${response.status}`,
+          );
+        }
+
+        const body: object = await response.json();
+        if (typeof body !== "object") {
+          throw new Error(
+            "Expected JSON object response from frontend app creation attempt",
+          );
+        }
+
+        if (!Object.hasOwn(body, "success")) {
+          throw new Error("No success field in response");
+        }
+
+        if (
+          !(
+            typeof (body as { success: unknown }).success === "boolean" &&
+            (body as { success: boolean }).success
+          )
+        ) {
+          console.error(body);
+          throw new Error(
+            "Frontend app creation response has success flag set to false",
+          );
+        }
+
+        if (environment === "development") {
+          console.log("Received response: ", body);
+        }
+      } catch (e: unknown) {
+        toast({
+          variant: "destructive",
+          title: "Failed to create new frontend application",
+          description:
+            e instanceof Error ? e.message : `Failed to send network request`,
+        });
+        return;
+      }
+
       toast({
-        variant: "destructive",
-        title: "Auth client not ready",
-        description: `Cannot acquire an access token yet`,
+        variant: "default",
+        title: "Created new frontend client application successfully",
       });
+      clearFrontendAppsCache(mutate);
       return;
-    }
-
-    let auth_access_jwt: AccessToken;
-    try {
-      const auth_jwt = await authClient.acquireAccessToken({
-        token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-        audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      });
-      if (!auth_jwt) throw new Error("Failed to acquire auth access token");
-      auth_access_jwt = auth_jwt;
-    } catch (e: unknown) {
-      toast({
-        variant: "destructive",
-        title: "Error loading authentication access token",
-        description:
-          e instanceof Error ? e.message : `Failed to prepare network request`,
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/apps/create", {
-        method: "POST",
-        body: JSON.stringify(values),
-        headers: {
-          Authorization: `Bearer ${auth_access_jwt.token}}`,
-        },
-      });
-      if (!response.ok || response.status !== 200) {
-        throw new Error(
-          `Frontend app creation request has bad status: ${response.status}`,
-        );
-      }
-
-      const body: object = await response.json();
-      if (typeof body !== "object") {
-        throw new Error(
-          "Expected JSON object response from frontend app creation attempt",
-        );
-      }
-
-      if (!body.hasOwnProperty("success"))
-        throw new Error("No success field in response");
-
-      if (
-        !(
-          typeof (body as { success: unknown }).success === "boolean" &&
-          (body as { success: boolean }).success
-        )
-      ) {
-        console.error(body);
-        throw new Error(
-          "Frontend app creation response has success flag set to false",
-        );
-      }
-
-      if (environment === "development") {
-        console.log("Received response: ", body);
-      }
-    } catch (e: unknown) {
-      toast({
-        variant: "destructive",
-        title: "Failed to create new frontend application",
-        description:
-          e instanceof Error ? e.message : `Failed to send network request`,
-      });
-      return;
-    }
-
-    toast({
-      variant: "default",
-      title: "Created new frontend client application successfully",
-    });
-    clearFrontendAppsCache(mutate);
+    })
     return;
   }
 

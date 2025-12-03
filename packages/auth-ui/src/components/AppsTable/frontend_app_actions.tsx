@@ -67,7 +67,7 @@ export function FrontendApplicationActions(
     }
 
     return launchable;
-  }, [appDomains.data])
+  }, [appDomains.data, environment])
 
   const launchAppDisabled: boolean = (
     !Array.isArray(appDomains.data) ||

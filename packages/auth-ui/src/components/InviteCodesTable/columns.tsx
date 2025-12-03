@@ -5,13 +5,12 @@ import type { ReactElement } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Checkbox, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { ArrowUpDown, ClipboardCopy, Cog, MoreHorizontal } from "lucide-react";
+import { ClipboardCopy, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";

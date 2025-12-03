@@ -1,6 +1,8 @@
+"use client";
+
 import type { AccessToken } from "@schemavaults/auth-common";
-import { HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS, type HardcodedAppId, isHardcodedAppId, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsApp, type SchemaVaultsAppDomainRef, schemaVaultsAppDomainRefSchema } from "@schemavaults/app-definitions";
-import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
+import { HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS, isHardcodedAppId, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppDomainRef, schemaVaultsAppDomainRefSchema } from "@schemavaults/app-definitions";
+import { useAuth } from "@schemavaults/auth-react-provider";
 import { toast } from "@schemavaults/ui";
 import type { SWRResponse } from "swr";
 import useSWR from "swr";
@@ -17,7 +19,6 @@ export interface UseAppDomainsInput {
 
 export function useAppDomains(input: UseAppDomainsInput): SWRResponse<SchemaVaultsAppDomainRef[], Error> {
   const app_id: string = typeof input === 'string' ? input : input.app_id;
-  const environment = useAppEnvironment();
   const auth = useAuth();
 
   return useSWR(getUseAppDomainsListEndpoint(app_id), async (): Promise<SchemaVaultsAppDomainRef[]> => {

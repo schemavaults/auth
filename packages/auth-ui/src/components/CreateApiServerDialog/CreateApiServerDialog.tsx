@@ -14,7 +14,7 @@ import {
   Textarea,
   useToast,
 } from "@schemavaults/ui";
-import type { ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 
 import {
   Dialog,
@@ -44,25 +44,33 @@ interface CreateApiServerDialogProps {
   ) => void;
 }
 
-let default_api_server_id: string = "";
-try {
-  default_api_server_id = crypto.randomUUID();
-} catch (e: unknown) {}
+function generateDefaultApiServerId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch (e: unknown) {
+    console.error("Failed to generate default API server UUID: ", e);
+    return ""
+  }
+}
 
 export function CreateApiServerDialog({
   clearApiServersCache,
 }: CreateApiServerDialogProps): ReactElement {
   const { toast } = useToast();
 
-  const form = useForm<SchemaVaultsApiServerDefinition>({
-    resolver: zodResolver(schemaVaultsApiServerDefinitionSchema),
-    defaultValues: {
-      api_server_name: "My Resource Server",
-      api_server_id: default_api_server_id,
-      api_server_description: "My API that does cool stuff",
+  const defaultValues: Partial<SchemaVaultsApiServerDefinition> = useMemo(() => {
+    return {
+      api_server_name: "",
+      api_server_id: generateDefaultApiServerId(),
+      api_server_description: "",
       public: false,
       created_at: Date.now(),
-    },
+    }
+  }, [])
+
+  const form = useForm<SchemaVaultsApiServerDefinition>({
+    resolver: zodResolver(schemaVaultsApiServerDefinitionSchema),
+    defaultValues,
   });
   const auth = useAuth();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
@@ -130,8 +138,9 @@ export function CreateApiServerDialog({
         );
       }
 
-      if (!body.hasOwnProperty("success"))
+      if (!Object.hasOwn(body, "success")) {
         throw new Error("No success field in response");
+      }
 
       if (
         !(

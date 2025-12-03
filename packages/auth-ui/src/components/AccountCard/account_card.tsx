@@ -13,8 +13,8 @@ import {
 } from "@schemavaults/ui";
 import type { UserData } from "@schemavaults/auth-react-provider";
 import SignOutButton from "@/components/SignOutButton";
-import { ViewFullUserProfileButton } from "./view_full_user_profile";
-import { ViewAdminDashboardButton } from "./view_admin_page_link";
+import ViewFullUserProfileButton from "./view_full_user_profile";
+import ViewAdminDashboardButton from "./view_admin_page_link";
 import {
   getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,

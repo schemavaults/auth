@@ -1,4 +1,6 @@
-import { useAppEnvironment, useAuth, type SchemaVaultsAppEnvironment } from "@schemavaults/auth-react-provider";
+"use client";
+
+import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
 import useSWR, { useSWRConfig } from "swr";
 import type { AccessToken } from "@schemavaults/auth-common";
@@ -70,7 +72,7 @@ export function useAppsList({ toast, queryType, initialData }: UseAppsListOption
         if (!origin.startsWith('https://')) throw new Error("Origin must be HTTPS in production")
       }
       if (environment === 'development') {
-        console.log(`[useAppsList] Sending request to endpoint \"${endpoint}\" from origin \"${origin}\"`)
+        console.log(`[useAppsList] Sending request to endpoint "${endpoint}" from origin "${origin}"`)
       }
       const listAppsResponse = await fetch(endpoint, {
         headers: new Headers({
@@ -82,7 +84,7 @@ export function useAppsList({ toast, queryType, initialData }: UseAppsListOption
       const listAppsBody: unknown = await listAppsResponse.json();
       if (typeof listAppsBody !== 'object') throw new Error("Failed to list apps; response not an object");
       const listAppsResponseObject = listAppsBody as ListAppsQueryResponse;
-      if (!listAppsResponseObject.hasOwnProperty('success') || !listAppsResponseObject.success) {
+      if (!Object.hasOwn(listAppsResponseObject, 'success') || !listAppsResponseObject.success) {
         throw new Error("List apps response has success = false");
       }
       return listAppsResponseObject.list;

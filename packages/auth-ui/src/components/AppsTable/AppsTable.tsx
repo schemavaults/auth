@@ -7,7 +7,7 @@ import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
 import { getAppsTableColumns } from "./columns";
 import { clearUseAppsListCache, useAppsList } from "./useAppsList";
-import type { ListAppsQueryType, SchemaVaultsApp, SchemaVaultsAppDomainRef } from "@schemavaults/app-definitions";
+import type { ListAppsQueryType, SchemaVaultsApp } from "@schemavaults/app-definitions";
 import { CreateAppDialog } from "../CreateAppDialog";
 import { Loader2 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -25,9 +25,9 @@ export function AppsTable(
   const apps: SWRResponse<SchemaVaultsApp[], Error> = useAppsList({
     toast,
     queryType,
-    initialData: (!!preloaded) ? preloaded.apps : undefined
+    initialData: (preloaded) ? preloaded.apps : undefined
   });
-  const { isLoading, data, error } = apps;
+  const { isLoading, data } = apps;
   const columns = useMemo((): ColumnDef<SchemaVaultsApp>[] => {
     return getAppsTableColumns(queryType, preloaded);
   }, [queryType, preloaded]);

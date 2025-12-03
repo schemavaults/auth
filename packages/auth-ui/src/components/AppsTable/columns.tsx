@@ -3,7 +3,7 @@
 import type { ReactElement } from "react"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { Checkbox, cn } from "@schemavaults/ui";
+import { Checkbox } from "@schemavaults/ui";
 import type { ListAppsQueryType, SchemaVaultsApp } from "@schemavaults/app-definitions";
 import { FrontendApplicationActions } from "./frontend_app_actions";
 import { AppDomainsList } from "./AppDomainsList";
@@ -55,7 +55,7 @@ export function getAppsTableColumns(
       id: "domains",
       header: "Domains",
       cell: ({ row }) => {
-        let app_id: string;
+        let app_id: string | undefined = undefined;
         try {
           const id: unknown = row.getValue('id');
           if (typeof id !== 'string') {
@@ -63,6 +63,11 @@ export function getAppsTableColumns(
           }
           app_id = id;
         } catch (e: unknown) {
+          console.error("Failed to load app ID for 'domains' cell in AppsTable: ", e);
+          app_id = undefined;
+        }
+
+        if (typeof app_id !== 'string') {
           return (
             <p className="text-destructive">
               Invalid app ID; not a string

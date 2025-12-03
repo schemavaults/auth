@@ -70,7 +70,7 @@ export function useApiServersList({ toast, queryType }: UseApiServersListOptions
         if (!origin.startsWith('https://')) throw new Error("Origin must use HTTPS in production")
       }
       if (environment === 'development') {
-        console.log(`[useApiServersList] Sending request to endpoint \"${endpoint}\" from origin \"${origin}\"`)
+        console.log(`[useApiServersList] Sending request to endpoint "${endpoint}" from origin "${origin}"`)
       }
       const listAppsResponse = await fetch(endpoint, {
         headers: new Headers({
@@ -82,7 +82,7 @@ export function useApiServersList({ toast, queryType }: UseApiServersListOptions
       const listAppsBody: unknown = await listAppsResponse.json();
       if (typeof listAppsBody !== 'object') throw new Error("Failed to list API servers; response not an object");
       const listAppsResponseObject = listAppsBody as ListApiServersQueryResponse;
-      if (!listAppsResponseObject.hasOwnProperty('success') || !listAppsResponseObject.success) {
+      if (!Object.hasOwn(listAppsResponseObject, 'success') || !listAppsResponseObject.success) {
         throw new Error("List API servers response has success = false");
       }
       return listAppsResponseObject.list;

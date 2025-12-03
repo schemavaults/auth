@@ -11,9 +11,8 @@ import {
   cn,
 } from "@schemavaults/ui";
 import {
-  ISchemaVaultsAuthClient,
+  type ISchemaVaultsAuthClient,
   useAuth,
-  useCurrentUser,
 } from "@schemavaults/auth-react-provider";
 import InviteCodesTable from "@/components/InviteCodesTable";
 import {
@@ -32,7 +31,6 @@ export interface InviteCodesCardProps {
 
 export function InviteCodesCard(props: InviteCodesCardProps): ReactElement {
   const authClient = useAuth();
-  const currentUser = useCurrentUser();
 
   const cardTitle = props.cardTitle ?? "Invite Codes";
   const cardDescription =

@@ -25,7 +25,6 @@ import {
   useForm,
 } from "@schemavaults/ui";
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
-import { useSWRConfig } from "swr";
 import type { AccessToken } from "@schemavaults/auth-common";
 import {
   type AppToApiPermission,
@@ -36,9 +35,8 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlugZap } from "lucide-react";
 
-interface ConnectAppToApiDialogProps {}
 
-export function ConnectAppToApiDialog({}: ConnectAppToApiDialogProps): ReactElement {
+export function ConnectAppToApiDialog(): ReactElement {
   const { toast } = useToast();
   const form = useForm<AppToApiPermission>({
     resolver: zodResolver(appToApiPermissionSchema),
@@ -49,7 +47,6 @@ export function ConnectAppToApiDialog({}: ConnectAppToApiDialogProps): ReactElem
     },
   });
   const auth = useAuth();
-  const { mutate } = useSWRConfig();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
   async function onSubmit(values: AppToApiPermission): Promise<void> {
@@ -112,8 +109,9 @@ export function ConnectAppToApiDialog({}: ConnectAppToApiDialogProps): ReactElem
         );
       }
 
-      if (!body.hasOwnProperty("success"))
+      if (!Object.hasOwn(body, "success")) {
         throw new Error("No success field in response");
+      }
 
       if (
         !(

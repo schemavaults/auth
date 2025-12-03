@@ -4,11 +4,11 @@ import { Button, useToast } from "@schemavaults/ui";
 import { Loader2, SlidersHorizontal } from "lucide-react";
 import { useTransition, type ReactElement } from "react";
 
-export interface ViewFullUserProfileButton {
+export interface ViewFullUserProfileButtonProps {
   navigate: () => Promise<void>;
 }
 
-export function ViewFullUserProfileButton({ navigate }: ViewFullUserProfileButton): ReactElement {
+export function ViewFullUserProfileButton({ navigate }: ViewFullUserProfileButtonProps): ReactElement {
   const [navigating, startNavigating] = useTransition();
   const {toast} = useToast();
 
@@ -44,3 +44,5 @@ export function ViewFullUserProfileButton({ navigate }: ViewFullUserProfileButto
     </Button>
   );
 }
+
+export default ViewFullUserProfileButton;

@@ -5,7 +5,7 @@ import type { ReactElement } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Checkbox } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { ArrowUpDown, ClipboardCopy, Cog, MoreHorizontal } from "lucide-react"
+import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@schemavaults/ui";
 import type { SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
 
@@ -51,7 +51,7 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
     id: "actions",
     cell: ({ row }): ReactElement => {
       const api = row.original
- 
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

@@ -2,7 +2,6 @@
 
 import type { ReactElement } from "react";
 import type { SWRResponse } from "swr";
-import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
 import { columns } from "./columns";
 import { Loader2 } from "lucide-react";
@@ -16,8 +15,7 @@ import CreateInviteCodeDialog from "@/components/CreateInviteCodeDialog";
 export function InviteCodesTable({
   invite_codes,
 }: InviteCodesDatatableProps): ReactElement {
-  const { toast } = useToast();
-  const { isLoading, data, error } = invite_codes;
+  const { isLoading, data } = invite_codes;
 
   if (!data && isLoading) {
     return (

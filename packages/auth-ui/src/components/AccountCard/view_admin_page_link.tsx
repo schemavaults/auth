@@ -1,8 +1,8 @@
 "use client";
 
 import { Button, useToast } from "@schemavaults/ui";
-import { Loader2, SlidersHorizontal } from "lucide-react";
-import { ReactNode, useTransition, type ReactElement } from "react";
+import { SlidersHorizontal } from "lucide-react";
+import { type ReactNode, useTransition } from "react";
 
 export interface ViewAdminDashboardButtonProps {
   navigate: () => Promise<void>;
@@ -30,6 +30,7 @@ export function ViewAdminDashboardButton({
           try {
             await navigate();
           } catch (e: unknown) {
+            console.error("Failed to navigate to admin dashboard: ", e);
             toast({
               variant: "destructive",
               title: "Failed to navigate to admin dashboard!",
@@ -45,3 +46,5 @@ export function ViewAdminDashboardButton({
     </Button>
   );
 }
+
+export default ViewAdminDashboardButton;

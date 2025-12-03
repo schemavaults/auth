@@ -36,9 +36,7 @@ import { SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } fro
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SwatchBook } from "lucide-react";
 
-export interface CreateInviteCodeDialogProps {}
-
-export function CreateInviteCodeDialog({}: CreateInviteCodeDialogProps): ReactElement {
+export function CreateInviteCodeDialog(): ReactElement {
   const { toast } = useToast();
   const form = useForm<InviteCodeDefinition>({
     resolver: zodResolver(inviteCodeDefinitionSchema),
@@ -124,8 +122,10 @@ export function CreateInviteCodeDialog({}: CreateInviteCodeDialogProps): ReactEl
         );
       }
 
-      if (!body.hasOwnProperty("success"))
+      if (!Object.hasOwn(body, 'success')) {
         throw new Error("No success field in response");
+      }
+
 
       if (
         !(
