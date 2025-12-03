@@ -1,7 +1,7 @@
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type { ServerRuntime } from "next";
 import { redirect } from "next/navigation";
-
+import 'server-only';
 export const runtime: ServerRuntime = 'edge';
 
 async function IndexPageRedirectToLogin(): Promise<never> {
