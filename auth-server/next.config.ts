@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
-const output = !!process.env.NEXT_STANDALONE_DOCKER_BUILD
-  ? "standalone"
+const output = (
+  typeof process.env.NEXT_STANDALONE_DOCKER_BUILD === 'string' && process.env.NEXT_STANDALONE_DOCKER_BUILD.length > 0
+) ? "standalone"
   : undefined;
 
 console.log(
