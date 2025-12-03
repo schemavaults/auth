@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-ui",
-  "version": "0.5.31",
+  "version": "0.5.32",
   "private": false,
   "license": "UNLICENSED",
   "description": "React.js UI components for authentication/authorization shared between different SchemaVaults apps",
@@ -9,13 +9,13 @@
     "url": "https://github.com/schemavaults/auth-ui.git"
   },
   "dependencies": {
-    "@schemavaults/ui": "0.11.131",
+    "@schemavaults/ui": "0.11.133",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@hookform/resolvers": "3.9.0"
   },
   "devDependencies": {
-    "typescript": "5.9.2",
+    "typescript": "5.9.3",
     "tsc-alias": "1.8.16",
     "@types/react": "19.0.0",
     "@types/react-dom": "19.0.0",
