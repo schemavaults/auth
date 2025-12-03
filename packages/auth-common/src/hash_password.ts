@@ -47,12 +47,11 @@ export async function hashPassword(password: string): Promise<string> {
   }
 
   // String to encode
-  const secret: string = `agajnurmomahoeojnaw${password}${salt}`;
+  const secret: string = `${salt}${password}${salt}`;
 
   // Text encoder
   const encoder = new TextEncoder();
-  const data: Uint8Array = encoder.encode(secret);
-
+  const data: BufferSource = encoder.encode(secret);
   const firstHash: ArrayBuffer = await crypto.subtle.digest("SHA-256", data);
 
   // Hash Iterations
