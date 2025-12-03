@@ -4,12 +4,12 @@ import { redirect } from "next/navigation";
 
 export const runtime: ServerRuntime = 'edge';
 
-async function RedirectToDefaultApp(): Promise<never> {
+async function IndexPageRedirectToLogin(): Promise<never> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (environment === 'development') {
-    console.log("[RedirectToDefaultApp] Redirecting to login page...");
+    console.log("[IndexPageRedirectToLogin] Redirecting to login page...");
   }
   redirect("/auth/login")
 }
 
-export default RedirectToDefaultApp;
+export default IndexPageRedirectToLogin;
