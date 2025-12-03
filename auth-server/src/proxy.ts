@@ -3,7 +3,7 @@ import "server-only";
 import {
   type NextFetchEvent,
   type NextRequest,
-  type NextMiddleware,
+  type NextProxy,
   NextResponse,
 } from "next/server";
 import { SchemaVaultsServerMiddleware } from "@schemavaults/auth-server-sdk";
@@ -75,7 +75,7 @@ const SchemaVaultsAuthServerMiddleware = async (
   }
 };
 
-export default SchemaVaultsAuthServerMiddleware satisfies NextMiddleware;
+export default SchemaVaultsAuthServerMiddleware satisfies NextProxy;
 
 export const config = {
   matcher: [

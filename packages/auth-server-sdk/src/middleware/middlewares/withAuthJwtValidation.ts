@@ -11,7 +11,7 @@ import {
   type DecodeTokenFn,
   type AuthMiddlewareError,
 } from "@schemavaults/auth-common";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import {
   type CustomJWTPayload,
   decodeJWT,
@@ -75,16 +75,17 @@ class AuthJwtValidationMiddleware
     const environment: SchemaVaultsAppEnvironment = this.environment;
     if (this.debug) {
       console.log(
-        '[Middleware] Running auth middleware on path: "' +
-          req.nextUrl.pathname +
-          '"',
+        `[${this.name}] Running auth middleware on path: "${req.nextUrl.pathname}"`,
       );
     }
-    const cookiesHandler = await cookies();
 
-    if (cookiesHandler.size > 20) {
-      console.error("[Middleware] Too many cookies: ", cookiesHandler);
-      return json(JSON.stringify({}), { status: 400 });
+    if (req.cookies.size > 20) {
+      console.error(`[${this.name}] Too many cookies: `, req.cookies.size);
+      return json({
+        error: true,
+        success: false,
+        message: "Too many cookies attached to request!"
+      }, { status: 400 });
     }
 
     // Initialize array to store tokens from different sources
@@ -92,9 +93,9 @@ class AuthJwtValidationMiddleware
 
     // Load Tokens from cookies
     let refresh_token: string | undefined =
-      cookiesHandler.get("refresh_token")?.value;
+      req.cookies.get("refresh_token")?.value;
     let access_token: string | undefined =
-      cookiesHandler.get("access_token")?.value;
+      req.cookies.get("access_token")?.value;
 
     if (typeof refresh_token === "string") {
       token_sources.push({
@@ -113,9 +114,8 @@ class AuthJwtValidationMiddleware
     }
 
     let authorizationHeaderToken: string | undefined = undefined;
-    const h = await headers();
     const authorizationHeader: string | null =
-      h.get("Authorization") ?? h.get("authorization") ?? null;
+      req.headers.get("Authorization") ?? req.headers.get("authorization") ?? null;
     if (typeof authorizationHeader === "string") {
       const bearerPrefix = "Bearer " as const;
       if (authorizationHeader.startsWith(bearerPrefix)) {

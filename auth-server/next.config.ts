@@ -1,3 +1,4 @@
+// next.config.ts
 import type { NextConfig } from "next";
 
 const output = (
@@ -6,7 +7,7 @@ const output = (
   : undefined;
 
 console.log(
-  `Building SchemaVaults Next.js Auth Server App with output mode: ${output ?? "<default>"}`,
+  `[next.config.ts] Building SchemaVaults Auth Server with output mode: ${output ?? "<default>"}`,
 );
 
 const nextConfig: NextConfig = {

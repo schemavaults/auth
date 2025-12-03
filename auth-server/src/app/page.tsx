@@ -7,10 +7,9 @@ export const runtime: ServerRuntime = 'edge';
 async function RedirectToDefaultApp(): Promise<never> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (environment === 'development') {
-    console.log("Redirecting to default app...");
-    redirect("http://localhost:3000")
+    console.log("[RedirectToDefaultApp] Redirecting to login page...");
   }
-  redirect("https://schemavaults.com")
+  redirect("/auth/login")
 }
 
 export default RedirectToDefaultApp;

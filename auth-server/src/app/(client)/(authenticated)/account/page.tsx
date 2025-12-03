@@ -46,6 +46,9 @@ async function attemptToPreloadAppsAndDomains(
   );
 }
 
+type CookiesHandler = Awaited<ReturnType<typeof cookies>>;
+
+
 export default async function AuthServerAccountDashboardPage(): Promise<ReactElement> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (environment === "development") {
@@ -54,7 +57,22 @@ export default async function AuthServerAccountDashboardPage(): Promise<ReactEle
 
   const token_sources: PotentiallyValidTokenSource[] = [];
 
-  const refresh_token_cookie = (await cookies()).get("refresh_token");
+  let cookiesHandler: CookiesHandler;
+  try {
+    cookiesHandler = await cookies();
+  } catch (e: unknown) {
+    console.error("Failed to parse cookies: ", e);
+    redirectWithError(
+      (url: string, type: RedirectType | undefined): never => {
+        void type;
+        return redirect(url);
+      },
+      500,
+      "internal_server_error"
+    );
+  }
+
+  const refresh_token_cookie = cookiesHandler.get("refresh_token");
   if (typeof refresh_token_cookie?.value === "string") {
     token_sources.push({
       sourceHint: "Auth Server Refresh Token",

@@ -6,11 +6,11 @@ import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import { RouteGuardFactory } from "@schemavaults/auth-server-sdk";
 import { cookies } from "next/headers";
 import { redirect, type RedirectType } from "next/navigation";
-import type { PropsWithChildren } from "react";
+import type { ReactNode } from "react";
 
 export default async function AdminPathsRouteGuardServerComponent({
   children,
-}: PropsWithChildren) {
+}: { children: ReactNode }): Promise<ReactNode> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (environment === "development") {
     console.log("[AdminPathsRouteGuardServerComponent] Preparing admin page!");
