@@ -7,7 +7,7 @@ import SchemaVaultsTailwindConfigFactory from "@schemavaults/theme";
 let config: Config;
 try {
   // Initialize the config factory
-  const configFactory = new SchemaVaultsTailwindConfigFactory({ debug: true });
+  const configFactory = new SchemaVaultsTailwindConfigFactory();
 
   // Generate and export the config
   config = configFactory.createConfig({
