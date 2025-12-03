@@ -44,7 +44,7 @@ async function validateOneAudience(
   if (!isSemanticallyValidAudience || !parsed_aud.data) {
     console.error(
       `[validateAudience] Invalid audience ref. ` +
-        `Instead received: \"${audience}\"`,
+        `Instead received: "${audience}"`,
       parsed_aud.error,
     );
     return false;

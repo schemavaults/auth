@@ -132,11 +132,19 @@ export async function POST(
             },
           );
         }
-        let all_api_servers: SchemaVaultsApiServerDefinition[];
         try {
-          all_api_servers = await apiServerRegistry.listApiServers(
-            "all",
-            userData,
+          return NextResponse.json(
+            {
+              success: true,
+              message: "Successfully listed all SchemaVaults API servers",
+              list: await apiServerRegistry.listApiServers(
+                "all",
+                userData,
+              ) satisfies SchemaVaultsApiServerDefinition[],
+            } satisfies ListApiServersQueryResponse,
+            {
+              status: 200,
+            },
           );
         } catch (e: unknown) {
           console.error(e);
@@ -150,17 +158,6 @@ export async function POST(
             },
           );
         }
-
-        return NextResponse.json(
-          {
-            success: true,
-            message: "Successfully listed all SchemaVaults API servers",
-            list: all_api_servers,
-          } satisfies ListApiServersQueryResponse,
-          {
-            status: 200,
-          },
-        );
 
       default:
         return NextResponse.json(

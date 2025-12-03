@@ -11,9 +11,11 @@ import {
   useAppEnvironment,
 } from "@schemavaults/auth-react-provider";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, type PropsWithChildren, type ReactElement } from "react";
+import { type ReactNode, useMemo, type ReactElement } from "react";
 
-export interface ClientAuthProviderProps extends PropsWithChildren {}
+export interface ClientAuthProviderProps {
+  children: ReactNode | ReactElement
+}
 
 export function ClientAuthProvider({
   children,
@@ -48,3 +50,5 @@ export function ClientAuthProvider({
     </AuthProvider>
   );
 }
+
+export default ClientAuthProvider;

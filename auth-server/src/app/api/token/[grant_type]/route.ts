@@ -145,6 +145,10 @@ export async function POST(
     );
   }
 
+  const headers = req.headers;
+  const auth_header: string | null = headers.get("Authorization");
+  const refresh_token: string = (typeof auth_header === "string" && auth_header.startsWith("Bearer ")) ? auth_header.slice("Bearer ".length) : "";
+
   switch (body.grant_type) {
     case "authorization_code":
       return await handleAuthorizationCodeGrant(
@@ -156,7 +160,7 @@ export async function POST(
         debug satisfies boolean,
       );
     case "refresh_token":
-      const headers = req.headers;
+
       if (!headers.has("Authorization")) {
         console.error(
           "Missing authorization header for 'refresh_token' grant method!",
@@ -171,7 +175,6 @@ export async function POST(
           },
         );
       }
-      const auth_header: string | null = headers.get("Authorization");
       if (
         typeof auth_header !== "string" ||
         !auth_header.startsWith("Bearer ")
@@ -189,7 +192,7 @@ export async function POST(
           },
         );
       }
-      const refresh_token: string = auth_header.slice("Bearer ".length);
+
 
       try {
         return await handleRefreshTokenGrant(

@@ -35,6 +35,7 @@ export function successRedirect({
 
     window.location.href = final_redirect_url;
   } catch (e: unknown) {
-    throw new Error("Failed to redirect to the redirect URI");
+    console.error("Failed to redirect to the redirect URI: ", e);
+    throw new Error("Failed to redirect to the redirect URI!");
   }
 }

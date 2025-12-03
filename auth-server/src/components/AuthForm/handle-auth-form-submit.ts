@@ -8,9 +8,7 @@ import { closeWindowRedirect } from "./close-window-redirect";
 import { useToast } from "@schemavaults/ui";
 import { AuthFormData } from "./auth-form-data";
 import {
-  CodeChallenge,
   type CodeChallengeWithDetails,
-  CodeVerifier,
   type CodeVerifierWithDetails,
   PKCE_ProofKeyManager,
 } from "@schemavaults/auth-common";
@@ -309,6 +307,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
           }
           router.prefetch(CLOSE_WINDOW_PAGE_HREF);
         } catch (e: unknown) {
+          console.warn("Failed to prefetch close window page: ", e);
           /** no-op */
         }
 

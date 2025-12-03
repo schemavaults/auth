@@ -109,6 +109,7 @@ export async function POST(
 
     new_superuser_uid = parsed.data;
   } catch (e: unknown) {
+    console.error("Failed to parse user ID to set as superuser: ", e);
     return NextResponse.json(
       {
         success: false,

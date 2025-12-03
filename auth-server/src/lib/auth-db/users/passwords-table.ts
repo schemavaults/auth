@@ -1,9 +1,7 @@
 
 import type {
-  ColumnType,
   Generated,
   Insertable,
-  JSONColumnType,
   Selectable,
 } from 'kysely'
 import { z } from 'zod';

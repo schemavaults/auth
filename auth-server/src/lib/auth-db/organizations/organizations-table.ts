@@ -1,9 +1,6 @@
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import type {
-  ColumnType,
-  Generated,
   Insertable,
-  JSONColumnType,
   Selectable,
   Updateable,
 } from "kysely";

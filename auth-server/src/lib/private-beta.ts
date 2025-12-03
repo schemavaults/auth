@@ -1,6 +1,6 @@
 export function isPrivateBeta(): boolean {
   try {
-    const PRIVATE_BETA_FLAG = process.env.NEXT_PUBLIC_SCHEMAVAULTS_PRIVATE_BETA;
+    const PRIVATE_BETA_FLAG: string | undefined = process.env.NEXT_PUBLIC_SCHEMAVAULTS_PRIVATE_BETA;
     if (
       !!PRIVATE_BETA_FLAG &&
       typeof PRIVATE_BETA_FLAG === "string" &&
@@ -18,7 +18,8 @@ export function isPrivateBeta(): boolean {
       return true;
     }
   } catch (e: unknown) {
-    /** no-op */
+    console.error("Error checking private beta flag from environment variables:", e);
+    throw new Error("Error checking private beta flag from environment variables!");
   }
 
   return false;

@@ -1,11 +1,8 @@
 
 import type { SchemaVaultsApp } from "@schemavaults/app-definitions";
 
-import {
-  ColumnType,
-  Generated,
+import type {
   Insertable,
-  JSONColumnType,
   Selectable,
   Updateable,
 } from 'kysely'

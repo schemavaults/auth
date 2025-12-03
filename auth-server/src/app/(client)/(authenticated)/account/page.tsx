@@ -6,7 +6,7 @@ import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth-c
 import { cookies } from "next/headers";
 import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
-import { redirect } from "next/navigation";
+import { redirect, type RedirectType } from "next/navigation";
 import {
   AuthorizedAppsRegistry,
   ServerlessDatabase,
@@ -71,7 +71,8 @@ export default async function AuthServerAccountDashboardPage(): Promise<ReactEle
   );
   if (!route_guard.isAccessAllowed) {
     redirectWithError(
-      (url: string, type): never => {
+      (url: string, type: RedirectType | undefined): never => {
+        void type;
         return redirect(url);
       },
       401,
@@ -81,7 +82,8 @@ export default async function AuthServerAccountDashboardPage(): Promise<ReactEle
   const user = route_guard.user;
   if (!user) {
     redirectWithError(
-      (url: string, type): never => {
+      (url: string, type: RedirectType | undefined): never => {
+        void type;
         return redirect(url);
       },
       401,

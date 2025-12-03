@@ -117,7 +117,7 @@ export class SchemaVaultsAppRegistry {
     );
 
     const first_row = rows[0]!;
-    if (!first_row.hasOwnProperty("created_at")) {
+    if (!Object.hasOwn(first_row, "created_at")) {
       throw new Error("App row missing creation timestamp");
     }
 
@@ -146,7 +146,7 @@ export class SchemaVaultsAppRegistry {
   private static async parseAppDomainFromDb(
     row: object,
   ): Promise<SchemaVaultsAppDomainRef> {
-    if (!row.hasOwnProperty("created_at") || !("created_at" in row)) {
+    if (!Object.hasOwn(row, "created_at") || !("created_at" in row)) {
       throw new Error("Missing app domain creation time");
     }
 
@@ -397,7 +397,7 @@ export class SchemaVaultsAppRegistry {
             function parseAppDefinitionDatabaseRow(row) {
               if (typeof row !== "object")
                 throw new Error("Expected row to be an object");
-              if (!row.hasOwnProperty("created_at")) {
+              if (!Object.hasOwn(row, "created_at")) {
                 throw new Error("Missing app creation timestamp");
               }
               const created_at: number =
@@ -482,6 +482,7 @@ export class SchemaVaultsAppRegistry {
     try {
       await this.db.insertInto("app_domains").values(app_domain).execute();
     } catch (e: unknown) {
+      console.error("Failed to add new app domain; db insert failed: ", e)
       throw new Error("Failed to add new app domain; db insert failed");
     }
   }

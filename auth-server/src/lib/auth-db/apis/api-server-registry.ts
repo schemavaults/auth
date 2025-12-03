@@ -28,6 +28,7 @@ export class SchemaVaultsApiServerRegistry {
       try {
         await this.setup();
       } catch (e: unknown) {
+        console.error("Failed to ensure that API servers tables were created: ", e);
         throw new Error(
           "Failed to ensure that API servers tables were created",
         );
@@ -53,7 +54,7 @@ export class SchemaVaultsApiServerRegistry {
     );
 
     const first_row = rows[0]!;
-    if (!first_row.hasOwnProperty("created_at")) {
+    if (!Object.hasOwn(first_row, "created_at")) {
       throw new Error("Missing creation time in row data");
     }
 
@@ -84,8 +85,9 @@ export class SchemaVaultsApiServerRegistry {
       try {
         await this.setup();
       } catch (e: unknown) {
+        console.error("Failed to ensure that API servers tables were created: ", e);
         throw new Error(
-          "Failed to ensure that API servers tables were created",
+          "Failed to ensure that API servers tables were created!",
         );
       }
     }
@@ -119,8 +121,9 @@ export class SchemaVaultsApiServerRegistry {
       try {
         await this.setup();
       } catch (e: unknown) {
+        console.error("Failed to ensure that API servers tables were created: ", e);
         throw new Error(
-          "Failed to ensure that API servers tables were created",
+          "Failed to ensure that API servers tables were created!",
         );
       }
     }
@@ -179,8 +182,9 @@ export class SchemaVaultsApiServerRegistry {
       try {
         await this.setup();
       } catch (e: unknown) {
+        console.error("Failed to ensure that API servers tables were created: ", e);
         throw new Error(
-          "Failed to ensure that API servers tables were created",
+          "Failed to ensure that API servers tables were created!",
         );
       }
     }
@@ -217,7 +221,7 @@ export class SchemaVaultsApiServerRegistry {
           rows.map((row) => {
             if (typeof row !== "object" || !row)
               throw new Error("Expected row to be an object");
-            if (!row.hasOwnProperty("created_at")) {
+            if (!Object.hasOwn(row, "created_at")) {
               throw new Error("Missing api server creation time");
             }
             const created_at: number = parseInt(

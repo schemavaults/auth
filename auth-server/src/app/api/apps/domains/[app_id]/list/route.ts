@@ -130,13 +130,16 @@ export async function POST(
   let app: SchemaVaultsApp;
   try {
     const loadAppQuery = await apps.getApp(app_id);
-    if (!loadAppQuery) throw new Error(`No app found with app_id ${app_id}`);
+    if (!loadAppQuery) {
+      throw new Error(`No app found with app_id ${app_id}`);
+    }
     app = loadAppQuery;
   } catch (e: unknown) {
+    console.error("Failed to load SchemaVaults app with given 'app_id': ", e)
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to get SchemaVaults app with given app_id",
+        message: "Failed to load SchemaVaults app with given 'app_id'",
       } satisfies ListAppDomainsResponse,
       {
         status: 404,

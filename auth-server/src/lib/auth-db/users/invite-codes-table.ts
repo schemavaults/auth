@@ -1,10 +1,7 @@
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";
 
 import {
-  ColumnType,
-  Generated,
   Insertable,
-  JSONColumnType,
   Selectable,
   Updateable,
 } from "kysely";

@@ -201,7 +201,7 @@ export class UserRegistry {
       console.log("[UserRegistry] Parsing user(?) document from DB", row);
     }
 
-    if (!row.hasOwnProperty("created_at")) {
+    if (!Object.hasOwn(row, "created_at")) {
       throw new Error(
         "Invalid user document from DB; missing created_at property",
       );
@@ -417,8 +417,8 @@ export class UserRegistry {
         .transaction()
         .execute(async function createUserTransaction(trx): Promise<void> {
           let inviteCodeDefinition: InviteCodeDefinition | null;
-          if (!!invite_code) {
-            inviteCodeDefinition = await lookupInviteCode(invite_code);
+          if (parsed_user.data.invite_code && typeof parsed_user.data.invite_code === 'string') {
+            inviteCodeDefinition = await lookupInviteCode(parsed_user.data.invite_code);
             if (!inviteCodeDefinition) {
               throw new Error(
                 "Failed to find invite code to create user with!",
@@ -427,7 +427,7 @@ export class UserRegistry {
             const maxInviteCodeUsages: number = inviteCodeDefinition.max_uses;
 
             const nInviteCodeUsages: number =
-              await countInviteCodeUsages(invite_code);
+              await countInviteCodeUsages(parsed_user.data.invite_code);
             if (nInviteCodeUsages < maxInviteCodeUsages) {
               // this invite code still has usages remaining
             } else {
@@ -465,6 +465,7 @@ export class UserRegistry {
     try {
       return await saltAndHashPassword(password);
     } catch (e: unknown) {
+      console.error("Failed to hash password: ", e);
       throw new Error("Failed to hash password");
     }
   }
@@ -487,7 +488,7 @@ export class UserRegistry {
         .execute();
     } catch (e: unknown) {
       console.error(
-        "Failed to look up password record for user with specified UID!",
+        "Failed to look up password record for user with specified UID: ", e
       );
       throw new Error(
         "Failed to look up password record for user with specified UID!",
@@ -599,6 +600,7 @@ export class UserRegistry {
         PKCE_ProofKeyManager.createCodeVerifier().code_verifier;
       authorization_code = random_code;
     } catch (e: unknown) {
+      console.error("Failed to generate authorization code: ", e);
       throw new Error("Failed to generate authorization code");
     }
 

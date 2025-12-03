@@ -5,7 +5,7 @@ import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsA
 import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import { RouteGuardFactory } from "@schemavaults/auth-server-sdk";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, type RedirectType } from "next/navigation";
 import type { PropsWithChildren } from "react";
 
 export default async function AdminPathsRouteGuardServerComponent({
@@ -35,7 +35,8 @@ export default async function AdminPathsRouteGuardServerComponent({
   );
   if (!route_guard.isAccessAllowed) {
     redirectWithError(
-      (url: string, type): never => {
+      (url: string, type: RedirectType | undefined): never => {
+        void type;
         return redirect(url);
       },
       401,
@@ -45,7 +46,8 @@ export default async function AdminPathsRouteGuardServerComponent({
   const user = route_guard.user;
   if (!user) {
     redirectWithError(
-      (url: string, type): never => {
+      (url: string, type: RedirectType | undefined): never => {
+        void type;
         return redirect(url);
       },
       401,

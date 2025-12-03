@@ -126,7 +126,7 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
     );
 
     const first_row = rows[0]!;
-    if (!first_row.hasOwnProperty("created_at")) {
+    if (!Object.hasOwn(first_row, "created_at")) {
       throw new Error("Missing creation date");
     }
 

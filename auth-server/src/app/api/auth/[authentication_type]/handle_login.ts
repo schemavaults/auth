@@ -68,6 +68,7 @@ export async function handleLogin({
   try {
     user = await userRegistry.getUserByEmail(email_credentials.email);
   } catch (e: unknown) {
+    console.error("Failed to query user: ", e);
     return NextResponse.json(
       {
         success: false,
@@ -107,6 +108,7 @@ export async function handleLogin({
       email_credentials.password,
     );
   } catch (e: unknown) {
+    console.error("Failed to compare password: ", e)
     return NextResponse.json(
       {
         success: false,
@@ -144,6 +146,7 @@ export async function handleLogin({
       challenge_time,
     );
   } catch (e: unknown) {
+    console.error("Failed to generate authorization code: ", e)
     return NextResponse.json(
       {
         success: false,

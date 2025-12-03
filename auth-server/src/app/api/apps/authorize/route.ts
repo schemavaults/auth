@@ -91,6 +91,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!parsed_body.success) throw parsed_body.error;
     app_id = parsed_body.data.app_id;
   } catch (e: unknown) {
+    console.error("Invalid 'app_id' to authorize app for: ", e);
     return NextResponse.json(
       {
         success: false,

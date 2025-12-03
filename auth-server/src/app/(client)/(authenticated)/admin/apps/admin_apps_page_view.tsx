@@ -1,8 +1,6 @@
 "use client";
 
 import { AppsCard } from "@schemavaults/auth-ui";
-import { cn } from "@schemavaults/ui";
-import { useRouter } from "next/navigation";
 import type { ReactElement } from "react";
 import { PageContainer } from "@/components/PageContainer";
 

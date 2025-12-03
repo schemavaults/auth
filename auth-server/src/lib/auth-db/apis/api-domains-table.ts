@@ -2,10 +2,7 @@
 import type { SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
 
 import type {
-  ColumnType,
-  Generated,
   Insertable,
-  JSONColumnType,
   Selectable,
   Updateable,
 } from 'kysely'

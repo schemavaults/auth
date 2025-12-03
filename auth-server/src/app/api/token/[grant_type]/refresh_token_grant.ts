@@ -16,7 +16,6 @@ import type { z } from "zod";
 import { validateAudience } from "./validate-audience";
 import {
   getAppEnvironment,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
@@ -64,6 +63,7 @@ export async function handleRefreshTokenGrant(
   try {
     user = await loadUserData(uid, usersRegistry);
   } catch (e: unknown) {
+    console.error("Failed to load user data: ", e);
     return NextResponse.json(
       {
         success: false,

@@ -2,11 +2,11 @@ import { SchemaVaultsAppRegistry, ServerlessDatabase } from "@/lib/auth-db";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import redirectWithError from "@/lib/redirect-with-error";
 import {
-  AppId,
+  type AppId,
   appIdSchema,
-  SchemaVaultsApp,
+  type SchemaVaultsApp,
 } from "@schemavaults/app-definitions";
-import { redirect, type ReadonlyURLSearchParams } from "next/navigation";
+import { redirect } from "next/navigation";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 
 export interface IDetermineOnSuccessfulAuthenticateActionInputs {

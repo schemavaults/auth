@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement, useCallback, useState } from "react";
+import { type ReactElement, useState } from "react";
 import {
   emailCredentialsSchema,
   emailRegistrationCredentialsSchema,
@@ -117,12 +117,6 @@ export function AuthForm<T extends "login" | "register">({
 
   const router = useRouter();
 
-  const onSubmitFailure: () => void = useCallback((): void => {
-    try {
-      setSubmitting(false);
-    } catch (e: unknown) {}
-  }, [setSubmitting]);
-
   return (
     <Card
       id={`auth-${type}-form`}
@@ -152,7 +146,7 @@ export function AuthForm<T extends "login" | "register">({
                 toast,
                 type,
                 onSuccessfulAuthenticate,
-                onSubmitFailure,
+                onSubmitFailure: (): void => setSubmitting(false),
                 auth,
                 searchParams,
                 router,

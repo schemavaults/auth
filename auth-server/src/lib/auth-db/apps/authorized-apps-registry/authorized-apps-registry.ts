@@ -150,7 +150,7 @@ export class AuthorizedAppsRegistry {
           rows.map((row) => {
             if (typeof row !== "object" || !row)
               throw new Error("Expected each row to be an object");
-            if (!row.hasOwnProperty("authorized_at")) {
+            if (!Object.hasOwn(row, "authorized_at")) {
               throw new Error(
                 "Expected each query row to have an 'authorized_at' property",
               );
@@ -232,7 +232,8 @@ export class AuthorizedAppsRegistry {
         })
         .execute();
     } catch (e: unknown) {
-      throw new Error("Failed to insert authorized app record into database");
+      console.error("Failed to insert authorized app record into database: ", e)
+      throw new Error("Failed to insert authorized app record into database!");
     }
 
     if (this.debug) {
@@ -326,9 +327,10 @@ export class AuthorizedAppsRegistry {
         .array()
         .safeParseAsync(
           rows.map((row) => {
-            if (typeof row !== "object")
+            if (typeof row !== "object" || !row) {
               throw new Error("Expected each row to be an object");
-            if (!(row as object).hasOwnProperty("authorized_at")) {
+            }
+            if (!Object.hasOwn(row, "authorized_at")) {
               throw new Error(
                 "Expected each query row to have an 'authorized_at' property",
               );
@@ -386,7 +388,7 @@ export class AuthorizedAppsRegistry {
       if (!appAuthorization) return false;
       if (this.env === "development") {
         console.log(
-          `[AuthorizedAppsRegistry] User with ID \"${uid}\" has authorized application with ID \"${app_id}\"`,
+          `[AuthorizedAppsRegistry] User with ID "${uid}" has authorized application with ID "${app_id}"`,
         );
       }
       return true;

@@ -111,22 +111,9 @@ export async function POST(
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
-  let appsToApiPermissionsRegistry: SchemaVaultsAppToApiPermissionsRegistry;
-  try {
-    appsToApiPermissionsRegistry = new SchemaVaultsAppToApiPermissionsRegistry(
-      dbh.db,
-    );
-  } catch (e: unknown) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create new SchemaVaults API server",
-      } satisfies ResourceCreationResponse,
-      {
-        status: 500,
-      },
-    );
-  }
+  const appsToApiPermissionsRegistry: SchemaVaultsAppToApiPermissionsRegistry = new SchemaVaultsAppToApiPermissionsRegistry(
+    dbh.db,
+  )
 
   try {
     await appsToApiPermissionsRegistry.allow(

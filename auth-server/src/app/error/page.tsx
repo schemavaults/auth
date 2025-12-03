@@ -7,7 +7,7 @@ import "server-only";
 import ErrorPageView from "./error_page_view";
 
 export default async function ErrorPageComponent(input: {
-  params?: Promise<{}>;
+  params?: Promise<unknown>;
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }): Promise<ReactElement> {
   let error: number = 500;
@@ -59,6 +59,7 @@ export default async function ErrorPageComponent(input: {
       }
     }
   } catch (e: unknown) {
+    console.error("There was an error displaying the actual error: ", e);
     error = 500;
     message = "Double error! There was an error displaying the actual error :(";
   }

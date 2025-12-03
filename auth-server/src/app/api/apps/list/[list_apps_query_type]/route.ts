@@ -23,6 +23,72 @@ import {
 } from "@schemavaults/auth-server-sdk";
 import type { UserData } from "@schemavaults/auth-common";
 
+async function listAuthorizedAppsForUser(
+  appsRegistry: SchemaVaultsAppRegistry,
+  authorizedAppsRegistry: AuthorizedAppsRegistry,
+  userData: UserData
+): Promise<NextResponse<ListAppsQueryResponse>> {
+  const user_authorized_apps: AuthorizedAppDeclaration[] =
+    await authorizedAppsRegistry.listAuthorizedAppsForUser(userData.uid);
+
+  if (user_authorized_apps.length === 0) {
+    return NextResponse.json(
+      {
+        success: true,
+        message: "You have not authorized any applications",
+        list: [],
+      } satisfies ListAppsQueryResponse,
+      {
+        status: 200,
+      },
+    );
+  }
+
+  let authorized_apps_details: SchemaVaultsApp[];
+  try {
+    const loadAppDefinitionsForAuthorizedAppsPromises: Promise<SchemaVaultsApp>[] =
+      user_authorized_apps.map(async function loadDefForApp(
+        authorized_app: AuthorizedAppDeclaration,
+      ): Promise<SchemaVaultsApp> {
+        return await getDefinitionForAuthorizedDeclaration(
+          authorized_app,
+          appsRegistry,
+        );
+      });
+
+    authorized_apps_details = await Promise.all(
+      loadAppDefinitionsForAuthorizedAppsPromises,
+    );
+  } catch (e: unknown) {
+    console.error(
+      "Failed to load full app definitions for apps marked as authorized: ",
+      e,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          "Failed to load full app definitions for apps marked as authorized",
+      } satisfies ListAppsQueryResponse,
+      {
+        status: 500,
+      },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      success: true,
+      message:
+        "Successfully listed SchemaVaults apps that you have authorized",
+      list: authorized_apps_details,
+    } satisfies ListAppsQueryResponse,
+    {
+      status: 200,
+    },
+  );
+}
+
 /**
  * List available SchemaVaults apps
  *
@@ -136,9 +202,17 @@ export async function POST(
             },
           );
         }
-        let all_apps: SchemaVaultsApp[];
         try {
-          all_apps = await appsRegistry.listApps("all", userData);
+          return NextResponse.json(
+            {
+              success: true,
+              message: "Successfully listed all SchemaVaults apps",
+              list: await appsRegistry.listApps("all", userData),
+            } satisfies ListAppsQueryResponse,
+            {
+              status: 200,
+            },
+          );
         } catch (e: unknown) {
           console.error("Failed to list all apps:", e);
           return NextResponse.json(
@@ -152,84 +226,25 @@ export async function POST(
           );
         }
 
-        return NextResponse.json(
-          {
-            success: true,
-            message: "Successfully listed all SchemaVaults apps",
-            list: all_apps,
-          } satisfies ListAppsQueryResponse,
-          {
-            status: 200,
-          },
-        );
-
       case "public":
-        const public_apps = await appsRegistry.listApps("public", userData);
-        return NextResponse.json(
-          {
-            success: true,
-            message:
-              "Successfully listed all publicly-available SchemaVaults apps",
-            list: public_apps,
-          } satisfies ListAppsQueryResponse,
-          {
-            status: 200,
-          },
-        );
-
-      case "authorized":
-        if (environment === "development") {
-          console.log("Attempting to list authorized applications...");
-        }
-
-        const user_authorized_apps: AuthorizedAppDeclaration[] =
-          await authorizedAppsRegistry.listAuthorizedAppsForUser(userData.uid);
-
-        if (environment === "development") {
-          console.log(
-            "Received list of authorization applications: ",
-            user_authorized_apps,
-          );
-        }
-
-        if (user_authorized_apps.length === 0) {
+        try {
           return NextResponse.json(
             {
               success: true,
-              message: "You have not authorized any applications",
-              list: [],
+              message:
+                "Successfully listed all publicly-available SchemaVaults apps",
+              list: await appsRegistry.listApps("public", userData),
             } satisfies ListAppsQueryResponse,
             {
               status: 200,
             },
           );
-        }
-
-        let authorized_apps_details: SchemaVaultsApp[];
-        try {
-          const loadAppDefinitionsForAuthorizedAppsPromises: Promise<SchemaVaultsApp>[] =
-            user_authorized_apps.map(async function loadDefForApp(
-              authorized_app: AuthorizedAppDeclaration,
-            ): Promise<SchemaVaultsApp> {
-              return await getDefinitionForAuthorizedDeclaration(
-                authorized_app,
-                appsRegistry,
-              );
-            });
-
-          authorized_apps_details = await Promise.all(
-            loadAppDefinitionsForAuthorizedAppsPromises,
-          );
         } catch (e: unknown) {
-          console.error(
-            "Failed to load full app definitions for apps marked as authorized: ",
-            e,
-          );
+          console.error("Failed to list public apps:", e);
           return NextResponse.json(
             {
               success: false,
-              message:
-                "Failed to load full app definitions for apps marked as authorized",
+              message: "Failed to list public apps",
             } satisfies ListAppsQueryResponse,
             {
               status: 500,
@@ -237,17 +252,27 @@ export async function POST(
           );
         }
 
-        return NextResponse.json(
-          {
-            success: true,
-            message:
-              "Successfully listed SchemaVaults apps that you have authorized",
-            list: authorized_apps_details,
-          } satisfies ListAppsQueryResponse,
-          {
-            status: 200,
-          },
-        );
+
+      case "authorized":
+        try {
+          return await listAuthorizedAppsForUser(
+            appsRegistry,
+            authorizedAppsRegistry,
+            userData,
+          )
+        } catch (e: unknown) {
+          console.error("Failed to list authorized apps for user:", e);
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Failed to list authorized apps for user",
+            } satisfies ListAppsQueryResponse,
+            {
+              status: 500,
+            },
+          );
+        }
+
 
       default:
         return NextResponse.json(

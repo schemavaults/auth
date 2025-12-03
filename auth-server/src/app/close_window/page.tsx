@@ -8,7 +8,9 @@ function CloseWindowNowPage(): ReactElement {
     setTimeout(() => {
       try {
         window.close();
-      } catch (e) { }
+      } catch (e: unknown) {
+        console.warn("Error automatically closing window: ", e)
+      }
     }, 5000);
   }, [])
 
@@ -18,7 +20,7 @@ function CloseWindowNowPage(): ReactElement {
         <Wordmark />
         <Separator />
         <p className="font-bold">CLI operation successful.</p>
-        <p>You may now close this window.</p>
+        <p>You may now close this window. (Or it will close automatically in a few seconds...)</p>
       </main>
     </div>
 

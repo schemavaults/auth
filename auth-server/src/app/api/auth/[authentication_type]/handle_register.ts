@@ -261,7 +261,7 @@ export async function handleRegister({
     console.log("[handleRegistry] User does not appear to exist yet");
   }
 
-  if (!!user) {
+  if (user) {
     return NextResponse.json(
       {
         success: false,
@@ -303,7 +303,7 @@ export async function handleRegister({
       challenge_time,
     );
   } catch (e: unknown) {
-    console.error("Failed to generate authorization code");
+    console.error("Failed to generate authorization code: ", e);
     return NextResponse.json(
       {
         success: false,

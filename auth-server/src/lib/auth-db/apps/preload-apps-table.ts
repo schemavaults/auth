@@ -5,13 +5,11 @@ import type {
   AuthorizedAppDeclaration,
   AuthorizedAppsRegistry,
 } from "./authorized-apps-registry";
-import {
-    getAppEnvironment,
-  type AppId,
-  type ListAppsQueryType,
-  type SchemaVaultsApp,
-  type SchemaVaultsAppDomainRef,
-  type SchemaVaultsAppEnvironment,
+import type {
+  AppId,
+  ListAppsQueryType,
+  SchemaVaultsApp,
+  SchemaVaultsAppDomainRef,
 } from "@schemavaults/app-definitions";
 import { getDefinitionForAuthorizedDeclaration } from "./get-app-from-authorized-declaration";
 
@@ -65,10 +63,73 @@ async function returnAppsWithDomains(
   };
 }
 
+async function preloadAllApps(appsRegistry: SchemaVaultsAppRegistry, userData: UserData) {
+  let all_apps: SchemaVaultsApp[];
+  try {
+    all_apps = await appsRegistry.listApps("all", userData);
+  } catch (e: unknown) {
+    console.error("Failed to list all apps:", e);
+    throw new Error("Failed to list all apps");
+  }
+  return all_apps
+}
+
+async function preloadPublicApps(appsRegistry: SchemaVaultsAppRegistry, userData: UserData) {
+  let public_apps: SchemaVaultsApp[];
+  try {
+    public_apps = await appsRegistry.listApps("public", userData);
+  } catch (e: unknown) {
+    console.error("Failed to list public apps:", e);
+    throw new Error("Failed to list public apps");
+  }
+  return public_apps;
+}
+
+async function preloadAuthorizedApps(
+  appsRegistry: SchemaVaultsAppRegistry,
+  authorizedAppsRegistry: AuthorizedAppsRegistry,
+  userData: UserData,
+): Promise<SchemaVaultsApp[]> {
+  const user_authorized_apps: AuthorizedAppDeclaration[] =
+    await authorizedAppsRegistry.listAuthorizedAppsForUser(
+      userData.uid,
+    );
+
+  if (user_authorized_apps.length === 0) {
+    return [];
+  }
+
+  let authorized_apps_details: SchemaVaultsApp[];
+  try {
+    const loadAppDefinitionsForAuthorizedAppsPromises: Promise<SchemaVaultsApp>[] =
+      user_authorized_apps.map(async function loadDefForApp(
+        authorized_app: AuthorizedAppDeclaration,
+      ): Promise<SchemaVaultsApp> {
+        return await getDefinitionForAuthorizedDeclaration(
+          authorized_app,
+          appsRegistry,
+        );
+      });
+
+    authorized_apps_details = await Promise.all(
+      loadAppDefinitionsForAuthorizedAppsPromises,
+    );
+  } catch (e: unknown) {
+    console.error(
+      "Failed to load full app definitions for apps marked as authorized: ",
+      e,
+    );
+    throw new Error(
+      "Failed to load full app definitions for apps marked as authorized",
+    );
+  }
+
+  return authorized_apps_details
+}
+
 export async function preloadAppsTable(
   opts: QueryAppsInputOptions,
 ): Promise<PreloadedAppsTableDataWithDomainRefs> {
-  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const userData: UserData = opts.user;
 
   try {
@@ -77,71 +138,24 @@ export async function preloadAppsTable(
         if (typeof userData.admin !== "boolean" || !userData.admin) {
           throw new Error("You must be an admin to list all SchemaVaults apps");
         }
-        let all_apps: SchemaVaultsApp[];
-        try {
-          all_apps = await opts.appsRegistry.listApps("all", userData);
-        } catch (e: unknown) {
-          console.error("Failed to list all apps:", e);
-          throw new Error("Failed to list all apps");
-        }
-
-        return await returnAppsWithDomains(all_apps, opts.appsRegistry);
-
-      case "public":
-        const public_apps = await opts.appsRegistry.listApps(
-          "public",
-          userData,
-        );
-        return await returnAppsWithDomains(public_apps, opts.appsRegistry);
-
-      case "authorized":
-        if (environment === "development") {
-          console.log("Attempting to list authorized applications...");
-        }
-
-        const user_authorized_apps: AuthorizedAppDeclaration[] =
-          await opts.authorizedAppsRegistry.listAuthorizedAppsForUser(
-            userData.uid,
-          );
-
-        if (environment === "development") {
-          console.log(
-            "Received list of authorization applications: ",
-            user_authorized_apps,
-          );
-        }
-
-        if (user_authorized_apps.length === 0) {
-          return { apps: [], domains: {} };
-        }
-
-        let authorized_apps_details: SchemaVaultsApp[];
-        try {
-          const loadAppDefinitionsForAuthorizedAppsPromises: Promise<SchemaVaultsApp>[] =
-            user_authorized_apps.map(async function loadDefForApp(
-              authorized_app: AuthorizedAppDeclaration,
-            ): Promise<SchemaVaultsApp> {
-              return await getDefinitionForAuthorizedDeclaration(
-                authorized_app,
-                opts.appsRegistry,
-              );
-            });
-
-          authorized_apps_details = await Promise.all(
-            loadAppDefinitionsForAuthorizedAppsPromises,
-          );
-        } catch (e: unknown) {
-          console.error(
-            "Failed to load full app definitions for apps marked as authorized: ",
-            e,
-          );
-          throw new Error(
-            "Failed to load full app definitions for apps marked as authorized",
-          );
-        }
 
         return await returnAppsWithDomains(
-          authorized_apps_details,
+          await preloadAllApps(opts.appsRegistry, userData),
+          opts.appsRegistry,
+        );
+
+      case "public":
+        return await returnAppsWithDomains(
+          await preloadPublicApps(opts.appsRegistry, userData),
+          opts.appsRegistry
+        );
+
+      case "authorized":
+
+
+
+        return await returnAppsWithDomains(
+          await preloadAuthorizedApps(opts.appsRegistry, opts.authorizedAppsRegistry, userData),
           opts.appsRegistry,
         );
 

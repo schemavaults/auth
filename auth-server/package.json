@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "private": true,
   "repository": {
     "type": "git",
@@ -11,7 +11,7 @@
     "next": "16.0.4",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "@schemavaults/ui": "0.11.131",
+    "@schemavaults/ui": "0.11.133",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-ui": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
@@ -31,13 +31,20 @@
     "bun-types": "1.3.3",
     "postcss": "8.5.3",
     "tailwindcss": "3.4.17",
-    "autoprefixer": "10.4.21"
+    "autoprefixer": "10.4.21",
+    "eslint": "9.39.1",
+    "globals": "16.5.0",
+    "@typescript-eslint/eslint-plugin": "8.48.1",
+    "@typescript-eslint/parser": "8.48.1",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-jsx-a11y": "6.10.2"
   },
   "scripts": {
     "dev": "NEXT_TELEMETRY_DISABLED=1 bun --bun next dev --port 6767",
     "build": "NEXT_TELEMETRY_DISABLED=1 bun --bun next build",
     "start": "NEXT_TELEMETRY_DISABLED=1 bun --bun next start",
-    "lint": "bun --bun next lint"
+    "lint": "eslint src --ext .ts,.tsx"
   },
   "browser": {
     "crypto": false
