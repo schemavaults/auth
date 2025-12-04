@@ -76,8 +76,11 @@ describe("JWTs for Vault FileSystem", () => {
   test("error thrown generating a token for an invalid FS server audience", async () => {
     const invalid_region_ids: string[] = [
       "",
-      "us-east1!",
-      "my-invalid-region_",
+      "us-east1", // region id should just be a uuid
+      "us-east1!", // invalid char
+      "my-invalid-region_", // invalid char
+      69 as any, // not a string
+      "01e0eagd-434c-4dc7-bff4-ddz488b62528" // almost a uuid but with invalid chars
     ];
 
     expect(
