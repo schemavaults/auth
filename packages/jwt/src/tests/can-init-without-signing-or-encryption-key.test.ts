@@ -18,6 +18,7 @@ describe("JWT_Keys instance initialization w/o auth-server-only keys", () => {
       const verifier_secret = reinited.public_signing_verifier_spki;
       void verifier_secret;
     } catch (e: unknown) {
+      void e;
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();

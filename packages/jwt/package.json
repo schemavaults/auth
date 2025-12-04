@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/jwt",
   "description": "Utility functions for authentication and authorization for use from the auth server or a resource server",
-  "version": "0.5.9",
+  "version": "0.5.10",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -24,12 +24,17 @@
     "cleanup:compiled-tests-output": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
     "cleanup:delete-tests-dir": "rm -rf ./dist/tests",
     "cleanup": "bun run cleanup:delete-tests-dir && bun run cleanup:compiled-tests-output",
-    "postbuild": "bun run cleanup"
+    "postbuild": "bun run cleanup",
+    "lint": "eslint src --ext .ts,.tsx"
   },
   "devDependencies": {
     "typescript": "5.9.3",
     "bun-types": "1.3.3",
-    "tsc-alias": "1.8.16"
+    "tsc-alias": "1.8.16",
+    "eslint": "9.39.1",
+    "globals": "16.5.0",
+    "@typescript-eslint/eslint-plugin": "8.48.1",
+    "@typescript-eslint/parser": "8.48.1"
   },
   "browser": {
     "crypto": false

@@ -15,7 +15,6 @@ import {
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
   schemaVaultsAppEnvironments,
-  getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { type GenerateJWTOptions, generateJWT } from "./generate";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";

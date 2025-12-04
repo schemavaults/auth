@@ -9,6 +9,7 @@ describe("Print Key Environment Variables", () => {
       const keys = await JWT_Keys.createKeys();
       printJwtKeysAsEnvVars(keys, console.log);
     } catch (e: unknown) {
+      console.error("Error generating keys or printing them as environment variables: ", e);
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();

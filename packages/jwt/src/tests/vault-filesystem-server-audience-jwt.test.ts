@@ -94,6 +94,7 @@ describe("JWTs for Vault FileSystem", () => {
             region_id,
           );
         } catch (e: unknown) {
+          void e;
           return false;
         }
       }),

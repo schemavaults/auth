@@ -53,7 +53,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     aud = audience;
   } else {
     throw new Error(
-      "Invalid auth token \'type\' (should be 'access'/'refresh')",
+      "Invalid auth token 'type' (should be 'access'/'refresh')",
     );
   }
 

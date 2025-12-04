@@ -1,6 +1,5 @@
 import { decodeJWT, JWT_Keys } from "@/jwt";
 import {
-  SCHEMAVAULTS_CLI,
   SCHEMAVAULTS_MAIL_APP_DEFINITION,
   SCHEMAVAULTS_WEB,
   type SchemaVaultsAppEnvironment,

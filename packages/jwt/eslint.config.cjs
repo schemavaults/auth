@@ -1,11 +1,8 @@
-// @schemavaults/auth-ui - eslint.config.cjs
+// @schemavaults/jwt - eslint.config.cjs
 
 const js = require("@eslint/js");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
-const reactPlugin = require("eslint-plugin-react");
-const reactHooksPlugin = require("eslint-plugin-react-hooks");
-const jsxA11yPlugin = require("eslint-plugin-jsx-a11y");
 const globals = require("globals");
 
 module.exports = [
@@ -35,42 +32,12 @@ module.exports = [
 
     plugins: {
       "@typescript-eslint": tsPlugin,
-      "react": reactPlugin,
-      "react-hooks": reactHooksPlugin,
-      "jsx-a11y": jsxA11yPlugin,
-    },
-
-    settings: {
-      react: {
-        version: "detect",
-      },
     },
 
     rules: {
       // TypeScript recommended rules
       ...tsPlugin.configs.recommended.rules,
 
-      // React recommended rules
-      ...reactPlugin.configs.recommended.rules,
-
-      // JSX a11y recommended rules
-      ...jsxA11yPlugin.configs.recommended.rules,
-
-      // React Hooks rules
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
-
-      // Custom overrides
-      "react/react-in-jsx-scope": "off",
-      "react/prop-types": "off",
-      "react/jsx-key": [
-        "error",
-        {
-          checkFragmentShorthand: true,
-          checkKeyMustBeforeSpread: true,
-          warnOnDuplicates: true,
-        },
-      ],
       "@typescript-eslint/no-unused-vars": [
         "warn",
         { argsIgnorePattern: "^_" },

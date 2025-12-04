@@ -19,3 +19,7 @@ dist/tests
 .github/
 
 README.md
+
+eslint.config.cjs
+eslint.config.js
+eslint.config.mjs

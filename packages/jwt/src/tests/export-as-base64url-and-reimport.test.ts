@@ -40,6 +40,7 @@ describe("JWT_Keys base64url export & import", () => {
         keys.private_signing_secret_pkcs8,
       );
     } catch (e: unknown) {
+      void e;
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();
