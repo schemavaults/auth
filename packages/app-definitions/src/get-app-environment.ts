@@ -15,16 +15,39 @@ function stripQuotes(maybeQuotes?: string | undefined): string | undefined {
   return trimmed;
 }
 
+function parseSchemaVaultsAppEnvironmentFromProcessDotEnv(): SchemaVaultsAppEnvironment {
+  if (typeof process.env.SCHEMAVAULTS_APP_ENVIRONMENT !== "string") {
+    throw new Error(
+      "SchemaVaults App Environment configuration could not be resolved from environment variables! Is 'SCHEMAVAULTS_APP_ENVIRONMENT' set?",
+    );
+  }
+  const parsed = schemaVaultsAppEnvironmentSchema.safeParse(
+    process.env.SCHEMAVAULTS_APP_ENVIRONMENT,
+  )
+  if (!parsed.success) {
+    throw new Error(
+      "process.env.SCHEMAVAULTS_APP_ENVIRONMENT is not set to a valid variable!",
+    );
+  }
+  return parsed.data satisfies SchemaVaultsAppEnvironment;
+}
+
 export function getAppEnvironment(
   DEBUG_GET_APP_ENVIRONMENT: boolean = false,
 ): SchemaVaultsAppEnvironment {
   // Ensure that getAppEnvironment is only used server-side or from non-React/browser applications
 
   let isBrowser: boolean = false;
-  // @ts-expect-error
-  if (typeof window !== "undefined") {
-    isBrowser = true;
+  try {
+    // @ts-expect-error We're checking if the 'window' global is defined when DOM library is not explicitly loaded
+    if (window) {
+      isBrowser = true;
+    }
+  } catch (e: unknown) {
+    void e; // no-op-- it's okay for this to not be a browser
+    isBrowser = false;
   }
+
 
   if (isBrowser) {
     if (typeof process !== "undefined" && !!process) {
@@ -35,20 +58,7 @@ export function getAppEnvironment(
           case "test":
             return "test";
           case "production":
-            if (typeof process.env.SCHEMAVAULTS_APP_ENVIRONMENT !== "string") {
-              throw new Error(
-                "SchemaVaults App Environment configuration could not be resolved from environment variables",
-              );
-            }
-            const parsed = schemaVaultsAppEnvironmentSchema.safeParse(
-              process.env.SCHEMAVAULTS_APP_ENVIRONMENT,
-            );
-            if (!parsed.success) {
-              throw new Error(
-                "process.env.SCHEMAVAULTS_APP_ENVIRONMENT is not set to a valid variable!",
-              );
-            }
-            return parsed.data;
+            return parseSchemaVaultsAppEnvironmentFromProcessDotEnv();
           default:
         }
       }

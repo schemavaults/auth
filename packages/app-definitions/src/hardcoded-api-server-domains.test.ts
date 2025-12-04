@@ -16,6 +16,7 @@ describe("Hardcoded API Server Domains", () => {
         uuidSet.add(domain.api_server_domain_ref_id);
       });
     } catch (e: unknown) {
+      console.error("Non-unique hardcoded API server domain ID found: ", e);
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();

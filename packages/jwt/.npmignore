@@ -20,6 +20,8 @@ dist/tests
 
 README.md
 
+tsconfig.json
+
 eslint.config.cjs
 eslint.config.js
 eslint.config.mjs

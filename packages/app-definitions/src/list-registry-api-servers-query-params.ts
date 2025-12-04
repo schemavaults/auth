@@ -11,7 +11,7 @@ export type ListApiServersQueryType = typeof list_api_servers_query_type[number]
 export const listApiServersQueryTypeSchema = z.string()
   .refine(
     (val: string): val is ListApiServersQueryType => (list_api_servers_query_type as string[]).includes(val),
-    `Invalid list API servers query type. Should be one of: ${list_api_servers_query_type.map(val=>`\"${val}\"`).join(", ")}`
+    `Invalid list API servers query type. Should be one of: ${list_api_servers_query_type.map(val=>`"${val}"`).join(", ")}`
   )
 
 export type ListApiServersQueryResponse = {

@@ -15,6 +15,7 @@ describe("Hardcoded App Domains", () => {
         uuidSet.add(domain.app_domain_ref_id);
       });
     } catch (e: unknown) {
+      console.error("Non-unique hardcoded app domain ID found: ", e);
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();
