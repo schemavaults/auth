@@ -1,6 +1,6 @@
 # @schemavaults/auth
 
-Welcome to the SchemaVaults Auth Platform.
+Welcome to the monorepo for the [SchemaVaults Auth Platform](https://auth.schemavaults.com).
 
 ## Repository Structure
 
