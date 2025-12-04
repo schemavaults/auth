@@ -1,0 +1,44 @@
+{
+  "lsp": {
+    "eslint": {
+      "settings": {
+        "workingDirectories": [
+          {
+            "mode": "auto"
+          }
+        ],
+        "experimental": {
+          "useFlatConfig": true
+        },
+        "validate": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ],
+        "run": "onSave",
+        "nodePath": null,
+        "options": {
+          "flags": []
+        }
+      }
+    }
+  },
+  "languages": {
+    "TypeScript": {
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    },
+    "JavaScript": {
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    },
+    "TSX": {
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    }
+  }
+}
