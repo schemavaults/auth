@@ -18,12 +18,11 @@ async function isGenerateAndDecodeTokenForStorageRegionSuccess(
   const user = new MockUser();
   const now = Date.now();
 
-  const audience = `schemavaults-fs:${region_id}`;
 
   const generateOptions: GenerateJWTOptions<"access"> = {
     type: "access",
     user,
-    audience,
+    audience: region_id,
     iat: now,
     client_app_id: SCHEMAVAULTS_CLI.app_id,
     jwt_keys,
@@ -36,13 +35,13 @@ async function isGenerateAndDecodeTokenForStorageRegionSuccess(
     jwt: jwt.token,
     type: "access",
     jwt_keys,
-    audience,
+    audience: region_id,
     env,
   });
 
   expect(decoded.uid).toBe(user.uid);
   expect(decoded.sub).toBe(user.sub);
-  expect(decoded.aud).toBe(audience);
+  expect(decoded.aud).toBe(region_id);
   expect(decoded.email).toBe(user.email);
   expect(decoded.admin).toBe(user.admin);
 
@@ -52,17 +51,18 @@ async function isGenerateAndDecodeTokenForStorageRegionSuccess(
 describe("JWTs for Vault FileSystem", () => {
   test("Access JWT with a fs server audience can be generated and decoded", async () => {
     const region_ids = [
-      "alpha-fs",
-      "us-east1",
-      "my-region",
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+      crypto.randomUUID()
     ] as const satisfies readonly string[];
 
-    expect(
-      region_ids.every((region_id): boolean => {
-        return audienceRefSchema.safeParse(region_id).success;
-      }),
-      "Expected every example storage region IDs to be valid",
-    ).toBeTrue();
+    for (const region_id of region_ids) {
+      expect(
+        audienceRefSchema.safeParse(region_id).success,
+        `Expected every example storage region IDs to be valid, but "${region_id}" is not valid.`).toBeTrue()
+    }
+
 
     const results: boolean[] = await Promise.all(
       region_ids.map(async (region_id: string): Promise<boolean> => {

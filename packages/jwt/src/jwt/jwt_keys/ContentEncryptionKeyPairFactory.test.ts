@@ -1,11 +1,11 @@
 import { test, describe, expect } from "bun:test";
-import { SigningKeyPairFactory } from "./SigningKeyPairFactory";
 import { base64url } from "jose";
 import { PEMFormat } from "./pem-format";
+import { ContentEncryptionKeyPairFactory } from "./ContentEncryptionKeyPairFactory";
 
-describe("Signing Key Pair Factory", () => {
+describe("Content Encryption Key Pair Factory", () => {
   test("can generate a public/private base64url-encoded key pair", async () => {
-    const factory = new SigningKeyPairFactory({ debug: false });
+    const factory = new ContentEncryptionKeyPairFactory({ debug: false });
     const [privateKey, publicKey] = await factory.generate("base64url");
 
     const pemPrivateKey = Buffer.from(base64url.decode(privateKey)).toString(
@@ -22,7 +22,7 @@ describe("Signing Key Pair Factory", () => {
   });
 
   test("can generate a public/private PEM-encoded key pair", async () => {
-    const factory = new SigningKeyPairFactory({ debug: false });
+    const factory = new ContentEncryptionKeyPairFactory({ debug: false });
     const [privateKey, publicKey] = await factory.generate("pem");
 
     expect(privateKey.startsWith("-----BEGIN PRIVATE KEY-----")).toBeTrue();
@@ -33,7 +33,7 @@ describe("Signing Key Pair Factory", () => {
   });
 
   test("PEMFormat.isPemFormat() thinks generated keys are valid", async () => {
-    const factory = new SigningKeyPairFactory({ debug: false });
+    const factory = new ContentEncryptionKeyPairFactory({ debug: false });
     const [privateKey, publicKey] = await factory.generate("pem");
 
     expect(PEMFormat.isPemFormat(privateKey, "PRIVATE")).toBeTrue();
@@ -41,7 +41,7 @@ describe("Signing Key Pair Factory", () => {
   });
 
   test("multiple key generations are not the same", async () => {
-    const factory = new SigningKeyPairFactory({ debug: false });
+    const factory = new ContentEncryptionKeyPairFactory({ debug: false });
     const [privateKey1, publicKey1] = await factory.generate("pem");
     const [privateKey2, publicKey2] = await factory.generate("pem");
 

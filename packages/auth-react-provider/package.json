@@ -27,7 +27,6 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
-    "test": "NODE_ENV=test bun test",
     "lint": "eslint src --ext .ts,.tsx"
   },
   "devDependencies": {

@@ -1,5 +1,4 @@
-import { base64url } from "jose";
-import { PEMFormat } from "./pem-format";
+import AbstractBaseKeyPairFactory from "./AbstractBaseKeyPairFactory";
 
 export interface SigningKeyPairFactoryOptions {
   debug?: boolean;
@@ -10,18 +9,9 @@ export interface SigningKeyPairFactoryOptions {
  * @see SigningKeyPairFactory.generate()
  * @description Generates a signing/verifier RSA256 key pair
  */
-export class SigningKeyPairFactory {
-  private debug: boolean;
+export class SigningKeyPairFactory extends AbstractBaseKeyPairFactory {
 
-  public constructor({ debug }: SigningKeyPairFactoryOptions) {
-    this.debug = typeof debug === "boolean" ? debug : false;
-  }
-
-  private static toPemFormat(key: ArrayBuffer, key_type: "PUBLIC" | "PRIVATE") {
-    return PEMFormat.toPemFormat(key, key_type);
-  }
-
-  private async generateRsaPemKeyPair(): Promise<
+  private static async generateRsaPemSigningAndVerificationKeyPair(debug: boolean = false): Promise<
     readonly [privateKey: string, publicKey: string]
   > {
     const keyPair = await crypto.subtle.generateKey(
@@ -35,8 +25,8 @@ export class SigningKeyPairFactory {
       ["sign", "verify"],
     );
 
-    if (this.debug) {
-      console.log("[JWT_Keys] generateSigningKeyPair() -> ", {
+    if (debug) {
+      console.log("[JWT_Keys] generateRsaPemSigningAndVerificationKeyPair() -> ", {
         publicKey: keyPair.publicKey,
         privateKey: keyPair.privateKey,
       });
@@ -51,8 +41,8 @@ export class SigningKeyPairFactory {
       keyPair.publicKey,
     );
 
-    if (this.debug) {
-      console.log("[JWT_Keys] generateSigningKeyPair() exported: -> ", {
+    if (debug) {
+      console.log("[JWT_Keys] generateRsaPemSigningAndVerificationKeyPair() exported: -> ", {
         exportedPublicKey,
         exportedPrivateKey,
       });
@@ -67,8 +57,8 @@ export class SigningKeyPairFactory {
       "PUBLIC",
     );
 
-    if (this.debug) {
-      console.log("[JWT_Keys] generateSigningKeyPair() pem format: -> ", {
+    if (debug) {
+      console.log("[JWT_Keys] generateRsaPemSigningAndVerificationKeyPair() pem format: -> ", {
         pemPublicKey,
         pemPrivateKey,
       });
@@ -84,23 +74,8 @@ export class SigningKeyPairFactory {
   public async generate(
     export_method: "base64url" | "pem",
   ): Promise<readonly [privateKey: string, publicKey: string]> {
-    const [privateKey, publicKey] = await this.generateRsaPemKeyPair();
+    const [privateKey, publicKey] = await SigningKeyPairFactory.generateRsaPemSigningAndVerificationKeyPair(this.debug);
 
-    switch (export_method) {
-      case "pem":
-        return [privateKey, publicKey] as const satisfies readonly [
-          string,
-          string,
-        ];
-      case "base64url":
-        return [
-          base64url.encode(privateKey),
-          base64url.encode(publicKey),
-        ] as const satisfies readonly [string, string];
-      default:
-        throw new Error(
-          "Received invalid 'export_method' to generate key pair with!",
-        );
-    }
+    return SigningKeyPairFactory.exportKeyPair([privateKey, publicKey], export_method);
   }
 }

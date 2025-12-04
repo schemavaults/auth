@@ -54,7 +54,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
   if (type === "refresh") {
     if (typeof audience !== "string" || audience !== refresh_token_audience) {
       throw new Error(
-        `Audience for a refresh token must be the auth server. Received "${audience}", expected "${refresh_token_audience}"`,
+        `Audience for a refresh token must be the auth server. Received "${audience}", but expected "${refresh_token_audience}".`,
       );
     } else {
       aud = refresh_token_audience;

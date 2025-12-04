@@ -6,6 +6,11 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
       "persistent": false
     },
+    "test": {
+      "dependsOn": [],
+      "outputs": [],
+      "persistent": false
+    },
     "dev": {
       "persistent": true,
       "cache": false,

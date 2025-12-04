@@ -15,21 +15,6 @@ import { PEMFormat } from "./pem-format";
 import isValidBase64UrlEncoding from "@/utils/isValidBase64UrlEncoding";
 import { getDefaultDebugState } from "@/utils/getDefaultDebugState";
 
-// declare global {
-//   declare module NodeJS {
-//     interface ProcessEnv {
-//       // Encryption key
-//       PRIVATE_JWT_ENCRYPTION_SECRET?: string;
-//       // Decryption key
-//       PRIVATE_JWT_DECRYPTION_SECRET?: string;
-//       // Private signature signing key
-//       PRIVATE_JWT_SIGNING_SECRET?: string;
-//       // Public signature key, verifiy token['sig'] was signed by the private key above
-//       PUBLIC_JWT_SIGNING_VERIFIER?: string;
-//     }
-//   }
-// }
-
 export const enum JWT_Keys_Env {
   PRIVATE_JWT_ENCRYPTION_SECRET = "PRIVATE_JWT_ENCRYPTION_SECRET",
   PRIVATE_JWT_DECRYPTION_SECRET = "PRIVATE_JWT_DECRYPTION_SECRET",
