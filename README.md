@@ -6,9 +6,10 @@ Welcome to the SchemaVaults Auth Platform.
 
 ### The `packages` directory
 
-- [jwt](./packages/jwt)
-- [auth-common](./packages/auth-common)
-- [auth-client-sdk](./packages/auth-client-sdk)
-- [auth-react-provider](./packages/auth-react-provider)
-- [auth-ui](./packages/auth-ui)
-- [auth-server-sdk](./packages/auth-server-sdk)
+- [@schemavaults/app-definitions](./packages/app-definitions)
+- [@schemavaults/auth-client-sdk](./packages/auth-client-sdk)
+- [@schemavaults/auth-common](./packages/auth-common)
+- [@schemavaults/auth-react-provider](./packages/auth-react-provider)
+- [@schemavaults/auth-server-sdk](./packages/auth-server-sdk)
+- [@schemavaults/auth-ui](./packages/auth-ui)
+- [@schemavaults/jwt](./packages/jwt)
