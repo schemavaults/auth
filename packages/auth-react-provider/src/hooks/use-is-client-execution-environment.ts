@@ -9,10 +9,12 @@ export function useIsClientExecutionEnvironment(): boolean {
   const debug: boolean = useDebug(environment);
 
   try {
-    if (!!window) {
+    if (window) {
       return true;
     }
-  } catch (e: unknown) {}
+  } catch (e: unknown) {
+    void e;
+  }
 
   if (debug) {
     console.log(

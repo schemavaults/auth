@@ -75,6 +75,7 @@ export function create_code_verifier({ challenge_time, generateRandomCodeVerifie
       max_age: MAX_PKCE_CODE_VERIFIER_AGE
     } satisfies CodeVerifierWithDetails;
   } catch (e: unknown) {
+    console.error("Failed to generate a new code_verifier with crypto: ", e);
     throw new Error("Failed to generate a new code_verifier with crypto");
   }
 }

@@ -14,3 +14,9 @@ turbo.json
 dist/**/*.test.d.ts
 
 .github/
+
+tsconfig.json
+
+eslint.config.cjs
+eslint.config.js
+eslint.config.mjs

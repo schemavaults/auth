@@ -17,11 +17,11 @@ export function AuthMiddlewareManager(
   const router = useRouter();
 
   const {
-    auth_server_uri,
-    successful_authentication_redirect_uri,
+    // auth_server_uri,
+    // successful_authentication_redirect_uri,
     successful_logout_redirect_uri,
     children,
-    app_id,
+    // app_id,
     path,
     authMiddlewareRules,
     authed_on_unauthed_redirect_uri,

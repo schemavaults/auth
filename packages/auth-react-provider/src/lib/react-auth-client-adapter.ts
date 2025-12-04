@@ -78,6 +78,7 @@ export class ReactAuthClientSdkAdapter
 
       return crypto.randomUUID();
     } catch (e: unknown) {
+      console.error("Failed to generate UUID: ", e);
       throw new Error("Failed to generate UUID! Insecure HTTP context?");
     }
   }
@@ -277,7 +278,7 @@ export class ReactAuthClientSdkAdapter
       }
       const code_verifiers = JSON.parse(code_verifiers_str);
       if (!code_verifiers || typeof code_verifiers !== "object") {
-        if (!!code_verifiers) {
+        if (code_verifiers) {
           window.localStorage.removeItem(
             AuthClientSdkAdapterLocalStorageKeys.CODE_VERIFIERS,
           );
@@ -554,7 +555,12 @@ export class ReactAuthClientSdkAdapter
   }
 
   public clearAccessToken(token_id: string): void {
-    if (this.accessTokens.hasOwnProperty(token_id))
+    if (Object.hasOwn(this.accessTokens, token_id)) {
       this.accessTokens.delete(token_id);
+    } else {
+      if (this.debug) {
+        console.warn(`[clearAccessToken] No token with ID '${token_id}' found to clear; this is a no-op error.`)
+      }
+    }
   }
 }

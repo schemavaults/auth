@@ -1,4 +1,4 @@
-// @schemavaults/jwt - eslint.config.cjs
+// @schemavaults/auth-common - eslint.config.cjs
 
 const js = require("@eslint/js");
 const tsParser = require("@typescript-eslint/parser");
@@ -48,6 +48,6 @@ module.exports = [
 
   // Ignore patterns
   {
-    ignores: ["dist/**", "node_modules/**", "*.config.js"],
+    ignores: ["dist/**", "node_modules/**", "*.config.js", "*.config.cjs"],
   },
 ];

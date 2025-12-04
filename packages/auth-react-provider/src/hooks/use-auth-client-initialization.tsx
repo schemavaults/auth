@@ -90,7 +90,7 @@ export function useAuthClientInitialization(
         } catch (e: unknown) {
           if (debug) {
             console.error(
-              "[useAuthClientInitialization] Failed to initialize auth client.",
+              "[useAuthClientInitialization] Failed to initialize auth client: ", e
             );
           }
           throw new Error("Failed to initialize auth client.");
@@ -105,7 +105,7 @@ export function useAuthClientInitialization(
         return;
       }
     },
-    [ready, setReady, debug],
+    [ready, setReady, debug, app_id, auth_server_uri, authorize_uri, successful_authentication_redirect_uri, successful_logout_redirect_uri, environment, authClientRef, default_audiences],
   ); // end of auth client initialization side-effect
 }
 

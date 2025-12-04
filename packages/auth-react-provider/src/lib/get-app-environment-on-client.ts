@@ -32,7 +32,7 @@ export function getAppEnvironmentOnClient(
   try {
     return getAppEnvironment();
   } catch (e: unknown) {
-    /** no-op */
+    void e; /** no-op */
   }
 
   throw new Error(

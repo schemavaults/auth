@@ -12,13 +12,16 @@ import { getAppEnvironmentOnClient } from "@/lib/get-app-environment-on-client";
 const DEBUG = false as const satisfies boolean;
 
 export function useAppEnvironment(): SchemaVaultsAppEnvironment {
+  const contextValue: SchemaVaultsAppEnvironment | null = useContext(
+    SchemaVaultsAppEnvironmentContext,
+  );
   let appEnv: SchemaVaultsAppEnvironment | undefined = undefined;
 
   try {
     // Catch so hook could still run on SSR
     appEnv = getAppEnvironmentOnClient(window);
   } catch (e: unknown) {
-    /** no-op, window might not be defined on server */
+    void e; /** no-op, window might not be defined on server */
   }
 
   if (appEnv && DEBUG) {
@@ -35,7 +38,7 @@ export function useAppEnvironment(): SchemaVaultsAppEnvironment {
       return serverSideAppEnv;
     }
   } catch (e: unknown) {
-    /** no-op, this should throw/catch on client-side for getAppEnvironment usage */
+    void e; /** no-op, this should throw/catch on client-side for getAppEnvironment usage */
   }
 
   if (appEnv && DEBUG) {
@@ -44,11 +47,10 @@ export function useAppEnvironment(): SchemaVaultsAppEnvironment {
       appEnv,
     );
   }
-  if (appEnv) return appEnv;
+  if (appEnv) {
+    return appEnv;
+  }
 
-  const contextValue: SchemaVaultsAppEnvironment | null = useContext(
-    SchemaVaultsAppEnvironmentContext,
-  );
   if (!contextValue || typeof contextValue !== "string") {
     throw new Error(
       "useAppEnvironment must be used within a SchemaVaultsAppEnvironmentContextProvider!",

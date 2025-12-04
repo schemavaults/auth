@@ -3,7 +3,7 @@ import type {
   ISchemaVaultsMiddlewareFactory,
   ISchemaVaultsMiddlewareFnInputs,
 } from "@/middleware_types";
-import type { NextFetchEvent, NextRequest, NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { BaseMiddleware } from "@/middlewares/BaseMiddleware";
 
 class RequestLoggingMiddleware
@@ -27,7 +27,7 @@ class RequestLoggingMiddleware
       ip = req.headers.get("X-Real-IP") ?? undefined;
     }
 
-    const logIpPortion: string = ip ? `IP: \"${ip}\"` : "unknown IP";
+    const logIpPortion: string = ip ? `IP: "${ip}"` : "unknown IP";
     console.log(`'${req.method}' => '${req.url}' (${logIpPortion}).`);
     const next = this.next;
     if (!RequestLoggingMiddleware.hasNextMiddleware(next)) {

@@ -59,7 +59,6 @@ export class MiddlewareChain
     json,
     ...inputs
   }: ISchemaVaultsMiddlewareFnInputs): Promise<NextResponse | Response> {
-    const debug: boolean = this.debug;
     if (this.debug) {
       console.log("[MiddlewareChain] handle()");
     }

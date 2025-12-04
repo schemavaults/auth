@@ -1,12 +1,12 @@
 import { z } from "zod";
 import {
-  hashPassword as saltAndHashPassword,
   PKCE_ProofKeyManager,
   inviteCodeFormatSchema,
-  InviteCodeDefinition,
+  type InviteCodeDefinition,
   inviteCodeDefinitionSchema,
-  InviteCode,
+  type InviteCode,
 } from "@schemavaults/auth-common";
+import { hashPassword as saltAndHashPassword} from "@/lib/hash_password"
 import { type Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
 import { type PasswordRecord, passwordRecordSchema } from "./passwords-table";

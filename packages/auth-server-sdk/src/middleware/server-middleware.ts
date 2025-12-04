@@ -1,8 +1,7 @@
 // server-middleware.ts
 
-import {
-  type AuthMiddlewareRules,
-  appRefIdSchema,
+import type {
+   AuthMiddlewareRules,
 } from "@schemavaults/auth-common";
 import {
   type IMiddlewareChainInitOptions,

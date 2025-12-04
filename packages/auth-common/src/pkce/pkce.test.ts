@@ -1,8 +1,8 @@
 import { expect, describe, it } from "bun:test";
 
 import { PKCE_ProofKeyManager } from "./pkce";
-import { CodeVerifier, CodeVerifierWithDetails, CreateCodeVerifierInputOptions } from "./code_verifier";
-import { CodeChallengeWithDetails } from "./code_challenge";
+import type { CodeVerifierWithDetails } from "./code_verifier";
+import type { CodeChallengeWithDetails } from "./code_challenge";
 
 describe("PKCE_ProofKeyManager", () => {
   it("createCodeVerifier should return a code_verifier string of length between 43 and 1024", async () => {
@@ -37,7 +37,7 @@ describe("PKCE_ProofKeyManager", () => {
 
     // Hashes correctly?
     const encoder = new TextEncoder();
-    const data: Uint8Array = encoder.encode(code_verifier.code_verifier);
+    const data: BufferSource = encoder.encode(code_verifier.code_verifier);
     const hash_buffer: ArrayBuffer = await crypto.subtle.digest("SHA-256", data);
     const base64_encoded_hash: string = Buffer.from(hash_buffer).toString("base64");
     const base64url_encoded_hash = base64_encoded_hash.replace(/[^A-Za-z0-9_-]/g, "_");

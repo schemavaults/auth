@@ -24,7 +24,7 @@ function maybeGetCurrentUserFromAuthHook(
     const auth: ISchemaVaultsAuthClient = authClientRef.client.current;
     const currentUser: UserData | null = getCurrentUser(auth);
 
-    if (!!currentUser) {
+    if (currentUser) {
       if (debug) {
         console.log(
           "[maybeGetCurrentUserFromAuthHook] Loaded current user data from auth client: ",

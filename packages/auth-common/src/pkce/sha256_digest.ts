@@ -9,7 +9,7 @@ export async function sha256_digest(code_verifier: string): Promise<string> {
   if (isSecureContext) {
     digest = async function secureContextSha256Digest(code_verifier: string): Promise<string> {
       const encoder = new TextEncoder();
-      const data: Uint8Array = encoder.encode(code_verifier);
+      const data: BufferSource = encoder.encode(code_verifier);
 
       const sha_digest = await crypto.subtle.digest(digest_algorithm, data);
 
@@ -39,6 +39,7 @@ export async function sha256_digest(code_verifier: string): Promise<string> {
           return output;
         }
       } catch (e: unknown) {
+        console.error("Failed to load sha256 hash function: ", e);
         throw new Error("Failed to load sha256 hash function")
       }
 

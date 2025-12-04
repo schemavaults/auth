@@ -15,6 +15,7 @@ describe("MiddlewareChain", () => {
         chain.toMiddlewareFlowString(),
       );
     } catch (e: unknown) {
+      void e;
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();
@@ -38,6 +39,7 @@ describe("MiddlewareChain", () => {
         chain.toMiddlewareFlowString(),
       );
     } catch (e: unknown) {
+      void e;
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();

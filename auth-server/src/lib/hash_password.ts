@@ -1,10 +1,11 @@
 // Web Crypto API
 // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest
 
-import maybeStripQuotes from "@/utils/maybeStripQuotes";
+import maybeStripQuotes from "@/lib/maybeStripQuotes";
 
 // Required environment variables for this module
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
     interface ProcessEnv {
       PRIVATE_GLOBAL_PASSWORD_SALT: string;

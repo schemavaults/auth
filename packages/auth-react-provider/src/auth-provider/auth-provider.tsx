@@ -110,7 +110,7 @@ function AppEnvironmentAwareAuthProvider(
       console.error(e);
       throw new Error("Failed to query domain for app!");
     }
-  }, [props.successful_logout_redirect_uri, appEnvironment]);
+  }, [props.successful_logout_redirect_uri, appEnvironment, app_id]);
 
   const successful_authentication_redirect_uri: string = useMemo((): string => {
     if (typeof props.successful_authentication_redirect_uri === "string") {

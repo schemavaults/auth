@@ -147,7 +147,7 @@ export function useStartLoginOauthPKCEFlow(
         console.log("[useStartLoginOauthPKCEFlow] Auth client not ready.");
       }
     }
-  }, [authContext, debug, router, toast]);
+  }, [authContext, debug, router, toast, checkIfAuthenticatedWithServer]);
 }
 
 export default useStartLoginOauthPKCEFlow;

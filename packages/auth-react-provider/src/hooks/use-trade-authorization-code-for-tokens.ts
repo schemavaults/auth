@@ -25,9 +25,8 @@ export interface IUseTradeAuthorizationCodeForTokensEffectOptions {
 }
 
 export function useTradeAuthorizationCodeForTokensEffect(
-  opts: IUseTradeAuthorizationCodeForTokensEffectOptions,
+  { router, searchParams, auth, toast, ...opts }: IUseTradeAuthorizationCodeForTokensEffectOptions,
 ): void {
-  const { router, searchParams, auth } = opts;
   const environment = useAppEnvironment();
   const debug: boolean = useDebugWithSpecifiedBooleanOrLookupDefault(
     environment,
@@ -40,14 +39,16 @@ export function useTradeAuthorizationCodeForTokensEffect(
       if (window) {
         currentHref = window.location.href satisfies string;
       }
-    } catch (e: unknown) {}
+    } catch (e: unknown) {
+      void e; // no-op
+    }
 
     if (debug) {
       console.log(
         "[tradeAuthorizationCodeForTokensEffect] Attempting to trade authorization code for authentication tokens on path: ",
         currentHref,
       );
-      if (typeof opts.toast === "function") {
+      if (typeof toast === "function") {
         console.log(
           "[tradeAuthorizationCodeForTokensEffect] Received 'toast' function to allow displaying info to end-user!",
         );
@@ -65,11 +66,11 @@ export function useTradeAuthorizationCodeForTokensEffect(
       tradeCodeEffectCancelled = true;
     }
 
-    if (debug && typeof opts.toast === "function") {
-      opts.toast({
+    if (debug && typeof toast === "function") {
+      toast({
         title: "[DEV] useTradeAuthorizationCodeForTokensEffect",
         description:
-          "Attempting to trade authorization code & code proof for tokens",
+          "Attempting to trade authorization code & code proof for tokens...",
       });
     }
 
@@ -94,8 +95,8 @@ export function useTradeAuthorizationCodeForTokensEffect(
 
     function onAuthHandlerFail(e?: unknown): void {
       if (tradeCodeEffectCancelled) return;
-      if (typeof opts.toast === "function") {
-        opts.toast({
+      if (typeof toast === "function") {
+        toast({
           variant: "destructive",
           title: "Failed to trade authorization code for tokens",
           description:
@@ -110,8 +111,8 @@ export function useTradeAuthorizationCodeForTokensEffect(
     }
 
     if (auth.isAuthenticated) {
-      if (typeof opts.toast === "function") {
-        opts.toast({
+      if (typeof toast === "function") {
+        toast({
           variant: "warning",
           title: "Already logged in!",
           description:
@@ -150,8 +151,8 @@ export function useTradeAuthorizationCodeForTokensEffect(
             "[tradeAuthorizationCodeForTokensHandler] Missing authorization code or challenge time.",
           );
         }
-        if (typeof opts.toast === "function") {
-          opts.toast({
+        if (typeof toast === "function") {
+          toast({
             variant: "destructive",
             title: "Missing authorization code or challenge time!",
             description: "Expected data not found within query parameters!",
@@ -173,8 +174,8 @@ export function useTradeAuthorizationCodeForTokensEffect(
             "[tradeAuthorizationCodeForTokensHandler] Challenge time is not a number.",
           );
         }
-        if (typeof opts.toast === "function") {
-          opts.toast({
+        if (typeof toast === "function") {
+          toast({
             variant: "destructive",
             title: "Failed to parse PKCE challenge time!",
             description: "Please try again later...",
@@ -212,7 +213,9 @@ export function useTradeAuthorizationCodeForTokensEffect(
             };
           }
         }
-      } catch (e: unknown) {}
+      } catch (e: unknown) {
+        console.warn("Code verifier appears to have already been used, and there was an error handling this case: ", e);
+      }
 
       // This uses PKCE behind the scenes to ensure that the authorization code is valid (and came from this client)
 
@@ -229,13 +232,15 @@ export function useTradeAuthorizationCodeForTokensEffect(
       } catch (e: unknown) {
         if (e instanceof Error) {
           if (e.message.includes("already been used")) {
+            console.warn("handleSuccessfulAuthentication() appears to have failed due to an 'already been used' error!", e.message)
+            /** no-op */
           } else {
             console.error(
               "[tradeAuthorizationCodeForTokensHandler] Handle successful authentication handler failed: ",
               e,
             );
-            if (typeof opts.toast === "function") {
-              opts.toast({
+            if (typeof toast === "function") {
+              toast({
                 variant: "destructive",
                 title: "Failed to acquire authentication tokens",
                 description: "Successful authentication handler failed!",
@@ -334,5 +339,7 @@ export function useTradeAuthorizationCodeForTokensEffect(
       });
 
     return cancelEffectUnsubscribeFn;
-  }, []);
+  }, [toast, debug, router, searchParams, auth]);
 }
+
+export default useTradeAuthorizationCodeForTokensEffect;

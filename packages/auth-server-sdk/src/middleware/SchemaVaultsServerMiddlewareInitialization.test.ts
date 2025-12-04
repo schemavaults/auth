@@ -18,6 +18,7 @@ describe("SchemaVaultsServerMiddleware Initialization", () => {
         middleware.toMiddlewareFlowString(),
       );
     } catch (e: unknown) {
+      console.error("Error initializing middleware: ", e);
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();

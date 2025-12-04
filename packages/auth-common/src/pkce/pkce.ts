@@ -1,4 +1,4 @@
-import { type CodeChallenge, create_code_challenge, codeChallengeSchema, code_challenge_method, type CreateCodeChallengeInputOptions, CodeChallengeWithDetails, codeChallengeWithDetailsSchema } from "./code_challenge";
+import { create_code_challenge, codeChallengeSchema, code_challenge_method, type CreateCodeChallengeInputOptions, CodeChallengeWithDetails, codeChallengeWithDetailsSchema } from "./code_challenge";
 import { type CodeVerifier, create_code_verifier, codeVerifierSchema, MAX_PKCE_CODE_VERIFIER_AGE, CodeVerifierWithDetails, codeVerifierWithDetailsSchema } from "./code_verifier";
 import { sha256_digest } from "./sha256_digest";
 

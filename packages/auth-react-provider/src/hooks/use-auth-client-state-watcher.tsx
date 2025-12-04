@@ -126,7 +126,7 @@ export function useAuthClientStateWatcher({
             authClientRef.current.removeAuthStateChangeListener(listener_id);
           } catch (e: unknown) {
             console.error(
-              "[useAuthClientStateWatcher] Failed to remove auth state change listener.",
+              "[useAuthClientStateWatcher] Failed to remove auth state change listener: ", e
             );
           }
           return;
@@ -134,5 +134,5 @@ export function useAuthClientStateWatcher({
       };
       return unsubscribe;
     }
-  }, [auth, debug]);
+  }, [auth, debug, onAuthStateChanged]);
 }

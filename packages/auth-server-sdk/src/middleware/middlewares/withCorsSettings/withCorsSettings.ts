@@ -77,9 +77,10 @@ class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
       policy: POLICY satisfies SchemaVaultsCORSEnforcementPolicy,
       audience,
       debug: DEBUG,
+      environment: this.environment
     });
     console.log(
-      `[withCorsSettings] ${isOriginSet ? "An" : "No"} origin is set. ${isOriginSet ? `Origin \"${origin}\"` : "Not having an origin"} ${isAllowed ? "is" : "is not"} allowed for audience \"${audience}\"`,
+      `[withCorsSettings] ${isOriginSet ? "An" : "No"} origin is set. ${isOriginSet ? `Origin "${origin}"` : "Not having an origin"} ${isAllowed ? "is" : "is not"} allowed for audience "${audience}"`,
     );
     if (!isAllowed) {
       if (DEBUG) {

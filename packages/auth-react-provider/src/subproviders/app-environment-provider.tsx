@@ -42,6 +42,7 @@ export function SchemaVaultsAppEnvironmentContextProvider({
       }
     } catch (e: unknown) {
       /** no-op */
+      void e;
     }
 
     try {
@@ -53,12 +54,13 @@ export function SchemaVaultsAppEnvironmentContextProvider({
       }
     } catch (e: unknown) {
       /** no-op */
+      void e;
     }
 
     // Else, client will have to fetch /api/environment to load current app environment
 
     return undefined;
-  }, [props.environment]);
+  }, [props.environment, verbose]);
 
   if (!app_env) {
     throw new Error(

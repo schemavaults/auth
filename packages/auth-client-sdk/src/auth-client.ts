@@ -143,13 +143,13 @@ export class SchemaVaultsAuthClient
     if (this.DEBUG) {
       let currentUrl: string | undefined = undefined;
       try {
-        // @ts-ignore
+        // @ts-expect-error Window is not defined in Node.js, this may not be in a browser environment
         if (typeof window === "object" && !!window) {
-          // @ts-ignore
+          // @ts-expect-error Window is not defined in Node.js, this may not be in a browser environment
           currentUrl = window.location.href;
         }
       } catch (e: unknown) {
-        /** no-op */
+        void e; /** no-op */
       }
       if (typeof currentUrl === "string") {
         // Successfully loaded current url
@@ -233,17 +233,17 @@ export class SchemaVaultsAuthClient
             this.environment === "staging"
           ) {
             console.log(
-              `[handleAuthStateChange] Triggering listener with ID \"${id}\"...`,
+              `[handleAuthStateChange] Triggering listener with ID "${id}"...`,
             );
           }
           listener();
         } catch (e: unknown) {
           console.error(
-            `Error thrown from onAuthStateChange listener with ID \"${id}\":`,
+            `Error thrown from onAuthStateChange listener with ID "${id}":`,
             e,
           );
           throw new Error(
-            `[handleAuthStateChange] Error thrown from onAuthStateChange listener with ID \"${id}\"`,
+            `[handleAuthStateChange] Error thrown from onAuthStateChange listener with ID "${id}"`,
           );
         }
       },
@@ -382,9 +382,12 @@ export class SchemaVaultsAuthClient
     }
 
     // Do some validation
-    if (typeof code_verifier === "object" && !!code_verifier) {
-    } else {
-      throw new Error("Expected code_verifier to be an object!");
+    if (typeof code_verifier !== "object" || !code_verifier) {
+      throw new TypeError("Expected generated 'code_verifier' to be an object!");
+    } else if (typeof code_verifier.challenge_time !== "number") {
+      throw new TypeError("Expected generated 'code_verifier.challenge_time' to be a number!");
+    } else if (typeof code_verifier.code_verifier !== "string") {
+      throw new TypeError("Expected generated 'code_verifier.code_verifier' to be a string!");
     }
 
     // This is sent to the auth server-- it's a hash of the code verifier
@@ -541,7 +544,7 @@ export class SchemaVaultsAuthClient
       // store each access token
       const accessToken: AccessToken | undefined = access_tokens[audience];
       if (!accessToken)
-        throw new Error(`Missing access token for audience \"${audience}\"`);
+        throw new Error(`Missing access token for audience "${audience}"`);
       if (audience !== accessToken.aud)
         throw new Error(
           "Record key does not match access token audience field",
@@ -655,7 +658,7 @@ export class SchemaVaultsAuthClient
             max_age: PKCE_ProofKeyManager.max_age,
           });
         } catch (e: unknown) {
-          /** no-op */
+          void e; /** no-op */
         }
       }
       throw new Error("Code verifier has expired");
@@ -882,11 +885,15 @@ export class SchemaVaultsAuthClient
           ...access_tokens,
           refresh_token,
         });
-      } catch (e: unknown) {}
+      } catch (e: unknown) {
+        void e; /** no-op */
+      }
       try {
         console.log("[SchemaVaultsAuthClient] User data:");
         console.table(user);
-      } catch (e: unknown) {}
+      } catch (e: unknown) {
+        void e; /** no-op */
+      }
     }
 
     // Store refresh tokens
@@ -1041,7 +1048,7 @@ export class SchemaVaultsAuthClient
   private storeAccessToken(token_id: string, access_token: AccessToken): void {
     if (this.DEBUG)
       console.log(
-        `Storing access token with ID \"${token_id}\" via adapter: `,
+        `Storing access token with ID "${token_id}" via adapter: `,
         access_token,
       );
     this.adapter.storeAccessToken(token_id, access_token);
@@ -1051,13 +1058,13 @@ export class SchemaVaultsAuthClient
   public getAccessTokenFromCache(token_id: string): AccessToken | null {
     if (this.DEBUG) {
       console.log(
-        `[SchemaVaultsAuthClient] Getting access token with ID \"${token_id}\" via adapter...`,
+        `[SchemaVaultsAuthClient] Getting access token with ID "${token_id}" via adapter...`,
       );
     }
     const token: AccessToken | null = this.adapter.getAccessToken(token_id);
     if (this.DEBUG && !token) {
       console.warn(
-        `[SchemaVaultsAuthClient] Cache lookup failed for access token with ID \"${token_id}\" via adapter...`,
+        `[SchemaVaultsAuthClient] Cache lookup failed for access token with ID "${token_id}" via adapter...`,
       );
     }
     return token;
@@ -1101,10 +1108,15 @@ export class SchemaVaultsAuthClient
 
     if (!opts.ensure_fresh) {
       const cached = this.getAccessTokenFromCache(opts.token_id);
-      if (!!cached) {
+      if (cached) {
         if (cached.exp < Date.now() + 10 * 1000) {
           // Clear the access token from the cache
-          this.adapter;
+          try {
+            this.adapter.clearAccessToken(opts.token_id);
+          } catch (e: unknown) {
+            console.error("Failed to clear access token from cache:", e);
+          }
+
         } else {
           // Use access token if it doesn't expire in the next 10 seconds
           return cached;
@@ -1194,13 +1206,14 @@ export class SchemaVaultsAuthClient
         );
       }
       if (e instanceof Error) {
-        const eMsg = e.message;
+        const eMsg: string = e.message;
         if (
           eMsg.includes("token has expired") ||
           eMsg.includes("ERR_JWT_EXPIRED")
         ) {
+
           await this.logout();
-          return null as any;
+          throw new Error("Failed to exchange refresh token for access token; refresh token expired! We logged you out.");
         }
       }
 
@@ -1216,7 +1229,7 @@ export class SchemaVaultsAuthClient
     const access = access_tokens[audience];
     if (!access)
       throw new Error(
-        `No access token included with the audience originally requested: \"${audience}\"`,
+        `No access token included with the audience originally requested: "${audience}"`,
       );
 
     if (!opts.dont_cache) {
@@ -1576,7 +1589,7 @@ export class SchemaVaultsAuthClient
       try {
         id = this.adapter.uuid();
       } catch (e: unknown) {
-        console.error();
+        console.error("Failed to generate UUID using both crypto.randomUUID and platform adapter: ", e);
         throw new Error(
           "Failed to generate UUID using both crypto.randomUUID and platform adapter! :(",
         );
@@ -1604,7 +1617,7 @@ export class SchemaVaultsAuthClient
 
     if (this.listeners.has(id)) {
       throw new Error(
-        `An auth state listener callback already exists with ID: \"${id}\"`,
+        `An auth state listener callback already exists with ID: "${id}"`,
       );
     }
     this.listeners.set(id, {
@@ -1622,7 +1635,7 @@ export class SchemaVaultsAuthClient
   public removeAuthStateChangeListener(listener_id: string): void {
     if (!this.listeners.has(listener_id))
       throw new Error(
-        `No auth state change listener with ID \"${listener_id}\"`,
+        `No auth state change listener with ID "${listener_id}"`,
       );
     const removed_successfully: boolean = this.listeners.delete(listener_id);
     if (!removed_successfully) {
@@ -1630,7 +1643,7 @@ export class SchemaVaultsAuthClient
         `[SchemaVaultsAuthClient] removeAuthStateChangeListener(listener_id="${listener_id}") -> Failed to remove listener from map-- wrong ID or does not exist?.`,
       );
       throw new Error(
-        `Failed to remove auth state change listener with ID \"${listener_id}\"`,
+        `Failed to remove auth state change listener with ID "${listener_id}"`,
       );
     }
     if (this.DEBUG) {

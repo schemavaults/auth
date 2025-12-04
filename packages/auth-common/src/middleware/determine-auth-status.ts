@@ -93,7 +93,7 @@ export async function determineAuthStatus(
     }
 
     if (typeof decoded_jwt !== 'object') throw new Error("Expected decoded jwt to be an object");
-    const admin: boolean = decoded_jwt.hasOwnProperty('admin') ? (decoded_jwt.admin ?? false) : false;
+    const admin: boolean = Object.hasOwn(decoded_jwt, 'admin') ? (decoded_jwt.admin ?? false) : false;
     return {
       status: "logged-in",
       admin

@@ -16,7 +16,7 @@ export interface UseLogoutEffectOptions {
   debug?: boolean;
 }
 
-export function useLogoutEffect(opts?: UseLogoutEffectOptions): void {
+export function useLogoutEffect({ onLogoutSuccess, onLogoutFailure, ...opts }: UseLogoutEffectOptions): void {
   const authContext = useAuth();
   const router = useRouter();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
@@ -61,16 +61,16 @@ export function useLogoutEffect(opts?: UseLogoutEffectOptions): void {
 
     auth
       .logout()
-      .then(function onLogoutSuccess(): void {
-        if (typeof opts?.onLogoutSuccess === "function") {
-          opts.onLogoutSuccess();
+      .then(function onLogoutSuccessHandler(): void {
+        if (typeof onLogoutSuccess === "function") {
+          onLogoutSuccess();
         }
         router.push(successful_logout_redirect_uri);
         return;
       })
-      .catch(function onLogoutFailure(e: unknown): void {
-        if (typeof opts?.onLogoutFailure === "function") {
-          opts.onLogoutFailure(e);
+      .catch(function onLogoutFailureErorrHandler(e: unknown): void {
+        if (typeof onLogoutFailure === "function") {
+          onLogoutFailure(e);
         } else {
           const errMsg: string =
             e instanceof Error
@@ -82,5 +82,5 @@ export function useLogoutEffect(opts?: UseLogoutEffectOptions): void {
       });
 
     return unsubscribe;
-  }, [authContext.ready, debug]);
+  }, [authContext, debug, onLogoutSuccess, onLogoutFailure, router]);
 }

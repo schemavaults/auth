@@ -1,4 +1,3 @@
-export { hashPassword, comparePassword } from "./hash_password";
 export { userDataSchema, type UserData } from "./user_data";
 
 export * from "./credentials";

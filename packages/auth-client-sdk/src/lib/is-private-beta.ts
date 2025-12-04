@@ -18,7 +18,8 @@ export function isPrivateBeta(): boolean {
       return true;
     }
   } catch (e: unknown) {
-    /** no-op */
+    console.error("Error checking private beta flag:", e);
+    throw new Error("Failed to check private beta flag!");
   }
 
   return false;

@@ -21,7 +21,7 @@ export function useDebug(environment: SchemaVaultsAppEnvironment): boolean {
         return true;
       }
     } catch (e: unknown) {
-      /** no-op */
+      void e; /** no-op */
     }
 
     return false;

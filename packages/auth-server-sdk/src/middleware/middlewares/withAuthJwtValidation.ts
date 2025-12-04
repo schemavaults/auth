@@ -11,7 +11,6 @@ import {
   type DecodeTokenFn,
   type AuthMiddlewareError,
 } from "@schemavaults/auth-common";
-import { headers } from "next/headers";
 import {
   type CustomJWTPayload,
   decodeJWT,
