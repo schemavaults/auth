@@ -9,7 +9,7 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
-const debug: boolean = true;
+const debug: boolean = false;
 const iat: number = Date.now();
 const type: AuthTokenTypes = "refresh";
 const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id satisfies string;

@@ -21,3 +21,5 @@ export class MockUser implements UserData {
     return this.uid;
   }
 }
+
+export default MockUser;

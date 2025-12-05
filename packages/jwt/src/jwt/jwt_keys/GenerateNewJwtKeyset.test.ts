@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import generateNewJwtKeySet from "./generate_new_jwt_keyset";
 
-const DEBUG: boolean = true;
+const DEBUG: boolean = false;
 
 describe("Generate new JWT keyset", () => {
   test("should generate a new JWT keyset", async () => {

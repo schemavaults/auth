@@ -13,7 +13,7 @@ import {
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
-import { MockUser } from "@/tests/MockUser";
+import MockUser from "@/tests/MockUser";
 
 const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
 
