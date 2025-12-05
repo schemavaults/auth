@@ -1,5 +1,7 @@
 import { importPKCS8, importSPKI, type KeyLike } from "jose";
 import Raw_JWT_Keys_Store, { type IInitRawJwtKeysStoreOptions } from "./raw_jwt_keys_store";
+import encryptDecryptAlg from "../encrypt_decrypt_alg";
+import signingVerificationAlg from "../sign_verify_alg";
 
 /**
  * @name JWT_Keys
@@ -33,14 +35,14 @@ export class JWT_Keys {
   ): Promise<KeyLike> {
     return await importPKCS8(
       pkcs8,
-      "RS256",
+      signingVerificationAlg,
     ) satisfies KeyLike;
   }
 
   private static async init_spki_public_verifier_key(
     spki: string,
   ): Promise<KeyLike> {
-    return await importSPKI(spki, "RS256");
+    return await importSPKI(spki, signingVerificationAlg);
   }
 
   private static async init_decryption_key(
@@ -48,7 +50,7 @@ export class JWT_Keys {
   ): Promise<KeyLike> {
     const initializedPkcs8EncryptionKey: KeyLike = await importPKCS8(
       pkcs8,
-      "RS256",
+      encryptDecryptAlg,
     );
     return initializedPkcs8EncryptionKey;
   }
@@ -58,7 +60,7 @@ export class JWT_Keys {
   ): Promise<KeyLike> {
     return await importSPKI(
       spki,
-      "RS256",
+      encryptDecryptAlg,
     );
   }
 

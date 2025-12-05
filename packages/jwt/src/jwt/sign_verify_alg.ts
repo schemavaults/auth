@@ -1,2 +1,2 @@
-export const alg = "RSA256" as const;
+export const alg = "RS256" as const;
 export default alg;

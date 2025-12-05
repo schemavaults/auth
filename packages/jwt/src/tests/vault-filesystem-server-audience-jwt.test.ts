@@ -79,7 +79,8 @@ describe("JWTs for Vault FileSystem", () => {
       "us-east1", // region id should just be a uuid
       "us-east1!", // invalid char
       "my-invalid-region_", // invalid char
-      69 as any, // not a string
+      // @ts-expect-error Passing an invalid type on purpose for this test case
+      69, // bad type
       "01e0eagd-434c-4dc7-bff4-ddz488b62528" // almost a uuid but with invalid chars
     ];
 

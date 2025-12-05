@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { signJWT } from "./sign";
-import { generateNewJwtKeySet, JWT_Keys } from "./jwt_keys";
+import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
 import { verifyJWTSignature } from "./verify_signature";
 import type { AuthTokenTypes } from "@schemavaults/auth-common";
 import {
@@ -9,20 +9,33 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
-const debug: boolean = false;
+const debug: boolean = true;
+const iat: number = Date.now();
+const type: AuthTokenTypes = "refresh";
+const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id satisfies string;
+const email = "jalexwhitman@gmail.com" as const satisfies string;
+const uid: string = crypto.randomUUID();
+const sub: string = uid;
+const env: SchemaVaultsAppEnvironment = getAppEnvironment();
 
 describe("JWT Signature 'sig' field", async (): Promise<void> => {
+  it("can sign a JWT", async () => {
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet(debug);
+    const sig: string = await signJWT({
+      jwt_keys,
+      audience,
+      iat,
+      email,
+      uid,
+      type,
+      env,
+    });
+    expect(sig).toBeString();
+    expect(sig.length).toBeGreaterThan(0)
+  })
+
   it("can sign and validate a JWT", async () => {
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet(debug);
-
-    const iat: number = Date.now();
-
-    const type: AuthTokenTypes = "refresh";
-    const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id satisfies string;
-    const email = "jalexwhitman@gmail.com" as const satisfies string;
-    const uid: string = crypto.randomUUID();
-    const sub: string = uid;
-    const env: SchemaVaultsAppEnvironment = getAppEnvironment();
 
     const sig: string = await signJWT({
       jwt_keys,
