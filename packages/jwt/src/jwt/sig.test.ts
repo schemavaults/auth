@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { signJWT } from "./sign";
-import { JWT_Keys } from "./jwt_keys";
+import { generateNewJwtKeySet, JWT_Keys } from "./jwt_keys";
 import { verifyJWTSignature } from "./verify_signature";
 import type { AuthTokenTypes } from "@schemavaults/auth-common";
 import {
@@ -13,7 +13,7 @@ const debug: boolean = false;
 
 describe("JWT Signature 'sig' field", async (): Promise<void> => {
   it("can sign and validate a JWT", async () => {
-    const jwt_keys: JWT_Keys = await JWT_Keys.createKeys({ debug });
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet(debug);
 
     const iat: number = Date.now();
 

@@ -1,4 +1,4 @@
-import { decodeJWT, JWT_Keys } from "@/jwt";
+import { decodeJWT, generateNewJwtKeySet, type JWT_Keys } from "@/jwt";
 import {
   SCHEMAVAULTS_MAIL_APP_DEFINITION,
   SCHEMAVAULTS_WEB,
@@ -6,11 +6,11 @@ import {
 } from "@schemavaults/app-definitions";
 import { describe, test, expect } from "bun:test";
 import { MockUser } from "@/tests/MockUser";
-import { generateJWT, GenerateJWTOptions } from "@/jwt/generate";
+import { generateJWT, type GenerateJWTOptions } from "@/jwt/generate";
 
 const env: SchemaVaultsAppEnvironment = "test";
 
-const jwt_keys: JWT_Keys = await JWT_Keys.createKeys();
+const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
 
 async function isGenerateAndDecodeTokenForMailServerSuccess(
   client_app_id: string = SCHEMAVAULTS_MAIL_APP_DEFINITION.app_id,

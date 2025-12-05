@@ -1,5 +1,5 @@
 import { test, describe, expect } from "bun:test";
-import { SigningKeyPairFactory } from "./SigningKeyPairFactory";
+import SigningKeyPairFactory from "./SigningKeyPairFactory";
 import { base64url } from "jose";
 import { PEMFormat } from "./pem-format";
 

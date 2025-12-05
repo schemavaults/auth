@@ -1,26 +1,28 @@
-import { JWT_Keys } from "@/jwt";
+import { generateNewJwtKeySet, JWT_Keys } from "@/jwt";
 import { describe, test, expect } from "bun:test";
 
 describe("JWT_Keys instance initialization w/o auth-server-only keys", () => {
   test("can reinitialize a JWT_Keys instance w/o encryption or signing key", async () => {
     let errorThrown: boolean = false;
     try {
-      const keys = await JWT_Keys.createKeys();
+      const keys: JWT_Keys = await generateNewJwtKeySet();
+      const decryption: string = keys.raw_keys.decryption;
+      const verification: string = keys.raw_keys.verification;
 
-      const reinited = await JWT_Keys.init({
-        // private_signing_secret: keys.private_signing_secret_pkcs8,
-        public_signing_verifier: keys.public_signing_verifier_spki,
-        decryption_secret: keys.decryption_secret_base64url,
+      const reinited = new JWT_Keys({
+        decryption: { value: decryption, privacyLevel: 'private', format: "pem", name: "decryption" },
+        verification: { value: verification, privacyLevel: 'public', format: "pem", name: "verification" },
+        is_auth_server: false
       });
 
-      const decrypt_secret = reinited.decryption_secret_base64url;
-      void decrypt_secret;
-      const verifier_secret = reinited.public_signing_verifier_spki;
-      void verifier_secret;
+      expect(decryption).toBe(reinited.raw_keys.decryption);
+      expect(verification).toBe(reinited.raw_keys.verification);
+      expect(reinited.raw_keys.encryption).toBeFalsy();
+      expect(reinited.raw_keys.signing).toBeFalsy();
     } catch (e: unknown) {
       void e;
       errorThrown = true;
     }
-    expect(errorThrown).toBeFalse();
+    expect(errorThrown, "An error should not be thrown initializing JWT_Keys without encryption or signing keys").toBeFalse();
   });
 });

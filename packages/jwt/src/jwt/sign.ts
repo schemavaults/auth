@@ -1,9 +1,10 @@
-import { JWTPayload, SignJWT } from "jose";
-import { JWT_Keys } from "./jwt_keys";
+import { type JWTPayload, type KeyLike, SignJWT } from "jose";
+import type { JWT_Keys } from "./jwt_keys";
 import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
-import { AuthTokenTypes } from "@schemavaults/auth-common";
-import { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import type { AuthTokenTypes } from "@schemavaults/auth-common";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import signAndVerifyAlg from "./sign_verify_alg";
 
 export interface SignJSONWebTokenInputOptions<
   TokenType extends AuthTokenTypes,
@@ -30,11 +31,19 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
 
   const env = opts.env;
 
-  const jwt_keys = opts.jwt_keys;
+  const jwt_keys: JWT_Keys = opts.jwt_keys;
 
-  const alg = "RS256";
-
-  const private_key = jwt_keys.private_signing_secret;
+  let private_signing_key: KeyLike;
+  try {
+    const private_key_promise: Promise<KeyLike> | null = jwt_keys.signing_key;
+    if (!private_key_promise) {
+      throw new Error("Failed to load private signing key from key store!")
+    }
+    private_signing_key = await private_key_promise;
+  } catch (e: unknown) {
+    console.error("Failed to load private signing key from key store: ", e);
+    throw new Error("Failed to load private signing key from key store!");
+  }
 
   const signaturePayload: JWTPayload = {
     sub,
@@ -45,12 +54,12 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
 
   try {
     return await new SignJWT(signaturePayload)
-      .setProtectedHeader({ alg })
+      .setProtectedHeader({ alg: signAndVerifyAlg })
       .setAudience(opts.audience)
       .setIssuedAt(opts.iat)
       .setIssuer(issuer)
       .setExpirationTime(getExpiryDurationString(type))
-      .sign(private_key);
+      .sign(private_signing_key);
   } catch (e: unknown) {
     console.error("Failed to sign JWT: ", e);
     throw new Error("Failed to sign JWT!");

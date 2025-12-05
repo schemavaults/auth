@@ -79,3 +79,5 @@ export class SigningKeyPairFactory extends AbstractBaseKeyPairFactory {
     return SigningKeyPairFactory.exportKeyPair([privateKey, publicKey], export_method);
   }
 }
+
+export default SigningKeyPairFactory;

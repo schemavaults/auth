@@ -1,4 +1,4 @@
-import { type JWTDecryptResult, jwtDecrypt } from "jose";
+import { type JWTDecryptResult, type KeyLike, jwtDecrypt } from "jose";
 import type { JWT_Keys } from "./jwt_keys";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import { issuer } from "./iss";
@@ -57,13 +57,13 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     );
   }
 
-  let decodingKey: Uint8Array;
+  let decryptionKey: KeyLike;
   try {
     const keys = jwt_keys;
-    decodingKey = keys.decryption_secret;
+    decryptionKey = await keys.decryption_key;
   } catch (e: unknown) {
-    console.error(e);
-    throw new Error("Error getting decoding key");
+    console.error("Error loading decryption key from key store: ", e);
+    throw new Error("Error loading decryption key from key store!");
   }
 
   const decodeTime: Date = new Date();
@@ -73,7 +73,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     console.log(`[decodeJWT] Setting max token age to ${maxTokenAge}`);
   }
 
-  const decoded: JWTDecryptResult = await jwtDecrypt(jwt, decodingKey, {
+  const decoded: JWTDecryptResult = await jwtDecrypt(jwt, decryptionKey, {
     audience: aud,
     issuer,
     maxTokenAge,

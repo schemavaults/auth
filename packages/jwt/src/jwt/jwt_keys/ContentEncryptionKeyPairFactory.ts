@@ -75,3 +75,5 @@ export class ContentEncryptionKeyPairFactory extends AbstractBaseKeyPairFactory 
     return ContentEncryptionKeyPairFactory.exportKeyPair([privateKey, publicKey], export_method)
   }
 }
+
+export default ContentEncryptionKeyPairFactory;

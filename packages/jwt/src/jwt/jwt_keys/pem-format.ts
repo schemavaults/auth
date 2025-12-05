@@ -81,3 +81,5 @@ export class PEMFormat {
     return true;
   }
 }
+
+export default PEMFormat;

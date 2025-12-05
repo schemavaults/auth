@@ -1,6 +1,6 @@
-import { EncryptJWT } from "jose";
+import { EncryptJWT, KeyLike } from "jose";
 import type { JWT_Keys } from "./jwt_keys";
-import { alg, enc } from "./alg";
+import { alg, enc } from "./encrypt_decrypt_alg";
 import { issuer } from "./iss";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import { getExpiryDurationString, getExpiryTime } from "./expiry";
@@ -108,8 +108,13 @@ export async function generateJWT<T extends AuthTokenTypes>(
     );
   }
 
+  const encryption_key_promise: Promise<KeyLike> | null = jwt_keys.encryption_key;
+  if (!encryption_key_promise) {
+    throw new Error("Failed to load encryption key from key store!")
+  }
+  const encryption_key: KeyLike = await encryption_key_promise;
+
   try {
-    const secret: Uint8Array = jwt_keys.encryption_secret;
 
     const additionalClaims: Partial<CustomJWTPayload> = {
       uid: user.uid,
@@ -132,7 +137,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
       .setAudience(aud)
       .setExpirationTime(getExpiryDurationString(type))
       .setSubject(userData.uid)
-      .encrypt(secret);
+      .encrypt(encryption_key);
 
     const expiryTime: number = getExpiryTime(type, iat);
 

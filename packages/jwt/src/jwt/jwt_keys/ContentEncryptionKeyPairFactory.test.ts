@@ -1,7 +1,7 @@
 import { test, describe, expect } from "bun:test";
 import { base64url } from "jose";
 import { PEMFormat } from "./pem-format";
-import { ContentEncryptionKeyPairFactory } from "./ContentEncryptionKeyPairFactory";
+import ContentEncryptionKeyPairFactory from "./ContentEncryptionKeyPairFactory";
 
 describe("Content Encryption Key Pair Factory", () => {
   test("can generate a public/private base64url-encoded key pair", async () => {

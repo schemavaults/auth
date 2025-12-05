@@ -12,10 +12,10 @@ import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { JWT_Keys } from "./jwt_keys";
+import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
 import { MockUser } from "@/tests/MockUser";
 
-const jwt_keys: JWT_Keys = await JWT_Keys.createKeys();
+const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
 
 const env: SchemaVaultsAppEnvironment = "test";
 
