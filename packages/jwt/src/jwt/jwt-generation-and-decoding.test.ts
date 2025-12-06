@@ -19,7 +19,7 @@ const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
 
 const env: SchemaVaultsAppEnvironment = "test";
 
-describe("JWT", () => {
+describe("JWT Generation & Decoding", () => {
   it("should generate and decode a refresh token JWT", async () => {
     const user: UserData = new MockUser();
     const now = Date.now();
@@ -46,6 +46,7 @@ describe("JWT", () => {
 
     expect(decoded.aud).toBe(audience);
     expect(decoded.sub).toBe(user.uid);
+    expect(decoded.orgs).toBeArrayOfSize(0)
   });
 
   it("should generate and decode an access token JWT", async () => {

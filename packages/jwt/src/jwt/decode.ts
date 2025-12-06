@@ -1,5 +1,5 @@
 import { type JWTDecryptResult, type CryptoKey, jwtDecrypt } from "jose";
-import type { JWT_Keys } from "./jwt_keys";
+import { JWT_Keys } from "./jwt_keys";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
@@ -15,19 +15,31 @@ import {
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
 import { verifyJWTSignature } from "./verify_signature";
+import type { SafeParseReturnType } from "zod";
+import isValidUuid from "@/utils/isValidUuid";
 
-export interface DecodeJWTOptions<T extends AuthTokenTypes> {
+interface BaseDecodeJWTOptions<T extends AuthTokenTypes> {
   type: T;
   jwt: string;
-  jwt_keys: JWT_Keys;
   audience?: string;
   env?: SchemaVaultsAppEnvironment;
 }
 
+interface DecodeJWTWithAllKeysOptions<T extends AuthTokenTypes> extends BaseDecodeJWTOptions<T> {
+  jwt_keys: JWT_Keys;
+}
+
+interface DecodeJWTWithOnlyRequiredKeysOptions<T extends AuthTokenTypes> extends BaseDecodeJWTOptions<T> {
+  decryption_key: CryptoKey;
+  verification_key: CryptoKey;
+  keyset_id: string;
+}
+
+export type DecodeJWTOptions<T extends AuthTokenTypes> = DecodeJWTWithAllKeysOptions<T> | DecodeJWTWithOnlyRequiredKeysOptions<T>;
+
 export async function decodeJWT<T extends AuthTokenTypes>({
   type,
   jwt,
-  jwt_keys,
   audience,
   ...opts
 }: DecodeJWTOptions<T>): Promise<CustomJWTPayload> {
@@ -37,6 +49,23 @@ export async function decodeJWT<T extends AuthTokenTypes>({
 
   if (debug) {
     console.log("[decodeJWT] Attempting to decode JWT: ", jwt);
+  }
+
+  let keyset_id: string;
+  try {
+    if ("keyset_id" in opts) {
+      keyset_id = opts.keyset_id;
+    } else if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+      keyset_id = opts.jwt_keys.keyset_id;
+    } else {
+      throw new Error("Failed to retrieve keyset ID from input options");
+    }
+    if (!isValidUuid(keyset_id)) {
+      throw new Error("Invalid keyset ID; not a valid UUID!");
+    }
+  } catch (error: unknown) {
+    console.error("Failed to retrieve keyset ID:", error);
+    throw new Error("Failed to retrieve keyset ID");
   }
 
   if (typeof jwt !== "string") {
@@ -57,23 +86,28 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     );
   }
 
-  let decryptionKey: CryptoKey;
+  let decryption_key: CryptoKey;
   try {
-    const keys = jwt_keys;
-    decryptionKey = await keys.decryption_key;
+    if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+      decryption_key = await opts.jwt_keys.decryption_key;
+    } else if ("decryption_key" in opts) {
+      decryption_key = opts.decryption_key;
+    } else {
+      throw new Error("Missing decryption key for JWT to decode with");
+    }
   } catch (e: unknown) {
-    console.error("Error loading decryption key from key store: ", e);
-    throw new Error("Error loading decryption key from key store!");
+    console.error("Error loading decryption key from key store or inputs: ", e);
+    throw new Error("Error loading decryption key from key store or inputs!");
   }
 
   const decodeTime: Date = new Date();
 
-  const maxTokenAge = getExpiryDurationString(type);
+  const maxTokenAge: string = getExpiryDurationString(type);
   if (debug) {
     console.log(`[decodeJWT] Setting max token age to ${maxTokenAge}`);
   }
 
-  const decoded: JWTDecryptResult = await jwtDecrypt(jwt, decryptionKey, {
+  const decoded: JWTDecryptResult = await jwtDecrypt(jwt, decryption_key, {
     audience: aud,
     issuer,
     maxTokenAge,
@@ -129,7 +163,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     throw new Error("Missing 'env' field in JWT payload!");
   }
 
-  const parsed_app_env = await schemaVaultsAppEnvironmentSchema.safeParseAsync(
+  const parsed_app_env: SafeParseReturnType<SchemaVaultsAppEnvironment, SchemaVaultsAppEnvironment> = await schemaVaultsAppEnvironmentSchema.safeParseAsync(
     payload.env,
   );
   if (!parsed_app_env.success) {
@@ -157,10 +191,25 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     throw new Error("Sub and UID must be strings and should be equal!");
   }
 
+  let verification_key: CryptoKey;
+  try {
+    if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+      verification_key = await opts.jwt_keys.verification_key;
+    } else if ("verification_key" in opts) {
+      verification_key = opts.verification_key;
+    } else {
+      throw new Error("Missing verification key for JWT to decode with");
+    }
+  } catch (e: unknown) {
+    console.error("Error loading verification key from key store or inputs: ", e);
+    throw new Error("Error loading verification key from key store or inputs!");
+  }
+
   try {
     const isValidSig: boolean = await verifyJWTSignature({
       jwt: signature,
-      jwt_keys,
+      verification_key,
+      keyset_id,
       aud,
       iat,
       type,

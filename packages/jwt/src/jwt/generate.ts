@@ -1,5 +1,5 @@
 import { EncryptJWT, type CryptoKey } from "jose";
-import type { JWT_Keys } from "./jwt_keys";
+import JWT_Keys from "./jwt_keys";
 import { alg, enc } from "./encrypt_decrypt_alg";
 import { issuer } from "./iss";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
@@ -16,17 +16,29 @@ import {
 } from "@schemavaults/auth-common";
 import { signJWT } from "./sign";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import isValidUuid from "@/utils/isValidUuid";
 
-export interface GenerateJWTOptions<T extends AuthTokenTypes> {
+interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
   user: UserData;
   type: T;
   iat: number;
   client_app_id: string;
   audience: string;
-  jwt_keys: JWT_Keys;
   env: SchemaVaultsAppEnvironment;
   orgs: readonly OrganizationID[];
 }
+
+interface GenerateJWTWithAllKeysOptions<T extends AuthTokenTypes> extends BaseGenerateJWTOptions<T> {
+  jwt_keys: JWT_Keys;
+}
+
+interface GenerateJWTWithOnlyRequiredKeysOptions<T extends AuthTokenTypes> extends BaseGenerateJWTOptions<T> {
+  encryption_key: CryptoKey;
+  signing_key: CryptoKey;
+  keyset_id: string;
+}
+
+export type GenerateJWTOptions<T extends AuthTokenTypes> = GenerateJWTWithAllKeysOptions<T> | GenerateJWTWithOnlyRequiredKeysOptions<T>;
 
 const organizationIdsSchema = organizationIdSchema.array().readonly();
 
@@ -44,11 +56,28 @@ export async function generateJWT<T extends AuthTokenTypes>(
     iat,
     client_app_id,
     audience,
-    jwt_keys,
     ...opts
   }: GenerateJWTOptions<T>,
   refresh_token_audience = REFRESH_TOKEN_AUDIENCE,
 ): Promise<T extends "access" ? AccessToken : RefreshToken> {
+
+  let keyset_id: string;
+  try {
+    if ("keyset_id" in opts) {
+      keyset_id = opts.keyset_id;
+    } else if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+      keyset_id = opts.jwt_keys.keyset_id
+    } else {
+      throw new Error("Failed to parse 'keyset_id' from options!");
+    }
+    if (!isValidUuid(keyset_id)) {
+      throw new Error("Invalid 'keyset_id' provided; not a valid uuid!");
+    }
+  } catch (e: unknown) {
+    console.error("Error parsing 'keyset_id' from options: ", e);
+    throw new Error("Error parsing 'keyset_id' from options!");
+  }
+
   const userData: UserData = user;
   let aud: string;
   if (type === "refresh") {
@@ -87,11 +116,30 @@ export async function generateJWT<T extends AuthTokenTypes>(
   }
   const orgs: readonly OrganizationID[] = parsed_organization_ids.data;
 
+  let signing_key: CryptoKey;
+  try {
+    if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+      const signing_key_promise: Promise<CryptoKey> | null = opts.jwt_keys.signing_key;
+      if (!signing_key_promise) {
+        throw new Error("Failed to load signing key from key store!")
+      }
+      signing_key = await signing_key_promise;
+    } else if ("signing_key" in opts) {
+      signing_key = opts.signing_key;
+    } else {
+      throw new Error("Did not receive signing key from key store or input options!")
+    }
+  } catch (e: unknown) {
+    console.error("Failed to load encryption key from key store or input options: ", e);
+    throw new Error("Failed to load encryption key from key store or input options!");
+  }
+
   let sig: string;
   try {
     sig = await signJWT({
       audience,
-      jwt_keys,
+      signing_key,
+      keyset_id,
       iat,
       uid,
       email,
@@ -109,14 +157,25 @@ export async function generateJWT<T extends AuthTokenTypes>(
     );
   }
 
-  const encryption_key_promise: Promise<CryptoKey> | null = jwt_keys.encryption_key;
-  if (!encryption_key_promise) {
-    throw new Error("Failed to load encryption key from key store!")
+  let encryption_key: CryptoKey;
+  try {
+    if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+      const encryption_key_promise: Promise<CryptoKey> | null = opts.jwt_keys.encryption_key;
+      if (!encryption_key_promise) {
+        throw new Error("Failed to load encryption key from key store!")
+      }
+      encryption_key = await encryption_key_promise;
+    } else if ("encryption_key" in opts) {
+      encryption_key = opts.encryption_key;
+    } else {
+      throw new Error("Did not receive encryption key from key store or input options!")
+    }
+  } catch (e: unknown) {
+    console.error("Failed to load encryption key from key store or input options: ", e);
+    throw new Error("Failed to load encryption key from key store or input options!");
   }
-  const encryption_key: CryptoKey = await encryption_key_promise;
 
   try {
-
     const additionalClaims: Partial<CustomJWTPayload> = {
       uid: user.uid,
       admin: user.admin ?? false,
@@ -132,7 +191,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
     };
 
     const jwt = await new EncryptJWT(additionalClaims)
-      .setProtectedHeader({ alg, enc })
+      .setProtectedHeader({ alg, enc, keyset_id, kid: `${keyset_id}-decryption` })
       .setIssuedAt(new Date(iat))
       .setIssuer(issuer)
       .setAudience(aud)
@@ -156,8 +215,8 @@ export async function generateJWT<T extends AuthTokenTypes>(
     };
 
     return tokenData as T extends "access" ? AccessToken : RefreshToken;
-  } catch (error) {
-    console.error(error);
-    throw new Error("Error generating JWT");
+  } catch (error: unknown) {
+    console.error("Error generating JWT: ", error);
+    throw new Error("Error generating JWT!");
   }
 }

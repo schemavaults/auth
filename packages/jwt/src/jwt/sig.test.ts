@@ -8,6 +8,8 @@ import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import { decodeProtectedHeader, type ProtectedHeaderParameters } from "jose";
+import signVerifyAlgorithm from './sign_verify_alg';
 
 const iat: number = Date.now();
 const type: AuthTokenTypes = "refresh";
@@ -60,5 +62,33 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
     });
 
     expect(result).toBeTrue();
+  });
+
+  it("can sign a JWT with just the signing key", async () => {
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
+    const keyset_id: string = jwt_keys.keyset_id;
+    const signing_key_promise: Promise<CryptoKey> | null = jwt_keys.signing_key;
+    if (!signing_key_promise) {
+      throw new Error("Signing key not found in generated keyset!");
+    }
+    const signing_key: CryptoKey = await signing_key_promise;
+    const sig: string = await signJWT({
+      signing_key,
+      keyset_id,
+      audience,
+      iat,
+      email,
+      uid,
+      type,
+      env,
+      orgs: []
+    });
+    expect(sig).toBeString();
+    expect(sig.length).toBeGreaterThan(0);
+    const header: ProtectedHeaderParameters = decodeProtectedHeader(sig);
+    expect(header.alg).toBeString();
+    expect(header.alg).toBe(signVerifyAlgorithm);
+    expect(header.keyset_id).toBeString();
+    expect(header.keyset_id).toBe(keyset_id)
   });
 });

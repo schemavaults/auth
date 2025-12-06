@@ -10,6 +10,12 @@ export async function to_public_jwks(active_keysets: JWT_Keys | readonly JWT_Key
 
   for (const keyset of keysets) {
     const keyset_id: string = keyset.keyset_id;
+
+    if (keyset.keyset_expiry && keyset.keyset_expiry < Date.now()) {
+      // don't use any keys from this expired keyset
+      continue;
+    }
+
     const keys_in_set: readonly JsonSerializedJwtKey[] = keyset.listSerializedKeys()
     for (const key of keys_in_set) {
       const key_type: JwtKeyType = key.key_type;
@@ -24,7 +30,8 @@ export async function to_public_jwks(active_keysets: JWT_Keys | readonly JWT_Key
       output_jwks.push({
         ...jwk,
         kid: `${keyset_id}-${key.key_type}`
-      })
+      });
+      continue;
     }
   }
 
