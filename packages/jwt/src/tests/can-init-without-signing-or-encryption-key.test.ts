@@ -6,12 +6,15 @@ describe("JWT_Keys instance initialization w/o auth-server-only keys", () => {
     let errorThrown: boolean = false;
     try {
       const keys: JWT_Keys = await generateNewJwtKeySet();
+      const keyset_id: string = keys.keyset_id;
       const decryption: string = keys.raw_keys.decryption;
       const verification: string = keys.raw_keys.verification;
 
       const reinited = new JWT_Keys({
-        decryption: { value: decryption, privacyLevel: 'private', format: "pem", name: "decryption" },
-        verification: { value: verification, privacyLevel: 'public', format: "pem", name: "verification" },
+        keyset_id,
+        keyset_expiry: keys.keyset_expiry,
+        decryption: { value: decryption, privacy_level: 'private', format: "pem", key_type: "decryption", keyset_id },
+        verification: { value: verification, privacy_level: 'public', format: "pem", key_type: "verification", keyset_id },
         is_auth_server: false
       });
 

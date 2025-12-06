@@ -1,4 +1,4 @@
-import { EncryptJWT, KeyLike } from "jose";
+import { EncryptJWT, type CryptoKey } from "jose";
 import type { JWT_Keys } from "./jwt_keys";
 import { alg, enc } from "./encrypt_decrypt_alg";
 import { issuer } from "./iss";
@@ -97,6 +97,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
       email,
       type,
       env,
+      orgs
     });
   } catch (e: unknown) {
     console.error(
@@ -108,11 +109,11 @@ export async function generateJWT<T extends AuthTokenTypes>(
     );
   }
 
-  const encryption_key_promise: Promise<KeyLike> | null = jwt_keys.encryption_key;
+  const encryption_key_promise: Promise<CryptoKey> | null = jwt_keys.encryption_key;
   if (!encryption_key_promise) {
     throw new Error("Failed to load encryption key from key store!")
   }
-  const encryption_key: KeyLike = await encryption_key_promise;
+  const encryption_key: CryptoKey = await encryption_key_promise;
 
   try {
 

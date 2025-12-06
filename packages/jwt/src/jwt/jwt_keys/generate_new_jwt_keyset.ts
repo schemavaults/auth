@@ -1,6 +1,8 @@
+import { z } from "zod";
 import ContentEncryptionKeyPairFactory from "./ContentEncryptionKeyPairFactory";
 import { JWT_Keys } from "./jwt_keys";
 import SigningKeyPairFactory from "./SigningKeyPairFactory";
+import isValidUuid from "@/utils/isValidUuid";
 
 /**
  * @name generateJwtSigningKeyPair
@@ -43,37 +45,65 @@ export async function generateJwtContentEncryptionKeyPair(
   ];
 }
 
-export async function generateNewJwtKeySet(debug: boolean = false): Promise<JWT_Keys> {
+export interface IGenerateNewJwtKeySetOpts {
+  keyset_id?: string;
+  keyset_expiry?: number;
+  debug?: boolean;
+}
+
+const DEFAULT_KEYSET_VALID_DURATION: number = 1000 * 60 * 60 * 24 * 30; // 30 days
+
+export async function generateNewJwtKeySet(opts?: IGenerateNewJwtKeySetOpts): Promise<JWT_Keys> {
+  const debug: boolean = opts?.debug || false;
+
+  if (typeof opts?.keyset_id === 'string') {
+    if (!isValidUuid(opts.keyset_id)) {
+      throw new Error(`Invalid keyset ID: '${opts.keyset_id}'. Should be a valid UUID.`);
+    }
+  }
+
   const [[privateEncryptDecryptKey, publicEncryptDecryptKey], [privateSigningKey, publicSigningVerifierKey]] =
     await Promise.all([
       generateJwtContentEncryptionKeyPair(debug),
       generateJwtSigningKeyPair(debug)
     ])
 
+  const keyset_id: string = typeof opts?.keyset_id === 'string' ? opts.keyset_id : crypto.randomUUID();
+  const keyset_expiry: number = typeof opts?.keyset_expiry === 'number'  ? opts.keyset_expiry : Date.now() + DEFAULT_KEYSET_VALID_DURATION;
+  if (keyset_expiry < Date.now()) {
+    throw new Error(`Invalid keyset expiry: '${keyset_expiry}'. Should be a future timestamp.`);
+  }
+
   const generatedKeys: JWT_Keys = new JWT_Keys({
+    keyset_id,
+    keyset_expiry,
     encryption: { // encryption happens with public key
       format: "pem",
-      privacyLevel: "public",
+      privacy_level: "public",
       value: publicEncryptDecryptKey,
-      name: 'encryption'
+      key_type: 'encryption',
+      keyset_id
     },
     decryption: { // decryption happens with private key (counter-intuitively)
       value: privateEncryptDecryptKey,
-      privacyLevel: "private",
+      privacy_level: "private",
       format: "pem",
-      name: 'decryption'
+      key_type: 'decryption',
+      keyset_id
     },
     signing: {
       value: privateSigningKey,
-      privacyLevel: "private",
+      privacy_level: "private",
       format: "pem",
-      name: 'signing'
+      key_type: 'signing',
+      keyset_id
     },
     verification: {
       value: publicSigningVerifierKey,
-      privacyLevel: "public",
+      privacy_level: "public",
       format: "pem",
-      name: 'verification'
+      key_type: 'verification',
+      keyset_id
     },
     is_auth_server: true,
   })

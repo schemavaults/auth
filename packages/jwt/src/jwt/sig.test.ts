@@ -9,7 +9,6 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
-const debug: boolean = false;
 const iat: number = Date.now();
 const type: AuthTokenTypes = "refresh";
 const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id satisfies string;
@@ -20,7 +19,7 @@ const env: SchemaVaultsAppEnvironment = getAppEnvironment();
 
 describe("JWT Signature 'sig' field", async (): Promise<void> => {
   it("can sign a JWT", async () => {
-    const jwt_keys: JWT_Keys = await generateNewJwtKeySet(debug);
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
     const sig: string = await signJWT({
       jwt_keys,
       audience,
@@ -29,13 +28,14 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
       uid,
       type,
       env,
+      orgs: []
     });
     expect(sig).toBeString();
     expect(sig.length).toBeGreaterThan(0)
   })
 
   it("can sign and validate a JWT", async () => {
-    const jwt_keys: JWT_Keys = await generateNewJwtKeySet(debug);
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
 
     const sig: string = await signJWT({
       jwt_keys,
@@ -45,6 +45,7 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
       uid,
       type,
       env,
+      orgs: []
     });
 
     const result: boolean = await verifyJWTSignature({

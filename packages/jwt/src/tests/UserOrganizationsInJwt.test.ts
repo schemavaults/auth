@@ -1,11 +1,11 @@
 
 import { describe, expect, it } from "bun:test";
 import MockUser from "./MockUser";
-import { type GenerateJWTOptions, generateJWT } from "@/jwt/generate";
+import { generateJWT } from "@/jwt/generate";
 import { SCHEMAVAULTS_CLI } from "@schemavaults/app-definitions";
 import { generateNewJwtKeySet } from "@/jwt/jwt_keys";
 import { decodeJWT } from "@/jwt/decode";
-import { AccessToken, AuthToken } from "@schemavaults/auth-common";
+import type { AccessToken } from "@schemavaults/auth-common";
 
 const user = new MockUser();
 

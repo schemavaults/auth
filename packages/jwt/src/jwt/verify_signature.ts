@@ -1,4 +1,4 @@
-import { jwtVerify, type KeyLike } from "jose";
+import { jwtVerify, type CryptoKey } from "jose";
 import type { JWT_Keys } from "./jwt_keys";
 import { issuer } from "./iss";
 import type { AuthTokenTypes } from "@schemavaults/auth-common";
@@ -29,7 +29,7 @@ export async function verifyJWTSignature({
     throw new Error("Invalid sub/uid field for jwt!");
   }
 
-  const verifierKeyPromise: Promise<KeyLike> = jwt_keys.verifier_key;
+  const verifierKeyPromise: Promise<CryptoKey> = jwt_keys.verification_key;
   const verifierKey = await verifierKeyPromise;
 
   try {

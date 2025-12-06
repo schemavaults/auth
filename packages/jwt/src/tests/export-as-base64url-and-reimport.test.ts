@@ -13,7 +13,9 @@ describe("JWT_Keys base64url export & import", () => {
   test("can export keys in base64url, and reimport", async () => {
     let errorThrown: boolean = false;
     try {
-      const keys = (await generateNewJwtKeySet()).exportKeys();
+      const keyset = await generateNewJwtKeySet();
+      const keyset_id: string = keyset.keyset_id;
+      const keys = keyset.exportKeys();
 
       const decryption_secret_base64url: string = keys.decryption_base64url;
       const encryption_secret_base64url: string | null = keys.encryption_base64url;
@@ -30,29 +32,35 @@ describe("JWT_Keys base64url export & import", () => {
       }
 
       const reinited = new JWT_Keys({
+        keyset_id,
+        keyset_expiry: keyset.keyset_expiry,
         signing: {
           value: signing_base64url,
-          name: "signing",
+          key_type: "signing",
           format: "base64url",
-          privacyLevel: "private",
+          privacy_level: "private",
+          keyset_id
         },
         verification: {
           value: verifier_base64url,
-          name: "verification",
+          key_type: "verification",
           format: "base64url",
-          privacyLevel: "public",
+          privacy_level: "public",
+          keyset_id
         },
         encryption: {
           value: encryption_secret_base64url,
-          name: "encryption",
+          key_type: "encryption",
           format: "base64url",
-          privacyLevel: "public",
+          privacy_level: "public",
+          keyset_id
         },
         decryption: {
           value: decryption_secret_base64url,
-          name: "decryption",
+          key_type: "decryption",
           format: "base64url",
-          privacyLevel: "private",
+          privacy_level: "private",
+          keyset_id
         },
       });
       const reinited_keys = reinited.exportKeys();

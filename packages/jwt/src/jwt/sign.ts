@@ -1,8 +1,8 @@
-import { type JWTPayload, type KeyLike, SignJWT } from "jose";
+import { type JWTPayload, type CryptoKey, SignJWT } from "jose";
 import type { JWT_Keys } from "./jwt_keys";
 import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
-import type { AuthTokenTypes } from "@schemavaults/auth-common";
+import type { AuthTokenTypes, OrganizationID } from "@schemavaults/auth-common";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import signAndVerifyAlg from "./sign_verify_alg";
 
@@ -16,6 +16,7 @@ export interface SignJSONWebTokenInputOptions<
   audience: string;
   type: TokenType;
   env: SchemaVaultsAppEnvironment;
+  orgs: readonly OrganizationID[]
 }
 
 export async function signJWT<TokenType extends AuthTokenTypes>(
@@ -24,6 +25,7 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
   const type: TokenType = opts.type;
   const uid: string = opts.uid;
   const sub: string = uid;
+  const orgs: readonly string[] = opts.orgs;
 
   if (typeof uid !== "string" || typeof sub !== "string" || uid !== sub) {
     throw new Error("uid and sub must be defined and equal strings");
@@ -33,9 +35,9 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
 
   const jwt_keys: JWT_Keys = opts.jwt_keys;
 
-  let private_signing_key: KeyLike;
+  let private_signing_key: CryptoKey;
   try {
-    const private_key_promise: Promise<KeyLike> | null = jwt_keys.signing_key;
+    const private_key_promise: Promise<CryptoKey> | null = jwt_keys.signing_key;
     if (!private_key_promise) {
       throw new Error("Failed to load private signing key from key store!")
     }
@@ -50,6 +52,7 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
     uid,
     type,
     env,
+    orgs
   };
 
   try {

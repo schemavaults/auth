@@ -1,4 +1,4 @@
-import { type JWTDecryptResult, type KeyLike, jwtDecrypt } from "jose";
+import { type JWTDecryptResult, type CryptoKey, jwtDecrypt } from "jose";
 import type { JWT_Keys } from "./jwt_keys";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import { issuer } from "./iss";
@@ -57,7 +57,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     );
   }
 
-  let decryptionKey: KeyLike;
+  let decryptionKey: CryptoKey;
   try {
     const keys = jwt_keys;
     decryptionKey = await keys.decryption_key;
