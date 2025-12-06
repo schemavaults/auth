@@ -1,5 +1,5 @@
-import { type JWTDecryptResult, type CryptoKey, jwtDecrypt } from "jose";
-import { JWT_Keys } from "./jwt_keys";
+import { type JWTDecryptResult, type CryptoKey, jwtDecrypt, decodeProtectedHeader, ProtectedHeaderParameters } from "jose";
+import JWT_Keys from "./jwt_keys";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
@@ -17,6 +17,7 @@ import {
 import { verifyJWTSignature } from "./verify_signature";
 import type { SafeParseReturnType } from "zod";
 import isValidUuid from "@/utils/isValidUuid";
+import encryptDecryptAlgorithm from "./encrypt_decrypt_alg";
 
 interface BaseDecodeJWTOptions<T extends AuthTokenTypes> {
   type: T;
@@ -86,6 +87,46 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     );
   }
 
+  const decodeTime: Date = new Date();
+
+  const maxTokenAge: string = getExpiryDurationString(type);
+  if (debug) {
+    console.log(`[decodeJWT] Setting max token age to ${maxTokenAge}`);
+  }
+
+  let kid: string;
+  let alg: string;
+  try {
+    const decoded_header: ProtectedHeaderParameters = decodeProtectedHeader(jwt);
+    if (!decoded_header.kid || typeof decoded_header.kid !== "string") {
+      throw new Error("Missing 'kid' in JWT header");
+    }
+    kid = decoded_header.kid;
+    if (!decoded_header.alg || typeof decoded_header.alg !== "string") {
+      throw new Error("Missing 'alg' in JWT header");
+    }
+    alg = decoded_header.alg;
+    if (!decoded_header.keyset_id || typeof decoded_header.keyset_id !== "string") {
+      throw new Error("Missing 'keyset_id' in JWT header");
+    }
+    if (decoded_header.keyset_id !== keyset_id) {
+      throw new Error("Invalid keyset_id in JWT header; mismatch with input decryption key");
+    }
+  } catch (e: unknown) {
+    console.error("Error decoding JWT header: ", e);
+    throw new Error("Error decoding JWT header!");
+  }
+
+  if (kid !== `${keyset_id}-decryption`) {
+    throw new Error("Invalid kid in JWT header; mismatch with input decryption key");
+  }
+
+  if (alg !== encryptDecryptAlgorithm) {
+    throw new Error("Invalid algorithm header for JWT decryption");
+  }
+
+
+
   let decryption_key: CryptoKey;
   try {
     if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
@@ -98,13 +139,6 @@ export async function decodeJWT<T extends AuthTokenTypes>({
   } catch (e: unknown) {
     console.error("Error loading decryption key from key store or inputs: ", e);
     throw new Error("Error loading decryption key from key store or inputs!");
-  }
-
-  const decodeTime: Date = new Date();
-
-  const maxTokenAge: string = getExpiryDurationString(type);
-  if (debug) {
-    console.log(`[decodeJWT] Setting max token age to ${maxTokenAge}`);
   }
 
   const decoded: JWTDecryptResult = await jwtDecrypt(jwt, decryption_key, {
