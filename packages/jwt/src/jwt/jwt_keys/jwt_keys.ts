@@ -2,7 +2,8 @@ import { importPKCS8, importSPKI, type CryptoKey } from "jose";
 import Raw_JWT_Keys_Store, { type IInitRawJwtKeysStoreOptions } from "./raw_jwt_keys_store";
 import encryptDecryptAlg from "../encrypt_decrypt_alg";
 import signingVerificationAlg from "../sign_verify_alg";
-import { JsonSerializedJwtKey } from "./JsonSerializedJwtKey";
+import type { JsonSerializedJwtKey } from "./JsonSerializedJwtKey";
+import type { I_JWT_Keys } from './I_JWT_Keys';
 
 /**
  * @name JWT_Keys
@@ -11,7 +12,7 @@ import { JsonSerializedJwtKey } from "./JsonSerializedJwtKey";
  * @constructor JWT_Keys.init(...)
  * @hideconstructor
  */
-export class JWT_Keys {
+export class JWT_Keys implements I_JWT_Keys {
   public get keyset_id(): string {
     return this.raw_keys.keyset_id;
   }

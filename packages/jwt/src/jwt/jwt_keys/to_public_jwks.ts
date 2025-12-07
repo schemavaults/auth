@@ -1,10 +1,10 @@
-import type JWT_Keys from "@/jwt/jwt_keys";
+import type { I_JWT_Keys } from "@/jwt/jwt_keys";
 import type { JsonSerializedJwtKey } from "@/jwt/jwt_keys/JsonSerializedJwtKey";
 import type { JwtKeyType } from "@/jwt/jwt_keys/ValidJwtKeyTypes";
 import { exportJWK, type JWK } from "jose";
 
-export async function to_public_jwks(active_keysets: JWT_Keys | readonly JWT_Keys[]): Promise<{ keys: readonly JWK[] }> {
-  const keysets: readonly JWT_Keys[] = Array.isArray(active_keysets) ? active_keysets : [active_keysets];
+export async function to_public_jwks(active_keysets: I_JWT_Keys | readonly I_JWT_Keys[]): Promise<{ keys: readonly JWK[] }> {
+  const keysets: readonly I_JWT_Keys[] = Array.isArray(active_keysets) ? active_keysets : [active_keysets];
 
   const output_jwks: JWK[] = [];
 
