@@ -15,6 +15,8 @@ import {
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import loadAuthServerMiddlewareRules from "@/lib/auth-server-middleware-rules";
+import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
+import { ServerlessDatabase } from "./lib/auth-db";
 
 const SchemaVaultsAuthServerMiddleware = async (
   req: NextRequest,
@@ -24,6 +26,9 @@ const SchemaVaultsAuthServerMiddleware = async (
 
   const debug: boolean = shouldEnableDebug(environment);
 
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+  const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
+
   let middleware: SchemaVaultsServerMiddleware;
   try {
     middleware = new SchemaVaultsServerMiddleware({
@@ -31,6 +36,7 @@ const SchemaVaultsAuthServerMiddleware = async (
       auth_middleware_rules: loadAuthServerMiddlewareRules(),
       environment,
       debug,
+      jwt_keys_manager
     });
   } catch (e: unknown) {
     console.error(

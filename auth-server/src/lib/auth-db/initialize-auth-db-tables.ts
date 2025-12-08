@@ -7,6 +7,7 @@ import {
 import { AuthorizedAppsRegistry, SchemaVaultsAppRegistry } from "./apps";
 import { UserRegistry } from "./users";
 import { OrganizationsRegistry } from "./organizations";
+import { AuthServerJwtKeysStore } from "./jwt_keys";
 
 export async function initializeAuthDbTables(
   db: Kysely<AuthDatabase>,
@@ -46,4 +47,7 @@ export async function initializeAuthDbTables(
     authdAppsPromise,
     setupOrgsRegistryPromise,
   ]);
+
+  const jwtKeysRegistry = new AuthServerJwtKeysStore(db);
+  await jwtKeysRegistry.setup();
 }

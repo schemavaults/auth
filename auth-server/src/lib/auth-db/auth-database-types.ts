@@ -4,6 +4,7 @@ import type {
   AppsToApisPermissionsTable,
 } from "./apis";
 import type { AppDomainsTable, AppsTable, AuthorizedAppsTable } from "./apps";
+import type { JwtKeysTable } from "./jwt_keys";
 import type {
   OrganizationMembershipRolesTable,
   OrganizationsTable,
@@ -28,4 +29,5 @@ export type AuthDatabase = {
   invite_codes: InviteCodesTable;
   organizations: OrganizationsTable;
   organization_membership_roles: OrganizationMembershipRolesTable;
+  jwt_keys: JwtKeysTable;
 };

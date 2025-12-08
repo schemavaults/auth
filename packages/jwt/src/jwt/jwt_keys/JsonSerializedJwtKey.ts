@@ -5,6 +5,7 @@ import { validJwtKeyTypesList } from "./ValidJwtKeyTypes";
 
 export const jsonSerializedJwtKeySchema = z.object({
   keyset_id: z.string().uuid(),
+  keyset_expiry: z.number().nonnegative().optional(),
   value: z.string().min(1),
   format: z.enum(["pem", "base64url"]),
   privacy_level: z.enum(["private", "public"]),
