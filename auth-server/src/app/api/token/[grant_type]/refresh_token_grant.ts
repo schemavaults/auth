@@ -1,4 +1,4 @@
-import { JWT_Factory, JWT_Keys, decodeJWT } from "@schemavaults/jwt";
+import { type I_JWT_Keys, JWT_Factory, JWT_Keys, decodeJWT, getKeysetIdFromToken } from "@schemavaults/jwt";
 import {
   type OrganizationsRegistry,
   type ServerlessDatabase,
@@ -19,6 +19,7 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 
 export async function handleRefreshTokenGrant(
   refresh_token: string,
@@ -29,12 +30,53 @@ export async function handleRefreshTokenGrant(
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
   debug: boolean = shouldEnableDebug(environment),
 ): Promise<NextResponse> {
+
+  let refresh_token_keyset_id: string;
+  try {
+    refresh_token_keyset_id = getKeysetIdFromToken(refresh_token);
+  } catch (e: unknown) {
+    console.error(e);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to retrieve refresh token keyset ID",
+      } satisfies RequestTokensResult,
+      {
+        status: 500,
+      },
+    );
+  }
+
+  let jwt_keys_manager: AuthServerJwtKeysManager;
+  try {
+    jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
+  } catch (e: unknown) {
+    throw new Error("Failed to initialize JWT key manager");
+  }
+
+  let refresh_token_keyset: I_JWT_Keys;
+  try {
+    refresh_token_keyset = await jwt_keys_manager.getKeyset(refresh_token_keyset_id);
+  } catch (e: unknown) {
+    console.error("Failed to retrieve refresh token keyset: ", e);
+    const isKeysetExpiredError: boolean = e instanceof Error && e.message.includes("expired");
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to retrieve refresh token keyset",
+      } satisfies RequestTokensResult,
+      {
+        status: isKeysetExpiredError ? 401 : 500,
+      },
+    );
+  }
+
   let decoded: UserData;
   try {
     decoded = await decodeJWT({
       type: "refresh",
       jwt: refresh_token,
-      jwt_keys: await JWT_Keys.init(),
+      jwt_keys: refresh_token_keyset,
     });
   } catch (e: unknown) {
     let errorDecodingTokenMsg: string = "Failed to decode refresh token";
@@ -130,7 +172,7 @@ export async function handleRefreshTokenGrant(
     const jwt_factory = new JWT_Factory({
       user,
       client_app_id: body.client_app_id,
-      jwt_keys: await JWT_Keys.init(),
+      jwt_keys: await jwt_keys_manager.getFreshEnoughKeysetOrCreateNew(),
       environment,
       user_organizations,
     });

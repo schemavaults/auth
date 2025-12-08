@@ -1,4 +1,4 @@
-import { IJsonWebKeySetsStore } from "./IJsonWebKeySetsStore";
+import type { IJsonWebKeySetsStore } from "./IJsonWebKeySetsStore";
 import {  to_public_jwks, type I_JWT_Keys } from "@schemavaults/jwt";
 
 type JWKS = Awaited<ReturnType<typeof to_public_jwks>>;

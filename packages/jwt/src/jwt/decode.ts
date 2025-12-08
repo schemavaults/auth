@@ -1,5 +1,5 @@
-import { type JWTDecryptResult, type CryptoKey, jwtDecrypt, decodeProtectedHeader, ProtectedHeaderParameters } from "jose";
-import JWT_Keys from "./jwt_keys";
+import { type JWTDecryptResult, type CryptoKey, jwtDecrypt, decodeProtectedHeader, type ProtectedHeaderParameters } from "jose";
+import type { I_JWT_Keys} from "./jwt_keys";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
@@ -27,7 +27,7 @@ interface BaseDecodeJWTOptions<T extends AuthTokenTypes> {
 }
 
 interface DecodeJWTWithAllKeysOptions<T extends AuthTokenTypes> extends BaseDecodeJWTOptions<T> {
-  jwt_keys: JWT_Keys;
+  jwt_keys: I_JWT_Keys;
 }
 
 interface DecodeJWTWithOnlyRequiredKeysOptions<T extends AuthTokenTypes> extends BaseDecodeJWTOptions<T> {
@@ -56,7 +56,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
   try {
     if ("keyset_id" in opts) {
       keyset_id = opts.keyset_id;
-    } else if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+    } else if ("jwt_keys" in opts) {
       keyset_id = opts.jwt_keys.keyset_id;
     } else {
       throw new Error("Failed to retrieve keyset ID from input options");
@@ -129,7 +129,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
 
   let decryption_key: CryptoKey;
   try {
-    if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+    if ("jwt_keys" in opts) {
       decryption_key = await opts.jwt_keys.decryption_key;
     } else if ("decryption_key" in opts) {
       decryption_key = opts.decryption_key;
@@ -227,7 +227,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
 
   let verification_key: CryptoKey;
   try {
-    if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+    if ("jwt_keys" in opts) {
       verification_key = await opts.jwt_keys.verification_key;
     } else if ("verification_key" in opts) {
       verification_key = opts.verification_key;

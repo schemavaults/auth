@@ -9,3 +9,5 @@ export { JWT_Keys, generateNewJwtKeySet, to_public_jwks, importAsymmetricJWK, js
 export type * from "./jwt_keys";
 
 export { getKeysetIdFromToken } from './get_keyset_id_from_token';
+
+export { refreshTokenExpiry, accessTokenExpiry } from "./expiry"

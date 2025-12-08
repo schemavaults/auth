@@ -1,5 +1,5 @@
 import { EncryptJWT, type CryptoKey } from "jose";
-import JWT_Keys from "./jwt_keys";
+import type { I_JWT_Keys } from "./jwt_keys";
 import { alg, enc } from "./encrypt_decrypt_alg";
 import { issuer } from "./iss";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
@@ -29,7 +29,7 @@ interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
 }
 
 interface GenerateJWTWithAllKeysOptions<T extends AuthTokenTypes> extends BaseGenerateJWTOptions<T> {
-  jwt_keys: JWT_Keys;
+  jwt_keys: I_JWT_Keys;
 }
 
 interface GenerateJWTWithOnlyRequiredKeysOptions<T extends AuthTokenTypes> extends BaseGenerateJWTOptions<T> {
@@ -65,7 +65,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
   try {
     if ("keyset_id" in opts) {
       keyset_id = opts.keyset_id;
-    } else if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+    } else if ("jwt_keys" in opts) {
       keyset_id = opts.jwt_keys.keyset_id
     } else {
       throw new Error("Failed to parse 'keyset_id' from options!");
@@ -118,7 +118,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
 
   let signing_key: CryptoKey;
   try {
-    if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+    if ("jwt_keys" in opts) {
       const signing_key_promise: Promise<CryptoKey> | null = opts.jwt_keys.signing_key;
       if (!signing_key_promise) {
         throw new Error("Failed to load signing key from key store!")
@@ -159,7 +159,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
 
   let encryption_key: CryptoKey;
   try {
-    if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
+    if ("jwt_keys" in opts) {
       const encryption_key_promise: Promise<CryptoKey> | null = opts.jwt_keys.encryption_key;
       if (!encryption_key_promise) {
         throw new Error("Failed to load encryption key from key store!")

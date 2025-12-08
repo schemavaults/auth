@@ -18,12 +18,12 @@ import {
 } from "@schemavaults/app-definitions";
 import { type GenerateJWTOptions, generateJWT } from "./generate";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
-import type { JWT_Keys } from "./jwt_keys";
+import type { I_JWT_Keys } from "./jwt_keys";
 
 export interface IJWT_Factory_Init_Options {
   user: UserData;
   client_app_id: string;
-  jwt_keys: JWT_Keys;
+  jwt_keys: I_JWT_Keys;
   environment: SchemaVaultsAppEnvironment;
   user_organizations: readonly OrganizationID[];
 }
@@ -39,7 +39,7 @@ export class JWT_Factory {
   private readonly client_app_id: AppId;
   private readonly user: UserData;
   private static readonly REFRESH_TOKEN_AUDIENCE = REFRESH_TOKEN_AUDIENCE;
-  private readonly jwt_keys: JWT_Keys;
+  private readonly jwt_keys: I_JWT_Keys;
   private readonly environment: SchemaVaultsAppEnvironment;
   private readonly user_organizations: readonly OrganizationID[];
 
@@ -132,7 +132,7 @@ export class JWT_Factory {
       iat,
       audience: aud,
       client_app_id: this.client_app_id,
-      jwt_keys: this.jwt_keys satisfies JWT_Keys,
+      jwt_keys: this.jwt_keys satisfies I_JWT_Keys,
       env: this.environment satisfies SchemaVaultsAppEnvironment,
       orgs: this.user_organizations satisfies readonly OrganizationID[],
     };

@@ -19,6 +19,8 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import { IJwtKeyManager } from "@schemavaults/auth-server-sdk";
+import { AuthServerJwtKeysManager } from "@/lib/AuthServerJwtKeysManager";
 
 export async function handleAuthorizationCodeGrant(
   body: z.infer<typeof authorizationCodePOSTbody>,
@@ -205,12 +207,19 @@ export async function handleAuthorizationCodeGrant(
     );
   }
 
+  let jwt_keys_manager: AuthServerJwtKeysManager;
+  try {
+    jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
+  } catch (e: unknown) {
+    throw new Error("Failed to initialize JWT key manager");
+  }
+
   let jwt_factory: JWT_Factory;
   try {
     jwt_factory = new JWT_Factory({
       user,
       client_app_id: body.client_app_id,
-      jwt_keys: await JWT_Keys.init(),
+      jwt_keys: await jwt_keys_manager.getFreshEnoughKeysetOrCreateNew(),
       user_organizations,
       environment,
     });

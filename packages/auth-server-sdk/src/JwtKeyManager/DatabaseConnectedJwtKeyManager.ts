@@ -3,7 +3,7 @@ import type { IJsonWebKeySetsStore } from "./JsonWebKeySetsStore";
 import type { IJwtKeyManager } from "./IJwtKeyManager";
 
 export class DatabaseConnectedJwtKeyManager implements IJwtKeyManager {
-  private readonly store: IJsonWebKeySetsStore;
+  protected readonly store: IJsonWebKeySetsStore;
 
   public constructor(store: IJsonWebKeySetsStore) {
     this.store = store;
