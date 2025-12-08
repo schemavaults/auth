@@ -24,7 +24,7 @@ import type {
 } from "@/middleware_types";
 import BaseMiddleware from "@/middlewares/BaseMiddleware";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
-import loadJwtDecodingKeys, { type IDecodeAuthTokenKeys } from "./loadJwtDecodingKeys";
+import loadJwtDecodingKeys, { type IDecodeAuthTokenKeys } from "@/JwtKeyManager/loadJwtDecodingKeys";
 
 export interface AuthJwtValidationMiddlewareOptions {
   audience: string;
@@ -38,8 +38,6 @@ interface IAuthJwtValidationMiddlewareOpts
   extends AuthJwtValidationMiddlewareOptions {
   next: ISchemaVaultsMiddleware;
 }
-
-
 
 class AuthJwtValidationMiddleware
   extends BaseMiddleware

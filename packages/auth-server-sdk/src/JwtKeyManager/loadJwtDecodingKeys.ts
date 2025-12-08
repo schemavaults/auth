@@ -12,14 +12,9 @@ export interface IDecodeAuthTokenKeys {
   decryption_key: CryptoKey;
 }
 
-export async function loadJwtDecodingKeys(
-  { keys_manager, keyset_id }: ILoadJwtDecodingKeysOptions
+export async function loadJwtDecodingKeysFromJwks(
+  { keyset_id, jwks }: { keyset_id: string, jwks: JWKS }
 ): Promise<IDecodeAuthTokenKeys> {
-  const jwks: JWKS = await keys_manager.loadJwks();
-  if (!jwks || typeof jwks !== 'object' || !("keys" in jwks) ||!Array.isArray(jwks.keys)) {
-    throw new TypeError("Invalid JWKS; not an object or missing 'keys' array!");
-  }
-
   const verification_kid: string = `${keyset_id}-verification`;
   const decryption_kid: string = `${keyset_id}-decryption`;
   let verification_key: CryptoKey | undefined = undefined;
@@ -47,6 +42,17 @@ export async function loadJwtDecodingKeys(
     verification_key,
     decryption_key
   };
+}
+
+export async function loadJwtDecodingKeys(
+  { keys_manager, keyset_id }: ILoadJwtDecodingKeysOptions
+): Promise<IDecodeAuthTokenKeys> {
+  const jwks: JWKS = await keys_manager.loadJwks();
+  if (!jwks || typeof jwks !== 'object' || !("keys" in jwks) ||!Array.isArray(jwks.keys)) {
+    throw new TypeError("Invalid JWKS; not an object or missing 'keys' array!");
+  }
+
+  return await loadJwtDecodingKeysFromJwks({ keyset_id, jwks });
 }
 
 export default loadJwtDecodingKeys;

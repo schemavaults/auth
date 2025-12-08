@@ -65,16 +65,6 @@ export class SchemaVaultsServerMiddleware
     return parsed_api_server_id.success
   }
 
-  private static determineJwtAudienceFromConstructorOptions(
-    opts: IServerMiddlewareInitializationOptions,
-  ): string {
-    if (!SchemaVaultsServerMiddleware.isValidApiServerId(opts.api_server_id)) {
-      throw new TypeError("Invalid 'api_server_id' for server middleware!")
-    }
-
-    return opts.api_server_id satisfies ApiServerId;
-  }
-
   private static getDefaultCorsPolicy(
     environment: SchemaVaultsAppEnvironment,
   ): SchemaVaultsCORSEnforcementPolicy {
@@ -87,10 +77,10 @@ export class SchemaVaultsServerMiddleware
   private static setupMiddlewareChain(
     opts: IServerMiddlewareInitializationOptions,
   ): ISchemaVaultsMiddleware {
-    const audience: ApiServerId =
-      SchemaVaultsServerMiddleware.determineJwtAudienceFromConstructorOptions(
-        opts,
-      );
+    if (!SchemaVaultsServerMiddleware.isValidApiServerId(opts.api_server_id)) {
+      throw new TypeError("Invalid 'api_server_id' for server middleware!")
+    }
+    const audience: ApiServerId = opts.api_server_id;
 
     const environment: SchemaVaultsAppEnvironment =
       opts.environment ?? getAppEnvironment();

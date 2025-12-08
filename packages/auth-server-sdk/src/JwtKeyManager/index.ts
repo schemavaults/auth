@@ -5,3 +5,5 @@ export type { IJwtKeyManager } from "./IJwtKeyManager";
 
 export { DatabaseConnectedJwtKeyManager } from './DatabaseConnectedJwtKeyManager';
 export { RemoteJwtKeyManager } from './RemoteJwtKeyManager';
+
+export { loadJwtDecodingKeys, type IDecodeAuthTokenKeys } from './loadJwtDecodingKeys';
