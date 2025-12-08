@@ -1,4 +1,4 @@
-import { type I_JWT_Keys, JWT_Factory, JWT_Keys, decodeJWT, getKeysetIdFromToken } from "@schemavaults/jwt";
+import { type I_JWT_Keys, JWT_Factory, decodeJWT, getKeysetIdFromToken } from "@schemavaults/jwt";
 import {
   type OrganizationsRegistry,
   type ServerlessDatabase,
@@ -51,6 +51,7 @@ export async function handleRefreshTokenGrant(
   try {
     jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
   } catch (e: unknown) {
+    console.error("Failed to initialize JWT key manager: ", e);
     throw new Error("Failed to initialize JWT key manager");
   }
 

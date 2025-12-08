@@ -6,7 +6,7 @@ import {
   type UserData,
   type authorizationCodePOSTbody,
 } from "@schemavaults/auth-common";
-import { JWT_Factory, JWT_Keys } from "@schemavaults/jwt";
+import { JWT_Factory } from "@schemavaults/jwt";
 import {
   type ServerlessDatabase,
   type UserRegistry,
@@ -19,7 +19,6 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
-import { IJwtKeyManager } from "@schemavaults/auth-server-sdk";
 import { AuthServerJwtKeysManager } from "@/lib/AuthServerJwtKeysManager";
 
 export async function handleAuthorizationCodeGrant(
@@ -211,6 +210,7 @@ export async function handleAuthorizationCodeGrant(
   try {
     jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
   } catch (e: unknown) {
+    console.error("Failed to initialize JWT key manager: ", e);
     throw new Error("Failed to initialize JWT key manager");
   }
 
