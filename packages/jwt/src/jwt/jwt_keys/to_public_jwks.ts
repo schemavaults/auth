@@ -23,9 +23,9 @@ export async function to_public_jwks(active_keysets: I_JWT_Keys | readonly I_JWT
         continue; // Skip keys that are not decryption or verification keys
       }
       if (key.keyset_id !== keyset_id) {
-        throw new Error(`Keyset ${keyset_id} contains a key that is not part of it!`);
+        throw new Error(`Keyset '${keyset_id}' contains a key that is not part of it!`);
       }
-      const jose_activated_key = await keyset[`${key_type}_key`]
+      const jose_activated_key: CryptoKey = await keyset[`${key_type}_key`]
       const jwk: JWK = await exportJWK(jose_activated_key)
       output_jwks.push({
         ...jwk,

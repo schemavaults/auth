@@ -12,6 +12,10 @@ describe("JWT Key Set to Public JWKS", () => {
     const jwks = await to_public_jwks(keyset);
     expect(jwks).toBeDefined();
     expect(jwks.keys).toBeArrayOfSize(2);
+    expect(
+      jwks.keys.every(jwk => "kid" in jwk && typeof jwk.kid === "string"),
+      "Expected all keys to have a 'kid' property of type string"
+    ).toBeTrue();
   })
 
   it("can include multiple keysets in JWKS output", async () => {
@@ -27,5 +31,9 @@ describe("JWT Key Set to Public JWKS", () => {
     const jwks = await to_public_jwks([keyset1, keyset2, keyset3]);
     expect(jwks).toBeDefined();
     expect(jwks.keys).toBeArrayOfSize(6);
+    expect(
+      jwks.keys.every(jwk => "kid" in jwk && typeof jwk.kid === "string"),
+      "Expected all keys to have a 'kid' property of type string"
+    ).toBeTrue();
   })
 })

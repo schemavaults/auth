@@ -11,5 +11,7 @@ export { generateNewJwtKeySet, generateJwtContentEncryptionKeyPair, generateJwtS
 
 import { to_public_jwks } from './to_public_jwks';
 export { to_public_jwks };
-type JWKS = Awaited<ReturnType<typeof to_public_jwks>>;
-export type { JWKS };
+
+export type { JWK } from './JWK';
+export type { JWKS } from './JWKS';
+export { importAsymmetricJWK } from "./importAsymmetricJWK";

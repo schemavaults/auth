@@ -7,8 +7,8 @@ describe("Generate new JWT keyset", () => {
   test("should generate a new JWT keyset", async () => {
     const keyset = await generateNewJwtKeySet();
     expect(keyset).toBeDefined();
-    const keys = keyset.exportKeys();
-    expect(keys).toBeDefined();
+    const keys = keyset.listSerializedKeys()
+    expect(keys).toBeArrayOfSize(4);
     if (DEBUG) {
       console.log(keys);
     }
