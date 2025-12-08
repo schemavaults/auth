@@ -12,6 +12,8 @@ import {
   type ApiServerId,
   apiServerIdSchema,
   getAppEnvironment,
+  getHardcodedClientWebAppDomain,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
@@ -28,6 +30,8 @@ import type {
   ISchemaVaultsMiddlewareFnInputs,
 } from "./middleware_types";
 import BaseMiddleware from "@/middlewares/BaseMiddleware";
+import { IJwtKeyManager } from "@/JwtKeyManager";
+import RemoteJwtKeyManager from "@/JwtKeyManager/RemoteJwtKeyManager";
 
 export interface IServerMiddlewareInitializationOptions {
   api_server_id?: string;
@@ -35,6 +39,7 @@ export interface IServerMiddlewareInitializationOptions {
   debug?: boolean;
   cors_policy?: SchemaVaultsCORSEnforcementPolicy;
   environment?: SchemaVaultsAppEnvironment;
+  jwt_keys_manager?: IJwtKeyManager;
 }
 
 export class SchemaVaultsServerMiddleware
@@ -90,6 +95,29 @@ export class SchemaVaultsServerMiddleware
     const environment: SchemaVaultsAppEnvironment =
       opts.environment ?? getAppEnvironment();
 
+    const isAuthServer: boolean = audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    let jwt_keys_manager: IJwtKeyManager;
+    if (isAuthServer) {
+      if (!opts.jwt_keys_manager) {
+        throw new Error("Missing 'jwt_keys_manager' option for auth server middleware!");
+      }
+      jwt_keys_manager = opts.jwt_keys_manager;
+    } else {
+      if (audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+        throw new Error("Expected this to not be the auth server if this point was reached!")
+      }
+      if (opts.jwt_keys_manager) {
+        jwt_keys_manager = opts.jwt_keys_manager;
+      } else {
+        jwt_keys_manager = new RemoteJwtKeyManager({
+          auth_server_uri: getHardcodedClientWebAppDomain(
+            SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+            environment
+          )
+        })
+      }
+    }
+
     const debug: boolean =
       typeof opts.debug === "boolean"
         ? opts.debug
@@ -114,6 +142,7 @@ export class SchemaVaultsServerMiddleware
           middleware_rules: opts.auth_middleware_rules,
           debug: debug,
           environment: environment,
+          keys_manager: jwt_keys_manager
         }),
       ] as const satisfies readonly ISchemaVaultsMiddlewareFactory[],
       debug,

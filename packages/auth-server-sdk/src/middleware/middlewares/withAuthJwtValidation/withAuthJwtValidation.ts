@@ -14,7 +14,7 @@ import {
 import {
   type CustomJWTPayload,
   decodeJWT,
-  type JWT_Keys,
+  getKeysetIdFromToken,
 } from "@schemavaults/jwt";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type {
@@ -22,14 +22,16 @@ import type {
   ISchemaVaultsMiddlewareFactory,
   ISchemaVaultsMiddlewareFnInputs,
 } from "@/middleware_types";
-import { BaseMiddleware } from "@/middlewares/BaseMiddleware";
-import loadJwtKeysFromEnv from "@/jwt/loadJwtKeysFromEnv";
+import BaseMiddleware from "@/middlewares/BaseMiddleware";
+import type { IJwtKeyManager } from "@/JwtKeyManager";
+import loadJwtDecodingKeys, { type IDecodeAuthTokenKeys } from "./loadJwtDecodingKeys";
 
 export interface AuthJwtValidationMiddlewareOptions {
   audience: string;
   middleware_rules?: AuthMiddlewareRules;
   debug?: boolean;
   environment: SchemaVaultsAppEnvironment;
+  keys_manager: IJwtKeyManager;
 }
 
 interface IAuthJwtValidationMiddlewareOpts
@@ -37,12 +39,15 @@ interface IAuthJwtValidationMiddlewareOpts
   next: ISchemaVaultsMiddleware;
 }
 
+
+
 class AuthJwtValidationMiddleware
   extends BaseMiddleware
   implements ISchemaVaultsMiddleware
 {
   private readonly audience: string;
   private readonly middleware_rules: AuthMiddlewareRules;
+  private readonly keys_manager: IJwtKeyManager;
 
   public constructor({
     next,
@@ -63,6 +68,14 @@ class AuthJwtValidationMiddleware
 
     this.audience = audience;
     this.middleware_rules = opts.middleware_rules ?? defaultAuthMiddlewareRules;
+    this.keys_manager = opts.keys_manager;
+  }
+
+  protected async loadJwtDecodingKeys(keyset_id: string): Promise<IDecodeAuthTokenKeys> {
+    return await loadJwtDecodingKeys({
+      keyset_id,
+      keys_manager: this.keys_manager
+    }) satisfies IDecodeAuthTokenKeys;
   }
 
   public async handle({
@@ -167,14 +180,35 @@ class AuthJwtValidationMiddleware
           type,
           jwt_audience,
         }): Promise<Awaited<ReturnType<DecodeTokenFn>>> => {
+          let keyset_id: string;
           try {
-            const jwt_keys: JWT_Keys = await loadJwtKeysFromEnv();
+            keyset_id = getKeysetIdFromToken(token);
+          } catch (e: unknown) {
+            console.error("Failed to load 'keyset_id' from auth token: ", e);
+            throw new Error("Failed to load 'keyset_id' from auth token!");
+          }
+
+          let decodingKeys: IDecodeAuthTokenKeys;
+          try {
+            decodingKeys = await this.loadJwtDecodingKeys(keyset_id);
+            if (decodingKeys.keyset_id !== keyset_id) {
+              throw new Error("Mismatch between the keyset ID of result and what was requested!");
+            }
+          } catch (e: unknown) {
+            console.error(`Failed to load keys associated with token-associated keyset '${keyset_id}': `, e)
+            throw new Error("Failed to load keys associated with token-associated keyset!");
+          }
+          const { decryption_key, verification_key } = decodingKeys;
+
+          try {
             const decoded: CustomJWTPayload = await decodeJWT({
               jwt: token,
               type,
               audience: jwt_audience,
-              jwt_keys,
               env: environment,
+              decryption_key,
+              verification_key,
+              keyset_id
             });
             return { ...decoded };
           } catch (e: unknown) {
