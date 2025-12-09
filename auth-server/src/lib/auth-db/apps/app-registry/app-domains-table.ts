@@ -1,11 +1,6 @@
-
 import type { SchemaVaultsAppDomainRef } from "@schemavaults/app-definitions";
 
-import type {
-  Insertable,
-  Selectable,
-  Updateable,
-} from 'kysely'
+import type { Insertable, Selectable, Updateable } from "@schemavaults/dbh";
 
 export type AppDomainsTable = SchemaVaultsAppDomainRef;
 

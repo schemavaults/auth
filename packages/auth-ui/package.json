@@ -12,6 +12,7 @@
     "@schemavaults/ui": "0.12.0",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
+    "@schemavaults/auth-common": "workspace:*",
     "@hookform/resolvers": "3.9.0"
   },
   "devDependencies": {

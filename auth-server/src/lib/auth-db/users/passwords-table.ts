@@ -1,22 +1,20 @@
+import type { Generated, Insertable, Selectable } from "@schemavaults/dbh";
+import { z } from "zod";
 
-import type {
-  Generated,
-  Insertable,
-  Selectable,
-} from 'kysely'
-import { z } from 'zod';
-
-export const passwordRecordSchema = z.object({
-  password_id: z.string().uuid(),
-  uid: z.string().uuid(),
-  password: z.string().min(32), // password hash
-  created_at: z.number().nonnegative()
-}).required({
-  password_id: true,
-  uid: true,
-  password: true,
-  created_at: true
-}).strict();
+export const passwordRecordSchema = z
+  .object({
+    password_id: z.string().uuid(),
+    uid: z.string().uuid(),
+    password: z.string().min(32), // password hash
+    created_at: z.number().nonnegative(),
+  })
+  .required({
+    password_id: true,
+    uid: true,
+    password: true,
+    created_at: true,
+  })
+  .strict();
 
 export type PasswordRecord = z.infer<typeof passwordRecordSchema>;
 

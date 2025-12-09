@@ -1,10 +1,5 @@
-
-import type { AppToApiPermission } from '@schemavaults/app-definitions';
-import type {
-  Insertable,
-  Selectable,
-  Updateable,
-} from 'kysely'
+import type { AppToApiPermission } from "@schemavaults/app-definitions";
+import type { Insertable, Selectable, Updateable } from "@schemavaults/dbh";
 
 export type AppsToApisPermissionsTable = AppToApiPermission;
 

@@ -1,9 +1,5 @@
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
-import type {
-  Insertable,
-  Selectable,
-  Updateable,
-} from "kysely";
+import type { Insertable, Selectable, Updateable } from "@schemavaults/dbh";
 
 export type OrganizationsTable = OrganizationDefinition;
 

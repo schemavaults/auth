@@ -12,7 +12,9 @@
       "name": "@schemavaults/auth-server",
       "version": "0.12.5",
       "dependencies": {
+        "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
+        "@schemavaults/auth-client-sdk": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/auth-server-sdk": "workspace:*",
@@ -21,6 +23,7 @@
         "@schemavaults/jwt": "workspace:*",
         "@schemavaults/theme": "0.25.5",
         "@schemavaults/ui": "0.12.0",
+        "lucide-react": "0.508.0",
         "next": "16.0.7",
         "react": "19.0.0",
         "react-dom": "19.0.0",
@@ -64,7 +67,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.3.24",
+      "version": "0.3.25",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -107,6 +110,7 @@
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
+        "@schemavaults/auth-common": "workspace:*",
         "cookies-next": "4.1.1",
         "swr": "2.3.4",
         "uuid": "11.0.3",
@@ -159,6 +163,7 @@
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
+        "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/ui": "0.12.0",
       },

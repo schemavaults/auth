@@ -10,7 +10,6 @@ import {
 
 import { useToast } from "@schemavaults/ui";
 import { Loader2, LogIn, UserPlus } from "lucide-react";
-import type { DefaultValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -107,7 +106,7 @@ export function AuthForm<T extends "login" | "register">({
   const { toast } = useToast();
   const form = useForm<AuthFormData<"login" | "register">>({
     resolver: getSchemaResolver({ type }),
-    defaultValues: getDefaultValues({ type }) as DefaultValues<AuthFormData<T>>,
+    defaultValues: getDefaultValues({ type }),
   });
   const [submitting, setSubmitting] = useState<boolean>(false);
 

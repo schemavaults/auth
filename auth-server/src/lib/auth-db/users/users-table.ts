@@ -1,8 +1,4 @@
-import type {
-  Insertable,
-  Selectable,
-  Updateable,
-} from "kysely";
+import type { Insertable, Selectable, Updateable } from "@schemavaults/dbh";
 import type { UserDocument } from "./user-registry";
 
 export type UsersTable = UserDocument;
