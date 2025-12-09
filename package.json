@@ -6,7 +6,8 @@
   },
   "workspaces": [
     "./auth-server",
-    "./packages/*"
+    "./packages/*",
+    "./tests/*"
   ],
   "packageManager": "bun@1.3.3",
   "scripts": {

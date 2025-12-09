@@ -1,0 +1,13 @@
+{
+  "name": "@schemavaults/e2e-auth-tests",
+  "version": "0.0.1",
+  "dependencies": {
+    "cypress": "15.7.1"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "open": "cypress open"
+  }
+}
