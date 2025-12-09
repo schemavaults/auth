@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
+    "build:server": "bun run build --filter @schemavaults/auth-server",
     "test": "turbo test",
     "lint": "turbo lint"
   }
