@@ -6,11 +6,12 @@ services:
       args:
         BUN_VERSION: 1.3.3
       target: test-runner
-    network_mode: service:schemavaults-auth-server
     depends_on:
       - schemavaults-auth-server
     environment:
-      CYPRESS_BASE_URL: http://localhost:80
+      CYPRESS_BASE_URL: http://schemavaults-auth-server:80
+    networks:
+      - test-enduser-network
 
   schemavaults-auth-server:
     build:
@@ -19,13 +20,16 @@ services:
       args:
         BUN_VERSION: 1.3.3
       target: production
-    network_mode: service:postgres-db
     depends_on:
       - postgres-db
     environment:
       POSTGRES_USER: schemavaults-auth-server-dev
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
       POSTGRES_DATABASE: schemavaults-auth-server
+      POSTGRES_HOST: postgres-db
+    networks:
+      - test-enduser-network
+      - test-database-network
 
   postgres-db:
     image: postgres:16.8
@@ -36,6 +40,14 @@ services:
       POSTGRES_USER: schemavaults-auth-server-dev
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
       POSTGRES_DB: schemavaults-auth-server
+    networks:
+      - test-database-network
 
 volumes:
   postgres-data:
+
+networks:
+  test-enduser-network:
+    driver: bridge
+  test-database-network:
+    driver: bridge
