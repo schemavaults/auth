@@ -19,6 +19,8 @@ COPY --chown=bun:bun auth-server/postcss.config.js auth-server/postcss.config.js
 COPY --chown=bun:bun auth-server/tailwind.config.ts auth-server/tailwind.config.ts
 COPY --chown=bun:bun auth-server/next.config.ts auth-server/next.config.ts
 COPY --chown=bun:bun auth-server/eslint.config.cjs auth-server/eslint.config.cjs
+COPY --chown=bun:bun auth-server/tsconfig.json auth-server/tsconfig.json
+
 
 
 ### Supporting Auth Packages (Config Files) ###
