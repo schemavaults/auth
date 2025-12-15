@@ -14,7 +14,7 @@ import {
 } from "@/lib/auth-db";
 import {
   getAppEnvironment,
-  SchemaVaultsAppEnvironment,
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 
@@ -147,7 +147,10 @@ export async function POST(
 
   const headers = req.headers;
   const auth_header: string | null = headers.get("Authorization");
-  const refresh_token: string = (typeof auth_header === "string" && auth_header.startsWith("Bearer ")) ? auth_header.slice("Bearer ".length) : "";
+  const refresh_token: string =
+    typeof auth_header === "string" && auth_header.startsWith("Bearer ")
+      ? auth_header.slice("Bearer ".length)
+      : "";
 
   switch (body.grant_type) {
     case "authorization_code":
@@ -160,7 +163,6 @@ export async function POST(
         debug satisfies boolean,
       );
     case "refresh_token":
-
       if (!headers.has("Authorization")) {
         console.error(
           "Missing authorization header for 'refresh_token' grant method!",
@@ -192,7 +194,6 @@ export async function POST(
           },
         );
       }
-
 
       try {
         return await handleRefreshTokenGrant(

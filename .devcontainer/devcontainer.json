@@ -1,11 +1,11 @@
 {
   "name": "@schemavaults/auth-server Dev Environment",
   "dockerComposeFile": "docker-compose.yml",
-  "service": "auth-server",
+  "service": "schemavaults-auth-server",
   "forwardPorts": [6767],
   "shutdownAction": "stopCompose",
   "postCreateCommand": "bun install",
-  "postAttachCommand": "bun run dev",
+  "postAttachCommand": "bun run dev --filter @schemavaults/auth-server",
   "portsAttributes": {
     "6767": {
       "label": "@schemavaults/auth-server Next.js Dev Server",

@@ -5,7 +5,8 @@
     "cypress": "15.7.1"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@types/node": "24.4.0"
   },
   "scripts": {
     "open": "cypress open"
