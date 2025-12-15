@@ -34,15 +34,20 @@ function resolveAuthServerRootDir(): string {
   process.exit(1);
 }
 
-console.log(
-  `[next.config.ts] Configuring @schemavaults/auth-server... (output mode: ${output ?? "<default>"})`,
-);
-
 const projectRoot: string = resolveAuthServerRootDir();
 if (!existsSync(join(projectRoot, "package.json"))) {
   throw new Error("@schemavaults/auth-server package.json not found");
 }
 const monorepoRoot: string = normalize(join(projectRoot, ".."));
+if (!existsSync(join(monorepoRoot, "package.json"))) {
+  throw new Error("@schemavaults/auth monorepo root package.json not found");
+}
+
+console.group(`[next.config.ts] Configuring @schemavaults/auth-server...`);
+console.log(`(output mode: ${output ?? "<default>"}`);
+console.log("monorepo root: ", monorepoRoot);
+console.log("project root: ", projectRoot);
+console.groupEnd();
 
 const nextConfig: NextConfig = {
   // Generate for a standalone container server if NEXT_STANDALONE_DOCKER_BUILD
@@ -51,6 +56,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: monorepoRoot,
   },
+  outputFileTracingRoot: monorepoRoot,
 };
 
 export default nextConfig;
