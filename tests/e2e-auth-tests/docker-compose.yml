@@ -11,8 +11,6 @@ services:
       - schemavaults-auth-server
     environment:
       CYPRESS_BASE_URL: http://schemavaults-auth-server:80
-    networks:
-      - test-enduser-network
     links:
       - schemavaults-auth-server
 
@@ -33,13 +31,13 @@ services:
       POSTGRES_HOST: postgres-db
       PRIVATE_GLOBAL_PASSWORD_SALT: examplePasswordSalt12
       PRIVATE_PASSWORD_HASH_ROUNDS: 5
-    networks:
-      - test-enduser-network
-      - test-database-network
+    expose:
+      - 80
     links:
       - postgres-db
 
   postgres-db:
+    container_name: postgres-db
     image: postgres:16.8
     restart: unless-stopped
     volumes:
@@ -48,14 +46,8 @@ services:
       POSTGRES_USER: schemavaults-auth-server-dev
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
       POSTGRES_DB: schemavaults-auth-server
-    networks:
-      - test-database-network
+    expose:
+      - 5432
 
 volumes:
   postgres-data:
-
-networks:
-  test-enduser-network:
-    driver: bridge
-  test-database-network:
-    driver: bridge
