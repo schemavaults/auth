@@ -5,11 +5,13 @@ services:
       dockerfile: tests/e2e-auth-tests/Dockerfile
       args:
         BUN_VERSION: 1.3.3
+      target: test-runner
     network_mode: service:schemavaults-auth-server
     depends_on:
       - schemavaults-auth-server
     volumes:
-      - .:/workspace:cached
+      - ./tests/e2e-auth-tests/cypress.config.ts:/schemavaults/auth/tests/e2e-auth-tests/cypress.config.ts:cached
+      - ./tests/e2e-auth-tests/cypress/:/schemavaults/auth/tests/e2e-auth-tests/cypress/:cached
     environment:
       CYPRESS_BASE_URL: http://schemavaults-auth-server
 
