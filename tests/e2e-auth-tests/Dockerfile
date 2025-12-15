@@ -4,10 +4,11 @@
 ARG BUN_VERSION
 FROM oven/bun:${BUN_VERSION} AS bunbase
 
-# Update/Install additional tools
+### Update/Install Additional Tools ###
 RUN apt-get update
 RUN apt-get install -y git
 RUN apt-get install -y libgtk-3-0 libgbm-dev libnotify-dev libnss3 libxss1 libasound2 libxtst6 xauth xvfb
+RUN apt-get install -y unzip
 
 FROM bunbase AS deps
 
@@ -18,7 +19,7 @@ COPY tests/e2e-auth-tests/package.json tests/e2e-auth-tests/package.json
 
 WORKDIR /schemavaults/auth/tests/e2e-auth-tests
 RUN bun install
-WORKDIR /schemavaults/auth
+RUN bun run cy:install
 
 FROM deps as test-runner
 
