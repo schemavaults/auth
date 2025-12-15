@@ -31,6 +31,8 @@ services:
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
       POSTGRES_DATABASE: schemavaults-auth-server
       POSTGRES_HOST: postgres-db
+      PRIVATE_GLOBAL_PASSWORD_SALT: examplePasswordSalt12
+      PRIVATE_PASSWORD_HASH_ROUNDS: 5
     networks:
       - test-enduser-network
       - test-database-network
