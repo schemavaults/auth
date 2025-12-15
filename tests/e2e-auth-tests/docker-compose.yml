@@ -9,8 +9,6 @@ services:
     network_mode: service:schemavaults-auth-server
     depends_on:
       - schemavaults-auth-server
-    volumes:
-      - ./tests/e2e-auth-tests/cypress/:/schemavaults/auth/tests/e2e-auth-tests/cypress/:cached
     environment:
       CYPRESS_BASE_URL: http://schemavaults-auth-server
 
