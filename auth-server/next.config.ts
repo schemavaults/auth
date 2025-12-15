@@ -8,7 +8,7 @@ const output =
     : undefined;
 
 console.log(
-  `[next.config.ts] Building @schemavaults/auth-server with output mode: ${output ?? "<default>"}`,
+  `[next.config.ts] Configuring @schemavaults/auth-server... (output mode: ${output ?? "<default>"})`,
 );
 
 const nextConfig: NextConfig = {
