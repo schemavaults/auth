@@ -113,8 +113,8 @@ RUN bun run build --filter @schemavaults/auth-server
 FROM bunbase AS production
 
 WORKDIR /schemavaults/auth
-COPY --chown=bun:bun --from=build package.json package.json
-COPY --chown=bun:bun --from=build bun.lock bun.lock
+COPY --chown=bun:bun --from=build /schemavaults/auth/package.json package.json
+COPY --chown=bun:bun --from=build /schemavaults/auth/bun.lock bun.lock
 COPY --chown=bun:bun --from=build /schemavaults/auth/auth-server/package.json auth-server/package.json
 COPY --chown=bun:bun --from=build /schemavaults/auth/auth-server/.next/ auth-server/.next/
 COPY --chown=bun:bun --from=build /schemavaults/auth/auth-server/public/ auth-server/public/
