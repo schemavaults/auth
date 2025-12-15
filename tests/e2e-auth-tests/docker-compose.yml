@@ -22,6 +22,10 @@ services:
     network_mode: service:postgres-db
     depends_on:
       - postgres-db
+    environment:
+      POSTGRES_USER: schemavaults-auth-server-dev
+      POSTGRES_PASSWORD: schemavaults-auth-server-dev
+      POSTGRES_DB: schemavaults-auth-server
 
   postgres-db:
     image: postgres:16.8
