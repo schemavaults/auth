@@ -59,7 +59,7 @@ COPY --chown=bun:bun packages/jwt/tsconfig.json packages/jwt/tsconfig.json
 COPY --chown=bun:bun packages/jwt/eslint.config.cjs packages/jwt/eslint.config.cjs
 
 ### Install packages
-RUN bun install --frozen-lockfile
+RUN bun install
 
 FROM deps AS development
 
@@ -117,7 +117,7 @@ COPY --chown=bun:bun --from=build /schemavaults/auth/auth-server/package.json au
 COPY --chown=bun:bun --from=build /schemavaults/auth/auth-server/.next/ auth-server/.next/
 COPY --chown=bun:bun --from=build /schemavaults/auth/auth-server/public/ auth-server/public/
 
-RUN bun install --frozen-lockfile --production
+RUN bun install --production
 
 WORKDIR /schemavaults/auth/auth-server
 CMD [ "bun", "run", "start" ]
