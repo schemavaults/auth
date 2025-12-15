@@ -5,7 +5,7 @@ ARG BUN_VERSION
 FROM oven/bun:${BUN_VERSION} AS bunbase
 
 # Install additional tools if needed
-RUN apt-get update && apt-get install -y git
+RUN apt-get update && apt-get install -y git libgtk-3-0t64 libgbm-dev libnotify-dev libnss3 libxss1 libasound2t64 libxtst6 xauth xvfb
 
 FROM bunbase AS deps
 
