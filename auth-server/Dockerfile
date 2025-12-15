@@ -4,6 +4,7 @@ ARG BUN_VERSION
 ARG NODEJS_VERSION
 
 FROM oven/bun:${BUN_VERSION} AS bunbase
+FROM node:${NODEJS_VERSION} AS nodejsbase
 
 FROM bunbase AS deps
 
@@ -21,8 +22,6 @@ COPY --chown=bun:bun auth-server/tailwind.config.ts auth-server/tailwind.config.
 COPY --chown=bun:bun auth-server/next.config.ts auth-server/next.config.ts
 COPY --chown=bun:bun auth-server/eslint.config.cjs auth-server/eslint.config.cjs
 COPY --chown=bun:bun auth-server/tsconfig.json auth-server/tsconfig.json
-
-
 
 ### Supporting Auth Packages (Config Files) ###
 
@@ -110,8 +109,6 @@ WORKDIR /schemavaults/auth
 ENV NEXT_STANDALONE_DOCKER_BUILD true
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN bun run build --filter @schemavaults/auth-server
-
-FROM node:${NODEJS_VERSION} AS nodejsbase
 
 FROM nodejsbase AS production
 
