@@ -1,5 +1,6 @@
 services:
   schemavaults-e2e-auth-tests:
+    container_name: schemavaults-e2e-auth-tests
     build:
       context: ../..
       dockerfile: tests/e2e-auth-tests/Dockerfile
@@ -12,8 +13,11 @@ services:
       CYPRESS_BASE_URL: http://schemavaults-auth-server:80
     networks:
       - test-enduser-network
+    links:
+      - schemavaults-auth-server
 
   schemavaults-auth-server:
+    container_name: schemavaults-auth-server
     build:
       context: ../..
       dockerfile: auth-server/Dockerfile
@@ -30,6 +34,8 @@ services:
     networks:
       - test-enduser-network
       - test-database-network
+    links:
+      - postgres-db
 
   postgres-db:
     image: postgres:16.8

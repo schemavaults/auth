@@ -9,7 +9,8 @@
     "@types/node": "24.4.0"
   },
   "scripts": {
-    "open": "cypress open",
+    "open": "bun run cy:open",
+    "cy:open": "cypress open",
     "e2e": "cypress run",
     "cy:install": "cypress install"
   }
