@@ -117,4 +117,4 @@ EXPOSE 80
 ENV PORT 80
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_STANDALONE_DOCKER_BUILD true
-CMD [ "bun", "run", "start" ]
+CMD [ "bun", "run", "start:standalone" ]
