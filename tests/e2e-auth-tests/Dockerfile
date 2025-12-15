@@ -14,6 +14,7 @@ WORKDIR /schemavaults/auth
 
 COPY package.json package.json
 COPY bun.lock bun.lock
+COPY auth-server/package.json auth-server/package.json
 COPY tests/e2e-auth-tests/package.json tests/e2e-auth-tests/package.json
 
 RUN bun install
