@@ -6,6 +6,7 @@ services:
       dockerfile: tests/e2e-auth-tests/Dockerfile
       args:
         BUN_VERSION: 1.3.3
+        NODEJS_VERSION: 24-alpine
       target: test-runner
     depends_on:
       - schemavaults-auth-server

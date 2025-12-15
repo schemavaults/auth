@@ -1,6 +1,7 @@
 # Dockerfile for @schemavaults/auth-server (production)
 
 ARG BUN_VERSION
+ARG NODEJS_VERSION
 
 FROM oven/bun:${BUN_VERSION} AS bunbase
 
@@ -110,11 +111,21 @@ ENV NEXT_STANDALONE_DOCKER_BUILD true
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN bun run build --filter @schemavaults/auth-server
 
-FROM build AS production
+FROM node:${NODEJS_VERSION} AS nodejsbase
+
+FROM nodejsbase AS production
+
+WORKDIR /schemavaults/auth
+
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json auth-server/package.json
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ auth-server/.next/standalone/
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/public/
 
 WORKDIR /schemavaults/auth/auth-server
+
 EXPOSE 80
 ENV PORT 80
+
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_STANDALONE_DOCKER_BUILD true
-CMD [ "bun", "run", "start:standalone" ]
+CMD [ "node", "./.next/standalone/auth-server/server.js" ]

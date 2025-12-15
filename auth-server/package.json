@@ -48,7 +48,7 @@
     "build": "NEXT_TELEMETRY_DISABLED=1 next build",
     "build:standalone": "NEXT_STANDALONE_DOCKER_BUILD=true NEXT_TELEMETRY_DISABLED=1 next build",
     "start": "NEXT_TELEMETRY_DISABLED=1 next start",
-    "start:standalone": "bun run --bun .next/standalone/auth-server/server.js",
+    "start:standalone": "NEXT_TELEMETRY_DISABLED=1 node .next/standalone/auth-server/server.js",
     "lint": "NEXT_TELEMETRY_DISABLED=1 next typegen && eslint src --ext .ts,.tsx"
   },
   "browser": {
