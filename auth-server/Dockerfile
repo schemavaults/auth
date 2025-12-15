@@ -112,8 +112,8 @@ RUN bun run build --filter @schemavaults/auth-server
 
 FROM build AS production
 
-WORKDIR /schemavaults/auth
+WORKDIR /schemavaults/auth/auth-server
 EXPOSE 6767
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_STANDALONE_DOCKER_BUILD true
-CMD [ "bun", "run", "start", "--filter", "@schemavaults/auth-server" ]
+CMD [ "bun", "run", "start" ]
