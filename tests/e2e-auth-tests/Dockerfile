@@ -25,6 +25,7 @@ FROM deps as test-runner
 
 WORKDIR /schemavaults/auth/tests/e2e-auth-tests
 COPY tests/e2e-auth-tests/cypress.config.ts cypress.config.ts
+COPY tests/e2e-auth-tests/tsconfig.json tsconfig.json
 COPY tests/e2e-auth-tests/cypress/ cypress/
 
 CMD [ "bun", "run", "e2e" ]

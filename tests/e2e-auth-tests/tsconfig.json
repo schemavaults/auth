@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "strict": true,
+    "lib": ["ESNext"],
+    "target": "ES2015",
+    "downlevelIteration": true
+  },
+  "include": ["cypress/**/*.ts"],
+  "exclude": ["node_modules"]
+}
