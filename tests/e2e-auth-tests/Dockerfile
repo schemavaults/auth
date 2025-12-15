@@ -12,15 +12,14 @@ FROM bunbase AS deps
 # Set working directory
 WORKDIR /schemavaults/auth
 
-COPY package.json package.json
-COPY bun.lock bun.lock
-COPY auth-server/package.json auth-server/package.json
 COPY tests/e2e-auth-tests/package.json tests/e2e-auth-tests/package.json
 
+WORKDIR /schemavaults/auth/tests/e2e-auth-tests
 RUN bun install
+WORKDIR /schemavaults/auth
 
 FROM deps as test-runner
 
-WORKDIR /schemavaults/auth
+WORKDIR /schemavaults/auth/tests/e2e-auth-tests
 
 CMD [ "bun", "run", "e2e" ]
