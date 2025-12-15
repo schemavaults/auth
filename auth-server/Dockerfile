@@ -113,7 +113,8 @@ RUN bun run build --filter @schemavaults/auth-server
 FROM build AS production
 
 WORKDIR /schemavaults/auth/auth-server
-EXPOSE 6767
+EXPOSE 80
+ENV PORT 80
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_STANDALONE_DOCKER_BUILD true
 CMD [ "bun", "run", "start" ]

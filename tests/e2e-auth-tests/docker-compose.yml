@@ -23,7 +23,6 @@ services:
     depends_on:
       - postgres-db
     environment:
-      PORT: 6767
       POSTGRES_USER: schemavaults-auth-server-dev
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
       POSTGRES_DATABASE: schemavaults-auth-server
