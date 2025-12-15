@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd .. && bun run build --filter @schemavaults/auth-server",
+  "buildCommand": "cd .. && bun run build:server",
   "installCommand": "cd .. && bun install",
-  "devCommand": "cd .. && bun run dev --filter @schemavaults/auth-server",
+  "devCommand": "cd .. && bun run dev:server",
   "framework": "nextjs"
 }

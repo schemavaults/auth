@@ -12,6 +12,7 @@
   "packageManager": "bun@1.3.3",
   "scripts": {
     "dev": "turbo dev",
+    "dev:server": "bun run dev --filter @schemavaults/auth-server",
     "build": "turbo build",
     "build:server": "bun run build --filter @schemavaults/auth-server",
     "test": "turbo test",
