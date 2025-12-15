@@ -10,7 +10,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.12.6",
+      "version": "0.12.8",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -19,7 +19,7 @@
         "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/auth-server-sdk": "workspace:*",
         "@schemavaults/auth-ui": "workspace:*",
-        "@schemavaults/dbh": "0.5.1",
+        "@schemavaults/dbh": "0.5.6",
         "@schemavaults/jwt": "workspace:*",
         "@schemavaults/theme": "0.25.5",
         "@schemavaults/ui": "0.12.0",
@@ -216,7 +216,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "dependencies": {
         "cypress": "15.7.1",
       },
@@ -555,7 +555,7 @@
 
     "@schemavaults/auth-ui": ["@schemavaults/auth-ui@workspace:packages/auth-ui"],
 
-    "@schemavaults/dbh": ["@schemavaults/dbh@0.5.1", "", { "dependencies": { "@neondatabase/serverless": "1.0.1", "kysely": "0.28.2", "kysely-neon": "1.3.0" } }, "sha512-tB98glu+1mBzitQIEb/TU6gBdP+M1yYABn6Pa+mnsmSHH+Tj52PfN9VmaOtfBApHAL4sju6puCkwVm0lu5SmwA=="],
+    "@schemavaults/dbh": ["@schemavaults/dbh@0.5.6", "", { "dependencies": { "@neondatabase/serverless": "1.0.1", "kysely": "0.28.2", "kysely-neon": "1.3.0" } }, "sha512-2t+ifCkuTIg+EYBk751hDuLe14nB33oKZtodma+jtYQTAhNxQp6fFrUYKCfHrJZWTsZUrQZiso32TVI+vcC2ig=="],
 
     "@schemavaults/e2e-auth-tests": ["@schemavaults/e2e-auth-tests@workspace:tests/e2e-auth-tests"],
 
