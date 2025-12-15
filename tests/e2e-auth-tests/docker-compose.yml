@@ -10,7 +10,7 @@ services:
     depends_on:
       - schemavaults-auth-server
     environment:
-      CYPRESS_BASE_URL: http://schemavaults-auth-server
+      CYPRESS_BASE_URL: http://localhost:80
 
   schemavaults-auth-server:
     build:
