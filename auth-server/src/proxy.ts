@@ -36,7 +36,7 @@ const SchemaVaultsAuthServerMiddleware = async (
       auth_middleware_rules: loadAuthServerMiddlewareRules(),
       environment,
       debug,
-      jwt_keys_manager
+      jwt_keys_manager,
     });
   } catch (e: unknown) {
     console.error(
@@ -94,7 +94,8 @@ export const config = {
      * - manifest.json (manifest file)
      * - media (media files)
      * - api/environment (allow client to know what schemavaults app environment is running)
+     * - close_window (clientside page that allows client to close the window)
      */
-    "/((?!_next/static|_next/image|icon.png|favicon.ico|manifest.json|media|api/environment).*)",
+    "/((?!_next/static|_next/image|icon.png|favicon.ico|manifest.json|media|api/environment|close_window).*)",
   ],
 };
