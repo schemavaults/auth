@@ -110,16 +110,10 @@ ENV NEXT_STANDALONE_DOCKER_BUILD true
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN bun run build --filter @schemavaults/auth-server
 
-FROM bunbase AS production
+FROM build AS production
 
 WORKDIR /schemavaults/auth
-COPY --chown=bun:bun --from=build /schemavaults/auth/package.json package.json
-COPY --chown=bun:bun --from=build /schemavaults/auth/bun.lock bun.lock
-COPY --chown=bun:bun --from=build /schemavaults/auth/auth-server/package.json auth-server/package.json
-COPY --chown=bun:bun --from=build /schemavaults/auth/auth-server/.next/ auth-server/.next/
-COPY --chown=bun:bun --from=build /schemavaults/auth/auth-server/public/ auth-server/public/
-
-RUN bun install --production
-
-WORKDIR /schemavaults/auth/auth-server
-CMD [ "bun", "run", "start" ]
+EXPOSE 6767
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_STANDALONE_DOCKER_BUILD true
+CMD [ "bun", "run", "start", "--filter", "@schemavaults/auth-server" ]
