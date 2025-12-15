@@ -9,10 +9,10 @@ function CloseWindowNowPage(): ReactElement {
       try {
         window.close();
       } catch (e: unknown) {
-        console.warn("Error automatically closing window: ", e)
+        console.warn("Error automatically closing window: ", e);
       }
     }, 5000);
-  }, [])
+  }, []);
 
   return (
     <div className="flex flex-col w-full min-h-screen items-center justify-center">
@@ -20,11 +20,16 @@ function CloseWindowNowPage(): ReactElement {
         <Wordmark />
         <Separator />
         <p className="font-bold">CLI operation successful.</p>
-        <p>You may now close this window. (Or it will close automatically in a few seconds...)</p>
+        <p>
+          You may now close this window. (Or it will close automatically in a
+          few seconds...)
+        </p>
       </main>
     </div>
-
   );
 }
 
 export default CloseWindowNowPage;
+
+//  Force static rendering and cache the data of a layout or page by causing an error if any components use Dynamic APIs or uncached data
+export const dynamic = "error";
