@@ -9,13 +9,14 @@ import {
   HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP,
   appIdSchema,
   HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
-  SchemaVaultsAppEnvironment,
+  type SchemaVaultsAppEnvironment,
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
 import { type Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../../auth-database-types";
 import { z } from "zod";
+import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
 
 /**
  * @name SchemaVaultsAppRegistry
@@ -23,17 +24,22 @@ import { z } from "zod";
  * @see AuthorizedAppsRegistry To manage which apps a user has actually authorized
  * @see SchemaVaultsApiServerRegistry Backend API servers which frontend applications can actually access
  */
-export class SchemaVaultsAppRegistry {
+export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
 
   private hardcodedApps: Map<string, SchemaVaultsApp>;
 
   public async getApp(app_id: string): Promise<SchemaVaultsApp | null> {
-    if (this.debug)
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
+
+    if (this.debug) {
       console.log(
         `[SchemaVaultsAppRegistry] Attempting to load app with ID: "${app_id}"`,
       );
+    }
 
     if (this.hardcodedApps.has(app_id)) {
       if (this.debug) {
@@ -62,22 +68,6 @@ export class SchemaVaultsAppRegistry {
           "[SchemaVaultsAppRegistry] " +
             `App_id "${app_id}" was not found in hardcoded apps list, looking up in database...`,
         );
-      }
-    }
-
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      console.log(
-        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
-      );
-      try {
-        await this.setup();
-      } catch (e: unknown) {
-        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
-        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
       }
     }
 
@@ -191,20 +181,8 @@ export class SchemaVaultsAppRegistry {
   public async getAppDomains(
     app_id: string,
   ): Promise<SchemaVaultsAppDomainRef[]> {
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      console.log(
-        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
-      );
-      try {
-        await this.setup();
-      } catch (e: unknown) {
-        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
-        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
-      }
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     const isValidAppId: boolean = (await appIdSchema.safeParseAsync(app_id))
@@ -244,20 +222,8 @@ export class SchemaVaultsAppRegistry {
     app_description: string,
     publicly_listed?: boolean,
   ): Promise<void> {
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      console.log(
-        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
-      );
-      try {
-        await this.setup();
-      } catch (e: unknown) {
-        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
-        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
-      }
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
@@ -310,20 +276,8 @@ export class SchemaVaultsAppRegistry {
     type: Exclude<ListAppsQueryType, "authorized">,
     user: UserData,
   ): Promise<SchemaVaultsApp[]> {
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      console.log(
-        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
-      );
-      try {
-        await this.setup();
-      } catch (e: unknown) {
-        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
-        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
-      }
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     if (!user) {
@@ -423,7 +377,7 @@ export class SchemaVaultsAppRegistry {
     }
   }
 
-  public async setup(): Promise<void> {
+  protected async setup(): Promise<void> {
     try {
       await SchemaVaultsAppRegistry.setupAppRegistrySQLTables(this.db);
     } catch (e: unknown) {
@@ -432,7 +386,8 @@ export class SchemaVaultsAppRegistry {
     }
   }
 
-  public constructor(private db: Kysely<AuthDatabase>) {
+  public constructor(protected db: Kysely<AuthDatabase>) {
+    super(db);
     this.env = getAppEnvironment();
     this.debug =
       this.env === "development" ||
@@ -452,20 +407,8 @@ export class SchemaVaultsAppRegistry {
     app_id: string,
     new_app_domain: SchemaVaultsAppDomainRef,
   ) {
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      console.log(
-        "[SchemaVaultsAppRegistry] Running setup() in case this is first time..",
-      );
-      try {
-        await this.setup();
-      } catch (e: unknown) {
-        console.error("[SchemaVaultsAppRegistry] Failed to run setup: ", e);
-        throw new Error("[SchemaVaultsAppRegistry] Failed to run setup!");
-      }
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     const parsed =
@@ -482,8 +425,73 @@ export class SchemaVaultsAppRegistry {
     try {
       await this.db.insertInto("app_domains").values(app_domain).execute();
     } catch (e: unknown) {
-      console.error("Failed to add new app domain; db insert failed: ", e)
+      console.error("Failed to add new app domain; db insert failed: ", e);
       throw new Error("Failed to add new app domain; db insert failed");
     }
+  }
+
+  protected async doesAppsTableExist(): Promise<boolean> {
+    const tableExists = sql`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'apps'
+      ) AS exists;
+    `.execute(this.db);
+
+    const result = await tableExists;
+    const exists: boolean =
+      typeof result.rows[0] === "object" &&
+      result.rows[0] !== null &&
+      "exists" in result.rows[0] &&
+      !!result.rows[0].exists;
+    return exists;
+  }
+
+  protected async doesAppDomainsTableExist(): Promise<boolean> {
+    const tableExists = sql`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'app_domains'
+      ) AS exists;
+    `.execute(this.db);
+
+    const result = await tableExists;
+    const exists: boolean =
+      typeof result.rows[0] === "object" &&
+      result.rows[0] !== null &&
+      "exists" in result.rows[0] &&
+      !!result.rows[0].exists;
+    return exists;
+  }
+
+  public async hasBeenInitialized(): Promise<boolean> {
+    if (this.initialized) {
+      return true;
+    }
+
+    const appDomainsTableExists = this.doesAppDomainsTableExist();
+    const appsTableExists = this.doesAppsTableExist();
+
+    const initialized: boolean = await Promise.all([
+      appDomainsTableExists,
+      appsTableExists,
+    ]).then(([appDomainsExists, appsExists]) => {
+      return appDomainsExists && appsExists;
+    });
+
+    if (initialized) {
+      // cache result
+      this.initialized = true;
+    }
+
+    return initialized;
+  }
+
+  public async performSetupTasks(): Promise<void> {
+    return await this.setup();
   }
 }

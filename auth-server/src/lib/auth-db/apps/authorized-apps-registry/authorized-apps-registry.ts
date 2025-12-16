@@ -11,6 +11,7 @@ import {
 import { Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../../auth-database-types";
 import { SchemaVaultsAppRegistry } from "../app-registry";
+import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
 
 const authorizedAppDeclarationSchema = z
   .object({
@@ -31,12 +32,45 @@ export type AuthorizedAppDeclaration = z.infer<
   typeof authorizedAppDeclarationSchema
 >;
 
-export class AuthorizedAppsRegistry {
+export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
+  protected async hasAuthorizedAppsTableBeenInitialized(): Promise<boolean> {
+    const tableExists = sql`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'authorized_apps'
+      ) AS exists;
+    `.execute(this.db);
+
+    const result = await tableExists;
+    const exists: boolean =
+      typeof result.rows[0] === "object" &&
+      result.rows[0] !== null &&
+      "exists" in result.rows[0] &&
+      !!result.rows[0].exists;
+    return exists;
+  }
+
+  public async hasBeenInitialized(): Promise<boolean> {
+    if (this.initialized) {
+      return true;
+    }
+
+    return await this.hasAuthorizedAppsTableBeenInitialized();
+  }
+
+  public async performSetupTasks(): Promise<void> {
+    if (!(await this.appRegistry.hasBeenInitialized())) {
+      await this.appRegistry.performSetupTasks();
+    }
+    return await this.setup();
+  }
+
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
   private hardcodedApps: Map<string, SchemaVaultsApp> =
     HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP;
-  private isRegistrySetup: boolean = false;
 
   private appRegistry: SchemaVaultsAppRegistry;
 
@@ -68,18 +102,16 @@ export class AuthorizedAppsRegistry {
   }
 
   public async setup(): Promise<void> {
-    if (this.isRegistrySetup) {
-      if (
-        this.env === "development" ||
-        this.env === "test" ||
-        this.env === "staging"
-      ) {
+    if (this.initialized) {
+      if (this.debug) {
         console.log("Authorized apps registry is already set up");
       }
       return;
     }
 
-    await this.appRegistry.setup();
+    if (!(await this.appRegistry.hasBeenInitialized())) {
+      await this.appRegistry.performSetupTasks();
+    }
 
     try {
       await Promise.all([
@@ -97,25 +129,21 @@ export class AuthorizedAppsRegistry {
       console.log("Authorized apps registry is now set up.");
     }
 
-    if (!this.isRegistrySetup) this.isRegistrySetup = true;
+    this.initialized = true;
   }
 
   public async listAuthorizedAppsForUser(
     uid: string,
   ): Promise<AuthorizedAppDeclaration[]> {
-    if (this.env === "development") {
+    if (this.debug) {
       console.log(
         "[AuthorizedAppsRegistry] Attempting to list authorized apps for user: ",
         uid,
       );
     }
 
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      await this.setup();
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     if (typeof uid !== "string")
@@ -203,21 +231,20 @@ export class AuthorizedAppsRegistry {
       );
     }
 
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      await this.setup();
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     if (typeof uid !== "string")
       throw new Error("Expected user ID to be a string");
     const parsed_uid = await z.string().uuid().safeParseAsync(uid);
-    if (!parsed_uid.success) throw new Error("Received invalid user ID");
+    if (!parsed_uid.success) {
+      throw new Error("Received invalid user ID");
+    }
 
-    if (typeof app_id !== "string")
+    if (typeof app_id !== "string") {
       throw new Error("Expected app ID to be a string");
+    }
     const parsed_app_id = await appIdSchema.safeParseAsync(app_id);
     if (!parsed_app_id.success) throw new Error("Received invalid app ID");
 
@@ -232,7 +259,10 @@ export class AuthorizedAppsRegistry {
         })
         .execute();
     } catch (e: unknown) {
-      console.error("Failed to insert authorized app record into database: ", e)
+      console.error(
+        "Failed to insert authorized app record into database: ",
+        e,
+      );
       throw new Error("Failed to insert authorized app record into database!");
     }
 
@@ -371,16 +401,12 @@ export class AuthorizedAppsRegistry {
     uid: string,
     app_id: string,
   ): Promise<boolean> {
-    if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
-      return true;
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      await this.setup();
+    if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+      return true;
     }
 
     try {
@@ -403,7 +429,8 @@ export class AuthorizedAppsRegistry {
     }
   }
 
-  public constructor(private db: Kysely<AuthDatabase>) {
+  public constructor(protected db: Kysely<AuthDatabase>) {
+    super(db);
     this.env = getAppEnvironment();
     this.debug =
       this.env === "development" ||

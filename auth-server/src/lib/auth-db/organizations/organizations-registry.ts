@@ -6,23 +6,47 @@ import {
 } from "@schemavaults/app-definitions";
 import type { IOrganizationsRegistry } from "./IOrganizationsRegistry";
 import {
-  OrganizationDefinition,
+  type OrganizationDefinition,
   organizationDefinitionSchema,
-  OrganizationID,
+  type OrganizationID,
   organizationIdSchema,
   SCHEMAVAULTS_ORGANIZATION_ID,
 } from "@schemavaults/auth-common";
-import { OrganizationRow } from "./organizations-table";
+import type { OrganizationRow } from "./organizations-table";
 import isValidUuid from "@/lib/is-valid-uuid";
 import {
   isValidOrganizationMembershipRoleType,
-  OrganizationMembershipRoleType,
+  type OrganizationMembershipRoleType,
 } from "./organization-membership-role-types";
+import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
 
-export class OrganizationsRegistry implements IOrganizationsRegistry {
+export class OrganizationsRegistry
+  extends AbstractDatabaseResourceGroup
+  implements IOrganizationsRegistry
+{
+  public async hasBeenInitialized(): Promise<boolean> {
+    if (this.initialized) {
+      return true;
+    }
+    const initialized: boolean =
+      await this.hasTableBeenInitialized("organizations");
+
+    if (initialized) {
+      this.initialized = true;
+      return true;
+    }
+    return false;
+  }
+
+  public async performSetupTasks(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+    await this.setup();
+    this.initialized = true;
+  }
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
-  private readonly db: Kysely<AuthDatabase>;
 
   private static async setupOrganizationsSQLTable(
     db: Kysely<AuthDatabase>,
@@ -67,9 +91,10 @@ export class OrganizationsRegistry implements IOrganizationsRegistry {
   }
 
   public constructor(
-    db: Kysely<AuthDatabase>,
+    protected readonly db: Kysely<AuthDatabase>,
     debug: boolean | undefined = undefined,
   ) {
+    super(db);
     this.env = getAppEnvironment();
 
     const defaultDebugState: boolean =

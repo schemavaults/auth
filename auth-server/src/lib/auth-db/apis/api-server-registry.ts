@@ -11,6 +11,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
+import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
 
 /**
  * @name SchemaVaultsApiServerRegistry
@@ -18,21 +19,12 @@ import type { AuthDatabase } from "../auth-database-types";
  * @see SchemaVaultsAppRegistry To manage the list of frontend applications
  * @see AuthorizedAppsRegistry To manage which frontend apps a user has actually authorized
  */
-export class SchemaVaultsApiServerRegistry {
-  private readonly environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-
+export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup {
   public async getApiServer(
     api_server_id: string,
   ): Promise<SchemaVaultsApiServerDefinition> {
-    if (this.environment === "development") {
-      try {
-        await this.setup();
-      } catch (e: unknown) {
-        console.error("Failed to ensure that API servers tables were created: ", e);
-        throw new Error(
-          "Failed to ensure that API servers tables were created",
-        );
-      }
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     const getApiServerQuery = this.db
@@ -81,15 +73,8 @@ export class SchemaVaultsApiServerRegistry {
   public async getApiServerDomains(
     api_server_id: string,
   ): Promise<SchemaVaultsApiServerDomainRef[]> {
-    if (this.environment === "development") {
-      try {
-        await this.setup();
-      } catch (e: unknown) {
-        console.error("Failed to ensure that API servers tables were created: ", e);
-        throw new Error(
-          "Failed to ensure that API servers tables were created!",
-        );
-      }
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     const queryApiServers = this.db
@@ -117,15 +102,8 @@ export class SchemaVaultsApiServerRegistry {
     api_server_description: string,
     publicly_listed?: boolean,
   ): Promise<void> {
-    if (this.environment === "development") {
-      try {
-        await this.setup();
-      } catch (e: unknown) {
-        console.error("Failed to ensure that API servers tables were created: ", e);
-        throw new Error(
-          "Failed to ensure that API servers tables were created!",
-        );
-      }
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     const parsed_app =
@@ -159,6 +137,7 @@ export class SchemaVaultsApiServerRegistry {
         hardcoded BOOLEAN DEFAULT FALSE
       );
     `;
+    await createApiServersTable.execute(db);
     const createApiServerDomainsTable = sql`
       CREATE TABLE IF NOT EXISTS API_SERVER_DOMAINS (
         api_server_domain_ref_id UUID PRIMARY KEY,
@@ -170,7 +149,6 @@ export class SchemaVaultsApiServerRegistry {
         CONSTRAINT fk_api FOREIGN KEY (api_server_id) REFERENCES API_SERVERS(api_server_id) ON DELETE CASCADE
       );
     `;
-    await createApiServersTable.execute(db);
     await createApiServerDomainsTable.execute(db);
   }
 
@@ -178,15 +156,8 @@ export class SchemaVaultsApiServerRegistry {
     type: ListApiServersQueryType,
     user: UserData,
   ): Promise<SchemaVaultsApiServerDefinition[]> {
-    if (this.environment === "development") {
-      try {
-        await this.setup();
-      } catch (e: unknown) {
-        console.error("Failed to ensure that API servers tables were created: ", e);
-        throw new Error(
-          "Failed to ensure that API servers tables were created!",
-        );
-      }
+    if (!this.hasBeenInitialized()) {
+      await this.performSetupTasks();
     }
 
     if (!user)
@@ -258,5 +229,35 @@ export class SchemaVaultsApiServerRegistry {
     }
   }
 
-  public constructor(private db: Kysely<AuthDatabase>) {}
+  public constructor(protected db: Kysely<AuthDatabase>) {
+    super(db);
+  }
+
+  public async performSetupTasks(): Promise<void> {
+    return await this.setup();
+  }
+
+  public async hasBeenInitialized(): Promise<boolean> {
+    if (this.initialized) {
+      return true;
+    }
+
+    // Promises checking if SQL tables exist
+    const apiServers: Promise<boolean> =
+      this.hasTableBeenInitialized("api_servers");
+    const apiServerDomains: Promise<boolean> =
+      this.hasTableBeenInitialized("api_server_domains");
+
+    const allTablesInitialized = await Promise.all([
+      apiServers,
+      apiServerDomains,
+    ]);
+
+    if (allTablesInitialized.every((e) => e)) {
+      this.initialized = true;
+      return true;
+    }
+
+    return false;
+  }
 }

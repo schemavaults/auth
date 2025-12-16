@@ -63,7 +63,10 @@ async function returnAppsWithDomains(
   };
 }
 
-async function preloadAllApps(appsRegistry: SchemaVaultsAppRegistry, userData: UserData) {
+async function preloadAllApps(
+  appsRegistry: SchemaVaultsAppRegistry,
+  userData: UserData,
+) {
   let all_apps: SchemaVaultsApp[];
   try {
     all_apps = await appsRegistry.listApps("all", userData);
@@ -71,10 +74,13 @@ async function preloadAllApps(appsRegistry: SchemaVaultsAppRegistry, userData: U
     console.error("Failed to list all apps:", e);
     throw new Error("Failed to list all apps");
   }
-  return all_apps
+  return all_apps;
 }
 
-async function preloadPublicApps(appsRegistry: SchemaVaultsAppRegistry, userData: UserData) {
+async function preloadPublicApps(
+  appsRegistry: SchemaVaultsAppRegistry,
+  userData: UserData,
+) {
   let public_apps: SchemaVaultsApp[];
   try {
     public_apps = await appsRegistry.listApps("public", userData);
@@ -91,9 +97,7 @@ async function preloadAuthorizedApps(
   userData: UserData,
 ): Promise<SchemaVaultsApp[]> {
   const user_authorized_apps: AuthorizedAppDeclaration[] =
-    await authorizedAppsRegistry.listAuthorizedAppsForUser(
-      userData.uid,
-    );
+    await authorizedAppsRegistry.listAuthorizedAppsForUser(userData.uid);
 
   if (user_authorized_apps.length === 0) {
     return [];
@@ -124,7 +128,7 @@ async function preloadAuthorizedApps(
     );
   }
 
-  return authorized_apps_details
+  return authorized_apps_details;
 }
 
 export async function preloadAppsTable(
@@ -147,15 +151,16 @@ export async function preloadAppsTable(
       case "public":
         return await returnAppsWithDomains(
           await preloadPublicApps(opts.appsRegistry, userData),
-          opts.appsRegistry
+          opts.appsRegistry,
         );
 
       case "authorized":
-
-
-
         return await returnAppsWithDomains(
-          await preloadAuthorizedApps(opts.appsRegistry, opts.authorizedAppsRegistry, userData),
+          await preloadAuthorizedApps(
+            opts.appsRegistry,
+            opts.authorizedAppsRegistry,
+            userData,
+          ),
           opts.appsRegistry,
         );
 

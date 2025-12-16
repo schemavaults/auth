@@ -6,7 +6,7 @@ import {
   inviteCodeDefinitionSchema,
   type InviteCode,
 } from "@schemavaults/auth-common";
-import { hashPassword as saltAndHashPassword} from "@/lib/hash_password"
+import { hashPassword as saltAndHashPassword } from "@/lib/hash_password";
 import { type Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
 import { type PasswordRecord, passwordRecordSchema } from "./passwords-table";
@@ -20,6 +20,7 @@ import {
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { isPrivateBetaEnabled } from "@/lib/private-beta";
+import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
 
 const userDocumentSchema = z
   .object({
@@ -40,9 +41,15 @@ const userDocumentSchema = z
 
 export type UserDocument = z.infer<typeof userDocumentSchema>;
 
-export class UserRegistry {
-  private _setup: boolean = false;
+export class UserRegistry extends AbstractDatabaseResourceGroup {
   private readonly debug: boolean;
+
+  public async performSetupTasks(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+    await this.setup();
+  }
 
   private static async setupInviteCodesSQLTable(
     db: Kysely<AuthDatabase>,
@@ -59,8 +66,18 @@ export class UserRegistry {
     await createInviteCodesTableSql.execute(db);
   }
 
+  public async hasBeenInitialized(): Promise<boolean> {
+    const allTablesExist = await Promise.all([
+      this.hasTableBeenInitialized("invite_codes"),
+      this.hasTableBeenInitialized("users"),
+      this.hasTableBeenInitialized("passwords"),
+      this.hasTableBeenInitialized("authorization_codes"),
+    ]);
+    return allTablesExist.every((exists) => exists);
+  }
+
   private async setupUserRegistrySQLTables(): Promise<void> {
-    if (this._setup) {
+    if (this.initialized) {
       if (this.env === "development") {
         console.log("[UserRegistry] Already setup...");
       }
@@ -161,19 +178,19 @@ export class UserRegistry {
         "[UserRegistry] Set up user registry SQL tables successfully.",
       );
     }
-    this._setup = true;
+    this.initialized = true;
   }
 
-  public async setup(): Promise<void> {
-    if (this._setup) {
-      if (this.env === "development") {
+  protected async setup(): Promise<void> {
+    if (this.initialized) {
+      if (this.debug) {
         console.log("[UserRegistry] Already set up");
       }
       return;
     }
 
     try {
-      if (this.env === "development") {
+      if (this.debug) {
         console.log(
           "[UserRegistry] Attempting to setup UserRegistry SQL tables...",
         );
@@ -193,12 +210,6 @@ export class UserRegistry {
   private static async parseUserDocument(row: unknown): Promise<UserDocument> {
     if (typeof row !== "object" || !row) {
       throw new Error("Invalid row type from DB");
-    }
-
-    const env: SchemaVaultsAppEnvironment = getAppEnvironment();
-
-    if (env === "development") {
-      console.log("[UserRegistry] Parsing user(?) document from DB", row);
     }
 
     if (!Object.hasOwn(row, "created_at")) {
@@ -221,12 +232,8 @@ export class UserRegistry {
   }
 
   public async getUserByEmail(email: string): Promise<UserDocument | null> {
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      await this.setup();
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     if (this.env !== "production") {
@@ -288,12 +295,8 @@ export class UserRegistry {
   }
 
   public async getUserByUID(uid: string): Promise<UserDocument | null> {
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      await this.setup();
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     if (this.env !== "production") {
@@ -358,12 +361,8 @@ export class UserRegistry {
     invite_code?: string,
   ): Promise<UserDocument> {
     const debug: boolean = this.debug;
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      await this.setup();
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     if (this.env !== "production") {
@@ -417,8 +416,13 @@ export class UserRegistry {
         .transaction()
         .execute(async function createUserTransaction(trx): Promise<void> {
           let inviteCodeDefinition: InviteCodeDefinition | null;
-          if (parsed_user.data.invite_code && typeof parsed_user.data.invite_code === 'string') {
-            inviteCodeDefinition = await lookupInviteCode(parsed_user.data.invite_code);
+          if (
+            parsed_user.data.invite_code &&
+            typeof parsed_user.data.invite_code === "string"
+          ) {
+            inviteCodeDefinition = await lookupInviteCode(
+              parsed_user.data.invite_code,
+            );
             if (!inviteCodeDefinition) {
               throw new Error(
                 "Failed to find invite code to create user with!",
@@ -426,8 +430,9 @@ export class UserRegistry {
             }
             const maxInviteCodeUsages: number = inviteCodeDefinition.max_uses;
 
-            const nInviteCodeUsages: number =
-              await countInviteCodeUsages(parsed_user.data.invite_code);
+            const nInviteCodeUsages: number = await countInviteCodeUsages(
+              parsed_user.data.invite_code,
+            );
             if (nInviteCodeUsages < maxInviteCodeUsages) {
               // this invite code still has usages remaining
             } else {
@@ -488,7 +493,8 @@ export class UserRegistry {
         .execute();
     } catch (e: unknown) {
       console.error(
-        "Failed to look up password record for user with specified UID: ", e
+        "Failed to look up password record for user with specified UID: ",
+        e,
       );
       throw new Error(
         "Failed to look up password record for user with specified UID!",
@@ -651,12 +657,8 @@ export class UserRegistry {
     code_verifier: string,
     challenge_time: number,
   ): Promise<{ uid: string } | null> {
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      await this.setup();
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     if (this.debug) {
@@ -973,6 +975,9 @@ export class UserRegistry {
     if (this.debug) {
       console.log(`[UserRegistry] countInviteCodeUsages("${invite_code}")`);
     }
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
 
     const parsedInviteCode =
       await inviteCodeFormatSchema.safeParseAsync(invite_code);
@@ -1035,6 +1040,9 @@ export class UserRegistry {
   }
 
   public async listAllInviteCodes(): Promise<readonly InviteCodeDefinition[]> {
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
     try {
       const allInviteCodesQuery = this.db
         .selectFrom("invite_codes")
@@ -1071,9 +1079,10 @@ export class UserRegistry {
   private readonly env: SchemaVaultsAppEnvironment;
 
   public constructor(
-    private db: Kysely<AuthDatabase>,
+    protected db: Kysely<AuthDatabase>,
     debug: boolean | undefined = undefined,
   ) {
+    super(db);
     this.env = getAppEnvironment();
 
     const defaultDebugState: boolean =
