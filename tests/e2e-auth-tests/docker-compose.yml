@@ -36,10 +36,15 @@ services:
       - 80
     links:
       - postgres-db
+      - postgres-ws-proxy
 
   postgres-db:
     container_name: postgres-db
-    image: postgres:16.8
+    build:
+      context: ../..
+      dockerfile: auth-postgres-db/Dockerfile
+      args:
+        POSTGRES_VERSION: 17.7
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -49,6 +54,27 @@ services:
       POSTGRES_DB: schemavaults-auth-server
     expose:
       - 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 6s
+      timeout: 4s
+      retries: 8
+
+  postgres-ws-proxy:
+    container_name: postgres-ws-proxy
+    image: ghcr.io/schemavaults/dbh/postgres-ws-proxy:0.6.4
+    environment:
+      APPEND_PORT: "postgres-db:5432"
+      ALLOW_ADDR_REGEX: ".*"
+      LISTEN_PORT: ":5433"
+      LOG_TRAFFIC: "true"
+    ports:
+      - "5433:5433"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    links:
+      - postgres-db
 
 volumes:
   postgres-data:
