@@ -20,6 +20,4 @@ export interface IOrganizationsRegistry {
     uid: string,
     role: OrganizationMembershipRoleType,
   ) => Promise<void>;
-
-  setup: () => Promise<void>;
 }

@@ -15,12 +15,13 @@ export async function initializeAuthDbTables(
   const appRegistry = new SchemaVaultsAppRegistry(db);
   const apiServerRegistry = new SchemaVaultsApiServerRegistry(db);
   const appsAndApisSetupPromise: Promise<[void, void]> = Promise.all([
-    appRegistry.setup(),
-    apiServerRegistry.setup(),
+    appRegistry.performSetupTasks(),
+    apiServerRegistry.performSetupTasks(),
   ]);
 
   const userRegistry = new UserRegistry(db);
-  const setupUserRegistryPromise: Promise<void> = userRegistry.setup();
+  const setupUserRegistryPromise: Promise<void> =
+    userRegistry.performSetupTasks();
 
   // can create tables that don't depend on each other at the same time
 
@@ -28,19 +29,19 @@ export async function initializeAuthDbTables(
   await appsAndApisSetupPromise;
   const appsToApisPermissionsRegistry =
     new SchemaVaultsAppToApiPermissionsRegistry(db);
-  const a2aPermsPromise = appsToApisPermissionsRegistry.setup();
+  const a2aPermsPromise = appsToApisPermissionsRegistry.performSetupTasks();
 
   // authorized apps depends on users and apps tables
   await setupUserRegistryPromise;
   await appsAndApisSetupPromise;
   const authorizedAppsRegistry = new AuthorizedAppsRegistry(db);
 
-  const authdAppsPromise = authorizedAppsRegistry.setup();
+  const authdAppsPromise = authorizedAppsRegistry.performSetupTasks();
 
   // organizations depends on users
   await setupUserRegistryPromise;
   const orgRegistry = new OrganizationsRegistry(db);
-  const setupOrgsRegistryPromise = orgRegistry.setup();
+  const setupOrgsRegistryPromise = orgRegistry.performSetupTasks();
 
   await Promise.all([
     a2aPermsPromise,

@@ -101,7 +101,7 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
     }
   }
 
-  public async setup(): Promise<void> {
+  protected async setup(): Promise<void> {
     if (this.initialized) {
       if (this.debug) {
         console.log("Authorized apps registry is already set up");

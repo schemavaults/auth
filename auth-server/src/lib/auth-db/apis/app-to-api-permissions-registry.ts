@@ -13,6 +13,7 @@ import {
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
+import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
 
 /**
  * @name SchemaVaultsAppToApiPermissionsRegistry
@@ -21,8 +22,23 @@ import isValidUuid from "@/lib/is-valid-uuid";
  * @see AuthorizedAppsRegistry To manage which frontend apps a user has actually authorized
  * @see SchemaVaultsApiServerRegistry To manage the list of backend API servers
  */
-export class SchemaVaultsAppToApiPermissionsRegistry {
-  private readonly environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+export class SchemaVaultsAppToApiPermissionsRegistry extends AbstractDatabaseResourceGroup {
+  public async hasBeenInitialized(): Promise<boolean> {
+    if (this.initialized) {
+      return true;
+    }
+
+    return await this.hasTableBeenInitialized("apps_to_apis_permissions");
+  }
+  public async performSetupTasks(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+    return await this.setup();
+  }
+
+  private readonly environment: SchemaVaultsAppEnvironment =
+    getAppEnvironment();
 
   private createHardcodedAppToApiAuthorization(
     client_app_id: string,
@@ -232,7 +248,7 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
     }
   }
 
-  public async setup(): Promise<void> {
+  protected async setup(): Promise<void> {
     await SchemaVaultsAppToApiPermissionsRegistry.setupAppToApiPermissionsRegistrySQLTables(
       this.db,
       this.debug,
@@ -240,7 +256,9 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
   }
 
   public constructor(
-    private readonly db: Kysely<AuthDatabase>,
+    protected readonly db: Kysely<AuthDatabase>,
     private readonly debug: boolean = false,
-  ) {}
+  ) {
+    super(db);
+  }
 }

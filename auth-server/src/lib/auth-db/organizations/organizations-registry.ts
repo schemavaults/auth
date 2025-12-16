@@ -86,7 +86,7 @@ export class OrganizationsRegistry
     await OrganizationsRegistry.setupOrganizationMembershipRolesSQLTable(db);
   }
 
-  public async setup(): Promise<void> {
+  protected async setup(): Promise<void> {
     await OrganizationsRegistry.setup(this.db);
   }
 
