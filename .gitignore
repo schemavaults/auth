@@ -20,3 +20,5 @@ postgres-data/
 .devcontainer/postgres-data/
 
 .turbo/
+
+.vercel/

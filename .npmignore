@@ -6,3 +6,12 @@ node_modules/
 
 vercel.json
 turbo.json
+
+.env
+.env.local
+.env.development
+.env.test
+.env.staging
+.env.production
+
+.vercel/
