@@ -17,6 +17,7 @@
     "build:server": "bun run build --filter @schemavaults/auth-server",
     "test": "turbo test",
     "lint": "turbo lint",
-    "start": "turbo start"
+    "start": "turbo start",
+    "start:server": "bun run start --filter @schemavaults/auth-server"
   }
 }

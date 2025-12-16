@@ -44,7 +44,7 @@ if (!existsSync(join(monorepoRoot, "package.json"))) {
 }
 
 console.group(`[next.config.ts] Configuring @schemavaults/auth-server...`);
-console.log(`(output mode: ${output ?? "<default>"}`);
+console.log(`output mode: ${output ?? "<default>"}`);
 console.log("monorepo root: ", monorepoRoot);
 console.log("project root: ", projectRoot);
 console.groupEnd();
