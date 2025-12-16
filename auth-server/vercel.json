@@ -3,5 +3,7 @@
   "buildCommand": "cd .. && bun run build:server",
   "installCommand": "cd .. && bun install",
   "devCommand": "cd .. && bun run dev:server",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "bunVersion": "1.x",
+  "outputDirectory": ".next"
 }
