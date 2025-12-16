@@ -4,10 +4,8 @@ import {
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDomainRefSchema,
   type SchemaVaultsApiServerDomainRef,
-  ListApiServersQueryType,
+  type ListApiServersQueryType,
   listApiServersQueryTypeSchema,
-  SchemaVaultsAppEnvironment,
-  getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
