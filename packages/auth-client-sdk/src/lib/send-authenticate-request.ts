@@ -119,7 +119,21 @@ export async function sendAuthenticateRequest(
   }
 
   if (typeof response.status === "number" && response.status >= 500) {
-    throw new Error("Server-side error handling authentication request :(");
+    let errorMsg: string =
+      "Unknown server-side error handling authentication request :(";
+    try {
+      if (typeof response.data === "object" && response.data !== null) {
+        if (
+          "message" in response.data &&
+          typeof response.data.message === "string"
+        ) {
+          errorMsg = response.data.message;
+        }
+      }
+    } catch (error: unknown) {
+      void error;
+    }
+    throw new Error(errorMsg);
   }
 
   if (typeof response.status === "number" && response.status === 404) {
