@@ -6,7 +6,7 @@ import type {
 import { successRedirect } from "./success-redirect";
 import { closeWindowRedirect } from "./close-window-redirect";
 import { useToast } from "@schemavaults/ui";
-import { AuthFormData } from "./auth-form-data";
+import type { AuthFormData } from "./auth-form-data";
 import {
   type CodeChallengeWithDetails,
   type CodeVerifierWithDetails,
@@ -174,13 +174,14 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     );
   } catch (e: unknown) {
     console.error("[handleAuthFormSubmit] Error", e);
+    const errMsg: string =
+      e instanceof Error
+        ? e.message
+        : "An unknown error occurred while trying to authenticate";
     toast({
       variant: "destructive",
       title: type === "login" ? "Sign-in Error" : "Registration Error",
-      description:
-        e instanceof Error
-          ? e.message
-          : "An unknown error occurred while trying to authenticate",
+      description: errMsg,
     });
     onSubmitFailure();
     return;

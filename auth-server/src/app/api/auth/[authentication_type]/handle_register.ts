@@ -175,6 +175,7 @@ export async function handleRegister({
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to connect to user registry",
       },
       {
@@ -184,6 +185,27 @@ export async function handleRegister({
   }
   if (debug) {
     console.log("[handleRegister] Loaded UserRegistry database interface...");
+  }
+
+  try {
+    if (!(await userRegistry.hasBeenInitialized())) {
+      await userRegistry.performSetupTasks();
+    }
+  } catch (e: unknown) {
+    console.error(
+      "[handleRegister] Error ensuring user registry database is ready: ",
+      e,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Error ensuring user registry database is ready",
+      },
+      {
+        status: 500,
+      },
+    );
   }
 
   // Validate that invite code is valid / in database if one was supplied!

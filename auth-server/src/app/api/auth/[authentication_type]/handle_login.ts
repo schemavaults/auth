@@ -63,6 +63,27 @@ export async function handleLogin({
     );
   }
 
+  try {
+    if (!(await userRegistry.hasBeenInitialized())) {
+      await userRegistry.performSetupTasks();
+    }
+  } catch (e: unknown) {
+    console.error(
+      "[handleLogin] Error ensuring user registry database is ready: ",
+      e,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Error ensuring user registry database is ready",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+
   // Check if email exists in db
   let user: UserDocument | null;
   try {
@@ -108,7 +129,7 @@ export async function handleLogin({
       email_credentials.password,
     );
   } catch (e: unknown) {
-    console.error("Failed to compare password: ", e)
+    console.error("Failed to compare password: ", e);
     return NextResponse.json(
       {
         success: false,
@@ -146,7 +167,7 @@ export async function handleLogin({
       challenge_time,
     );
   } catch (e: unknown) {
-    console.error("Failed to generate authorization code: ", e)
+    console.error("Failed to generate authorization code: ", e);
     return NextResponse.json(
       {
         success: false,

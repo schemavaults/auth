@@ -49,6 +49,7 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
       return;
     }
     await this.setup();
+    this.initialized = true;
   }
 
   private static async setupInviteCodesSQLTable(
@@ -67,13 +68,22 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
   }
 
   public async hasBeenInitialized(): Promise<boolean> {
+    if (this.initialized) {
+      return true;
+    }
+
     const allTablesExist = await Promise.all([
       this.hasTableBeenInitialized("invite_codes"),
       this.hasTableBeenInitialized("users"),
       this.hasTableBeenInitialized("passwords"),
       this.hasTableBeenInitialized("authorization_codes"),
     ]);
-    return allTablesExist.every((exists) => exists);
+    const everyTableInitialized: boolean = allTablesExist.every(
+      (exists) => exists,
+    );
+
+    this.initialized = everyTableInitialized;
+    return everyTableInitialized;
   }
 
   private async setupUserRegistrySQLTables(): Promise<void> {
