@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { inviteCodeFormatSchema } from "./invite-code-format";
 
-const MAX_DESCRIPTION_LENGTH: number = 64;
+const MAX_DESCRIPTION_LENGTH: number = 128;
 
 export const inviteCodeDefinitionSchema = z
   .object({
@@ -9,6 +9,7 @@ export const inviteCodeDefinitionSchema = z
     created_at: z.number().nonnegative(),
     max_uses: z.number().int().positive(),
     description: z.string().max(MAX_DESCRIPTION_LENGTH).optional(),
+    created_by: z.string().uuid().optional(),
   })
   .required({
     invite_code: true,
