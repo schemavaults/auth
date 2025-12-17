@@ -19,7 +19,7 @@
         "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/auth-server-sdk": "workspace:*",
         "@schemavaults/auth-ui": "workspace:*",
-        "@schemavaults/dbh": "0.6.4",
+        "@schemavaults/dbh": "0.7.0",
         "@schemavaults/jwt": "workspace:*",
         "@schemavaults/theme": "0.25.5",
         "@schemavaults/ui": "0.12.0",
@@ -555,7 +555,7 @@
 
     "@schemavaults/auth-ui": ["@schemavaults/auth-ui@workspace:packages/auth-ui"],
 
-    "@schemavaults/dbh": ["@schemavaults/dbh@0.6.4", "", { "dependencies": { "@neondatabase/serverless": "1.0.1", "kysely": "0.28.2", "kysely-neon": "1.3.0" } }, "sha512-ryN4NtAt5p6qcOWGCSxf+lEV2H1NM7n+l8etAqapJHpVoD4L1zzZ63BJu3Ba3IIEpphfvoltarhz4mu24J+pKQ=="],
+    "@schemavaults/dbh": ["@schemavaults/dbh@0.7.0", "", { "dependencies": { "@neondatabase/serverless": "1.0.1", "kysely": "0.28.2", "kysely-neon": "1.3.0" } }, "sha512-Tm4O2wMNKu1L967/pHtFFt4b6whjQyTFtLJV/8nA1dxr7c6gLbQQSZvsvdi2T3Hsf5ZYBn+inw6XOped8Zk16Q=="],
 
     "@schemavaults/e2e-auth-tests": ["@schemavaults/e2e-auth-tests@workspace:tests/e2e-auth-tests"],
 

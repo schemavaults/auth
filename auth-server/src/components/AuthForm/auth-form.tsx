@@ -8,7 +8,7 @@ import {
 
 // Login / Register functions
 
-import { useToast } from "@schemavaults/ui";
+import { cn, useToast } from "@schemavaults/ui";
 import { Loader2, LogIn, UserPlus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -120,7 +120,14 @@ export function AuthForm<T extends "login" | "register">({
     <Card
       id={`auth-${type}-form`}
       key={`auth-${type}-form`}
-      className="w-11/12 xs:w-10/12 sm:w-3/4 md:w-2/3 lg:w-1/2 xl:w-1/3 bg-white md:shadow-md md:rounded-lg p-4"
+      className={cn(
+        "w-11/12 xs:w-10/12 sm:w-3/4 md:w-2/3 lg:w-1/2 xl:w-1/3",
+        "bg-white",
+        "md:shadow-md",
+        "md:rounded-lg",
+        "p-4",
+        "my-16",
+      )}
     >
       <Form {...form}>
         <CardHeader>
@@ -279,3 +286,5 @@ export function AuthForm<T extends "login" | "register">({
     </Card>
   );
 }
+
+export default AuthForm;

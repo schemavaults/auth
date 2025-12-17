@@ -22,6 +22,9 @@ import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import loadSuperuserInviteCode, {
+  superuserInviteCodeEnvVarKey,
+} from "@/lib/TestSuperuserInviteCode";
 
 export interface HandleRegisterOptions {
   body: unknown;
@@ -206,6 +209,38 @@ export async function handleRegister({
         status: 500,
       },
     );
+  }
+
+  async function saveSuperuserInviteCodeDefinitionIfSet(): Promise<void> {
+    const superuserInviteCode: string | undefined | null =
+      loadSuperuserInviteCode();
+    if (
+      superuserInviteCode &&
+      superuserInviteCode?.length > 0 &&
+      invite_code &&
+      invite_code.length > 0 &&
+      invite_code === superuserInviteCode
+    ) {
+      const inviteCodeDefinition: InviteCodeDefinition | null =
+        await userRegistry.lookupInviteCode(invite_code);
+      if (!inviteCodeDefinition) {
+        await userRegistry.createInviteCode({
+          invite_code: invite_code,
+          created_at: Date.now(),
+          description: `Created by environment variable with key '${superuserInviteCodeEnvVarKey}'`,
+          max_uses: 1,
+        });
+      }
+    } else {
+      return;
+    }
+  } // end of saveSuperuserInviteCodeDefinitionIfSet
+
+  try {
+    await saveSuperuserInviteCodeDefinitionIfSet();
+  } catch (error: unknown) {
+    console.warn("Failed to save superuser invite code definition:", error);
+    // no-op
   }
 
   // Validate that invite code is valid / in database if one was supplied!

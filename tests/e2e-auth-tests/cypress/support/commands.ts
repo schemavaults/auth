@@ -35,3 +35,28 @@
 //     }
 //   }
 // }
+
+Cypress.Commands.add("login", (email: string, password: string) => {
+  cy.visit("/auth/login");
+  cy.url().should("include", "/auth/login");
+  cy.get("input[name='email']").type(email);
+  cy.get("input[name='password']").type(password);
+  cy.get("button[type='submit']").click();
+  cy.url().should("not.include", "login");
+});
+
+Cypress.Commands.add(
+  "register",
+  (email: string, password: string, invite_code?: string) => {
+    cy.visit("/auth/register");
+    cy.url().should("include", "/auth/register");
+    cy.get("input[name='email']").type(email);
+    cy.get("input[name='password']").type(password);
+    cy.get("input[name='confirm']").type(password);
+    if (invite_code) {
+      cy.get("input[name='invite_code']").type(invite_code);
+    }
+    cy.get("button[type='submit']").click();
+    cy.url().should("not.include", "/auth/register");
+  },
+);

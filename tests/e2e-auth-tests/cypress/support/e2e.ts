@@ -14,4 +14,17 @@
 // ***********************************************************
 
 // Import commands.js using ES2015 syntax:
-import './commands'
+import "./commands";
+
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      login(email: string, password: string): Chainable;
+      register(
+        email: string,
+        password: string,
+        invite_code?: string,
+      ): Chainable;
+    }
+  }
+}

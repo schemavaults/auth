@@ -14,7 +14,8 @@
       "passThroughEnv": [
         "NODE_ENV",
         "SCHEMAVAULTS_APP_ENVIRONMENT",
-        "NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT"
+        "NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT",
+        "PRIVATE_SUPERUSER_INVITE_CODE"
       ],
       "persistent": false,
       "cache": true

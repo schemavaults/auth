@@ -22,7 +22,7 @@
     "@schemavaults/theme": "0.25.5",
     "zod": "3.23.8",
     "swr": "2.3.4",
-    "@schemavaults/dbh": "0.6.4",
+    "@schemavaults/dbh": "0.7.0",
     "server-only": "0.0.1",
     "lucide-react": "0.508.0",
     "@hookform/resolvers": "3.9.0"

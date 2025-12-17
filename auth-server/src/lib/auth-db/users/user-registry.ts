@@ -833,6 +833,10 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
       console.log(`[UserRegistry] lookupInviteCode("${invite_code}")`);
     }
 
+    if (typeof invite_code !== "string") {
+      throw new TypeError("Invalid format for invite code; expected a string!");
+    }
+
     const parsedInviteCode =
       await inviteCodeFormatSchema.safeParseAsync(invite_code);
     if (!parsedInviteCode.success) {

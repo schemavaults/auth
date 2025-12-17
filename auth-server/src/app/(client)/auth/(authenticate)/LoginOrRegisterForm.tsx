@@ -40,7 +40,7 @@ export function LoginOrRegisterForm({
   return (
     <ThemedPageBackground
       className="items-center justify-center flex"
-      backgroundClassName="h-screen"
+      backgroundClassName="grow min-h-[100dvh] h-full"
     >
       <AuthForm
         type={type}

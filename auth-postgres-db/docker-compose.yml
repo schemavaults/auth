@@ -8,7 +8,7 @@ services:
         POSTGRES_VERSION: 17.7
     restart: unless-stopped
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: schemavaults-auth-server-dev
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
@@ -16,14 +16,19 @@ services:
     expose:
       - 5432
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U schemavaults-auth-server-dev -d schemavaults-auth-server",
+        ]
       interval: 6s
       timeout: 4s
       retries: 8
 
   postgres-ws-proxy:
     container_name: postgres-ws-proxy
-    image: ghcr.io/schemavaults/dbh/postgres-ws-proxy:0.6.4
+    image: ghcr.io/schemavaults/dbh/postgres-ws-proxy:0.7.0
+    platform: linux/amd64
     environment:
       APPEND_PORT: "postgres-db:5432"
       ALLOW_ADDR_REGEX: ".*"
@@ -31,11 +36,10 @@ services:
       LOG_TRAFFIC: "true"
     ports:
       - "5433:5433"
+    expose:
+      - 5433
     depends_on:
       postgres-db:
         condition: service_healthy
     links:
       - postgres-db
-
-volumes:
-  postgres-data:
