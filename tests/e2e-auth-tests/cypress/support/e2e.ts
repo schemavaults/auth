@@ -26,10 +26,7 @@ declare global {
         invite_code?: string,
       ): Chainable;
       create_and_login_as_superuser(): Chainable;
-      has_error_toast(
-        containing_message?: string,
-        variant?: string,
-      ): Chainable<boolean>;
+      has_error_toast(containing_message?: string): Chainable<boolean>;
     }
   }
 }

@@ -38,7 +38,8 @@
 
 Cypress.Commands.add("login", (email: string, password: string) => {
   cy.visit("/auth/login");
-  cy.url().should("include", "/auth/login");
+  cy.log(`Attempting to login as user: '${email}'`);
+  cy.url({ log: false }).should("include", "/auth/login");
   cy.get("input[name='email']", { log: false }).type(email);
   cy.get("input[name='password']", { log: false }).type(password);
   cy.get("button[type='submit']", { log: false }).click();
@@ -50,7 +51,8 @@ Cypress.Commands.add(
   "register",
   (email: string, password: string, invite_code?: string) => {
     cy.visit("/auth/register");
-    cy.url().should("include", "/auth/register");
+    cy.log(`Attempting to register as user: '${email}'`);
+    cy.url({ log: false }).should("include", "/auth/register");
     cy.get("input[name='email']", { log: false }).type(email);
     cy.get("input[name='password']", { log: false }).type(password);
     cy.get("input[name='confirm']", { log: false }).type(password);
@@ -73,8 +75,12 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
     password: "Password123!",
   };
   if (SuperuserCreatedCache.created) {
+    cy.log(
+      "Superuser appears to be marked as already created-- attempting to login right away...",
+    );
     cy.login(credentials.email, credentials.password);
-    cy.url().should("not.include", "/auth/login");
+    cy.url({ log: false }).should("not.include", "/auth/login");
+    return;
   }
 
   const invite_code: string | undefined = Cypress.env(
@@ -98,50 +104,75 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
 
   cy.wait(2500);
 
-  cy.url().then((url: string) => {
-    if (url.includes("/auth/register")) {
+  cy.url({ log: false }).then((url: string) => {
+    cy.log("Registration should have completed by now; checking URL: ", url);
+    const redirected: boolean = !url.includes("/auth/register");
+    if (!redirected) {
+      cy.log(
+        "Submitting registration form does not seem to have redirected user.",
+      );
       // if error message includes 'already exists', then try to login instead
-      cy.has_error_toast("already exists").then(() => {
-        cy.log(`Found error toast with message: already exists`);
-        SuperuserCreatedCache.created = true;
-        cy.login(credentials.email, credentials.password);
-      });
+      cy.has_error_toast("already exists").then(
+        (alreadyExistsError: boolean) => {
+          if (alreadyExistsError) {
+            cy.log(`Found error toast with message: already exists`);
+            SuperuserCreatedCache.created = true;
+            cy.login(credentials.email, credentials.password);
+          }
+        },
+      );
       return;
-    }
-
-    if (!url.includes("/auth/register")) {
-      SuperuserCreatedCache.created = true;
+    } else {
+      cy.log("Submitting registration form appears to have redirected user.");
+      // user was redirected off the register page
       cy.url().should("not.include", "/auth/register");
+      SuperuserCreatedCache.created = true;
     }
   });
-});
+}); // end of create_and_login_as_superuser command
 
-Cypress.Commands.add("has_error_toast", (containing_message?: string) => {
-  return cy.get("body", { log: false }).then(($body) => {
-    const $errorToasts = $body.find("li.toast[data-variant='destructive']");
+Cypress.Commands.add(
+  "has_error_toast",
+  (containing_message?: string): Cypress.Chainable<boolean> => {
+    cy.log(
+      "Attempting to find error toast" + typeof containing_message === "string"
+        ? ` with message: '${containing_message}'`
+        : "",
+    );
 
-    if ($errorToasts.length === 0) {
-      cy.log("No error toasts found");
-      return false;
-    }
+    const isToastFound: Cypress.Chainable<JQuery<boolean>> = cy
+      .get("body", { log: false })
+      .then(($body): Cypress.Chainable<JQuery<boolean>> => {
+        const $errorToasts = $body.find("li.toast[data-variant='destructive']");
 
-    cy.log(`Found ${$errorToasts.length} error toast(s)`);
+        if ($errorToasts.length === 0) {
+          cy.log("No error toasts found");
+          return cy.wrap<boolean>(false, { log: false });
+        }
 
-    if (!containing_message) {
-      return true;
-    }
+        cy.log(`Found ${$errorToasts.length} error toast(s)`);
 
-    // Check if any toast contains the message
-    let found = false;
-    $errorToasts.each((_, toast) => {
-      const text = Cypress.$(toast).text().toLowerCase();
-      if (text.includes(containing_message.toLowerCase())) {
-        found = true;
-        cy.log(`Found error toast with message: ${containing_message}`);
-        return false; // break the .each loop
-      }
+        if (!containing_message) {
+          return cy.wrap<boolean>(false, { log: false });
+        }
+
+        // Check if any toast contains the message
+        let found = false;
+        $errorToasts.each((_, toast): false | void => {
+          const text = Cypress.$(toast).text().toLowerCase();
+          if (text.includes(containing_message.toLowerCase())) {
+            found = true;
+            cy.log(`Found error toast with message: ${containing_message}`);
+            return false; // break the .each loop
+          }
+        });
+
+        return cy.wrap<boolean>(found, { log: false });
+      });
+
+    return isToastFound.then((found: JQuery<boolean>) => {
+      const boolValue: boolean = found[0];
+      return boolValue;
     });
-
-    return found;
-  });
-});
+  },
+); // end of has_error_toast command
