@@ -18,7 +18,7 @@ import {
   isValidOrganizationMembershipRoleType,
   type OrganizationMembershipRoleType,
 } from "./organization-membership-role-types";
-import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
+import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 
 export class OrganizationsRegistry
   extends AbstractDatabaseResourceGroup

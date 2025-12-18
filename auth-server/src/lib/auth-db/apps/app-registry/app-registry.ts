@@ -16,7 +16,7 @@ import type { UserData } from "@schemavaults/auth-common";
 import { type Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../../auth-database-types";
 import { z } from "zod";
-import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
+import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 
 /**
  * @name SchemaVaultsAppRegistry

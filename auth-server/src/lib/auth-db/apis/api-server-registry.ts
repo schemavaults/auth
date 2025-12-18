@@ -9,7 +9,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
-import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
+import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 
 /**
  * @name SchemaVaultsApiServerRegistry

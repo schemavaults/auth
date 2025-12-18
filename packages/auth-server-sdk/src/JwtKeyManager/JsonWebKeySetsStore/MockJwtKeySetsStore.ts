@@ -6,6 +6,13 @@ export class MockJwtKeySetsStore
   extends AbstractJsonWebKeySetsStore
   implements IJsonWebKeySetsStore
 {
+  public async hasBeenInitialized(): Promise<boolean> {
+    return true;
+  }
+
+  public async performSetupTasks(): Promise<void> {
+    return;
+  }
   private _map: Map<string, Map<string, I_JWT_Keys>> = new Map();
 
   public get(audienceId: string, keySetId: string): Promise<I_JWT_Keys | null> {

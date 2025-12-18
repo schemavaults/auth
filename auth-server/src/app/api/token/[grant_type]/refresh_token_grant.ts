@@ -1,4 +1,9 @@
-import { type I_JWT_Keys, JWT_Factory, decodeJWT, getKeysetIdFromToken } from "@schemavaults/jwt";
+import {
+  type I_JWT_Keys,
+  decodeJWT,
+  getAudienceFromToken,
+  getKeysetIdFromToken,
+} from "@schemavaults/jwt";
 import {
   type OrganizationsRegistry,
   type ServerlessDatabase,
@@ -16,10 +21,13 @@ import type { z } from "zod";
 import { validateAudience } from "./validate-audience";
 import {
   getAppEnvironment,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
-import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
+import AuthServerJwtKeysManager, {
+  generateTokensForAuthenticatedUser,
+} from "@/lib/AuthServerJwtKeysManager";
 
 export async function handleRefreshTokenGrant(
   refresh_token: string,
@@ -30,7 +38,6 @@ export async function handleRefreshTokenGrant(
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
   debug: boolean = shouldEnableDebug(environment),
 ): Promise<NextResponse> {
-
   let refresh_token_keyset_id: string;
   try {
     refresh_token_keyset_id = getKeysetIdFromToken(refresh_token);
@@ -47,6 +54,33 @@ export async function handleRefreshTokenGrant(
     );
   }
 
+  let refresh_token_audience_id: string;
+  try {
+    refresh_token_audience_id = getAudienceFromToken(refresh_token);
+  } catch (e: unknown) {
+    console.error(e);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to retrieve refresh token keyset ID",
+      } satisfies RequestTokensResult,
+      {
+        status: 500,
+      },
+    );
+  }
+  if (refresh_token_audience_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Invalid audience ID",
+      } satisfies RequestTokensResult,
+      {
+        status: 400,
+      },
+    );
+  }
+
   let jwt_keys_manager: AuthServerJwtKeysManager;
   try {
     jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
@@ -57,10 +91,14 @@ export async function handleRefreshTokenGrant(
 
   let refresh_token_keyset: I_JWT_Keys;
   try {
-    refresh_token_keyset = await jwt_keys_manager.getKeyset(refresh_token_keyset_id);
+    refresh_token_keyset = await jwt_keys_manager.getKeyset(
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      refresh_token_keyset_id,
+    );
   } catch (e: unknown) {
     console.error("Failed to retrieve refresh token keyset: ", e);
-    const isKeysetExpiredError: boolean = e instanceof Error && e.message.includes("expired");
+    const isKeysetExpiredError: boolean =
+      e instanceof Error && e.message.includes("expired");
     return NextResponse.json(
       {
         success: false,
@@ -170,72 +208,29 @@ export async function handleRefreshTokenGrant(
   }
 
   try {
-    const jwt_factory = new JWT_Factory({
-      user,
-      client_app_id: body.client_app_id,
-      jwt_keys: await jwt_keys_manager.getFreshEnoughKeysetOrCreateNew(),
-      environment,
-      user_organizations,
+    const replaceRefreshToo: boolean =
+      typeof body.replaceRefreshToo === "boolean"
+        ? body.replaceRefreshToo
+        : false;
+
+    const tokensResult: RequestTokensResult =
+      await generateTokensForAuthenticatedUser({
+        user,
+        client_app_id: body.client_app_id,
+        audiences: Array.isArray(body.audience)
+          ? body.audience
+          : [body.audience],
+        environment,
+        user_organizations,
+        generate_refresh: replaceRefreshToo,
+        auth_jwt_manager: jwt_keys_manager,
+      });
+
+    return NextResponse.json(tokensResult satisfies RequestTokensResult, {
+      status: 200,
     });
-    if (body.replaceRefreshToo) {
-      return NextResponse.json(
-        {
-          success: true,
-          message: "Generated refresh and access tokens successfully",
-          tokens: (await jwt_factory.generateTokens(body.audience, true))
-            .tokens,
-          userData: user,
-        } satisfies RequestTokensResult,
-        {
-          status: 200,
-        },
-      );
-    }
-
-    // Else, just generate an access token
-    if (typeof body.audience === "string") {
-      const access_token = await jwt_factory.access(body.audience);
-      return NextResponse.json(
-        {
-          success: true,
-          message: "Generated access token successfully",
-          tokens: {
-            access: {
-              [body.audience]: access_token,
-            },
-          },
-          userData: user,
-        } satisfies RequestTokensResult,
-        {
-          status: 200,
-        },
-      );
-    }
-
-    const tokens = (
-      await jwt_factory.generateTokens(
-        body.audience,
-        false /** don't regen refresh token */,
-      )
-    ).tokens;
-
-    if (debug) {
-      console.log("[handleRefreshTokenGrant]");
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Generated refresh and access tokens successfully",
-        tokens,
-        userData: user,
-      } satisfies RequestTokensResult,
-      {
-        status: 200,
-      },
-    );
   } catch (e: unknown) {
-    console.error(e);
+    console.error("Failed to generate new tokens: ", e);
     return NextResponse.json(
       {
         success: false,

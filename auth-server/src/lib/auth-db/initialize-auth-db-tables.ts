@@ -50,5 +50,5 @@ export async function initializeAuthDbTables(
   ]);
 
   const jwtKeysRegistry = new AuthServerJwtKeysStore(db);
-  await jwtKeysRegistry.setup();
+  await jwtKeysRegistry.performSetupTasks();
 }

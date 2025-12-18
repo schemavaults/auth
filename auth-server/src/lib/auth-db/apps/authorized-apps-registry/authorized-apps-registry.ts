@@ -11,7 +11,7 @@ import {
 import { Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../../auth-database-types";
 import { SchemaVaultsAppRegistry } from "../app-registry";
-import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
+import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 
 const authorizedAppDeclarationSchema = z
   .object({

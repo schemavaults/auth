@@ -19,7 +19,10 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
-import { AuthServerJwtKeysManager } from "@/lib/AuthServerJwtKeysManager";
+import {
+  AuthServerJwtKeysManager,
+  generateTokensForAuthenticatedUser,
+} from "@/lib/AuthServerJwtKeysManager";
 
 export async function handleAuthorizationCodeGrant(
   body: z.infer<typeof authorizationCodePOSTbody>,
@@ -130,7 +133,10 @@ export async function handleAuthorizationCodeGrant(
   const audience: string | readonly string[] = body.audience;
   try {
     if (debug) {
-      console.log(`[AuthorizationCodeGrant] Validating token audience(s)...`);
+      console.log(
+        `[AuthorizationCodeGrant] Validating token audience(s): `,
+        audience,
+      );
     }
 
     const isValidAudience: boolean = await validateAudience(
@@ -169,13 +175,16 @@ export async function handleAuthorizationCodeGrant(
       },
     );
   }
-
+  /**
+   * TOKENS VALIDATED
+   */
   if (debug) {
     console.log(
       `[AuthorizationCodeGrant] Token audience(s) appear valid, creating json web token factory...`,
     );
   }
 
+  // Load organizations that user is associated with
   let user_organizations: readonly OrganizationID[];
   try {
     user_organizations = await orgRegistry.listUserOrganizationMemberships(
@@ -202,40 +211,23 @@ export async function handleAuthorizationCodeGrant(
     throw new Error("Failed to initialize JWT key manager");
   }
 
-  let jwt_factory: JWT_Factory;
-  try {
-    jwt_factory = new JWT_Factory({
-      user,
-      client_app_id: body.client_app_id,
-      jwt_keys: await jwt_keys_manager.getFreshEnoughKeysetOrCreateNew(),
-      user_organizations,
-      environment,
-    });
-  } catch (e: unknown) {
-    console.error(
-      "[AuthorizationCodeGrant] Failed to init token generator: ",
-      e,
-    );
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to initialize token generator",
-      } satisfies RequestTokensResult,
-      {
-        status: 500,
-      },
-    );
-  }
-
   if (debug) {
     console.log(`[AuthorizationCodeGrant] Generating JWTs with JWT_Factory...`);
   }
 
   try {
-    const generateRefresh = true as const;
-    const tokens = (
-      await jwt_factory.generateTokens(body.audience, generateRefresh)
-    ).tokens;
+    const generate_refresh = true as const;
+    const tokenGenerationResult: RequestTokensResult =
+      await generateTokensForAuthenticatedUser({
+        user,
+        client_app_id: body.client_app_id,
+        user_organizations,
+        environment,
+        audiences: typeof audience === "string" ? [audience] : audience,
+        generate_refresh,
+        auth_jwt_manager: jwt_keys_manager,
+      });
+    const { tokens } = tokenGenerationResult;
 
     if (debug) {
       console.log(
@@ -247,12 +239,7 @@ export async function handleAuthorizationCodeGrant(
     }
 
     return NextResponse.json(
-      {
-        success: true,
-        message: "Generated refresh and access tokens successfully",
-        tokens,
-        userData: user,
-      } satisfies RequestTokensResult,
+      tokenGenerationResult satisfies RequestTokensResult,
       {
         status: 200,
       },

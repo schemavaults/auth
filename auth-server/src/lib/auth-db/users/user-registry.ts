@@ -20,7 +20,7 @@ import {
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { isPrivateBetaEnabled } from "@/lib/private-beta";
-import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
+import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 
 const userDocumentSchema = z
   .object({

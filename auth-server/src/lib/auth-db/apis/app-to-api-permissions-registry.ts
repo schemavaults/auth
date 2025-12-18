@@ -13,7 +13,7 @@ import {
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
-import AbstractDatabaseResourceGroup from "@/lib/AbstractDatabaseResourceGroup";
+import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 
 /**
  * @name SchemaVaultsAppToApiPermissionsRegistry
