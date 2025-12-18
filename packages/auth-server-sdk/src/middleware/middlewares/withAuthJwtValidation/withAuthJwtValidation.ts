@@ -16,7 +16,10 @@ import {
   decodeJWT,
   getKeysetIdFromToken,
 } from "@schemavaults/jwt";
-import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  apiServerIdSchema,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import type {
   ISchemaVaultsMiddleware,
   ISchemaVaultsMiddlewareFactory,
@@ -24,7 +27,9 @@ import type {
 } from "@/middleware_types";
 import BaseMiddleware from "@/middlewares/BaseMiddleware";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
-import loadJwtDecodingKeys, { type IDecodeAuthTokenKeys } from "@/JwtKeyManager/loadJwtDecodingKeys";
+import loadJwtDecodingKeys, {
+  type IDecodeAuthTokenKeys,
+} from "@/JwtKeyManager/loadJwtDecodingKeys";
 
 export interface AuthJwtValidationMiddlewareOptions {
   audience: string;
@@ -62,6 +67,10 @@ class AuthJwtValidationMiddleware
       throw new Error(
         "AuthJwtValidationMiddleware did not receive an 'audience' to enforce for received JWTs!",
       );
+    } else if (!apiServerIdSchema.safeParse(audience).success) {
+      throw new TypeError(
+        "Invalid 'audience'; should be a valid API server ID!",
+      );
     }
 
     this.audience = audience;
@@ -69,11 +78,16 @@ class AuthJwtValidationMiddleware
     this.keys_manager = opts.keys_manager;
   }
 
-  protected async loadJwtDecodingKeys(keyset_id: string): Promise<IDecodeAuthTokenKeys> {
-    return await loadJwtDecodingKeys({
+  protected async loadJwtDecodingKeys(
+    keyset_id: string,
+  ): Promise<IDecodeAuthTokenKeys> {
+    const audience_id: string = this.audience;
+    const decoding_keys: IDecodeAuthTokenKeys = await loadJwtDecodingKeys({
       keyset_id,
-      keys_manager: this.keys_manager
-    }) satisfies IDecodeAuthTokenKeys;
+      keys_manager: this.keys_manager,
+      audience_id,
+    });
+    return decoding_keys;
   }
 
   public async handle({
@@ -91,11 +105,14 @@ class AuthJwtValidationMiddleware
 
     if (req.cookies.size > 20) {
       console.error(`[${this.name}] Too many cookies: `, req.cookies.size);
-      return json({
-        error: true,
-        success: false,
-        message: "Too many cookies attached to request!"
-      }, { status: 400 });
+      return json(
+        {
+          error: true,
+          success: false,
+          message: "Too many cookies attached to request!",
+        },
+        { status: 400 },
+      );
     }
 
     // Initialize array to store tokens from different sources
@@ -125,7 +142,9 @@ class AuthJwtValidationMiddleware
 
     let authorizationHeaderToken: string | undefined = undefined;
     const authorizationHeader: string | null =
-      req.headers.get("Authorization") ?? req.headers.get("authorization") ?? null;
+      req.headers.get("Authorization") ??
+      req.headers.get("authorization") ??
+      null;
     if (typeof authorizationHeader === "string") {
       const bearerPrefix = "Bearer " as const;
       if (authorizationHeader.startsWith(bearerPrefix)) {
@@ -190,11 +209,18 @@ class AuthJwtValidationMiddleware
           try {
             decodingKeys = await this.loadJwtDecodingKeys(keyset_id);
             if (decodingKeys.keyset_id !== keyset_id) {
-              throw new Error("Mismatch between the keyset ID of result and what was requested!");
+              throw new Error(
+                "Mismatch between the keyset ID of result and what was requested!",
+              );
             }
           } catch (e: unknown) {
-            console.error(`Failed to load keys associated with token-associated keyset '${keyset_id}': `, e)
-            throw new Error("Failed to load keys associated with token-associated keyset!");
+            console.error(
+              `Failed to load keys associated with token-associated keyset '${keyset_id}': `,
+              e,
+            );
+            throw new Error(
+              "Failed to load keys associated with token-associated keyset!",
+            );
           }
           const { decryption_key, verification_key } = decodingKeys;
 
@@ -206,7 +232,7 @@ class AuthJwtValidationMiddleware
               env: environment,
               decryption_key,
               verification_key,
-              keyset_id
+              keyset_id,
             });
             return { ...decoded };
           } catch (e: unknown) {

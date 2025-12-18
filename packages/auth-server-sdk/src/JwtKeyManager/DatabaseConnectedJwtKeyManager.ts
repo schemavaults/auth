@@ -9,8 +9,8 @@ export class DatabaseConnectedJwtKeyManager implements IJwtKeyManager {
     this.store = store;
   }
 
-  public async loadJwks(): Promise<JWKS> {
-    return await this.store.getJwks();
+  public async loadJwks(audienceId: string): Promise<JWKS> {
+    return await this.store.getJwks(audienceId);
   }
 }
 

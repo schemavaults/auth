@@ -15,8 +15,8 @@ describe("SchemaVaultsServerMiddleware Initialization", () => {
         debug: true,
         api_server_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
         jwt_keys_manager: new DatabaseConnectedJwtKeyManager(
-          new MockJwtKeySetsStore()
-        )
+          new MockJwtKeySetsStore(),
+        ),
       });
       console.log(
         "SchemaVaultsServerMiddleware Flow String: ",
@@ -45,6 +45,26 @@ describe("SchemaVaultsServerMiddleware Initialization", () => {
         "Error initializing SchemaVaults server middleware for the schemavaults mail server: ",
         e,
       );
+      errorThrown = true;
+    }
+    expect(errorThrown).toBeFalse();
+  });
+
+  test("can initialize the SchemaVaults server middleware for random API server", () => {
+    const api_server_id: string = crypto.randomUUID();
+
+    let errorThrown: boolean = false;
+    try {
+      const middleware = new SchemaVaultsServerMiddleware({
+        debug: true,
+        api_server_id,
+      });
+      console.log(
+        "SchemaVaultsServerMiddleware Flow String: ",
+        middleware.toMiddlewareFlowString(),
+      );
+    } catch (e: unknown) {
+      console.error("Error initializing middleware: ", e);
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();

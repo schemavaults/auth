@@ -11,12 +11,15 @@ import {
 } from "@schemavaults/auth-common";
 import { decodeJWT, getKeysetIdFromToken } from "@schemavaults/jwt";
 import {
+  apiServerIdSchema,
   getAppEnvironment,
   getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import loadJwtDecodingKeys, { type IDecodeAuthTokenKeys } from "@/JwtKeyManager/loadJwtDecodingKeys";
+import loadJwtDecodingKeys, {
+  type IDecodeAuthTokenKeys,
+} from "@/JwtKeyManager/loadJwtDecodingKeys";
 import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 
 export interface RouteGuardFactoryInitOptions {
@@ -51,9 +54,7 @@ export class RouteGuardFactory {
   private static _instance: RouteGuardFactory;
   private readonly environment: SchemaVaultsAppEnvironment;
 
-  private constructor(
-    { environment }: RouteGuardFactoryInitOptions
-  ) {
+  private constructor({ environment }: RouteGuardFactoryInitOptions) {
     this.environment = environment;
   }
 
@@ -90,6 +91,12 @@ export class RouteGuardFactory {
       );
     }
 
+    if (!apiServerIdSchema.safeParse(jwt_audience).success) {
+      throw new TypeError(
+        `Invalid API server ID for 'jwt_audience': ${jwt_audience}`,
+      );
+    }
+
     let user: UserData | null = null;
 
     try {
@@ -109,7 +116,8 @@ export class RouteGuardFactory {
             throw new Error("Failed to load 'keyset_id' from auth token!");
           }
 
-          const isAuthServer: boolean = jwt_audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+          const isAuthServer: boolean =
+            jwt_audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
 
           let keys_manager: IJwtKeyManager;
           if (RouteGuardFactory.jwt_keys_manager) {
@@ -118,31 +126,41 @@ export class RouteGuardFactory {
             if (isAuthServer) {
               console.error(
                 "[RouteGuardFactory] " +
-                "Failed to resolve JWT keys manager on auth server! " +
-                "Please ensure the keys manager is set up with: 'RouteGuardFactory.jwt_keys_manager = ______'"
+                  "Failed to resolve JWT keys manager on auth server! " +
+                  "Please ensure the keys manager is set up with: 'RouteGuardFactory.jwt_keys_manager = ______'",
               );
-              throw new Error("Failed to resolve JWT keys manager on auth server!")
+              throw new Error(
+                "Failed to resolve JWT keys manager on auth server!",
+              );
             }
             keys_manager = new RemoteJwtKeyManager({
               auth_server_uri: getHardcodedClientWebAppDomain(
                 SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-                environment
-              )
-            })
+                environment,
+              ),
+            });
           }
 
           let decodingKeys: IDecodeAuthTokenKeys;
           try {
             decodingKeys = await loadJwtDecodingKeys({
               keyset_id,
-              keys_manager
+              keys_manager,
+              audience_id: jwt_audience,
             });
             if (decodingKeys.keyset_id !== keyset_id) {
-              throw new Error("Mismatch between the keyset ID of result and what was requested!");
+              throw new Error(
+                "Mismatch between the keyset ID of result and what was requested!",
+              );
             }
           } catch (e: unknown) {
-            console.error(`Failed to load keys associated with token-associated keyset '${keyset_id}': `, e)
-            throw new Error("Failed to load keys associated with token-associated keyset!");
+            console.error(
+              `Failed to load keys associated with token-associated keyset '${keyset_id}': `,
+              e,
+            );
+            throw new Error(
+              "Failed to load keys associated with token-associated keyset!",
+            );
           }
           const { decryption_key, verification_key } = decodingKeys;
 
@@ -212,7 +230,9 @@ export class RouteGuardFactory {
     );
   }
 
-  public static getInstance(jwt_keys_manager?: IJwtKeyManager): RouteGuardFactory {
+  public static getInstance(
+    jwt_keys_manager?: IJwtKeyManager,
+  ): RouteGuardFactory {
     if (!RouteGuardFactory._instance) {
       function initRouteGuardFactory(): RouteGuardFactory {
         const environment = getAppEnvironment();
@@ -223,7 +243,7 @@ export class RouteGuardFactory {
 
         return new RouteGuardFactory({
           environment,
-          jwt_keys_manager
+          jwt_keys_manager,
         });
       }
       RouteGuardFactory._instance = initRouteGuardFactory();
