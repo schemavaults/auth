@@ -33,31 +33,12 @@ export type AuthorizedAppDeclaration = z.infer<
 >;
 
 export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
-  protected async hasAuthorizedAppsTableBeenInitialized(): Promise<boolean> {
-    const tableExists = sql`
-      SELECT EXISTS (
-        SELECT 1
-        FROM information_schema.tables
-        WHERE table_schema = 'public'
-          AND table_name = 'authorized_apps'
-      ) AS exists;
-    `.execute(this.db);
-
-    const result = await tableExists;
-    const exists: boolean =
-      typeof result.rows[0] === "object" &&
-      result.rows[0] !== null &&
-      "exists" in result.rows[0] &&
-      !!result.rows[0].exists;
-    return exists;
-  }
-
   public async hasBeenInitialized(): Promise<boolean> {
     if (this.initialized) {
       return true;
     }
 
-    return await this.hasAuthorizedAppsTableBeenInitialized();
+    return await this.hasTableBeenInitialized("authorized_apps");
   }
 
   public async performSetupTasks(): Promise<void> {

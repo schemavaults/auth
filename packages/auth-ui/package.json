@@ -9,7 +9,7 @@
     "url": "https://github.com/schemavaults/auth-ui.git"
   },
   "dependencies": {
-    "@schemavaults/ui": "0.12.0",
+    "@schemavaults/ui": "0.12.4",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",

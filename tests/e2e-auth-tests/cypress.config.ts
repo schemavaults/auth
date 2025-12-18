@@ -6,4 +6,7 @@ export default defineConfig({
   e2e: {
     baseUrl: devAuthServer,
   },
+  env: {
+    PRIVATE_SUPERUSER_INVITE_CODE: "superuser",
+  },
 });

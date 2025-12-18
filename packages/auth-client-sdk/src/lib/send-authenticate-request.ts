@@ -150,6 +150,10 @@ export async function sendAuthenticateRequest(
     if (!response.ok) {
       if (response.status === 401) {
         throw new Error("Invalid credentials");
+      } else if (response.status === 404 && authentication_type === "login") {
+        throw new Error(
+          "User does not exist! Ensure that you have the correct credentials!",
+        );
       }
       throw new Error("Failed to authenticate");
     }

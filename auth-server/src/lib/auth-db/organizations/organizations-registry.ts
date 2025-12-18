@@ -28,8 +28,13 @@ export class OrganizationsRegistry
     if (this.initialized) {
       return true;
     }
+    const tablesInitializedPromises = await Promise.all([
+      this.hasTableBeenInitialized("organizations"),
+      this.hasTableBeenInitialized("organaization_membership_roles"),
+    ]);
+
     const initialized: boolean =
-      await this.hasTableBeenInitialized("organizations");
+      tablesInitializedPromises[0] && tablesInitializedPromises[1];
 
     if (initialized) {
       this.initialized = true;
@@ -109,6 +114,10 @@ export class OrganizationsRegistry
   public async lookupOrganization(
     org_id: OrganizationID,
   ): Promise<OrganizationDefinition> {
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
+
     const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id);
     if (!parsed_org_id.success) {
       throw new Error(
@@ -162,6 +171,10 @@ export class OrganizationsRegistry
   public async createOrganization(
     org_def: OrganizationDefinition,
   ): Promise<void> {
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
+
     const parsedOrgDef =
       await organizationDefinitionSchema.safeParseAsync(org_def);
     if (!parsedOrgDef.success) {
@@ -199,6 +212,10 @@ export class OrganizationsRegistry
   public async listUserOrganizationMemberships(
     uid: string,
   ): Promise<readonly OrganizationID[]> {
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
+
     if (!isValidUuid(uid)) {
       throw new Error(
         "Invalid user ID to lookup organization memberships for!",
@@ -243,6 +260,10 @@ export class OrganizationsRegistry
     uid: string,
     role: OrganizationMembershipRoleType,
   ): Promise<void> {
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
+
     const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id);
     if (!parsed_org_id.success) {
       throw new Error(

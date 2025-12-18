@@ -15,13 +15,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className="w-screen h-screen min-h-[100dvh] overflow-x-hidden overflow-y-scroll"
+      className="w-screen min-h-[100dvh] overflow-x-hidden overflow-y-scroll flex flex-col justify-start items-stretch"
     >
       <body
         className={[
           inter.className,
           "w-screen overflow-x-hidden",
-          "min-h-[100dvh] h-screen overflow-y-scroll",
+          "grow",
+          "min-h-[100dvh] overflow-y-scroll",
+          "flex flex-col justify-start items-stretch",
         ].join(" ")}
       >
         {children}

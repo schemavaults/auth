@@ -60,7 +60,8 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
         invite_code TEXT PRIMARY KEY,
         created_at BIGINT NOT NULL,
         max_uses BIGINT NOT NULL,
-        description TEXT
+        description TEXT,
+        created_by UUID
       );
     `;
 

@@ -25,6 +25,11 @@ declare global {
         password: string,
         invite_code?: string,
       ): Chainable;
+      create_and_login_as_superuser(): Chainable;
+      has_error_toast(
+        containing_message?: string,
+        variant?: string,
+      ): Chainable<boolean>;
     }
   }
 }
