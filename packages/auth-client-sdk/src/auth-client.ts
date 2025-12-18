@@ -12,7 +12,6 @@ import {
   type RequestTokensResult,
   audienceRefSchema,
   audienceSchema,
-  appRefIdSchema,
 } from "@schemavaults/auth-common";
 import type {
   IAuthClientPOSTResultType,
@@ -29,6 +28,7 @@ import type {
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
 import { z } from "zod";
 import {
+  appIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
@@ -165,7 +165,7 @@ export class SchemaVaultsAuthClient
     }
 
     // Get frontend client app ID
-    const parsed_app_id = appRefIdSchema.safeParse(opts.app_id);
+    const parsed_app_id = appIdSchema.safeParse(opts.app_id);
     if (!parsed_app_id.success) {
       throw new Error(
         "Invalid app ID received for @schemavaults/auth-client-sdk initialization",
@@ -383,11 +383,17 @@ export class SchemaVaultsAuthClient
 
     // Do some validation
     if (typeof code_verifier !== "object" || !code_verifier) {
-      throw new TypeError("Expected generated 'code_verifier' to be an object!");
+      throw new TypeError(
+        "Expected generated 'code_verifier' to be an object!",
+      );
     } else if (typeof code_verifier.challenge_time !== "number") {
-      throw new TypeError("Expected generated 'code_verifier.challenge_time' to be a number!");
+      throw new TypeError(
+        "Expected generated 'code_verifier.challenge_time' to be a number!",
+      );
     } else if (typeof code_verifier.code_verifier !== "string") {
-      throw new TypeError("Expected generated 'code_verifier.code_verifier' to be a string!");
+      throw new TypeError(
+        "Expected generated 'code_verifier.code_verifier' to be a string!",
+      );
     }
 
     // This is sent to the auth server-- it's a hash of the code verifier
@@ -1116,7 +1122,6 @@ export class SchemaVaultsAuthClient
           } catch (e: unknown) {
             console.error("Failed to clear access token from cache:", e);
           }
-
         } else {
           // Use access token if it doesn't expire in the next 10 seconds
           return cached;
@@ -1211,9 +1216,10 @@ export class SchemaVaultsAuthClient
           eMsg.includes("token has expired") ||
           eMsg.includes("ERR_JWT_EXPIRED")
         ) {
-
           await this.logout();
-          throw new Error("Failed to exchange refresh token for access token; refresh token expired! We logged you out.");
+          throw new Error(
+            "Failed to exchange refresh token for access token; refresh token expired! We logged you out.",
+          );
         }
       }
 
@@ -1589,7 +1595,10 @@ export class SchemaVaultsAuthClient
       try {
         id = this.adapter.uuid();
       } catch (e: unknown) {
-        console.error("Failed to generate UUID using both crypto.randomUUID and platform adapter: ", e);
+        console.error(
+          "Failed to generate UUID using both crypto.randomUUID and platform adapter: ",
+          e,
+        );
         throw new Error(
           "Failed to generate UUID using both crypto.randomUUID and platform adapter! :(",
         );
@@ -1634,9 +1643,7 @@ export class SchemaVaultsAuthClient
 
   public removeAuthStateChangeListener(listener_id: string): void {
     if (!this.listeners.has(listener_id))
-      throw new Error(
-        `No auth state change listener with ID "${listener_id}"`,
-      );
+      throw new Error(`No auth state change listener with ID "${listener_id}"`);
     const removed_successfully: boolean = this.listeners.delete(listener_id);
     if (!removed_successfully) {
       console.error(
