@@ -6,11 +6,7 @@ import {
   type JsonSerializedJwtKey,
 } from "./JsonSerializedJwtKey";
 import isValidUuid from "@/utils/isValidUuid";
-import {
-  apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-} from "@schemavaults/app-definitions";
-import { audienceRefSchema, audienceSchema } from "@schemavaults/auth-common";
+import { apiServerIdSchema } from "@schemavaults/app-definitions";
 
 export interface IInitRawJwtKeysStoreOptions {
   audience_id: string;
