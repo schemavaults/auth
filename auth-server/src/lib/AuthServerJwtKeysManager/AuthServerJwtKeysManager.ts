@@ -1,6 +1,7 @@
 import {
   type IJwtKeyManager,
   DatabaseConnectedJwtKeyManager,
+  type IDatabaseResourceGroup,
 } from "@schemavaults/auth-server-sdk";
 import AuthServerJwtKeysStore from "@/lib/auth-db/jwt_keys/AuthServerJwtKeysStore";
 import type { Kysely } from "@schemavaults/dbh";
@@ -10,12 +11,15 @@ import {
   refreshTokenExpiry,
   type I_JWT_Keys,
 } from "@schemavaults/jwt";
-import { ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
+import {
+  type ApiServerId,
+  apiServerIdSchema,
+} from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 
 export class AuthServerJwtKeysManager
   extends DatabaseConnectedJwtKeyManager
-  implements IJwtKeyManager
+  implements IJwtKeyManager, IDatabaseResourceGroup
 {
   private static readonly refresh_token_valid_duration: number =
     refreshTokenExpiry;

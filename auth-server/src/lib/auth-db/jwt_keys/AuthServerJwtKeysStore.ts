@@ -137,7 +137,14 @@ export class AuthServerJwtKeysStore
     });
   }
 
-  public async get(keyset_id: string): Promise<I_JWT_Keys | null> {
+  public async get(
+    audience_id: string,
+    keyset_id: string,
+  ): Promise<I_JWT_Keys | null> {
+    if (!this.isValidApiServerId(audience_id)) {
+      throw new Error(`Invalid audience ID to query for: '${audience_id}'`);
+    }
+
     if (!isValidUuid(keyset_id)) {
       throw new TypeError(`Invalid keyset ID to query for: '${keyset_id}'`);
     }
@@ -146,6 +153,7 @@ export class AuthServerJwtKeysStore
       const query = this.dbh
         .selectFrom("jwt_keys")
         .where("keyset_id", "=", keyset_id)
+        .where("audience_id", "=", audience_id)
         .selectAll();
       const result = await query.execute();
       rows = result.map(this.parseJwtKeyRow);
@@ -181,7 +189,10 @@ export class AuthServerJwtKeysStore
     ) satisfies I_JWT_Keys;
   }
 
-  public async has(keyset_id: string): Promise<boolean> {
+  public async has(audience_id: string, keyset_id: string): Promise<boolean> {
+    if (!this.isValidApiServerId(audience_id)) {
+      throw new Error(`Invalid audience ID to query for: '${audience_id}'`);
+    }
     if (!isValidUuid(keyset_id)) {
       throw new TypeError(
         `Invalid keyset ID to check existence for: '${keyset_id}'`,
@@ -191,6 +202,7 @@ export class AuthServerJwtKeysStore
       const query = this.dbh
         .selectFrom("jwt_keys")
         .where("keyset_id", "=", keyset_id)
+        .where("audience_id", "=", audience_id)
         .select("keyset_id");
       const result = await query.execute();
       if (result.length > 0) {
@@ -210,6 +222,11 @@ export class AuthServerJwtKeysStore
   }
 
   public async storeKeySet(keys: I_JWT_Keys): Promise<void> {
+    if (!this.isValidApiServerId(keys.audience_id)) {
+      throw new TypeError(
+        `Invalid audience ID to store JWT keys for: '${keys.audience_id}'`,
+      );
+    }
     const keyset_expiry: number = keys.keyset_expiry;
     const serialized_keys: readonly JsonSerializedJwtKey[] =
       keys.listSerializedKeys();
@@ -219,6 +236,11 @@ export class AuthServerJwtKeysStore
   }
 
   public async delete(audience_id: string, keyset_id: string): Promise<void> {
+    if (!this.isValidApiServerId(audience_id)) {
+      throw new TypeError(
+        `Invalid audience ID to delete JWT keys for: '${audience_id}'`,
+      );
+    }
     if (!isValidUuid(keyset_id)) {
       throw new TypeError(
         `Invalid keyset ID to attempt deletion for: '${keyset_id}'`,
@@ -228,6 +250,7 @@ export class AuthServerJwtKeysStore
       await this.dbh
         .deleteFrom("jwt_keys")
         .where("keyset_id", "=", keyset_id)
+        .where("audience_id", "=", audience_id)
         .execute();
     } catch (e: unknown) {
       console.error(
@@ -259,6 +282,7 @@ export class AuthServerJwtKeysStore
     try {
       const query = this.dbh
         .selectFrom("jwt_keys")
+        .where("audience_id", "=", audience_id)
         .where("keyset_expiry", ">", now)
         .selectAll();
       const result = await query.execute();

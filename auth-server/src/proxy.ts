@@ -28,6 +28,25 @@ const SchemaVaultsAuthServerMiddleware = async (
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
   const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
+  try {
+    if (!(await jwt_keys_manager.hasBeenInitialized())) {
+      await jwt_keys_manager.performSetupTasks();
+    }
+  } catch (e: unknown) {
+    console.error(
+      "[@schemavaults/auth-server | proxy.ts] Failed to initialize JWT keys manager: ",
+      e,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to load JWT keys!",
+      } satisfies AuthenticateResult,
+      {
+        status: 500,
+      },
+    );
+  }
 
   let middleware: SchemaVaultsServerMiddleware;
   try {
@@ -40,7 +59,7 @@ const SchemaVaultsAuthServerMiddleware = async (
     });
   } catch (e: unknown) {
     console.error(
-      "[@schemavaults/auth-server | middleware.ts] Failed to initialize SchemaVaults middleware: ",
+      "[@schemavaults/auth-server | proxy.ts] Failed to initialize SchemaVaults middleware: ",
       e,
     );
     return NextResponse.json(
@@ -66,7 +85,7 @@ const SchemaVaultsAuthServerMiddleware = async (
     return middleware_result;
   } catch (e: unknown) {
     console.error(
-      "[@schemavaults/auth-server | middleware.ts] Failed to run SchemaVaults middleware: ",
+      "[@schemavaults/auth-server | proxy.ts] Failed to run SchemaVaults middleware: ",
       e,
     );
     return NextResponse.json(

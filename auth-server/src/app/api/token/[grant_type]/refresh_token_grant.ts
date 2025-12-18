@@ -84,6 +84,9 @@ export async function handleRefreshTokenGrant(
   let jwt_keys_manager: AuthServerJwtKeysManager;
   try {
     jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
+    if (!(await jwt_keys_manager.hasBeenInitialized())) {
+      await jwt_keys_manager.performSetupTasks();
+    }
   } catch (e: unknown) {
     console.error("Failed to initialize JWT key manager: ", e);
     throw new Error("Failed to initialize JWT key manager");
