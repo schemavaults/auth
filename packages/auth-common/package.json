@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-common",
   "description": "Types and utility functions for authentication and authorization",
-  "version": "0.7.11",
+  "version": "0.7.12",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
