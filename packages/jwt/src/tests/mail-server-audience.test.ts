@@ -10,12 +10,15 @@ import { generateJWT, type GenerateJWTOptions } from "@/jwt/generate";
 
 const env: SchemaVaultsAppEnvironment = "test";
 
-const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
-
 async function isGenerateAndDecodeTokenForMailServerSuccess(
   client_app_id: string = SCHEMAVAULTS_MAIL_APP_DEFINITION.app_id,
 ): Promise<boolean> {
   const audience = SCHEMAVAULTS_MAIL_APP_DEFINITION.app_id;
+  const audience_id: string = audience;
+
+  const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+    audience_id,
+  });
 
   const user = new MockUser();
   const now = Date.now();

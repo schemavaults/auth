@@ -3,19 +3,39 @@ import { describe, test, expect } from "bun:test";
 
 describe("JWT_Keys instance initialization w/o auth-server-only keys", () => {
   test("can reinitialize a JWT_Keys instance w/o encryption or signing key", async () => {
+    const api_server_id: string = crypto.randomUUID();
+    const audience_id: string = api_server_id;
+
     let errorThrown: boolean = false;
     try {
-      const keys: JWT_Keys = await generateNewJwtKeySet();
+      const keys: JWT_Keys = await generateNewJwtKeySet({
+        audience_id,
+      });
       const keyset_id: string = keys.keyset_id;
       const decryption: string = keys.raw_keys.decryption;
       const verification: string = keys.raw_keys.verification;
 
       const reinited = new JWT_Keys({
+        audience_id: api_server_id,
         keyset_id,
         keyset_expiry: keys.keyset_expiry,
-        decryption: { value: decryption, privacy_level: 'private', format: "pem", key_type: "decryption", keyset_id },
-        verification: { value: verification, privacy_level: 'public', format: "pem", key_type: "verification", keyset_id },
-        is_auth_server: false
+        decryption: {
+          value: decryption,
+          privacy_level: "private",
+          format: "pem",
+          key_type: "decryption",
+          keyset_id,
+          audience_id,
+        },
+        verification: {
+          value: verification,
+          privacy_level: "public",
+          format: "pem",
+          key_type: "verification",
+          keyset_id,
+          audience_id,
+        },
+        is_auth_server: false,
       });
 
       expect(decryption).toBe(reinited.raw_keys.decryption);
@@ -26,6 +46,9 @@ describe("JWT_Keys instance initialization w/o auth-server-only keys", () => {
       void e;
       errorThrown = true;
     }
-    expect(errorThrown, "An error should not be thrown initializing JWT_Keys without encryption or signing keys").toBeFalse();
+    expect(
+      errorThrown,
+      "An error should not be thrown initializing JWT_Keys without encryption or signing keys",
+    ).toBeFalse();
   });
 });

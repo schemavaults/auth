@@ -7,17 +7,20 @@ import { describe, test, expect } from "bun:test";
 import { MockUser } from "@/tests/MockUser";
 import { generateJWT, type GenerateJWTOptions } from "@/jwt/generate";
 import { audienceRefSchema } from "@schemavaults/auth-common";
+import isValidUuid from "@/utils/isValidUuid";
 
 const env: SchemaVaultsAppEnvironment = "test";
-
-const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
 
 async function isGenerateAndDecodeTokenForStorageRegionSuccess(
   region_id: string,
 ): Promise<boolean> {
   const user = new MockUser();
   const now = Date.now();
+  expect(isValidUuid(region_id)).toBe(true);
 
+  const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+    audience_id: region_id,
+  });
 
   const generateOptions: GenerateJWTOptions<"access"> = {
     type: "access",
@@ -54,15 +57,15 @@ describe("JWTs for Vault FileSystem", () => {
       crypto.randomUUID(),
       crypto.randomUUID(),
       crypto.randomUUID(),
-      crypto.randomUUID()
+      crypto.randomUUID(),
     ] as const satisfies readonly string[];
 
     for (const region_id of region_ids) {
       expect(
         audienceRefSchema.safeParse(region_id).success,
-        `Expected every example storage region IDs to be valid, but "${region_id}" is not valid.`).toBeTrue()
+        `Expected every example storage region IDs to be valid, but "${region_id}" is not valid.`,
+      ).toBeTrue();
     }
-
 
     const results: boolean[] = await Promise.all(
       region_ids.map(async (region_id: string): Promise<boolean> => {
@@ -81,7 +84,7 @@ describe("JWTs for Vault FileSystem", () => {
       "my-invalid-region_", // invalid char
       // @ts-expect-error Passing an invalid type on purpose for this test case
       69, // bad type
-      "01e0eagd-434c-4dc7-bff4-ddz488b62528" // almost a uuid but with invalid chars
+      "01e0eagd-434c-4dc7-bff4-ddz488b62528", // almost a uuid but with invalid chars
     ];
 
     expect(

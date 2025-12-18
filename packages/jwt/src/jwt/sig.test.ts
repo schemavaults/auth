@@ -9,7 +9,7 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { decodeProtectedHeader, type ProtectedHeaderParameters } from "jose";
-import signVerifyAlgorithm from './sign_verify_alg';
+import signVerifyAlgorithm from "./sign_verify_alg";
 
 const iat: number = Date.now();
 const type: AuthTokenTypes = "refresh";
@@ -21,7 +21,9 @@ const env: SchemaVaultsAppEnvironment = getAppEnvironment();
 
 describe("JWT Signature 'sig' field", async (): Promise<void> => {
   it("can sign a JWT", async () => {
-    const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: audience,
+    });
     const sig: string = await signJWT({
       jwt_keys,
       audience,
@@ -30,14 +32,16 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
       uid,
       type,
       env,
-      orgs: []
+      orgs: [],
     });
     expect(sig).toBeString();
-    expect(sig.length).toBeGreaterThan(0)
-  })
+    expect(sig.length).toBeGreaterThan(0);
+  });
 
   it("can sign and validate a JWT", async () => {
-    const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: audience,
+    });
 
     const sig: string = await signJWT({
       jwt_keys,
@@ -47,7 +51,7 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
       uid,
       type,
       env,
-      orgs: []
+      orgs: [],
     });
 
     const result: boolean = await verifyJWTSignature({
@@ -65,7 +69,9 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
   });
 
   it("can sign a JWT with just the signing key", async () => {
-    const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: audience,
+    });
     const keyset_id: string = jwt_keys.keyset_id;
     const signing_key_promise: Promise<CryptoKey> | null = jwt_keys.signing_key;
     if (!signing_key_promise) {
@@ -81,7 +87,7 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
       uid,
       type,
       env,
-      orgs: []
+      orgs: [],
     });
     expect(sig).toBeString();
     expect(sig.length).toBeGreaterThan(0);
@@ -89,6 +95,6 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
     expect(header.alg).toBeString();
     expect(header.alg).toBe(signVerifyAlgorithm);
     expect(header.keyset_id).toBeString();
-    expect(header.keyset_id).toBe(keyset_id)
+    expect(header.keyset_id).toBe(keyset_id);
   });
 });

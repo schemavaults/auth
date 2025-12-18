@@ -10,12 +10,10 @@ import {
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  SchemaVaultsAppEnvironment,
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
 import MockUser from "@/tests/MockUser";
-
-const jwt_keys: JWT_Keys = await generateNewJwtKeySet();
 
 const env: SchemaVaultsAppEnvironment = "test";
 
@@ -23,6 +21,10 @@ describe("JWT Generation & Decoding", () => {
   it("should generate and decode a refresh token JWT", async () => {
     const user: UserData = new MockUser();
     const now = Date.now();
+
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    });
 
     const audience = REFRESH_TOKEN_AUDIENCE;
     const generateOptions: GenerateJWTOptions<"refresh"> = {
@@ -46,15 +48,19 @@ describe("JWT Generation & Decoding", () => {
 
     expect(decoded.aud).toBe(audience);
     expect(decoded.sub).toBe(user.uid);
-    expect(decoded.orgs).toBeArrayOfSize(0)
+    expect(decoded.orgs).toBeArrayOfSize(0);
   });
 
-  it("should generate and decode an access token JWT", async () => {
+  it("should generate and decode an access token JWT for auth server", async () => {
     const user = new MockUser();
     const now = Date.now();
 
-    const client_app_id = crypto.randomUUID();
-    const audience = crypto.randomUUID();
+    const client_app_id = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: audience,
+    });
 
     const generateOptions: GenerateJWTOptions<"access"> = {
       type: "access",
@@ -87,6 +93,11 @@ describe("JWT Generation & Decoding", () => {
 
     const client_app_id = crypto.randomUUID();
     const audience = crypto.randomUUID();
+
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: audience,
+    });
+
     const organization_id: OrganizationID = "my-organization";
 
     expect(isValidOrganizationID(organization_id)).toBeTrue();
@@ -114,5 +125,114 @@ describe("JWT Generation & Decoding", () => {
     expect(Array.isArray(decoded.orgs)).toBeTrue();
     expect(decoded.orgs.length).toBe(1);
     expect(decoded.orgs[0]).toBe(organization_id);
+  });
+
+  it("should throw an error attempting to generate refresh token for non-auth server audience", async () => {
+    const user: UserData = new MockUser();
+    const now = Date.now();
+
+    const auth_app_id = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+
+    const jwt_keys_for_auth_app: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: auth_app_id,
+    });
+
+    const random_app_id: string = crypto.randomUUID();
+    const random_api_id: string = crypto.randomUUID();
+
+    const generateOptions: GenerateJWTOptions<"refresh"> = {
+      type: "refresh",
+      user,
+      audience: random_api_id,
+      iat: now,
+      client_app_id: random_app_id,
+      jwt_keys: jwt_keys_for_auth_app, // intentionally mismatched keyset <=> audience to create error
+      env,
+      orgs: [],
+    };
+
+    let errorThrown: boolean = false;
+    try {
+      await generateJWT(generateOptions);
+    } catch (e: unknown) {
+      void e;
+      errorThrown = true;
+    }
+    expect(errorThrown).toBeTrue();
+  });
+
+  it("should throw an error generating access token using keys from mismatched audience", async () => {
+    const user: UserData = new MockUser();
+    const now = Date.now();
+
+    const jwt_keys_audience_id = crypto.randomUUID();
+    const jwt_keys_for_mismatched_audience = await generateNewJwtKeySet({
+      audience_id: jwt_keys_audience_id,
+    });
+
+    const random_app_id: string = crypto.randomUUID();
+    const random_api_id: string = crypto.randomUUID();
+
+    expect(jwt_keys_audience_id).not.toBe(random_api_id);
+
+    const generateOptions: GenerateJWTOptions<"access"> = {
+      type: "access",
+      user,
+      audience: random_api_id,
+      iat: now,
+      client_app_id: random_app_id,
+      jwt_keys: jwt_keys_for_mismatched_audience,
+      env,
+      orgs: [],
+    };
+
+    let errorThrown: boolean = false;
+    try {
+      await generateJWT(generateOptions);
+    } catch (e: unknown) {
+      void e;
+      errorThrown = true;
+    }
+    expect(
+      errorThrown,
+      "Expected an error to be thrown, but one was not!",
+    ).toBeTrue();
+  });
+
+  it("should throw an error generating access token for external API server using auth server keys", async () => {
+    const user: UserData = new MockUser();
+    const now = Date.now();
+
+    const jwt_keys_for_auth_server = await generateNewJwtKeySet({
+      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    });
+
+    const random_app_id: string = crypto.randomUUID();
+    const random_api_id: string = crypto.randomUUID();
+
+    expect(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id).not.toBe(random_api_id);
+
+    const generateOptions: GenerateJWTOptions<"access"> = {
+      type: "access",
+      user,
+      audience: random_api_id,
+      iat: now,
+      client_app_id: random_app_id,
+      jwt_keys: jwt_keys_for_auth_server,
+      env,
+      orgs: [],
+    };
+
+    let errorThrown: boolean = false;
+    try {
+      await generateJWT(generateOptions);
+    } catch (e: unknown) {
+      void e;
+      errorThrown = true;
+    }
+    expect(
+      errorThrown,
+      "Expected an error to be thrown, but one was not!",
+    ).toBeTrue();
   });
 });
