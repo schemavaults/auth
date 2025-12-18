@@ -53,11 +53,7 @@ export async function handleAuthorizationCodeGrant(
 
   let uid: string;
   try {
-    if (
-      environment === "development" ||
-      environment === "test" ||
-      environment === "staging"
-    ) {
+    if (debug) {
       console.log(
         `[AuthorizationCodeGrant] Attempting to validate authorization code...`,
       );
@@ -105,11 +101,7 @@ export async function handleAuthorizationCodeGrant(
 
   let user: UserData;
   try {
-    if (
-      environment === "development" ||
-      environment === "test" ||
-      environment === "staging"
-    ) {
+    if (debug) {
       console.log(
         `[AuthorizationCodeGrant] Loading user data for uid "${uid}"...`,
       );
@@ -137,11 +129,7 @@ export async function handleAuthorizationCodeGrant(
 
   const audience: string | readonly string[] = body.audience;
   try {
-    if (
-      environment === "development" ||
-      environment === "test" ||
-      environment === "staging"
-    ) {
+    if (debug) {
       console.log(`[AuthorizationCodeGrant] Validating token audience(s)...`);
     }
 
@@ -249,11 +237,7 @@ export async function handleAuthorizationCodeGrant(
       await jwt_factory.generateTokens(body.audience, generateRefresh)
     ).tokens;
 
-    if (
-      environment === "development" ||
-      environment === "test" ||
-      environment === "staging"
-    ) {
+    if (debug) {
       console.log(
         `[AuthorizationCodeGrant] Generated JWTs successfully! Sending response to frontend client...`,
       );
