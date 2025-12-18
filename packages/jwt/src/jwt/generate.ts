@@ -17,6 +17,7 @@ import {
 import { signJWT } from "./sign";
 import {
   apiServerIdSchema,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/utils/isValidUuid";
@@ -142,6 +143,13 @@ export async function generateJWT<T extends AuthTokenTypes>(
   }
   const orgs: readonly OrganizationID[] = parsed_organization_ids.data;
 
+  if (
+    type === "refresh" &&
+    audience !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+  ) {
+    throw new Error("Invalid audience for refresh token");
+  }
+
   let signing_key: CryptoKey;
   try {
     if ("jwt_keys" in opts) {
@@ -238,6 +246,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
         enc,
         keyset_id,
         kid: `${keyset_id}-decryption`,
+        aud: audience satisfies string,
       })
       .setIssuedAt(new Date(iat))
       .setIssuer(issuer)

@@ -1,5 +1,11 @@
-import { type JWTDecryptResult, type CryptoKey, jwtDecrypt, decodeProtectedHeader, type ProtectedHeaderParameters } from "jose";
-import type { I_JWT_Keys} from "./jwt_keys";
+import {
+  type JWTDecryptResult,
+  type CryptoKey,
+  jwtDecrypt,
+  decodeProtectedHeader,
+  type ProtectedHeaderParameters,
+} from "jose";
+import type { I_JWT_Keys } from "./jwt_keys";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
@@ -10,7 +16,9 @@ import type {
   UserData,
 } from "@schemavaults/auth-common";
 import {
+  apiServerIdSchema,
   getAppEnvironment,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
@@ -26,22 +34,28 @@ interface BaseDecodeJWTOptions<T extends AuthTokenTypes> {
   env?: SchemaVaultsAppEnvironment;
 }
 
-interface DecodeJWTWithAllKeysOptions<T extends AuthTokenTypes> extends BaseDecodeJWTOptions<T> {
+interface DecodeJWTWithAllKeysOptions<T extends AuthTokenTypes>
+  extends BaseDecodeJWTOptions<T> {
   jwt_keys: I_JWT_Keys;
 }
 
-interface DecodeJWTWithOnlyRequiredKeysOptions<T extends AuthTokenTypes> extends BaseDecodeJWTOptions<T> {
+interface DecodeJWTWithOnlyRequiredKeysOptions<T extends AuthTokenTypes>
+  extends BaseDecodeJWTOptions<T> {
   decryption_key: CryptoKey;
   verification_key: CryptoKey;
   keyset_id: string;
 }
 
-export type DecodeJWTOptions<T extends AuthTokenTypes> = DecodeJWTWithAllKeysOptions<T> | DecodeJWTWithOnlyRequiredKeysOptions<T>;
+export type DecodeJWTOptions<T extends AuthTokenTypes> =
+  | DecodeJWTWithAllKeysOptions<T>
+  | DecodeJWTWithOnlyRequiredKeysOptions<T>;
 
 export async function decodeJWT<T extends AuthTokenTypes>({
   type,
   jwt,
-  audience,
+  audience = type === "refresh"
+    ? SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+    : undefined,
   ...opts
 }: DecodeJWTOptions<T>): Promise<CustomJWTPayload> {
   const environment: SchemaVaultsAppEnvironment =
@@ -50,6 +64,10 @@ export async function decodeJWT<T extends AuthTokenTypes>({
 
   if (debug) {
     console.log("[decodeJWT] Attempting to decode JWT: ", jwt);
+  }
+
+  if (!audience || typeof audience !== "string") {
+    throw new TypeError("Invalid audience; expected string");
   }
 
   let keyset_id: string;
@@ -73,6 +91,18 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     throw new Error("Invalid JWT; expected string");
   }
 
+  if (
+    type === "refresh" &&
+    audience !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+  ) {
+    if (debug) {
+      console.log("Invalid audience for refresh token: ", audience);
+    }
+    throw new Error(
+      `Invalid audience for refresh token; only '${SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}' is valid.`,
+    );
+  }
+
   let aud: string;
   if (type === "refresh") {
     aud = REFRESH_TOKEN_AUDIENCE;
@@ -82,9 +112,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     }
     aud = audience;
   } else {
-    throw new Error(
-      "Invalid auth token 'type' (should be 'access'/'refresh')",
-    );
+    throw new Error("Invalid auth token 'type' (should be 'access'/'refresh')");
   }
 
   const decodeTime: Date = new Date();
@@ -96,8 +124,10 @@ export async function decodeJWT<T extends AuthTokenTypes>({
 
   let kid: string;
   let alg: string;
+  let decoded_header_aud: string;
   try {
-    const decoded_header: ProtectedHeaderParameters = decodeProtectedHeader(jwt);
+    const decoded_header: ProtectedHeaderParameters =
+      decodeProtectedHeader(jwt);
     if (!decoded_header.kid || typeof decoded_header.kid !== "string") {
       throw new Error("Missing 'kid' in JWT header");
     }
@@ -106,26 +136,55 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       throw new Error("Missing 'alg' in JWT header");
     }
     alg = decoded_header.alg;
-    if (!decoded_header.keyset_id || typeof decoded_header.keyset_id !== "string") {
+    if (
+      !decoded_header.keyset_id ||
+      typeof decoded_header.keyset_id !== "string"
+    ) {
       throw new Error("Missing 'keyset_id' in JWT header");
     }
     if (decoded_header.keyset_id !== keyset_id) {
-      throw new Error("Invalid keyset_id in JWT header; mismatch with input decryption key");
+      throw new Error(
+        "Invalid keyset_id in JWT header; mismatch with input decryption key",
+      );
     }
+
+    if (
+      !decoded_header.aud ||
+      typeof decoded_header.aud !== "string" ||
+      !apiServerIdSchema.safeParse(decoded_header.aud).success
+    ) {
+      throw new Error("Invalid audience in JWT header");
+    }
+
+    if (
+      type === "refresh" &&
+      decoded_header.aud !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+    ) {
+      throw new Error(
+        `Invalid audience in JWT header; only '${SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}' tokens are allowed here`,
+      );
+    }
+
+    if (decoded_header.aud !== audience) {
+      throw new Error(
+        `Invalid audience in JWT header; only '${audience}' tokens are allowed here`,
+      );
+    }
+    decoded_header_aud = decoded_header.aud;
   } catch (e: unknown) {
     console.error("Error decoding JWT header: ", e);
     throw new Error("Error decoding JWT header!");
   }
 
   if (kid !== `${keyset_id}-decryption`) {
-    throw new Error("Invalid kid in JWT header; mismatch with input decryption key");
+    throw new Error(
+      "Invalid kid in JWT header; mismatch with input decryption key",
+    );
   }
 
   if (alg !== encryptDecryptAlgorithm) {
     throw new Error("Invalid algorithm header for JWT decryption");
   }
-
-
 
   let decryption_key: CryptoKey;
   try {
@@ -147,6 +206,10 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     maxTokenAge,
     currentDate: decodeTime,
   });
+
+  if (decoded.payload.aud !== decoded_header_aud) {
+    throw new Error("Mismatch in header 'aud' and 'aud' in JWT payload");
+  }
 
   if (debug) {
     console.log("[decodeJWT] Decoded JWT: ", decoded);
@@ -197,9 +260,10 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     throw new Error("Missing 'env' field in JWT payload!");
   }
 
-  const parsed_app_env: SafeParseReturnType<SchemaVaultsAppEnvironment, SchemaVaultsAppEnvironment> = await schemaVaultsAppEnvironmentSchema.safeParseAsync(
-    payload.env,
-  );
+  const parsed_app_env: SafeParseReturnType<
+    SchemaVaultsAppEnvironment,
+    SchemaVaultsAppEnvironment
+  > = await schemaVaultsAppEnvironmentSchema.safeParseAsync(payload.env);
   if (!parsed_app_env.success) {
     throw new Error(
       "Invalid app environment within 'env' field of JWT payload!",
@@ -235,7 +299,10 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       throw new Error("Missing verification key for JWT to decode with");
     }
   } catch (e: unknown) {
-    console.error("Error loading verification key from key store or inputs: ", e);
+    console.error(
+      "Error loading verification key from key store or inputs: ",
+      e,
+    );
     throw new Error("Error loading verification key from key store or inputs!");
   }
 
