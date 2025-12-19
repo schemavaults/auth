@@ -33,7 +33,10 @@ const SchemaVaultsAuthServerMiddleware = async (
   try {
     jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
   } catch (e: unknown) {
-    console.error("Failed to initialize JWT key manager:", e);
+    console.error(
+      "[@schemavaults/auth-server | proxy.ts] Failed to initialize JWT key manager:",
+      e,
+    );
     return NextResponse.json(
       {
         success: false,
