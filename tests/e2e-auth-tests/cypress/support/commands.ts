@@ -71,9 +71,14 @@ class SuperuserCreatedCache {
 
 Cypress.Commands.add("create_and_login_as_superuser", () => {
   const credentials = {
-    email: "admin@schemavaults.com",
-    password: "Password123!",
+    email: Cypress.env("PRIVATE_SUPERUSER_EMAIL"),
+    password: Cypress.env("PRIVATE_SUPERUSER_PASSWORD"),
   };
+  if (!credentials.email || !credentials.password) {
+    throw new Error(
+      "PRIVATE_SUPERUSER_EMAIL and PRIVATE_SUPERUSER_PASSWORD environment variables are not set",
+    );
+  }
   if (SuperuserCreatedCache.created) {
     cy.log(
       "Superuser appears to be marked as already created-- attempting to login right away...",

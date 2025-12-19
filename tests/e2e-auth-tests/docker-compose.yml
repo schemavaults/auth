@@ -28,7 +28,7 @@ services:
     environment:
       POSTGRES_USER: schemavaults-auth-server-dev
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
-      POSTGRES_DATABASE: schemavaults-auth-server
+      POSTGRES_DATABASE: schemavaults-auth-server-dev
       POSTGRES_HOST: postgres-db
       PRIVATE_GLOBAL_PASSWORD_SALT: examplePasswordSalt12
       PRIVATE_PASSWORD_HASH_ROUNDS: 5
@@ -52,11 +52,15 @@ services:
     environment:
       POSTGRES_USER: schemavaults-auth-server-dev
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
-      POSTGRES_DB: schemavaults-auth-server
+      POSTGRES_DB: schemavaults-auth-server-dev
     expose:
       - 5432
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U schemavaults-auth-server-dev"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U schemavaults-auth-server-dev -d schemavaults-auth-server-dev",
+        ]
       interval: 6s
       timeout: 4s
       retries: 8
