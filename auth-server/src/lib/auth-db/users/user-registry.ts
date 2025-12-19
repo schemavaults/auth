@@ -908,6 +908,10 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
         typeof inviteCodeDefinition.max_uses === "number"
           ? inviteCodeDefinition.max_uses
           : Number.parseInt(inviteCodeDefinition.max_uses),
+      created_by:
+        typeof inviteCodeDefinition.created_by === "string"
+          ? inviteCodeDefinition.created_by
+          : undefined,
     } satisfies InviteCodeDefinition);
     if (!parsed.success) {
       console.error(
