@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { validJwtKeyTypesList } from "./ValidJwtKeyTypes";
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import PEMFormat from "./pem-format";
 
 export const jsonSerializedJwtKeySchema = z
   .object({
@@ -22,6 +23,25 @@ export const jsonSerializedJwtKeySchema = z
     privacy_level: true,
     key_type: true,
   })
-  .strict();
+  .strict()
+  .refine((key): boolean => {
+    if (
+      key.format === "pem" &&
+      key.privacy_level === "public" &&
+      !PEMFormat.isPemFormat(key.value, "PUBLIC")
+    ) {
+      return false;
+    }
+
+    if (
+      key.format === "pem" &&
+      key.privacy_level === "private" &&
+      !PEMFormat.isPemFormat(key.value, "PRIVATE")
+    ) {
+      return false;
+    }
+
+    return true;
+  }, "Mismatch between 'privacy_level' and header of PEM-formatted key");
 
 export type JsonSerializedJwtKey = z.infer<typeof jsonSerializedJwtKeySchema>;
