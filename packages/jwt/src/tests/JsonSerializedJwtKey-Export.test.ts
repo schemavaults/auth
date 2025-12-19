@@ -3,7 +3,10 @@ import {
   type JsonSerializedJwtKey,
   jsonSerializedJwtKeySchema,
 } from "@/jwt/jwt_keys";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import {
+  apiServerIdSchema,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+} from "@schemavaults/app-definitions";
 import { describe, expect, test } from "bun:test";
 
 function isValidJsonSerializedJwtKey(
@@ -78,5 +81,27 @@ describe("JsonSerializedJwtKey-Export", () => {
       throw new Error("Verification key is missing from generated keyset");
     }
     expect(verification.privacy_level).toBe("public");
+  });
+
+  test("all keys have the same audience ID", async () => {
+    const audience_id: string = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    expect(audience_id).toBeString();
+    expect(apiServerIdSchema.safeParse(audience_id).success).toBe(true);
+    const jwt_keys = await generateNewJwtKeySet({
+      audience_id,
+    });
+    const encryption: JsonSerializedJwtKey | null =
+      jwt_keys.encryption_key_json;
+    const decryption: JsonSerializedJwtKey = jwt_keys.decryption_key_json;
+    const signing: JsonSerializedJwtKey | null = jwt_keys.signing_key_json;
+    const verification: JsonSerializedJwtKey | null =
+      jwt_keys.verification_key_json;
+    if (!encryption || !decryption || !signing || !verification) {
+      throw new Error("One or more keys are missing from generated keyset");
+    }
+    expect(encryption.audience_id).toBe(audience_id);
+    expect(signing.audience_id).toBe(audience_id);
+    expect(verification.audience_id).toBe(audience_id);
+    expect(decryption.audience_id).toBe(audience_id);
   });
 });
