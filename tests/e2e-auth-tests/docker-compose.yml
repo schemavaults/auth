@@ -50,17 +50,13 @@ services:
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: schemavaults-auth-server-dev
-      POSTGRES_PASSWORD: schemavaults-auth-server-dev
-      POSTGRES_DB: schemavaults-auth-server-dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     expose:
       - 5432
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U schemavaults-auth-server-dev -d schemavaults-auth-server-dev",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 6s
       timeout: 4s
       retries: 8
