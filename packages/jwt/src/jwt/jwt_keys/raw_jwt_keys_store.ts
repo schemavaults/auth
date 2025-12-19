@@ -207,7 +207,7 @@ class Raw_JWT_Keys_Store {
     return {
       format: "pem",
       value,
-      privacy_level: "public",
+      privacy_level: "private", // decryption is with private-key, counter-intuitively
       key_type: "decryption",
       keyset_id: this.keyset_id,
       audience_id: this.audience_id,

@@ -108,6 +108,22 @@ export class JWT_Keys implements I_JWT_Keys {
   public listSerializedKeys(): readonly JsonSerializedJwtKey[] {
     return this.exportKeys().listSerializedKeys();
   }
+
+  public get signing_key_json(): JsonSerializedJwtKey | null {
+    return this.raw_keys.signing_json ?? null;
+  }
+
+  public get verification_key_json(): JsonSerializedJwtKey {
+    return this.raw_keys.verification_json;
+  }
+
+  public get encryption_key_json(): JsonSerializedJwtKey | null {
+    return this.raw_keys.encryption_json ?? null;
+  }
+
+  public get decryption_key_json(): JsonSerializedJwtKey {
+    return this.raw_keys.decryption_json;
+  }
 }
 
 export default JWT_Keys;
