@@ -46,6 +46,12 @@ export class AuthServerJwtKeysManager
         Date.now() + AuthServerJwtKeysManager.keyset_valid_duration,
       audience_id,
     });
+
+    const newKeySetId: string = newKeySet.keyset_id;
+    if (!this.isValidKeysetId(newKeySetId)) {
+      throw new Error("Invalid keyset ID for generated keyset!");
+    }
+
     await this.store.storeKeySet(newKeySet);
     return newKeySet;
   }

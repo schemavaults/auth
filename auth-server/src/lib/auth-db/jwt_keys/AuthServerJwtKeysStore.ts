@@ -91,24 +91,33 @@ export class AuthServerJwtKeysStore
   private static initJwtKeysetInstanceFromSerializedKeys(
     keys: readonly JwtKeyRecord[],
   ): JWT_Keys {
+    // Perform some basic validation on the keys being initialized
+    if (!Array.isArray(keys)) {
+      throw new TypeError(`Expected an array of JWT key records`);
+    }
     if (keys.length !== 4) {
       throw new Error(`Expected 4 JWT keys, got ${keys.length}`);
     }
+    if (!keys.every((k) => typeof k === "object" && k)) {
+      throw new TypeError(
+        `Invalid JWT key record from database; one or more rows is not a truthy object!`,
+      );
+    }
 
-    if (new Set(keys.map((k) => k.audience_id)).size !== keys.length) {
+    if (new Set(keys.map((k) => k.audience_id)).size !== 1) {
       throw new Error(`Expected all JWT keys to have the same audience ID`);
     }
-    const parsedApiServerId = apiServerIdSchema.safeParse(keys[0]?.audience_id);
+    const parsedApiServerId = apiServerIdSchema.safeParse(keys[0].audience_id);
     if (!parsedApiServerId.success) {
       console.error(parsedApiServerId.error);
       throw new Error(`Invalid API server ID`);
     }
     const audience_id: string = parsedApiServerId.data;
 
-    if (new Set(keys.map((k) => k.keyset_id)).size !== keys.length) {
+    if (new Set(keys.map((k) => k.keyset_id)).size !== 1) {
       throw new Error(`Expected all JWT keys to have the same keyset ID`);
     }
-    const keyset_id: string = keys[0]!.keyset_id;
+    const keyset_id: string = keys[0].keyset_id;
     if (!isValidUuid(keyset_id)) {
       throw new Error(`Invalid JWT keyset ID: ${keyset_id}`);
     }
