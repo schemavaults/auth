@@ -3,8 +3,12 @@ import type { JsonSerializedJwtKey } from "@/jwt/jwt_keys/JsonSerializedJwtKey";
 import type { JwtKeyType } from "@/jwt/jwt_keys/ValidJwtKeyTypes";
 import { exportJWK, type JWK } from "jose";
 
-export async function to_public_jwks(active_keysets: I_JWT_Keys | readonly I_JWT_Keys[]): Promise<{ keys: readonly JWK[] }> {
-  const keysets: readonly I_JWT_Keys[] = Array.isArray(active_keysets) ? active_keysets : [active_keysets];
+export async function to_public_jwks(
+  active_keysets: I_JWT_Keys | readonly I_JWT_Keys[],
+): Promise<{ keys: readonly JWK[] }> {
+  const keysets: readonly I_JWT_Keys[] = Array.isArray(active_keysets)
+    ? active_keysets
+    : [active_keysets];
 
   const output_jwks: JWK[] = [];
 
@@ -16,27 +20,30 @@ export async function to_public_jwks(active_keysets: I_JWT_Keys | readonly I_JWT
       continue;
     }
 
-    const keys_in_set: readonly JsonSerializedJwtKey[] = keyset.listSerializedKeys()
+    const keys_in_set: readonly JsonSerializedJwtKey[] =
+      keyset.listSerializedKeys();
     for (const key of keys_in_set) {
       const key_type: JwtKeyType = key.key_type;
-      if (key_type !== 'decryption' && key_type !== 'verification') {
+      if (key_type !== "decryption" && key_type !== "verification") {
         continue; // Skip keys that are not decryption or verification keys
       }
       if (key.keyset_id !== keyset_id) {
-        throw new Error(`Keyset '${keyset_id}' contains a key that is not part of it!`);
+        throw new Error(
+          `Keyset '${keyset_id}' contains a key that is not part of it!`,
+        );
       }
-      const jose_activated_key: CryptoKey = await keyset[`${key_type}_key`]
-      const jwk: JWK = await exportJWK(jose_activated_key)
+      const jose_activated_key: CryptoKey = await keyset[`${key_type}_key`];
+      const jwk: JWK = await exportJWK(jose_activated_key);
       output_jwks.push({
         ...jwk,
-        kid: `${keyset_id}-${key.key_type}`
+        kid: `${keyset_id}-${key.key_type}`,
       });
       continue;
     }
   }
 
   return {
-    keys: output_jwks
+    keys: output_jwks,
   };
 }
 
