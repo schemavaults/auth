@@ -9,5 +9,9 @@ GRANT ALL PRIVILEGES ON DATABASE "schemavaults-auth-server-dev" TO "schemavaults
 -- Make the user the owner of the public schema
 ALTER SCHEMA public OWNER TO "schemavaults-auth-server-dev";
 
--- Grant all privileges on the schema
+-- Grant schema permissions
 GRANT ALL ON SCHEMA public TO "schemavaults-auth-server-dev";
+
+-- Grant default privileges for future tables
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "schemavaults-auth-server-dev";
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "schemavaults-auth-server-dev";
