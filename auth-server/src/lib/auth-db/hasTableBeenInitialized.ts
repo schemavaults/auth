@@ -4,10 +4,15 @@ import type { AuthDatabase } from "./auth-database-types";
 export default async function hasTableBeenInitialized(
   db: Kysely<AuthDatabase>,
   table_name: string,
+  debug: boolean = false,
 ): Promise<boolean> {
   {
     if (typeof table_name !== "string") {
       throw new TypeError("table_name must be a string");
+    }
+
+    if (debug) {
+      console.log(`Checking if table '${table_name}' exists...`);
     }
 
     const tableExists = sql`
@@ -36,6 +41,15 @@ export default async function hasTableBeenInitialized(
     }
 
     const exists: boolean = "exists" in rows[0] && !!rows[0].exists;
+
+    if (debug) {
+      if (exists) {
+        console.log(`Table '${table_name}' exists.`);
+      } else {
+        console.log(`Table '${table_name}' does not appear to exist.`);
+      }
+    }
+
     return exists;
   }
 }

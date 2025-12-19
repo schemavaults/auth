@@ -27,20 +27,38 @@ const SchemaVaultsAuthServerMiddleware = async (
   const debug: boolean = shouldEnableDebug(environment);
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-  const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
+
+  // Init AuthServerJwtKeysManager
+  let jwt_keys_manager: AuthServerJwtKeysManager;
+  try {
+    jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
+  } catch (e: unknown) {
+    console.error("Failed to initialize JWT key manager:", e);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to initialize JWT key manager!",
+      } satisfies AuthenticateResult,
+      {
+        status: 500,
+      },
+    );
+  }
+
+  // Ensure that AuthServerJwtKeysManager is set up
   try {
     if (!(await jwt_keys_manager.hasBeenInitialized())) {
       await jwt_keys_manager.performSetupTasks();
     }
   } catch (e: unknown) {
     console.error(
-      "[@schemavaults/auth-server | proxy.ts] Failed to initialize JWT keys manager: ",
+      "[@schemavaults/auth-server | proxy.ts] Failed to ensure that JWT key manager is initialized: ",
       e,
     );
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to load JWT keys!",
+        message: "Failed to ensure that JWT key manager is initialized!",
       } satisfies AuthenticateResult,
       {
         status: 500,

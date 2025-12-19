@@ -16,6 +16,8 @@ import type { IDatabaseResourceGroup } from "@schemavaults/auth-server-sdk";
 import {
   type ApiServerId,
   apiServerIdSchema,
+  getAppEnvironment,
+  SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import hasTableBeenInitialized from "@/lib/auth-db/hasTableBeenInitialized";
 
@@ -28,7 +30,10 @@ export class AuthServerJwtKeysStore
   private async hasSqlTableBeenInitialized(
     table_name: string,
   ): Promise<boolean> {
-    return await hasTableBeenInitialized(this.dbh, table_name);
+    const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+    const debug: boolean =
+      environment === "development" || environment === "test";
+    return await hasTableBeenInitialized(this.dbh, table_name, debug);
   }
 
   // Setup required database tables
@@ -38,12 +43,33 @@ export class AuthServerJwtKeysStore
   }
 
   public async hasBeenInitialized(): Promise<boolean> {
-    return await this.hasSqlTableBeenInitialized("jwt_keys");
+    try {
+      const jwtKeysTableSetup: boolean =
+        await this.hasSqlTableBeenInitialized("jwt_keys");
+      return jwtKeysTableSetup;
+    } catch (e: unknown) {
+      console.error(
+        "Error checking if SQL tables are ready for storing JWT signing/encryption keys: ",
+        e,
+      );
+      throw new Error(
+        "Error checking if SQL tables are ready for storing JWT signing/encryption keys!",
+      );
+    }
   }
 
   public async performSetupTasks(): Promise<void> {
-    await this.setup();
-    return;
+    try {
+      await this.setup();
+    } catch (e: unknown) {
+      console.error(
+        "Error setting up SQL tables for storing JWT signing/encryption keys: ",
+        e,
+      );
+      throw new Error(
+        "Error setting up SQL tables for storing JWT signing/encryption keys!",
+      );
+    }
   }
 
   private parseJwtKeyRow(row: JwtKeyRecord): JwtKeyRecord {

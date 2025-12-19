@@ -5,32 +5,14 @@ export async function setupJwtKeysTable(
   dbh: Kysely<AuthDatabase>,
 ): Promise<void> {
   const createJwtKeysTableSql = sql`
-    DO $$ BEGIN
-        CREATE TYPE jwt_keys_privacy_level_enum AS ENUM ('public', 'private');
-    EXCEPTION
-        WHEN duplicate_object THEN null;
-    END $$;
-
-    DO $$ BEGIN
-        CREATE TYPE jwt_keys_storage_formats AS ENUM ('pem', 'base64url');
-    EXCEPTION
-        WHEN duplicate_object THEN null;
-    END $$;
-
-    DO $$ BEGIN
-        CREATE TYPE jwt_keys_key_type AS ENUM ('encryption', 'decryption', 'signing', 'verification');
-    EXCEPTION
-        WHEN duplicate_object THEN null;
-    END $$;
-
     CREATE TABLE IF NOT EXISTS JWT_KEYS (
       audience_id TEXT NOT NULL,
       keyset_id UUID NOT NULL,
       keyset_expiry BIGINT NOT NULL,
       value TEXT NOT NULL,
-      format jwt_keys_storage_formats NOT NULL,
-      privacy_level jwt_keys_privacy_level_enum NOT NULL,
-      key_type jwt_keys_key_type NOT NULL,
+      format VARCHAR(16) NOT NULL,
+      privacy_level VARCHAR(16) NOT NULL,
+      key_type VARCHAR(16) NOT NULL,
       PRIMARY KEY (audience_id, keyset_id, key_type)
     );
   `;
