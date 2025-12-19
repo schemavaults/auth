@@ -6,7 +6,6 @@ import {
   type UserData,
   type authorizationCodePOSTbody,
 } from "@schemavaults/auth-common";
-import { JWT_Factory } from "@schemavaults/jwt";
 import {
   type ServerlessDatabase,
   type UserRegistry,
