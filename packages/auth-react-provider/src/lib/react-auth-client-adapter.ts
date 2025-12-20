@@ -99,6 +99,13 @@ export class ReactAuthClientSdkAdapter
     }
   }
 
+  // Modern browsers enforce a 4KB (4096 bytes) limit on cookie sizes.
+  private static maxCookieLength = 4096 as const satisfies number;
+
+  private static getStringByteSize(str: string): number {
+    return new Blob([str]).size;
+  }
+
   private saveCookie(key: string, value: string) {
     if (this.environment === "development") {
       console.log(
@@ -106,11 +113,16 @@ export class ReactAuthClientSdkAdapter
         value,
       );
     }
-    if (value.length > 2049) {
+    const MAX_COOKIE_LENGTH: number = ReactAuthClientSdkAdapter.maxCookieLength;
+    const cookie_bytes: number =
+      ReactAuthClientSdkAdapter.getStringByteSize(value);
+    if (cookie_bytes >= MAX_COOKIE_LENGTH) {
       console.error(
         `[ReactAuthClientSdkAdapter] Cookie value too long for key: ${key}`,
       );
-      throw new Error("Cookie value too long");
+      throw new Error(
+        `Cookie value too long; length may not exceed '${MAX_COOKIE_LENGTH}' bytes but received '${cookie_bytes}' bytes!`,
+      );
     }
     try {
       setCookie(key, value, this.cookieOptions);
@@ -559,7 +571,9 @@ export class ReactAuthClientSdkAdapter
       this.accessTokens.delete(token_id);
     } else {
       if (this.debug) {
-        console.warn(`[clearAccessToken] No token with ID '${token_id}' found to clear; this is a no-op error.`)
+        console.warn(
+          `[clearAccessToken] No token with ID '${token_id}' found to clear; this is a no-op error.`,
+        );
       }
     }
   }
