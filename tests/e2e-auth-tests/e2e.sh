@@ -1,0 +1,27 @@
+#!/bin/bash
+#
+# #!/bin/bash
+
+if ! command -v docker &> /dev/null
+then
+    echo "Error: docker is not installed" >&2
+    exit 1
+fi
+
+if [ ! -f docker-compose.yml ]; then
+    echo "Error: docker-compose.yml for test environment not found!" >&2
+fi
+
+MONOREPO_ROOT="$(pwd)/../.."
+cd $MONOREPO_ROOT
+
+if [ ! -f package.json ]; then
+    echo "Error: Failed to resolve package.json in monorepo root!" >&2
+fi
+
+docker compose \
+  -f tests/e2e-auth-tests/docker-compose.yml \
+  up \
+  --exit-code-from schemavaults-e2e-auth-tests \
+  --abort-on-container-exit \
+  --build

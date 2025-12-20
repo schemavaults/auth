@@ -1,6 +1,5 @@
 services:
   schemavaults-e2e-auth-tests:
-    container_name: schemavaults-e2e-auth-tests
     build:
       context: ../..
       dockerfile: tests/e2e-auth-tests/Dockerfile
@@ -8,17 +7,16 @@ services:
         BUN_VERSION: 1.3.3
       target: test-runner
     depends_on:
-      - schemavaults-auth-server
+      - schemavaults-auth
     volumes:
       - ./cypress/screenshots:/schemavaults/auth/tests/e2e-auth-tests/cypress/screenshots/
       - ./cypress/videos:/schemavaults/auth/tests/e2e-auth-tests/cypress/videos/
     environment:
-      CYPRESS_BASE_URL: http://schemavaults-auth-server:80
+      CYPRESS_BASE_URL: http://schemavaults-auth:80
     links:
-      - schemavaults-auth-server
+      - schemavaults-auth
 
-  schemavaults-auth-server:
-    container_name: schemavaults-auth-server
+  schemavaults-auth:
     build:
       context: ../..
       dockerfile: auth-server/Dockerfile

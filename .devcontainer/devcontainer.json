@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server Dev Environment",
   "dockerComposeFile": "docker-compose.yml",
-  "service": "schemavaults-auth-server",
+  "service": "schemavaults-auth",
   "forwardPorts": [6767],
   "shutdownAction": "stopCompose",
   "postCreateCommand": "bun install",
