@@ -19,6 +19,12 @@ jobs:
         run: |
           /bin/bash ./e2e.sh
         working-directory: tests/e2e-auth-tests
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: failed-test-screenshots
+          path: tests/e2e-auth-tests/cypress/screenshots/
+          retention-days: 2
 
   Deploy-Vercel-Production:
     runs-on: ubuntu-latest
