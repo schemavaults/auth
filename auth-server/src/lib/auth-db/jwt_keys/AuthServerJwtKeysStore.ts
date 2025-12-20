@@ -20,6 +20,7 @@ import {
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import hasTableBeenInitialized from "@/lib/auth-db/hasTableBeenInitialized";
+import extractDbhErrorEventDetails from "@/lib/auth-db/extractDbhErrorEventDetails";
 
 export class AuthServerJwtKeysStore
   extends AbstractJsonWebKeySetsStore
@@ -48,9 +49,11 @@ export class AuthServerJwtKeysStore
         await this.hasSqlTableBeenInitialized("jwt_keys");
       return jwtKeysTableSetup;
     } catch (e: unknown) {
+      const errorDetails: string = extractDbhErrorEventDetails(e);
       console.error(
         "Error checking if SQL tables are ready for storing JWT signing/encryption keys: ",
         e,
+        errorDetails,
       );
       throw new Error(
         "Error checking if SQL tables are ready for storing JWT signing/encryption keys!",
@@ -62,9 +65,11 @@ export class AuthServerJwtKeysStore
     try {
       await this.setup();
     } catch (e: unknown) {
+      const errorDetails: string = extractDbhErrorEventDetails(e);
       console.error(
         "Error setting up SQL tables for storing JWT signing/encryption keys: ",
         e,
+        errorDetails,
       );
       throw new Error(
         "Error setting up SQL tables for storing JWT signing/encryption keys!",
