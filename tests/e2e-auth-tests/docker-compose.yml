@@ -9,6 +9,9 @@ services:
       target: test-runner
     depends_on:
       - schemavaults-auth-server
+    volumes:
+      - ./cypress/screenshots:/schemavaults/auth/tests/e2e-auth-tests/cypress/screenshots/
+      - ./cypress/videos:/schemavaults/auth/tests/e2e-auth-tests/cypress/videos/
     environment:
       CYPRESS_BASE_URL: http://schemavaults-auth-server:80
     links:
