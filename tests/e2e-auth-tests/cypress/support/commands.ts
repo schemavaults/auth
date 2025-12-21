@@ -61,6 +61,7 @@ Cypress.Commands.add("login", (email: string, password: string) => {
     .should("not.be.disabled")
     .click();
   // we don't make any assumptions about whether login should have succeeded or failed
+  cy.wait(2000, { log: false });
 });
 
 Cypress.Commands.add(
@@ -96,6 +97,7 @@ Cypress.Commands.add(
     }
     cy.get("button[type='submit']").should("not.be.disabled").click();
     // we don't make any assumptions about whether registration should have succeeded or failed
+    cy.wait(2000, { log: false });
   },
 );
 
@@ -118,7 +120,7 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
       "Superuser appears to be marked as already created-- attempting to login right away...",
     );
     cy.login(credentials.email, credentials.password);
-    cy.wait(3000);
+    cy.wait(6000);
     cy.url({ log: false }).should("not.include", "/auth/login");
     cy.url({ log: false }).should("include", "/account");
     return;
@@ -153,7 +155,7 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
             cy.log(`Found error toast with message: already exists`);
             cy.login(credentials.email, credentials.password);
             SuperuserCreatedCache.created = true;
-            cy.wait(3000);
+            cy.wait(5000);
           }
         },
       );
