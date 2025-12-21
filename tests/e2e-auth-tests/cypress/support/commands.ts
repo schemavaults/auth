@@ -196,11 +196,15 @@ Cypress.Commands.add(
         // Check if any toast contains the message
         let found = false;
         $errorToasts.each((_, toast): false | void => {
-          const text = Cypress.$(toast).text().toLowerCase();
+          const text: string = Cypress.$(toast).text().toLowerCase();
           if (text.includes(containing_message.toLowerCase())) {
             found = true;
             cy.log(`Found error toast with message: ${containing_message}`);
             return false; // break the .each loop
+          } else {
+            cy.log(
+              `Found error toast, but it doesn't match message ('${containing_message}'): '${text}'`,
+            );
           }
         });
 
