@@ -116,8 +116,8 @@ WORKDIR /schemavaults/auth
 
 COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json auth-server/package.json
 COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ auth-server/.next/standalone/
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ auth-server/.next/standalone/.next/static/
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/.next/standalone/public/
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ auth-server/.next/standalone/auth-server/.next/static/
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/.next/standalone/auth-server/public/
 
 WORKDIR /schemavaults/auth/auth-server
 
