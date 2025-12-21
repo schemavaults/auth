@@ -1,22 +1,24 @@
-"use client";
-
-import type { PropsWithChildren, ReactElement } from "react";
-import { ClientAuthProvider } from "./auth-provider";
 import {
-  LazyFramerMotionProvider,
-  Toaster,
-  TooltipProvider,
-} from "@schemavaults/ui";
+  getAppEnvironment,
+  schemaVaultsAppEnvironmentSchema,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
+import type { PropsWithChildren, ReactElement } from "react";
+import "server-only";
+import ClientOnlyGlobalProviders from "./client-global-providers";
 
 export default function ClientOnlyPageLayout({
   children,
 }: PropsWithChildren): ReactElement {
+  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+  if (!schemaVaultsAppEnvironmentSchema.safeParse(environment)) {
+    throw new Error(
+      "Failed to load app environment to render client page layout with!",
+    );
+  }
   return (
-    <ClientAuthProvider>
-      <LazyFramerMotionProvider>
-        <TooltipProvider>{children}</TooltipProvider>
-        <Toaster />
-      </LazyFramerMotionProvider>
-    </ClientAuthProvider>
+    <ClientOnlyGlobalProviders environment={environment}>
+      {children}
+    </ClientOnlyGlobalProviders>
   );
 }

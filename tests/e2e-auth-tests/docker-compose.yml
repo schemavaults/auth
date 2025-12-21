@@ -29,6 +29,7 @@ services:
     environment:
       SCHEMAVAULTS_APP_ENVIRONMENT: test
       NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT: test
+      NODE_ENV: test
       POSTGRES_USER: schemavaults-auth-server-dev
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
       POSTGRES_DATABASE: schemavaults-auth-server-dev
