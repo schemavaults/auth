@@ -53,10 +53,10 @@ Cypress.Commands.add("login", (email: string, password: string) => {
 
   cy.get("input[name='email']", { log: false })
     .should("not.be.disabled")
-    .type(email);
+    .type(email, { force: true });
   cy.get("input[name='password']", { log: false })
     .should("not.be.disabled")
-    .type(password);
+    .type(password, { force: true });
   cy.get("button[type='submit']", { log: false })
     .should("not.be.disabled")
     .click();
@@ -83,17 +83,17 @@ Cypress.Commands.add(
 
     cy.get("input[name='email']", { log: false })
       .should("not.be.disabled")
-      .type(email);
+      .type(email, { force: true });
     cy.get("input[name='password']", { log: false })
       .should("not.be.disabled")
-      .type(password);
+      .type(password, { force: true });
     cy.get("input[name='confirm']", { log: false })
       .should("not.be.disabled")
-      .type(password);
+      .type(password, { force: true });
     if (invite_code) {
       cy.get("input[name='invite_code']", { log: false })
         .should("not.be.disabled")
-        .type(invite_code);
+        .type(invite_code, { force: true });
     }
     cy.get("button[type='submit']").should("not.be.disabled").click();
     cy.wait(3000);

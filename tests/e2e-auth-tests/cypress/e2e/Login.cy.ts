@@ -5,8 +5,10 @@ describe("Login", () => {
 
   it("can submit an invalid login form and not be redirected", () => {
     cy.visit("/auth/login");
-    cy.get("input[name='email']").type("testinvalidcredentials@example.com");
-    cy.get("input[name='password']").type("passWord123!@#"); // random credentials
+    cy.get("input[name='email']").type("testinvalidcredentials@example.com", {
+      force: true,
+    });
+    cy.get("input[name='password']").type("passWord123!@#", { force: true }); // random credentials
     cy.get("button[type='submit']").click();
     cy.url().should("include", "/auth/login");
   });
