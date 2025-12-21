@@ -29,9 +29,9 @@ export function extractDbhErrorEventDetails(e: unknown): string {
     typeof e === "object" &&
     e !== null &&
     "type" in e &&
-    (e as any).type === "error"
+    e.type === "error"
   ) {
-    const errorEvent = e as any;
+    const errorEvent: ErrorEvent = e as ErrorEvent;
     const parts: string[] = ["ErrorEvent"];
 
     // Extract message if available
@@ -46,14 +46,18 @@ export function extractDbhErrorEventDetails(e: unknown): string {
 
     // Extract target information (e.g., WebSocket URL, readyState)
     if ("target" in errorEvent && errorEvent.target) {
-      const target = errorEvent.target as any;
+      const target: EventTarget = errorEvent.target;
       const targetParts: string[] = [];
 
-      if (target.url) {
+      if ("url" in target && target.url) {
         targetParts.push(`url: "${target.url}"`);
       }
 
-      if (target.readyState !== undefined) {
+      if (
+        "readyState" in target &&
+        target.readyState !== undefined &&
+        typeof target.readyState === "number"
+      ) {
         const readyStateNames = ["CONNECTING", "OPEN", "CLOSING", "CLOSED"];
         const readyStateName =
           readyStateNames[target.readyState] || `UNKNOWN(${target.readyState})`;
