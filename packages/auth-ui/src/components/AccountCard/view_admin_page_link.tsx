@@ -22,6 +22,7 @@ export function ViewAdminDashboardButton({
 
   return (
     <Button
+      id={"view-admin-dashboard-link"}
       className="gap-2 flex"
       variant={"destructive"}
       disabled={navigating}
