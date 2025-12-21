@@ -52,16 +52,20 @@ Cypress.Commands.add("login", (email: string, password: string) => {
   });
 
   cy.get("input[name='email']", { log: false })
+    .should("exist")
     .should("not.be.disabled")
     .type(email, { force: true });
   cy.get("input[name='password']", { log: false })
+    .should("exist")
     .should("not.be.disabled")
     .type(password, { force: true });
   cy.get("button[type='submit']", { log: false })
+    .should("exist")
     .should("not.be.disabled")
     .click();
+
+  cy.log("Submitted login form");
   // we don't make any assumptions about whether login should have succeeded or failed
-  cy.wait(2000, { log: false });
 });
 
 Cypress.Commands.add(
@@ -82,12 +86,15 @@ Cypress.Commands.add(
     });
 
     cy.get("input[name='email']", { log: false })
+      .should("exist")
       .should("not.be.disabled")
       .type(email, { force: true });
     cy.get("input[name='password']", { log: false })
+      .should("exist")
       .should("not.be.disabled")
       .type(password, { force: true });
     cy.get("input[name='confirm']", { log: false })
+      .should("exist")
       .should("not.be.disabled")
       .type(password, { force: true });
     if (invite_code) {
@@ -95,9 +102,13 @@ Cypress.Commands.add(
         .should("not.be.disabled")
         .type(invite_code, { force: true });
     }
-    cy.get("button[type='submit']").should("not.be.disabled").click();
+    cy.get("button[type='submit']")
+      .should("exist")
+      .should("not.be.disabled")
+      .click();
+
+    cy.log("Submitted register form");
     // we don't make any assumptions about whether registration should have succeeded or failed
-    cy.wait(2000, { log: false });
   },
 );
 
@@ -139,7 +150,7 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
 
   cy.register(credentials.email, credentials.password, invite_code);
 
-  cy.wait(5000);
+  cy.wait(2500);
 
   cy.url({ log: false }).then((url: string) => {
     cy.log("Registration should have completed by now; checking URL: ", url);
