@@ -1083,7 +1083,7 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
         .selectAll();
       const allInviteCodesRaw = await allInviteCodesQuery.execute();
       const allInviteCodesParsed = allInviteCodesRaw.map((raw_invite_code) => {
-        return {
+        const withParsedFields = {
           ...raw_invite_code,
           created_at:
             typeof raw_invite_code.created_at === "number"
@@ -1093,7 +1093,18 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
             typeof raw_invite_code.max_uses === "number"
               ? raw_invite_code.max_uses
               : Number.parseInt(raw_invite_code.max_uses),
+          created_by:
+            typeof raw_invite_code.created_by === "number"
+              ? raw_invite_code.created_by
+              : typeof raw_invite_code.created_by === "string"
+                ? Number.parseInt(raw_invite_code.created_by)
+                : undefined,
         };
+        if (!withParsedFields.created_by) {
+          delete withParsedFields.created_by;
+        }
+
+        return withParsedFields;
       });
       if (!UserRegistry.areValidInviteCodeDefinitions(allInviteCodesParsed)) {
         throw new Error(
