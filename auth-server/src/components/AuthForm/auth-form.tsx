@@ -173,7 +173,7 @@ export function AuthForm<T extends "login" | "register">({
           onSubmit={form.handleSubmit(
             (values: AuthFormData<"login" | "register">) => {
               startSubmitting(async (): Promise<void> => {
-                onAuthFormSubmitValidValues(values);
+                await onAuthFormSubmitValidValues(values);
               });
             },
             function onBadAuthFormValues(e): void {
