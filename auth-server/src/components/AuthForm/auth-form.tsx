@@ -42,6 +42,7 @@ import { handleAuthFormSubmit } from "./handle-auth-form-submit";
 import { AuthFormData } from "./auth-form-data";
 import type { AuthFormType } from "./auth-form-type";
 import { AuthFormSwapLink } from "./swap-auth-type-link";
+import { isPrivateBetaEnabled } from "@/lib/private-beta";
 
 interface AuthFormProps<T extends "login" | "register">
   extends AuthFormType<T> {
@@ -188,6 +189,8 @@ export function AuthForm<T extends "login" | "register">({
                       placeholder="name@example.com"
                       autoComplete="email"
                       {...field}
+                      name={field.name}
+                      disabled={field.disabled}
                     />
                   </FormControl>
                   <FormDescription>
@@ -211,6 +214,8 @@ export function AuthForm<T extends "login" | "register">({
                       autoComplete={
                         type === "login" ? "current-password" : "new-password"
                       }
+                      name={field.name}
+                      disabled={field.disabled}
                     />
                   </FormControl>
                   <FormDescription>
@@ -234,6 +239,8 @@ export function AuthForm<T extends "login" | "register">({
                         {...field}
                         type="password"
                         autoComplete="new-password"
+                        name={field.name}
+                        disabled={field.disabled}
                       />
                     </FormControl>
                     <FormDescription>
@@ -252,11 +259,17 @@ export function AuthForm<T extends "login" | "register">({
                   <FormItem>
                     <FormLabel>Invite Code</FormLabel>
                     <FormControl>
-                      <Input placeholder="MY_INVITE_CODE" {...field} />
+                      <Input
+                        placeholder="MY_INVITE_CODE"
+                        {...field}
+                        name={field.name}
+                        disabled={field.disabled}
+                      />
                     </FormControl>
                     <FormDescription>
-                      SchemaVaults is currently in closed beta. If you have an
-                      invite code, enter it here.
+                      {isPrivateBetaEnabled() &&
+                        "SchemaVaults is currently in closed beta. "}
+                      {"If you have an invite code, enter it here."}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

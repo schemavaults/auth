@@ -369,16 +369,31 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
   public async createUser(
     email: string,
     password: string,
-    invite_code?: string,
+    invite_code: string | undefined = undefined,
+    create_as_admin: boolean = false,
   ): Promise<UserDocument> {
     const debug: boolean = this.debug;
     if (!(await this.hasBeenInitialized())) {
       await this.performSetupTasks();
     }
 
+    if (typeof email !== "string") {
+      throw new TypeError("'email' must be a string");
+    } else if (typeof password !== "string") {
+      throw new TypeError("'password' must be a string");
+    }
+
+    if (typeof invite_code !== "string" && typeof invite_code !== "undefined") {
+      throw new TypeError("'invite_code' must be a string (if passed)");
+    }
+
+    if (typeof create_as_admin !== "boolean") {
+      throw new TypeError("'create_as_admin' must be a boolean");
+    }
+
     if (this.env !== "production") {
       console.log(
-        "[UserRegistry] Attempting to create user with email: ",
+        `[UserRegistry] Attempting to create ${create_as_admin ? "admin" : "regular"} user with email: `,
         email,
       );
     }
@@ -391,7 +406,7 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
       uid,
       invite_code,
       created_at: Date.now(),
-      admin: false,
+      admin: create_as_admin satisfies boolean,
       disabled: false,
     } satisfies UserDocument);
     if (!parsed_user.success) {
@@ -402,7 +417,7 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
 
     if (debug) {
       console.log(
-        `[UserRegistry::createUser] Creating user: "${user.email}" with uid: "${user.uid}" [Invite code: ${user.invite_code}]`,
+        `[UserRegistry::createUser] Creating ${create_as_admin ? "admin" : "regular"} user: "${user.email}" with uid: "${user.uid}" [Invite code: ${user.invite_code}]`,
       );
     }
 
@@ -448,7 +463,7 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
               // this invite code still has usages remaining
             } else {
               throw new Error(
-                `Invite code '${inviteCodeDefinition.invite_code}' has exceeded its usage limit!`,
+                `Invite code '${inviteCodeDefinition.invite_code}' has exceeded its usage limit (${nInviteCodeUsages}/${maxInviteCodeUsages})!`,
               );
             }
           }

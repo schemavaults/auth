@@ -38,7 +38,7 @@
 
 Cypress.Commands.add("login", (email: string, password: string) => {
   cy.visit("/auth/login");
-  cy.wait(1000, { log: false });
+  cy.wait(1250, { log: false });
   cy.log(`Attempting to login as user: '${email}'`);
   cy.url({ log: false }).should("include", "/auth/login");
   cy.get("input[name='email']", { log: false })
@@ -50,7 +50,7 @@ Cypress.Commands.add("login", (email: string, password: string) => {
   cy.get("button[type='submit']", { log: false })
     .should("not.be.disabled")
     .click();
-  cy.wait(1500);
+  cy.wait(3000);
   cy.url().should("not.include", "login");
 });
 
@@ -58,7 +58,7 @@ Cypress.Commands.add(
   "register",
   (email: string, password: string, invite_code?: string) => {
     cy.visit("/auth/register");
-    cy.wait(1000, { log: false });
+    cy.wait(1250, { log: false });
     cy.log(`Attempting to register as user: '${email}'`);
     cy.url({ log: false }).should("include", "/auth/register");
     cy.get("input[name='email']", { log: false })
@@ -75,8 +75,8 @@ Cypress.Commands.add(
         .should("not.be.disabled")
         .type(invite_code);
     }
-    cy.get("button[type='submit']").click();
-    cy.wait(1500);
+    cy.get("button[type='submit']").should("not.be.disabled").click();
+    cy.wait(3000);
     cy.url().should("not.include", "/auth/register");
   },
 );

@@ -239,7 +239,10 @@ export async function handleRegister({
   try {
     await saveSuperuserInviteCodeDefinitionIfSet();
   } catch (error: unknown) {
-    console.warn("Failed to save superuser invite code definition:", error);
+    console.warn(
+      "Failed to save superuser invite code definition to database:",
+      error,
+    );
     // no-op
   }
 
@@ -330,12 +333,46 @@ export async function handleRegister({
     );
   }
 
+  async function shouldCreateAsSuperuser(): Promise<boolean> {
+    let superuserInviteCode: string | undefined | null = null;
+    try {
+      const SUPERUSER_CODE = loadSuperuserInviteCode();
+      if (typeof SUPERUSER_CODE === "string" && SUPERUSER_CODE.length > 0) {
+        superuserInviteCode = SUPERUSER_CODE;
+      }
+    } catch (e: unknown) {
+      void e;
+    }
+
+    if (
+      !superuserInviteCode ||
+      typeof superuserInviteCode !== "string" ||
+      superuserInviteCode.length === 0
+    ) {
+      return false;
+    }
+    if (typeof invite_code !== "string" || invite_code.length === 0) {
+      return false;
+    }
+
+    return superuserInviteCode === invite_code;
+  }
+
   let newUser: UserDocument;
   try {
+    const AS_ADMIN: boolean = await shouldCreateAsSuperuser();
     if (debug) {
-      console.log("[handleRegister] Creating user with email:", email);
+      console.log(
+        `[handleRegister] Creating ${AS_ADMIN ? "admin" : "regular"} user with email:`,
+        email,
+      );
     }
-    newUser = await userRegistry.createUser(email, password, invite_code);
+    newUser = await userRegistry.createUser(
+      email,
+      password,
+      invite_code,
+      AS_ADMIN,
+    );
   } catch (e: unknown) {
     console.error("[handleRegister] Failed to create user: ", e);
     return NextResponse.json(
