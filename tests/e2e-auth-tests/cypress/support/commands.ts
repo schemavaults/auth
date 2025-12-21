@@ -41,6 +41,14 @@ Cypress.Commands.add("login", (email: string, password: string) => {
   cy.wait(1250, { log: false });
   cy.log(`Attempting to login as user: '${email}'`);
   cy.url({ log: false }).should("include", "/auth/login");
+
+  cy.get("input[name='email']", { log: false }).then(($input) => {
+    if ($input.is(":disabled")) {
+      cy.log("Email input is disabled, waiting a few seconds...");
+      cy.wait(3000, { log: false });
+    }
+  });
+
   cy.get("input[name='email']", { log: false })
     .should("not.be.disabled")
     .type(email);
@@ -61,6 +69,14 @@ Cypress.Commands.add(
     cy.wait(1250, { log: false });
     cy.log(`Attempting to register as user: '${email}'`);
     cy.url({ log: false }).should("include", "/auth/register");
+
+    cy.get("input[name='email']", { log: false }).then(($input) => {
+      if ($input.is(":disabled")) {
+        cy.log("Email input is disabled, waiting a few seconds...");
+        cy.wait(3000, { log: false });
+      }
+    });
+
     cy.get("input[name='email']", { log: false })
       .should("not.be.disabled")
       .type(email);

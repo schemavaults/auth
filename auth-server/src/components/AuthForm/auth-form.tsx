@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useState, useTransition } from "react";
 import {
   emailCredentialsSchema,
   emailRegistrationCredentialsSchema,
@@ -109,13 +109,47 @@ export function AuthForm<T extends "login" | "register">({
     resolver: getSchemaResolver({ type }),
     defaultValues: getDefaultValues({ type }),
   });
-  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [submitting, startSubmitting] = useTransition();
 
   const auth = useAuth();
 
   const searchParams = useSearchParams();
 
   const router = useRouter();
+
+  async function onAuthFormSubmitValidValues(
+    values: AuthFormData<"login" | "register">,
+  ): Promise<void> {
+    if (appEnv === "development" || appEnv === "test" || appEnv === "staging") {
+      console.log("[AuthForm] Submitting...");
+    }
+
+    try {
+      await handleAuthFormSubmit({
+        values,
+        toast,
+        type,
+        onSuccessfulAuthenticate,
+        onSubmitFailure: (): void => {
+          console.warn("onSubmitFailure()");
+          return;
+        },
+        auth,
+        searchParams,
+        router,
+        env: appEnv,
+      });
+      return;
+    } catch (e: unknown) {
+      console.error("[AuthForm] Error in auth form submit handler: ", e);
+      toast({
+        variant: "destructive",
+        title: "Error submitting form",
+        description: "An error occurred while trying to submit the form.",
+      });
+      return;
+    }
+  }
 
   return (
     <Card
@@ -136,45 +170,23 @@ export function AuthForm<T extends "login" | "register">({
           <AuthFormCardDescription type={type} />
         </CardHeader>
         <form
-          onSubmit={form.handleSubmit(async (values): Promise<void> => {
-            setSubmitting(true);
-
-            if (
-              appEnv === "development" ||
-              appEnv === "test" ||
-              appEnv === "staging"
-            ) {
-              console.log("[AuthForm] Submitting...");
-            }
-
-            try {
-              await handleAuthFormSubmit({
-                values,
-                toast,
-                type,
-                onSuccessfulAuthenticate,
-                onSubmitFailure: (): void => setSubmitting(false),
-                auth,
-                searchParams,
-                router,
-                env: appEnv,
+          onSubmit={form.handleSubmit(
+            (values: AuthFormData<"login" | "register">) => {
+              startSubmitting(async (): Promise<void> => {
+                onAuthFormSubmitValidValues(values);
               });
-              return;
-            } catch (e: unknown) {
-              console.error(
-                "[AuthForm] Error in auth form submit handler: ",
-                e,
-              );
+            },
+            function onBadAuthFormValues(e): void {
+              console.error("[onBadAuthFormValues()] form errors: ", e);
               toast({
                 variant: "destructive",
-                title: "Error submitting form",
+                title: "Invalid field(s) in authentication form",
                 description:
-                  "An error occurred while trying to submit the form.",
+                  "Please ensure your inputs are valid and then resubmit.",
               });
-              setSubmitting(false);
               return;
-            }
-          })}
+            },
+          )}
           className="space-y-2"
         >
           <CardContent className="flex flex-col justify-start items-stretch gap-2">
@@ -190,7 +202,7 @@ export function AuthForm<T extends "login" | "register">({
                       autoComplete="email"
                       {...field}
                       name={field.name}
-                      disabled={field.disabled}
+                      disabled={field.disabled || submitting}
                     />
                   </FormControl>
                   <FormDescription>
@@ -215,7 +227,7 @@ export function AuthForm<T extends "login" | "register">({
                         type === "login" ? "current-password" : "new-password"
                       }
                       name={field.name}
-                      disabled={field.disabled}
+                      disabled={field.disabled || submitting}
                     />
                   </FormControl>
                   <FormDescription>
@@ -240,7 +252,7 @@ export function AuthForm<T extends "login" | "register">({
                         type="password"
                         autoComplete="new-password"
                         name={field.name}
-                        disabled={field.disabled}
+                        disabled={field.disabled || submitting}
                       />
                     </FormControl>
                     <FormDescription>
@@ -263,7 +275,7 @@ export function AuthForm<T extends "login" | "register">({
                         placeholder="MY_INVITE_CODE"
                         {...field}
                         name={field.name}
-                        disabled={field.disabled}
+                        disabled={field.disabled || submitting}
                       />
                     </FormControl>
                     <FormDescription>
