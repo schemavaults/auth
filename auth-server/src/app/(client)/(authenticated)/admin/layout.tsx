@@ -1,20 +1,29 @@
 import "server-only";
 
 import redirectWithError from "@/lib/redirect-with-error";
-import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  getAppEnvironment,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
-import { RouteGuardFactory } from "@schemavaults/auth-server-sdk";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { cookies } from "next/headers";
 import { redirect, type RedirectType } from "next/navigation";
 import type { ReactNode } from "react";
+import { ServerlessDatabase } from "@/lib/auth-db";
 
 export default async function AdminPathsRouteGuardServerComponent({
   children,
-}: { children: ReactNode }): Promise<ReactNode> {
+}: {
+  children: ReactNode;
+}): Promise<ReactNode> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (environment === "development") {
     console.log("[AdminPathsRouteGuardServerComponent] Preparing admin page!");
   }
+
+  await using dbh = ServerlessDatabase.createDBH();
 
   const token_sources: PotentiallyValidTokenSource[] = [];
 
@@ -27,7 +36,7 @@ export default async function AdminPathsRouteGuardServerComponent({
     });
   }
 
-  const route_guard_factory = RouteGuardFactory.getInstance();
+  const route_guard_factory = new RouteGuardFactory(dbh.db);
   const route_guard = await route_guard_factory.createGuardFromTokenSources(
     "admin",
     token_sources,

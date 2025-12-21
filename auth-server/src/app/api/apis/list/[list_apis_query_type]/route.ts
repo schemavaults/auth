@@ -16,10 +16,8 @@ import {
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  type IRouteGuard,
-  RouteGuardFactory,
-} from "@schemavaults/auth-server-sdk";
+import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 /**
  * List available SchemaVaults API servers
@@ -60,17 +58,20 @@ export async function POST(
     );
   }
 
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
   try {
-    const route_guard: IRouteGuard =
-      await RouteGuardFactory.getInstance().createGuardFromAuthHeader(
-        list_apis_query_type === "all" ? "admin" : "authenticated",
-        req.headers.get("Authorization") ??
-          req.headers.get("authorization") ??
-          null,
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      );
+    const route_guard: IRouteGuard = await new RouteGuardFactory(
+      dbh.db,
+    ).createGuardFromAuthHeader(
+      list_apis_query_type === "all" ? "admin" : "authenticated",
+      req.headers.get("Authorization") ??
+        req.headers.get("authorization") ??
+        null,
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    );
     const user: UserData | null = route_guard.user;
     if (!route_guard.isAccessAllowed() || !user) {
       return NextResponse.json(
@@ -98,8 +99,6 @@ export async function POST(
       },
     );
   }
-
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   let apiServerRegistry: SchemaVaultsApiServerRegistry;
   try {
@@ -137,10 +136,10 @@ export async function POST(
             {
               success: true,
               message: "Successfully listed all SchemaVaults API servers",
-              list: await apiServerRegistry.listApiServers(
+              list: (await apiServerRegistry.listApiServers(
                 "all",
                 userData,
-              ) satisfies SchemaVaultsApiServerDefinition[],
+              )) satisfies SchemaVaultsApiServerDefinition[],
             } satisfies ListApiServersQueryResponse,
             {
               status: 200,

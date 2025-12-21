@@ -6,13 +6,15 @@ import {
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
 import type { UserData } from "@schemavaults/auth-common";
-import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  getAppEnvironment,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  type IRouteGuard,
-  RouteGuardFactory,
-} from "@schemavaults/auth-server-sdk";
+import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 const authorizeAppEndpointRequestBodySchema = z
   .object({
@@ -29,20 +31,24 @@ const authorizeAppEndpointRequestBodySchema = z
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-  if (environment === "development")
+  if (environment === "development") {
     console.log("[/api/apps/authorize] GET request received");
+  }
+
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
   try {
-    const route_guard: IRouteGuard =
-      await RouteGuardFactory.getInstance().createGuardFromAuthHeader(
-        "authenticated",
-        req.headers.get("Authorization") ??
-          req.headers.get("authorization") ??
-          null,
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      );
+    const route_guard: IRouteGuard = await new RouteGuardFactory(
+      dbh.db,
+    ).createGuardFromAuthHeader(
+      "authenticated",
+      req.headers.get("Authorization") ??
+        req.headers.get("authorization") ??
+        null,
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    );
     const user: UserData | null = route_guard.user;
     if (!route_guard.isAccessAllowed()) {
       return NextResponse.json(
@@ -102,8 +108,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
     );
   }
-
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   try {
     const registry = new AuthorizedAppsRegistry(dbh.db);

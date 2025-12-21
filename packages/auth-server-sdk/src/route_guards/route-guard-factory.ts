@@ -1,5 +1,5 @@
-import { AdminRequiredRouteGuard } from "./admin";
-import { AuthenticationRequiredRouteGuard } from "./authenticated";
+import AdminRequiredRouteGuard from "./admin";
+import AuthenticationRequiredRouteGuard from "./authenticated";
 import type { IRouteGuard } from "./base-route-guard";
 import { z } from "zod";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
@@ -25,6 +25,7 @@ import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 export interface RouteGuardFactoryInitOptions {
   environment: SchemaVaultsAppEnvironment;
   jwt_keys_manager?: IJwtKeyManager;
+  is_auth_server?: boolean;
 }
 
 type DecodeTokenFnOutput = Awaited<ReturnType<DecodeTokenFn>>;
@@ -50,12 +51,35 @@ const GUARDS = {
 >;
 
 export class RouteGuardFactory {
-  public static jwt_keys_manager: IJwtKeyManager | null = null;
-  private static _instance: RouteGuardFactory;
+  private readonly jwt_keys_manager: IJwtKeyManager;
   private readonly environment: SchemaVaultsAppEnvironment;
+  private readonly is_auth_server: boolean;
 
-  private constructor({ environment }: RouteGuardFactoryInitOptions) {
+  public constructor({ environment, ...opts }: RouteGuardFactoryInitOptions) {
     this.environment = environment;
+    if (
+      typeof opts.is_auth_server !== "boolean" &&
+      typeof opts.is_auth_server !== "undefined"
+    ) {
+      throw new TypeError("Invalid value for 'is_auth_server'");
+    }
+    this.is_auth_server = opts.is_auth_server ?? false;
+
+    if (opts.jwt_keys_manager) {
+      this.jwt_keys_manager = opts.jwt_keys_manager;
+    } else {
+      if (this.is_auth_server) {
+        throw new TypeError(
+          "An argument for 'jwt_keys_manager' is required when 'is_auth_server' is true",
+        );
+      }
+      this.jwt_keys_manager = new RemoteJwtKeyManager({
+        auth_server_uri: getHardcodedClientWebAppDomain(
+          SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+          environment,
+        ),
+      });
+    }
   }
 
   private static isValidRouteGuardType(type: unknown): type is RouteGuardType {
@@ -116,29 +140,11 @@ export class RouteGuardFactory {
             throw new Error("Failed to load 'keyset_id' from auth token!");
           }
 
-          const isAuthServer: boolean =
-            jwt_audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
-
-          let keys_manager: IJwtKeyManager;
-          if (RouteGuardFactory.jwt_keys_manager) {
-            keys_manager = RouteGuardFactory.jwt_keys_manager;
-          } else {
-            if (isAuthServer) {
-              console.error(
-                "[RouteGuardFactory] " +
-                  "Failed to resolve JWT keys manager on auth server! " +
-                  "Please ensure the keys manager is set up with: 'RouteGuardFactory.jwt_keys_manager = ______'",
-              );
-              throw new Error(
-                "Failed to resolve JWT keys manager on auth server!",
-              );
-            }
-            keys_manager = new RemoteJwtKeyManager({
-              auth_server_uri: getHardcodedClientWebAppDomain(
-                SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-                environment,
-              ),
-            });
+          const keys_manager: IJwtKeyManager = this.jwt_keys_manager;
+          if (!keys_manager) {
+            throw new Error(
+              "Failed to resolve reference to JWT keys manager to operate this route guard!",
+            );
           }
 
           let decodingKeys: IDecodeAuthTokenKeys;
@@ -229,25 +235,6 @@ export class RouteGuardFactory {
       jwt_audience,
     );
   }
-
-  public static getInstance(
-    jwt_keys_manager?: IJwtKeyManager,
-  ): RouteGuardFactory {
-    if (!RouteGuardFactory._instance) {
-      function initRouteGuardFactory(): RouteGuardFactory {
-        const environment = getAppEnvironment();
-
-        if (jwt_keys_manager && !RouteGuardFactory.jwt_keys_manager) {
-          RouteGuardFactory.jwt_keys_manager = jwt_keys_manager;
-        }
-
-        return new RouteGuardFactory({
-          environment,
-          jwt_keys_manager,
-        });
-      }
-      RouteGuardFactory._instance = initRouteGuardFactory();
-    }
-    return RouteGuardFactory._instance;
-  }
 }
+
+export default RouteGuardFactory;

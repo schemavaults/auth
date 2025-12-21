@@ -7,28 +7,29 @@ import {
 } from "@/lib/auth-db";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
-import {
-  type IRouteGuard,
-  RouteGuardFactory,
-} from "@schemavaults/auth-server-sdk";
+import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 export async function POST(
   req: NextRequest,
   props: { params: Promise<{ uid: string }> },
 ): Promise<NextResponse> {
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
   try {
-    const route_guard: IRouteGuard =
-      await RouteGuardFactory.getInstance().createGuardFromAuthHeader(
-        "admin",
-        req.headers.get("Authorization") ??
-          req.headers.get("authorization") ??
-          null,
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      );
+    const route_guard: IRouteGuard = await new RouteGuardFactory(
+      dbh.db,
+    ).createGuardFromAuthHeader(
+      "admin",
+      req.headers.get("Authorization") ??
+        req.headers.get("authorization") ??
+        null,
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    );
     const user: UserData | null = route_guard.user;
     if (!route_guard.isAccessAllowed()) {
       return NextResponse.json(
@@ -125,8 +126,6 @@ export async function POST(
     typeof new_superuser_uid === "string",
     "Expected 'new_superuser_uid' to be a string if this point was reached!",
   );
-
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   // Promote user with user ID 'new_superuser_uid' to superuser/admin
   try {

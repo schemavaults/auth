@@ -31,9 +31,12 @@ async function PreloadedInviteCodesPage({
 }
 
 async function InviteCodesServerComponent(): Promise<ReactElement> {
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
   return await withAdminRouteGuard({
     ProtectedAdminPageServerComponent: PreloadedInviteCodesPage,
     cookies: await cookies(),
+    dbh,
   });
 }
 

@@ -11,10 +11,8 @@ import {
 } from "@schemavaults/app-definitions";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  type IRouteGuard,
-  RouteGuardFactory,
-} from "@schemavaults/auth-server-sdk";
+import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 export type ListAppDomainsResponse =
   | {
@@ -59,17 +57,20 @@ export async function POST(
     console.log(`[/api/apps/domains/${app_id}/list] Received POST request`);
   }
 
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
   try {
-    const route_guard: IRouteGuard =
-      await RouteGuardFactory.getInstance().createGuardFromAuthHeader(
-        "admin",
-        req.headers.get("Authorization") ??
-          req.headers.get("authorization") ??
-          null,
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      );
+    const route_guard: IRouteGuard = await new RouteGuardFactory(
+      dbh.db,
+    ).createGuardFromAuthHeader(
+      "admin",
+      req.headers.get("Authorization") ??
+        req.headers.get("authorization") ??
+        null,
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    );
     const user: UserData | null = route_guard.user;
     if (!route_guard.isAccessAllowed()) {
       return NextResponse.json(
@@ -109,8 +110,6 @@ export async function POST(
     );
   }
 
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-
   let apps: SchemaVaultsAppRegistry;
   try {
     apps = new SchemaVaultsAppRegistry(dbh.db);
@@ -135,7 +134,7 @@ export async function POST(
     }
     app = loadAppQuery;
   } catch (e: unknown) {
-    console.error("Failed to load SchemaVaults app with given 'app_id': ", e)
+    console.error("Failed to load SchemaVaults app with given 'app_id': ", e);
     return NextResponse.json(
       {
         success: false,

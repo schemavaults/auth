@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth-db";
 import type { UserData } from "@schemavaults/auth-common";
 import {
-    getAppEnvironment,
+  getAppEnvironment,
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDefinitionSchema,
   type SchemaVaultsAppEnvironment,
@@ -15,10 +15,8 @@ import {
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  type IRouteGuard,
-  RouteGuardFactory,
-} from "@schemavaults/auth-server-sdk";
+import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 /**
  * Create a new API server
@@ -31,17 +29,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (environment === "development")
     console.log("[/api/apis/create] GET request received");
 
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
   try {
-    const route_guard: IRouteGuard =
-      await RouteGuardFactory.getInstance().createGuardFromAuthHeader(
-        "admin",
-        req.headers.get("Authorization") ??
-          req.headers.get("authorization") ??
-          null,
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      );
+    const route_guard: IRouteGuard = await new RouteGuardFactory(
+      dbh.db,
+    ).createGuardFromAuthHeader(
+      "admin",
+      req.headers.get("Authorization") ??
+        req.headers.get("authorization") ??
+        null,
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    );
     const user: UserData | null = route_guard.user;
     if (!route_guard.isAccessAllowed() || !user) {
       return NextResponse.json(
@@ -103,8 +104,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
     );
   }
-
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   let apiServerRegistry: SchemaVaultsApiServerRegistry;
   try {

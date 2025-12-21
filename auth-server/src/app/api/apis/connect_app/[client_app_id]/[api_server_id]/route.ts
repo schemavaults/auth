@@ -5,17 +5,19 @@ import {
   ServerlessDatabase,
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
-import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  getAppEnvironment,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
 import {
   type AppToApiPermission,
   appToApiPermissionSchema,
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  type IRouteGuard,
-  RouteGuardFactory,
-} from "@schemavaults/auth-server-sdk";
+import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 /**
  * Connect a frontend app client to an API server
@@ -32,17 +34,20 @@ export async function POST(
     console.log("[/api/apis/connect_app] GET request received");
   }
 
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
   try {
-    const route_guard: IRouteGuard =
-      await RouteGuardFactory.getInstance().createGuardFromAuthHeader(
-        "admin",
-        req.headers.get("Authorization") ??
-          req.headers.get("authorization") ??
-          null,
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      );
+    const route_guard: IRouteGuard = await new RouteGuardFactory(
+      dbh.db,
+    ).createGuardFromAuthHeader(
+      "admin",
+      req.headers.get("Authorization") ??
+        req.headers.get("authorization") ??
+        null,
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    );
     const user: UserData | null = route_guard.user;
     if (!route_guard.isAccessAllowed() || !user) {
       return NextResponse.json(
@@ -109,11 +114,8 @@ export async function POST(
     );
   }
 
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-
-  const appsToApiPermissionsRegistry: SchemaVaultsAppToApiPermissionsRegistry = new SchemaVaultsAppToApiPermissionsRegistry(
-    dbh.db,
-  )
+  const appsToApiPermissionsRegistry: SchemaVaultsAppToApiPermissionsRegistry =
+    new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
 
   try {
     await appsToApiPermissionsRegistry.allow(

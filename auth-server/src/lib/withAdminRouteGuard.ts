@@ -1,15 +1,17 @@
 import "server-only";
 
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth-common";
-import {
-  type IRouteGuard,
-  RouteGuardFactory,
-} from "@schemavaults/auth-server-sdk";
+import type {
+  PotentiallyValidTokenSource,
+  UserData,
+} from "@schemavaults/auth-common";
+import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import type { cookies as CookiesGetterType } from "next/headers";
 import type { ReactElement } from "react";
 import redirectWithError from "@/lib/redirect-with-error";
 import { redirect } from "next/navigation";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
+import type { ServerlessDatabase } from "@/lib/auth-db";
 
 export interface ProtectedAdminPageProps {
   user: UserData;
@@ -20,11 +22,13 @@ export interface IWithAdminRouteGuardUtilOpts {
     props: ProtectedAdminPageProps,
   ) => Promise<ReactElement>;
   cookies: Awaited<ReturnType<typeof CookiesGetterType>>;
+  dbh: ServerlessDatabase;
 }
 
 export async function withAdminRouteGuard({
   ProtectedAdminPageServerComponent,
   cookies,
+  dbh,
 }: IWithAdminRouteGuardUtilOpts): Promise<ReactElement> {
   const token_sources: PotentiallyValidTokenSource[] = [];
 
@@ -37,7 +41,7 @@ export async function withAdminRouteGuard({
     });
   }
 
-  const route_guard_factory = RouteGuardFactory.getInstance();
+  const route_guard_factory = new RouteGuardFactory(dbh.db);
   const route_guard: IRouteGuard =
     await route_guard_factory.createGuardFromTokenSources(
       "admin",

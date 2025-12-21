@@ -17,16 +17,14 @@ import {
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  type IRouteGuard,
-  RouteGuardFactory,
-} from "@schemavaults/auth-server-sdk";
+import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import type { UserData } from "@schemavaults/auth-common";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 async function listAuthorizedAppsForUser(
   appsRegistry: SchemaVaultsAppRegistry,
   authorizedAppsRegistry: AuthorizedAppsRegistry,
-  userData: UserData
+  userData: UserData,
 ): Promise<NextResponse<ListAppsQueryResponse>> {
   const user_authorized_apps: AuthorizedAppDeclaration[] =
     await authorizedAppsRegistry.listAuthorizedAppsForUser(userData.uid);
@@ -79,8 +77,7 @@ async function listAuthorizedAppsForUser(
   return NextResponse.json(
     {
       success: true,
-      message:
-        "Successfully listed SchemaVaults apps that you have authorized",
+      message: "Successfully listed SchemaVaults apps that you have authorized",
       list: authorized_apps_details,
     } satisfies ListAppsQueryResponse,
     {
@@ -129,17 +126,20 @@ export async function POST(
     );
   }
 
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
   try {
-    const route_guard: IRouteGuard =
-      await RouteGuardFactory.getInstance().createGuardFromAuthHeader(
-        type === "all" ? "admin" : "authenticated",
-        req.headers.get("Authorization") ??
-          req.headers.get("authorization") ??
-          null,
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      );
+    const route_guard: IRouteGuard = await new RouteGuardFactory(
+      dbh.db,
+    ).createGuardFromAuthHeader(
+      type === "all" ? "admin" : "authenticated",
+      req.headers.get("Authorization") ??
+        req.headers.get("authorization") ??
+        null,
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    );
     const user: UserData | null = route_guard.user;
     if (!route_guard.isAccessAllowed() || !user) {
       return NextResponse.json(
@@ -167,8 +167,6 @@ export async function POST(
       },
     );
   }
-
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   let appsRegistry: SchemaVaultsAppRegistry;
   let authorizedAppsRegistry: AuthorizedAppsRegistry;
@@ -252,14 +250,13 @@ export async function POST(
           );
         }
 
-
       case "authorized":
         try {
           return await listAuthorizedAppsForUser(
             appsRegistry,
             authorizedAppsRegistry,
             userData,
-          )
+          );
         } catch (e: unknown) {
           console.error("Failed to list authorized apps for user:", e);
           return NextResponse.json(
@@ -272,7 +269,6 @@ export async function POST(
             },
           );
         }
-
 
       default:
         return NextResponse.json(

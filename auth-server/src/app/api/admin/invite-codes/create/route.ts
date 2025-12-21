@@ -11,24 +11,25 @@ import {
   type InviteCodeDefinition,
   type UserData,
 } from "@schemavaults/auth-common";
-import {
-  type IRouteGuard,
-  RouteGuardFactory,
-} from "@schemavaults/auth-server-sdk";
+import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { type NextRequest, NextResponse } from "next/server";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
   try {
-    const route_guard: IRouteGuard =
-      await RouteGuardFactory.getInstance().createGuardFromAuthHeader(
-        "admin",
-        req.headers.get("Authorization") ??
-          req.headers.get("authorization") ??
-          null,
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      );
+    const route_guard: IRouteGuard = await new RouteGuardFactory(
+      dbh.db,
+    ).createGuardFromAuthHeader(
+      "admin",
+      req.headers.get("Authorization") ??
+        req.headers.get("authorization") ??
+        null,
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    );
     const user: UserData | null = route_guard.user;
     if (!route_guard.isAccessAllowed()) {
       return NextResponse.json(
@@ -121,8 +122,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
     );
   }
-
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   try {
     const registry = new UserRegistry(dbh.db);

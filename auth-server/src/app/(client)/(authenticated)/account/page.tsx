@@ -2,9 +2,16 @@ import "server-only";
 import type { ReactElement } from "react";
 
 import AccountPageView from "./auth-dashboard-account-page-view";
-import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth-common";
+import type {
+  PotentiallyValidTokenSource,
+  UserData,
+} from "@schemavaults/auth-common";
 import { cookies } from "next/headers";
-import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  getAppEnvironment,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { redirect, type RedirectType } from "next/navigation";
 import {
@@ -14,13 +21,12 @@ import {
   SchemaVaultsAppRegistry,
 } from "@/lib/auth-db";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
-import { RouteGuardFactory } from "@schemavaults/auth-server-sdk";
+import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 async function attemptToPreloadAppsAndDomains(
+  dbh: ServerlessDatabase,
   userData: UserData,
 ): Promise<PreloadedAppsTableDataWithDomainRefs> {
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-
   let appsRegistry: SchemaVaultsAppRegistry | undefined;
   let authorizedAppsRegistry: AuthorizedAppsRegistry | undefined;
   try {
@@ -48,12 +54,13 @@ async function attemptToPreloadAppsAndDomains(
 
 type CookiesHandler = Awaited<ReturnType<typeof cookies>>;
 
-
 export default async function AuthServerAccountDashboardPage(): Promise<ReactElement> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (environment === "development") {
     console.log("[AuthServerAccountDashboardPage] Preparing account page!");
   }
+
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   const token_sources: PotentiallyValidTokenSource[] = [];
 
@@ -68,7 +75,7 @@ export default async function AuthServerAccountDashboardPage(): Promise<ReactEle
         return redirect(url);
       },
       500,
-      "internal_server_error"
+      "internal_server_error",
     );
   }
 
@@ -81,7 +88,7 @@ export default async function AuthServerAccountDashboardPage(): Promise<ReactEle
     });
   }
 
-  const route_guard_factory = RouteGuardFactory.getInstance();
+  const route_guard_factory = new RouteGuardFactory(dbh.db);
   const route_guard = await route_guard_factory.createGuardFromTokenSources(
     "authenticated",
     token_sources,
@@ -119,7 +126,7 @@ export default async function AuthServerAccountDashboardPage(): Promise<ReactEle
     | PreloadedAppsTableDataWithDomainRefs
     | undefined = undefined;
   try {
-    preloaded_authorized_apps = await attemptToPreloadAppsAndDomains(user);
+    preloaded_authorized_apps = await attemptToPreloadAppsAndDomains(dbh, user);
   } catch (e: unknown) {
     console.error("Failed to preload authorized apps:", e);
     /** no-op error */
