@@ -88,12 +88,13 @@ export function extractDbhErrorEventDetails(e: unknown): string {
   if (typeof e === "object" && e !== null) {
     try {
       // Attempt to extract useful properties
-      const obj = e as any;
+      const obj: object = e;
       const parts: string[] = [];
 
-      if (obj.message) parts.push(`message: "${obj.message}"`);
-      if (obj.code) parts.push(`code: ${obj.code}`);
-      if (obj.name) parts.push(`name: ${obj.name}`);
+      if ("message" in obj && obj.message)
+        parts.push(`message: "${obj.message}"`);
+      if ("code" in obj && obj.code) parts.push(`code: ${obj.code}`);
+      if ("name" in obj && obj.name) parts.push(`name: ${obj.name}`);
 
       if (parts.length > 0) {
         return `Object {${parts.join(", ")}}`;
