@@ -38,11 +38,18 @@
 
 Cypress.Commands.add("login", (email: string, password: string) => {
   cy.visit("/auth/login");
+  cy.wait(1000, { log: false });
   cy.log(`Attempting to login as user: '${email}'`);
   cy.url({ log: false }).should("include", "/auth/login");
-  cy.get("input[name='email']", { log: false }).type(email);
-  cy.get("input[name='password']", { log: false }).type(password);
-  cy.get("button[type='submit']", { log: false }).click();
+  cy.get("input[name='email']", { log: false })
+    .should("not.be.disabled")
+    .type(email);
+  cy.get("input[name='password']", { log: false })
+    .should("not.be.disabled")
+    .type(password);
+  cy.get("button[type='submit']", { log: false })
+    .should("not.be.disabled")
+    .click();
   cy.wait(1500);
   cy.url().should("not.include", "login");
 });
@@ -51,13 +58,22 @@ Cypress.Commands.add(
   "register",
   (email: string, password: string, invite_code?: string) => {
     cy.visit("/auth/register");
+    cy.wait(1000, { log: false });
     cy.log(`Attempting to register as user: '${email}'`);
     cy.url({ log: false }).should("include", "/auth/register");
-    cy.get("input[name='email']", { log: false }).type(email);
-    cy.get("input[name='password']", { log: false }).type(password);
-    cy.get("input[name='confirm']", { log: false }).type(password);
+    cy.get("input[name='email']", { log: false })
+      .should("not.be.disabled")
+      .type(email);
+    cy.get("input[name='password']", { log: false })
+      .should("not.be.disabled")
+      .type(password);
+    cy.get("input[name='confirm']", { log: false })
+      .should("not.be.disabled")
+      .type(password);
     if (invite_code) {
-      cy.get("input[name='invite_code']", { log: false }).type(invite_code);
+      cy.get("input[name='invite_code']", { log: false })
+        .should("not.be.disabled")
+        .type(invite_code);
     }
     cy.get("button[type='submit']").click();
     cy.wait(1500);
