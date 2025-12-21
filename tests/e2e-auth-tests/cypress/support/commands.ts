@@ -120,6 +120,7 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
     cy.login(credentials.email, credentials.password);
     cy.wait(3000);
     cy.url({ log: false }).should("not.include", "/auth/login");
+    cy.url({ log: false }).should("include", "/account");
     return;
   }
 
@@ -161,6 +162,7 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
       cy.log("Submitting registration form appears to have redirected user.");
       // user was redirected off the register page
       cy.url().should("not.include", "/auth/register");
+      cy.url().should("include", "/account");
       SuperuserCreatedCache.created = true;
     }
   });
