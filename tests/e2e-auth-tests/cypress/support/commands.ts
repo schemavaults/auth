@@ -60,8 +60,7 @@ Cypress.Commands.add("login", (email: string, password: string) => {
   cy.get("button[type='submit']", { log: false })
     .should("not.be.disabled")
     .click();
-  cy.wait(3000);
-  cy.url().should("not.include", "login");
+  // we don't make any assumptions about whether login should have succeeded or failed
 });
 
 Cypress.Commands.add(
@@ -96,8 +95,7 @@ Cypress.Commands.add(
         .type(invite_code, { force: true });
     }
     cy.get("button[type='submit']").should("not.be.disabled").click();
-    cy.wait(3000);
-    cy.url().should("not.include", "/auth/register");
+    // we don't make any assumptions about whether registration should have succeeded or failed
   },
 );
 
@@ -120,6 +118,7 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
       "Superuser appears to be marked as already created-- attempting to login right away...",
     );
     cy.login(credentials.email, credentials.password);
+    cy.wait(3000);
     cy.url({ log: false }).should("not.include", "/auth/login");
     return;
   }
@@ -135,15 +134,9 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
 
   cy.log(`Attempting to create superuser with invite code: '${invite_code}'`);
 
-  cy.visit("/auth/register");
-  cy.url({ log: false }).should("include", "/auth/register");
-  cy.get("input[name='email']", { log: false }).type(credentials.email);
-  cy.get("input[name='password']", { log: false }).type(credentials.password);
-  cy.get("input[name='confirm']", { log: false }).type(credentials.password);
-  cy.get("input[name='invite_code']", { log: false }).type(invite_code);
-  cy.get("button[type='submit']", { log: false }).click();
+  cy.register(credentials.email, credentials.password, invite_code);
 
-  cy.wait(2500);
+  cy.wait(5000);
 
   cy.url({ log: false }).then((url: string) => {
     cy.log("Registration should have completed by now; checking URL: ", url);
@@ -157,8 +150,9 @@ Cypress.Commands.add("create_and_login_as_superuser", () => {
         (alreadyExistsError: boolean) => {
           if (alreadyExistsError) {
             cy.log(`Found error toast with message: already exists`);
-            SuperuserCreatedCache.created = true;
             cy.login(credentials.email, credentials.password);
+            SuperuserCreatedCache.created = true;
+            cy.wait(3000);
           }
         },
       );
