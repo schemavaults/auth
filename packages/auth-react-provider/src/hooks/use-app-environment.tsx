@@ -6,8 +6,9 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { useContext } from "react";
-import { SchemaVaultsAppEnvironmentContext } from "@/contexts/app-environment-context";
-import { getAppEnvironmentOnClient } from "@/lib/get-app-environment-on-client";
+import SchemaVaultsAppEnvironmentContext from "@/contexts/app-environment-context";
+import getAppEnvironmentOnClientBasedOnWindowHref from "@/lib/get-app-environment-on-client-based-on-window-href";
+import isClientRuntime from "@/lib/isClientRuntime";
 
 const DEBUG = false as const satisfies boolean;
 
@@ -17,43 +18,93 @@ export function useAppEnvironment(): SchemaVaultsAppEnvironment {
   );
   let appEnv: SchemaVaultsAppEnvironment | undefined = undefined;
 
-  try {
-    // Catch so hook could still run on SSR
-    appEnv = getAppEnvironmentOnClient(window);
-  } catch (e: unknown) {
-    void e; /** no-op, window might not be defined on server */
+  let runtime: "client" | "server" | undefined = undefined;
+  if (isClientRuntime()) {
+    runtime = "client";
+  } else {
+    runtime = "server";
   }
 
-  if (appEnv && DEBUG) {
-    console.log(
-      "[useAppEnvironment] Loaded current environment based on current URL: ",
-      appEnv,
+  if (!runtime) {
+    throw new Error(
+      "Failed to determine if this runtime environment is 'client' or 'server'!",
     );
   }
-  if (appEnv) return appEnv;
 
-  try {
-    const serverSideAppEnv = getAppEnvironment();
-    if (schemaVaultsAppEnvironmentSchema.safeParse(serverSideAppEnv).success) {
-      return serverSideAppEnv;
+  // Attempt to resolve app environment from current URL
+  // (e.g. we know that if on https://schemavaults.com it's going to be production)
+  if (runtime === "client") {
+    try {
+      // Catch so hook could still run on SSR
+      appEnv = getAppEnvironmentOnClientBasedOnWindowHref(window);
+    } catch (e: unknown) {
+      console.error(
+        "[useAppEnvironment] Failed to resolve app environment on client: ",
+        e,
+      );
+      throw new Error(
+        "Error attempting to resolve app environment on client based on window href!",
+      );
     }
-  } catch (e: unknown) {
-    void e; /** no-op, this should throw/catch on client-side for getAppEnvironment usage */
+    if (appEnv) {
+      if (DEBUG) {
+        console.log(
+          "[useAppEnvironment] Loaded current environment based on current URL: ",
+          appEnv,
+        );
+      }
+      return appEnv;
+    }
   }
 
-  if (appEnv && DEBUG) {
-    console.log(
-      "[useAppEnvironment] Loaded current environment based on server-side env vars: ",
-      appEnv,
-    );
+  // Attempt to resolve app environment from env. vars. on server-side
+  if (runtime === "server") {
+    try {
+      const parsed =
+        schemaVaultsAppEnvironmentSchema.safeParse(getAppEnvironment());
+      if (!parsed.success) {
+        console.error(
+          "Loaded invalid app environment from 'getAppEnvironment' on server-side: ",
+          parsed.error,
+        );
+        throw new TypeError(
+          "Received invalid app environment from 'getAppEnvironment' on server-side!",
+        );
+      }
+      appEnv = parsed.data;
+      if (DEBUG) {
+        console.log(
+          "[useAppEnvironment] Loaded current environment based on server-side environment variables: ",
+          appEnv,
+        );
+      }
+      return appEnv satisfies SchemaVaultsAppEnvironment;
+    } catch (e: unknown) {
+      console.error(
+        "Failed to resolve app environment from environment variables on server-side: ",
+        e,
+      );
+      throw new Error(
+        "Failed to resolve app environment from environment variables on server-side!",
+      );
+    }
   }
-  if (appEnv) {
-    return appEnv;
+
+  // Falling back to checking React context for environment
+  if (runtime !== "client") {
+    throw new Error(
+      "Expected app environment to have been resolved by this point for non-client environments.",
+    );
   }
 
   if (!contextValue || typeof contextValue !== "string") {
     throw new Error(
       "useAppEnvironment must be used within a SchemaVaultsAppEnvironmentContextProvider!",
+    );
+  }
+  if (!schemaVaultsAppEnvironmentSchema.safeParse(contextValue).success) {
+    throw new TypeError(
+      "Received invalid app environment from SchemaVaultsAppEnvironmentContext!",
     );
   }
   appEnv = contextValue;

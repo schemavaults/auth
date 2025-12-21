@@ -7,7 +7,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { SchemaVaultsAppEnvironmentContext } from "@/contexts/app-environment-context";
 import { type PropsWithChildren, useMemo, type ReactElement } from "react";
-import { getAppEnvironmentOnClient } from "@/lib/get-app-environment-on-client";
+import { getAppEnvironmentOnClientBasedOnWindowHref } from "@/lib/get-app-environment-on-client-based-on-window-href";
 
 export interface SchemaVaultsAppEnvironmentContextProviderProps
   extends PropsWithChildren {
@@ -38,7 +38,7 @@ export function SchemaVaultsAppEnvironmentContextProvider({
             "[SchemaVaultsAppEnvironmentContextProvider] Loading environment from client-side...",
           );
         }
-        return getAppEnvironmentOnClient(window);
+        return getAppEnvironmentOnClientBasedOnWindowHref(window);
       }
     } catch (e: unknown) {
       /** no-op */
