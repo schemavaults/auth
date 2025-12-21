@@ -46,6 +46,8 @@ Cypress.Commands.add("login", (email: string, password: string) => {
     if ($input.is(":disabled")) {
       cy.log("Email input is disabled, waiting a few seconds...");
       cy.wait(3000, { log: false });
+    } else {
+      cy.log("Email input does not appear to be disabled...");
     }
   });
 
@@ -74,6 +76,8 @@ Cypress.Commands.add(
       if ($input.is(":disabled")) {
         cy.log("Email input is disabled, waiting a few seconds...");
         cy.wait(3000, { log: false });
+      } else {
+        cy.log("Email input does not appear to be disabled...");
       }
     });
 
