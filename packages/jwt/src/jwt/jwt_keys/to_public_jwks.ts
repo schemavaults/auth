@@ -2,6 +2,7 @@ import type { I_JWT_Keys } from "@/jwt/jwt_keys";
 import type { JsonSerializedJwtKey } from "@/jwt/jwt_keys/JsonSerializedJwtKey";
 import type { JwtKeyType } from "@/jwt/jwt_keys/ValidJwtKeyTypes";
 import { exportJWK, type JWK } from "jose";
+import getAlgorithmForKey from "./getAlgorithmForKey";
 
 export async function to_public_jwks(
   active_keysets: I_JWT_Keys | readonly I_JWT_Keys[],
@@ -33,10 +34,14 @@ export async function to_public_jwks(
         );
       }
       const jose_activated_key: CryptoKey = await keyset[`${key_type}_key`];
+
+      const alg: string = getAlgorithmForKey(key);
+
       const jwk: JWK = await exportJWK(jose_activated_key);
       output_jwks.push({
         ...jwk,
         kid: `${keyset_id}-${key.key_type}`,
+        alg,
       });
       continue;
     }

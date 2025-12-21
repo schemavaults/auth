@@ -45,4 +45,21 @@ describe("JWT Key Set to Public JWKS", () => {
       "Expected all keys to have a 'kid' property of type string",
     ).toBeTrue();
   });
+
+  it("keys include an 'alg' property", async () => {
+    const api_server_id: string = crypto.randomUUID();
+    const keyset1 = await generateNewJwtKeySet({
+      audience_id: api_server_id,
+    });
+    const keyset2 = await generateNewJwtKeySet({
+      audience_id: api_server_id,
+    });
+    const keyset3 = await generateNewJwtKeySet({
+      audience_id: api_server_id,
+    });
+    const jwks = await to_public_jwks([keyset1, keyset2, keyset3]);
+    expect(
+      jwks.keys.every((jwk) => "alg" in jwk && typeof jwk.alg === "string"),
+    ).toBeTrue();
+  });
 });
