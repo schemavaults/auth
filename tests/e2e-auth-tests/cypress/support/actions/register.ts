@@ -7,7 +7,7 @@ export default function register(
   cy.intercept("POST", "**/api/token/authorization_code").as(
     "exchangeTokenRequest",
   );
-  cy.intercept("GET", "**/account").as("loadAccountPage");
+  cy.intercept("GET", "**/account**").as("loadAccountPage");
 
   cy.visit("/auth/register");
   cy.wait(1250, { log: false });
@@ -61,7 +61,7 @@ export default function register(
             if (exchange_tokens_interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
               return cy
-                .wait("@loadAccountPage")
+                .wait("@loadAccountPage", { timeout: 10000 })
                 .then((account_interception) => {
                   if (account_interception.response?.statusCode === 200) {
                     return cy.wait(1500).then(() => cy.wrap(true));
