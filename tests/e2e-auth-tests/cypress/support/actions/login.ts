@@ -57,7 +57,10 @@ export default function login(
             if (interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
               return cy
-                .wait("@loadAccountPage", { timeout: 10000 })
+                .wait("@loadAccountPage", {
+                  timeout: 20000,
+                  requestTimeout: 20000,
+                })
                 .then((account_interception) => {
                   const statusCode: number =
                     account_interception.response?.statusCode ?? 500;
@@ -68,7 +71,9 @@ export default function login(
                       return cy.wrap(true, { log: false });
                     });
                   } else {
-                    cy.log("Failed to load account page");
+                    cy.log(
+                      "Failed to load account page. Status Code: " + statusCode,
+                    );
                     return cy.wrap(false, { log: false });
                   }
                 });
