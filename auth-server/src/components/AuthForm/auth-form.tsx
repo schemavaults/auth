@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement, useState, useTransition } from "react";
+import { type ReactElement, useTransition } from "react";
 import {
   emailCredentialsSchema,
   emailRegistrationCredentialsSchema,
