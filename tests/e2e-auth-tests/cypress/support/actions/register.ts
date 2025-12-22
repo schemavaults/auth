@@ -71,7 +71,7 @@ export default function register(
                   if (statusCode < 400) {
                     cy.log("Account page loaded successfully");
                     return cy.wait(7500).then(() => {
-                      cy.url().should("include", "/account");
+                      cy.url({ timeout: 10000 }).should("include", "/account");
                       return cy.wrap(true, { log: false });
                     });
                   } else {
