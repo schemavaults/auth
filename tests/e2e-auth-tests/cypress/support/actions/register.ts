@@ -1,0 +1,76 @@
+export default function register(
+  email: string,
+  password: string,
+  invite_code?: string,
+) {
+  cy.intercept("POST", "**/api/auth/register").as("registerRequest");
+  cy.intercept("POST", "**/api/token/authorization_code").as(
+    "exchangeTokenRequest",
+  );
+
+  cy.visit("/auth/register");
+  cy.wait(1250, { log: false });
+  cy.log(`Attempting to register as user: '${email}'`);
+  cy.url({ log: false }).should("include", "/auth/register");
+
+  cy.get("input[name='email']", { log: false }).then(($input) => {
+    if ($input.is(":disabled")) {
+      cy.log("Email input is disabled, waiting a few seconds...");
+      cy.wait(3000, { log: false });
+    } else {
+      cy.log("Email input does not appear to be disabled...");
+    }
+  });
+
+  cy.get("input[name='email']", { log: false })
+    .should("exist")
+    .should("not.be.disabled")
+    .type(email, { force: true });
+  cy.get("input[name='password']", { log: false })
+    .should("exist")
+    .should("not.be.disabled")
+    .type(password, { force: true });
+  cy.get("input[name='confirm']", { log: false })
+    .should("exist")
+    .should("not.be.disabled")
+    .type(password, { force: true });
+  if (invite_code) {
+    cy.get("input[name='invite_code']", { log: false })
+      .should("not.be.disabled")
+      .type(invite_code, { force: true });
+  }
+  cy.get("button[type='submit']")
+    .should("exist")
+    .should("not.be.disabled")
+    .click();
+
+  cy.log("Submitted register form");
+
+  cy.wait("@registerRequest", { timeout: 10000 }).then(
+    (register_interception) => {
+      cy.log(
+        `Register API response status: ${register_interception.response?.statusCode}`,
+      );
+      if (register_interception.response?.statusCode === 200) {
+        cy.log("Register request succeeded");
+        cy.wait("@exchangeTokenRequest", { timeout: 10000 }).then(
+          (exchange_tokens_interception) => {
+            if (exchange_tokens_interception.response?.statusCode === 200) {
+              cy.log("Exchange token request succeeded");
+            } else {
+              cy.log(
+                `Exchange token request failed with status ${exchange_tokens_interception.response?.statusCode} ${exchange_tokens_interception.response?.statusMessage}`,
+              );
+            }
+          },
+        );
+      } else {
+        cy.log(
+          `Register request failed with status ${register_interception.response?.statusCode} ${register_interception.response?.statusMessage}`,
+        );
+      }
+    },
+  );
+
+  // we don't make any assumptions about whether registration should have succeeded or failed
+}
