@@ -2,7 +2,7 @@ class SuperuserCreatedCache {
   public static created: boolean = false;
 }
 
-export default function createAndLoginAsSuperuser() {
+export default function createAndLoginAsSuperuser(): Cypress.Chainable<boolean> {
   const credentials = {
     email: Cypress.env("PRIVATE_SUPERUSER_EMAIL"),
     password: Cypress.env("PRIVATE_SUPERUSER_PASSWORD"),
@@ -16,19 +16,22 @@ export default function createAndLoginAsSuperuser() {
     cy.log(
       "Superuser appears to be marked as already created-- attempting to login right away...",
     );
-    cy.login(credentials.email, credentials.password).then(
-      (success: boolean) => {
+    return cy
+      .login(credentials.email, credentials.password)
+      .then((success: boolean) => {
         if (!success) {
-          throw new Error(
-            "Failed to login as superuser despite it being marked as created",
-          );
+          cy.log("Failed to login as existing superuser!");
+          return cy.wrap(false, { log: false });
         }
+        cy.wait(3000);
         cy.url({ log: false }).should("not.include", "/auth/login");
         cy.url({ log: false }).should("include", "/account");
-        return;
-      },
-    );
-    return;
+        return cy.wrap(true, { log: false });
+      })
+      .then((res) => {
+        const val: boolean = res[0];
+        return val;
+      });
   } else {
     cy.log(
       "Superuser is not marked as already existing; proceeding to attempt creation...",
@@ -46,37 +49,61 @@ export default function createAndLoginAsSuperuser() {
 
   cy.log(`Attempting to create superuser with invite code: '${invite_code}'`);
 
-  cy.register(credentials.email, credentials.password, invite_code).then(
-    (register_success: boolean) => {
+  return cy
+    .register(credentials.email, credentials.password, invite_code)
+    .then((register_success: boolean): Cypress.Chainable<JQuery<boolean>> => {
       if (register_success) {
         cy.url().should("not.include", "/auth/register");
         cy.url().should("include", "/account");
         SuperuserCreatedCache.created = true;
-        return;
+        return cy.wrap(true, { log: false });
       } else {
         cy.log("Registration failed");
         // register did not succeed
-        cy.has_error_toast("already exists").then(
-          (alreadyExistsError: boolean) => {
-            if (alreadyExistsError) {
-              cy.log(`Found error toast with message: 'already exists'`);
-              cy.log(`Attempting to login as existing superuser...`);
-              cy.login(credentials.email, credentials.password).then(
-                (login_success) => {
-                  if (login_success) {
-                    cy.url().should("include", "/account");
-                    SuperuserCreatedCache.created = true;
-                  }
-                },
-              );
-            } else {
-              throw new Error(
-                "Registration failed and did not also receive an 'already exists' error message!",
-              );
-            }
-          },
-        );
+        return cy
+          .has_error_toast("already exists")
+          .then(
+            (
+              alreadyExistsError: boolean,
+            ): Cypress.Chainable<JQuery<boolean>> => {
+              if (alreadyExistsError) {
+                cy.log(`Found error toast with message: 'already exists'`);
+                cy.log(`Attempting to login as existing superuser...`);
+                const existing_superuser_login_result: Cypress.Chainable<
+                  JQuery<boolean>
+                > = cy
+                  .login(credentials.email, credentials.password)
+                  .then(
+                    (
+                      login_success: boolean,
+                    ): Cypress.Chainable<JQuery<boolean>> => {
+                      if (login_success) {
+                        cy.wait(3000);
+                        cy.url().should("include", "/account");
+                        cy.log(
+                          "Logging in as existing superuser appears to have been a success!",
+                        );
+                        SuperuserCreatedCache.created = true;
+                        return cy.wrap(true, { log: false });
+                      } else {
+                        cy.log("Login as existing superuser failed");
+                        return cy.wrap(false, { log: false });
+                      }
+                    },
+                  );
+
+                return existing_superuser_login_result;
+              } else {
+                throw new Error(
+                  "Registration failed and did not also receive an 'already exists' error message!",
+                );
+              }
+            },
+          );
       }
-    },
-  );
+    })
+    .then((res: JQuery<boolean>) => {
+      const val: boolean = res[0];
+      return val;
+    });
 }
