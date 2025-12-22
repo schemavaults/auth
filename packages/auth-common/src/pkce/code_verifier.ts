@@ -1,8 +1,4 @@
 import isCryptoApiAvailable from "@/is_crypto_api_available";
-import {
-  getAppEnvironment,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
 import { z } from "zod";
 
 const MIN_CODE_VERIFIER_LENGTH = 43 as const;
@@ -13,6 +9,7 @@ export const MAX_PKCE_CODE_VERIFIER_AGE: number = 1000 * 60 * 60; // 1 hour
 export interface CreateCodeVerifierInputOptions {
   challenge_time?: number;
   generateRandomCodeVerifier?: () => string;
+  debug?: boolean;
 }
 
 function secureContextRandomCharacters(): string {
@@ -45,8 +42,8 @@ function generatePseudoRandomBase64String(): string {
 export function create_code_verifier({
   challenge_time,
   generateRandomCodeVerifier,
+  debug = false,
 }: CreateCodeVerifierInputOptions): CodeVerifierWithDetails {
-  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   try {
     let code_verifier: string =
       typeof generateRandomCodeVerifier === "function"
@@ -63,7 +60,7 @@ export function create_code_verifier({
       "_",
     );
 
-    if (environment === "development") {
+    if (debug) {
       console.log("Created new code_verifier: ", base64url_encoded_verifier);
     }
 
