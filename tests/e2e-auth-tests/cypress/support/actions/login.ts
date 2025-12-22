@@ -6,6 +6,7 @@ export default function login(
   cy.intercept("POST", "**/api/token/authorization_code").as(
     "exchangeTokenRequest",
   );
+  cy.intercept("GET", "**/account").as("loadAccountPage");
 
   // Go to
   cy.visit("/auth/login");
@@ -55,7 +56,15 @@ export default function login(
             );
             if (interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
-              return cy.wrap(true);
+              return cy
+                .wait("@loadAccountPage")
+                .then((account_interception) => {
+                  if (account_interception.response?.statusCode === 200) {
+                    return cy.wait(1500).then(() => cy.wrap(true));
+                  } else {
+                    return cy.wrap(false);
+                  }
+                });
             } else {
               cy.log(
                 `Exchange token request failed with status ${interception.response?.statusCode} ${interception.response?.statusMessage}`,
