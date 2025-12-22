@@ -2,7 +2,7 @@ export default function register(
   email: string,
   password: string,
   invite_code?: string,
-) {
+): Cypress.Chainable<boolean> {
   cy.intercept("POST", "**/api/auth/register").as("registerRequest");
   cy.intercept("POST", "**/api/token/authorization_code").as(
     "exchangeTokenRequest",
@@ -46,31 +46,37 @@ export default function register(
 
   cy.log("Submitted register form");
 
-  cy.wait("@registerRequest", { timeout: 10000 }).then(
-    (register_interception) => {
+  const register_result: Cypress.Chainable<JQuery<boolean>> = cy
+    .wait("@registerRequest", { timeout: 10000 })
+    .then((register_interception): Cypress.Chainable<JQuery<boolean>> => {
       cy.log(
         `Register API response status: ${register_interception.response?.statusCode}`,
       );
       if (register_interception.response?.statusCode === 200) {
         cy.log("Register request succeeded");
-        cy.wait("@exchangeTokenRequest", { timeout: 10000 }).then(
-          (exchange_tokens_interception) => {
+        return cy
+          .wait("@exchangeTokenRequest", { timeout: 10000 })
+          .then((exchange_tokens_interception) => {
             if (exchange_tokens_interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
+              return cy.wrap(true);
             } else {
               cy.log(
                 `Exchange token request failed with status ${exchange_tokens_interception.response?.statusCode} ${exchange_tokens_interception.response?.statusMessage}`,
               );
+              return cy.wrap(false);
             }
-          },
-        );
+          });
       } else {
         cy.log(
           `Register request failed with status ${register_interception.response?.statusCode} ${register_interception.response?.statusMessage}`,
         );
+        return cy.wrap(false);
       }
-    },
-  );
+    });
 
-  // we don't make any assumptions about whether registration should have succeeded or failed
+  return register_result.then((res) => {
+    const val: boolean = res[0];
+    return val;
+  });
 }

@@ -19,12 +19,12 @@ import "./commands";
 declare global {
   namespace Cypress {
     interface Chainable {
-      login(email: string, password: string): Chainable;
+      login(email: string, password: string): Chainable<boolean>;
       register(
         email: string,
         password: string,
         invite_code?: string,
-      ): Chainable;
+      ): Chainable<boolean>;
       create_and_login_as_superuser(): Chainable;
       has_error_toast(containing_message?: string): Chainable<boolean>;
     }

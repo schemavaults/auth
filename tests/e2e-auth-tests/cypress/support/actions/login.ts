@@ -1,4 +1,7 @@
-export default function login(email: string, password: string) {
+export default function login(
+  email: string,
+  password: string,
+): Cypress.Chainable<boolean> {
   cy.intercept("POST", "**/api/auth/login").as("loginRequest");
   cy.intercept("POST", "**/api/token/authorization_code").as(
     "exchangeTokenRequest",
@@ -36,30 +39,41 @@ export default function login(email: string, password: string) {
   cy.log("Submitted login form");
 
   // Wait for the actual API request to complete
-  cy.wait("@loginRequest", { timeout: 10000 }).then((interception) => {
-    cy.log(`Login API response status: ${interception.response?.statusCode}`);
-    if (interception.response?.statusCode === 200) {
-      cy.log("Login request succeeded");
-      cy.wait("@exchangeTokenRequest", { timeout: 10000 }).then(
-        (interception) => {
-          cy.log(
-            `Exchange token API response status: ${interception.response?.statusCode}`,
-          );
-          if (interception.response?.statusCode === 200) {
-            cy.log("Exchange token request succeeded");
-          } else {
-            cy.log(
-              `Exchange token request failed with status ${interception.response?.statusCode} ${interception.response?.statusMessage}`,
-            );
-          }
-        },
-      );
-    } else {
+  const submit_result: Cypress.Chainable<boolean> = cy
+    .wait("@loginRequest", { timeout: 10000 })
+    .then((login_interception): Cypress.Chainable<JQuery<boolean>> => {
       cy.log(
-        `Login request failed with status ${interception.response?.statusCode} ${interception.response?.statusMessage}`,
+        `Login API response status: ${login_interception.response?.statusCode}`,
       );
-    }
-  });
+      if (login_interception.response?.statusCode === 200) {
+        cy.log("Login request succeeded");
+        return cy
+          .wait("@exchangeTokenRequest", { timeout: 10000 })
+          .then((interception) => {
+            cy.log(
+              `Exchange token API response status: ${interception.response?.statusCode}`,
+            );
+            if (interception.response?.statusCode === 200) {
+              cy.log("Exchange token request succeeded");
+              return cy.wrap(true);
+            } else {
+              cy.log(
+                `Exchange token request failed with status ${interception.response?.statusCode} ${interception.response?.statusMessage}`,
+              );
+              return cy.wrap(false);
+            }
+          });
+      } else {
+        cy.log(
+          `Login request failed with status ${login_interception.response?.statusCode} ${login_interception.response?.statusMessage}`,
+        );
+        return cy.wrap(false);
+      }
+    })
+    .then((res) => {
+      const val: boolean = res[0];
+      return val;
+    });
 
-  // we don't make any assumptions about whether login should have succeeded or failed
+  return submit_result;
 }

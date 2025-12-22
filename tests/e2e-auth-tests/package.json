@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/e2e-auth-tests",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "dependencies": {
     "cypress": "15.7.1"
   },
