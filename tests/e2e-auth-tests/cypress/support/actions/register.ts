@@ -2,7 +2,7 @@ export default function register(
   email: string,
   password: string,
   invite_code?: string,
-): Cypress.Chainable<boolean> {
+): Cypress.Chainable<number> {
   cy.intercept("POST", "**/api/auth/register").as("registerRequest");
   cy.intercept("POST", "**/api/token/authorization_code").as(
     "exchangeTokenRequest",
@@ -47,9 +47,9 @@ export default function register(
 
   cy.log("Submitted register form");
 
-  const register_result: Cypress.Chainable<JQuery<boolean>> = cy
+  const register_result: Cypress.Chainable<JQuery<number>> = cy
     .wait("@registerRequest", { timeout: 10000 })
-    .then((register_interception): Cypress.Chainable<JQuery<boolean>> => {
+    .then((register_interception): Cypress.Chainable<JQuery<number>> => {
       cy.log(
         `Register API response status: ${register_interception.response?.statusCode}`,
       );
@@ -72,33 +72,40 @@ export default function register(
                     cy.log("Account page loaded successfully");
                     return cy.wait(7500).then(() => {
                       cy.url({ timeout: 10000 }).should("include", "/account");
-                      return cy.wrap(true, { log: false });
+                      // Wait for page to be interactive
+                      cy.get("body", { timeout: 10000 }).should("be.visible");
+                      return cy.wrap(200, { log: false });
                     });
                   } else {
                     cy.log(
                       "Failed to load account page with status code: " +
                         statusCode,
                     );
-                    return cy.wrap(false, { log: false });
+                    return cy.wrap(statusCode, { log: false });
                   }
                 });
             } else {
               cy.log(
                 `Exchange token request failed with status ${exchange_tokens_interception.response?.statusCode} ${exchange_tokens_interception.response?.statusMessage}`,
               );
-              return cy.wrap(false, { log: false });
+              return cy.wrap(
+                exchange_tokens_interception.response?.statusCode ?? 500,
+                { log: false },
+              );
             }
           });
       } else {
         cy.log(
           `Register request failed with status ${register_interception.response?.statusCode} ${register_interception.response?.statusMessage}`,
         );
-        return cy.wrap(false, { log: false });
+        return cy.wrap(register_interception.response?.statusCode ?? 500, {
+          log: false,
+        });
       }
     });
 
-  return register_result.then((res) => {
-    const val: boolean = res[0];
+  return register_result.then((res: JQuery<number>) => {
+    const val: number = res[0];
     return val;
   });
 }

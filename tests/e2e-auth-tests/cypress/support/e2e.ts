@@ -24,7 +24,7 @@ declare global {
         email: string,
         password: string,
         invite_code?: string,
-      ): Chainable<boolean>;
+      ): Chainable<number>;
       create_and_login_as_superuser(): Chainable<boolean>;
       has_error_toast(containing_message?: string): Chainable<boolean>;
     }
