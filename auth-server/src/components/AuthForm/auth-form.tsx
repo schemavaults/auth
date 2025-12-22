@@ -130,8 +130,8 @@ export function AuthForm<T extends "login" | "register">({
         toast,
         type,
         onSuccessfulAuthenticate,
-        onSubmitFailure: (): void => {
-          console.warn("onSubmitFailure()");
+        onSubmitFailure: (e: unknown): void => {
+          console.warn("onSubmitFailure()", e);
           return;
         },
         auth,

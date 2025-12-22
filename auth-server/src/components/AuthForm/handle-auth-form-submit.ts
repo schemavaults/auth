@@ -23,7 +23,7 @@ interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
   toast: ReturnType<typeof useToast>["toast"];
   type: T;
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
-  onSubmitFailure: () => void;
+  onSubmitFailure: (e: unknown) => void;
   auth: ReturnType<typeof useAuth>;
   searchParams: URLSearchParams;
   router: ReturnType<typeof useRouter>;
@@ -75,7 +75,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       description:
         "Failed to creates tokens from successful authentication; please try again later.",
     });
-    onSubmitFailure();
+    onSubmitFailure(new Error("Auth client not ready"));
     return;
   }
 
@@ -84,12 +84,17 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     code_verifier = PKCE_ProofKeyManager.createCodeVerifier();
   } catch (e: unknown) {
     console.error("Failed to create code verifier: ", e);
+    let errorMessage: string =
+      "An unknown error occurred while trying to create a code verifier!";
+    if (e instanceof Error) {
+      errorMessage = e.message;
+    }
     toast({
       variant: "destructive",
       title: "Error creating code verifier",
-      description: "An error occurred while trying to create a code verifier",
+      description: errorMessage,
     });
-    onSubmitFailure();
+    onSubmitFailure(e);
     return;
   }
 
@@ -160,7 +165,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       title: "Error creating code challenge",
       description: "An error occurred while trying to create a code challenge",
     });
-    onSubmitFailure();
+    onSubmitFailure(e);
     return;
   }
 
@@ -183,7 +188,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       title: type === "login" ? "Sign-in Error" : "Registration Error",
       description: errMsg,
     });
-    onSubmitFailure();
+    onSubmitFailure(e);
     return;
   }
 
