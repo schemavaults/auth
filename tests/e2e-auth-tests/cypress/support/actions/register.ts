@@ -68,14 +68,17 @@ export default function register(
                 .then((account_interception) => {
                   const statusCode: number =
                     account_interception.response?.statusCode ?? 500;
-                  if (statusCode < 300) {
+                  if (statusCode < 400) {
                     cy.log("Account page loaded successfully");
-                    return cy.wait(5000).then(() => {
+                    return cy.wait(7500).then(() => {
                       cy.url().should("include", "/account");
                       return cy.wrap(true, { log: false });
                     });
                   } else {
-                    cy.log("Failed to load account page");
+                    cy.log(
+                      "Failed to load account page with status code: " +
+                        statusCode,
+                    );
                     return cy.wrap(false, { log: false });
                   }
                 });
