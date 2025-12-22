@@ -39,9 +39,9 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/auth-react-provider";
 import { handleAuthFormSubmit } from "./handle-auth-form-submit";
-import { AuthFormData } from "./auth-form-data";
+import type { AuthFormData } from "./auth-form-data";
 import type { AuthFormType } from "./auth-form-type";
-import { AuthFormSwapLink } from "./swap-auth-type-link";
+import AuthFormSwapLink from "./swap-auth-type-link";
 import { isPrivateBetaEnabled } from "@/lib/private-beta";
 
 interface AuthFormProps<T extends "login" | "register">
