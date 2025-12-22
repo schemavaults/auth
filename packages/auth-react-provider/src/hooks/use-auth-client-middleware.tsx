@@ -87,7 +87,7 @@ export function useAuthClientMiddleware(
           token_sources,
           user_data,
           client_type: "client",
-          app_env: environment,
+          debug,
         });
 
       if (debug) {

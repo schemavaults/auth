@@ -179,8 +179,8 @@ class AuthJwtValidationMiddleware
     try {
       const baseAuthStatusDeterminationInputs = {
         client_type: "server" as const,
-        app_env: this.environment,
         token_sources,
+        debug: this.debug satisfies boolean,
       } as const satisfies Partial<Parameters<typeof determineAuthStatus>[0]>;
 
       if (this.debug) {

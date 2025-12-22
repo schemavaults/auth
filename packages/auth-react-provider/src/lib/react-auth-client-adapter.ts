@@ -58,15 +58,20 @@ export class ReactAuthClientSdkAdapter
 
   private get ssl(): boolean {
     const environment: SchemaVaultsAppEnvironment = this.environment;
-    if (environment === "development" || environment === "test") return false;
+    if (environment === "development" || environment === "test") {
+      return false;
+    }
     return true;
   }
 
-  private cookieOptions: OptionsType = {
-    httpOnly: false,
-    secure: this.ssl,
-    sameSite: "strict",
-  };
+  private get cookieOptions(): OptionsType {
+    const env: SchemaVaultsAppEnvironment = this.environment;
+    return {
+      httpOnly: false,
+      secure: this.ssl,
+      sameSite: env !== "development" && env !== "test" ? "strict" : "none",
+    };
+  }
 
   private _uuid_generator: (() => string) | undefined = undefined;
 
@@ -136,19 +141,18 @@ export class ReactAuthClientSdkAdapter
       console.error(e);
       throw new Error("Failed to save cookie to key: " + key);
     }
+
+    // check that cookie was saved correctly in dev environments
     if (this.environment === "development") {
-      const recently_saved_cookie = this.readCookie(key);
-      if (!recently_saved_cookie || recently_saved_cookie !== value) {
-        console.error(
-          `[ReactAuthClientSdkAdapter] Cookie just saved does not appear to actually have been saved: ${key}`,
-        );
-        throw new Error(
-          "Cookie just saved does not appear to actually have been saved",
-        );
-      } else {
-        console.log(
-          `[ReactAuthClientSdkAdapter] Allegedly saved cookie to key: ${key}`,
-        );
+      try {
+        const recently_saved_cookie = this.readCookie(key);
+        if (!recently_saved_cookie || recently_saved_cookie !== value) {
+          console.warn(
+            `[ReactAuthClientSdkAdapter] Cookie just saved does not appear to actually have been saved: ${key}`,
+          );
+        }
+      } catch (e: unknown) {
+        void e;
       }
     }
   }

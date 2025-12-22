@@ -69,11 +69,11 @@ export default function register(
                   const statusCode: number =
                     account_interception.response?.statusCode ?? 500;
                   if (statusCode < 400) {
-                    cy.log("Account page loaded successfully");
                     return cy.wait(7500).then(() => {
                       cy.url({ timeout: 10000 }).should("include", "/account");
                       // Wait for page to be interactive
                       cy.get("body", { timeout: 10000 }).should("be.visible");
+                      cy.log("Account page loaded successfully");
                       return cy.wrap(200, { log: false });
                     });
                   } else {

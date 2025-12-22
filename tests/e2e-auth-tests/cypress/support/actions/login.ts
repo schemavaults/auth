@@ -68,6 +68,9 @@ export default function login(
                     cy.log(
                       "Loaded data for /account route (not necessarily navigated yet though)",
                     );
+
+                    cy.has_error_toast();
+
                     return cy.wait(7500).then(() => {
                       cy.url({ timeout: 10000 }).should("include", "/account");
                       // Wait for page to be interactive
