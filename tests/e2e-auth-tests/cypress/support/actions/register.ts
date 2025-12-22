@@ -64,7 +64,10 @@ export default function register(
                 .wait("@loadAccountPage", { timeout: 10000 })
                 .then((account_interception) => {
                   if (account_interception.response?.statusCode === 200) {
-                    return cy.wait(1500).then(() => cy.wrap(true));
+                    return cy.wait(5000).then(() => {
+                      cy.url().should("include", "/account");
+                      return cy.wrap(true);
+                    });
                   } else {
                     return cy.wrap(false);
                   }

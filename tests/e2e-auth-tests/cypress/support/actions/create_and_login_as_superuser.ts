@@ -52,6 +52,7 @@ export default function createAndLoginAsSuperuser() {
         cy.url().should("not.include", "/auth/register");
         cy.url().should("include", "/account");
         SuperuserCreatedCache.created = true;
+        return;
       } else {
         cy.log("Registration failed");
         // register did not succeed

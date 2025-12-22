@@ -25,7 +25,7 @@ declare global {
         password: string,
         invite_code?: string,
       ): Chainable<boolean>;
-      create_and_login_as_superuser(): Chainable;
+      create_and_login_as_superuser(): Chainable<void>;
       has_error_toast(containing_message?: string): Chainable<boolean>;
     }
   }
