@@ -37,19 +37,21 @@
 // }
 
 Cypress.Commands.add("login", (email: string, password: string) => {
+  cy.intercept("POST", "**/api/auth/login").as("loginRequest");
   cy.visit("/auth/login");
-  cy.wait(1250, { log: false });
   cy.log(`Attempting to login as user: '${email}'`);
   cy.url({ log: false }).should("include", "/auth/login");
 
-  cy.get("input[name='email']", { log: false }).then(($input) => {
-    if ($input.is(":disabled")) {
-      cy.log("Email input is disabled, waiting a few seconds...");
-      cy.wait(3000, { log: false });
-    } else {
-      cy.log("Email input does not appear to be disabled...");
-    }
-  });
+  cy.get("input[name='email']", { log: false, timeout: 10000 }).then(
+    ($input) => {
+      if ($input.is(":disabled")) {
+        cy.log("Email input is disabled, waiting a few seconds...");
+        cy.wait(3000, { log: false });
+      } else {
+        cy.log("Email input does not appear to be disabled...");
+      }
+    },
+  );
 
   cy.get("input[name='email']", { log: false })
     .should("exist")
@@ -65,12 +67,26 @@ Cypress.Commands.add("login", (email: string, password: string) => {
     .click();
 
   cy.log("Submitted login form");
+
+  // Wait for the actual API request to complete
+  cy.wait("@loginRequest", { timeout: 10000 }).then((interception) => {
+    cy.log(`Login API response status: ${interception.response?.statusCode}`);
+    if (interception.response?.statusCode === 200) {
+      cy.log("Login request succeeded");
+    } else {
+      cy.log(
+        `Login request failed with status ${interception.response?.statusCode} ${interception.response?.statusMessage}`,
+      );
+    }
+  });
+
   // we don't make any assumptions about whether login should have succeeded or failed
 });
 
 Cypress.Commands.add(
   "register",
   (email: string, password: string, invite_code?: string) => {
+    cy.intercept("POST", "**/api/auth/register").as("registerRequest");
     cy.visit("/auth/register");
     cy.wait(1250, { log: false });
     cy.log(`Attempting to register as user: '${email}'`);
@@ -108,6 +124,20 @@ Cypress.Commands.add(
       .click();
 
     cy.log("Submitted register form");
+
+    cy.wait("@registerRequest", { timeout: 10000 }).then((interception) => {
+      cy.log(
+        `Register API response status: ${interception.response?.statusCode}`,
+      );
+      if (interception.response?.statusCode === 200) {
+        cy.log("Register request succeeded");
+      } else {
+        cy.log(
+          `Register request failed with status ${interception.response?.statusCode} ${interception.response?.statusMessage}`,
+        );
+      }
+    });
+
     // we don't make any assumptions about whether registration should have succeeded or failed
   },
 );
