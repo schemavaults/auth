@@ -80,14 +80,14 @@ export default function register(
               cy.log(
                 `Exchange token request failed with status ${exchange_tokens_interception.response?.statusCode} ${exchange_tokens_interception.response?.statusMessage}`,
               );
-              return cy.wrap(false);
+              return cy.wrap(false, { log: false });
             }
           });
       } else {
         cy.log(
           `Register request failed with status ${register_interception.response?.statusCode} ${register_interception.response?.statusMessage}`,
         );
-        return cy.wrap(false);
+        return cy.wrap(false, { log: false });
       }
     });
 

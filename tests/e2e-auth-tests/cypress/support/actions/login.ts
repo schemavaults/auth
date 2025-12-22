@@ -65,25 +65,25 @@ export default function login(
                     cy.log("Account page loaded successfully");
                     return cy.wait(5000).then(() => {
                       cy.url().should("include", "/account");
-                      return cy.wrap(true);
+                      return cy.wrap(true, { log: false });
                     });
                   } else {
                     cy.log("Failed to load account page");
-                    return cy.wrap(false);
+                    return cy.wrap(false, { log: false });
                   }
                 });
             } else {
               cy.log(
                 `Exchange token request failed with status ${interception.response?.statusCode} ${interception.response?.statusMessage}`,
               );
-              return cy.wrap(false);
+              return cy.wrap(false, { log: false });
             }
           });
       } else {
         cy.log(
           `Login request failed with status ${login_interception.response?.statusCode} ${login_interception.response?.statusMessage}`,
         );
-        return cy.wrap(false);
+        return cy.wrap(false, { log: false });
       }
     })
     .then((res) => {
