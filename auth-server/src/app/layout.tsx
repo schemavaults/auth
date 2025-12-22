@@ -1,10 +1,9 @@
 import type { Metadata, ServerRuntime } from "next";
 import type { ReactNode } from "react";
-import { Inter } from "next/font/google";
 
 import "@schemavaults/theme/globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+import { inter } from "./fonts/Inter";
 
 export const metadata: Metadata = {
   title: "SchemaVaults Auth",
