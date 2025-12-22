@@ -53,10 +53,13 @@ export default function createAndLoginAsSuperuser(): Cypress.Chainable<boolean> 
     .register(credentials.email, credentials.password, invite_code)
     .then((register_success: boolean): Cypress.Chainable<JQuery<boolean>> => {
       if (register_success) {
-        cy.url().should("not.include", "/auth/register");
-        cy.url().should("include", "/account");
-        SuperuserCreatedCache.created = true;
-        return cy.wrap(true, { log: false });
+        cy.log("Registration appears to have been successful!");
+        return cy.wait(4000).then(() => {
+          cy.url().should("not.include", "/auth/register");
+          cy.url().should("include", "/account");
+          SuperuserCreatedCache.created = true;
+          return cy.wrap(true, { log: false });
+        });
       } else {
         cy.log("Registration failed");
         // register did not succeed

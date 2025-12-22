@@ -61,7 +61,10 @@ export default function register(
             if (exchange_tokens_interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
               return cy
-                .wait("@loadAccountPage", { timeout: 20000 })
+                .wait("@loadAccountPage", {
+                  timeout: 20000,
+                  requestTimeout: 20000,
+                })
                 .then((account_interception) => {
                   const statusCode: number =
                     account_interception.response?.statusCode ?? 500;
