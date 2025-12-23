@@ -13,4 +13,4 @@ export type * from "./hooks";
 
 export type * from "@/types/hook-status";
 
-export type { UserData } from "@/lib/UserData";
+export type { UserData } from "@/types/UserData";

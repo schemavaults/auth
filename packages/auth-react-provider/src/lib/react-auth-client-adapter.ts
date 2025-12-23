@@ -12,21 +12,16 @@ import {
 } from "@schemavaults/auth-common";
 import {
   type ISchemaVaultsAuthClientAdapter,
-  IAuthClientPOSTResultType,
+  type IAuthClientPOSTResultType,
 } from "@schemavaults/auth-client-sdk";
 import { setCookie, deleteCookie, getCookie } from "cookies-next";
 import type { OptionsType } from "cookies-next/lib/types";
+import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
   REFRESH_TOKEN = "refresh_token",
   USER_DATA = "user_data",
-}
-
-export interface IReactAuthClientSdkAdapterInitOptions {
-  uuid?: () => string;
-  environment: SchemaVaultsAppEnvironment;
-  debug?: boolean;
 }
 
 // Next.js/React.js to JS Client SDK Adapter
@@ -56,7 +51,7 @@ export class ReactAuthClientSdkAdapter
     this._uuid_generator = uuid;
   }
 
-  private get ssl(): boolean {
+  private get ssl_enabled(): boolean {
     const environment: SchemaVaultsAppEnvironment = this.environment;
     if (environment === "development" || environment === "test") {
       return false;
@@ -66,10 +61,11 @@ export class ReactAuthClientSdkAdapter
 
   private get cookieOptions(): OptionsType {
     const env: SchemaVaultsAppEnvironment = this.environment;
+    const strictEnv: boolean = env !== "development" && env !== "test";
     return {
       httpOnly: false,
-      secure: this.ssl,
-      sameSite: env !== "development" && env !== "test" ? "strict" : "none",
+      secure: this.ssl_enabled,
+      sameSite: strictEnv ? "strict" : "none",
     };
   }
 

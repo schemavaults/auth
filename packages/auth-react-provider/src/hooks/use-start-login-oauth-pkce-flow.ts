@@ -8,7 +8,7 @@ import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import useAppEnvironment, {
   type SchemaVaultsAppEnvironment,
 } from "@/hooks/use-app-environment";
-import type { UseUiToastHook } from "@/lib/UiToastFn";
+import type { UseUiToastHook } from "@/types/UiToastFn";
 import useDebug from "@/hooks/use-debug";
 
 export function useStartLoginOauthPKCEFlow(
