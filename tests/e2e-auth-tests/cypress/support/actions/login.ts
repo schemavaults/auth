@@ -72,6 +72,8 @@ export default function login(
                     cy.has_error_toast();
 
                     return cy.wait(7500).then(() => {
+                      cy.getCookie("refresh_token").should("exist");
+
                       cy.url({ timeout: 10000 }).should("include", "/account");
                       // Wait for page to be interactive
                       cy.get("body", { timeout: 10000 }).should("be.visible");
