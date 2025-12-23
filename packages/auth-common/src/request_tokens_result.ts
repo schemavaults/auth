@@ -4,9 +4,10 @@ import { accessTokenDataSchema, refreshTokenDataSchema } from "./token-data";
 import { audienceRefSchema } from "./audience-schema";
 import { organizationIdSchema } from "./organizations";
 
-export const requestTokensResultSchema = z
+const requestTokensSuccessfulResultSchema = z
   .object({
-    success: z.boolean(),
+    success: z.literal(true),
+    error: z.literal(false),
     message: z.string(),
     tokens: z
       .object({
@@ -26,7 +27,26 @@ export const requestTokensResultSchema = z
   .required({
     success: true,
     message: true,
+    error: true,
   })
   .strict();
+
+const requestTokensFailureResultSchema = z
+  .object({
+    success: z.literal(false),
+    error: z.literal(true),
+    message: z.string(),
+  })
+  .required({
+    success: true,
+    message: true,
+    error: true,
+  })
+  .strict();
+
+export const requestTokensResultSchema = z.union([
+  requestTokensFailureResultSchema,
+  requestTokensSuccessfulResultSchema,
+]);
 
 export type RequestTokensResult = z.infer<typeof requestTokensResultSchema>;
