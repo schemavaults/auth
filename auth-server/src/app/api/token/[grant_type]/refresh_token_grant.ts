@@ -46,6 +46,7 @@ export async function handleRefreshTokenGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to retrieve refresh token keyset ID",
       } satisfies RequestTokensResult,
       {
@@ -62,6 +63,7 @@ export async function handleRefreshTokenGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to retrieve refresh token keyset ID",
       } satisfies RequestTokensResult,
       {
@@ -73,6 +75,7 @@ export async function handleRefreshTokenGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Invalid audience ID",
       } satisfies RequestTokensResult,
       {
@@ -105,6 +108,7 @@ export async function handleRefreshTokenGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to retrieve refresh token keyset",
       } satisfies RequestTokensResult,
       {
@@ -133,6 +137,7 @@ export async function handleRefreshTokenGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: errorDecodingTokenMsg,
       } satisfies RequestTokensResult,
       {
@@ -151,6 +156,7 @@ export async function handleRefreshTokenGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to load user data",
       } satisfies RequestTokensResult,
       {
@@ -172,6 +178,7 @@ export async function handleRefreshTokenGrant(
       return NextResponse.json(
         {
           success: false,
+          error: true,
           message: "Invalid token audience",
         } satisfies RequestTokensResult,
         {
@@ -184,6 +191,7 @@ export async function handleRefreshTokenGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to validate token audience(s)",
       } satisfies RequestTokensResult,
       {
@@ -202,6 +210,7 @@ export async function handleRefreshTokenGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to list user's associated organizations!",
       } satisfies RequestTokensResult,
       {
@@ -216,7 +225,7 @@ export async function handleRefreshTokenGrant(
         ? body.replaceRefreshToo
         : false;
 
-    const tokensResult: RequestTokensResult =
+    const tokenGenerationResult: RequestTokensResult =
       await generateTokensForAuthenticatedUser({
         user,
         client_app_id: body.client_app_id,
@@ -229,14 +238,22 @@ export async function handleRefreshTokenGrant(
         auth_jwt_manager: jwt_keys_manager,
       });
 
-    return NextResponse.json(tokensResult satisfies RequestTokensResult, {
-      status: 200,
-    });
+    if (!tokenGenerationResult.success || tokenGenerationResult.error) {
+      throw new Error(tokenGenerationResult.message);
+    }
+
+    return NextResponse.json(
+      tokenGenerationResult satisfies RequestTokensResult,
+      {
+        status: 200,
+      },
+    );
   } catch (e: unknown) {
     console.error("Failed to generate new tokens: ", e);
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to generate new tokens",
       } satisfies RequestTokensResult,
       {

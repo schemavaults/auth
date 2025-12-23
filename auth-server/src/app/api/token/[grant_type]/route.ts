@@ -47,6 +47,7 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Invalid grant type, not a string",
       } satisfies RequestTokensResult,
       {
@@ -62,6 +63,7 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: invalidGrantTypeMessage,
       } satisfies RequestTokensResult,
       {
@@ -90,6 +92,7 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Invalid body JSON",
       } satisfies RequestTokensResult,
       {
@@ -103,6 +106,7 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Mismatched grant type",
       } satisfies RequestTokensResult,
       {
@@ -170,6 +174,7 @@ export async function POST(
         return NextResponse.json(
           {
             success: false,
+            error: true,
             message: "Missing Authorization header",
           } satisfies RequestTokensResult,
           {
@@ -187,6 +192,7 @@ export async function POST(
         return NextResponse.json(
           {
             success: false,
+            error: true,
             message: "Invalid Authorization header",
           } satisfies RequestTokensResult,
           {
@@ -210,6 +216,7 @@ export async function POST(
         return NextResponse.json(
           {
             success: false,
+            error: true,
             message: "Failed to run refresh token grant handler",
           } satisfies RequestTokensResult,
           {
@@ -222,6 +229,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+          error: true,
           message: "Unsupported grant type",
         } satisfies RequestTokensResult,
         {

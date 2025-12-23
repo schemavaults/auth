@@ -63,6 +63,7 @@ export default async function generateTokensForAuthenticatedUser({
   const parsed_tokens_result = requestTokensResultSchema.safeParse({
     message: `Generated token(s) for user '${user.uid}'`,
     success: true,
+    error: false,
     userData: {
       ...user,
     },

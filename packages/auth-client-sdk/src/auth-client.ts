@@ -1194,7 +1194,7 @@ export class SchemaVaultsAuthClient
     );
 
     // refresh token => access token
-    let tokens: RequestTokensResult["tokens"];
+    let tokens: (RequestTokensResult & { success: true })["tokens"];
     try {
       if (this.DEBUG) {
         console.log(
@@ -1385,7 +1385,7 @@ export class SchemaVaultsAuthClient
 
   private async handleSuccessfulExchangeAuthTokensResponse(
     tokens_response: unknown,
-  ): Promise<RequestTokensResult["tokens"] & object> {
+  ): Promise<(RequestTokensResult & { success: true })["tokens"] & object> {
     const parsed_tokens_data =
       await requestTokensResultSchema.safeParseAsync(tokens_response);
     if (!parsed_tokens_data.success) {
@@ -1438,7 +1438,7 @@ export class SchemaVaultsAuthClient
     refreshToken: RefreshToken | null,
     audience?: string | string[],
     replaceRefreshToo?: boolean,
-  ): Promise<RequestTokensResult["tokens"] & object> {
+  ): Promise<(RequestTokensResult & { success: true })["tokens"] & object> {
     if (this.DEBUG) {
       console.log(
         "[SchemaVaultsAuthClient] Attempting to send request to exchange refresh token for access token...",

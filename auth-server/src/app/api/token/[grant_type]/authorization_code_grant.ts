@@ -70,6 +70,7 @@ export async function handleAuthorizationCodeGrant(
       return NextResponse.json(
         {
           success: false,
+          error: true,
           message: "Invalid authorization code or code_verifier",
         } satisfies RequestTokensResult,
         {
@@ -86,6 +87,7 @@ export async function handleAuthorizationCodeGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to validate authorization code",
       } satisfies RequestTokensResult,
       {
@@ -114,6 +116,7 @@ export async function handleAuthorizationCodeGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to load user data",
       } satisfies RequestTokensResult,
       {
@@ -152,6 +155,7 @@ export async function handleAuthorizationCodeGrant(
       return NextResponse.json(
         {
           success: false,
+          error: true,
           message: "Invalid token audience",
         } satisfies RequestTokensResult,
         {
@@ -167,6 +171,7 @@ export async function handleAuthorizationCodeGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to validate token audience",
       } satisfies RequestTokensResult,
       {
@@ -194,6 +199,7 @@ export async function handleAuthorizationCodeGrant(
     return NextResponse.json(
       {
         success: false,
+        error: true,
         message: "Failed to list user's associated organizations!",
       } satisfies RequestTokensResult,
       {
@@ -229,14 +235,17 @@ export async function handleAuthorizationCodeGrant(
         generate_refresh,
         auth_jwt_manager: jwt_keys_manager,
       });
-    const { tokens } = tokenGenerationResult;
+
+    if (!tokenGenerationResult.success || tokenGenerationResult.error) {
+      throw new Error(tokenGenerationResult.message);
+    }
 
     if (debug) {
       console.log(
         `[AuthorizationCodeGrant] Generated JWTs successfully! Sending response to frontend client...`,
       );
       if (environment === "development") {
-        console.log(tokens);
+        console.log(tokenGenerationResult.tokens);
       }
     }
 
@@ -252,6 +261,7 @@ export async function handleAuthorizationCodeGrant(
       {
         success: false,
         message: "Failed to generate jwt auth tokens",
+        error: true,
       } satisfies RequestTokensResult,
       {
         status: 500,

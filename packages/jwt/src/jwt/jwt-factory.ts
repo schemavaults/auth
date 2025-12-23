@@ -199,6 +199,7 @@ export class JWT_Factory {
 
       const tokenGenerationResult: RequestTokensResult = {
         success: true,
+        error: false,
         message: "Generated tokens successfully",
         tokens: {
           refresh: await refreshTokenPromise,
