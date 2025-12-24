@@ -23,6 +23,8 @@ export {
 export {
   requestTokensResultSchema,
   type RequestTokensResult,
+  successfullyGeneratedTokensRecordSchema,
+  type SuccessfullyGeneratedTokensRecord,
 } from "./request_tokens_result";
 
 export * from "./auth_acquire_tokens_grant_types";
