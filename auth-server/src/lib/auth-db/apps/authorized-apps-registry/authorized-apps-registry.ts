@@ -42,6 +42,7 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
   }
 
   public async performSetupTasks(): Promise<void> {
+    // Ensure app registry is configured before attempting to configure the authorized apps registry
     if (!(await this.appRegistry.hasBeenInitialized())) {
       await this.appRegistry.performSetupTasks();
     }
@@ -264,12 +265,8 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
       );
     }
 
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      await this.setup();
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     if (typeof uid !== "string")
@@ -279,8 +276,9 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
       throw new Error("Received invalid user ID");
     }
 
-    if (typeof app_id !== "string")
+    if (typeof app_id !== "string") {
       throw new Error("Expected app ID to be a string");
+    }
     const parsed_app_id = await appIdSchema.safeParseAsync(app_id);
     if (!parsed_app_id.success) {
       throw new Error("Received invalid app ID");
@@ -305,12 +303,8 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
       } satisfies AuthorizedAppDeclaration;
     }
 
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      await this.setup();
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
     }
 
     if (typeof uid !== "string")
