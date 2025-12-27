@@ -141,11 +141,16 @@ export function AuthForm<T extends "login" | "register">({
       });
       return;
     } catch (e: unknown) {
+      let errorMsg: string =
+        "An error occurred while trying to submit the form.";
       console.error("[AuthForm] Error in auth form submit handler: ", e);
+      if (e instanceof Error) {
+        errorMsg = e.message;
+      }
       toast({
         variant: "destructive",
-        title: "Error submitting form",
-        description: "An error occurred while trying to submit the form.",
+        title: "Error submitting auth form",
+        description: errorMsg,
       });
       return;
     }
