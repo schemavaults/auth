@@ -275,7 +275,9 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
     if (typeof uid !== "string")
       throw new Error("Expected user ID to be a string");
     const parsed_uid = await z.string().uuid().safeParseAsync(uid);
-    if (!parsed_uid.success) throw new Error("Received invalid user ID");
+    if (!parsed_uid.success) {
+      throw new Error("Received invalid user ID");
+    }
 
     if (typeof app_id !== "string")
       throw new Error("Expected app ID to be a string");
