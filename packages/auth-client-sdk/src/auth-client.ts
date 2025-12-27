@@ -883,16 +883,26 @@ export class SchemaVaultsAuthClient
       if (!tokens) {
         console.error("Did not receive tokens in response from auth server");
         throw new Error("Did not receive tokens in response from auth server");
-      } else if (!tokens.access) {
+      }
+
+      if (!tokens.access) {
         console.error(
           "Did not receive any access tokens in response from auth server",
         );
         throw new Error(
           "Did not receive any access tokens in response from auth server",
         );
-      } else if (!tokens.refresh) {
+      }
+
+      if (
+        !tokens.refresh ||
+        (typeof tokens.refresh !== "object" &&
+          typeof tokens.refresh !== "string")
+      ) {
         console.error(
-          "Did not receive refresh token in response from auth server",
+          "Did not receive (valid) refresh token in response from auth server.",
+          `Type: ${typeof tokens.refresh}`,
+          tokens.refresh,
         );
         throw new Error(
           "Did not receive refresh token in response from auth server",

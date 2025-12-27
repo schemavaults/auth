@@ -38,7 +38,8 @@ export default async function returnGeneratedTokensToUser(
       expires: new Date(refresh_token.exp satisfies number),
       sameSite: "strict",
     });
-    delete tokenGenerationResult.tokens.refresh;
+    // replace actual token with indicator that token is set as http-only cookie
+    tokenGenerationResult.tokens.refresh = "AS_HTTP_ONLY_COOKIE";
   }
 
   return NextResponse.json(
