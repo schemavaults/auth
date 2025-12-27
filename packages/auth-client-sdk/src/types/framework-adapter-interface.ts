@@ -1,4 +1,8 @@
-import type { AccessToken, RefreshToken, UserData } from "@schemavaults/auth-common";
+import type {
+  AccessToken,
+  RefreshToken,
+  UserData,
+} from "@schemavaults/auth-common";
 
 interface AuthClientCodeVerifierActions {
   storeCodeVerifier: (codeVerifier: string, challenge_time: number) => void;
@@ -17,6 +21,9 @@ interface AuthClientUserDataActions {
 interface AuthClientAuthTokensActions {
   storeRefreshToken: (refresh_token: RefreshToken) => void;
   storeAccessToken: (token_id: string, access_token: AccessToken) => void;
+
+  setHttpOnlyRefreshTokenReceived?: undefined | (() => void);
+  doesSupportHttpOnlyRefreshToken?: undefined | (() => boolean);
 
   getRefreshToken: () => RefreshToken | null;
   getAccessToken: (token_id: string) => AccessToken | null;
@@ -37,18 +44,17 @@ interface AuthClientNetworkActions {
   sendPOSTRequest: (
     url: string,
     body: Record<string, unknown>,
-    headers: Record<string, string>
-  ) => Promise<IAuthClientPOSTResultType<object>>
+    headers: Record<string, string>,
+  ) => Promise<IAuthClientPOSTResultType<object>>;
 }
 
 // To use the auth client from a framework like React.js/Next.js, you would need to create an adapter
 // E.g. the next.js adapter uses cookies-next to manage cookies
-export interface ISchemaVaultsAuthClientAdapter extends
-  AuthClientCodeVerifierActions,
-  AuthClientUserDataActions,
-  AuthClientAuthTokensActions,
-  AuthClientNetworkActions
-{
+export interface ISchemaVaultsAuthClientAdapter
+  extends AuthClientCodeVerifierActions,
+    AuthClientUserDataActions,
+    AuthClientAuthTokensActions,
+    AuthClientNetworkActions {
   redirect: (uri: string) => void | Promise<void>;
   uuid: () => string;
 }

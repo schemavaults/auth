@@ -64,6 +64,7 @@ export default async function generateTokensForAuthenticatedUser({
     message: `Generated token(s) for user '${user.uid}'`,
     success: true,
     error: false,
+    client_app_id,
     userData: {
       ...user,
     },

@@ -5,8 +5,8 @@ import {
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { handleRefreshTokenGrant } from "./refresh_token_grant";
-import { handleAuthorizationCodeGrant } from "./authorization_code_grant";
+import handleRefreshTokenGrant from "./refresh_token_grant";
+import handleAuthorizationCodeGrant from "./authorization_code_grant";
 import {
   OrganizationsRegistry,
   ServerlessDatabase,

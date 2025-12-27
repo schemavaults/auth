@@ -15,8 +15,9 @@ import {
   type IAuthClientPOSTResultType,
 } from "@schemavaults/auth-client-sdk";
 import { setCookie, deleteCookie, getCookie } from "cookies-next";
-import type { OptionsType } from "cookies-next/lib/types";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
+
+type CookieOptionsType = NonNullable<Parameters<typeof getCookie>[1]>;
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
@@ -59,7 +60,7 @@ export class ReactAuthClientSdkAdapter
     return true;
   }
 
-  private get cookieOptions(): OptionsType {
+  private get cookieOptions(): CookieOptionsType {
     const env: SchemaVaultsAppEnvironment = this.environment;
     const strictEnv: boolean = env !== "development" && env !== "test";
     return {
@@ -576,5 +577,15 @@ export class ReactAuthClientSdkAdapter
         );
       }
     }
+  }
+
+  public doesSupportHttpOnlyRefreshToken(): boolean {
+    return true;
+  }
+
+  private lastHttpOnlyRefreshTokenReceived: Date | undefined;
+
+  public setHttpOnlyRefreshTokenReceived(): void {
+    this.lastHttpOnlyRefreshTokenReceived = new Date();
   }
 }

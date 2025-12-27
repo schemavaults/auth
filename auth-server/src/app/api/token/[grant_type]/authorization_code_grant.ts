@@ -22,6 +22,7 @@ import {
   AuthServerJwtKeysManager,
   generateTokensForAuthenticatedUser,
 } from "@/lib/AuthServerJwtKeysManager";
+import returnGeneratedTokensToUser from "./returnGeneratedTokensToUser";
 
 export async function handleAuthorizationCodeGrant(
   body: z.infer<typeof authorizationCodePOSTbody>,
@@ -249,12 +250,12 @@ export async function handleAuthorizationCodeGrant(
       }
     }
 
-    return NextResponse.json(
+    const isHttpsOnly: boolean =
+      environment !== "development" && environment !== "test";
+    return (await returnGeneratedTokensToUser(
       tokenGenerationResult satisfies RequestTokensResult,
-      {
-        status: 200,
-      },
-    );
+      isHttpsOnly,
+    )) satisfies NextResponse;
   } catch (e: unknown) {
     console.error("Failed to generate jwt auth tokens: ", e);
     return NextResponse.json(
@@ -269,3 +270,5 @@ export async function handleAuthorizationCodeGrant(
     );
   }
 }
+
+export default handleAuthorizationCodeGrant;

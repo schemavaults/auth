@@ -28,13 +28,17 @@ import type {
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
 import { z } from "zod";
 import {
+  ApiServerId,
+  type AppId,
   appIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
-import isPrivateBeta from "./lib/is-private-beta";
+import isPrivateBeta from "@/lib/is-private-beta";
+import debugPrintTokensAsTable from "@/lib/debugPrintTokensAsTable";
+import debugPrintUserDataAsTable from "@/lib/debugPrintUserDataAsTable";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
@@ -68,6 +72,10 @@ export class SchemaVaultsAuthClient
 
   private readonly DEBUG: boolean;
 
+  private get debug(): boolean {
+    return this.DEBUG;
+  }
+
   private readonly _default_audiences: string[];
 
   // Initialize the auth client
@@ -86,12 +94,6 @@ export class SchemaVaultsAuthClient
       );
     } else {
       this.environment = parsed_app_env.data;
-    }
-
-    if (this.environment === "development") {
-      console.log(
-        "[SchemaVaultsAuthClient] Creating auth client; determining debug status for execution...",
-      );
     }
 
     if (typeof opts.debug === "boolean") {
@@ -214,53 +216,54 @@ export class SchemaVaultsAuthClient
     }
   }
 
+  /**
+   * @name handleAuthStateChange()
+   * @description Loops over attached listeners and calls each one
+   * @see this.listeners
+   */
   private handleAuthStateChange(): void {
     if (this.DEBUG) {
       console.log("[handleAuthStateChange] Triggering listeners...");
     }
-    this.listeners.forEach(
-      (
-        listener_ref: OnAuthStateChangedListenerRef,
-        listener_id: string,
-      ): void => {
-        const { id, listener } = listener_ref;
-        if (listener_id !== id)
-          throw new Error("[handleAuthStateChange] Listener ID mismatch");
-        try {
-          if (
-            this.environment === "development" ||
-            this.environment === "test" ||
-            this.environment === "staging"
-          ) {
-            console.log(
-              `[handleAuthStateChange] Triggering listener with ID "${id}"...`,
-            );
-          }
-          listener();
-        } catch (e: unknown) {
-          console.error(
-            `Error thrown from onAuthStateChange listener with ID "${id}":`,
-            e,
-          );
-          throw new Error(
-            `[handleAuthStateChange] Error thrown from onAuthStateChange listener with ID "${id}"`,
+    for (const [listener_id, listener_ref] of this.listeners.entries()) {
+      if (listener_id !== listener_ref.id) {
+        throw new Error("[handleAuthStateChange] Listener ID mismatch");
+      }
+      try {
+        if (this.debug) {
+          console.log(
+            `[handleAuthStateChange] Triggering listener with ID "${listener_id}"...`,
           );
         }
-      },
-    );
+        listener_ref.listener();
+      } catch (e: unknown) {
+        console.error(
+          `Error thrown from onAuthStateChange listener with ID "${listener_id}":`,
+          e,
+        );
+        throw new Error(
+          `[handleAuthStateChange] Error thrown from onAuthStateChange listener with ID "${listener_id}"`,
+        );
+      }
+    }
   }
 
+  /**
+   * @name adapter
+   * @description Returns the adapter instance used by the auth client.
+   * @type ISchemaVaultsAuthClientAdapter
+   */
   private get adapter(): ISchemaVaultsAuthClientAdapter {
     return this._adapter;
   }
 
-  public get app_id(): string {
-    if (!this._app_id) {
+  public get app_id(): AppId {
+    if (!this._app_id || typeof this._app_id !== "string") {
       throw new Error(
         "Frontend client application ID not set for auth client!",
       );
     }
-    return this._app_id;
+    return this._app_id satisfies string;
   }
 
   // PKCE: Proof Key for Code Exchange
@@ -501,7 +504,7 @@ export class SchemaVaultsAuthClient
     }
   }
 
-  public async login() {
+  public async login(): Promise<void> {
     if (this.DEBUG) {
       console.log(
         "[SchemaVaultsAuthClient] Attempting to sign in with redirect...",
@@ -514,9 +517,9 @@ export class SchemaVaultsAuthClient
       if (e instanceof Error) throw e;
       throw new Error("Failed to authenticate with redirect to login!");
     }
-  }
+  } // login()
 
-  public async register() {
+  public async register(): Promise<void> {
     if (this.DEBUG) {
       console.log(
         "[SchemaVaultsAuthClient] Attempting to register with redirect...",
@@ -529,7 +532,7 @@ export class SchemaVaultsAuthClient
       if (e instanceof Error) throw e;
       throw new Error("Failed to authenticate with redirect to register!");
     }
-  }
+  } // register()
 
   private triggerAuthStateChanged(): void {
     const eventType = "authStateChanged" as const satisfies AuthClientEvent;
@@ -540,22 +543,39 @@ export class SchemaVaultsAuthClient
       );
     }
     this.dispatchEvent(changeEvent);
-  }
+  } // triggerAuthStateChanged()
 
   private storeMultipleAccessTokens(
-    access_tokens: Record<string, AccessToken>,
+    access_tokens: Record<ApiServerId, AccessToken | "AS_HTTP_ONLY_COOKIE">,
   ): void {
     const newAccessTokenAudiences: string[] = Object.keys(access_tokens);
     newAccessTokenAudiences.forEach((audience: string): void => {
       // store each access token
-      const accessToken: AccessToken | undefined = access_tokens[audience];
-      if (!accessToken)
-        throw new Error(`Missing access token for audience "${audience}"`);
-      if (audience !== accessToken.aud)
+      const accessToken: AccessToken | "AS_HTTP_ONLY_COOKIE" | undefined =
+        access_tokens[audience];
+      if (!accessToken) {
+        throw new TypeError(`Missing access token for audience "${audience}"`);
+      }
+      if (typeof accessToken === "object" && accessToken.type === "access") {
+        if (audience !== accessToken.aud) {
+          throw new Error(
+            "Record key does not match access token audience field",
+          );
+        }
+        this.storeAccessToken(audience, accessToken);
+        return;
+      } else if (
+        typeof accessToken === "string" &&
+        accessToken === "AS_HTTP_ONLY_COOKIE"
+      ) {
         throw new Error(
-          "Record key does not match access token audience field",
+          "Unimplemented; handling for HTTP-only Cookie Access Tokens is not implemented yet!",
         );
-      this.storeAccessToken(audience, accessToken);
+      } else {
+        throw new TypeError(
+          `Invalid access token type for audience "${audience}"`,
+        );
+      }
     });
   }
 
@@ -621,16 +641,18 @@ export class SchemaVaultsAuthClient
   public async loadSavedAuthorizationCodeVerifiers(): Promise<
     Record<number, string>
   > {
-    const codeVerifiers = await this.adapter.loadCodeVerifiers();
+    const codeVerifiers: Record<number, string> =
+      this.adapter.loadCodeVerifiers();
     return codeVerifiers;
-  }
+  } // loadSavedAuthorizationCodeVerifiers()
 
   public async handleSuccessfulAuthentication(
     authorization_code: string,
     challenge_time: number,
     code_verifier?: string,
   ): Promise<void> {
-    if (this.DEBUG) {
+    const debug: boolean = this.DEBUG;
+    if (debug) {
       console.log(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication]" +
           " " +
@@ -640,6 +662,13 @@ export class SchemaVaultsAuthClient
 
     if (!authorization_code) {
       throw new Error("Missing authorization code");
+    } else if (
+      typeof authorization_code !== "string" ||
+      authorization_code.length === 0
+    ) {
+      throw new TypeError(
+        "Expected 'authorization_code' to be a non-empty string!",
+      );
     }
 
     if (!challenge_time || typeof challenge_time !== "number") {
@@ -655,7 +684,7 @@ export class SchemaVaultsAuthClient
       console.error(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication] Code verifier has expired based on challenge time",
       );
-      if (this.environment === "development") {
+      if (this.debug) {
         try {
           console.table({
             challenge_time,
@@ -675,7 +704,7 @@ export class SchemaVaultsAuthClient
     // The client will use the code to get an access token
     // PKCE: The client will use the code_verifier to prove that it is the same client
 
-    if (this.DEBUG) {
+    if (debug) {
       console.log(
         "[SchemaVaultsAuthClient] " +
           "Attempting to load code verifier to prove authorization code validity...",
@@ -697,7 +726,7 @@ export class SchemaVaultsAuthClient
     if (shouldClearCodeVerifierAfterLoad) {
       // Clear the code verifier from storage
       try {
-        if (this.DEBUG) {
+        if (debug) {
           console.log(
             "[SchemaVaultsAuthClient] " +
               "Code verifier was retrieved from storage, now clearing code verifier at challenge time: ",
@@ -705,7 +734,7 @@ export class SchemaVaultsAuthClient
           );
         }
         this.adapter.clearCodeVerifier(challenge_time);
-        if (this.DEBUG) {
+        if (debug) {
           console.log(
             "[SchemaVaultsAuthClient] Cleared code verifiers from storage",
           );
@@ -715,12 +744,12 @@ export class SchemaVaultsAuthClient
           "[SchemaVaultsAuthClient] Failed to clear code verifiers: ",
           e,
         );
-        if (this.DEBUG) {
+        if (debug) {
           throw new Error("Failed to clear code verifiers");
         }
       }
     } else {
-      if (this.DEBUG) {
+      if (debug) {
         console.log(
           "[SchemaVaultsAuthClient] Not attempting to clear code verifiers in this app environment...",
         );
@@ -731,7 +760,7 @@ export class SchemaVaultsAuthClient
     // https://datatracker.ietf.org/doc/html/rfc7636#section-4.5
     const token_endpoint =
       `${this.auth_server_uri}/api/token/authorization_code` as const;
-    if (this.DEBUG) {
+    if (debug) {
       console.log(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Token Endpoint: ",
         token_endpoint,
@@ -739,7 +768,7 @@ export class SchemaVaultsAuthClient
     }
 
     const client_app_id: string = this.app_id;
-    if (this.DEBUG) {
+    if (debug) {
       console.log(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Client App ID: ",
         client_app_id,
@@ -747,7 +776,7 @@ export class SchemaVaultsAuthClient
     }
 
     let audience: string | string[] = this.defaultTokenAudiences;
-    if (this.DEBUG) {
+    if (debug) {
       console.log(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Initial access token audience(s): ",
         audience,
@@ -785,7 +814,7 @@ export class SchemaVaultsAuthClient
 
     let response: IAuthClientPOSTResultType<object>;
     try {
-      if (this.environment !== "production") {
+      if (this.debug) {
         console.log(
           `[SchemaVaultsAuthClient] Exchanging authorization code for access token; sending req body to token endpoint: "${token_endpoint}"`,
           request_body,
@@ -797,7 +826,7 @@ export class SchemaVaultsAuthClient
         {}, // no headers
       );
 
-      if (this.environment !== "production") {
+      if (this.debug) {
         console.log(
           "[SchemaVaultsAuthClient] Received response in attempt to exchange authorization code for access token: ",
           response,
@@ -818,15 +847,15 @@ export class SchemaVaultsAuthClient
       throw new Error(errorMsg);
     }
 
-    if (this.environment !== "production") {
+    if (this.DEBUG) {
       console.log(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] " +
           "Successfully exchanged authorization code for token(s)",
       );
     }
 
-    let refresh_token: RefreshToken;
-    let access_tokens: Record<string, AccessToken>;
+    let access_tokens: Record<ApiServerId, AccessToken | "AS_HTTP_ONLY_COOKIE">;
+    let refresh_token: RefreshToken | "AS_HTTP_ONLY_COOKIE";
     let user: UserData;
     try {
       const tokens_data = await requestTokensResultSchema.safeParseAsync(
@@ -843,7 +872,7 @@ export class SchemaVaultsAuthClient
         throw new Error(tokens_data.data.message);
       }
 
-      if (this.environment !== "production") {
+      if (this.DEBUG) {
         console.log(
           "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Success response data: ",
           tokens_data.data,
@@ -870,6 +899,10 @@ export class SchemaVaultsAuthClient
         );
       }
 
+      if (this.debug) {
+        debugPrintTokensAsTable(tokens);
+      }
+
       access_tokens = tokens.access;
       refresh_token = tokens.refresh;
 
@@ -878,6 +911,10 @@ export class SchemaVaultsAuthClient
         throw new Error(
           "Did not receive user data in response from auth server",
         );
+      } else {
+        if (this.debug) {
+          debugPrintUserDataAsTable(userData satisfies UserData);
+        }
       }
       user = userData;
     } catch (e: unknown) {
@@ -885,65 +922,45 @@ export class SchemaVaultsAuthClient
       throw new Error("Failed to parse tokens response");
     }
 
-    if (this.environment === "development" || this.environment === "staging") {
-      try {
-        console.table({
-          ...access_tokens,
-          refresh_token,
-        });
-      } catch (e: unknown) {
-        void e; /** no-op */
+    // Store refresh token
+    const doStoreReceivedRefreshToken = () => {
+      if (
+        typeof refresh_token === "object" &&
+        refresh_token.type === "refresh"
+      ) {
+        try {
+          if (debug) {
+            console.log("[SchemaVaultsAuthClient] Storing refresh token...");
+          }
+          this.storeRefreshToken(refresh_token);
+          if (debug) {
+            console.log("[SchemaVaultsAuthClient] Stored refresh token!");
+          }
+        } catch (e: unknown) {
+          console.error(e);
+          throw new Error("Failed to store refresh token");
+        }
+      } else if (
+        typeof refresh_token === "string" &&
+        refresh_token === "AS_HTTP_ONLY_COOKIE"
+      ) {
+        this.markHttpOnlyRefreshTokenAsReceived();
+        return;
+      } else {
+        throw new TypeError("Invalid type for refresh token!");
       }
-      try {
-        console.log("[SchemaVaultsAuthClient] User data:");
-        console.table(user);
-      } catch (e: unknown) {
-        void e; /** no-op */
-      }
-    }
-
-    // Store refresh tokens
-    try {
-      if (this.DEBUG) {
-        console.log("[SchemaVaultsAuthClient] Storing refresh token...");
-      }
-      this.storeRefreshToken(refresh_token);
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to store refresh token");
-    }
-    if (this.DEBUG) {
-      console.log("[SchemaVaultsAuthClient] Stored refresh token!");
-    }
+    };
+    doStoreReceivedRefreshToken();
 
     // Store access tokens
-    try {
-      if (this.DEBUG) {
-        console.log("[SchemaVaultsAuthClient] Storing access token(s)...");
-      }
-      this.storeMultipleAccessTokens(access_tokens);
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to store access tokens");
-    }
-    if (this.DEBUG) {
-      console.log("[SchemaVaultsAuthClient] Stored access tokens!");
-    }
+    this.storeMultipleAccessTokens(access_tokens);
 
     try {
-      if (
-        this.environment === "development" ||
-        this.environment === "test" ||
-        this.environment === "staging"
-      ) {
+      if (debug) {
         console.log("[SchemaVaultsAuthClient] Storing user data...");
       }
       this.storeUserData(user);
-      if (
-        this.environment === "development" ||
-        this.environment === "test" ||
-        this.environment === "staging"
-      ) {
+      if (debug) {
         console.log("[SchemaVaultsAuthClient] Stored user data.");
       }
     } catch (e: unknown) {
@@ -951,26 +968,26 @@ export class SchemaVaultsAuthClient
       throw new Error("Failed to store user data");
     }
 
-    if (this.DEBUG) {
+    if (debug) {
       console.log("[SchemaVaultsAuthClient] Triggering auth state changed!");
     }
     this.triggerAuthStateChanged();
-    if (this.DEBUG) {
+    if (debug) {
       console.log(
         "[SchemaVaultsAuthClient] Finished triggering auth state change.",
       );
     }
 
-    if (this.DEBUG) {
+    if (debug) {
       console.log(
         "[SchemaVaultsAuthClient] handleSuccessfulAuthentication success!",
       );
     }
     return;
-  }
+  } // handleSuccessfulAuthentication()
 
   public async logout(): Promise<void> {
-    if (this.environment !== "production") {
+    if (this.debug) {
       console.log("[SchemaVaultsAuthClient] logout() running...");
     }
 
@@ -990,7 +1007,8 @@ export class SchemaVaultsAuthClient
     }
 
     this.triggerAuthStateChanged();
-  }
+    return;
+  } // logout()
 
   public get auth_server_uri(): string {
     const host = this._authServerUri;
@@ -1044,19 +1062,50 @@ export class SchemaVaultsAuthClient
     return this._authorize_uri;
   }
 
+  /**
+   * @name storeRefreshToken(refresh_token)
+   * @param refresh_token A 'RefreshToken' object to be stored
+   * @returns nothing, after storing the refresh token via the adapter
+   */
   private storeRefreshToken(refresh_token: RefreshToken): void {
-    if (this.DEBUG)
-      console.log(`Storing refresh token via adapter: `, refresh_token);
+    if (typeof refresh_token !== "object" || refresh_token.type !== "refresh") {
+      throw new TypeError(
+        "Expected 'refresh_token' to be an object with 'type' set to 'refresh'",
+      );
+    }
+
+    if (this.DEBUG) {
+      console.log(
+        `[SchemaVaultsAuthClient] storeRefreshToken(${JSON.stringify(refresh_token)})`,
+      );
+    }
     this.adapter.storeRefreshToken(refresh_token);
     return;
   }
 
+  /**
+   * @name storeAccessToken(access_token)
+   * @param token_id The ID of the access token to be stored
+   * @param access_token An  'AccessToken' object to be stored
+   * @returns nothing, after storing the access token via the adapter
+   */
   private storeAccessToken(token_id: string, access_token: AccessToken): void {
-    if (this.DEBUG)
-      console.log(
-        `Storing access token with ID "${token_id}" via adapter: `,
-        access_token,
+    if (typeof token_id !== "string" || token_id.length === 0) {
+      throw new TypeError("Expected 'token_id' to be a non-empty string");
+    } else if (
+      typeof access_token !== "object" ||
+      access_token.type !== "access"
+    ) {
+      throw new TypeError(
+        "Expected 'access_token' to be an object with 'type' set to 'access'",
       );
+    }
+
+    if (this.DEBUG) {
+      console.log(
+        `[SchemaVaultsAuthClient] storeAccessToken("${token_id}", ${JSON.stringify(access_token)})`,
+      );
+    }
     this.adapter.storeAccessToken(token_id, access_token);
     return;
   }
@@ -1233,10 +1282,17 @@ export class SchemaVaultsAuthClient
       );
 
     const access = access_tokens[audience];
-    if (!access)
+    if (!access) {
       throw new Error(
         `No access token included with the audience originally requested: "${audience}"`,
       );
+    }
+
+    if (access === "AS_HTTP_ONLY_COOKIE") {
+      throw new Error(
+        `Access token is HTTP-only cookie, cannot be used in client SDK`,
+      );
+    }
 
     if (!opts.dont_cache) {
       this.storeAccessToken(opts.token_id, access);
@@ -1383,6 +1439,27 @@ export class SchemaVaultsAuthClient
     return userData;
   }
 
+  private markHttpOnlyRefreshTokenAsReceived(): void {
+    if (
+      typeof this.adapter.doesSupportHttpOnlyRefreshToken === "function" &&
+      this.adapter.doesSupportHttpOnlyRefreshToken()
+    ) {
+      const setHttpOnlyRefreshTokenReceived =
+        this.adapter.setHttpOnlyRefreshTokenReceived;
+      if (typeof setHttpOnlyRefreshTokenReceived !== "function") {
+        throw new Error(
+          "setHttpOnlyRefreshTokenReceived is not a function on the adapter, despite doesSupportHttpOnlyRefreshToken === true",
+        );
+      }
+      setHttpOnlyRefreshTokenReceived() satisfies void;
+      return;
+    } else {
+      throw new Error(
+        "doesSupportHttpOnlyRefreshToken() is falsy, but received an HTTP-only cookie!",
+      );
+    }
+  }
+
   private async handleSuccessfulExchangeAuthTokensResponse(
     tokens_response: unknown,
   ): Promise<(RequestTokensResult & { success: true })["tokens"] & object> {
@@ -1428,14 +1505,26 @@ export class SchemaVaultsAuthClient
     }
 
     if (tokens.refresh) {
-      this.storeRefreshToken(tokens.refresh);
+      if (
+        typeof tokens.refresh === "object" &&
+        tokens.refresh.type === "refresh"
+      ) {
+        this.storeRefreshToken(tokens.refresh);
+      } else if (
+        typeof tokens.refresh === "string" &&
+        tokens.refresh === "AS_HTTP_ONLY_COOKIE"
+      ) {
+        this.markHttpOnlyRefreshTokenAsReceived();
+      } else {
+        throw new TypeError("Invalid refresh token type");
+      }
     }
 
     return tokens;
   }
 
   private async exchangeAuthTokens(
-    refreshToken: RefreshToken | null,
+    refreshToken: RefreshToken | "AS_HTTP_ONLY_COOKIE",
     audience?: string | string[],
     replaceRefreshToo?: boolean,
   ): Promise<(RequestTokensResult & { success: true })["tokens"] & object> {
@@ -1484,9 +1573,31 @@ export class SchemaVaultsAuthClient
 
     const exchangeAuthTokensReqHeaders: Record<string, string> = {};
 
-    if (refreshToken) {
+    if (!refreshToken) {
+      throw new Error(
+        "Did not receive a refresh token to exchange for access token!",
+      );
+    }
+
+    if (typeof refreshToken === "object" && refreshToken.type === "refresh") {
       exchangeAuthTokensReqHeaders["Authorization"] =
         `Bearer ${refreshToken.token}`;
+    } else if (
+      typeof refreshToken === "string" &&
+      refreshToken === "AS_HTTP_ONLY_COOKIE"
+    ) {
+      const doesSupportHttpOnlyRefreshToken: undefined | (() => boolean) =
+        this.adapter.doesSupportHttpOnlyRefreshToken;
+      if (
+        typeof doesSupportHttpOnlyRefreshToken !== "function" ||
+        !doesSupportHttpOnlyRefreshToken()
+      ) {
+        throw new Error("Adapter does not support HTTP-only refresh tokens!");
+      }
+    } else {
+      throw new Error(
+        "Did not receive a valid refresh token (or valid method of acquiring refresh token)",
+      );
     }
 
     if (this.DEBUG) {
@@ -1583,7 +1694,7 @@ export class SchemaVaultsAuthClient
         "Failed to parse authentication tokens from exchange tokens POST request!",
       );
     }
-  }
+  } // exchangeAuthTokens()
 
   private uuid(): string {
     let id: string;

@@ -6,7 +6,7 @@ import {
   apiServerIdSchema,
 } from "@schemavaults/app-definitions";
 import type AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
-import { I_JWT_Keys, JWT_Factory } from "@schemavaults/jwt";
+import { type I_JWT_Keys, JWT_Factory } from "@schemavaults/jwt";
 import type { AccessToken, UserData } from "@schemavaults/auth-common";
 
 export interface IGenerateAccessTokenOpts {

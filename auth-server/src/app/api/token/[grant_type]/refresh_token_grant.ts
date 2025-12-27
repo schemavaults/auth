@@ -28,6 +28,7 @@ import shouldEnableDebug from "@/lib/should-enable-debug";
 import AuthServerJwtKeysManager, {
   generateTokensForAuthenticatedUser,
 } from "@/lib/AuthServerJwtKeysManager";
+import returnGeneratedTokensToUser from "./returnGeneratedTokensToUser";
 
 export async function handleRefreshTokenGrant(
   refresh_token: string,
@@ -242,12 +243,12 @@ export async function handleRefreshTokenGrant(
       throw new Error(tokenGenerationResult.message);
     }
 
-    return NextResponse.json(
+    const isHttpsOnly: boolean =
+      environment !== "development" && environment !== "test";
+    return (await returnGeneratedTokensToUser(
       tokenGenerationResult satisfies RequestTokensResult,
-      {
-        status: 200,
-      },
-    );
+      isHttpsOnly,
+    )) satisfies NextResponse;
   } catch (e: unknown) {
     console.error("Failed to generate new tokens: ", e);
     return NextResponse.json(
@@ -262,3 +263,5 @@ export async function handleRefreshTokenGrant(
     );
   }
 }
+
+export default handleRefreshTokenGrant;
