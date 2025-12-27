@@ -280,7 +280,9 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
     if (typeof app_id !== "string")
       throw new Error("Expected app ID to be a string");
     const parsed_app_id = await appIdSchema.safeParseAsync(app_id);
-    if (!parsed_app_id.success) throw new Error("Received invalid app ID");
+    if (!parsed_app_id.success) {
+      throw new Error("Received invalid app ID");
+    }
 
     throw new Error("Unimplemented");
   }
