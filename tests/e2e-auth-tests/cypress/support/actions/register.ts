@@ -60,6 +60,7 @@ export default function register(
           .then((exchange_tokens_interception) => {
             if (exchange_tokens_interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
+              cy.getCookie("refresh_token").should("exist");
               return cy
                 .wait("@loadAccountPage", {
                   timeout: 20000,
@@ -70,7 +71,6 @@ export default function register(
                     account_interception.response?.statusCode ?? 500;
                   if (statusCode < 400) {
                     return cy.wait(7500).then(() => {
-                      cy.getCookie("refresh_token").should("exist");
                       cy.url({ timeout: 10000 }).should("include", "/account");
                       // Wait for page to be interactive
                       cy.get("body", { timeout: 10000 }).should("be.visible");
