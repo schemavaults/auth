@@ -177,6 +177,7 @@ export class JWT_Factory {
     audiences?: string[] | string,
     replaceRefresh?: boolean,
   ): Promise<RequestTokensResult> {
+    const client_app_id: AppId = this.client_app_id;
     let access_token_audiences: string[];
 
     if (typeof audiences === "string")
@@ -200,7 +201,8 @@ export class JWT_Factory {
       const tokenGenerationResult: RequestTokensResult = {
         success: true,
         error: false,
-        message: "Generated tokens successfully",
+        message: "Generated token(s) successfully",
+        client_app_id,
         tokens: {
           refresh: await refreshTokenPromise,
           access: await this.multipleAccessTokens(access_token_audiences),
