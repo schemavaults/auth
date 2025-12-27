@@ -108,8 +108,8 @@ export class ReactAuthClientSdkAdapter
     return new Blob([str]).size;
   }
 
-  private saveCookie(key: string, value: string) {
-    if (this.environment === "development") {
+  private saveCookie(key: string, value: string): void {
+    if (this.debug) {
       console.log(
         `[ReactAuthClientSdkAdapter] Saving cookie to key: ${key} with value:`,
         value,
@@ -138,24 +138,6 @@ export class ReactAuthClientSdkAdapter
       console.error(e);
       throw new Error("Failed to save cookie to key: " + key);
     }
-
-    // check that cookie was saved correctly in dev environments
-    if (this.environment === "development") {
-      try {
-        const recently_saved_cookie = this.readCookie(key);
-        if (!recently_saved_cookie || recently_saved_cookie !== value) {
-          console.warn(
-            `[ReactAuthClientSdkAdapter] Cookie just saved does not appear to actually have been saved: ${key}`,
-          );
-        }
-      } catch (e: unknown) {
-        void e;
-      }
-    }
-  }
-
-  private readCookie(key: string): string | null {
-    return getCookie(key, this.cookieOptions) ?? null;
   }
 
   private clearCookie(key: string): void {
