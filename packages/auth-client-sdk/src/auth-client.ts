@@ -918,8 +918,12 @@ export class SchemaVaultsAuthClient
       }
       user = userData;
     } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to parse tokens response");
+      let errorMessage: string = "Unknown error";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      }
+      console.error("Failed to parse tokens response: ", errorMessage);
+      throw new Error(`Failed to parse tokens response: ${errorMessage}`);
     }
 
     // Store refresh token
