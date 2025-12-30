@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import {
   type OrganizationID,
   type RequestTokensResult,
@@ -23,8 +23,10 @@ import {
   generateTokensForAuthenticatedUser,
 } from "@/lib/AuthServerJwtKeysManager";
 import returnGeneratedTokensToUser from "./returnGeneratedTokensToUser";
+import getHostname from "@/lib/hostname";
 
 export async function handleAuthorizationCodeGrant(
+  req: NextRequest,
   body: z.infer<typeof authorizationCodePOSTbody>,
   userRegistry: UserRegistry,
   orgRegistry: OrganizationsRegistry,
@@ -252,10 +254,11 @@ export async function handleAuthorizationCodeGrant(
 
     const isHttpsOnly: boolean =
       environment !== "development" && environment !== "test";
-    return (await returnGeneratedTokensToUser(
-      tokenGenerationResult satisfies RequestTokensResult,
-      isHttpsOnly,
-    )) satisfies NextResponse;
+    return (await returnGeneratedTokensToUser({
+      tokenGenerationResult,
+      secure: isHttpsOnly,
+      hostname: getHostname(req),
+    })) satisfies NextResponse;
   } catch (e: unknown) {
     console.error("Failed to generate jwt auth tokens: ", e);
     return NextResponse.json(

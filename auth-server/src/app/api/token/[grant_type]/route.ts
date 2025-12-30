@@ -159,6 +159,7 @@ export async function POST(
   switch (body.grant_type) {
     case "authorization_code":
       return await handleAuthorizationCodeGrant(
+        req,
         body,
         userRegistry,
         orgRegistry,
@@ -203,6 +204,7 @@ export async function POST(
 
       try {
         return await handleRefreshTokenGrant(
+          req,
           refresh_token,
           body,
           userRegistry,

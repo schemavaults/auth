@@ -16,7 +16,7 @@ import {
   type UserData,
   type refreshTokenPOSTbody,
 } from "@schemavaults/auth-common";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 import { validateAudience } from "./validate-audience";
 import {
@@ -29,8 +29,10 @@ import AuthServerJwtKeysManager, {
   generateTokensForAuthenticatedUser,
 } from "@/lib/AuthServerJwtKeysManager";
 import returnGeneratedTokensToUser from "./returnGeneratedTokensToUser";
+import getHostname from "@/lib/hostname";
 
 export async function handleRefreshTokenGrant(
+  req: NextRequest,
   refresh_token: string,
   body: z.infer<typeof refreshTokenPOSTbody>,
   usersRegistry: UserRegistry,
@@ -245,10 +247,11 @@ export async function handleRefreshTokenGrant(
 
     const isHttpsOnly: boolean =
       environment !== "development" && environment !== "test";
-    return (await returnGeneratedTokensToUser(
-      tokenGenerationResult satisfies RequestTokensResult,
-      isHttpsOnly,
-    )) satisfies NextResponse;
+    return (await returnGeneratedTokensToUser({
+      tokenGenerationResult,
+      secure: isHttpsOnly,
+      hostname: getHostname(req),
+    })) satisfies NextResponse;
   } catch (e: unknown) {
     console.error("Failed to generate new tokens: ", e);
     return NextResponse.json(

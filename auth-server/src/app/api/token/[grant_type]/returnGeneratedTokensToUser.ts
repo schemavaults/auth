@@ -6,10 +6,17 @@ import type {
 import { NextResponse } from "next/server";
 import { setCookie } from "cookies-next";
 
-export default async function returnGeneratedTokensToUser(
-  tokenGenerationResult: RequestTokensResult,
-  secure: boolean,
-): Promise<NextResponse> {
+export interface IReturnGeneratedTokensToUserOpts {
+  tokenGenerationResult: RequestTokensResult;
+  secure: boolean;
+  hostname: string;
+}
+
+export default async function returnGeneratedTokensToUser({
+  tokenGenerationResult,
+  secure,
+  hostname,
+}: IReturnGeneratedTokensToUserOpts): Promise<NextResponse> {
   if (!tokenGenerationResult.success || tokenGenerationResult.error) {
     throw new Error(tokenGenerationResult.message);
   }
@@ -37,6 +44,7 @@ export default async function returnGeneratedTokensToUser(
       secure,
       expires: new Date(refresh_token.exp satisfies number),
       sameSite: "strict",
+      domain: hostname,
     });
     // replace actual token with indicator that token is set as http-only cookie
     tokenGenerationResult.tokens.refresh = "AS_HTTP_ONLY_COOKIE";
