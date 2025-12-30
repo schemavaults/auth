@@ -8,6 +8,7 @@ import {
   type UserData,
   accessTokenDataSchema,
   refreshTokenDataSchema,
+  refreshTokenExpiry,
   userDataSchema,
 } from "@schemavaults/auth-common";
 import {
@@ -462,7 +463,8 @@ export class ReactAuthClientSdkAdapter
       console.error(e);
       throw new Error("Failed to clear refresh tokens from cookies");
     }
-  }
+    this.lastHttpOnlyRefreshTokenReceived = null;
+  } // end of clearAuthTokens()
 
   public storeUserData(userData: UserData): void {
     const parsed = userDataSchema.safeParse(userData);
@@ -550,24 +552,59 @@ export class ReactAuthClientSdkAdapter
   }
 
   public clearAccessToken(token_id: string): void {
-    if (Object.hasOwn(this.accessTokens, token_id)) {
-      this.accessTokens.delete(token_id);
-    } else {
-      if (this.debug) {
-        console.warn(
-          `[clearAccessToken] No token with ID '${token_id}' found to clear; this is a no-op error.`,
-        );
+    if (this.accessTokens) {
+      if (this.accessTokens.has(token_id)) {
+        this.accessTokens.delete(token_id);
+        return;
+      } else {
+        if (this.debug) {
+          console.warn(
+            `[clearAccessToken] No token with ID '${token_id}' found to clear; this is a no-op error.`,
+          );
+        }
       }
     }
-  }
+    return;
+  } // end of clearAccessToken()
 
-  public doesSupportHttpOnlyRefreshToken(): boolean {
+  public doesSupportHttpOnlyRefreshToken(): true {
     return true;
   }
 
-  private lastHttpOnlyRefreshTokenReceived: Date | undefined;
+  /**
+   * The last time an HTTP-only refresh token was received.
+   */
+  protected lastHttpOnlyRefreshTokenReceived: Date | undefined | null =
+    undefined;
 
   public setHttpOnlyRefreshTokenReceived(): void {
-    this.lastHttpOnlyRefreshTokenReceived = new Date();
+    const currentTime: Date = new Date();
+    if (this.debug) {
+      console.log(
+        "[ReactAuthClientSdkAdapter] Marking last time HTTP-only refresh token received as: ",
+        currentTime,
+      );
+    }
+    this.lastHttpOnlyRefreshTokenReceived = currentTime;
+  }
+
+  public hasRefreshToken(): boolean {
+    if (this.doesSupportHttpOnlyRefreshToken()) {
+      const lastReceived: Date | undefined | null =
+        this.lastHttpOnlyRefreshTokenReceived;
+      if (!lastReceived) {
+        return false;
+      }
+      const now = new Date();
+      const timeElapsedSinceLastReceived: number =
+        now.getTime() - lastReceived.getTime();
+
+      const refreshTokenValidLength: number = refreshTokenExpiry - 1000; // subtract 1s to give a buffer zone
+      return timeElapsedSinceLastReceived < refreshTokenValidLength;
+    } else {
+      throw new Error(
+        "Expected ReactAuthClientSdkAdapter to support HTTP-only refresh tokens",
+      );
+    }
   }
 }

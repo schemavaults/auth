@@ -7,7 +7,7 @@ import {
 import type {
   IAuthClientPOSTResultType,
   ISchemaVaultsAuthClientAdapter,
-} from "@/types/framework-adapter-interface";
+} from "@/types/ISchemaVaultsAuthClientAdapter";
 import { credentialsSchema } from "@/lib/credentials-schema";
 import {
   isValidAuthenticationOutcomeType,

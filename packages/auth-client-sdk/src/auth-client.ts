@@ -16,7 +16,7 @@ import {
 import type {
   IAuthClientPOSTResultType,
   ISchemaVaultsAuthClientAdapter,
-} from "@/types/framework-adapter-interface";
+} from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { IAuthClientConstructorOptions } from "@/types/IAuthClientConstructorOptions";
 import { sendAuthenticateRequest } from "@/lib/send-authenticate-request";
 import type { Credentials } from "@/types/credentials";

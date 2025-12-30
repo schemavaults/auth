@@ -25,6 +25,7 @@ interface AuthClientAuthTokensActions {
   setHttpOnlyRefreshTokenReceived?: undefined | (() => void);
   doesSupportHttpOnlyRefreshToken?: undefined | (() => boolean);
 
+  hasRefreshToken: () => boolean;
   getRefreshToken: () => RefreshToken | null;
   getAccessToken: (token_id: string) => AccessToken | null;
 

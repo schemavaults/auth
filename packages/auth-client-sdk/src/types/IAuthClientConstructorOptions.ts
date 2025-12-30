@@ -1,5 +1,5 @@
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
-import type { ISchemaVaultsAuthClientAdapter } from "./framework-adapter-interface";
+import type { ISchemaVaultsAuthClientAdapter } from "./ISchemaVaultsAuthClientAdapter";
 
 export interface IAuthClientConstructorOptions {
   adapter: ISchemaVaultsAuthClientAdapter;

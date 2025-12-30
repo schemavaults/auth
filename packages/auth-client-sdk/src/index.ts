@@ -6,7 +6,7 @@ export {
 export type {
   ISchemaVaultsAuthClientAdapter,
   IAuthClientPOSTResultType,
-} from "@/types/framework-adapter-interface";
+} from "@/types/ISchemaVaultsAuthClientAdapter";
 
 export type {
   InitializeAuthClientOptions,
