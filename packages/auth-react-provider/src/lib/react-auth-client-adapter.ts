@@ -556,13 +556,12 @@ export class ReactAuthClientSdkAdapter
       if (this.accessTokens.has(token_id)) {
         this.accessTokens.delete(token_id);
         return;
-      } else {
-        if (this.debug) {
-          console.warn(
-            `[clearAccessToken] No token with ID '${token_id}' found to clear; this is a no-op error.`,
-          );
-        }
       }
+    }
+    if (this.debug) {
+      console.warn(
+        `[clearAccessToken] No token with ID '${token_id}' found to clear; this is a no-op error.`,
+      );
     }
     return;
   } // end of clearAccessToken()

@@ -12,6 +12,7 @@ import {
   type RequestTokensResult,
   audienceRefSchema,
   audienceSchema,
+  SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
 import type {
   IAuthClientPOSTResultType,
@@ -1458,15 +1459,12 @@ export class SchemaVaultsAuthClient
       typeof this.adapter.doesSupportHttpOnlyRefreshToken === "function" &&
       this.adapter.doesSupportHttpOnlyRefreshToken()
     ) {
-      const setHttpOnlyRefreshTokenReceived =
-        this.adapter.setHttpOnlyRefreshTokenReceived;
-      if (typeof setHttpOnlyRefreshTokenReceived !== "function") {
+      if (typeof this.adapter.setHttpOnlyRefreshTokenReceived !== "function") {
         throw new Error(
           "setHttpOnlyRefreshTokenReceived is not a function on the adapter, despite doesSupportHttpOnlyRefreshToken === true",
         );
       }
-      setHttpOnlyRefreshTokenReceived() satisfies void;
-      return;
+      return this.adapter.setHttpOnlyRefreshTokenReceived();
     } else {
       throw new Error(
         "doesSupportHttpOnlyRefreshToken() is falsy, but received an HTTP-only cookie!",
@@ -1498,7 +1496,8 @@ export class SchemaVaultsAuthClient
       throw new Error("Request tokens response has success === false");
     }
 
-    const tokens = request_tokens_result.tokens;
+    const tokens: SuccessfullyGeneratedTokensRecord | undefined =
+      request_tokens_result.tokens;
 
     if (!tokens) {
       throw new Error("Response did not include any tokens");
