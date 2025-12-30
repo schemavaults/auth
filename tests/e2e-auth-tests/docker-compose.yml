@@ -37,7 +37,6 @@ services:
       PRIVATE_GLOBAL_PASSWORD_SALT: examplePasswordSalt12
       PRIVATE_PASSWORD_HASH_ROUNDS: 5
       PRIVATE_SUPERUSER_INVITE_CODE: superuser
-      HOSTNAME: schemavaults-auth:80
     expose:
       - 80
     links:
