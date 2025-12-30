@@ -1,23 +1,28 @@
+import { organizationIdSchema } from "@/organizations";
 import { z } from "zod";
 
-const validTokenTypes = z.union([z.literal('refresh'), z.literal('access')]);
+const validTokenTypes = z.union([z.literal("refresh"), z.literal("access")]);
 export type AuthTokenTypes = z.infer<typeof validTokenTypes>;
 
-export const tokenDataSchema = z.object({
-  type: validTokenTypes,
-  uid: z.string(),
-  iat: z.number(),
-  exp: z.number(),
-  token: z.string(),
-  aud: z.string()
-}).required({
-  type: true,
-  uid: true,
-  iat: true,
-  exp: true,
-  token: true,
-  aud: true
-}).strict();
+export const tokenDataSchema = z
+  .object({
+    type: validTokenTypes,
+    uid: z.string(),
+    iat: z.number(),
+    exp: z.number(),
+    token: z.string(),
+    aud: z.string(),
+    orgs: organizationIdSchema.array().optional(),
+  })
+  .required({
+    type: true,
+    uid: true,
+    iat: true,
+    exp: true,
+    token: true,
+    aud: true,
+  })
+  .strict();
 
 /**
  * @name AuthToken
@@ -28,11 +33,11 @@ export const tokenDataSchema = z.object({
 export type AuthToken = z.infer<typeof tokenDataSchema>;
 
 export const refreshTokenDataSchema = tokenDataSchema.extend({
-  type: z.literal('refresh')
+  type: z.literal("refresh"),
 });
 
 export const accessTokenDataSchema = tokenDataSchema.extend({
-  type: z.literal('access')
+  type: z.literal("access"),
 });
 
 /**
