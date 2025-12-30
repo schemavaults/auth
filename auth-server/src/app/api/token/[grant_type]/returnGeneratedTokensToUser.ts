@@ -10,12 +10,14 @@ export interface IReturnGeneratedTokensToUserOpts {
   tokenGenerationResult: RequestTokensResult;
   secure: boolean;
   hostname: string;
+  debug?: boolean;
 }
 
 export default async function returnGeneratedTokensToUser({
   tokenGenerationResult,
   secure,
   hostname,
+  debug = false,
 }: IReturnGeneratedTokensToUserOpts): Promise<NextResponse> {
   if (!tokenGenerationResult.success || tokenGenerationResult.error) {
     throw new Error(tokenGenerationResult.message);
@@ -39,6 +41,11 @@ export default async function returnGeneratedTokensToUser({
       throw new TypeError("Refresh token is not an object.");
     }
     const refresh_token: RefreshToken = tokenGenerationResult.tokens.refresh;
+
+    if (debug) {
+      console.log("Setting HTTP-only refresh token on domain: ", hostname);
+    }
+
     await setCookie("refresh_token", refresh_token.token satisfies string, {
       httpOnly: true,
       secure,

@@ -16,7 +16,7 @@ import {
   type UserData,
   type refreshTokenPOSTbody,
 } from "@schemavaults/auth-common";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 import { validateAudience } from "./validate-audience";
 import {
@@ -251,6 +251,7 @@ export async function handleRefreshTokenGrant(
       tokenGenerationResult,
       secure: isHttpsOnly,
       hostname: getHostname(req),
+      debug,
     })) satisfies NextResponse;
   } catch (e: unknown) {
     console.error("Failed to generate new tokens: ", e);

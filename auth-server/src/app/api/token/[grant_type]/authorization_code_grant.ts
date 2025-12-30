@@ -258,6 +258,7 @@ export async function handleAuthorizationCodeGrant(
       tokenGenerationResult,
       secure: isHttpsOnly,
       hostname: getHostname(req),
+      debug,
     })) satisfies NextResponse;
   } catch (e: unknown) {
     console.error("Failed to generate jwt auth tokens: ", e);
