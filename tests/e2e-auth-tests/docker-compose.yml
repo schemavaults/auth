@@ -15,6 +15,8 @@ services:
       CYPRESS_BASE_URL: http://schemavaults-auth:80
     links:
       - schemavaults-auth
+    profiles:
+      - e2e
 
   schemavaults-auth:
     build:
@@ -39,6 +41,8 @@ services:
       PRIVATE_SUPERUSER_INVITE_CODE: superuser
     expose:
       - 80
+    ports:
+      - 80:80
     links:
       - postgres-db
       - postgres-ws-proxy

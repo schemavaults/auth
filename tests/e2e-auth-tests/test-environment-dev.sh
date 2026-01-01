@@ -1,6 +1,11 @@
 #!/bin/bash
-# e2e.sh
-# Launches the containerized auth server and the Cypress test runner
+# test-environment-dev.sh
+# Launches all the containers for the test environment (except for the actual Cypress test runner)
+# Lets you connect to the test environment from your local browser to test it manually
+# Add to /etc/hosts file:
+# 127.0.0.1 schemavaults-auth
+# Then from your browser you can connect to http://schemavaults-auth
+
 
 if ! command -v docker &> /dev/null
 then
@@ -22,7 +27,6 @@ fi
 docker compose \
   -f tests/e2e-auth-tests/docker-compose.yml \
   up \
-  --exit-code-from schemavaults-e2e-auth-tests \
   --abort-on-container-exit \
-  --build \
-  --profile e2e
+  --force-recreate \
+  --build
