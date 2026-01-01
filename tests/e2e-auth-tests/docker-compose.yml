@@ -13,6 +13,7 @@ services:
       - ./cypress/videos:/schemavaults/auth/tests/e2e-auth-tests/cypress/videos/
     environment:
       CYPRESS_BASE_URL: http://schemavaults-auth:80
+      SCHEMAVAULTS_APP_ENVIRONMENT: test
     links:
       - schemavaults-auth
     profiles:

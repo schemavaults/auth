@@ -10,5 +10,7 @@ export default defineConfig({
     PRIVATE_SUPERUSER_INVITE_CODE: "superuser",
     PRIVATE_SUPERUSER_EMAIL: "admin@schemavaults.com",
     PRIVATE_SUPERUSER_PASSWORD: "Password123!",
+    SCHEMAVAULTS_APP_ENVIRONMENT:
+      process.env.SCHEMAVAULTS_APP_ENVIRONMENT ?? "development",
   },
 });

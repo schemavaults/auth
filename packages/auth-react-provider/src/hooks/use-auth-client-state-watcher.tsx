@@ -1,7 +1,7 @@
 "use client";
 
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
-import { RefObject, useEffect } from "react";
+import { type RefObject, useEffect } from "react";
 import { useAuth } from "./use-auth";
 import {
   useAppEnvironment,
@@ -126,7 +126,8 @@ export function useAuthClientStateWatcher({
             authClientRef.current.removeAuthStateChangeListener(listener_id);
           } catch (e: unknown) {
             console.error(
-              "[useAuthClientStateWatcher] Failed to remove auth state change listener: ", e
+              "[useAuthClientStateWatcher] Failed to remove auth state change listener: ",
+              e,
             );
           }
           return;

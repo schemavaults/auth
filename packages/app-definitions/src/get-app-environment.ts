@@ -15,21 +15,97 @@ function stripQuotes(maybeQuotes?: string | undefined): string | undefined {
   return trimmed;
 }
 
-function parseSchemaVaultsAppEnvironmentFromProcessDotEnv(): SchemaVaultsAppEnvironment {
-  if (typeof process.env.SCHEMAVAULTS_APP_ENVIRONMENT !== "string") {
+function parseSchemaVaultsAppEnvironmentFromBrowserProcessDotEnv(): SchemaVaultsAppEnvironment {
+  const isSchemaVaultsAppEnvironmentEnvVarSet =
+    typeof process.env.SCHEMAVAULTS_APP_ENVIRONMENT === "string" &&
+    process.env.SCHEMAVAULTS_APP_ENVIRONMENT.length > 0;
+  const isNextPublicSchemaVaultsAppEnvironmentEnvVarSet =
+    typeof process.env.NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT === "string" &&
+    process.env.NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT.length > 0;
+
+  if (
+    !isSchemaVaultsAppEnvironmentEnvVarSet &&
+    !isNextPublicSchemaVaultsAppEnvironmentEnvVarSet
+  ) {
     throw new Error(
-      "SchemaVaults App Environment configuration could not be resolved from environment variables! Is 'SCHEMAVAULTS_APP_ENVIRONMENT' set?",
+      "SchemaVaults App Environment configuration could not be resolved from environment variables! Is 'SCHEMAVAULTS_APP_ENVIRONMENT' or 'NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT' set?",
     );
   }
-  const parsed = schemaVaultsAppEnvironmentSchema.safeParse(
-    process.env.SCHEMAVAULTS_APP_ENVIRONMENT,
-  )
-  if (!parsed.success) {
+
+  if (
+    isSchemaVaultsAppEnvironmentEnvVarSet &&
+    !isNextPublicSchemaVaultsAppEnvironmentEnvVarSet
+  ) {
+    const parsed = schemaVaultsAppEnvironmentSchema.safeParse(
+      process.env.SCHEMAVAULTS_APP_ENVIRONMENT,
+    );
+    if (!parsed.success) {
+      throw new Error(
+        "process.env.SCHEMAVAULTS_APP_ENVIRONMENT is not set to a valid variable!",
+      );
+    }
+    return parsed.data satisfies SchemaVaultsAppEnvironment;
+  } else if (
+    isNextPublicSchemaVaultsAppEnvironmentEnvVarSet &&
+    !isSchemaVaultsAppEnvironmentEnvVarSet
+  ) {
+    const parsed = schemaVaultsAppEnvironmentSchema.safeParse(
+      process.env.NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT,
+    );
+    if (!parsed.success) {
+      throw new Error(
+        "process.env.NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT is not set to a valid variable!",
+      );
+    }
+    return parsed.data satisfies SchemaVaultsAppEnvironment;
+  } else {
+    // default to SCHEMAVAULTS_APP_ENVIRONMENT if both are set
+    const parsed = schemaVaultsAppEnvironmentSchema.safeParse(
+      process.env.SCHEMAVAULTS_APP_ENVIRONMENT,
+    );
+    if (!parsed.success) {
+      throw new Error(
+        "process.env.SCHEMAVAULTS_APP_ENVIRONMENT is not set to a valid variable!",
+      );
+    }
+    return parsed.data satisfies SchemaVaultsAppEnvironment;
+  }
+}
+
+function assertHttpsUsageInProduction(): void {
+  // @ts-expect-error We're checking if the 'window' global is defined when DOM library is not explicitly loaded
+  if (!window) {
     throw new Error(
-      "process.env.SCHEMAVAULTS_APP_ENVIRONMENT is not set to a valid variable!",
+      "assertHttpsUsageInProduction can only be called in a browser",
     );
   }
-  return parsed.data satisfies SchemaVaultsAppEnvironment;
+  // @ts-expect-error We're checking if the 'window.location' global is defined when DOM library is not explicitly loaded
+  else if (!("location" in window) || !window.location) {
+    throw new Error(
+      "assertHttpsUsageInProduction can only be called in a browser",
+    );
+  }
+  // @ts-expect-error We're checking if the 'window.location' global is defined when DOM library is not explicitly loaded
+  else if (!window.location.protocol) {
+    throw new Error(
+      "assertHttpsUsageInProduction can only be called in a browser",
+    );
+  }
+  // @ts-expect-error We're checking if the 'window.location.protocol' is set to https: when DOM library is not explicitly loaded
+  if (window.location.protocol !== "https:") {
+    throw new Error("Production and staging environments must use HTTPS!");
+  }
+}
+
+function parseSchemaVaultsAppEnvironmentInProductionBrowser(): SchemaVaultsAppEnvironment {
+  const environment: SchemaVaultsAppEnvironment =
+    parseSchemaVaultsAppEnvironmentFromBrowserProcessDotEnv();
+
+  if (environment !== "development" && environment !== "test") {
+    assertHttpsUsageInProduction();
+  }
+
+  return environment;
 }
 
 export function getAppEnvironment(
@@ -48,7 +124,6 @@ export function getAppEnvironment(
     isBrowser = false;
   }
 
-
   if (isBrowser) {
     if (typeof process !== "undefined" && !!process) {
       if (typeof typeof process.env.NODE_ENV === "string") {
@@ -58,7 +133,7 @@ export function getAppEnvironment(
           case "test":
             return "test";
           case "production":
-            return parseSchemaVaultsAppEnvironmentFromProcessDotEnv();
+            return parseSchemaVaultsAppEnvironmentInProductionBrowser();
           default:
         }
       }
