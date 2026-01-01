@@ -29,7 +29,7 @@ import type {
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
 import { z } from "zod";
 import {
-  ApiServerId,
+  type ApiServerId,
   type AppId,
   appIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
@@ -1712,21 +1712,18 @@ export class SchemaVaultsAuthClient
   private uuid(): string {
     let id: string;
     try {
-      id = crypto.randomUUID();
+      id = this.adapter.uuid();
     } catch (e: unknown) {
-      console.warn("Failed to use crypto.randomUUID to generate an ID:", e);
-      console.log("Trying to use adapter...");
-      try {
-        id = this.adapter.uuid();
-      } catch (e: unknown) {
-        console.error(
-          "Failed to generate UUID using both crypto.randomUUID and platform adapter: ",
-          e,
-        );
-        throw new Error(
-          "Failed to generate UUID using both crypto.randomUUID and platform adapter! :(",
-        );
-      }
+      console.error(
+        "Failed to generate UUID using SchemaVaultsAuthClient platform adapter: ",
+        e,
+      );
+      throw new Error(
+        "Failed to generate UUID using SchemaVaultsAuthClient platform adapter!",
+      );
+    }
+    if (typeof id !== "string" || id.length === 0) {
+      throw new TypeError("Invalid UUID generated!");
     }
     return id;
   }
