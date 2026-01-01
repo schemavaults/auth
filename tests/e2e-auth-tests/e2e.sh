@@ -21,7 +21,7 @@ fi
 
 docker compose \
   -f tests/e2e-auth-tests/docker-compose.yml \
-  --profile e2e
+  --profile e2e \
   up \
   --exit-code-from schemavaults-e2e-auth-tests \
   --abort-on-container-exit \
