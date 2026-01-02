@@ -15,6 +15,7 @@ fi
 
 if [ ! -f docker-compose.yml ]; then
     echo "Error: docker-compose.yml for test environment not found!" >&2
+    exit 1
 fi
 
 MONOREPO_ROOT="$(pwd)/../.."
@@ -22,6 +23,7 @@ cd $MONOREPO_ROOT
 
 if [ ! -f package.json ]; then
     echo "Error: Failed to resolve package.json in monorepo root!" >&2
+    exit 1
 fi
 
 docker compose \
