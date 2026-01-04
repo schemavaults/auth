@@ -4,7 +4,6 @@ import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
 import { verifyJWTSignature } from "./verify_signature";
 import type { AuthTokenTypes } from "@schemavaults/auth-common";
 import {
-  getAppEnvironment,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -17,7 +16,7 @@ const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id satisfies string;
 const email = "jalexwhitman@gmail.com" as const satisfies string;
 const uid: string = crypto.randomUUID();
 const sub: string = uid;
-const env: SchemaVaultsAppEnvironment = getAppEnvironment();
+const env: SchemaVaultsAppEnvironment = "test";
 
 describe("JWT Signature 'sig' field", async (): Promise<void> => {
   it("can sign a JWT", async () => {

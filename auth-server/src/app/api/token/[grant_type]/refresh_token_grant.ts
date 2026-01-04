@@ -126,6 +126,7 @@ export async function handleRefreshTokenGrant(
       type: "refresh",
       jwt: refresh_token,
       jwt_keys: refresh_token_keyset,
+      env: environment,
     });
   } catch (e: unknown) {
     let errorDecodingTokenMsg: string = "Failed to decode refresh token";

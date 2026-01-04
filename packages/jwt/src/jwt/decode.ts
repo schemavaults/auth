@@ -17,7 +17,6 @@ import type {
 } from "@schemavaults/auth-common";
 import {
   apiServerIdSchema,
-  getAppEnvironment,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
@@ -31,7 +30,7 @@ interface BaseDecodeJWTOptions<T extends AuthTokenTypes> {
   type: T;
   jwt: string;
   audience?: string;
-  env?: SchemaVaultsAppEnvironment;
+  env: SchemaVaultsAppEnvironment;
 }
 
 interface DecodeJWTWithAllKeysOptions<T extends AuthTokenTypes>
@@ -58,8 +57,10 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     : undefined,
   ...opts
 }: DecodeJWTOptions<T>): Promise<CustomJWTPayload> {
-  const environment: SchemaVaultsAppEnvironment =
-    opts.env ?? getAppEnvironment();
+  const environment: SchemaVaultsAppEnvironment = opts.env;
+  if (!environment) {
+    throw new Error("Invalid app environment to decode JWT within");
+  }
   const debug: boolean = environment === "development";
 
   if (debug) {
