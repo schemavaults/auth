@@ -22,7 +22,7 @@ export function SignOutButton({
           : defaultLogoutPageHref
       }
     >
-      <Button variant={"destructive"}>
+      <Button variant={"destructive"} id="sign-out-button">
         <span className="flex flex-row justify-start items-center">
           <LogOut className="h-4 w-4 mr-2" key="sign-out-icon" /> Sign out
         </span>
