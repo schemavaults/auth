@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/app-definitions",
   "description": "Define frontend or API server applications",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -16,10 +16,13 @@
     "zod": "3.23.8"
   },
   "scripts": {
-    "build": "bun run build:types && bun run build:esm && bun run build:cjs",
+    "build": "bun run typecheck && bun run build:types && bun run build:esm && bun run build:cjs",
     "build:esm": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",
-    "build:cjs": "esbuild --bundle src/index.ts --format=cjs --outfile=dist/index.cjs --platform=node && tsc --project tsconfig.json --emitDeclarationOnly",
-    "build:types": "tsc --project tsconfig.json --noEmit",
+    "build:cjs_default_export": "esbuild --bundle src/index.ts --format=cjs --outfile=dist/index.cjs --platform=node",
+    "build:cjs_get_app_environment_entrypoint": "esbuild --bundle src/get-app-environment/index.ts --format=cjs --outfile=dist/get-app-environment.cjs --platform=node",
+    "build:cjs": "bun run build:cjs_default_export && bun run build:cjs_get_app_environment_entrypoint",
+    "build:types": "tsc --project tsconfig.json --emitDeclarationOnly",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "bun test",
     "cleanup:compiled_tests_in_dist_directory": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
     "cleanup": "bun run cleanup:compiled_tests_in_dist_directory",
@@ -52,6 +55,16 @@
       "types": "./dist/*",
       "import": "./dist/*",
       "require": "./dist/*"
+    },
+    "./get-app-environment": {
+      "types": "./dist/get-app-environment/index.d.ts",
+      "import": "./dist/get-app-environment/index.js",
+      "require": "./dist/get-app-environment.cjs"
+    },
+    "./get-app-environment/*": {
+      "types": "./dist/get-app-environment/*",
+      "import": "./dist/get-app-environment/*",
+      "require": "./dist/get-app-environment/*"
     }
   },
   "publishConfig": {

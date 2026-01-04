@@ -6,7 +6,7 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { defaultAuthMiddlewareRules } from "@schemavaults/auth-common";
-import { AuthProvider } from "@schemavaults/auth-react-provider";
+import AuthProvider from "@schemavaults/auth-react-provider";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useMemo, type ReactElement } from "react";
 
@@ -25,6 +25,8 @@ export function ClientAuthProvider({
     if (isPrivateBetaEnabled()) {
       return true;
     } else if (environment === "development") {
+      return true;
+    } else if (environment === "test") {
       return true;
     }
     return false;

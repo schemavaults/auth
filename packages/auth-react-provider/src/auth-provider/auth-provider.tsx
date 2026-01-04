@@ -22,7 +22,6 @@ import useAuthClientInitialization, {
   type UseAuthClientInitializationOptions,
 } from "@/hooks/use-auth-client-initialization";
 import { AuthMiddlewareManager } from "./auth-middleware-manager";
-import { useAppEnvironment } from "@/hooks/use-app-environment";
 import {
   getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
@@ -74,8 +73,7 @@ function assertHttpsInProduction(
 function AppEnvironmentAwareAuthProvider(
   props: SchemaVaultsAuthProviderProps,
 ): ReactElement {
-  const appEnvironment: SchemaVaultsAppEnvironment = useAppEnvironment();
-
+  const appEnvironment: SchemaVaultsAppEnvironment = props.environment;
   // throw if production/staging and not https
   assertHttpsInProduction(appEnvironment);
 
@@ -234,6 +232,7 @@ function AppEnvironmentAwareAuthProvider(
       default_audiences: props.default_audiences,
       debug,
       authorize_uri,
+      environment: appEnvironment,
     };
 
   // Initialize auth client, store in the authClientRef

@@ -26,6 +26,7 @@ services:
       args:
         BUN_VERSION: 1.3.3
         NODEJS_VERSION: 24-alpine
+        NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS: yes
       target: production
     depends_on:
       - postgres-db
@@ -40,6 +41,7 @@ services:
       PRIVATE_GLOBAL_PASSWORD_SALT: examplePasswordSalt12
       PRIVATE_PASSWORD_HASH_ROUNDS: 5
       PRIVATE_SUPERUSER_INVITE_CODE: superuser
+      NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS: yes
     expose:
       - 80
     ports:

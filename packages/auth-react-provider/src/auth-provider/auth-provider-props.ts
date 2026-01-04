@@ -29,5 +29,5 @@ export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
 
   default_audiences?: InitializeAuthClientOptions["default_audiences"];
 
-  environment?: SchemaVaultsAppEnvironment;
+  environment: SchemaVaultsAppEnvironment;
 }

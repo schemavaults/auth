@@ -57,8 +57,18 @@ export function useCurrentUser(): UserData | null {
 
   useAuthClientStateWatcher({
     debug,
-    onAuthStateChanged: async ({ auth }): Promise<void> => {
-      setUser(auth.currentUser);
+    onAuthStateChanged: async function updateCurrentUserOnAuthStateChanged({
+      auth,
+    }): Promise<void> {
+      const user = auth.currentUser;
+      if (debug) {
+        console.log(
+          "[updateCurrentUserOnAuthStateChanged] Updating current user: ",
+          user,
+        );
+      }
+      setUser(user);
+      return;
     },
   });
 

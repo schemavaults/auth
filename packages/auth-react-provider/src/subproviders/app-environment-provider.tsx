@@ -1,68 +1,44 @@
 "use client";
 
 import {
-  getAppEnvironment,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
 import { SchemaVaultsAppEnvironmentContext } from "@/contexts/app-environment-context";
 import { type PropsWithChildren, useMemo, type ReactElement } from "react";
-import { getAppEnvironmentOnClientBasedOnWindowHref } from "@/lib/get-app-environment-on-client-based-on-window-href";
 
 export interface SchemaVaultsAppEnvironmentContextProviderProps
   extends PropsWithChildren {
   verbose?: boolean;
-  environment?: SchemaVaultsAppEnvironment;
+  environment: SchemaVaultsAppEnvironment;
 }
 
 export function SchemaVaultsAppEnvironmentContextProvider({
   children,
   verbose,
-  ...props
+  environment,
 }: SchemaVaultsAppEnvironmentContextProviderProps): ReactElement {
-  const app_env: SchemaVaultsAppEnvironment | undefined = useMemo(():
-    | SchemaVaultsAppEnvironment
-    | undefined => {
-    if (
-      typeof props.environment === "string" &&
-      schemaVaultsAppEnvironmentSchema.safeParse(props.environment).success
-    ) {
-      return props.environment;
-    }
-
-    try {
-      // Try to load environment based on the current URL for client
-      if (window) {
+  const validated_app_env: SchemaVaultsAppEnvironment =
+    useMemo((): SchemaVaultsAppEnvironment => {
+      if (
+        typeof environment === "string" &&
+        schemaVaultsAppEnvironmentSchema.safeParse(environment).success
+      ) {
         if (verbose) {
           console.log(
-            "[SchemaVaultsAppEnvironmentContextProvider] Loading environment from client-side...",
+            "[SchemaVaultsAppEnvironmentContextProvider] environment: ",
+            environment,
           );
         }
-        return getAppEnvironmentOnClientBasedOnWindowHref(window);
+        return environment;
+      } else {
+        throw new TypeError(
+          "Received invalid 'environment' to provide to children through SchemaVaultsAppEnvironmentContextProvider",
+        );
       }
-    } catch (e: unknown) {
-      /** no-op */
-      void e;
-    }
+    }, [environment, verbose]);
 
-    try {
-      const serverSideAppEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
-      if (
-        schemaVaultsAppEnvironmentSchema.safeParse(serverSideAppEnv).success
-      ) {
-        return serverSideAppEnv;
-      }
-    } catch (e: unknown) {
-      /** no-op */
-      void e;
-    }
-
-    // Else, client will have to fetch /api/environment to load current app environment
-
-    return undefined;
-  }, [props.environment, verbose]);
-
-  if (!app_env) {
+  if (!validated_app_env) {
     throw new Error(
       "Failed to load app environment within SchemaVaultsAppEnvironmentContextProvider!",
     );
@@ -70,8 +46,8 @@ export function SchemaVaultsAppEnvironmentContextProvider({
 
   return (
     <SchemaVaultsAppEnvironmentContext.Provider
-      value={app_env}
-      key={`schemavaults-app-environment-provider-[${app_env}]`}
+      value={validated_app_env}
+      key={`schemavaults-app-environment-provider-[${validated_app_env}]`}
     >
       {children}
     </SchemaVaultsAppEnvironmentContext.Provider>

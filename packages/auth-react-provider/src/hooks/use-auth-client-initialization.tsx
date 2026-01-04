@@ -6,7 +6,6 @@ import {
 } from "@schemavaults/auth-client-sdk";
 import { type RefObject, useEffect } from "react";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
-import useAppEnvironment from "./use-app-environment";
 import AuthClientFactory from "@/lib/auth-client-factory";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "./use-debug";
 
@@ -21,6 +20,7 @@ export interface UseAuthClientInitializationOptions {
   app_id: string;
   debug?: boolean;
   default_audiences?: InitializeAuthClientOptions["default_audiences"];
+  environment: SchemaVaultsAppEnvironment;
 }
 
 export function useAuthClientInitialization(
@@ -32,9 +32,13 @@ export function useAuthClientInitialization(
     successful_logout_redirect_uri,
     authorize_uri,
   } = opts;
-  const { authClientRef, auth_server_uri, app_id, default_audiences } = opts;
-
-  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
+  const {
+    authClientRef,
+    auth_server_uri,
+    app_id,
+    default_audiences,
+    environment,
+  } = opts;
 
   const debug: boolean = useDebugWithSpecifiedBooleanOrLookupDefault(
     environment,
@@ -90,7 +94,8 @@ export function useAuthClientInitialization(
         } catch (e: unknown) {
           if (debug) {
             console.error(
-              "[useAuthClientInitialization] Failed to initialize auth client: ", e
+              "[useAuthClientInitialization] Failed to initialize auth client: ",
+              e,
             );
           }
           throw new Error("Failed to initialize auth client.");
@@ -105,7 +110,19 @@ export function useAuthClientInitialization(
         return;
       }
     },
-    [ready, setReady, debug, app_id, auth_server_uri, authorize_uri, successful_authentication_redirect_uri, successful_logout_redirect_uri, environment, authClientRef, default_audiences],
+    [
+      ready,
+      setReady,
+      debug,
+      app_id,
+      auth_server_uri,
+      authorize_uri,
+      successful_authentication_redirect_uri,
+      successful_logout_redirect_uri,
+      environment,
+      authClientRef,
+      default_audiences,
+    ],
   ); // end of auth client initialization side-effect
 }
 

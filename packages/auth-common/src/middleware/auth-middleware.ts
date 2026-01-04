@@ -7,10 +7,7 @@ import {
   type AuthMiddlewareRules,
   type AuthenticationStatus,
 } from "./middleware-rules";
-import {
-  getAppEnvironment,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { AuthMiddlewareError } from "./auth-middleware-error";
 
 export interface AuthMiddlewareOptions {
@@ -29,7 +26,7 @@ export interface AuthMiddlewareOptions {
   /** Page which users should be sent to after successfully logging out */
   successful_logout_redirect_uri?: string;
   /** App Environment. This can usually be loaded from the env without passing it explicitly... but it might throw if not ¯\_(ツ)_/¯ */
-  environment?: SchemaVaultsAppEnvironment;
+  environment: SchemaVaultsAppEnvironment;
   /** Enable debug logging. Defaults to 'true' in non-production environments. */
   debug?: boolean;
 }
@@ -58,16 +55,12 @@ export function AuthMiddleware({
   unauthedOnAuthedRouteRedirectTo,
   authorize_uri,
   successful_logout_redirect_uri,
+  environment,
   ...opts
 }: AuthMiddlewareOptions): AuthMiddlewareResult {
   // Determine environment
-  let environment: SchemaVaultsAppEnvironment;
-  if (opts.environment) {
-    environment = opts.environment;
-  } else if (typeof window === "undefined" || !window) {
-    environment = getAppEnvironment();
-  } else {
-    throw new Error(
+  if (!environment) {
+    throw new TypeError(
       "[AuthMiddleware] Did not receive an 'environment' input option!",
     );
   }
@@ -122,6 +115,7 @@ export function AuthMiddleware({
     parsedPath,
     authStatus,
     rules,
+    environment,
   );
 
   if (debug) {

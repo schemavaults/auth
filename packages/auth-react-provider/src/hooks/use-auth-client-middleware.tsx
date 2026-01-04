@@ -114,7 +114,7 @@ export function useAuthClientMiddleware(
 
       if (debug) {
         console.log(
-          `[useAuthClientStateWatcher] Auth SDK State Change Event Auth middleware result: `,
+          `[onAuthStateChangedRunMiddleware] Auth SDK State Change Event Auth middleware result: `,
           authMiddlewareResult,
         );
       }
@@ -122,7 +122,7 @@ export function useAuthClientMiddleware(
       if (authMiddlewareResult.redirect) {
         if (debug) {
           console.log(
-            `[useAuthClientStateWatcher] ` +
+            `[onAuthStateChangedRunMiddleware] ` +
               `Redirecting to: ${authMiddlewareResult.redirectTo} (from ${
                 window.location.origin
               } @ ${opts.path})`,

@@ -1,3 +1,5 @@
+// (client)/layout.tsx
+
 import {
   getAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
@@ -7,9 +9,9 @@ import type { PropsWithChildren, ReactElement } from "react";
 import "server-only";
 import ClientOnlyGlobalProviders from "./client-global-providers";
 
-export default function ClientOnlyPageLayout({
+export default async function ClientFacingServerPageLayout({
   children,
-}: PropsWithChildren): ReactElement {
+}: PropsWithChildren): Promise<ReactElement> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (!schemaVaultsAppEnvironmentSchema.safeParse(environment)) {
     throw new Error(

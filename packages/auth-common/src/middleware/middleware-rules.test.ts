@@ -1,18 +1,45 @@
-import {test, expect} from "bun:test";
+import { test, expect } from "bun:test";
 
-import {parseNavigationPath} from "./parse-navigation-path";
-import { type AuthMiddlewareRules, evaluateAuthMiddlewareRules, AuthenticationStatus } from "./middleware-rules";
+import {
+  type NavigationPath,
+  parseNavigationPath,
+} from "./parse-navigation-path";
+import {
+  type AuthMiddlewareRules,
+  evaluateAuthMiddlewareRules as _evaluateAuthMiddlewareRules,
+  type AuthenticationStatus,
+} from "./middleware-rules";
+
+function evaluateAuthMiddlewareRules(
+  currentPath: NavigationPath,
+  authStatus: AuthenticationStatus,
+  rules: AuthMiddlewareRules,
+) {
+  return _evaluateAuthMiddlewareRules(currentPath, authStatus, rules, "test");
+}
 
 const examplePublicRoutes = [
   [], //              /
-  ["api", "token"] // /api/token    
+  ["api", "token"], // /api/token
 ];
-const exampleUnauthedRoutes = [["auth", "login"], ["auth", "register"], ["auth", "forgot-password"]];
-const exampleAuthedRoutes = [["vaults"], ["vaults", "my-vault"], ["vaults", "my-vault", "secrets"]];
-const exampleAdminRoutes = [["admin"], ["admin", "users"], ["admin", "users", "create"]];
+const exampleUnauthedRoutes = [
+  ["auth", "login"],
+  ["auth", "register"],
+  ["auth", "forgot-password"],
+];
+const exampleAuthedRoutes = [
+  ["vaults"],
+  ["vaults", "my-vault"],
+  ["vaults", "my-vault", "secrets"],
+];
+const exampleAdminRoutes = [
+  ["admin"],
+  ["admin", "users"],
+  ["admin", "users", "create"],
+];
 const exampleApiRoutes = [
   ["trpc"], //        /trpc/*
-  ["api"] //           /api/*
+  ["api"], //           /api/*
 ];
 
 const exampleRules: AuthMiddlewareRules = {
@@ -20,87 +47,103 @@ const exampleRules: AuthMiddlewareRules = {
   unauthed: exampleUnauthedRoutes,
   authed: exampleAuthedRoutes,
   admin: exampleAdminRoutes,
-  api: exampleApiRoutes
+  api: exampleApiRoutes,
 };
 
 test("unauthenticated users are not redirected from public routes", () => {
-  expect(evaluateAuthMiddlewareRules(
-    parseNavigationPath("/"),
-    {
-      status: "logged-out"
-    } satisfies AuthenticationStatus,
-    exampleRules
-  )).toEqual(["logged-out", "on", "public"]);
+  expect(
+    evaluateAuthMiddlewareRules(
+      parseNavigationPath("/"),
+      {
+        status: "logged-out",
+      } satisfies AuthenticationStatus,
+      exampleRules,
+    ),
+  ).toEqual(["logged-out", "on", "public"]);
 });
 
 test("authenticated users are not redirected from public routes", () => {
-  expect(evaluateAuthMiddlewareRules(
-    parseNavigationPath("/"),
-    {
-      status: 'logged-in'
-    } satisfies AuthenticationStatus,
-    exampleRules
-  )).toEqual(["logged-in", "on", "public"]);
+  expect(
+    evaluateAuthMiddlewareRules(
+      parseNavigationPath("/"),
+      {
+        status: "logged-in",
+      } satisfies AuthenticationStatus,
+      exampleRules,
+    ),
+  ).toEqual(["logged-in", "on", "public"]);
 });
 
 test("unauthenticated users are not redirected from unauthed routes", () => {
-  expect(evaluateAuthMiddlewareRules(
-    parseNavigationPath("/auth/login"),
-    {
-      status: "logged-out"
-    } satisfies AuthenticationStatus,
-    exampleRules
-  )).toEqual(["logged-out", "on", "unauthed"]);
+  expect(
+    evaluateAuthMiddlewareRules(
+      parseNavigationPath("/auth/login"),
+      {
+        status: "logged-out",
+      } satisfies AuthenticationStatus,
+      exampleRules,
+    ),
+  ).toEqual(["logged-out", "on", "unauthed"]);
 });
 
 test("authenticated users are redirected from unauthed routes", () => {
-  expect(evaluateAuthMiddlewareRules(
-    parseNavigationPath("/auth/login"),
-    {
-      status: 'logged-in'
-    } satisfies AuthenticationStatus,
-    exampleRules
-  )).toEqual(["logged-in", "on", "unauthed"]);
+  expect(
+    evaluateAuthMiddlewareRules(
+      parseNavigationPath("/auth/login"),
+      {
+        status: "logged-in",
+      } satisfies AuthenticationStatus,
+      exampleRules,
+    ),
+  ).toEqual(["logged-in", "on", "unauthed"]);
 });
 
 test("unauthenticated users are redirected from authed routes", () => {
-  expect(evaluateAuthMiddlewareRules(
-    parseNavigationPath("/vaults/my-vault"),
-    {
-      status: "logged-out"
-    } satisfies AuthenticationStatus,
-    exampleRules
-  )).toEqual(["logged-out", "on", "authed"]);
+  expect(
+    evaluateAuthMiddlewareRules(
+      parseNavigationPath("/vaults/my-vault"),
+      {
+        status: "logged-out",
+      } satisfies AuthenticationStatus,
+      exampleRules,
+    ),
+  ).toEqual(["logged-out", "on", "authed"]);
 });
 
 test("authenticated users are not redirected from authed routes", () => {
-  expect(evaluateAuthMiddlewareRules(
-    parseNavigationPath("/vaults/my-vault"),
-    {
-      status: 'logged-in'
-    } satisfies AuthenticationStatus,
-    exampleRules
-  )).toEqual(["logged-in", "on", "authed"]);
+  expect(
+    evaluateAuthMiddlewareRules(
+      parseNavigationPath("/vaults/my-vault"),
+      {
+        status: "logged-in",
+      } satisfies AuthenticationStatus,
+      exampleRules,
+    ),
+  ).toEqual(["logged-in", "on", "authed"]);
 });
 
 test("the login page is an unauthed route", () => {
-  expect(evaluateAuthMiddlewareRules(
-    parseNavigationPath("/auth/login"),
-    {
-      status: 'logged-in'
-    } satisfies AuthenticationStatus,
-    exampleRules
-  )[2]).toEqual("unauthed");
+  expect(
+    evaluateAuthMiddlewareRules(
+      parseNavigationPath("/auth/login"),
+      {
+        status: "logged-in",
+      } satisfies AuthenticationStatus,
+      exampleRules,
+    )[2],
+  ).toEqual("unauthed");
 });
 
 test("the register page is an unauthed route", () => {
-  expect(evaluateAuthMiddlewareRules(
-    parseNavigationPath("/auth/login"),
-    {
-      status: 'logged-in'
-    } satisfies AuthenticationStatus,
-    exampleRules
-  )[2]).toEqual("unauthed");
+  expect(
+    evaluateAuthMiddlewareRules(
+      parseNavigationPath("/auth/login"),
+      {
+        status: "logged-in",
+      } satisfies AuthenticationStatus,
+      exampleRules,
+    )[2],
+  ).toEqual("unauthed");
 });
 
 test("routes ending in /api or /trpc return a 401 error, not a redirect", () => {
@@ -108,22 +151,22 @@ test("routes ending in /api or /trpc return a 401 error, not a redirect", () => 
     const [status, on, route_type] = evaluateAuthMiddlewareRules(
       parseNavigationPath(route),
       authStatus,
-      exampleRules
+      exampleRules,
     );
-  
+
     expect(status).toEqual(authStatus.status);
     expect(on).toEqual("on");
     expect(route_type).toEqual("api");
   }
 
   const loggedIn = {
-    status: 'logged-in'
+    status: "logged-in",
   } satisfies AuthenticationStatus;
 
   const loggedOut = {
-    status: 'logged-out'
+    status: "logged-out",
   } satisfies AuthenticationStatus;
-  
+
   testApiRoute("/api/delete/the/production/database", loggedIn);
   testApiRoute("/api", loggedIn);
   testApiRoute("/trpc/delete/the/production/database", loggedIn);
@@ -139,16 +182,16 @@ test("routes ending in /api or /trpc that are explicitly public are treated as p
     const [status, on, route_type] = evaluateAuthMiddlewareRules(
       parseNavigationPath(route),
       {
-        status: 'logged-in'
+        status: "logged-in",
       } satisfies AuthenticationStatus,
-      exampleRules
+      exampleRules,
     );
-  
+
     expect(status).toEqual("logged-in");
     expect(on).toEqual("on");
     expect(route_type).toEqual("public");
   }
-  
+
   testPublicApiRoute("/api/token");
   testPublicApiRoute("/api/token/refresh/blah/blah/blah");
 });

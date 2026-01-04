@@ -3,10 +3,11 @@ import type {
   RefreshToken,
   RequestTokensResult,
 } from "@schemavaults/auth-common";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { setCookie } from "cookies-next";
 
 export interface IReturnGeneratedTokensToUserOpts {
+  req: NextRequest;
   tokenGenerationResult: RequestTokensResult;
   secure: boolean;
   hostname: string;
@@ -14,6 +15,7 @@ export interface IReturnGeneratedTokensToUserOpts {
 }
 
 export default async function returnGeneratedTokensToUser({
+  req,
   tokenGenerationResult,
   secure,
   hostname,
@@ -33,34 +35,45 @@ export default async function returnGeneratedTokensToUser({
     );
   }
 
-  if (tokenGenerationResult.tokens?.refresh) {
-    if (typeof tokenGenerationResult.tokens.refresh !== "object") {
-      console.error(
-        "Refresh token is not an object. Any replacement of refresh token with HTTP-only cookie should happen after this point.",
-      );
-      throw new TypeError("Refresh token is not an object.");
-    }
-    const refresh_token: RefreshToken = tokenGenerationResult.tokens.refresh;
-
-    if (debug) {
-      console.log("Setting HTTP-only refresh token on domain: ", hostname);
-    }
-
-    await setCookie("refresh_token", refresh_token.token satisfies string, {
-      httpOnly: true,
-      secure,
-      expires: new Date(refresh_token.exp satisfies number),
-      sameSite: "strict",
-      domain: hostname,
-    });
+  let refresh_token: RefreshToken | undefined = undefined;
+  if (
+    // Extract refresh token from generation, pass as http-only cookie
+    tokenGenerationResult.tokens?.refresh &&
+    typeof tokenGenerationResult.tokens.refresh === "object"
+  ) {
+    refresh_token = tokenGenerationResult.tokens.refresh;
     // replace actual token with indicator that token is set as http-only cookie
     tokenGenerationResult.tokens.refresh = "AS_HTTP_ONLY_COOKIE";
   }
 
-  return NextResponse.json(
+  const success_response = NextResponse.json(
     tokenGenerationResult satisfies RequestTokensResult,
     {
       status: 200,
     },
   );
+
+  async function setRefreshTokenCookie(): Promise<void> {
+    if (refresh_token) {
+      if (debug) {
+        console.log(
+          `Setting HTTP${secure ? "S" : ""}-only refresh token on domain: `,
+          hostname,
+        );
+      }
+
+      await setCookie("refresh_token", refresh_token.token satisfies string, {
+        httpOnly: true,
+        secure,
+        expires: new Date(refresh_token.exp satisfies number),
+        sameSite: secure ? "strict" : "lax",
+        domain: hostname,
+        req,
+        res: success_response,
+      });
+    }
+  }
+  await setRefreshTokenCookie();
+
+  return success_response;
 }

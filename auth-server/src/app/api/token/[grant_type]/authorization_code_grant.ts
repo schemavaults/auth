@@ -255,6 +255,7 @@ export async function handleAuthorizationCodeGrant(
     const isHttpsOnly: boolean =
       environment !== "development" && environment !== "test";
     return (await returnGeneratedTokensToUser({
+      req,
       tokenGenerationResult,
       secure: isHttpsOnly,
       hostname: getHostname(req),

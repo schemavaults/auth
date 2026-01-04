@@ -3,11 +3,25 @@ import type { NextConfig } from "next";
 import { join, normalize } from "path";
 import { existsSync, readFileSync } from "fs";
 
-const output =
-  typeof process.env.NEXT_STANDALONE_DOCKER_BUILD === "string" &&
-  process.env.NEXT_STANDALONE_DOCKER_BUILD.length > 0
-    ? "standalone"
-    : undefined;
+function isNextStandaloneDockerBuildFlagSet(): boolean {
+  return (
+    typeof process.env.NEXT_STANDALONE_DOCKER_BUILD === "string" &&
+    process.env.NEXT_STANDALONE_DOCKER_BUILD.length > 0
+  );
+}
+
+function isIncludeProductionSourceMapsFlagSet(): boolean {
+  return (
+    typeof process.env.NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS === "string" &&
+    process.env.NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS.length > 0 &&
+    process.env.NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS !== "false" &&
+    process.env.NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS !== "no"
+  );
+}
+
+const output: "standalone" | undefined = isNextStandaloneDockerBuildFlagSet()
+  ? "standalone"
+  : undefined;
 
 function resolveAuthServerRootDir(): string {
   let currentDirectory: string = __dirname;
@@ -57,6 +71,7 @@ const nextConfig: NextConfig = {
     root: monorepoRoot,
   },
   outputFileTracingRoot: monorepoRoot,
+  productionBrowserSourceMaps: isIncludeProductionSourceMapsFlagSet(),
 };
 
 export default nextConfig;

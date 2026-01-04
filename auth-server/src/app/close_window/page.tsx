@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator, Wordmark } from "@schemavaults/ui";
-import { ServerRuntime } from "next";
+import type { ServerRuntime } from "next";
 import { useEffect, type ReactElement } from "react";
 
 function CloseWindowNowPage(): ReactElement {

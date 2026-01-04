@@ -63,13 +63,17 @@ export function useAuthClientStateWatcher({
           return;
         }
 
-        const onAuthStateChangedHandlerInput: OnAuthStateChangedHandlerInput = {
-          auth: authClient,
-          debug,
-        };
-
         try {
-          await onAuthStateChanged(onAuthStateChangedHandlerInput);
+          if (debug) {
+            console.log(
+              "[useAuthClientStateWatcher] Calling onAuthStateChanged() with auth client: ",
+              authClient,
+            );
+          }
+          await onAuthStateChanged({
+            auth: authClient,
+            debug,
+          } satisfies OnAuthStateChangedHandlerInput);
         } catch (e: unknown) {
           console.error(
             "There was an error running the onAuthStateChanged callback passed to useAuthClientStateWatcher: ",
