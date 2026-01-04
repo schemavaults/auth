@@ -58,9 +58,18 @@ export function useAppEnvironment(): SchemaVaultsAppEnvironment {
 
   // Attempt to resolve app environment from env. vars. on server-side
   if (runtime === "server") {
-    if (window) {
-      throw new Error("Server-side code running on the client!");
+    class WindowVarExistsOnServerRuntimeError extends Error {}
+    try {
+      if (window)
+        throw new WindowVarExistsOnServerRuntimeError(
+          "Server-side code running on the client!",
+        );
+    } catch (e: unknown) {
+      if (e instanceof WindowVarExistsOnServerRuntimeError) {
+        throw e;
+      }
     }
+
     return resolveAppEnvironmentOnServer();
   }
   // On the client, we should have access to the app environment context
