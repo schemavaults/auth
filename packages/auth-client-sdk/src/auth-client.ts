@@ -1,4 +1,4 @@
-import { AuthenticateURLEncoder } from "@/lib/authenticate-url-encoder";
+import AuthenticateURLEncoder from "@/lib/authenticate-url-encoder";
 import {
   PKCE_ProofKeyManager,
   requestTokensResultSchema,
@@ -12,7 +12,7 @@ import {
   type RequestTokensResult,
   audienceRefSchema,
   audienceSchema,
-  SuccessfullyGeneratedTokensRecord,
+  type SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
 import type {
   IAuthClientPOSTResultType,

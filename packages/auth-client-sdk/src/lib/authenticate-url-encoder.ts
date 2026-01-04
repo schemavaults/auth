@@ -103,3 +103,5 @@ export class AuthenticateURLEncoder {
     return authenticate_url;
   }
 }
+
+export default AuthenticateURLEncoder;
