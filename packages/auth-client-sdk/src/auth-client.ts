@@ -40,6 +40,7 @@ import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-typ
 import isPrivateBeta from "@/lib/is-private-beta";
 import debugPrintTokensAsTable from "@/lib/debugPrintTokensAsTable";
 import debugPrintUserDataAsTable from "@/lib/debugPrintUserDataAsTable";
+import { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
@@ -1164,163 +1165,41 @@ export class SchemaVaultsAuthClient
 
   /**
    * @name acquireAccessToken
-   * @description Attempt to acquire an access token in order to communicate with a SchemaVaults resource server
+   * @description Attempt to acquire an access token in order to communicate with a SchemaVaults resource server.
+   * This will attempt to load a locally-saved refresh token in order to exchange it for an access token.
+   * @see this.exchangeAuthTokens()
    */
   public async acquireAccessToken(
     opts: AcquireAccessTokenOptions,
   ): Promise<AccessToken> {
-    if (this.DEBUG) {
-      console.log(
-        "[SchemaVaultsAuthClient] Attempting to acquire access token with opts: ",
-        opts,
-      );
-    }
-
-    if (!opts.ensure_fresh) {
-      const cached = this.getAccessTokenFromCache(opts.token_id);
-      if (cached) {
-        if (cached.exp < Date.now() + 10 * 1000) {
-          // Clear the access token from the cache
-          try {
-            this.adapter.clearAccessToken(opts.token_id);
-          } catch (e: unknown) {
-            console.error("Failed to clear access token from cache:", e);
-          }
-        } else {
-          // Use access token if it doesn't expire in the next 10 seconds
-          return cached;
-        }
-      }
-      // Else, access token needs to be requested from server
-
-      if (this.DEBUG) {
-        console.warn(
-          "[SchemaVaultsAuthClient] Access token not in cache, must attempt to get one from auth platform...",
-        );
-      }
-    }
-
-    let refresh_token: RefreshToken | null =
-      opts.refresh_token ?? this.getRefreshTokenFromCache();
-    if (!refresh_token) {
-      if (this.DEBUG) {
-        console.warn(
-          "[SchemaVaultsAuthClient] Client is attempting to get an access token, but they don't have a refresh token...",
-        );
-      }
-      throw new Error(
-        "No refresh token available to exchange for access token!",
-      );
-    } else {
-      if (this.DEBUG) {
-        console.log(
-          "[SchemaVaultsAuthClient] Found refresh token VIA auth client adapter to use in access-token-exchange: ",
-          refresh_token,
-        );
-      }
-    }
-    console.assert(
-      !!refresh_token,
-      "Expected a refresh token to have been successfully retrieved if this point was reached!",
-    );
-
-    // where is this access token for? (e.g. auth server? registry? some other API server?)
-    let audience: string;
+    let tradeRefreshTokenForAccessToken: (
+      inputs: IAcquireAccessTokenFnOptions,
+    ) => Promise<AccessToken>;
     try {
-      const parsed_audience = audienceRefSchema.safeParse(opts.audience);
-      if (!parsed_audience.success) {
-        console.error(
-          "Failed to parse desired audience for access token load request: ",
-          parsed_audience.error,
+      tradeRefreshTokenForAccessToken = await import(
+        "@/lib/acquire-access-token"
+      ).then((mod) => mod.default);
+      if (typeof tradeRefreshTokenForAccessToken !== "function") {
+        throw new Error(
+          "Expected default export from 'acquire-access-token' module to be a function!",
         );
-        if (this.DEBUG) {
-          console.error(
-            "Error resulted from audience value of: ",
-            opts.audience,
-          );
-        }
-        throw parsed_audience.error;
       }
-      audience = parsed_audience.data;
-    } catch (e: unknown) {
+    } catch (error) {
       console.error(
-        "Failed to parse 'audience' to request for new access token to exchange refresh token for: ",
-        e,
+        "[SchemaVaultsAuthClient] Failed to import acquire-access-token module:",
+        error,
       );
-      throw new Error(
-        "Failed to parse 'audience' to request for new access token to exchange refresh token for!",
-      );
+      throw new Error("Failed to import 'acquire-access-token' module");
     }
 
-    console.assert(
-      typeof audience === "string",
-      "Expected 'audience' to be a string if this point was reached!",
-    );
-
-    // refresh token => access token
-    let tokens: (RequestTokensResult & { success: true })["tokens"];
-    try {
-      if (this.DEBUG) {
-        console.log(
-          `[SchemaVaultsAuthClient] Attempting to acquire access token of audience '${audience}' with refresh token: `,
-          refresh_token,
-        );
-      }
-      tokens = await this.exchangeAuthTokens(refresh_token, audience);
-    } catch (e: unknown) {
-      if (this.DEBUG) {
-        console.error(
-          `Failed to exchange refresh token for access token of audience: "${audience}": `,
-          e,
-        );
-      }
-      if (e instanceof Error) {
-        const eMsg: string = e.message;
-        if (
-          eMsg.includes("token has expired") ||
-          eMsg.includes("ERR_JWT_EXPIRED")
-        ) {
-          await this.logout();
-          throw new Error(
-            "Failed to exchange refresh token for access token; refresh token expired! We logged you out.",
-          );
-        }
-      }
-
-      throw new Error("Failed to exchange refresh token for access token");
-    }
-
-    const access_tokens = tokens?.access;
-    if (!access_tokens)
-      throw new Error(
-        "No access tokens included in response from token acquisition endpoint",
-      );
-
-    const access = access_tokens[audience];
-    if (!access) {
-      throw new Error(
-        `No access token included with the audience originally requested: "${audience}"`,
-      );
-    }
-
-    if (access === "AS_HTTP_ONLY_COOKIE") {
-      throw new Error(
-        `Access token is HTTP-only cookie, cannot be used in client SDK`,
-      );
-    }
-
-    if (!opts.dont_cache) {
-      this.storeAccessToken(opts.token_id, access);
-    }
-
-    if (this.DEBUG) {
-      console.log(
-        `[SchemaVaultsAuthClient] Acquired access token of audience '${audience}':`,
-        access,
-      );
-    }
-
-    return access;
+    const adapter: ISchemaVaultsAuthClientAdapter = this.adapter;
+    return await tradeRefreshTokenForAccessToken({
+      opts,
+      adapter,
+      logout: this.logout.bind(this),
+      exchangeAuthTokens: this.exchangeAuthTokens.bind(this),
+      debug: this.debug,
+    });
   }
 
   private storeUserData(userData: UserData): void {
@@ -1540,7 +1419,7 @@ export class SchemaVaultsAuthClient
     refreshToken: RefreshToken | "AS_HTTP_ONLY_COOKIE",
     audience?: string | string[],
     replaceRefreshToo?: boolean,
-  ): Promise<(RequestTokensResult & { success: true })["tokens"] & object> {
+  ): Promise<SuccessfullyGeneratedTokensRecord> {
     if (this.DEBUG) {
       console.log(
         "[SchemaVaultsAuthClient] Attempting to send request to exchange refresh token for access token...",
@@ -1593,6 +1472,13 @@ export class SchemaVaultsAuthClient
     }
 
     if (typeof refreshToken === "object" && refreshToken.type === "refresh") {
+      if (
+        typeof refreshToken.token !== "string" ||
+        refreshToken.token.length === 0
+      ) {
+        throw new TypeError("Expected 'token' to be a non-empty string!");
+      }
+
       exchangeAuthTokensReqHeaders["Authorization"] =
         `Bearer ${refreshToken.token}`;
     } else if (
