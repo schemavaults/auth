@@ -27,6 +27,7 @@ declare global {
       ): Chainable<number>;
       create_and_login_as_superuser(): Chainable<boolean>;
       has_error_toast(containing_message?: string): Chainable<boolean>;
+      logout(): Chainable<void>;
     }
   }
 }

@@ -3,6 +3,7 @@
 import createAndLoginAsSuperuser from "./actions/create_and_login_as_superuser";
 import hasErrorToast from "./actions/has_error_toast";
 import login from "./actions/login";
+import logout from "./actions/logout";
 import register from "./actions/register";
 
 // ***********************************************
@@ -52,3 +53,5 @@ Cypress.Commands.add(
 );
 
 Cypress.Commands.add("has_error_toast", hasErrorToast);
+
+Cypress.Commands.add("logout", logout);
