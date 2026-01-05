@@ -1,6 +1,7 @@
 import { deleteCookie } from "cookies-next/server";
 import { type NextRequest, NextResponse } from "next/server";
 import "server-only";
+import getHostname from "@/lib/hostname";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const response = NextResponse.json(
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       httpOnly: true,
       req,
       res: response,
+      domain: getHostname(req),
     });
   } catch (e: unknown) {
     console.error("Failed to delete refresh token cookie: ", e);

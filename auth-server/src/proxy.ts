@@ -134,8 +134,9 @@ export const config = {
      * - manifest.json (manifest file)
      * - media (media files)
      * - api/environment (allow client to know what schemavaults app environment is running)
+     * - api/logout (any client can ask to have their refresh token deleted)
      * - close_window (clientside page that allows client to close the window)
      */
-    "/((?!_next/static|_next/image|icon.png|favicon.ico|manifest.json|media|api/environment|close_window).*)",
+    "/((?!_next/static|_next/image|icon.png|favicon.ico|manifest.json|media|api/environment|api/logout|close_window).*)",
   ],
 };
