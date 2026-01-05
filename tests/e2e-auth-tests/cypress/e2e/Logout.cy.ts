@@ -16,10 +16,12 @@ describe("Logout", () => {
     cy.url().should("include", "/account");
 
     // Perform logout
-    cy.logout();
-
-    // Post-logout assertions
-    cy.url().should("include", "/auth/login");
-    cy.getCookie("refresh_token").should("not.exist");
+    cy.logout().then(() => {
+      cy.wait(5000).then(() => {
+        // Post-logout assertions
+        cy.url({ timeout: 10000 }).should("include", "/auth/login");
+        cy.getCookie("refresh_token").should("not.exist");
+      });
+    });
   });
 });

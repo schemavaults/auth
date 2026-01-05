@@ -10,15 +10,16 @@ export function LogoutPageView(): ReactElement {
   const router = useRouter();
 
   useLogoutEffect({
-    onLogoutSuccess: (): void => {
+    onLogoutSuccess(): void {
       toast({
         variant: "default",
         title: "Logged out successfully!",
         description: "Sending you back to the login page...",
       });
       router.push("/auth/login");
-    },
-    onLogoutFailure: (e: unknown): void => {
+      return;
+    }, // end of onLogoutSuccess
+    onLogoutFailure(e: unknown): void {
       console.error("Failed to log out: ", e);
       const errorMessage: string =
         e instanceof Error ? e.message : "An unknown error has occurred!";
@@ -27,7 +28,8 @@ export function LogoutPageView(): ReactElement {
         title: "Failed to log out!",
         description: errorMessage,
       });
-    },
+      return;
+    }, // end of onLogoutFailure
   });
 
   return <LoadingPage message="Attempting to log you out..." />;
