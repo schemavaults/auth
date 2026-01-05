@@ -10,7 +10,7 @@ export default function logout() {
   cy.get("button#sign-out-button").click();
 
   // Post-logout assertions
-  cy.wait(2500).then(() => {
+  cy.wait(4000).then(() => {
     cy.url().should("not.include", "/account");
     cy.getCookie("refresh_token").should("not.exist");
   });

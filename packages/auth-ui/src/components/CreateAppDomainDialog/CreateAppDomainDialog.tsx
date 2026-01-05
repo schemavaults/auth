@@ -48,15 +48,6 @@ interface CreateFrontendAppDialogProps {
   onOpenChange: (value: boolean) => void;
 }
 
-function generateDefaultAppDomainRefId(): string {
-  try {
-    return crypto.randomUUID();
-  } catch (e: unknown) {
-    console.error("Failed to generate random UUID as new app domain ref ID: ", e);
-    return ""
-  }
-}
-
 export function CreateAppDomainDialog({
   clearFrontendWebAppDomainsCache,
   app_id,
@@ -70,11 +61,11 @@ export function CreateAppDomainDialog({
     return {
       app_id,
       domain: "",
-      app_domain_ref_id: generateDefaultAppDomainRefId(),
+      app_domain_ref_id: "",
       environment,
       created_at: Date.now(),
-    }
-  }, [environment, app_id])
+    };
+  }, [environment, app_id]);
 
   const form = useForm<SchemaVaultsAppDomainRef>({
     resolver: zodResolver(schemaVaultsAppDomainRefSchema),
@@ -149,7 +140,6 @@ export function CreateAppDomainDialog({
       if (!Object.hasOwn(body, "success")) {
         throw new Error("No success field in response");
       }
-
 
       if (
         !(
@@ -254,7 +244,10 @@ export function CreateAppDomainDialog({
                         (app_env: SchemaVaultsAppEnvironment) => {
                           const environment_radio_button_id: string = `environment-radio-item-${app_env}`;
                           return (
-                            <div className="flex items-center space-x-2" key={app_env}>
+                            <div
+                              className="flex items-center space-x-2"
+                              key={app_env}
+                            >
                               <RadioGroupItem
                                 value={app_env}
                                 id={environment_radio_button_id}

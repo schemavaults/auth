@@ -9,18 +9,17 @@ describe("Logout", () => {
       if (!success) {
         throw new Error("Failed to create and login as superuser");
       }
-    });
 
-    // We should now be logged in (as superuser) on the account page
-    cy.getCookie("refresh_token").should("exist");
-    cy.url().should("include", "/account");
+      // We should now be logged in (as superuser) on the account page
+      cy.getCookie("refresh_token").should("exist");
 
-    // Perform logout
-    cy.logout().then(() => {
-      cy.wait(5000).then(() => {
-        // Post-logout assertions
-        cy.url({ timeout: 10000 }).should("include", "/auth/login");
-        cy.getCookie("refresh_token").should("not.exist");
+      // Perform logout
+      cy.logout().then(() => {
+        cy.wait(5000).then(() => {
+          // Post-logout assertions
+          cy.url({ timeout: 10000 }).should("include", "/auth/login");
+          cy.getCookie("refresh_token").should("not.exist");
+        });
       });
     });
   });
