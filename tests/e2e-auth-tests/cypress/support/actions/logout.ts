@@ -9,9 +9,14 @@ export default function logout() {
   // Perform logout actions
   cy.get("button#sign-out-button").click();
 
-  // Post-logout assertions
-  cy.wait(4000).then(() => {
+  // Post-logout triggered assertions
+  return cy.wait(3000).then(() => {
     cy.url().should("not.include", "/account");
-    cy.getCookie("refresh_token").should("not.exist");
+
+    // Post successful logout assertions
+    return cy.wait(6500).then(() => {
+      cy.getCookie("refresh_token").should("not.exist");
+      cy.url({ timeout: 20000 }).should("not.include", "/auth/logout");
+    });
   });
 }

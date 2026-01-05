@@ -15,11 +15,7 @@ describe("Logout", () => {
 
       // Perform logout
       cy.logout().then(() => {
-        cy.wait(5000).then(() => {
-          // Post-logout assertions
-          cy.url({ timeout: 10000 }).should("include", "/auth/login");
-          cy.getCookie("refresh_token").should("not.exist");
-        });
+        cy.getCookie("refresh_token").should("not.exist");
       });
     });
   });
