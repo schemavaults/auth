@@ -18,6 +18,8 @@ function isIncludeProductionSourceMapsFlagSet(): boolean {
     process.env.NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS !== "no"
   );
 }
+const productionBrowserSourceMaps: boolean =
+  isIncludeProductionSourceMapsFlagSet();
 
 const output: "standalone" | undefined = isNextStandaloneDockerBuildFlagSet()
   ? "standalone"
@@ -61,6 +63,7 @@ console.group(`[next.config.ts] Configuring @schemavaults/auth-server...`);
 console.log(`output mode: ${output ?? "<default>"}`);
 console.log("monorepo root: ", monorepoRoot);
 console.log("project root: ", projectRoot);
+console.log("production source maps: ", productionBrowserSourceMaps);
 console.groupEnd();
 
 const nextConfig: NextConfig = {
@@ -71,7 +74,7 @@ const nextConfig: NextConfig = {
     root: monorepoRoot,
   },
   outputFileTracingRoot: monorepoRoot,
-  productionBrowserSourceMaps: isIncludeProductionSourceMapsFlagSet(),
+  productionBrowserSourceMaps,
 };
 
 export default nextConfig;

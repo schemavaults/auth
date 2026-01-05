@@ -1,6 +1,5 @@
 # Dockerfile for @schemavaults/auth-server (production)
 
-ARG NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS
 ARG BUN_VERSION
 ARG NODEJS_VERSION
 
@@ -107,7 +106,10 @@ COPY --chown=bun:bun packages/jwt/src/ packages/jwt/src/
 FROM source AS build
 
 WORKDIR /schemavaults/auth
+
+ARG NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS
 ENV NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS=$NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS
+
 ENV NEXT_STANDALONE_DOCKER_BUILD true
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN bun run build --filter @schemavaults/auth-server
