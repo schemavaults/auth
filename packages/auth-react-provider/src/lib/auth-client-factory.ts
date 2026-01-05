@@ -75,6 +75,7 @@ export class AuthClientFactory {
     return new ReactAuthClientSdkAdapter({
       uuid,
       environment: this.environment,
+      auth_server_uri: this.auth_server_uri,
       debug: this.debug,
     });
   }

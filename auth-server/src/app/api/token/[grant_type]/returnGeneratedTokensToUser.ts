@@ -4,7 +4,7 @@ import type {
   RequestTokensResult,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
-import { setCookie } from "cookies-next";
+import { setCookie } from "cookies-next/server";
 
 export interface IReturnGeneratedTokensToUserOpts {
   req: NextRequest;

@@ -10,7 +10,6 @@ import {
   authorizationCodePOSTbody,
   refreshTokenPOSTbody,
   type RequestTokensResult,
-  audienceRefSchema,
   audienceSchema,
   type SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
@@ -40,7 +39,7 @@ import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-typ
 import isPrivateBeta from "@/lib/is-private-beta";
 import debugPrintTokensAsTable from "@/lib/debugPrintTokensAsTable";
 import debugPrintUserDataAsTable from "@/lib/debugPrintUserDataAsTable";
-import { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
+import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
@@ -1004,12 +1003,12 @@ export class SchemaVaultsAuthClient
 
   public async logout(): Promise<void> {
     if (this.debug) {
-      console.log("[SchemaVaultsAuthClient] logout() running...");
+      console.log("[SchemaVaultsAuthClient] logout()");
     }
 
     try {
       this.adapter.clearCodeVerifiers() satisfies void;
-      this.adapter.clearAuthTokens() satisfies void;
+      (await this.adapter.clearAuthTokens()) satisfies void;
       this.adapter.clearUserData() satisfies void;
     } catch (e: unknown) {
       console.error(e);
@@ -1025,6 +1024,22 @@ export class SchemaVaultsAuthClient
     this.triggerAuthStateChanged();
     return;
   } // logout()
+
+  public hasHttpOnlyRefreshToken(): boolean {
+    if (typeof this.adapter.doesSupportHttpOnlyRefreshToken !== "function") {
+      return false;
+    }
+    if (!this.adapter.doesSupportHttpOnlyRefreshToken()) {
+      return false;
+    }
+    if (typeof this.adapter.hasHttpOnlyRefreshToken !== "function") {
+      return false;
+    }
+    if (this.adapter.hasHttpOnlyRefreshToken()) {
+      return true;
+    }
+    return false;
+  } // hasHttpOnlyRefreshToken()
 
   public get auth_server_uri(): string {
     const host = this._authServerUri;

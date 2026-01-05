@@ -1,6 +1,10 @@
 "use client";
 
-import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  getHardcodedClientWebAppDomain,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import {
   type AccessToken,
   PKCE_ProofKeyManager,
@@ -32,6 +36,7 @@ export class ReactAuthClientSdkAdapter
 {
   private readonly environment: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
+  private readonly auth_server_uri: string;
 
   public constructor({
     uuid,
@@ -51,6 +56,12 @@ export class ReactAuthClientSdkAdapter
     }
 
     this._uuid_generator = uuid;
+    this.auth_server_uri = opts.auth_server_uri
+      ? opts.auth_server_uri
+      : getHardcodedClientWebAppDomain(
+          SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+          this.environment,
+        );
   }
 
   private get ssl_enabled(): boolean {
@@ -447,8 +458,29 @@ export class ReactAuthClientSdkAdapter
     }
   }
 
-  public clearAuthTokens(): void {
+  public clearAccessTokens(): void {
     this.accessTokens = new Map();
+    return;
+  }
+
+  public async clearHttpOnlyRefreshToken(): Promise<void> {
+    try {
+      await this.sendPOSTRequest(`${this.auth_server_uri}/api/logout`, {}, {});
+    } catch (e: unknown) {
+      console.error(
+        "Failed to clear HTTP-only refresh token via network request to @schemavaults/auth-server: ",
+        e,
+      );
+      throw new Error(
+        "Failed to clear HTTP-only refresh token via network request to @schemavaults/auth-server",
+      );
+    }
+    this.lastHttpOnlyRefreshTokenReceived = null;
+    return;
+  }
+
+  public async clearAuthTokens(): Promise<void> {
+    this.clearAccessTokens();
     try {
       window.localStorage.removeItem(
         AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN,
@@ -463,7 +495,8 @@ export class ReactAuthClientSdkAdapter
       console.error(e);
       throw new Error("Failed to clear refresh tokens from cookies");
     }
-    this.lastHttpOnlyRefreshTokenReceived = null;
+    await this.clearHttpOnlyRefreshToken();
+    return;
   } // end of clearAuthTokens()
 
   public storeUserData(userData: UserData): void {
@@ -587,7 +620,7 @@ export class ReactAuthClientSdkAdapter
     this.lastHttpOnlyRefreshTokenReceived = currentTime;
   }
 
-  public hasRefreshToken(): boolean {
+  public hasHttpOnlyRefreshToken(): boolean {
     if (this.doesSupportHttpOnlyRefreshToken()) {
       const lastReceived: Date | undefined | null =
         this.lastHttpOnlyRefreshTokenReceived;
@@ -604,6 +637,16 @@ export class ReactAuthClientSdkAdapter
       throw new Error(
         "Expected ReactAuthClientSdkAdapter to support HTTP-only refresh tokens",
       );
+    }
+  }
+
+  public hasRefreshToken(): boolean {
+    if (this.hasHttpOnlyRefreshToken()) {
+      return true;
+    } else if (this.getRefreshToken()) {
+      return true;
+    } else {
+      return false;
     }
   }
 }

@@ -79,7 +79,16 @@ export function useAuthClientMiddleware(
           type: "refresh",
           token: refresh_token,
           sourceHint: "Refresh token",
-        });
+        } satisfies PotentiallyValidTokenSource);
+      }
+
+      if (!refresh_token && auth.hasHttpOnlyRefreshToken()) {
+        token_sources.push({
+          type: "refresh",
+          token: "AS_HTTP_ONLY_COOKIE",
+          sourceHint:
+            "Auth client believes it has an HTTP-only refresh token cookie",
+        } satisfies PotentiallyValidTokenSource);
       }
 
       const authStatus: AuthMiddlewareOptions["authStatus"] =

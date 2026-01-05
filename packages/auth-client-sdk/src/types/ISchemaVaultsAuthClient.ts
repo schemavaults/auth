@@ -1,4 +1,9 @@
-import type { AccessToken, RefreshToken, UserData, CodeChallengeWithDetails } from "@schemavaults/auth-common";
+import type {
+  AccessToken,
+  RefreshToken,
+  UserData,
+  CodeChallengeWithDetails,
+} from "@schemavaults/auth-common";
 import type { Credentials } from "@/types/credentials";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
@@ -43,6 +48,7 @@ export interface ISchemaVaultsAuthClient {
 
   getAccessTokenFromCache: (token_id: string) => AccessToken | null;
   getRefreshTokenFromCache: () => RefreshToken | null;
+  hasHttpOnlyRefreshToken: () => boolean;
 
   /**
    *
