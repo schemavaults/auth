@@ -28,4 +28,5 @@ docker compose \
   --exit-code-from schemavaults-e2e-auth-tests \
   --abort-on-container-exit \
   --build \
-  --force-recreate
+  --force-recreate \
+  --attach schemavaults-e2e-auth-tests
