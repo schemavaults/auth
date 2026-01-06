@@ -3,22 +3,27 @@
 import { useLogoutEffect } from "@schemavaults/auth-react-provider";
 import { LoadingPage, useToast } from "@schemavaults/ui";
 import { useRouter } from "next/navigation";
-import type { ReactElement } from "react";
+import { useCallback, type ReactElement } from "react";
 
 export function LogoutPageView(): ReactElement {
   const { toast } = useToast();
   const router = useRouter();
 
-  useLogoutEffect({
-    onLogoutSuccess(): void {
+  const onLogoutSuccess = useCallback(
+    (successful_logout_redirect_uri: string) => {
       toast({
         variant: "default",
         title: "Logged out successfully!",
         description: "Sending you back to the login page...",
       });
-      router.push("/auth/login");
+      router.push(successful_logout_redirect_uri);
       return;
-    }, // end of onLogoutSuccess
+    },
+    [router, toast],
+  );
+
+  useLogoutEffect({
+    onLogoutSuccess,
     onLogoutFailure(e: unknown): void {
       console.error("Failed to log out: ", e);
       const errorMessage: string =
