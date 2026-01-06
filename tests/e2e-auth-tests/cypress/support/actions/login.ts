@@ -10,6 +10,7 @@ export default function login(
 
   // Go to
   cy.visit("/auth/login");
+  cy.wait(1250, { log: false });
   cy.log(`Attempting to login as user: '${email}'`);
   cy.url({ log: false }).should("include", "/auth/login");
 
