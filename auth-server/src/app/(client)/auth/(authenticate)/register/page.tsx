@@ -29,6 +29,7 @@ export default async function RegisterPage(props: {
     <LoginOrRegisterForm
       type={"register"}
       onSuccessfulAuthenticate={on_successful_authenticate}
+      debug={debug}
     />
   );
 }

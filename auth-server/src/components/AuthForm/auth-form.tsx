@@ -47,6 +47,7 @@ import { isPrivateBetaEnabled } from "@/lib/private-beta";
 interface AuthFormProps<T extends "login" | "register">
   extends AuthFormType<T> {
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
+  debug?: boolean;
 }
 
 function AuthFormCardTitle<T extends "login" | "register">({
@@ -101,8 +102,10 @@ function getSchemaResolver<T extends "login" | "register">({
 export function AuthForm<T extends "login" | "register">({
   type,
   onSuccessfulAuthenticate,
+  ...props
 }: AuthFormProps<T>) {
   const appEnv: SchemaVaultsAppEnvironment = useAppEnvironment();
+  const debug: boolean = props.debug ?? false;
 
   const { toast } = useToast();
   const form = useForm<AuthFormData<"login" | "register">>({
@@ -114,7 +117,6 @@ export function AuthForm<T extends "login" | "register">({
   const auth = useAuth();
 
   const searchParams = useSearchParams();
-
   const router = useRouter();
 
   async function onAuthFormSubmitValidValues(
@@ -138,6 +140,7 @@ export function AuthForm<T extends "login" | "register">({
         searchParams,
         router,
         env: appEnv,
+        debug
       });
       return;
     } catch (e: unknown) {

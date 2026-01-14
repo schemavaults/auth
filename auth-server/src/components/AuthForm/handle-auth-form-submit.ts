@@ -28,6 +28,7 @@ interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
   searchParams: URLSearchParams;
   router: ReturnType<typeof useRouter>;
   env: SchemaVaultsAppEnvironment;
+  debug?: boolean;
 }
 
 const CLOSE_WINDOW_PAGE_HREF = "/close_window" as const satisfies string;
@@ -46,8 +47,9 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     onSubmitFailure,
   } = opts;
   const env = opts.env;
+  const debug: boolean = opts.debug ?? false;
 
-  if (env !== "production") {
+  if (debug) {
     console.log(`[AuthForm] handleFormSubmit: type=${type}`);
   }
 
@@ -159,7 +161,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       );
     }
   } catch (e: unknown) {
-    console.error(e);
+    console.error("Error creating code challenge: ", e);
     toast({
       variant: "destructive",
       title: "Error creating code challenge",
@@ -220,7 +222,9 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     toast_description = register_description;
   }
 
-  if (!toast_description) throw new Error("Failed to load toast description");
+  if (!toast_description || typeof toast_description !== "string") {
+    throw new TypeError("Failed to load toast description");
+  }
 
   toast({
     title: toast_title,
@@ -228,7 +232,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   });
 
   // Redirect back to the client with the authorization code
-  if (env !== "production") {
+  if (debug) {
     console.log(
       `[AuthForm] Redirecting to client with authorization code: `,
       authorization_code,
@@ -306,7 +310,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
 
         // Prefetch close window page
         try {
-          if (env !== "production") {
+          if (debug) {
             console.log(
               `[handleAuthFormSubmit] Prefetching close window page: ${CLOSE_WINDOW_PAGE_HREF}`,
             );
@@ -323,7 +327,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
           throw new Error("Non-200 status code on response");
         }
 
-        if (env !== "production") {
+        if (debug) {
           console.log(
             `[handleAuthFormSubmit] Sending to close window page: ${CLOSE_WINDOW_PAGE_HREF}`,
           );
@@ -345,7 +349,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         throw new Error("Failed to send authorization code to frontend client");
       }
     default:
-      if (env !== "production") {
+      if (debug) {
         console.error(
           `Invalid onSuccessfulAuthenticate action: "${onSuccessfulAuthenticate}"`,
         );

@@ -13,6 +13,7 @@ import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenti
 export interface CredentialsFormViewProps {
   type: AuthenticationOutcomeType;
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
+  debug?: boolean;
 }
 
 /**
@@ -22,6 +23,7 @@ export interface CredentialsFormViewProps {
 export function LoginOrRegisterForm({
   type,
   onSuccessfulAuthenticate,
+  debug
 }: CredentialsFormViewProps): ReactElement {
   if (!isValidAuthenticationOutcomeType(type)) {
     throw new Error("Invalid authentication type! Expected one of ");
@@ -45,6 +47,7 @@ export function LoginOrRegisterForm({
       <AuthForm
         type={type}
         onSuccessfulAuthenticate={onSuccessfulAuthenticate}
+        debug={debug}
       />
     </ThemedPageBackground>
   );
