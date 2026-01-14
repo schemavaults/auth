@@ -1,8 +1,8 @@
 import {
   getAppEnvironment,
-  SchemaVaultsAppEnvironment,
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { isPrivateBetaEnabled } from "./private-beta";
+import { isPrivateBetaEnabled } from "@/lib/private-beta";
 
 export function shouldEnableDebug(
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
