@@ -1,13 +1,13 @@
 {
   "name": "@schemavaults/e2e-auth-tests",
-  "version": "0.0.35",
+  "version": "0.0.36",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/schemavaults/auth.git",
     "directory": "tests/e2e-auth-tests"
   },
   "dependencies": {
-    "cypress": "15.7.1"
+    "cypress": "15.9.0"
   },
   "devDependencies": {
     "typescript": "5.9.3",
