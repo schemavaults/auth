@@ -1,11 +1,11 @@
 "use client";
 
 import { useLogoutEffect } from "@schemavaults/auth-react-provider";
-import { LoadingPage, useToast } from "@schemavaults/ui";
+import { ErrorPage, LoadingPage, useToast } from "@schemavaults/ui";
 import { useRouter } from "next/navigation";
-import { useCallback, type ReactElement } from "react";
+import { Component, type PropsWithChildren, type ReactNode, useCallback, type ReactElement } from "react";
 
-export function LogoutPageView(): ReactElement {
+function LogoutPageViewComponent(): ReactElement {
   const { toast } = useToast();
   const router = useRouter();
 
@@ -25,9 +25,8 @@ export function LogoutPageView(): ReactElement {
     [router, toast],
   );
 
-  useLogoutEffect({
-    onLogoutSuccess,
-    onLogoutFailure(e: unknown): void {
+  const onLogoutFailure = useCallback(
+    (e: unknown): void => {
       console.error("Failed to log out: ", e);
       const errorMessage: string =
         e instanceof Error ? e.message : "An unknown error has occurred!";
@@ -37,10 +36,50 @@ export function LogoutPageView(): ReactElement {
         description: errorMessage,
       });
       return;
-    }, // end of onLogoutFailure
+    },
+    [toast]
+  );
+
+  useLogoutEffect({
+    onLogoutSuccess,
+    onLogoutFailure
   });
 
   return <LoadingPage message="Attempting to log you out..." />;
 }
 
-export default LogoutPageView;
+interface LogoutPageErrorBoundaryProps extends PropsWithChildren {}
+interface LogoutPageErrorBoundaryState {
+  error: Error | null;
+}
+
+class LogoutPageErrorBoundary extends Component<LogoutPageErrorBoundaryProps, LogoutPageErrorBoundaryState> {
+  public constructor(props: LogoutPageErrorBoundaryProps) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  public static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  public render(): ReactNode {
+    if (this.state?.error) {
+      return (
+        <ErrorPage
+          message="Something went wrong while logging you out... "
+          error={this.state.error}
+        />
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function LogoutPageView(): ReactElement {
+  return (
+    <LogoutPageErrorBoundary>
+      <LogoutPageViewComponent />
+    </LogoutPageErrorBoundary>
+  );
+};
