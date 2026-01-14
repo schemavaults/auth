@@ -9,6 +9,7 @@ import {
   ShieldUser,
   SwatchBook,
   User as UserIcon,
+  Users,
 } from "lucide-react";
 import type { ReactElement } from "react";
 
@@ -41,6 +42,14 @@ export function getAuthenticatedUserDashboardLinks(
           url: "/admin",
           icon: ({ className }: { className: string }): ReactElement => (
             <ShieldUser className={className} />
+          ),
+        },
+        {
+          type: "dashboard-sidebar-item-definition" as const,
+          title: "Users",
+          url: "/admin/users",
+          icon: ({ className }: { className: string }): ReactElement => (
+            <Users className={className} />
           ),
         },
         {

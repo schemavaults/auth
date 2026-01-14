@@ -2,7 +2,7 @@
 
 import { AppsCard } from "@schemavaults/auth-ui";
 import type { ReactElement } from "react";
-import { PageContainer } from "@/components/PageContainer";
+import PageContainer from "@/components/PageContainer";
 
 function AdminAppsPageView(): ReactElement {
   return (

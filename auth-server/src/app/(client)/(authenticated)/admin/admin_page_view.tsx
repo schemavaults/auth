@@ -2,7 +2,7 @@
 
 import { Wordmark } from "@schemavaults/ui";
 import type { ReactElement } from "react";
-import { PageContainer } from "@/components/PageContainer";
+import PageContainer from "@/components/PageContainer";
 
 export default function AdminPageView(): ReactElement {
   return (
