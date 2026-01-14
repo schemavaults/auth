@@ -1,5 +1,5 @@
 
-export default function generate_random_code(length: number): string {
+function generate_random_alphanumeric_code_of_given_length(length: number): string {
   if (typeof length !== "number" || isNaN(length) || length <= 0) {
     throw new Error("Length must be a positive number");
   }
@@ -14,4 +14,10 @@ export default function generate_random_code(length: number): string {
     );
   }
   return result;
+}
+
+export default function generateRandomCode(length: number): Cypress.Chainable<string> {
+  return cy.wrap(generate_random_alphanumeric_code_of_given_length(length)).then((code => {
+    return code[0]
+  }))
 }

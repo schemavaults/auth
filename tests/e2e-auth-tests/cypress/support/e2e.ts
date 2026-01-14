@@ -31,7 +31,7 @@ declare global {
       is_authenticated(): Chainable<boolean>;
       is_admin(): Chainable<boolean>;
       create_invite_code(invite_code: string, max_uses: number): Chainable<boolean>;
-      generate_random_code(length: number): string;
+      generate_random_code(length: number): Chainable<string>;
     }
   }
 }
