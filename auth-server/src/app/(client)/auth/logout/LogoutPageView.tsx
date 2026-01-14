@@ -16,6 +16,9 @@ export function LogoutPageView(): ReactElement {
         title: "Logged out successfully!",
         description: "Sending you back to the login page...",
       });
+      if (typeof successful_logout_redirect_uri !== "string") {
+        throw new TypeError(`[onLogoutSuccess] Expected 'successful_logout_redirect_uri' to be a string, received ${typeof successful_logout_redirect_uri}!`);
+      }
       router.push(successful_logout_redirect_uri);
       return;
     },

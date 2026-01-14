@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useAuth } from "./use-auth";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import { useRouter } from "next/navigation";
@@ -68,7 +68,7 @@ export function useLogoutEffect({
         return;
       }; // defaultOnLogoutFailureCallback()
     }
-  }, []);
+  }, [debug, onLogoutFailure]);
 
   useEffect((): undefined | (() => void) => {
     let cancelDueToUnmount: boolean = false;
@@ -125,3 +125,5 @@ export function useLogoutEffect({
     router,
   ]);
 }
+
+export default useLogoutEffect;
