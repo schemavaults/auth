@@ -1,12 +1,13 @@
 {
   "name": "@schemavaults/auth-client-sdk",
   "description": "TypeScript SDK for interacting with SchemaVaults Auth server or protected resources",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/schemavaults/auth-client-sdk.git"
+    "url": "git+https://github.com/schemavaults/auth.git",
+    "directory": "packages/auth-client-sdk"
   },
   "type": "module",
   "main": "dist/index.js",

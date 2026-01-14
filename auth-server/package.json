@@ -1,10 +1,11 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.12.47",
+  "version": "0.12.48",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/schemavaults/auth-server.git"
+    "url": "git+https://github.com/schemavaults/auth.git",
+    "directory": "auth-server"
   },
   "description": "Server for authenticating users and generating tokens",
   "dependencies": {

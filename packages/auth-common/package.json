@@ -1,12 +1,13 @@
 {
   "name": "@schemavaults/auth-common",
   "description": "Types and utility functions for authentication and authorization",
-  "version": "0.7.24",
+  "version": "0.7.25",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/schemavaults/auth.git"
+    "url": "git+https://github.com/schemavaults/auth.git",
+    "directory": "packages/auth-common"
   },
   "type": "module",
   "main": "dist/index.js",

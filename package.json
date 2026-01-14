@@ -1,6 +1,10 @@
 {
   "name": "@schemavaults/auth",
   "description": "Monorepo for the SchemaVaults Auth platform",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schemavaults/auth.git"
+  },
   "devDependencies": {
     "turbo": "2.7.2"
   },

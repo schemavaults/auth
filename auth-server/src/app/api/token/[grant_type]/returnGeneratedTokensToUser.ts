@@ -5,6 +5,9 @@ import type {
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { setCookie } from "cookies-next/server";
+import { RefreshTokenCookieName, RefreshTokenExpiryCookieName } from "@/lib/RefreshTokenCookieNames";
+import getStringByteSize from "@/lib/getStringByteSize";
+import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
 
 export interface IReturnGeneratedTokensToUserOpts {
   req: NextRequest;
@@ -62,8 +65,26 @@ export default async function returnGeneratedTokensToUser({
         );
       }
 
-      await setCookie("refresh_token", refresh_token.token satisfies string, {
+      if (getStringByteSize(refresh_token.token satisfies string) > MaximumBrowserCookieSize) {
+        throw new Error(
+          `Refresh token size exceeds maximum browser cookie size of ${MaximumBrowserCookieSize} bytes! Cannot set refresh token as HTTP-only cookie.`,
+        );
+      }
+
+      await setCookie(RefreshTokenCookieName, refresh_token.token satisfies string, {
         httpOnly: true,
+        secure,
+        expires: new Date(refresh_token.exp satisfies number),
+        sameSite: secure ? "strict" : "lax",
+        domain: hostname,
+        req,
+        res: success_response,
+      });
+      // set a non-http-only cookie with the refresh token expiry time
+      // this way client should know if it is authenticated or not.
+      // don't use this cookie for auth, just for client-side logic
+      await setCookie(RefreshTokenExpiryCookieName, `${refresh_token.exp satisfies number}` satisfies string, {
+        httpOnly: false,
         secure,
         expires: new Date(refresh_token.exp satisfies number),
         sameSite: secure ? "strict" : "lax",

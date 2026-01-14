@@ -6,6 +6,7 @@ import {
   type AccessToken,
   type RefreshToken,
 } from "@schemavaults/auth-common";
+import isValidRefreshToken from "@/lib/isValidRefreshToken";
 
 export interface IAcquireAccessTokenFnOptions {
   opts: AcquireAccessTokenOptions;
@@ -67,21 +68,29 @@ export default async function acquireAccessToken({
   let refresh_token: RefreshToken | "AS_HTTP_ONLY_COOKIE" | null = null;
 
   if (opts.refresh_token) {
+    if (!isValidRefreshToken(opts.refresh_token)) {
+      throw new Error(
+        "Invalid refresh token provided in acquireAccessToken options; bad shape or expiry time!",
+      );
+    }
     refresh_token = opts.refresh_token;
   } else if (hasRefreshToken && doesSupportHttpOnlyRefreshToken) {
     refresh_token = "AS_HTTP_ONLY_COOKIE";
-  } else {
+  } else if (hasRefreshToken && !doesSupportHttpOnlyRefreshToken) {
     refresh_token = adapter.getRefreshToken();
-  }
-
-  if (!refresh_token && !doesSupportHttpOnlyRefreshToken) {
-    if (debug) {
-      console.warn(
-        "[SchemaVaultsAuthClient] Client is attempting to get an access token, but they don't have a refresh token...",
+    if (!refresh_token) {
+      throw new Error(
+        "Auth client adapter indicated it has a refresh token, but none could be loaded!",
       );
     }
+    if (!isValidRefreshToken(refresh_token)) {
+      throw new Error(
+        "Invalid refresh token loaded from auth client adapter; bad shape or expiry time!",
+      );
+    }
+  } else {
     throw new Error(
-      "No refresh token available in adapter to exchange for access token!",
+      "No refresh token available to acquire new access token!",
     );
   }
 
@@ -93,6 +102,16 @@ export default async function acquireAccessToken({
   }
 
   if (!refresh_token) {
+    if (debug) {
+      console.group("Debug Info for Missing Refresh Token");
+      console.log(
+        "Does support HTTP-only refresh token: ",
+        doesSupportHttpOnlyRefreshToken,
+      );
+      console.log("Has refresh token: ", hasRefreshToken);
+      console.groupEnd();
+    }
+    
     throw new Error(
       "Expected a refresh token to have been successfully retrieved (or marked as having HTTP-only cookie) if this point was reached!",
     );

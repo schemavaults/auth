@@ -1,7 +1,8 @@
+import "server-only";
 import { deleteCookie } from "cookies-next/server";
 import { type NextRequest, NextResponse } from "next/server";
-import "server-only";
 import getHostname from "@/lib/hostname";
+import { RefreshTokenCookieName,  RefreshTokenExpiryCookieName } from "@/lib/RefreshTokenCookieNames";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const response = NextResponse.json(
@@ -16,8 +17,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   );
 
   try {
-    await deleteCookie("refresh_token", {
+    await deleteCookie(RefreshTokenCookieName satisfies string, {
       httpOnly: true,
+      req,
+      res: response,
+      domain: getHostname(req),
+    });
+    await deleteCookie(RefreshTokenExpiryCookieName satisfies string, {
+      httpOnly: false,
       req,
       res: response,
       domain: getHostname(req),

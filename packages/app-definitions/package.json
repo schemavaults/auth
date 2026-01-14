@@ -1,12 +1,13 @@
 {
   "name": "@schemavaults/app-definitions",
   "description": "Define frontend or API server applications",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/schemavaults/app-definitions.git"
+    "url": "git+https://github.com/schemavaults/auth.git",
+    "directory": "packages/app-definitions"
   },
   "type": "module",
   "main": "dist/index.cjs",

@@ -1,12 +1,13 @@
 {
   "name": "@schemavaults/jwt",
   "description": "Utility functions for authentication and authorization for use from the auth server or a resource server",
-  "version": "0.6.12",
+  "version": "0.6.13",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/schemavaults/jwt.git"
+    "url": "git+https://github.com/schemavaults/auth.git",
+    "directory": "packages/jwt"
   },
   "type": "module",
   "main": "dist/index.js",

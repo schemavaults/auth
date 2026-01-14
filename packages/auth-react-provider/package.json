@@ -1,12 +1,13 @@
 {
   "name": "@schemavaults/auth-react-provider",
   "description": "React hooks and components to make using the @schemavaults/auth-client-sdk a breeze",
-  "version": "0.5.18",
+  "version": "0.5.19",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/schemavaults/auth-react-provider.git"
+    "url": "git+https://github.com/schemavaults/auth.git",
+    "directory": "packages/auth-react-provider"
   },
   "type": "module",
   "main": "dist/index.js",

@@ -11,22 +11,20 @@ import {
   type RefreshToken,
   type UserData,
   accessTokenDataSchema,
-  refreshTokenDataSchema,
-  refreshTokenExpiry,
   userDataSchema,
 } from "@schemavaults/auth-common";
 import {
   type ISchemaVaultsAuthClientAdapter,
   type IAuthClientPOSTResultType,
 } from "@schemavaults/auth-client-sdk";
-import { setCookie, deleteCookie, getCookie } from "cookies-next";
+import { deleteCookie, getCookie } from "cookies-next/client";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
 
-type CookieOptionsType = NonNullable<Parameters<typeof getCookie>[1]>;
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
   REFRESH_TOKEN = "refresh_token",
+  REFRESH_TOKEN_EXPIRY = "refresh_token_expiry",
   USER_DATA = "user_data",
 }
 
@@ -72,16 +70,6 @@ export class ReactAuthClientSdkAdapter
     return true;
   }
 
-  private get cookieOptions(): CookieOptionsType {
-    const env: SchemaVaultsAppEnvironment = this.environment;
-    const strictEnv: boolean = env !== "development" && env !== "test";
-    return {
-      httpOnly: false,
-      secure: this.ssl_enabled,
-      sameSite: strictEnv ? "strict" : "none",
-    };
-  }
-
   private _uuid_generator: (() => string) | undefined = undefined;
 
   public uuid(): string {
@@ -110,45 +98,6 @@ export class ReactAuthClientSdkAdapter
         `[ReactAuthClientSdkAdapter] Failed to redirect to URI: ${uri}`,
         e,
       );
-    }
-  }
-
-  // Modern browsers enforce a 4KB (4096 bytes) limit on cookie sizes.
-  private static maxCookieLength = 4096 as const satisfies number;
-
-  private static getStringByteSize(str: string): number {
-    return new Blob([str]).size;
-  }
-
-  private saveCookie(key: string, value: string): void {
-    if (this.debug) {
-      console.log(
-        `[ReactAuthClientSdkAdapter] Saving cookie to key: ${key} with value:`,
-        value,
-      );
-    }
-    const MAX_COOKIE_LENGTH: number = ReactAuthClientSdkAdapter.maxCookieLength;
-    const cookie_bytes: number =
-      ReactAuthClientSdkAdapter.getStringByteSize(value);
-    if (cookie_bytes >= MAX_COOKIE_LENGTH) {
-      console.error(
-        `[ReactAuthClientSdkAdapter] Cookie value too long for key: ${key}`,
-      );
-      throw new Error(
-        `Cookie value too long; length may not exceed '${MAX_COOKIE_LENGTH}' bytes but received '${cookie_bytes}' bytes!`,
-      );
-    }
-    try {
-      setCookie(key, value, this.cookieOptions);
-      if (this.environment === "development") {
-        console.log(
-          `[ReactAuthClientSdkAdapter] Saved cookie to key: ${key} with value:`,
-          value,
-        );
-      }
-    } catch (e) {
-      console.error(e);
-      throw new Error("Failed to save cookie to key: " + key);
     }
   }
 
@@ -395,25 +344,8 @@ export class ReactAuthClientSdkAdapter
   }
 
   public storeRefreshToken(refresh_token: RefreshToken): void {
-    const serialized_refresh_token = JSON.stringify(refresh_token);
-    try {
-      window.localStorage.setItem(
-        AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN,
-        serialized_refresh_token,
-      );
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to store refresh token in localStorage");
-    }
-    try {
-      this.saveCookie(
-        AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN,
-        refresh_token.token,
-      );
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to save refresh token in cookie");
-    }
+    void refresh_token;
+    throw new Error("Refresh tokens should be set by the server as HTTP-only cookies for web-based authentication.")
   }
 
   public storeAccessToken(token_id: string, access_token: AccessToken): void {
@@ -439,23 +371,7 @@ export class ReactAuthClientSdkAdapter
   }
 
   public getRefreshToken(): RefreshToken | null {
-    try {
-      const serialized = window.localStorage.getItem(
-        AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN,
-      );
-      if (!serialized) {
-        return null;
-      }
-      const parsed = refreshTokenDataSchema.safeParse(JSON.parse(serialized));
-      if (!parsed.success) {
-        console.error(parsed.error);
-        throw new Error("Invalid refresh token data");
-      }
-      return parsed.data;
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to get refresh token from localStorage");
-    }
+    throw new Error("Refresh tokens should be set by the server as HTTP-only cookies for web-based authentication.")
   }
 
   public clearAccessTokens(): void {
@@ -620,19 +536,37 @@ export class ReactAuthClientSdkAdapter
     this.lastHttpOnlyRefreshTokenReceived = currentTime;
   }
 
+  /**
+   * @description we can't directly read HTTP-only cookies from JS, so we can't access the token itself
+   * however, a companion non-HTTP-only cookie is set with the expiry time of the refresh token
+   * @returns True if there is a non-HTTP-only cookie indicating a valid HTTP-only refresh token is present, false otherwise
+   */
   public hasHttpOnlyRefreshToken(): boolean {
     if (this.doesSupportHttpOnlyRefreshToken()) {
-      const lastReceived: Date | undefined | null =
-        this.lastHttpOnlyRefreshTokenReceived;
-      if (!lastReceived) {
+      
+      const refreshTokenExpiryStr: string | undefined | null = getCookie(
+        AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY,
+        {
+          'httpOnly': false,
+          'secure': this.ssl_enabled,
+        }
+      );
+      if (typeof refreshTokenExpiryStr !== "string") {
+        if (this.debug) {
+          console.log(`[hasHttpOnlyRefreshToken] No refresh token expiry cookie found (key '${AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY}').`);
+        }
         return false;
       }
-      const now = new Date();
-      const timeElapsedSinceLastReceived: number =
-        now.getTime() - lastReceived.getTime();
+      const refreshTokenExpiryInt: number = parseInt(refreshTokenExpiryStr);
+      if (isNaN(refreshTokenExpiryInt)) {
+        if (this.debug) {
+          console.log("[hasHttpOnlyRefreshToken] Invalid refresh token expiry cookie value.");
+        }
+        return false;
+      }
+      const refreshTokenExpiryTime: Date = new Date(refreshTokenExpiryInt);
 
-      const refreshTokenValidLength: number = refreshTokenExpiry - 1000; // subtract 1s to give a buffer zone
-      return timeElapsedSinceLastReceived < refreshTokenValidLength;
+      return Date.now() + 1000 < refreshTokenExpiryTime.getTime();
     } else {
       throw new Error(
         "Expected ReactAuthClientSdkAdapter to support HTTP-only refresh tokens",
@@ -641,12 +575,6 @@ export class ReactAuthClientSdkAdapter
   }
 
   public hasRefreshToken(): boolean {
-    if (this.hasHttpOnlyRefreshToken()) {
-      return true;
-    } else if (this.getRefreshToken()) {
-      return true;
-    } else {
-      return false;
-    }
+    return this.hasHttpOnlyRefreshToken();
   }
 }
