@@ -27,7 +27,7 @@ export default function createInviteCode(invite_code: string, max_uses: number):
         .should('be.visible')
         .should("not.be.disabled")
         .type(invite_code, { force: true });
-      cy.get("input[name='description']", { log: false })
+      cy.get("textarea[name='description']", { log: false })
         .should("exist")
         .should("not.be.disabled")
         .type("Invite code generated within Cypress E2E test", { force: true });
