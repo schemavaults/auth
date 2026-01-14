@@ -168,7 +168,7 @@ export function CreateInviteCodeDialog(): ReactElement {
           <SwatchBook className="h-4 w-4 mr-2" /> Create Invite Code
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent id="create-invite-code-dialog-content" className="sm:max-w-[425px]">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(
