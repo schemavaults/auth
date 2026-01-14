@@ -63,10 +63,10 @@ jobs:
       - name: Upload screenshots of failing tests
         uses: actions/upload-artifact@v6
         with:
-          name: failed-test-screenshots
+          name: failed-test-screenshots-${{ github.sha }}
           path: tests/e2e-auth-tests/cypress/screenshots/
           retention-days: 2
-        if: always() && steps.check_screenshots_existence.outputs.exists == 'true'
+        if: steps.check_screenshots_existence.outputs.exists == 'true'
 
   Deploy-Vercel-Production:
     runs-on: ubuntu-latest
