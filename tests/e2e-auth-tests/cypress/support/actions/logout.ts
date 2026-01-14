@@ -3,6 +3,7 @@ export default function logout() {
   cy.visit("/account");
 
   // Pre-logout assertions
+  cy.is_authenticated().should('be.true');
   cy.url().should("include", "/account").should("not.include", "/auth/login");
   cy.getCookie("refresh_token").should("exist");
 
@@ -26,6 +27,7 @@ export default function logout() {
         // Post successful logout assertions
         cy.wait(5000).then(() => {
           cy.url({ timeout: 20000 }).should("not.include", "/auth/logout");
+          cy.is_authenticated().should("equal", false);
         });
       });
     });

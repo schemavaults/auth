@@ -164,7 +164,7 @@ export function CreateInviteCodeDialog(): ReactElement {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button>
+        <Button id='open-create-invite-code-dialog-button'>
           <SwatchBook className="h-4 w-4 mr-2" /> Create Invite Code
         </Button>
       </DialogTrigger>
@@ -259,7 +259,7 @@ export function CreateInviteCodeDialog(): ReactElement {
             />
 
             <DialogFooter>
-              <Button type="submit">
+              <Button type="submit" id='submit-create-invite-code-form-button'>
                 <SwatchBook className="h-4 w-4 mr-2" />
                 Create new invite code
               </Button>

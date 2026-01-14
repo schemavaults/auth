@@ -12,7 +12,7 @@ import {
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
-import { getAppEnvironment } from "@schemavaults/app-definitions";
+import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
 interface HandleLoginOptions {
   body: unknown;
@@ -35,7 +35,7 @@ const loginBodySchema = z
 export async function handleLogin({
   body,
 }: HandleLoginOptions): Promise<NextResponse> {
-  const appEnv = getAppEnvironment();
+  const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
 
   const parse_login_body = await loginBodySchema.safeParseAsync(body);
   if (!parse_login_body.success) {
@@ -190,3 +190,5 @@ export async function handleLogin({
     },
   );
 }
+
+export default handleLogin

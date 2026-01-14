@@ -421,3 +421,5 @@ export async function handleRegister({
     },
   );
 }
+
+export default handleRegister;

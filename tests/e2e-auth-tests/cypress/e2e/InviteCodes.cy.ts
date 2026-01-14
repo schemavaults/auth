@@ -16,4 +16,21 @@ describe("Invite Codes", () => {
     cy.wait(1000);
     cy.url().should("include", "/login");
   });
+
+  it("can create a new invite code as a superuser", () => {
+    cy.create_and_login_as_superuser().then((success) => {
+      if (!success) {
+        throw new Error("Failed to create and login as superuser");
+      }
+
+      const invite_code: string = cy.generate_random_code(16);
+      const max_uses: number = 1;
+
+      cy.create_invite_code(invite_code, max_uses).then(() => {
+        cy.log(
+          `Successfully created invite code '${invite_code}' with max uses ${max_uses}`,
+        );
+      });
+    });
+  });
 });

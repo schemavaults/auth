@@ -38,8 +38,9 @@ export async function POST(
     (await props.params).list_apis_query_type,
   );
   if (!parsed_query_type.success) {
-    if (environment === "development")
-      console.log("Invalid list API servers query type, not a string");
+    if (environment === "development") {
+      console.warn("Invalid list API servers query type, not a string");
+    }
     return NextResponse.json(
       {
         success: false,

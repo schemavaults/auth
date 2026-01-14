@@ -1,7 +1,10 @@
 /// <reference types="cypress" />
 
 import createAndLoginAsSuperuser from "./actions/create_and_login_as_superuser";
+import generate_random_code from "./actions/generate_random_code";
 import hasErrorToast from "./actions/has_error_toast";
+import is_admin from "./actions/is_admin";
+import is_authenticated from "./actions/is_authenticated";
 import login from "./actions/login";
 import logout from "./actions/logout";
 import register from "./actions/register";
@@ -55,3 +58,9 @@ Cypress.Commands.add(
 Cypress.Commands.add("has_error_toast", hasErrorToast);
 
 Cypress.Commands.add("logout", logout);
+
+Cypress.Commands.add("is_authenticated", is_authenticated);
+
+Cypress.Commands.add("is_admin", is_admin);
+
+Cypress.Commands.add('generate_random_code', generate_random_code)

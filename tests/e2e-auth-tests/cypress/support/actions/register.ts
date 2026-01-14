@@ -3,6 +3,8 @@ export default function register(
   password: string,
   invite_code?: string,
 ): Cypress.Chainable<number> {
+  cy.is_authenticated().should('be.false');
+
   cy.intercept("POST", "**/api/auth/register").as("registerRequest");
   cy.intercept("POST", "**/api/token/authorization_code").as(
     "exchangeTokenRequest",

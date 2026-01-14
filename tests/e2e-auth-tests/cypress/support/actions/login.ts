@@ -2,6 +2,8 @@ export default function login(
   email: string,
   password: string,
 ): Cypress.Chainable<boolean> {
+  cy.is_authenticated().should('be.false');
+
   cy.intercept("POST", "**/api/auth/login").as("loginRequest");
   cy.intercept("POST", "**/api/token/authorization_code").as(
     "exchangeTokenRequest",
@@ -78,6 +80,7 @@ export default function login(
                       // Wait for page to be interactive
                       cy.get("body", { timeout: 10000 }).should("be.visible");
                       cy.log("Account page loaded successfully");
+                      cy.is_authenticated().should("equal", true);
                       return cy.wrap(true, { log: false });
                     });
                   } else {
