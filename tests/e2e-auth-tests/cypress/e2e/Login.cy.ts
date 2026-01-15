@@ -13,11 +13,14 @@ describe("Login", () => {
     cy.url().should("include", "/auth/login");
   });
 
-  it("can login as superuser and is redirected from /auth/login to /account", () => {
+  it("can login as superuser and is redirected from /auth/login to /account after authentication", () => {
     cy.create_and_login_as_superuser().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to login as superuser");
       }
+
+      cy.getCookie("refresh_token").should("exist");
+      cy.getCookie("refresh_token_expiry").should("exist");
 
       cy.visit("/auth/login");
       cy.wait(2000);
