@@ -60,35 +60,42 @@ export function useAuthClientMiddleware(
     }
 
     if (auth) {
-      const refreshToken: RefreshToken | null = auth.getRefreshTokenFromCache();
-
-      let refresh_token: string | undefined = undefined;
-      if (refreshToken && refreshToken.exp > Date.now()) {
-        refresh_token = refreshToken.token;
+      // Load feature support
+      if (typeof auth.supports !== 'function') {
+        throw new TypeError("Auth client does not implement 'supports' method for feature checking");
       }
 
+      // Initalize token sources list to fill
       const token_sources: PotentiallyValidTokenSource[] = [];
 
-      let user_data: UserData | undefined = undefined;
-      if (auth.currentUser) {
-        user_data = auth.currentUser ?? undefined;
-      }
-
-      if (typeof refresh_token === "string") {
-        token_sources.push({
-          type: "refresh",
-          token: refresh_token,
-          sourceHint: "Refresh token",
-        } satisfies PotentiallyValidTokenSource);
-      }
-
-      if (!refresh_token && auth.hasHttpOnlyRefreshToken()) {
+      // Check for HTTP-only refresh token support
+      if (auth.supports('http-only-refresh-token') && auth.hasHttpOnlyRefreshToken()) {
         token_sources.push({
           type: "refresh",
           token: "AS_HTTP_ONLY_COOKIE",
           sourceHint:
             "Auth client believes it has an HTTP-only refresh token cookie",
-        } satisfies PotentiallyValidTokenSource);
+        } satisfies PotentiallyValidTokenSource)
+      } else if (!auth.supports('http-only-refresh-token')) {
+        const refreshToken: RefreshToken | null = auth.getRefreshTokenFromCache();
+
+        let refresh_token: string | undefined = undefined;
+        if (refreshToken && refreshToken.exp > Date.now()) {
+          refresh_token = refreshToken.token;
+        }
+
+        if (typeof refresh_token === "string") {
+          token_sources.push({
+            type: "refresh",
+            token: refresh_token,
+            sourceHint: "Refresh token",
+          } satisfies PotentiallyValidTokenSource);
+      }
+      }
+
+      let user_data: UserData | undefined = undefined;
+      if (auth.currentUser) {
+        user_data = auth.currentUser ?? undefined;
       }
 
       const authStatus: AuthMiddlewareOptions["authStatus"] =
