@@ -12,4 +12,17 @@ describe("Login", () => {
     cy.get("button[type='submit']").click();
     cy.url().should("include", "/auth/login");
   });
+
+  it("can login as superuser and is redirected from /auth/login to /account", () => {
+    cy.create_and_login_as_superuser().then((success: boolean) => {
+      if (!success) {
+        throw new Error("Failed to login as superuser");
+      }
+
+      cy.visit("/auth/login");
+      cy.wait(2000);
+      cy.url().should("not.include", "/auth/login");
+      cy.url().should("include", "/account");
+    });
+  });
 });
