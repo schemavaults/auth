@@ -199,7 +199,7 @@ export function CreateInviteCodeDialog(): ReactElement {
                 <FormItem>
                   <FormLabel>Invite Code</FormLabel>
                   <FormControl>
-                    <Input placeholder={"BLAHBLAHBLAH420"} {...field} />
+                    <Input placeholder={"BLAHBLAHBLAH420"} {...field} name="invite_code" />
                   </FormControl>
                   <FormDescription>Enter the new invite code.</FormDescription>
                   <FormMessage />
@@ -217,6 +217,7 @@ export function CreateInviteCodeDialog(): ReactElement {
                     <Textarea
                       placeholder={"e.g. Facebook Ad Campaign"}
                       {...field}
+                      name="description"
                     />
                   </FormControl>
                   <FormDescription>
@@ -237,6 +238,7 @@ export function CreateInviteCodeDialog(): ReactElement {
                     <Input
                       placeholder={"99999"}
                       {...field}
+                      name="max_uses"
                       onChange={(e): void => {
                         let asInt: number = e.target.valueAsNumber;
                         if (typeof asInt !== "number" || isNaN(asInt)) {
