@@ -4,7 +4,7 @@ import type {
   RequestTokensResult,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
-import { setCookie, type OptionsType } from "cookies-next/server";
+import { setCookie } from "cookies-next/server";
 import { RefreshTokenCookieName, RefreshTokenExpiryCookieName } from "@/lib/RefreshTokenCookieNames";
 import getStringByteSize from "@/lib/getStringByteSize";
 import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
@@ -16,8 +16,6 @@ export interface IReturnGeneratedTokensToUserOpts {
   hostname: string;
   debug?: boolean;
 }
-
-type SetCookieOpts = NonNullable<Parameters<typeof setCookie>[2]>;
 
 export default async function returnGeneratedTokensToUser({
   req,
