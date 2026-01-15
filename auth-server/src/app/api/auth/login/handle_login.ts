@@ -13,9 +13,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import shouldEnableDebug from "@/lib/should-enable-debug";
 
 interface HandleLoginOptions {
   body: unknown;
+  debug?: boolean;
 }
 
 // POST body for /api/auth/login
@@ -36,6 +38,7 @@ export async function handleLogin({
   body,
 }: HandleLoginOptions): Promise<NextResponse> {
   const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
+  const debug: boolean = shouldEnableDebug(appEnv);
 
   const parse_login_body = await loginBodySchema.safeParseAsync(body);
   if (!parse_login_body.success) {
@@ -49,7 +52,7 @@ export async function handleLogin({
 
   let userRegistry: UserRegistry;
   try {
-    userRegistry = new UserRegistry(dbh.db);
+    userRegistry = new UserRegistry(dbh.db, debug);
   } catch (e: unknown) {
     console.error(e);
     return NextResponse.json(
@@ -113,15 +116,15 @@ export async function handleLogin({
     );
   }
 
-  if (appEnv === "development" || appEnv === "test") {
-    console.log(`Found user with email ${email_credentials.email}`);
+  if (debug) {
+    console.log(`Found user with email '${email_credentials.email}' in database`);
   }
 
   const uid: string = user.uid;
 
   let compare_password_result: boolean = false;
   try {
-    if (appEnv === "development") {
+    if (debug) {
       console.log(`Comparing password for user with uid: ${uid}`);
     }
     compare_password_result = await userRegistry.comparePassword(
@@ -154,7 +157,7 @@ export async function handleLogin({
     );
   }
 
-  if (appEnv === "development") {
+  if (debug) {
     console.log(`Login successful as ${email_credentials.email} (uid: ${uid})`);
   }
 

@@ -573,7 +573,7 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
     uid: string,
     password: string,
   ): Promise<boolean> {
-    if (this.env === "development") {
+    if (this.debug) {
       console.log(
         `[UserRegistry::comparePassword] Attempting to compare input password against password saved in database`,
       );
@@ -585,7 +585,7 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
         UserRegistry.hashPassword(password),
       ]);
       const isSubmittedSameAsTruth: boolean = hashes[0] === hashes[1];
-      if (this.env === "development") {
+      if (this.debug) {
         console.log(
           `[UserRegistry::comparePassword] Password ${isSubmittedSameAsTruth ? "is" : "is not"} the same`,
         );
