@@ -20,7 +20,7 @@ export default function createInviteCode(invite_code: string, max_uses: number):
     return cy.visit("/admin/invite_codes").then(() => {
       cy.url().should("include", "/admin/invite_codes");
 
-      cy.get(`#${createInviteCodeDialogContentId}`, { log: false }).should("not.be.visible");
+      cy.get(`#${createInviteCodeDialogContentId}`, { log: false }).should("not.exist");
 
       cy.get(`button#${openInviteCodeCreationDialogButtonId}`).should('exist').click();
 
@@ -57,7 +57,7 @@ export default function createInviteCode(invite_code: string, max_uses: number):
       return cy.wait("@createInviteCodeRequest", { timeout: 10000 }).then((interception) => {
         interception.response?.statusCode && cy.wrap(interception.response?.statusCode).should("eq", 200);
         cy.log("Invite code creation request appears to have been a success!");
-        cy.get(`#${createInviteCodeDialogContentId}`, { log: false }).should("not.be.visible");
+        cy.get(`#${createInviteCodeDialogContentId}`, { log: false }).should("not.exist");
         return true;
       });
     })
