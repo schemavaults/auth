@@ -60,6 +60,7 @@ export default function login(
             if (interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
               cy.getCookie("refresh_token").should("exist");
+              cy.getCookie("refresh_token_expiry").should("exist");
               return cy
                 .wait("@loadAccountPage", {
                   timeout: 20000,
