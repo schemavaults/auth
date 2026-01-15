@@ -27,6 +27,7 @@ export default function createInviteCode(invite_code: string, max_uses: number):
       cy.wait(500); // Wait for dialog animation
 
       cy.get(`#${createInviteCodeDialogContentId}`, { log: false }).should("be.visible");
+      cy.url({ log: false }).should("include", "/admin/invite_codes");
 
       // Fill out form within new dialog
       cy.get(`input[name="invite_code"]`, { log: false })
@@ -40,6 +41,8 @@ export default function createInviteCode(invite_code: string, max_uses: number):
         .should('be.visible')
         .should("not.be.disabled")
         .type("Invite code generated within Cypress E2E test", { force: true });
+
+      cy.url({ log: false }).should("include", "/admin/invite_codes");
 
       cy.get(`input[name="max_uses"]`, { log: false })
         .should("exist")
