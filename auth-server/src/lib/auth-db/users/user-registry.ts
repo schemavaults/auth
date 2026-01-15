@@ -1121,6 +1121,50 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
     }
   }
 
+  public async listAllUsers(): Promise<readonly UserDocument[]> {
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
+
+    if (this.debug) {
+      console.log("[UserRegistry] listAllUsers()");
+    }
+
+    try {
+      const allUsersQuery = this.db
+        .selectFrom("users")
+        .select([
+          "email",
+          "email_verified",
+          "admin",
+          "created_at",
+          "disabled",
+          "invite_code",
+          "uid",
+        ])
+        .orderBy("created_at", "desc");
+
+      const allUsersRaw = await allUsersQuery.execute();
+      const allUsersParsed: UserDocument[] = [];
+
+      for (const raw_user of allUsersRaw) {
+        const parsed_user = await UserRegistry.parseUserDocument(raw_user);
+        allUsersParsed.push(parsed_user);
+      }
+
+      if (this.debug) {
+        console.log(
+          `[UserRegistry] listAllUsers() = ${allUsersParsed.length} users`,
+        );
+      }
+
+      return allUsersParsed;
+    } catch (e: unknown) {
+      console.error("Failed to load users from database: ", e);
+      throw new Error("Failed to load users from database!");
+    }
+  }
+
   private readonly env: SchemaVaultsAppEnvironment;
 
   public constructor(

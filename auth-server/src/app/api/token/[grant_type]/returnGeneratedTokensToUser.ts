@@ -4,7 +4,7 @@ import type {
   RequestTokensResult,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
-import { setCookie } from "cookies-next/server";
+import { setCookie, type OptionsType } from "cookies-next/server";
 import { RefreshTokenCookieName, RefreshTokenExpiryCookieName } from "@/lib/RefreshTokenCookieNames";
 import getStringByteSize from "@/lib/getStringByteSize";
 import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
@@ -16,6 +16,8 @@ export interface IReturnGeneratedTokensToUserOpts {
   hostname: string;
   debug?: boolean;
 }
+
+type SetCookieOpts = NonNullable<Parameters<typeof setCookie>[2]>;
 
 export default async function returnGeneratedTokensToUser({
   req,
@@ -71,7 +73,7 @@ export default async function returnGeneratedTokensToUser({
         );
       }
 
-      await setCookie(RefreshTokenCookieName, refresh_token.token satisfies string, {
+      const refreshTokenSetCookieOpts = {
         httpOnly: true,
         secure,
         expires: new Date(refresh_token.exp satisfies number),
@@ -79,11 +81,18 @@ export default async function returnGeneratedTokensToUser({
         domain: hostname,
         req,
         res: success_response,
-      });
+      };
+      if (!secure && hostname.startsWith('localhost:')) {
+        delete (refreshTokenSetCookieOpts as Partial<typeof refreshTokenSetCookieOpts>).domain;
+      }
+
+      await setCookie(RefreshTokenCookieName, refresh_token.token satisfies string, refreshTokenSetCookieOpts);
+      
+      
       // set a non-http-only cookie with the refresh token expiry time
       // this way client should know if it is authenticated or not.
       // don't use this cookie for auth, just for client-side logic
-      await setCookie(RefreshTokenExpiryCookieName, `${refresh_token.exp satisfies number}` satisfies string, {
+      const refreshTokenExpirySetCookieOpts = {
         httpOnly: false,
         secure,
         expires: new Date(refresh_token.exp satisfies number),
@@ -91,7 +100,11 @@ export default async function returnGeneratedTokensToUser({
         domain: hostname,
         req,
         res: success_response,
-      });
+      };
+      if (!secure && hostname.startsWith('localhost:')) {
+        delete (refreshTokenExpirySetCookieOpts as Partial<typeof refreshTokenExpirySetCookieOpts>).domain;
+      }
+      await setCookie(RefreshTokenExpiryCookieName, `${refresh_token.exp satisfies number}` satisfies string, refreshTokenExpirySetCookieOpts);
     }
   }
   await setRefreshTokenCookie();

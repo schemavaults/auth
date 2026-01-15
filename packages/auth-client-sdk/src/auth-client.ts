@@ -959,7 +959,10 @@ export class SchemaVaultsAuthClient
         typeof refresh_token === "string" &&
         refresh_token === "AS_HTTP_ONLY_COOKIE"
       ) {
-        this.markHttpOnlyRefreshTokenAsReceived();
+        this.assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie();
+        if (debug) {
+          console.log("[SchemaVaultsAuthClient] Detected HTTP-only cookie refresh token (accompanying-cookie).");
+        }
         return;
       } else {
         throw new TypeError("Invalid type for refresh token!");
@@ -1162,6 +1165,10 @@ export class SchemaVaultsAuthClient
         `[SchemaVaultsAuthClient] Getting access token from cache via adapter...`,
       );
     }
+    if (typeof this.adapter.doesSupportHttpOnlyRefreshToken === 'function' && this.adapter.doesSupportHttpOnlyRefreshToken()) {
+      throw new Error("Cannot get refresh token from cache when using HTTP-only cookie storage");
+    }
+
     const token: RefreshToken | null = this.adapter.getRefreshToken();
     if (this.DEBUG && !token) {
       if (!token) {
@@ -1348,20 +1355,11 @@ export class SchemaVaultsAuthClient
     return userData;
   }
 
-  private markHttpOnlyRefreshTokenAsReceived(): void {
-    if (
-      typeof this.adapter.doesSupportHttpOnlyRefreshToken === "function" &&
-      this.adapter.doesSupportHttpOnlyRefreshToken()
-    ) {
-      if (typeof this.adapter.setHttpOnlyRefreshTokenReceived !== "function") {
-        throw new Error(
-          "setHttpOnlyRefreshTokenReceived is not a function on the adapter, despite doesSupportHttpOnlyRefreshToken === true",
-        );
-      }
-      return this.adapter.setHttpOnlyRefreshTokenReceived();
-    } else {
+  private assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie(): void {
+    if (typeof this.adapter.hasHttpOnlyRefreshToken === 'function' && !this.adapter.hasHttpOnlyRefreshToken()) {
       throw new Error(
-        "doesSupportHttpOnlyRefreshToken() is falsy, but received an HTTP-only cookie!",
+        "Adapter does not indicate having an HTTP-only refresh token after exchange," + " " + 
+        "despite response of AS_HTTP_ONLY_COOKIE!"
       );
     }
   }
@@ -1421,7 +1419,10 @@ export class SchemaVaultsAuthClient
         typeof tokens.refresh === "string" &&
         tokens.refresh === "AS_HTTP_ONLY_COOKIE"
       ) {
-        this.markHttpOnlyRefreshTokenAsReceived();
+        this.assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie();
+        if (this.debug) {
+          console.log("[SchemaVaultsAuthClient] Detected HTTP-only cookie refresh token from exchange response.");
+        }
       } else {
         throw new TypeError("Invalid refresh token type");
       }
@@ -1698,5 +1699,16 @@ export class SchemaVaultsAuthClient
       );
     }
     return redirect_uri;
+  }
+
+  public supports(feature_name: string): boolean {
+    if (feature_name === 'http-only-refresh-token') {
+      return (
+        typeof this.adapter.doesSupportHttpOnlyRefreshToken === "function" &&
+        this.adapter.doesSupportHttpOnlyRefreshToken()
+      );
+    }
+
+    return false;
   }
 }

@@ -391,7 +391,6 @@ export class ReactAuthClientSdkAdapter
         "Failed to clear HTTP-only refresh token via network request to @schemavaults/auth-server",
       );
     }
-    this.lastHttpOnlyRefreshTokenReceived = null;
     return;
   }
 
@@ -517,23 +516,6 @@ export class ReactAuthClientSdkAdapter
 
   public doesSupportHttpOnlyRefreshToken(): true {
     return true;
-  }
-
-  /**
-   * The last time an HTTP-only refresh token was received.
-   */
-  protected lastHttpOnlyRefreshTokenReceived: Date | undefined | null =
-    undefined;
-
-  public setHttpOnlyRefreshTokenReceived(): void {
-    const currentTime: Date = new Date();
-    if (this.debug) {
-      console.log(
-        "[ReactAuthClientSdkAdapter] Marking last time HTTP-only refresh token received as: ",
-        currentTime,
-      );
-    }
-    this.lastHttpOnlyRefreshTokenReceived = currentTime;
   }
 
   /**

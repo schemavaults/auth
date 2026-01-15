@@ -91,4 +91,10 @@ export interface ISchemaVaultsAuthClient {
    * @returns Getter that returns true if there is a user currently signed in, false otherwise
    */
   isAuthenticated: boolean;
+
+  /**
+   * Return true if feature is supported by this auth client / adapter
+   * @param feature_name A feature name, e.g. 'http-only-refresh-token'
+   */
+  supports(feature_name: string): boolean;
 }

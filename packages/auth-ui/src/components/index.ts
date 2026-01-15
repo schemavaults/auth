@@ -17,3 +17,9 @@ export type { InviteCodesCardProps } from "./InviteCodesCard";
 
 export { InviteCodesTable } from "./InviteCodesTable";
 export type { InviteCodesDatatableProps } from "./InviteCodesTable";
+
+export { UsersTable } from "./UsersTable";
+export type { UsersDatatableProps } from "./UsersTable";
+
+export { UsersCard } from "./UsersCard";
+export type { UsersCardProps } from "./UsersCard";

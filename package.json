@@ -17,11 +17,13 @@
   "scripts": {
     "dev": "turbo dev",
     "dev:server": "bun run dev --filter @schemavaults/auth-server",
+    "dev:db": "cd auth-postgres-db && /bin/bash ./start-dev-db.sh",
     "build": "turbo build",
     "build:server": "bun run build --filter @schemavaults/auth-server",
     "test": "turbo test",
     "lint": "turbo lint",
     "start": "turbo start",
-    "start:server": "bun run start --filter @schemavaults/auth-server"
+    "start:server": "bun run start --filter @schemavaults/auth-server",
+    "e2e": "cd tests/e2e-auth-tests && /bin/bash ./e2e.sh"
   }
 }

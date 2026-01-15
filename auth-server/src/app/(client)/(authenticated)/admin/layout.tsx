@@ -12,6 +12,7 @@ import { cookies } from "next/headers";
 import { redirect, type RedirectType } from "next/navigation";
 import type { ReactNode } from "react";
 import { ServerlessDatabase } from "@/lib/auth-db";
+import shouldEnableDebug from "@/lib/should-enable-debug";
 
 export default async function AdminPathsRouteGuardServerComponent({
   children,
@@ -19,8 +20,9 @@ export default async function AdminPathsRouteGuardServerComponent({
   children: ReactNode;
 }): Promise<ReactNode> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-  if (environment === "development") {
-    console.log("[AdminPathsRouteGuardServerComponent] Preparing admin page!");
+  const debug: boolean = shouldEnableDebug(environment)
+  if (debug) {
+    console.log("[AdminPathsRouteGuardServerComponent] Preparing admin page...");
   }
 
   await using dbh = ServerlessDatabase.createDBH();
@@ -34,6 +36,10 @@ export default async function AdminPathsRouteGuardServerComponent({
       type: "refresh",
       token: refresh_token_cookie.value,
     });
+  } else {
+    if (debug) {
+      console.warn("[AdminPathsRouteGuardServerComponent] No refresh token cookie found.");
+    }
   }
 
   const route_guard_factory = new RouteGuardFactory(dbh.db);
