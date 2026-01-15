@@ -17,6 +17,18 @@ export interface IReturnGeneratedTokensToUserOpts {
   debug?: boolean;
 }
 
+function isLocalhostDomain(hostname: string): boolean {
+  if (hostname === 'localhost') {
+    return true;
+  }
+
+  if (hostname.startsWith('localhost:')) {
+    return true;
+  }
+
+  return false;
+}
+
 export default async function returnGeneratedTokensToUser({
   req,
   tokenGenerationResult,
@@ -80,7 +92,7 @@ export default async function returnGeneratedTokensToUser({
         req,
         res: success_response,
       };
-      if (!secure && hostname.startsWith('localhost:')) {
+      if (!secure && isLocalhostDomain(hostname)) {
         delete (refreshTokenSetCookieOpts as Partial<typeof refreshTokenSetCookieOpts>).domain;
       }
 
@@ -99,7 +111,7 @@ export default async function returnGeneratedTokensToUser({
         req,
         res: success_response,
       };
-      if (!secure && hostname.startsWith('localhost:')) {
+      if (!secure && isLocalhostDomain(hostname)) {
         delete (refreshTokenExpirySetCookieOpts as Partial<typeof refreshTokenExpirySetCookieOpts>).domain;
       }
       await setCookie(RefreshTokenExpiryCookieName, `${refresh_token.exp satisfies number}` satisfies string, refreshTokenExpirySetCookieOpts);
