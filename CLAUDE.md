@@ -23,23 +23,21 @@ bun run build:server                     # Build just auth-server
 
 ### Linting
 ```bash
-bun run lint                             # Lint all packages via Turborepo
-cd auth-server && bun run lint           # Lint auth-server only
-cd packages/<pkg> && bun run lint        # Lint specific package
+bun run lint                                         # Lint all packages via Turborepo
+bun run lint --filter @schemavaults/auth-server      # Lint auth-server only
+bun run lint --filter @schemavaults/auth-client-sdk  # Lint specific package
 ```
 
 ### Testing
 ```bash
 # Unit tests (per-package using bun test)
-cd packages/jwt && bun test              # Run tests in jwt package
-cd packages/auth-common && bun test      # Run tests in auth-common package
-cd packages/auth-client-sdk && bun test  # Run tests in auth-client-sdk package
-cd packages/auth-server-sdk && bun test  # Run tests in auth-server-sdk package
+bun run test --filter @schemavaults/jwt              # Run tests in jwt package
+bun run test --filter @schemavaults/auth-common      # Run tests in auth-common package
+bun run test --filter @schemavaults/auth-client-sdk  # Run tests in auth-client-sdk package
+bun run test --filter @schemavaults/auth-server-sdk  # Run tests in auth-server-sdk package
 
 # E2E tests (Cypress)
-cd tests/e2e-auth-tests
-bun run cy:open                          # Open Cypress UI
-bun run e2e                              # Run Cypress headless
+bun run e2e        # Run Cypress / Docker Compose testing pipeline
 ```
 
 ## Architecture
