@@ -108,8 +108,6 @@ export const columns: ColumnDef<InviteCodeDefinition>[] = [
             >
               <ClipboardCopy className="h-4 w-4 pr-2" /> Copy Invite Code
             </DropdownMenuItem>
-            {/* <DropdownMenuSeparator /> */}
-            {/* <DropdownMenuItem>Authorize app</DropdownMenuItem> */}
           </DropdownMenuContent>
         </DropdownMenu>
       );
