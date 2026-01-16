@@ -2,15 +2,28 @@
 // Initializes auth-server/.env.development with all required development environment variables
 
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { join, normalize } from "path";
 import { postgresCredentialEnvironmentVariables } from "../auth-postgres-db/add-dev-db-credentials-to-auth-server-env";
+import { cwd } from "process";
 
 const thisScriptName = "init-dev-env.ts";
 
+function resolveMonorepoRoot(): string {
+  if (existsSync(join(cwd(), thisScriptName))) {
+    return normalize(join(cwd(), ".."));
+  } else if (existsSync(join(cwd(), "auth-server"))) {
+    return cwd();
+  } else {
+    console.error("Failed to resolve monorepo root!");
+    process.exit(1);
+  }
+}
+
 function resolveAuthServerDir(): string {
-  const scriptDir = import.meta.dir;
-  if (existsSync(join(scriptDir, "package.json"))) {
-    return scriptDir;
+  const monorepoRoot: string = resolveMonorepoRoot();
+  const authServerDir = join(monorepoRoot, "auth-server");
+  if (existsSync(authServerDir)) {
+    return authServerDir;
   }
   console.error("Failed to resolve auth-server/ directory!");
   process.exit(1);
