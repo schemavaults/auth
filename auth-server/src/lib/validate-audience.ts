@@ -207,3 +207,5 @@ export async function validateAudience(
 
   return true;
 }
+
+export default validateAudience;

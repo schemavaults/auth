@@ -12,7 +12,7 @@ import {
   type OrganizationsRegistry,
   loadUserData,
 } from "@/lib/auth-db";
-import { validateAudience } from "./validate-audience";
+import validateAudience from "@/lib/validate-audience";
 import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
@@ -22,7 +22,7 @@ import {
   AuthServerJwtKeysManager,
   generateTokensForAuthenticatedUser,
 } from "@/lib/AuthServerJwtKeysManager";
-import returnGeneratedTokensToUser from "./returnGeneratedTokensToUser";
+import returnGeneratedTokensToUser from "@/lib/returnGeneratedTokensToUser";
 import getHostname from "@/lib/hostname";
 
 export async function handleAuthorizationCodeGrant(
