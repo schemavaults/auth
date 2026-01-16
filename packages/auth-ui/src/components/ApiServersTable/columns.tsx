@@ -33,17 +33,17 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
     enableHiding: false,
   },
   {
-    id: 'id',
+    id: 'api_server_id',
     accessorKey: "api_server_id",
     header: "API Server ID"
   },
   {
-    id: 'name',
+    id: 'api_server_name',
     accessorKey: "api_server_name",
     header: "API Server Name"
   },
   {
-    id: 'description',
+    id: 'api_server_description',
     accessorKey: "api_server_description",
     header: "Description"
   },

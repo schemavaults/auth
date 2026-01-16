@@ -37,17 +37,17 @@ export function getAppsTableColumns(
       enableHiding: false,
     },
     {
-      id: 'id',
+      id: 'app_id',
       accessorKey: "app_id",
       header: "App ID",
     },
     {
-      id: 'name',
+      id: 'app_name',
       accessorKey: "app_name",
       header: "App Name"
     },
     {
-      id: 'description',
+      id: 'app_description',
       accessorKey: "app_description",
       header: "Description"
     },

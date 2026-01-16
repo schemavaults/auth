@@ -47,11 +47,10 @@ export function AppsTable(
       initialVisibleColumns={{
         actions: true,
         select: true,
-        id: false,
         app_id: false,
-        name: true,
         app_name: true,
         app_description: true,
+        domains: true
       }}
       HeaderButtons={() => {
         return (
@@ -70,3 +69,5 @@ export function AppsTable(
     />
   )
 }
+
+export default AppsTable;

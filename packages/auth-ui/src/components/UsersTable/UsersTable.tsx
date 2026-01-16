@@ -40,6 +40,7 @@ export function UsersTable({ users }: UsersDatatableProps): ReactElement {
         return <></>;
       }}
       datatypeLabel="User"
+      searchColumn={['email', 'invite_code']}
     />
   );
 }

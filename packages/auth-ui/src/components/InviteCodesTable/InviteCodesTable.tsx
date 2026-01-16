@@ -45,6 +45,7 @@ export function InviteCodesTable({
         );
       }}
       datatypeLabel="Invite Code"
+      searchColumn={['invite_code', 'description']}
     />
   );
 }

@@ -9,8 +9,8 @@ import { columns } from "./columns";
 import type { ListApiServersQueryType, SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
 import { Loader2 } from "lucide-react";
 import { clearUseApiServersCache, useApiServersList } from "./useApiServersList";
-import { CreateApiServerDialog } from "../CreateApiServerDialog";
-import { ConnectAppToApiDialog } from "../ConnectAppToApiDialog";
+import { CreateApiServerDialog } from "@/components/CreateApiServerDialog";
+import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
 
 export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
@@ -36,10 +36,8 @@ export function ApiServersTable({ queryType }: ApiServersDatatableProps): ReactE
       initialVisibleColumns={{
         actions: true,
         select: true,
-        id: false,
         api_server_id: false,
         api_server_name: true,
-        name: true,
         api_server_description: true,
       }}
       HeaderButtons={(): ReactElement => {
@@ -51,6 +49,9 @@ export function ApiServersTable({ queryType }: ApiServersDatatableProps): ReactE
         );
       }}
       datatypeLabel="Server"
+      searchColumn={['api_server_id', 'api_server_name', 'api_server_description']}
     />
   )
 }
+
+export default ApiServersTable;
