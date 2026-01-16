@@ -44,6 +44,8 @@ function promptWithDefault(message: string, defaultValue: string): string {
 function generateEnvContent(
   superuserInviteCode: string,
   privateBeta: string,
+  passwordSalt: string,
+  passwordHashRounds: number,
 ): string {
   const lines: string[] = [];
 
@@ -51,6 +53,11 @@ function generateEnvContent(
   lines.push(`NODE_ENV="development"`);
   lines.push(`SCHEMAVAULTS_APP_ENVIRONMENT="development"`);
   lines.push(`NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT="development"`);
+  lines.push("");
+
+  lines.push(`# Password Hashing`);
+  lines.push(`PRIVATE_GLOBAL_PASSWORD_SALT="${passwordSalt}"`);
+  lines.push(`PRIVATE_PASSWORD_HASH_ROUNDS=${passwordHashRounds}`);
   lines.push("");
 
   lines.push(`# Superuser Invite Code`);
@@ -95,7 +102,27 @@ async function main(): Promise<void> {
     "true",
   );
 
-  const envContent = generateEnvContent(superuserInviteCode, privateBeta);
+  const passwordSalt = promptWithDefault(
+    "Enter PRIVATE_GLOBAL_PASSWORD_SALT",
+    "blahblahblah",
+  );
+
+  const passwordHashRoundsInput = promptWithDefault(
+    "Enter PRIVATE_PASSWORD_HASH_ROUNDS",
+    "3",
+  );
+  const passwordHashRounds = parseInt(passwordHashRoundsInput, 10);
+  if (isNaN(passwordHashRounds) || passwordHashRounds < 1) {
+    console.error("Error: PRIVATE_PASSWORD_HASH_ROUNDS must be a positive integer.");
+    process.exit(1);
+  }
+
+  const envContent = generateEnvContent(
+    superuserInviteCode,
+    privateBeta,
+    passwordSalt,
+    passwordHashRounds,
+  );
 
   writeFileSync(devEnvFile, envContent, { encoding: "utf-8" });
 
