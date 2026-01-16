@@ -18,6 +18,7 @@
     "dev": "turbo dev",
     "dev:server": "bun run dev --filter @schemavaults/auth-server",
     "dev:db": "cd auth-postgres-db && /bin/bash ./start-dev-db.sh",
+    "dev:init-env": "bun run auth-server/init-dev-env.ts",
     "build": "turbo build",
     "build:server": "bun run build --filter @schemavaults/auth-server",
     "test": "turbo test",
