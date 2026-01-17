@@ -16,7 +16,7 @@ import {
 /**
  * List available SchemaVaults API servers
  */
-export async function GET_api_list_handler(
+async function GET_api_list_handler(
   req: NextRequest,
 ): Promise<NextResponse> {
   const searchParams: URLSearchParams = req.nextUrl.searchParams;
@@ -136,4 +136,4 @@ export async function GET_api_list_handler(
   return await protected_route(req);
 }
 
-export const dynamic = "force-dynamic"; // defaults to auto
+export default GET_api_list_handler;

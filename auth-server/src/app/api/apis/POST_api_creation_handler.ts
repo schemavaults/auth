@@ -14,7 +14,7 @@ import { withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuar
 /**
  * Create a new API server
  */
-export const POST = withAuthenticatedApiRouteGuard(
+const POST_api_creation_handler = withAuthenticatedApiRouteGuard(
   async ({ req, user, dbh, environment }) => {
     if (environment === "development") {
       console.log("[/api/apis] POST request received");
@@ -100,4 +100,4 @@ export const POST = withAuthenticatedApiRouteGuard(
   },
 );
 
-export const dynamic = "force-dynamic"; // defaults to auto
+export default POST_api_creation_handler;
