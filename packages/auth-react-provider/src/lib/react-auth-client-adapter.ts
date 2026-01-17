@@ -384,7 +384,11 @@ export class ReactAuthClientSdkAdapter
 
   public async clearHttpOnlyRefreshToken(): Promise<void> {
     try {
-      await this.sendPOSTRequest(`${this.auth_server_uri}/api/logout`, {}, {});
+      await this.sendPOSTRequest(
+        `${this.auth_server_uri}/api/auth/logout`,
+        {},
+        {},
+      );
     } catch (e: unknown) {
       console.error(
         "Failed to clear HTTP-only refresh token via network request to @schemavaults/auth-server: ",

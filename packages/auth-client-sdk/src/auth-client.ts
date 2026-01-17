@@ -760,7 +760,7 @@ export class SchemaVaultsAuthClient
     // Get the endpoint to exchange the authorization code for an access token
     // https://datatracker.ietf.org/doc/html/rfc7636#section-4.5
     const token_endpoint =
-      `${this.auth_server_uri}/api/token/authorization_code` as const;
+      `${this.auth_server_uri}/api/auth/token/authorization_code` as const;
     if (debug) {
       console.log(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Token Endpoint: ",
@@ -1456,7 +1456,7 @@ export class SchemaVaultsAuthClient
     }
 
     const token_endpoint =
-      `${this.auth_server_uri}/api/token/refresh_token` as const;
+      `${this.auth_server_uri}/api/auth/token/refresh_token` as const;
 
     const client_app_id = this.app_id;
 

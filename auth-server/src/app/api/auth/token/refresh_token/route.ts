@@ -65,7 +65,7 @@ export async function POST(
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const debug: boolean = shouldEnableDebug(environment);
   if (debug) {
-    console.log(`${req.method} => /api/token/refresh_token`);
+    console.log(`${req.method} => /api/auth/token/refresh_token`);
   }
 
   const schema =

@@ -20,7 +20,7 @@ function evaluateAuthMiddlewareRules(
 
 const examplePublicRoutes = [
   [], //              /
-  ["api", "token"], // /api/token
+  ["api", "auth", "token"], // /api/token
 ];
 const exampleUnauthedRoutes = [
   ["auth", "login"],
@@ -192,6 +192,6 @@ test("routes ending in /api or /trpc that are explicitly public are treated as p
     expect(route_type).toEqual("public");
   }
 
-  testPublicApiRoute("/api/token");
-  testPublicApiRoute("/api/token/refresh/blah/blah/blah");
+  testPublicApiRoute("/api/auth/token");
+  testPublicApiRoute("/api/auth/token/refresh/blah/blah/blah");
 });

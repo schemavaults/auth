@@ -6,12 +6,12 @@ import type {
   UserData,
 } from "@schemavaults/auth-common";
 import {
-  type IProtectedAdminServerComponentPageProps,
-  withAdminServerComponentRouteGuard,
-} from "@/lib/withAdminRouteGuard";
+  type IProtectedAuthenticatedServerComponentPageProps,
+  withAuthenticatedServerComponentRouteGuard,
+} from "@/lib/withAuthenticatedRouteGuard";
 import {
   AuthorizedAppsRegistry,
-  ServerlessDatabase,
+  type ServerlessDatabase,
   preloadAppsTable,
   SchemaVaultsAppRegistry,
 } from "@/lib/auth-db";
@@ -47,7 +47,7 @@ async function attemptToPreloadAppsAndDomains(
 }
 
 async function AuthServerAccountDashboardPageServerComponent(
-  { user, dbh }: IProtectedAdminServerComponentPageProps
+  { user, dbh }: IProtectedAuthenticatedServerComponentPageProps
 ): Promise<ReactElement> {
 
   if (!user) {
@@ -75,5 +75,5 @@ async function AuthServerAccountDashboardPageServerComponent(
 }
 
 export default async function AuthServerAccountDashboardPage(): Promise<ReactElement> {
-  return await withAdminServerComponentRouteGuard(AuthServerAccountDashboardPageServerComponent);
+  return await withAuthenticatedServerComponentRouteGuard(AuthServerAccountDashboardPageServerComponent);
 }
