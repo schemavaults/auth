@@ -3,17 +3,12 @@ import type { ReactElement } from "react";
 
 import AccountPageView from "./auth-dashboard-account-page-view";
 import type {
-  PotentiallyValidTokenSource,
   UserData,
 } from "@schemavaults/auth-common";
-import { cookies } from "next/headers";
 import {
-  getAppEnvironment,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
-import redirectWithError from "@/lib/redirect-with-error";
-import { redirect, type RedirectType } from "next/navigation";
+  type IProtectedAdminServerComponentPageProps,
+  withAdminServerComponentRouteGuard,
+} from "@/lib/withAdminRouteGuard";
 import {
   AuthorizedAppsRegistry,
   ServerlessDatabase,
@@ -21,7 +16,6 @@ import {
   SchemaVaultsAppRegistry,
 } from "@/lib/auth-db";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
-import RouteGuardFactory from "@/lib/RouteGuardFactory";
 
 async function attemptToPreloadAppsAndDomains(
   dbh: ServerlessDatabase,
@@ -52,69 +46,10 @@ async function attemptToPreloadAppsAndDomains(
   );
 }
 
-type CookiesHandler = Awaited<ReturnType<typeof cookies>>;
+async function AuthServerAccountDashboardPageServerComponent(
+  { user, dbh }: IProtectedAdminServerComponentPageProps
+): Promise<ReactElement> {
 
-export default async function AuthServerAccountDashboardPage(): Promise<ReactElement> {
-  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-  if (environment === "development") {
-    console.log("[AuthServerAccountDashboardPage] Preparing account page!");
-  }
-
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-
-  const token_sources: PotentiallyValidTokenSource[] = [];
-
-  let cookiesHandler: CookiesHandler;
-  try {
-    cookiesHandler = await cookies();
-  } catch (e: unknown) {
-    console.error("Failed to parse cookies: ", e);
-    redirectWithError(
-      (url: string, type: RedirectType | undefined): never => {
-        void type;
-        return redirect(url);
-      },
-      500,
-      "internal_server_error",
-    );
-  }
-
-  const refresh_token_cookie = cookiesHandler.get("refresh_token");
-  if (typeof refresh_token_cookie?.value === "string") {
-    token_sources.push({
-      sourceHint: "Auth Server Refresh Token",
-      type: "refresh",
-      token: refresh_token_cookie.value,
-    });
-  }
-
-  const route_guard_factory = new RouteGuardFactory(dbh.db);
-  const route_guard = await route_guard_factory.createGuardFromTokenSources(
-    "authenticated",
-    token_sources,
-    SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-  );
-  if (!route_guard.isAccessAllowed) {
-    redirectWithError(
-      (url: string, type: RedirectType | undefined): never => {
-        void type;
-        return redirect(url);
-      },
-      401,
-      "unauthenticated",
-    );
-  }
-  const user = route_guard.user;
-  if (!user) {
-    redirectWithError(
-      (url: string, type: RedirectType | undefined): never => {
-        void type;
-        return redirect(url);
-      },
-      401,
-      "load_user_data_failure",
-    );
-  }
   if (!user) {
     // allow typescript to see that user data is set
     throw new Error(
@@ -137,4 +72,8 @@ export default async function AuthServerAccountDashboardPage(): Promise<ReactEle
       preloaded_authorized_apps_data={preloaded_authorized_apps}
     />
   );
+}
+
+export default async function AuthServerAccountDashboardPage(): Promise<ReactElement> {
+  return await withAdminServerComponentRouteGuard(AuthServerAccountDashboardPageServerComponent);
 }

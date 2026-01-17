@@ -9,7 +9,11 @@ import {
   type UserData,
   type DecodeTokenFn,
 } from "@schemavaults/auth-common";
-import { decodeJWT, getKeysetIdFromToken } from "@schemavaults/jwt";
+import {
+  type CustomJWTPayload,
+  decodeJWT as decodeSchemavaultsJwt,
+  getKeysetIdFromToken,
+} from "@schemavaults/jwt";
 import {
   apiServerIdSchema,
   getAppEnvironment,
@@ -26,6 +30,7 @@ export interface RouteGuardFactoryInitOptions {
   environment: SchemaVaultsAppEnvironment;
   jwt_keys_manager?: IJwtKeyManager;
   is_auth_server?: boolean;
+  debug?: boolean;
 }
 
 type DecodeTokenFnOutput = Awaited<ReturnType<DecodeTokenFn>>;
@@ -53,10 +58,12 @@ const GUARDS = {
 export class RouteGuardFactory {
   private readonly jwt_keys_manager: IJwtKeyManager;
   private readonly environment: SchemaVaultsAppEnvironment;
+  private readonly debug: boolean;
   private readonly is_auth_server: boolean;
 
   public constructor({ environment, ...opts }: RouteGuardFactoryInitOptions) {
     this.environment = environment;
+    this.debug = opts.debug ?? false;
     if (
       typeof opts.is_auth_server !== "boolean" &&
       typeof opts.is_auth_server !== "undefined"
@@ -108,14 +115,15 @@ export class RouteGuardFactory {
     jwt_audience: string,
   ): Promise<IRouteGuard> {
     const environment: SchemaVaultsAppEnvironment = this.environment;
-    if (environment !== "production") {
+    const debug: boolean = this.debug;
+    if (debug) {
       console.log(
         `[RouteGuardFactory] Initializing route guard from token sources: `,
         token_sources,
       );
     }
 
-    if (!apiServerIdSchema.safeParse(jwt_audience).success) {
+    if (!apiServerIdSchema.safeParse(jwt_audience satisfies string).success) {
       throw new TypeError(
         `Invalid API server ID for 'jwt_audience': ${jwt_audience}`,
       );
@@ -124,68 +132,72 @@ export class RouteGuardFactory {
     let user: UserData | null = null;
 
     try {
-      user = await decodeFirstOfSeveralJwts({
-        token_sources,
-        jwt_audience,
-        decodeJWT: async (opts): Promise<DecodeTokenFnOutput> => {
-          if (environment !== "production") {
-            console.log(`[RouteGuardFactory] Attempting to decode JWT...`);
-          }
+      user = await decodeFirstOfSeveralJwts(
+        {
+          token_sources,
+          jwt_audience,
+          decodeJWT: async (opts): Promise<DecodeTokenFnOutput> => {
+            if (environment !== "production") {
+              console.log(`[RouteGuardFactory] Attempting to decode JWT...`);
+            }
 
-          let keyset_id: string;
-          try {
-            keyset_id = getKeysetIdFromToken(opts.token satisfies string);
-          } catch (e: unknown) {
-            console.error("Failed to load 'keyset_id' from auth token: ", e);
-            throw new Error("Failed to load 'keyset_id' from auth token!");
-          }
+            let keyset_id: string;
+            try {
+              keyset_id = getKeysetIdFromToken(opts.token satisfies string);
+            } catch (e: unknown) {
+              console.error("Failed to load 'keyset_id' from auth token: ", e);
+              throw new Error("Failed to load 'keyset_id' from auth token!");
+            }
 
-          const keys_manager: IJwtKeyManager = this.jwt_keys_manager;
-          if (!keys_manager) {
-            throw new Error(
-              "Failed to resolve reference to JWT keys manager to operate this route guard!",
-            );
-          }
-
-          let decodingKeys: IDecodeAuthTokenKeys;
-          try {
-            decodingKeys = await loadJwtDecodingKeys({
-              keyset_id,
-              keys_manager,
-              audience_id: jwt_audience,
-            });
-            if (decodingKeys.keyset_id !== keyset_id) {
+            const keys_manager: IJwtKeyManager = this.jwt_keys_manager;
+            if (!keys_manager) {
               throw new Error(
-                "Mismatch between the keyset ID of result and what was requested!",
+                "Failed to resolve reference to JWT keys manager to operate this route guard!",
               );
             }
-          } catch (e: unknown) {
-            console.error(
-              `Failed to load keys associated with token-associated keyset '${keyset_id}': `,
-              e,
-            );
-            throw new Error(
-              "Failed to load keys associated with token-associated keyset!",
-            );
-          }
-          const { decryption_key, verification_key } = decodingKeys;
 
-          try {
-            return await decodeJWT({
-              jwt: opts.token,
-              type: opts.type,
-              audience: opts.jwt_audience,
-              decryption_key,
-              verification_key,
-              keyset_id,
-              env: environment,
-            });
-          } catch (e: unknown) {
-            console.error("Failed to decode JSON web token: ", e);
-            throw new Error("Failed to decode JSON web token!");
-          }
+            let decodingKeys: IDecodeAuthTokenKeys;
+            try {
+              decodingKeys = await loadJwtDecodingKeys({
+                keyset_id,
+                keys_manager,
+                audience_id: jwt_audience,
+                debug,
+              });
+              if (decodingKeys.keyset_id !== keyset_id) {
+                throw new Error(
+                  "Mismatch between the keyset ID of result and what was requested!",
+                );
+              }
+            } catch (e: unknown) {
+              console.error(
+                `Failed to load keys associated with token-associated keyset '${keyset_id}': `,
+                e,
+              );
+              throw new Error(
+                "Failed to load keys associated with token-associated keyset!",
+              );
+            }
+            const { decryption_key, verification_key } = decodingKeys;
+
+            try {
+              return (await decodeSchemavaultsJwt({
+                jwt: opts.token,
+                type: opts.type,
+                audience: opts.jwt_audience,
+                decryption_key,
+                verification_key,
+                keyset_id,
+                env: environment,
+              })) satisfies CustomJWTPayload;
+            } catch (e: unknown) {
+              console.error("Failed to decode JSON web token: ", e);
+              throw new Error("Failed to decode JSON web token!");
+            }
+          },
         },
-      });
+        debug,
+      );
     } catch (e: unknown) {
       console.error(
         "No-op error creating route-guard... Failed to decode JWTs, setting user = null",

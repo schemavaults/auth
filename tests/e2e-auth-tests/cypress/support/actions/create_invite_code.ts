@@ -31,67 +31,71 @@ export default function createInviteCode(
         "not.exist",
       );
 
-      cy.wait(500);
+      // Allow hydration before clicking on button
+      cy.wait(1000);
 
       cy.get(`button#${openInviteCodeCreationDialogButtonId}`)
         .should("exist")
         .click();
 
       // Wait for dialog animation
-      return cy.wait(1000).then(() => {
-        cy.get(`#${createInviteCodeDialogContentId}`, { log: false }).should(
-          "be.visible",
-        );
-        cy.url({ log: false }).should("include", "/admin/invite_codes");
+      cy.wait(750);
 
-        // Fill out form within new dialog
-        cy.get(`input[name="invite_code"]`, { log: false })
-          .should("exist")
-          .should("be.visible")
-          .should("not.be.disabled")
-          .type(invite_code, { force: true });
+      cy.get(`#${createInviteCodeDialogContentId}`, { log: false }).should(
+        "be.visible",
+      );
+      cy.url({ log: false }).should("include", "/admin/invite_codes");
 
-        cy.get(`textarea[name="description"]`, { log: false })
-          .should("exist")
-          .should("be.visible")
-          .should("not.be.disabled")
-          .type("Invite code generated within Cypress E2E test", {
-            force: true,
-          });
+      // Fill out form within new dialog
+      cy.get(`input[name="invite_code"]`, { log: false })
+        .should("exist")
+        .should("be.visible")
+        .should("not.be.disabled")
+        .type(invite_code, { force: true });
 
-        cy.url({ log: false }).should("include", "/admin/invite_codes");
+      cy.get(`textarea[name="description"]`, { log: false })
+        .should("exist")
+        .should("be.visible")
+        .should("not.be.disabled")
+        .type("Invite code generated within Cypress E2E test", {
+          force: true,
+        });
 
-        cy.get(`input[name="max_uses"]`, { log: false })
-          .should("exist")
-          .should("be.visible")
-          .should("not.be.disabled")
-          .type(`{selectAll}${max_uses.toString()}`, { force: true });
+      cy.url({ log: false }).should("include", "/admin/invite_codes");
 
-        // Submit form
-        cy.intercept("POST", "**/api/admin/invite-codes/create").as(
-          "createInviteCodeRequest",
-        );
-        cy.get(`button#${submitInviteCodeCreationDialogButtonId}`, {
-          log: false,
+      cy.get(`input[name="max_uses"]`, { log: false })
+        .should("exist")
+        .should("be.visible")
+        .should("not.be.disabled")
+        .type(`{selectAll}${max_uses.toString()}`, { force: true });
+
+      // Submit form
+      cy.intercept("POST", "**/api/admin/invite-codes").as(
+        "createInviteCodeRequest",
+      );
+      cy.get(`button#${submitInviteCodeCreationDialogButtonId}`, {
+        log: false,
+      })
+        .should("exist")
+        .should("not.be.disabled")
+        .click();
+
+      return cy
+        .wait("@createInviteCodeRequest", { timeout: 10000 })
+        .then((interception) => {
+          interception.response?.statusCode &&
+            cy.wrap(interception.response?.statusCode).should("eq", 200);
+          cy.log(
+            "Invite code creation request appears to have been a success!",
+          );
+          cy.get(`#${createInviteCodeDialogContentId}`, {
+            log: false,
+          }).should("not.exist");
+          return cy.wrap(true, { log: false });
         })
-          .should("exist")
-          .should("not.be.disabled")
-          .click();
-
-        return cy
-          .wait("@createInviteCodeRequest", { timeout: 10000 })
-          .then((interception) => {
-            interception.response?.statusCode &&
-              cy.wrap(interception.response?.statusCode).should("eq", 200);
-            cy.log(
-              "Invite code creation request appears to have been a success!",
-            );
-            cy.get(`#${createInviteCodeDialogContentId}`, {
-              log: false,
-            }).should("not.exist");
-            return true;
-          });
-      });
+        .then((val: JQuery<boolean>): boolean => {
+          return typeof val === "boolean" ? val : val[0];
+        });
     });
   });
 }

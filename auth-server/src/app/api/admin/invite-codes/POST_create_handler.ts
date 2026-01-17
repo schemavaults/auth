@@ -1,75 +1,18 @@
 import "server-only";
 
 import {
-  ServerlessDatabase,
   type ResourceCreationResponse,
   UserRegistry,
 } from "@/lib/auth-db";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import {
   inviteCodeDefinitionSchema,
   type InviteCodeDefinition,
-  type UserData,
 } from "@schemavaults/auth-common";
-import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
-import { type NextRequest, NextResponse } from "next/server";
-import RouteGuardFactory from "@/lib/RouteGuardFactory";
+import { NextResponse } from "next/server";
+import { IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-
-  // Load user data and make sure they're authorized to do things!
-  let userData: UserData;
-  try {
-    const route_guard: IRouteGuard = await new RouteGuardFactory(
-      dbh.db,
-    ).createGuardFromAuthHeader(
-      "admin",
-      req.headers.get("Authorization") ??
-        req.headers.get("authorization") ??
-        null,
-      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-    );
-    const user: UserData | null = route_guard.user;
-    if (!route_guard.isAccessAllowed()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Your access token does not grant you access to this resource",
-        } satisfies ResourceCreationResponse,
-        {
-          status: 403,
-        },
-      );
-    }
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to load user from authorization token",
-        } satisfies ResourceCreationResponse,
-        {
-          status: 401,
-        },
-      );
-    }
-    userData = user;
-  } catch (e: unknown) {
-    console.error(e);
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "You must pass a valid access token in the Authorization header to use this resource",
-      } satisfies ResourceCreationResponse,
-      {
-        status: 401,
-      },
-    );
-  }
-
-  if (!userData.admin) {
+export default async function POST_create_handler({ req, dbh, user }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
+  if (!user.admin) {
     return NextResponse.json(
       {
         success: false,

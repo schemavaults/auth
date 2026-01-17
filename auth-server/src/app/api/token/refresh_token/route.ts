@@ -1,3 +1,4 @@
+import "server-only";
 import {
   type RequestTokensResult,
   refreshTokenPOSTbody,
@@ -16,6 +17,8 @@ import {
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import RefreshTokenCookieName, { RefreshTokenExpiryCookieName } from "@/lib/RefreshTokenCookieNames";
+import getStringByteSize from "@/lib/getStringByteSize";
+import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
 
 const grant_type = 'refresh_token' as const;
 
@@ -139,6 +142,9 @@ export async function POST(
   let unvalidated_refresh_token: string;
   try {
     unvalidated_refresh_token = await extractRefreshToken(req);
+    if (typeof unvalidated_refresh_token !== 'string') {
+      throw new TypeError("Expected the result of extractRefreshToken to be a string!")
+    }
   } catch (e: unknown) {
     console.error("Failed to extract refresh token from request cookies or 'Authorization' header: ", e);
     return NextResponse.json(
@@ -146,6 +152,20 @@ export async function POST(
         success: false,
         error: true,
         message: "Failed to extract refresh token from request cookies or 'Authorization' header",
+      } satisfies RequestTokensResult,
+      {
+        status: 401,
+      },
+    );
+  }
+
+  if (getStringByteSize(unvalidated_refresh_token) > MaximumBrowserCookieSize) {
+    console.error("Refresh token exceeded maximum size.");
+    return NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Refresh token exceeded maximum size.",
       } satisfies RequestTokensResult,
       {
         status: 401,

@@ -17,29 +17,29 @@ import getStringByteSize from "./getStringByteSize";
 import MaximumBrowserCookieSize from "./MaximumBrowserCookieSize";
 import RefreshTokenCookieName from "./RefreshTokenCookieNames";
 
-export interface IProtectedAdminServerComponentPageProps {
+export interface IProtectedAuthenticatedServerComponentPageProps {
   user: UserData;
   dbh: ServerlessDatabase;
   environment: SchemaVaultsAppEnvironment;
 }
 
-export type TProtectedAdminPageServerComponent = (
-  props: IProtectedAdminServerComponentPageProps,
+export type TProtectedAuthenticatedPageServerComponent = (
+  props: IProtectedAuthenticatedServerComponentPageProps,
 ) => Promise<ReactElement>
 
-export interface IProtectedAdminApiRouteProps extends IProtectedAdminServerComponentPageProps {
+export interface IProtectedAuthenticatedApiRouteProps extends IProtectedAuthenticatedServerComponentPageProps {
   req: NextRequest;
 }
 
-export type TProtectedAdminApiRoute = (
-  props: IProtectedAdminApiRouteProps,
+export type TProtectedAuthenticatedApiRoute = (
+  props: IProtectedAuthenticatedApiRouteProps,
 ) => Promise<NextResponse>
 
-export interface IWithAdminRouteGuardUtilOpts {
-  ProtectedAdminPageServerComponent: TProtectedAdminPageServerComponent;
+export interface IWithAuthenticatedRouteGuardUtilOpts {
+  ProtectedAuthenticatedPageServerComponent: TProtectedAuthenticatedPageServerComponent;
 }
 
-export async function withAdminServerComponentRouteGuard(input: IWithAdminRouteGuardUtilOpts | TProtectedAdminPageServerComponent): Promise<ReactElement> {
+export async function withAuthenticatedServerComponentRouteGuard(input: IWithAuthenticatedRouteGuardUtilOpts | TProtectedAuthenticatedPageServerComponent): Promise<ReactElement> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment()
 
   const cookies = await loadCookies();
@@ -59,7 +59,7 @@ export async function withAdminServerComponentRouteGuard(input: IWithAdminRouteG
   const route_guard_factory = new RouteGuardFactory(dbh.db);
   const route_guard: IRouteGuard =
     await route_guard_factory.createGuardFromTokenSources(
-      "admin",
+      "authenticated",
       token_sources,
       SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
     );
@@ -69,24 +69,24 @@ export async function withAdminServerComponentRouteGuard(input: IWithAdminRouteG
   }
   const user: UserData = route_guard.user;
 
-  if (!route_guard.isAccessAllowed() || !user.admin) {
+  if (!route_guard.isAccessAllowed()) {
     redirectWithError(redirect, 403, "forbidden");
   }
 
-  const ProtectedAdminPageServerComponent = typeof input === 'function' ? input : input.ProtectedAdminPageServerComponent;
-  if (typeof ProtectedAdminPageServerComponent !== 'function') {
-    throw new TypeError("Expected ProtectedAdminPageServerComponent to be a function");
+  const ProtectedAuthenticatedPageServerComponent = typeof input === 'function' ? input : input.ProtectedAuthenticatedPageServerComponent;
+  if (typeof ProtectedAuthenticatedPageServerComponent !== 'function') {
+    throw new TypeError("Expected ProtectedAuthenticatedPageServerComponent to be a function");
   }
-  return (await ProtectedAdminPageServerComponent({
+  return (await ProtectedAuthenticatedPageServerComponent({
     user,
     dbh,
     environment
   })) satisfies ReactElement;
 }
 
-export function withAdminApiRouteGuard(input: TProtectedAdminApiRoute): (req: NextRequest) => Promise<NextResponse> {
-  const AdminApiRoute: TProtectedAdminApiRoute = input;
-  return async function ProtectedAdminApiRoute(req: NextRequest): Promise<NextResponse> {
+export function withAuthenticatedApiRouteGuard(input: TProtectedAuthenticatedApiRoute): (req: NextRequest) => Promise<NextResponse> {
+  const AuthenticatedApiRoute: TProtectedAuthenticatedApiRoute = input;
+  return async function ProtectedAuthenticatedApiRoute(req: NextRequest): Promise<NextResponse> {
     const environment: SchemaVaultsAppEnvironment = getAppEnvironment()
     await using dbh = ServerlessDatabase.createDBH();
 
@@ -130,7 +130,7 @@ export function withAdminApiRouteGuard(input: TProtectedAdminApiRoute): (req: Ne
     const route_guard_factory = new RouteGuardFactory(dbh.db);
     const route_guard: IRouteGuard =
       await route_guard_factory.createGuardFromTokenSources(
-        "admin",
+        "authenticated",
         token_sources,
         SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
       );
@@ -140,11 +140,11 @@ export function withAdminApiRouteGuard(input: TProtectedAdminApiRoute): (req: Ne
         success: false,
         error: true,
         message: "Authentication failed, unknown user"
-      }, { status: 401})
+      }, { status: 401 });
     }
     const user: UserData = route_guard.user;
 
-    if (!route_guard.isAccessAllowed() || !route_guard.user.admin) {
+    if (!route_guard.isAccessAllowed() || !route_guard.user) {
       return NextResponse.json({
         success: false,
         error: true,
@@ -152,7 +152,7 @@ export function withAdminApiRouteGuard(input: TProtectedAdminApiRoute): (req: Ne
       }, { status: 403 })
     }
 
-    return await AdminApiRoute({
+    return await AuthenticatedApiRoute({
       req,
       user,
       dbh,

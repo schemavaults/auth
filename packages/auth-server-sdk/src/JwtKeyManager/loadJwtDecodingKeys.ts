@@ -6,6 +6,7 @@ export interface ILoadJwtDecodingKeysOptions {
   audience_id: string;
   keyset_id: string;
   keys_manager: IJwtKeyManager;
+  debug?: boolean;
 }
 
 export interface IDecodeAuthTokenKeys {
@@ -14,13 +15,16 @@ export interface IDecodeAuthTokenKeys {
   decryption_key: CryptoKey;
 }
 
-export async function loadJwtDecodingKeysFromJwks({
-  keyset_id,
-  jwks,
-}: {
-  keyset_id: string;
-  jwks: JWKS;
-}): Promise<IDecodeAuthTokenKeys> {
+export async function loadJwtDecodingKeysFromJwks(
+  {
+    keyset_id,
+    jwks,
+  }: {
+    keyset_id: string;
+    jwks: JWKS;
+  },
+  debug: boolean = false,
+): Promise<IDecodeAuthTokenKeys> {
   const verification_kid: string = `${keyset_id}-verification`;
   const decryption_kid: string = `${keyset_id}-decryption`;
   let verification_key: CryptoKey | undefined = undefined;
@@ -40,6 +44,16 @@ export async function loadJwtDecodingKeysFromJwks({
   }
 
   if (!verification_key || !decryption_key) {
+    if (debug) {
+      console.group(
+        `loadJwtDecodingKeysFromJwks(keyset_id=${keyset_id}) failed due to missing verification_key or decryption_key`,
+      );
+      console.error(
+        "jwks.keys[].kid = ",
+        jwks.keys.map((k) => `'${k.kid}'`).join(", "),
+      );
+      console.groupEnd();
+    }
     throw new Error(
       `Missing verification or decryption key for keyset '${keyset_id}'`,
     );
@@ -56,7 +70,10 @@ export async function loadJwtDecodingKeys({
   keys_manager,
   keyset_id,
   audience_id,
+  ...opts
 }: ILoadJwtDecodingKeysOptions): Promise<IDecodeAuthTokenKeys> {
+  const debug: boolean = opts.debug ?? false;
+
   if (!apiServerIdSchema.safeParse(audience_id).success) {
     throw new Error(
       `Invalid audience ID to load JWT decoding keys for: '${audience_id}'`,
@@ -73,7 +90,7 @@ export async function loadJwtDecodingKeys({
     throw new TypeError("Invalid JWKS; not an object or missing 'keys' array!");
   }
 
-  return await loadJwtDecodingKeysFromJwks({ keyset_id, jwks });
+  return await loadJwtDecodingKeysFromJwks({ keyset_id, jwks }, debug);
 }
 
 export default loadJwtDecodingKeys;
