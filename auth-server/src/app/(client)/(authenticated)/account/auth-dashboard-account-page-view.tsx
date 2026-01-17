@@ -24,7 +24,7 @@ export default function AccountPageView({
   const admin: boolean = useAdmin();
   const user = useCurrentUser();
 
-  const cardsClassName = "w-full md:max-w-[60vw] lg:max-w-[80vw]";
+  const cardsClassName = "grow";
 
   return (
     <PageContainer>

@@ -56,8 +56,8 @@ export function CreateAppDialog({
       app_description: "Interact with my API",
       public: false,
       created_at: Date.now(),
-    }
-  }, [])
+    };
+  }, []);
 
   const form = useForm<SchemaVaultsApp>({
     resolver: zodResolver(schemaVaultsAppDefinitionSchema),
@@ -101,13 +101,15 @@ export function CreateAppDialog({
           variant: "destructive",
           title: "Error loading authentication access token",
           description:
-            e instanceof Error ? e.message : `Failed to prepare network request`,
+            e instanceof Error
+              ? e.message
+              : `Failed to prepare network request`,
         });
         return;
       }
 
       try {
-        const response = await fetch("/api/apps/create", {
+        const response = await fetch("/api/apps", {
           method: "POST",
           body: JSON.stringify(values),
           headers: {
@@ -162,7 +164,7 @@ export function CreateAppDialog({
       });
       clearFrontendAppsCache(mutate);
       return;
-    })
+    });
     return;
   }
 

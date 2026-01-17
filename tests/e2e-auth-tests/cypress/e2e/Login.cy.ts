@@ -1,3 +1,5 @@
+import type { RegularUserCredentials } from "../support/actions/create_and_login_as_regular_user";
+
 describe("Login", () => {
   it("can load the login page", () => {
     cy.visit("/auth/login");
@@ -27,5 +29,47 @@ describe("Login", () => {
       cy.url().should("not.include", "/auth/login");
       cy.url().should("include", "/account");
     });
+  });
+
+  it("can create and login as a regular user", () => {
+    cy.create_and_login_as_regular_user().then(
+      (credentialsResult: JQuery<RegularUserCredentials>) => {
+        let credentials: RegularUserCredentials;
+        if (
+          typeof credentialsResult === "object" &&
+          credentialsResult &&
+          "email" in credentialsResult &&
+          "password" in credentialsResult &&
+          typeof credentialsResult.email === "string" &&
+          typeof credentialsResult.password === "string"
+        ) {
+          credentials = credentialsResult as RegularUserCredentials;
+        } else {
+          credentials = credentialsResult.get(0);
+        }
+        cy.log(`Logged in as regular user: ${credentials.email}`);
+
+        cy.wait(1000);
+
+        cy.getCookie("refresh_token", { timeout: 10000 }).should("exist");
+        cy.getCookie("refresh_token_expiry", { timeout: 10000 }).should(
+          "exist",
+        );
+        cy.url().should("include", "/account");
+
+        // Regular user should not be an admin
+        cy.is_admin().should("be.false");
+
+        // Verify user can logout and login again with same credentials
+        cy.logout();
+
+        cy.login(credentials.email, credentials.password).then(
+          (login_success: boolean) => {
+            expect(login_success).to.be.true;
+            cy.url().should("include", "/account");
+          },
+        );
+      },
+    );
   });
 });

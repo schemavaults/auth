@@ -18,7 +18,7 @@ import {
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
-import { validateAudience } from "./validate-audience";
+import validateAudience from "@/lib/validate-audience";
 import {
   getAppEnvironment,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
@@ -28,7 +28,7 @@ import shouldEnableDebug from "@/lib/should-enable-debug";
 import AuthServerJwtKeysManager, {
   generateTokensForAuthenticatedUser,
 } from "@/lib/AuthServerJwtKeysManager";
-import returnGeneratedTokensToUser from "./returnGeneratedTokensToUser";
+import returnGeneratedTokensToUser from "@/lib/returnGeneratedTokensToUser";
 import getHostname from "@/lib/hostname";
 
 export async function handleRefreshTokenGrant(

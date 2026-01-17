@@ -10,11 +10,14 @@ export interface DecodeFirstOfSeveralJwtsInputOptions {
 
 type DecodeTokenOutput = Awaited<ReturnType<DecodeTokenFn>>;
 
-export async function decodeFirstOfSeveralJwts({
-  token_sources,
-  decodeJWT,
-  jwt_audience,
-}: DecodeFirstOfSeveralJwtsInputOptions): Promise<DecodeTokenOutput> {
+export async function decodeFirstOfSeveralJwts(
+  {
+    token_sources,
+    decodeJWT,
+    jwt_audience,
+  }: DecodeFirstOfSeveralJwtsInputOptions,
+  debug: boolean = false,
+): Promise<DecodeTokenOutput> {
   const n_token_sources: number = token_sources.length;
   if (!Array.isArray(token_sources) || n_token_sources === 0) {
     throw new Error("Did not receive a list of tokens to decode");
@@ -44,13 +47,29 @@ export async function decodeFirstOfSeveralJwts({
   const decodeResults: PromiseSettledResult<DecodeTokenOutput>[] =
     await Promise.allSettled(decodeTokenPromises);
 
-  const successfulDecodeResults: readonly DecodeTokenOutput[] = decodeResults
-    .filter((result) => result.status === "fulfilled")
-    .map(
+  const fulfilledDecodePromises = decodeResults.filter(
+    function isFulfilledPromise(
+      result: PromiseSettledResult<DecodeTokenOutput>,
+    ): result is PromiseFulfilledResult<DecodeTokenOutput> {
+      return result.status === "fulfilled";
+    },
+  );
+
+  const successfulDecodeResults: readonly DecodeTokenOutput[] =
+    fulfilledDecodePromises.map(
       (fulfilled_decode_result): DecodeTokenOutput =>
         fulfilled_decode_result.value,
     );
-  const successfulDecodeResult: boolean = successfulDecodeResults.length >= 1;
+
+  const n_successful_decode_results: number = successfulDecodeResults.length;
+
+  if (debug) {
+    console.log(
+      `[decodeFirstOfSeveralJwts] Decoded ${n_successful_decode_results}/${n_token_sources satisfies number} tokens successfully.`,
+    );
+  }
+
+  const successfulDecodeResult: boolean = n_successful_decode_results >= 1;
 
   if (!successfulDecodeResult) {
     const errorMessage: string =
@@ -60,16 +79,27 @@ export async function decodeFirstOfSeveralJwts({
     throw new Error(errorMessage);
   }
 
-  const uids_set: Set<string> = new Set(
-    successfulDecodeResults.map((r) => r.uid),
-  );
-  if (uids_set.size !== 1) {
-    throw new Error("Token decoding produced different user IDs!");
+  function validateSameInfoAcrossTokens(): void {
+    const uids_set: Set<string> = new Set();
+    const subs_set: Set<string> = new Set();
+    const auds_set: Set<string> = new Set();
+
+    for (const decoded of successfulDecodeResults) {
+      uids_set.add(decoded.uid);
+      subs_set.add(decoded.sub);
+      if (decoded.uid !== decoded.sub) {
+        throw new Error("uid not equal to sub");
+      }
+    }
+    if (uids_set.size !== 1 || subs_set.size !== 1) {
+      throw new Error("Token decoding produced different user IDs!");
+    }
   }
+  validateSameInfoAcrossTokens();
 
   // All of the results should in theory contain the same data-- use the first one (arbitrary)
   console.assert(
-    successfulDecodeResults.length >= 1,
+    n_successful_decode_results >= 1,
     "Expected there to be at least one JWT to have been decoded successfully if this point was reached!",
   );
   const firstSuccessfulResult: DecodeTokenOutput = successfulDecodeResults[0];

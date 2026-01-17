@@ -35,7 +35,6 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlugZap } from "lucide-react";
 
-
 export function ConnectAppToApiDialog(): ReactElement {
   const { toast } = useToast();
   const form = useForm<AppToApiPermission>({
@@ -98,7 +97,7 @@ export function ConnectAppToApiDialog(): ReactElement {
       );
       if (!response.ok || response.status !== 200) {
         throw new Error(
-          `API server creation request has bad status: ${response.status}`,
+          `App-to-Api connection creation request has bad status: ${response.status}`,
         );
       }
 

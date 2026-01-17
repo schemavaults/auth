@@ -1,70 +1,14 @@
 import "server-only";
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   type ResourceCreationResponse,
-  ServerlessDatabase,
   UserRegistry,
   type UserDocument,
 } from "@/lib/auth-db";
-import type { UserData } from "@schemavaults/auth-common";
-import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import RouteGuardFactory from "@/lib/RouteGuardFactory";
+import { IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-
-  let userData: UserData;
-  try {
-    const route_guard: IRouteGuard = await new RouteGuardFactory(
-      dbh.db,
-    ).createGuardFromAuthHeader(
-      "admin",
-      req.headers.get("Authorization") ??
-        req.headers.get("authorization") ??
-        null,
-      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-    );
-    const user: UserData | null = route_guard.user;
-    if (!route_guard.isAccessAllowed()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Your access token does not grant you access to this resource",
-        } satisfies ResourceCreationResponse,
-        {
-          status: 403,
-        },
-      );
-    }
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to load user from authorization token",
-        } satisfies ResourceCreationResponse,
-        {
-          status: 401,
-        },
-      );
-    }
-    userData = user;
-  } catch (e: unknown) {
-    console.error(e);
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "You must pass a valid access token in the Authorization header to use this resource",
-      } satisfies ResourceCreationResponse,
-      {
-        status: 401,
-      },
-    );
-  }
-
-  if (!userData.admin) {
+async function GET_list_users_handler({ user, dbh }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
+  if (!user.admin) {
     return NextResponse.json(
       {
         success: false,
@@ -106,3 +50,5 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     },
   );
 }
+
+export const GET = withAdminApiRouteGuard(GET_list_users_handler)

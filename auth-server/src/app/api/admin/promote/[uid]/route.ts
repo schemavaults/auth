@@ -11,65 +11,15 @@ import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
+import { IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 
-export async function POST(
-  req: NextRequest,
-  props: { params: Promise<{ uid: string }> },
+async function POST_admin_promotion_handler(
+  { req, user }: IProtectedAdminApiRouteProps,
+  new_superuser_uid: string
 ): Promise<NextResponse> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
-  // Load user data and make sure they're authorized to do things!
-  let userData: UserData;
-  try {
-    const route_guard: IRouteGuard = await new RouteGuardFactory(
-      dbh.db,
-    ).createGuardFromAuthHeader(
-      "admin",
-      req.headers.get("Authorization") ??
-        req.headers.get("authorization") ??
-        null,
-      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-    );
-    const user: UserData | null = route_guard.user;
-    if (!route_guard.isAccessAllowed()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Your access token does not grant you access to this resource",
-        } satisfies ResourceCreationResponse,
-        {
-          status: 403,
-        },
-      );
-    }
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to load user from authorization token",
-        } satisfies ResourceCreationResponse,
-        {
-          status: 401,
-        },
-      );
-    }
-    userData = user;
-  } catch (e: unknown) {
-    console.error(e);
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "You must pass a valid access token in the Authorization header to use this resource",
-      } satisfies ResourceCreationResponse,
-      {
-        status: 401,
-      },
-    );
-  }
-
-  if (!userData.admin) {
+  if (!user.admin) {
     return NextResponse.json(
       {
         success: false,
@@ -80,52 +30,6 @@ export async function POST(
       },
     );
   }
-
-  const params = await props.params;
-
-  let new_superuser_uid: string;
-  try {
-    if (
-      typeof params !== "object" ||
-      !params ||
-      !("uid" in params) ||
-      typeof params.uid !== "string"
-    ) {
-      throw new Error("Failed to load UID from dynamic [uid] route segment!");
-    }
-    const route_param_uid = params.uid;
-    const parsed = await z.string().uuid().safeParseAsync(route_param_uid);
-    if (!parsed.success) {
-      throw new Error(
-        "Invalid UUID supplied for user 'uid' to promote to admin!",
-      );
-    } else if (parsed.data != params.uid) {
-      console.error(
-        "Failed to parse 'uid' to promote from route params! Value parsed from schema is not equivalent to route param input!",
-      );
-      throw new Error(
-        "Failed to parse 'uid' to promote from route params! Value parsed from schema is not equivalent to route params input!",
-      );
-    }
-
-    new_superuser_uid = parsed.data;
-  } catch (e: unknown) {
-    console.error("Failed to parse user ID to set as superuser: ", e);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to parse user ID to set as superuser",
-      } satisfies ResourceCreationResponse,
-      {
-        status: 400,
-      },
-    );
-  }
-
-  console.assert(
-    typeof new_superuser_uid === "string",
-    "Expected 'new_superuser_uid' to be a string if this point was reached!",
-  );
 
   // Promote user with user ID 'new_superuser_uid' to superuser/admin
   try {
@@ -166,4 +70,54 @@ export async function POST(
     message: "Successfully promoted user to admin",
     resource_id: new_superuser_uid,
   } satisfies ResourceCreationResponse);
+}
+
+export async function POST(
+  req: NextRequest,
+  props: { params: Promise<{ uid: string }> },
+) {
+  const params = await props.params;
+
+  let new_superuser_uid: string;
+  try {
+    if (
+      typeof params !== "object" ||
+      !params ||
+      !("uid" in params) ||
+      typeof params.uid !== "string"
+    ) {
+      throw new Error("Failed to load UID from dynamic [uid] route segment!");
+    }
+    const route_param_uid = params.uid;
+    const parsed = await z.string().uuid().safeParseAsync(route_param_uid);
+    if (!parsed.success) {
+      throw new Error(
+        "Invalid UUID supplied for user 'uid' to promote to admin!",
+      );
+    } else if (parsed.data != params.uid) {
+      console.error(
+        "Failed to parse 'uid' to promote from route params! Value parsed from schema is not equivalent to route param input!",
+      );
+      throw new Error(
+        "Failed to parse 'uid' to promote from route params! Value parsed from schema is not equivalent to route params input!",
+      );
+    }
+
+    new_superuser_uid = parsed.data;
+  } catch (e: unknown) {
+    console.error("Failed to parse user ID to set as superuser: ", e);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to parse user ID to set as superuser",
+      } satisfies ResourceCreationResponse,
+      {
+        status: 400,
+      },
+    );
+  }
+  const protected_route: (req: NextRequest) => Promise<NextResponse> = withAdminApiRouteGuard(async (opts: IProtectedAdminApiRouteProps): Promise<NextResponse> => {
+    return await POST_admin_promotion_handler(opts, new_superuser_uid);
+  })
+  return await protected_route(req);
 }

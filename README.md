@@ -16,9 +16,13 @@ The auth platform code is within a [Turborepo](https://turborepo.com/) repositor
 - [@schemavaults/auth-ui](./packages/auth-ui)
 - [@schemavaults/jwt](./packages/jwt)
 
-### The `auth-server` application
+### The `auth-server` application directory
 
 In the [`auth-server`](./auth-server) directory is the code for the actual authentication/authorization server, which makes use of the packages in the [`packages`](./packages) directory.
+
+### The `auth-postgres-db` directory
+
+In the [`auth-postgres-db`](./auth-postgres-db) directory is utilities for launching/managing the dev/test versions of the Postgres database that `@schemavaults/auth-server` uses.
 
 ## Development
 
@@ -27,11 +31,17 @@ In the [`auth-server`](./auth-server) directory is the code for the actual authe
 bun install
 ```
 
-### Start a Postgres container for `@schemavaults/auth-server` app to connect to
+### Configure environment variables for `@schemavaults/auth-server`
+```bash
+bun run dev:init-env
+```
 
-TODO: Instructions on starting Postgres instance
+### Start a Postgres container for `@schemavaults/auth-server` app to connect to
+```bash
+bun run dev:db
+```
 
 ### Launch the development `@schemavaults/auth-server` Next.js app
 ```bash
-bun run dev --filter @schemavaults/auth-server
+bun run dev:server
 ```

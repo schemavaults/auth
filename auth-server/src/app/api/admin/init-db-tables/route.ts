@@ -10,9 +10,11 @@ import type { UserData } from "@schemavaults/auth-common";
 import { type IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
+import { IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
-  await using dbh = ServerlessDatabase.createDBH();
+
+
+async function POST_handler({ req, dbh }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
 
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
@@ -106,3 +108,5 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     },
   );
 }
+
+export const POST: (req: NextRequest) => Promise<NextResponse> = withAdminApiRouteGuard(POST_handler);

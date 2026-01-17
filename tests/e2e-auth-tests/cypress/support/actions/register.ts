@@ -3,13 +3,23 @@ export default function register(
   password: string,
   invite_code?: string,
 ): Cypress.Chainable<number> {
-  cy.is_authenticated().should('be.false');
+  cy.is_authenticated().should("be.false");
 
-  cy.intercept("POST", "**/api/auth/register").as("registerRequest");
-  cy.intercept("POST", "**/api/token/authorization_code").as(
-    "exchangeTokenRequest",
-  );
-  cy.intercept("GET", "**/account**").as("loadAccountPage");
+  cy.intercept({
+    method: "POST",
+    url: "**/api/auth/register",
+    times: 1,
+  }).as("registerRequest");
+  cy.intercept({
+    method: "POST",
+    url: "**/api/auth/token/authorization_code",
+    times: 1,
+  }).as("exchangeTokenRequest");
+  cy.intercept({
+    method: "GET",
+    url: "**/account**",
+    times: 1,
+  }).as("loadAccountPage");
 
   cy.visit("/auth/register");
   cy.wait(1250, { log: false });
@@ -58,36 +68,45 @@ export default function register(
       if (register_interception.response?.statusCode === 200) {
         cy.log("Register request succeeded");
         return cy
-          .wait("@exchangeTokenRequest", { timeout: 10000 })
+          .wait("@exchangeTokenRequest", { timeout: 15000 })
           .then((exchange_tokens_interception) => {
             if (exchange_tokens_interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
-              cy.getCookie("refresh_token").should("exist");
-              cy.getCookie("refresh_token_expiry").should("exist");
-              return cy
-                .wait("@loadAccountPage", {
-                  timeout: 20000,
-                  requestTimeout: 20000,
-                })
-                .then((account_interception) => {
-                  const statusCode: number =
-                    account_interception.response?.statusCode ?? 500;
-                  if (statusCode < 400) {
-                    return cy.wait(4000).then(() => {
-                      cy.url({ timeout: 10000 }).should("include", "/account");
-                      // Wait for page to be interactive
-                      cy.get("body", { timeout: 10000 }).should("be.visible");
-                      cy.log("Account page loaded successfully");
-                      return cy.wrap(200, { log: false });
-                    });
-                  } else {
-                    cy.log(
-                      "Failed to load account page with status code: " +
-                        statusCode,
-                    );
-                    return cy.wrap(statusCode, { log: false });
-                  }
-                });
+              return cy.wait(2500).then(() => {
+                cy.getCookie("refresh_token", { timeout: 10000 }).should(
+                  "exist",
+                );
+                cy.getCookie("refresh_token_expiry", { timeout: 10000 }).should(
+                  "exist",
+                );
+                return cy
+                  .wait("@loadAccountPage", {
+                    timeout: 20000,
+                    requestTimeout: 20000,
+                  })
+                  .then((account_interception) => {
+                    const statusCode: number =
+                      account_interception.response?.statusCode ?? 500;
+                    if (statusCode < 400) {
+                      return cy.wait(4000).then(() => {
+                        cy.url({ timeout: 10000 }).should(
+                          "include",
+                          "/account",
+                        );
+                        // Wait for page to be interactive
+                        cy.get("body", { timeout: 10000 }).should("be.visible");
+                        cy.log("Account page loaded successfully");
+                        return cy.wrap(200, { log: false });
+                      });
+                    } else {
+                      cy.log(
+                        "Failed to load account page with status code: " +
+                          statusCode,
+                      );
+                      return cy.wrap(statusCode, { log: false });
+                    }
+                  });
+              });
             } else {
               cy.log(
                 `Exchange token request failed with status ${exchange_tokens_interception.response?.statusCode} ${exchange_tokens_interception.response?.statusMessage}`,

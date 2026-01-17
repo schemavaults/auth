@@ -92,11 +92,14 @@ export async function determineAuthStatus(
 
     let decoded_jwt: UserData;
     try {
-      const decoded = await decodeFirstOfSeveralJwts({
-        token_sources,
-        decodeJWT: opts.decodeJWT,
-        jwt_audience,
-      });
+      const decoded = await decodeFirstOfSeveralJwts(
+        {
+          token_sources,
+          decodeJWT: opts.decodeJWT,
+          jwt_audience,
+        },
+        debug,
+      );
       if (typeof decoded === "object" && !!decoded) {
         decoded_jwt = decoded;
       } else {

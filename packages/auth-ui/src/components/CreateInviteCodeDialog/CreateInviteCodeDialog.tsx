@@ -32,7 +32,10 @@ import {
   inviteCodeDefinitionSchema,
   type AccessToken,
 } from "@schemavaults/auth-common";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SwatchBook } from "lucide-react";
 
@@ -102,7 +105,7 @@ export function CreateInviteCodeDialog(): ReactElement {
     }
 
     try {
-      const response = await fetch(`/api/admin/invite-codes/create` as const, {
+      const response = await fetch(`/api/admin/invite-codes` as const, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${auth_access_jwt.token}}`,
@@ -111,7 +114,7 @@ export function CreateInviteCodeDialog(): ReactElement {
       });
       if (!response.ok || response.status !== 200) {
         throw new Error(
-          `API server creation request has bad status: ${response.status}`,
+          `Invite code creation request has bad status: ${response.status}`,
         );
       }
 
@@ -122,10 +125,9 @@ export function CreateInviteCodeDialog(): ReactElement {
         );
       }
 
-      if (!Object.hasOwn(body, 'success')) {
+      if (!Object.hasOwn(body, "success")) {
         throw new Error("No success field in response");
       }
-
 
       if (
         !(
@@ -164,11 +166,14 @@ export function CreateInviteCodeDialog(): ReactElement {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button id='open-create-invite-code-dialog-button'>
+        <Button id="open-create-invite-code-dialog-button">
           <SwatchBook className="h-4 w-4 mr-2" /> Create Invite Code
         </Button>
       </DialogTrigger>
-      <DialogContent id="create-invite-code-dialog-content" className="sm:max-w-[425px]">
+      <DialogContent
+        id="create-invite-code-dialog-content"
+        className="sm:max-w-[425px]"
+      >
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(
@@ -199,7 +204,11 @@ export function CreateInviteCodeDialog(): ReactElement {
                 <FormItem>
                   <FormLabel>Invite Code</FormLabel>
                   <FormControl>
-                    <Input placeholder={"BLAHBLAHBLAH420"} {...field} name="invite_code" />
+                    <Input
+                      placeholder={"BLAHBLAHBLAH420"}
+                      {...field}
+                      name="invite_code"
+                    />
                   </FormControl>
                   <FormDescription>Enter the new invite code.</FormDescription>
                   <FormMessage />
@@ -261,7 +270,7 @@ export function CreateInviteCodeDialog(): ReactElement {
             />
 
             <DialogFooter>
-              <Button type="submit" id='submit-create-invite-code-form-button'>
+              <Button type="submit" id="submit-create-invite-code-form-button">
                 <SwatchBook className="h-4 w-4 mr-2" />
                 Create new invite code
               </Button>
@@ -273,4 +282,4 @@ export function CreateInviteCodeDialog(): ReactElement {
   );
 }
 
-export default CreateInviteCodeDialog
+export default CreateInviteCodeDialog;

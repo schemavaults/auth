@@ -86,6 +86,7 @@ class AuthJwtValidationMiddleware
       keyset_id,
       keys_manager: this.keys_manager,
       audience_id,
+      debug: this.debug,
     });
     return decoding_keys;
   }
