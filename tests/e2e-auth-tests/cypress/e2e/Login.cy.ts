@@ -28,4 +28,27 @@ describe("Login", () => {
       cy.url().should("include", "/account");
     });
   });
+
+  it("can create and login as a regular user", () => {
+    cy.create_and_login_as_regular_user().then((credentials) => {
+      cy.log(`Logged in as regular user: ${credentials.email}`);
+
+      cy.getCookie("refresh_token").should("exist");
+      cy.getCookie("refresh_token_expiry").should("exist");
+      cy.url().should("include", "/account");
+
+      // Regular user should not be an admin
+      cy.is_admin().should("be.false");
+
+      // Verify user can logout and login again with same credentials
+      cy.logout();
+
+      cy.login(credentials.email, credentials.password).then(
+        (login_success: boolean) => {
+          expect(login_success).to.be.true;
+          cy.url().should("include", "/account");
+        },
+      );
+    });
+  });
 });

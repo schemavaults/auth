@@ -15,6 +15,7 @@
 
 // Import commands.js using ES2015 syntax:
 import "./commands";
+import type { RegularUserCredentials } from "./actions/create_and_login_as_regular_user";
 
 declare global {
   namespace Cypress {
@@ -26,6 +27,7 @@ declare global {
         invite_code?: string,
       ): Chainable<number>;
       create_and_login_as_superuser(): Chainable<boolean>;
+      create_and_login_as_regular_user(): Chainable<RegularUserCredentials>;
       has_error_toast(containing_message?: string): Chainable<boolean>;
       logout(): Chainable<void>;
       is_authenticated(): Chainable<boolean>;

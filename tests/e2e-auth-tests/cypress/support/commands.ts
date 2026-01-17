@@ -1,5 +1,6 @@
 /// <reference types="cypress" />
 
+import createAndLoginAsRegularUser from "./actions/create_and_login_as_regular_user";
 import createAndLoginAsSuperuser from "./actions/create_and_login_as_superuser";
 import createInviteCode from "./actions/create_invite_code";
 import generate_random_code from "./actions/generate_random_code";
@@ -66,4 +67,9 @@ Cypress.Commands.add("is_admin", is_admin);
 
 Cypress.Commands.add('create_invite_code', createInviteCode)
 
-Cypress.Commands.add('generate_random_code', generate_random_code)
+Cypress.Commands.add("generate_random_code", generate_random_code);
+
+Cypress.Commands.add(
+  "create_and_login_as_regular_user",
+  createAndLoginAsRegularUser,
+);
