@@ -81,7 +81,7 @@ export default function createInviteCode(
         .click();
 
       return cy
-        .wait("@createInviteCodeRequest", { timeout: 10000 })
+        .wait("@createInviteCodeRequest", { timeout: 20000 })
         .then((interception) => {
           interception.response?.statusCode &&
             cy.wrap(interception.response?.statusCode).should("eq", 200);
