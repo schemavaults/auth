@@ -11,7 +11,7 @@ export default function register(
     times: 1,
   }).as("registerRequest");
   cy.intercept({
-    method: "GET",
+    method: "POST",
     url: "**/api/auth/token/authorization_code",
     times: 1,
   }).as("exchangeTokenRequest");
