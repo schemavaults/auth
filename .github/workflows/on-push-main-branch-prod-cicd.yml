@@ -101,8 +101,6 @@ jobs:
       package_name: "@schemavaults/app-definitions"
       package_path: packages/app-definitions
       bun_version: ${{ env.BUN_VERSION }}
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   Publish-Auth-Common:
     needs: Publish-App-Definitions
@@ -111,8 +109,6 @@ jobs:
       package_name: "@schemavaults/auth-common"
       package_path: packages/auth-common
       bun_version: ${{ env.BUN_VERSION }}
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   Publish-JWT:
     needs: Publish-Auth-Common
@@ -121,8 +117,6 @@ jobs:
       package_name: "@schemavaults/jwt"
       package_path: packages/jwt
       bun_version: ${{ env.BUN_VERSION }}
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   Publish-Auth-Client-SDK:
     needs: Publish-JWT
@@ -131,8 +125,6 @@ jobs:
       package_name: "@schemavaults/auth-client-sdk"
       package_path: packages/auth-client-sdk
       bun_version: ${{ env.BUN_VERSION }}
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   Publish-Auth-Server-SDK:
     needs: Publish-JWT
@@ -141,8 +133,6 @@ jobs:
       package_name: "@schemavaults/auth-server-sdk"
       package_path: packages/auth-server-sdk
       bun_version: ${{ env.BUN_VERSION }}
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   Publish-Auth-React-Provider:
     needs: Publish-Auth-Client-SDK
@@ -151,8 +141,6 @@ jobs:
       package_name: "@schemavaults/auth-react-provider"
       package_path: packages/auth-react-provider
       bun_version: ${{ env.BUN_VERSION }}
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   Publish-Auth-UI:
     needs: Publish-Auth-React-Provider
@@ -161,5 +149,3 @@ jobs:
       package_name: "@schemavaults/auth-ui"
       package_path: packages/auth-ui
       bun_version: ${{ env.BUN_VERSION }}
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

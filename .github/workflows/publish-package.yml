@@ -20,9 +20,6 @@ on:
         required: false
         type: string
         default: "24"
-    secrets:
-      NPM_TOKEN:
-        required: true
     outputs:
       published:
         description: "Whether the package was published"
