@@ -18,3 +18,5 @@ dist/**/*.test.d.ts
 eslint.config.cjs
 eslint.config.js
 eslint.config.mjs
+
+auth-ui.tgz

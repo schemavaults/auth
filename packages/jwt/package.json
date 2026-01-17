@@ -42,7 +42,7 @@
     "crypto": false
   },
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
   "packageManager": "bun@1.3.6"
 }

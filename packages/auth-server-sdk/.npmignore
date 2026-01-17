@@ -22,3 +22,5 @@ tsconfig.json
 eslint.config.cjs
 eslint.config.js
 eslint.config.mjs
+
+auth-server-sdk.tgz

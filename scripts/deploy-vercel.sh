@@ -6,6 +6,11 @@ then
     exit 1
 fi
 
+if [ -f ./deploy_vercel.sh ]; then
+    # ensure we are in the monorepo root for current directory
+    cd ..
+fi
+
  # parse VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID from .env
  if [ -f .env ]; then
      export $(grep -E '^(VERCEL_TOKEN|VERCEL_ORG_ID|VERCEL_PROJECT_ID)=' .env | xargs)

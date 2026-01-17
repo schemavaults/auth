@@ -11,3 +11,5 @@ dist-types
 .env.staging
 
 **/.DS_Store
+
+jwt.tgz

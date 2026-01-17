@@ -25,3 +25,5 @@ tsconfig.json
 eslint.config.cjs
 eslint.config.js
 eslint.config.mjs
+
+jwt.tgz

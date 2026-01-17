@@ -10,3 +10,5 @@ old_ui/
 .env.test
 .env.production
 .env.staging
+
+auth-ui.tgz

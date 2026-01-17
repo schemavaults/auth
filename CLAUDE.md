@@ -78,3 +78,7 @@ Copy `auth-server/.env.example` to `.env.local`. Key variables:
 - `POSTGRES_*` - Database connection
 - `PRIVATE_GLOBAL_PASSWORD_SALT` - For password hashing
 - `PRIVATE_SUPERUSER_INVITE_CODE` - Creates admin invite code on first registration
+
+## Continuous Integration & Continuous Delivery (C.I. & C.D. )
+
+The `.github/workflows` directory contains GitHub Actions workflows for automatically testing & publishing the `@schemavaults/auth` application/package suite.

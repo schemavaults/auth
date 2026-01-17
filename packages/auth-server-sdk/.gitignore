@@ -9,3 +9,5 @@ dist/
 .env.test
 .env.production
 .env.staging
+
+auth-server-sdk.tgz

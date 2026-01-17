@@ -65,7 +65,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
   "type": "module",
   "packageManager": "bun@1.3.6"

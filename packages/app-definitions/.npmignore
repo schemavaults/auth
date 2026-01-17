@@ -23,3 +23,5 @@ tsconfig.json
 eslint.config.cjs
 eslint.config.js
 eslint.config.mjs
+
+app-definitions.tgz
