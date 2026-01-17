@@ -17,7 +17,7 @@ import { withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuar
 export const POST = withAuthenticatedApiRouteGuard(
   async ({ req, user, dbh, environment }) => {
     if (environment === "development") {
-      console.log("[/api/apis/create] POST request received");
+      console.log("[/api/apis] POST request received");
     }
 
     if (!user.admin) {

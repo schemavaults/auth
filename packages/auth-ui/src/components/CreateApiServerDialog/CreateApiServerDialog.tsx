@@ -33,7 +33,7 @@ import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDefinitionSchema,
-  type SchemaVaultsAppEnvironment
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Server } from "lucide-react";
@@ -49,7 +49,7 @@ function generateDefaultApiServerId(): string {
     return crypto.randomUUID();
   } catch (e: unknown) {
     console.error("Failed to generate default API server UUID: ", e);
-    return ""
+    return "";
   }
 }
 
@@ -58,15 +58,16 @@ export function CreateApiServerDialog({
 }: CreateApiServerDialogProps): ReactElement {
   const { toast } = useToast();
 
-  const defaultValues: Partial<SchemaVaultsApiServerDefinition> = useMemo(() => {
-    return {
-      api_server_name: "",
-      api_server_id: generateDefaultApiServerId(),
-      api_server_description: "",
-      public: false,
-      created_at: Date.now(),
-    }
-  }, [])
+  const defaultValues: Partial<SchemaVaultsApiServerDefinition> =
+    useMemo(() => {
+      return {
+        api_server_name: "",
+        api_server_id: generateDefaultApiServerId(),
+        api_server_description: "",
+        public: false,
+        created_at: Date.now(),
+      };
+    }, []);
 
   const form = useForm<SchemaVaultsApiServerDefinition>({
     resolver: zodResolver(schemaVaultsApiServerDefinitionSchema),
@@ -118,7 +119,7 @@ export function CreateApiServerDialog({
     }
 
     try {
-      const response = await fetch("/api/apis/create", {
+      const response = await fetch("/api/apis", {
         method: "POST",
         body: JSON.stringify(values),
         headers: {

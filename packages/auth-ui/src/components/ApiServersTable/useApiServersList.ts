@@ -1,27 +1,42 @@
-import { useAppEnvironment, useAuth, type SchemaVaultsAppEnvironment } from "@schemavaults/auth-react-provider";
+import {
+  useAppEnvironment,
+  useAuth,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
 import useSWR, { useSWRConfig } from "swr";
 import type { AccessToken } from "@schemavaults/auth-common";
-import { type ListApiServersQueryResponse, type ListApiServersQueryType, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import {
+  type ListApiServersQueryResponse,
+  type ListApiServersQueryType,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+} from "@schemavaults/app-definitions";
 
 export interface UseApiServersListOptions {
   queryType: ListApiServersQueryType;
-  toast: ReturnType<typeof useToast>['toast'];
+  toast: ReturnType<typeof useToast>["toast"];
 }
 
-function getApiServersListEndpoint(queryType: ListApiServersQueryType): `/api/apis/list/${string}` {
-  return `/api/apis/list/${queryType}` as const;
+function getApiServersListEndpoint(
+  queryType: ListApiServersQueryType,
+): `/api/apis?${string}` {
+  const searchParams = new URLSearchParams();
+  searchParams.set("list_apis_query_type", queryType);
+  return `/api/apis?${searchParams.toString()}` as const;
 }
 
-export function clearUseApiServersCache(mutate: ReturnType<typeof useSWRConfig>['mutate']) {
-  mutate(
-    (key: string) => key.startsWith("/api/apis/list"),
-    undefined,
-    { revalidate: true }
-  );
+export function clearUseApiServersCache(
+  mutate: ReturnType<typeof useSWRConfig>["mutate"],
+) {
+  mutate((key: string) => key.startsWith("/api/apis"), undefined, {
+    revalidate: true,
+  });
 }
 
-export function useApiServersList({ toast, queryType }: UseApiServersListOptions) {
+export function useApiServersList({
+  toast,
+  queryType,
+}: UseApiServersListOptions) {
   const auth = useAuth();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
@@ -30,18 +45,18 @@ export function useApiServersList({ toast, queryType }: UseApiServersListOptions
   return useSWR(endpoint, async () => {
     if (!auth.ready) {
       toast({
-        variant: 'destructive',
+        variant: "destructive",
         title: "Auth client not ready",
-        description: "Unable to acquire access token to list API servers"
+        description: "Unable to acquire access token to list API servers",
       });
       throw new Error("Auth client not ready");
     }
     const authClient = auth.client.current;
     if (!authClient) {
       toast({
-        variant: 'destructive',
+        variant: "destructive",
         title: "Auth client not ready",
-        description: "Unable to acquire access token to list API servers"
+        description: "Unable to acquire access token to list API servers",
       });
       throw new Error("Auth client not ready");
     }
@@ -50,45 +65,55 @@ export function useApiServersList({ toast, queryType }: UseApiServersListOptions
     try {
       const auth_jwt = await authClient.acquireAccessToken({
         token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-        audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+        audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
       });
       if (!auth_jwt) throw new Error("Failed to acquire auth access token");
       auth_access_jwt = auth_jwt;
     } catch (e: unknown) {
       console.error("[useApiServersList] ", e);
       toast({
-        variant: 'destructive',
+        variant: "destructive",
         title: "Error loading authentication access token",
-        description: e instanceof Error ? e.message : `Failed to prepare network request`,
+        description:
+          e instanceof Error ? e.message : `Failed to prepare network request`,
       });
       throw e;
     }
 
     try {
       const origin = window.location.origin;
-      if (environment !== 'development' && environment !== 'test') {
-        if (!origin.startsWith('https://')) throw new Error("Origin must use HTTPS in production")
+      if (environment !== "development" && environment !== "test") {
+        if (!origin.startsWith("https://"))
+          throw new Error("Origin must use HTTPS in production");
       }
-      if (environment === 'development') {
-        console.log(`[useApiServersList] Sending request to endpoint "${endpoint}" from origin "${origin}"`)
+      if (environment === "development") {
+        console.log(
+          `[useApiServersList] Sending request to endpoint "${endpoint}" from origin "${origin}"`,
+        );
       }
       const listAppsResponse = await fetch(endpoint, {
         headers: new Headers({
-          Authorization: `Bearer ${auth_access_jwt.token satisfies string}`
+          Authorization: `Bearer ${auth_access_jwt.token satisfies string}`,
         }),
-        method: "POST"
+        method: "GET",
       });
-      if (!listAppsResponse.ok || listAppsResponse.status !== 200) throw new Error("Network request to list-apps endpoint failed");
+      if (!listAppsResponse.ok || listAppsResponse.status !== 200)
+        throw new Error("Network request to list-apps endpoint failed");
       const listAppsBody: unknown = await listAppsResponse.json();
-      if (typeof listAppsBody !== 'object') throw new Error("Failed to list API servers; response not an object");
-      const listAppsResponseObject = listAppsBody as ListApiServersQueryResponse;
-      if (!Object.hasOwn(listAppsResponseObject, 'success') || !listAppsResponseObject.success) {
+      if (typeof listAppsBody !== "object")
+        throw new Error("Failed to list API servers; response not an object");
+      const listAppsResponseObject =
+        listAppsBody as ListApiServersQueryResponse;
+      if (
+        !Object.hasOwn(listAppsResponseObject, "success") ||
+        !listAppsResponseObject.success
+      ) {
         throw new Error("List API servers response has success = false");
       }
       return listAppsResponseObject.list;
     } catch (error: unknown) {
       toast({
-        variant: 'destructive',
+        variant: "destructive",
         title: "Error loading list of API servers",
         description: `${error instanceof Error ? error.message : "An unknown error occurred."}`,
       });
