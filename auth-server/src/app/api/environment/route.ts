@@ -1,3 +1,4 @@
+import "server-only";
 import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
