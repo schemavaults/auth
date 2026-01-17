@@ -70,9 +70,11 @@ export default function createInviteCode(
         .type(`{selectAll}${max_uses.toString()}`, { force: true });
 
       // Submit form
-      cy.intercept("POST", "**/api/admin/invite-codes").as(
-        "createInviteCodeRequest",
-      );
+      cy.intercept({
+        method: "POST",
+        url: "**/api/admin/invite-codes",
+        times: 1,
+      }).as("createInviteCodeRequest");
       cy.get(`button#${submitInviteCodeCreationDialogButtonId}`, {
         log: false,
       })

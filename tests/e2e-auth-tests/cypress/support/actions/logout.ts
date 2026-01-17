@@ -8,8 +8,16 @@ export default function logout() {
   cy.getCookie("refresh_token").should("exist");
 
   // Perform logout actions
-  cy.intercept("POST", "**/api/auth/logout").as("logoutRequest");
-  cy.intercept("GET", "**/auth/login?**").as("loginPageLoad");
+  cy.intercept({
+    method: "POST",
+    url: "**/api/auth/logout",
+    times: 1,
+  }).as("logoutRequest");
+  cy.intercept({
+    method: "GET",
+    url: "**/auth/login?**",
+    times: 1,
+  }).as("loginPageLoad");
   cy.get("button#sign-out-button").click();
 
   // Post-logout triggered assertions

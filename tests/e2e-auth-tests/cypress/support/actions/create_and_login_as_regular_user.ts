@@ -12,75 +12,108 @@ export interface RegularUserCredentials {
   password: string;
 }
 
-export default function createAndLoginAsRegularUser(): Cypress.Chainable<RegularUserCredentials> {
+export default function createAndLoginAsRegularUser(): Cypress.Chainable<
+  JQuery<RegularUserCredentials>
+> {
   // Step 1: Sign in as superuser
-  return cy
+  const regular_user_login_result: Cypress.Chainable<
+    JQuery<RegularUserCredentials>
+  > = cy
     .create_and_login_as_superuser()
-    .then((success: boolean): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
-      if (!success) {
-        throw new Error("Failed to create/login as superuser");
-      }
+    .then(
+      (success: boolean): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
+        if (!success) {
+          throw new Error("Failed to create/login as superuser");
+        }
 
-      cy.log("Superuser logged in, now creating invite code...");
+        cy.log("Superuser logged in, now creating invite code...");
 
-      // Step 2: Create an invite code
-      const INVITE_CODE_LENGTH = 24;
-      return cy
-        .generate_random_code(INVITE_CODE_LENGTH)
-        .then((invite_code: string): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
-          if (typeof invite_code !== "string" || invite_code.length !== INVITE_CODE_LENGTH) {
-            throw new Error(
-              `Failed to generate valid invite code, got: '${invite_code}'`,
-            );
-          }
-
-          cy.log(`Generated invite code: '${invite_code}'`);
-
-          return cy
-            .create_invite_code(invite_code, 1)
-            .then((created: boolean): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
-              if (!created) {
-                throw new Error("Failed to create invite code");
+        // Step 2: Create an invite code
+        const INVITE_CODE_LENGTH = 24;
+        return cy
+          .generate_random_code(INVITE_CODE_LENGTH)
+          .then(
+            (
+              invite_code: string,
+            ): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
+              if (
+                typeof invite_code !== "string" ||
+                invite_code.length !== INVITE_CODE_LENGTH
+              ) {
+                throw new Error(
+                  `Failed to generate valid invite code, got: '${invite_code}'`,
+                );
               }
 
-              cy.log("Invite code created successfully, logging out...");
+              cy.log(`Generated invite code: '${invite_code}'`);
 
-              // Step 3: Sign out
-              cy.logout();
-
-              // Step 4: Register as new regular user
               return cy
-                .generate_random_code(8)
-                .then((random_suffix: string): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
-                  const credentials: RegularUserCredentials = {
-                    email: `test-user-${random_suffix}@example.com`,
-                    password: "TestPassword123!",
-                  };
+                .create_invite_code(invite_code, 1)
+                .then(
+                  (
+                    created: boolean,
+                  ): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
+                    if (!created) {
+                      throw new Error("Failed to create invite code");
+                    }
 
-                  cy.log(`Registering new regular user: '${credentials.email}'`);
+                    cy.log("Invite code created successfully, logging out...");
 
-                  return cy
-                    .register(credentials.email, credentials.password, invite_code)
-                    .then((status_code: number): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
-                      if (status_code !== 200) {
-                        throw new Error(
-                          `Failed to register regular user, got status: ${status_code}`,
-                        );
-                      }
+                    // Step 3: Sign out
+                    cy.logout();
 
-                      cy.log(
-                        `Successfully registered and logged in as regular user: '${credentials.email}'`,
+                    // Step 4: Register as new regular user
+                    return cy
+                      .generate_random_code(8)
+                      .then(
+                        (
+                          random_suffix: string,
+                        ): Cypress.Chainable<
+                          JQuery<RegularUserCredentials>
+                        > => {
+                          const credentials: RegularUserCredentials = {
+                            email: `test-user-${random_suffix}@example.com`,
+                            password: "TestPassword123!",
+                          };
+
+                          cy.log(
+                            `Registering new regular user: '${credentials.email}'`,
+                          );
+
+                          return cy
+                            .register(
+                              credentials.email,
+                              credentials.password,
+                              invite_code,
+                            )
+                            .then(
+                              (
+                                status_code: number,
+                              ): Cypress.Chainable<
+                                JQuery<RegularUserCredentials>
+                              > => {
+                                if (status_code !== 200) {
+                                  throw new Error(
+                                    `Failed to register regular user, got status: ${status_code}`,
+                                  );
+                                }
+
+                                cy.log(
+                                  `Successfully registered and logged in as regular user: '${credentials.email}'`,
+                                );
+                                cy.url().should("include", "/account");
+
+                                return cy.wrap(credentials, { log: false });
+                              },
+                            );
+                        },
                       );
-                      cy.url().should("include", "/account");
+                  },
+                );
+            },
+          );
+      },
+    );
 
-                      return cy.wrap(credentials, { log: false });
-                    });
-                });
-            });
-        });
-    })
-    .then((res: JQuery<RegularUserCredentials>): RegularUserCredentials => {
-      const val: RegularUserCredentials = res[0];
-      return val;
-    });
+  return regular_user_login_result;
 }

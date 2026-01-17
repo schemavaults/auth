@@ -27,12 +27,17 @@ declare global {
         invite_code?: string,
       ): Chainable<number>;
       create_and_login_as_superuser(): Chainable<boolean>;
-      create_and_login_as_regular_user(): Chainable<RegularUserCredentials>;
+      create_and_login_as_regular_user(): Chainable<
+        JQuery<RegularUserCredentials>
+      >;
       has_error_toast(containing_message?: string): Chainable<boolean>;
       logout(): Chainable<void>;
       is_authenticated(): Chainable<boolean>;
       is_admin(): Chainable<boolean>;
-      create_invite_code(invite_code: string, max_uses: number): Chainable<boolean>;
+      create_invite_code(
+        invite_code: string,
+        max_uses: number,
+      ): Chainable<boolean>;
       generate_random_code(length: number): Chainable<string>;
     }
   }
