@@ -35,13 +35,14 @@ export default async function POST_create_handler({ req, dbh, user }: IProtected
       throw parsed.error;
     }
 
-    const tenSeconds: number = 10000;
-    if (Math.abs(parsed.data.created_at - Date.now()) > tenSeconds) {
+    const thirtySecondsInMs = 30000 as const satisfies number;
+    const maxAgeMs: number = thirtySecondsInMs;
+    if (Math.abs(parsed.data.created_at - Date.now()) > maxAgeMs) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Invite code definition 'created_at' too far in the past (over 10s)!",
+            `Invite code definition 'created_at' too far in the past (over ${maxAgeMs / 1000}s)!`,
         } satisfies ResourceCreationResponse,
         {
           status: 412,
