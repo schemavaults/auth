@@ -10,6 +10,11 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
 jobs:
   SetupCiCdConfig:
     runs-on: ubuntu-latest
