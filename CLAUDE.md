@@ -19,6 +19,7 @@ bun run dev:server                       # Shortcut for the above
 ```bash
 bun run build                            # Build all packages
 bun run build:server                     # Build just auth-server
+bun run build:packages                   # Build all auth packages in the packages/ directory
 ```
 
 ### Linting

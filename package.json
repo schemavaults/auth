@@ -6,7 +6,7 @@
     "url": "git+https://github.com/schemavaults/auth.git"
   },
   "devDependencies": {
-    "turbo": "2.7.4"
+    "turbo": "2.7.5"
   },
   "workspaces": [
     "./auth-server",
@@ -21,6 +21,7 @@
     "dev:init-env": "bun run auth-server/init-dev-env.ts",
     "build": "turbo build",
     "build:server": "bun run build --filter @schemavaults/auth-server",
+    "build:packages": "bun run build --filter=\"./packages/*\"",
     "test": "turbo test",
     "lint": "turbo lint",
     "start": "turbo start",
