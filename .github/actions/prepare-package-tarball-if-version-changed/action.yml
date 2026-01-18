@@ -1,0 +1,53 @@
+name: "Prepare Package Tarball"
+description: "Within a package directory, pack and upload the package as an artifact that is ready to be uploaded to NPM registries"
+inputs:
+  package_name:
+    description: "Name of the package (e.g., @schemavaults/auth-common)"
+    required: true
+  package_path:
+    description: "Path to the package directory (e.g., packages/auth-common)"
+    required: true
+  bun_version:
+    description: "Bun version to use"
+    required: true
+  node_version:
+    description: "NodeJs version to use"
+    required: false
+    default: "24"
+  needs_build:
+    description: "Whether we should attempt to build the project with build --filter @schemavaults/{project_name}"
+    required: false
+    default: "true"
+runs:
+  using: "composite"
+  steps:
+    - name: Check if publish is needed
+      id: check
+      shell: bash
+      run: ./scripts/check-package-version.sh ${{ inputs.package_path }}
+
+    - name: Get package name without scoped @schemavaults/ prefix
+      id: tarball_name
+      if: steps.check.outputs.needs_publish == 'true'
+      shell: bash
+      run: |
+        echo "tarball_name=$(./scripts/extract-schemavaults-package-name.sh ${{ inputs.package_name }}).tgz" >> $GITHUB_OUTPUT
+
+    - name: Build package ${{ inputs.package_name }}
+      if: steps.check.outputs.needs_publish == 'true' && inputs.needs_build == 'true'
+      shell: bash
+      run: bun run build --filter ${{ inputs.package_name }}
+
+    - name: Pack up package with Bun
+      if: steps.check.outputs.needs_publish == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: bun pm pack --quiet --filename ${{ steps.tarball_name.outputs.tarball_name }} --gzip-level 9
+
+    - name: Upload package artifact
+      if: steps.check.outputs.needs_publish == 'true'
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ steps.tarball_name.outputs.tarball_name }}
+        path: ${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}
+        retention-days: 1

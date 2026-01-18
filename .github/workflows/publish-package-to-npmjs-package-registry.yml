@@ -1,0 +1,40 @@
+name: Publish Package to NPMJS Registry
+
+on:
+  workflow_call:
+    inputs:
+      tarball_name:
+        description: "Name of the tarball containing the packed NPM package (e.g. auth-common.tgz)"
+        required: true
+        type: string
+      node_version:
+        description: "NodeJs version to use"
+        required: true
+        type: string
+
+jobs:
+  Publish-Package-To-Npmjs:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Download package tarball artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.tarball_name }}
+          path: ./${{ inputs.tarball_name }}
+
+      - name: Assert package tarball exists at expected location
+        run: |
+          if [ ! -f ./${{ inputs.tarball_name }} ]; then
+            echo "Error: ${{ inputs.tarball_name }} not found!"
+            exit 1
+          fi
+
+      - name: Publish package to NPMJS registry
+        run: npm publish ./${{ inputs.tarball_name }} --provenance

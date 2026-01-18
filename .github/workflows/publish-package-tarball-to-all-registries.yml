@@ -1,0 +1,31 @@
+name: Publish package tarball to all registries
+
+on:
+  workflow_call:
+    inputs:
+      tarball_name:
+        description: "Name of the tarball containing the packed NPM package (e.g. auth-common.tgz)"
+        required: true
+        type: string
+      bun_version:
+        description: "Bun version to use"
+        required: true
+        type: string
+      node_version:
+        description: "NodeJs version to use"
+        required: false
+        type: string
+        default: "24"
+
+jobs:
+  Publish-To-Github:
+    uses: ./.github/workflows/publish-package-to-github-package-registry.yml
+    with:
+      tarball_name: ${{ inputs.tarball_name }}
+      bun_version: ${{ inputs.bun_version }}
+
+  Publish-To-Npmjs:
+    uses: ./.github/workflows/publish-package-to-npmjs-package-registry.yml
+    with:
+      tarball_name: ${{ inputs.tarball_name }}
+      node_version: ${{ inputs.node_version }}

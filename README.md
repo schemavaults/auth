@@ -45,3 +45,15 @@ bun run dev:db
 ```bash
 bun run dev:server
 ```
+
+## Production
+
+### Build all packages
+```bash
+bun run build:packages
+```
+
+### Build auth server
+```bash
+bun run build:server
+```

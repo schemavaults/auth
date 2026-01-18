@@ -38,7 +38,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          bun-version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       - name: Install dependencies
         run: |
           bun install
@@ -67,6 +67,7 @@ jobs:
   Run-E2E-Tests:
     runs-on: ubuntu-latest
     needs:
+      - SetupCiCdConfig
       - Run-Unit-Tests
       - Run-ESLint
     steps:
@@ -116,71 +117,186 @@ jobs:
       - name: Deploy Project Artifacts to Vercel
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
-  # Publish packages to npm (in dependency order)
+  Build-Auth-Packages-And-Upload-Tarballs-If-Changed:
+    runs-on: ubuntu-latest
+    needs:
+      - SetupCiCdConfig
+      - Run-Unit-Tests
+      - Run-ESLint
+    outputs:
+      auth_ui_tarball_name: ${{ steps.upload-auth-ui.outputs.tarball_name }}
+      auth_react_provider_tarball_name: ${{ steps.upload-auth-react-provider.outputs.tarball_name }}
+      auth_common_tarball_name: ${{ steps.upload-auth-common.outputs.tarball_name }}
+      auth_client_sdk_tarball_name: ${{ steps.upload-auth-client-sdk.outputs.tarball_name }}
+      auth_server_sdk_tarball_name: ${{ steps.upload-auth-server-sdk.outputs.tarball_name }}
+      jwt_tarball_name: ${{ steps.upload-jwt.outputs.tarball_name }}
+      app_definitions_tarball_name: ${{ steps.upload-app-definitions.outputs.tarball_name }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+
+      - name: Install package dependencies
+        run: bun install
+
+      # Build all @schemavaults/* packages for publishing
+      - name: Build all auth packages
+        run: bun run build:packages
+
+      - name: Upload @schemavaults/app-definitions tarball
+        id: upload-app-definitions
+        uses: ./.github/actions/prepare-package-tarball-if-version-changed
+        with:
+          package_path: "./packages/app-definitions"
+          package_name: "@schemavaults/app-definitions"
+          bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
+          node_version: "${{ env.NODE_VERSION }}"
+          needs_build: false
+
+      - name: Upload @schemavaults/auth-common tarball
+        id: upload-auth-common
+        uses: ./.github/actions/prepare-package-tarball-if-version-changed
+        with:
+          package_path: "./packages/auth-common"
+          package_name: "@schemavaults/auth-common"
+          bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
+          node_version: "${{ env.NODE_VERSION }}"
+          needs_build: false
+
+      - name: Upload @schemavaults/jwt tarball
+        id: upload-jwt
+        uses: ./.github/actions/prepare-package-tarball-if-version-changed
+        with:
+          package_path: "./packages/jwt"
+          package_name: "@schemavaults/jwt"
+          bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
+          node_version: "${{ env.NODE_VERSION }}"
+          needs_build: false
+
+      - name: Upload @schemavaults/auth-server-sdk tarball
+        id: upload-auth-server-sdk
+        uses: ./.github/actions/prepare-package-tarball-if-version-changed
+        with:
+          package_path: "./packages/auth-server-sdk"
+          package_name: "@schemavaults/auth-server-sdk"
+          bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
+          node_version: "${{ env.NODE_VERSION }}"
+          needs_build: false
+
+      - name: Upload @schemavaults/auth-client-sdk tarball
+        id: upload-auth-client-sdk
+        uses: ./.github/actions/prepare-package-tarball-if-version-changed
+        with:
+          package_path: "./packages/auth-client-sdk"
+          package_name: "@schemavaults/auth-client-sdk"
+          bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
+          node_version: "${{ env.NODE_VERSION }}"
+          needs_build: false
+
+      - name: Upload @schemavaults/auth-react-provider tarball
+        id: upload-auth-react-provider
+        uses: ./.github/actions/prepare-package-tarball-if-version-changed
+        with:
+          package_path: "./packages/auth-react-provider"
+          package_name: "@schemavaults/auth-react-provider"
+          bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
+          node_version: "${{ env.NODE_VERSION }}"
+          needs_build: false
+
+      - name: Upload @schemavaults/auth-ui tarball
+        id: upload-auth-ui
+        uses: ./.github/actions/prepare-package-tarball-if-version-changed
+        with:
+          package_path: "./packages/auth-ui"
+          package_name: "@schemavaults/auth-ui"
+          bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
+          node_version: "${{ env.NODE_VERSION }}"
+          needs_build: false
+
   Publish-App-Definitions:
     needs:
-      - Deploy-Vercel-Production
       - SetupCiCdConfig
-    uses: ./.github/workflows/publish-package.yml
+      - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
+    if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.app_definitions_tarball_name != '' }}
+    uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
-      package_name: "@schemavaults/app-definitions"
-      package_path: packages/app-definitions
+      tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.app_definitions_tarball_name }}
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+      node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
+    secrets: inherit
 
   Publish-Auth-Common:
-    needs: Publish-App-Definitions
-    uses: ./.github/workflows/publish-package.yml
+    needs:
+      - SetupCiCdConfig
+      - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
+    if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_common_tarball_name != '' }}
+    uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
-      package_name: "@schemavaults/auth-common"
-      package_path: packages/auth-common
+      tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_common_tarball_name }}
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+      node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
+    secrets: inherit
 
   Publish-JWT:
     needs:
-      - Publish-Auth-Common
       - SetupCiCdConfig
-    uses: ./.github/workflows/publish-package.yml
+      - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
+    if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.jwt_tarball_name != '' }}
+    uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
-      package_name: "@schemavaults/jwt"
-      package_path: packages/jwt
+      tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.jwt_tarball_name }}
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
-
-  Publish-Auth-Client-SDK:
-    needs:
-      - Publish-JWT
-      - SetupCiCdConfig
-    uses: ./.github/workflows/publish-package.yml
-    with:
-      package_name: "@schemavaults/auth-client-sdk"
-      package_path: packages/auth-client-sdk
-      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+      node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
+    secrets: inherit
 
   Publish-Auth-Server-SDK:
     needs:
-      - Publish-JWT
       - SetupCiCdConfig
-    uses: ./.github/workflows/publish-package.yml
+      - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
+    if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_server_sdk_tarball_name != '' }}
+    uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
-      package_name: "@schemavaults/auth-server-sdk"
-      package_path: packages/auth-server-sdk
+      tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_server_sdk_tarball_name }}
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+      node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
+    secrets: inherit
+
+  Publish-Auth-Client-SDK:
+    needs:
+      - SetupCiCdConfig
+      - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
+    if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_client_sdk_tarball_name != '' }}
+    uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
+    with:
+      tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_client_sdk_tarball_name }}
+      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+      node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
+    secrets: inherit
 
   Publish-Auth-React-Provider:
     needs:
-      - Publish-Auth-Client-SDK
       - SetupCiCdConfig
-    uses: ./.github/workflows/publish-package.yml
+      - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
+    if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_react_provider_tarball_name != '' }}
+    uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
-      package_name: "@schemavaults/auth-react-provider"
-      package_path: packages/auth-react-provider
+      tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_react_provider_tarball_name }}
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+      node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
+    secrets: inherit
 
   Publish-Auth-UI:
     needs:
-      - Publish-Auth-React-Provider
       - SetupCiCdConfig
-    uses: ./.github/workflows/publish-package.yml
+      - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
+    if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_ui_tarball_name != '' }}
+    uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
-      package_name: "@schemavaults/auth-ui"
-      package_path: packages/auth-ui
+      tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_ui_tarball_name }}
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+      node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
+    secrets: inherit

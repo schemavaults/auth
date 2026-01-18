@@ -1,0 +1,49 @@
+name: Publish Package to GitHub Package Registry
+
+on:
+  workflow_call:
+    inputs:
+      tarball_name:
+        description: "Name of the tarball containing the packed NPM package (e.g. auth-common.tgz)"
+        required: true
+        type: string
+      bun_version:
+        description: "Bun version to use"
+        required: true
+        type: string
+
+jobs:
+  Publish-Package-To-Github:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun_version }}
+
+      - name: Download package artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.tarball_name }}
+          path: ./${{ inputs.tarball_name }}
+
+      - name: Assert tarball exists at expected location
+        run: |
+          if [ ! -f ./${{ inputs.tarball_name }} ]; then
+            echo "Error: ${{ inputs.tarball_name }} not found!"
+            exit 1
+          fi
+
+      - name: Configure .npmrc file
+        run: |
+          echo "@schemavaults:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:username=\${SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER}" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=\${SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN}" >> .npmrc
+
+      - name: Publish package to GitHub NPM registry
+        run: bun publish ./${{ inputs.tarball_name }} --registry=https://npm.pkg.github.com
+        env:
+          SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER: ${{ github.actor }}
+          SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
