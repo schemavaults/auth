@@ -42,6 +42,16 @@ runs:
       shell: bash
       run: bun run build --filter ${{ inputs.package_name }}
 
+    - name: Assert dist/ directory exists
+      if: steps.check.outputs.needs_publish == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: |
+        if [ ! -d "${{ steps.tarball_name.outputs.tarball_name }}/dist" ]; then
+          echo "Error: Directory ${{ steps.tarball_name.outputs.tarball_name }}/dist does not exist"
+          exit 1
+        fi
+
     - name: Print tarball gather details
       if: steps.check.outputs.needs_publish == 'true' && inputs.needs_build == 'true'
       shell: bash
@@ -55,10 +65,21 @@ runs:
       working-directory: ${{ inputs.package_path }}
       run: bun pm pack --quiet --filename ${{ steps.tarball_name.outputs.tarball_name }} --gzip-level 9
 
+    - name: Assert tarball exists
+      if: steps.check.outputs.needs_publish == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: |
+        if [ ! -f "${{ steps.tarball_name.outputs.tarball_name }}" ]; then
+          echo "Error: Tarball ${{ steps.tarball_name.outputs.tarball_name }} does not exist"
+          exit 1
+        fi
+
     - name: Upload package artifact
       if: steps.check.outputs.needs_publish == 'true'
       uses: actions/upload-artifact@v6
+      working-directory: ${{ inputs.package_path }}
       with:
         name: ${{ steps.tarball_name.outputs.tarball_name }}
-        path: ${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}
+        path: ${{ steps.tarball_name.outputs.tarball_name }}
         retention-days: 1
