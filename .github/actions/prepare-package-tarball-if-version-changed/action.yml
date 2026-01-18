@@ -18,6 +18,10 @@ inputs:
     description: "Whether we should attempt to build the project with build --filter @schemavaults/{project_name}"
     required: false
     default: "true"
+outputs:
+  tarball_name:
+    description: "Name of the tarball artifact (only set if publish was needed)"
+    value: ${{ steps.tarball_name.outputs.tarball_name }}
 runs:
   using: "composite"
   steps:
