@@ -25,10 +25,17 @@ if [ ! -f "$PACKAGE_JSON" ]; then
   exit 1
 fi
 
+# Check if jq is installed
+if ! command -v jq &> /dev/null; then
+  echo "Error: jq is not installed or not found in PATH"
+  echo "Please install jq to continue"
+  exit 1
+fi
+
 # Extract package name and version from package.json
 PACKAGE_NAME=$(jq -r '.name' "$PACKAGE_JSON")
 LOCAL_VERSION=$(jq -r '.version' "$PACKAGE_JSON")
-IS_PRIVATE=$(jq -r '.private // true' "$PACKAGE_JSON")
+IS_PRIVATE=$(jq -r 'if .private == true then "true" else "false" end' "$PACKAGE_JSON")
 
 if [ "$IS_PRIVATE" = "true" ]; then
   echo "Package $PACKAGE_NAME is private, skipping publish check"
