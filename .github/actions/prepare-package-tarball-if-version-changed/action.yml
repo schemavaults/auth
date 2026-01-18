@@ -42,6 +42,13 @@ runs:
       shell: bash
       run: bun run build --filter ${{ inputs.package_name }}
 
+    - name: Print tarball gather details
+      if: steps.check.outputs.needs_publish == 'true' && inputs.needs_build == 'true'
+      shell: bash
+      run: |
+        echo "Current directory: $(pwd)"
+        echo "Tarball name: ${{ steps.tarball_name.outputs.tarball_name }}"
+
     - name: Pack up package with Bun
       if: steps.check.outputs.needs_publish == 'true'
       shell: bash
