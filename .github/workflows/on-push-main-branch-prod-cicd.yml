@@ -3,6 +3,7 @@ env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
   BUN_VERSION: 1.3.6
+  NODE_VERSION: 24
 
 on:
   push:
@@ -10,8 +11,22 @@ on:
       - main
 
 jobs:
+  SetupCiCdConfig:
+    runs-on: ubuntu-latest
+    outputs:
+      bun_version: ${{ steps.versions.outputs.bun_version }}
+      node_version: ${{ steps.versions.outputs.node_version }}
+    steps:
+      - name: Set version outputs
+        id: versions
+        run: |
+          echo "bun_version=${{ env.BUN_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "node_version=${{ env.NODE_VERSION }}" >> "$GITHUB_OUTPUT"
+
   Run-ESLint:
     runs-on: ubuntu-latest
+    needs:
+      - SetupCiCdConfig
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -28,13 +43,15 @@ jobs:
 
   Run-Unit-Tests:
     runs-on: ubuntu-latest
+    needs:
+      - SetupCiCdConfig
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          bun-version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       - name: Install dependencies
         run: |
           bun install
@@ -77,13 +94,14 @@ jobs:
       - Run-E2E-Tests
       - Run-Unit-Tests
       - Run-ESLint
+      - SetupCiCdConfig
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          bun-version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
       - name: Pull Vercel Environment Information
@@ -95,12 +113,14 @@ jobs:
 
   # Publish packages to npm (in dependency order)
   Publish-App-Definitions:
-    needs: Deploy-Vercel-Production
+    needs:
+      - Deploy-Vercel-Production
+      - SetupCiCdConfig
     uses: ./.github/workflows/publish-package.yml
     with:
       package_name: "@schemavaults/app-definitions"
       package_path: packages/app-definitions
-      bun_version: ${{ env.BUN_VERSION }}
+      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Publish-Auth-Common:
     needs: Publish-App-Definitions
@@ -108,44 +128,54 @@ jobs:
     with:
       package_name: "@schemavaults/auth-common"
       package_path: packages/auth-common
-      bun_version: ${{ env.BUN_VERSION }}
+      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Publish-JWT:
-    needs: Publish-Auth-Common
+    needs:
+      - Publish-Auth-Common
+      - SetupCiCdConfig
     uses: ./.github/workflows/publish-package.yml
     with:
       package_name: "@schemavaults/jwt"
       package_path: packages/jwt
-      bun_version: ${{ env.BUN_VERSION }}
+      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Publish-Auth-Client-SDK:
-    needs: Publish-JWT
+    needs:
+      - Publish-JWT
+      - SetupCiCdConfig
     uses: ./.github/workflows/publish-package.yml
     with:
       package_name: "@schemavaults/auth-client-sdk"
       package_path: packages/auth-client-sdk
-      bun_version: ${{ env.BUN_VERSION }}
+      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Publish-Auth-Server-SDK:
-    needs: Publish-JWT
+    needs:
+      - Publish-JWT
+      - SetupCiCdConfig
     uses: ./.github/workflows/publish-package.yml
     with:
       package_name: "@schemavaults/auth-server-sdk"
       package_path: packages/auth-server-sdk
-      bun_version: ${{ env.BUN_VERSION }}
+      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Publish-Auth-React-Provider:
-    needs: Publish-Auth-Client-SDK
+    needs:
+      - Publish-Auth-Client-SDK
+      - SetupCiCdConfig
     uses: ./.github/workflows/publish-package.yml
     with:
       package_name: "@schemavaults/auth-react-provider"
       package_path: packages/auth-react-provider
-      bun_version: ${{ env.BUN_VERSION }}
+      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Publish-Auth-UI:
-    needs: Publish-Auth-React-Provider
+    needs:
+      - Publish-Auth-React-Provider
+      - SetupCiCdConfig
     uses: ./.github/workflows/publish-package.yml
     with:
       package_name: "@schemavaults/auth-ui"
       package_path: packages/auth-ui
-      bun_version: ${{ env.BUN_VERSION }}
+      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
