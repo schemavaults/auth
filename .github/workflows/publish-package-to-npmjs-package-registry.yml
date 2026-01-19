@@ -7,6 +7,10 @@ on:
         description: "Name of the tarball containing the packed NPM package (e.g. auth-common.tgz)"
         required: true
         type: string
+      package_path:
+        description: "Directory of the NPM package to publish (e.g. packages/auth-common)"
+        required: true
+        type: string
       node_version:
         description: "NodeJs version to use"
         required: true
@@ -18,6 +22,9 @@ jobs:
     permissions:
       id-token: write
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ inputs.node_version }}
@@ -27,9 +34,10 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.tarball_name }}
-          path: .
+          path: ${{ inputs.package_path }}
 
       - name: Assert package tarball exists at expected location
+        working-directory: ${{ inputs.package_path }}
         run: |
           echo "Working Directory: \"$(pwd)\""
           echo "Working Directory Contents:\n$(ls -la)"
@@ -39,4 +47,5 @@ jobs:
           fi
 
       - name: Publish package to NPMJS registry
+        working-directory: ${{ inputs.package_path }}
         run: npm publish ./${{ inputs.tarball_name }} --provenance

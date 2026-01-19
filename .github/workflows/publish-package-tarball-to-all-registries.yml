@@ -7,6 +7,10 @@ on:
         description: "Name of the tarball containing the packed NPM package (e.g. auth-common.tgz)"
         required: true
         type: string
+      package_path:
+        description: "Directory of the NPM package to publish (e.g. packages/auth-common)"
+        required: true
+        type: string
       bun_version:
         description: "Bun version to use"
         required: true
@@ -22,10 +26,12 @@ jobs:
     uses: ./.github/workflows/publish-package-to-github-package-registry.yml
     with:
       tarball_name: ${{ inputs.tarball_name }}
+      package_path: ${{ inputs.package_path }}
       bun_version: ${{ inputs.bun_version }}
 
   Publish-To-Npmjs:
     uses: ./.github/workflows/publish-package-to-npmjs-package-registry.yml
     with:
       tarball_name: ${{ inputs.tarball_name }}
+      package_path: ${{ inputs.package_path }}
       node_version: ${{ inputs.node_version }}
