@@ -62,7 +62,7 @@ jobs:
         working-directory: ./${{ inputs.package_path }}
         run: |
           TARBALL_PATH="$(pwd)/${{ inputs.tarball_name }}"
-          echo "Publishing tarball at: $TARBALL_PATH"
+          echo "Publishing tarball at: \"$TARBALL_PATH\""
           if [ ! -f "$TARBALL_PATH" ]; then
             echo "Error: $TARBALL_PATH not found!"
             exit 1
@@ -71,6 +71,7 @@ jobs:
             echo "Error: .npmrc configuration file not found!"
             exit 1
           else
+            echo "Contents of .npmrc:"
             cat .npmrc
           fi
           SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN bun publish "$TARBALL_PATH" --registry=https://npm.pkg.github.com

@@ -55,7 +55,7 @@ jobs:
         working-directory: ./${{ inputs.package_path }}
         run: |
           TARBALL_PATH="$(pwd)/${{ inputs.tarball_name }}"
-          echo "Publishing tarball at: $TARBALL_PATH"
+          echo "Publishing tarball at: \"$TARBALL_PATH\""
           if [ ! -f "$TARBALL_PATH" ]; then
             echo "Error: $TARBALL_PATH not found!"
             exit 1

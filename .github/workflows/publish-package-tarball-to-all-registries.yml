@@ -33,6 +33,10 @@ jobs:
       tarball_name: ${{ inputs.tarball_name }}
       package_path: ${{ inputs.package_path }}
       bun_version: ${{ inputs.bun_version }}
+    permissions:
+      contents: read
+      packages: write
+    secrets: inherit
 
   Publish-To-Npmjs:
     uses: ./.github/workflows/publish-package-to-npmjs-package-registry.yml
@@ -40,3 +44,7 @@ jobs:
       tarball_name: ${{ inputs.tarball_name }}
       package_path: ${{ inputs.package_path }}
       node_version: ${{ inputs.node_version }}
+    permissions:
+      contents: read
+      id-token: write
+    secrets: inherit
