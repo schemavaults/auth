@@ -15,10 +15,6 @@ on:
         description: "Bun version to use"
         required: true
         type: string
-    secrets:
-      GITHUB_TOKEN:
-        required: true
-        description: The GitHub Token to be used to publish the package
 
 permissions:
   packages: write
