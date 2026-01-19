@@ -31,8 +31,10 @@ jobs:
 
       - name: Assert package tarball exists at expected location
         run: |
+          echo "$(pwd)"
+          echo "$(ls -la)"
           if [ ! -f ./${{ inputs.tarball_name }} ]; then
-            echo "Error: ${{ inputs.tarball_name }} not found!"
+            echo "Error: ./${{ inputs.tarball_name }} not found!"
             exit 1
           fi
 
