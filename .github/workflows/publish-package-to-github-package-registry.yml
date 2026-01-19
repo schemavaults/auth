@@ -52,15 +52,13 @@ jobs:
           fi
 
       - name: Configure .npmrc file
-        working-directory: ./${{ inputs.package_path }}
         run: |
-          if [ -f ./.npmrc ]; then
-            echo "Error: Expected .npmrc file to not exist yet!"
+          if [ ! -f ./.npmrc.github ]; then
+            echo "Error: Expected .npmrc.github file to exist in the monorepo root!"
             exit 1
           fi
-          echo "@schemavaults:registry=https://npm.pkg.github.com" > .npmrc
-          echo "//npm.pkg.github.com/:username=\${SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER}" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=\${SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN}" >> .npmrc
+          cp ./.npmrc.github ./.npmrc
+          cp ./.npmrc.github ./${{ inputs.package_path }}/.npmrc
 
       - name: Publish package to GitHub NPM registry
         working-directory: ./${{ inputs.package_path }}
