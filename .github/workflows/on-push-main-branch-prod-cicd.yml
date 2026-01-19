@@ -151,7 +151,7 @@ jobs:
         id: upload-app-definitions
         uses: ./.github/actions/prepare-package-tarball-if-version-changed
         with:
-          package_path: "./packages/app-definitions"
+          package_path: "packages/app-definitions"
           package_name: "@schemavaults/app-definitions"
           bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
           node_version: "${{ env.NODE_VERSION }}"
@@ -161,7 +161,7 @@ jobs:
         id: upload-auth-common
         uses: ./.github/actions/prepare-package-tarball-if-version-changed
         with:
-          package_path: "./packages/auth-common"
+          package_path: "packages/auth-common"
           package_name: "@schemavaults/auth-common"
           bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
           node_version: "${{ env.NODE_VERSION }}"
@@ -171,7 +171,7 @@ jobs:
         id: upload-jwt
         uses: ./.github/actions/prepare-package-tarball-if-version-changed
         with:
-          package_path: "./packages/jwt"
+          package_path: "packages/jwt"
           package_name: "@schemavaults/jwt"
           bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
           node_version: "${{ env.NODE_VERSION }}"
@@ -181,7 +181,7 @@ jobs:
         id: upload-auth-server-sdk
         uses: ./.github/actions/prepare-package-tarball-if-version-changed
         with:
-          package_path: "./packages/auth-server-sdk"
+          package_path: "packages/auth-server-sdk"
           package_name: "@schemavaults/auth-server-sdk"
           bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
           node_version: "${{ env.NODE_VERSION }}"
@@ -191,7 +191,7 @@ jobs:
         id: upload-auth-client-sdk
         uses: ./.github/actions/prepare-package-tarball-if-version-changed
         with:
-          package_path: "./packages/auth-client-sdk"
+          package_path: "packages/auth-client-sdk"
           package_name: "@schemavaults/auth-client-sdk"
           bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
           node_version: "${{ env.NODE_VERSION }}"
@@ -201,7 +201,7 @@ jobs:
         id: upload-auth-react-provider
         uses: ./.github/actions/prepare-package-tarball-if-version-changed
         with:
-          package_path: "./packages/auth-react-provider"
+          package_path: "packages/auth-react-provider"
           package_name: "@schemavaults/auth-react-provider"
           bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
           node_version: "${{ env.NODE_VERSION }}"
@@ -211,7 +211,7 @@ jobs:
         id: upload-auth-ui
         uses: ./.github/actions/prepare-package-tarball-if-version-changed
         with:
-          package_path: "./packages/auth-ui"
+          package_path: "packages/auth-ui"
           package_name: "@schemavaults/auth-ui"
           bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
           node_version: "${{ env.NODE_VERSION }}"

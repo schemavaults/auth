@@ -77,15 +77,17 @@ runs:
         fi
 
     - name: Upload package artifact
+      id: upload_package_artifact
       if: steps.check.outputs.needs_publish == 'true'
       uses: actions/upload-artifact@v6
       with:
         name: ${{ steps.tarball_name.outputs.tarball_name }}
-        path: ./${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}
+        path: ${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}
         retention-days: 1
+        if-no-files-found: error
 
     - name: Finished message
       if: steps.check.outputs.needs_publish == 'true'
       shell: bash
       run: |
-        echo "Successfully uploaded package tarball as name \"${{ steps.tarball_name.outputs.tarball_name }}\""
+        echo "Successfully uploaded package tarball as \"${{ steps.tarball_name.outputs.tarball_name }}\" at \"${{ steps.upload_package_artifact.outputs.artifact-url }}\""
