@@ -68,7 +68,7 @@ runs:
       if: steps.check.outputs.needs_publish == 'true'
       shell: bash
       run: |
-        echo "Checking if tarball exists at path: ${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}"
+        echo "Checking if tarball exists at path \"${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}\" from working directory \"$(pwd)\""
         if [ ! -f "${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}" ]; then
           echo "Error: Tarball ${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }} does not exist"
           exit 1
