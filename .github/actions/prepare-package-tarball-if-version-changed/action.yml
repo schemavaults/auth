@@ -58,12 +58,17 @@ runs:
     - name: Pack up package with Bun
       if: steps.check.outputs.needs_publish == 'true'
       shell: bash
-      run: cd ${{ inputs.package_path }} && bun pm pack --filename ${{ steps.tarball_name.outputs.tarball_name }} --gzip-level 9
+      run: |
+        REPO_ROOT_DIR="$(pwd)"
+        PACKAGE_DIR="${{ inputs.package_path}}/${{ steps.tarball_name.outputs.tarball_name }}"
+        cd $PACKAGE_DIR && \
+          bun pm pack --destination . --filename ${{ steps.tarball_name.outputs.tarball_name }} --gzip-level 9
 
     - name: Assert tarball exists
       if: steps.check.outputs.needs_publish == 'true'
       shell: bash
       run: |
+        echo "Checking if tarball exists at path: ${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}"
         if [ ! -f "${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}" ]; then
           echo "Error: Tarball ${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }} does not exist"
           exit 1
