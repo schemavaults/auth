@@ -15,6 +15,10 @@ on:
         description: "Bun version to use"
         required: true
         type: string
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+        description: The GitHub Token to be used to publish the package
 
 permissions:
   packages: write
@@ -75,8 +79,9 @@ jobs:
             echo "Error: .npmrc configuration file not found!"
             exit 1
           else
-            echo "Contents of .npmrc:"
+            echo "Contents of .npmrc:\n"
             cat .npmrc
+            echo "\n"
           fi
           if [ -z "$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER" ]; then
             echo "Missing user to publish with from environment variables!"
@@ -86,8 +91,9 @@ jobs:
             echo "Missing auth token to publish with from secrets!"
             exit 1
           fi
+          echo "Variables SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER and SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN appear to be set."
 
-          SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN bun publish "$TARBALL_PATH" --access public
+          SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN bun publish "$TARBALL_PATH" --registry=https://npm.pkg.github.com --access public
         env:
           SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER: ${{ github.actor }}
           SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
