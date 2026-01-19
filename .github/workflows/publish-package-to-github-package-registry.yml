@@ -42,7 +42,7 @@ jobs:
           path: ${{ inputs.package_path }}
 
       - name: Assert package tarball exists at expected location
-        working-directory: ${{ inputs.package_path }}
+        working-directory: ./${{ inputs.package_path }}
         run: |
           echo "Working Directory: \"$(pwd)\""
           echo "Working Directory Contents:\n$(ls -la)"
@@ -52,15 +52,20 @@ jobs:
           fi
 
       - name: Configure .npmrc file
-        working-directory: ${{ inputs.package_path }}
+        working-directory: ./${{ inputs.package_path }}
         run: |
           echo "@schemavaults:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:username=\${SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER}" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=\${SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN}" >> .npmrc
 
       - name: Publish package to GitHub NPM registry
-        working-directory: ${{ inputs.package_path }}
-        run: bun publish ./${{ inputs.tarball_name }} --registry=https://npm.pkg.github.com
+        working-directory: ./${{ inputs.package_path }}
+        run: |
+          if [ ! -f ./${{ inputs.tarball_name }} ]; then
+            echo "Error: ./${{ inputs.tarball_name }} not found!"
+            exit 1
+          fi
+          bun publish ./${{ inputs.tarball_name }} --registry=https://npm.pkg.github.com
         env:
           SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER: ${{ github.actor }}
           SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}

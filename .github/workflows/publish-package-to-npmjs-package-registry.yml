@@ -42,7 +42,7 @@ jobs:
           path: ${{ inputs.package_path }}
 
       - name: Assert package tarball exists at expected location
-        working-directory: ${{ inputs.package_path }}
+        working-directory: ./${{ inputs.package_path }}
         run: |
           echo "Working Directory: \"$(pwd)\""
           echo "Working Directory Contents:\n$(ls -la)"
@@ -52,5 +52,10 @@ jobs:
           fi
 
       - name: Publish package to NPMJS registry
-        working-directory: ${{ inputs.package_path }}
-        run: npm publish ./${{ inputs.tarball_name }} --provenance
+        working-directory: ./${{ inputs.package_path }}
+        run: |
+          if [ ! -f ./${{ inputs.tarball_name }} ]; then
+            echo "Error: ./${{ inputs.tarball_name }} not found!"
+            exit 1
+          fi
+          npm publish ./${{ inputs.tarball_name }} --provenance
