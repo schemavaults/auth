@@ -81,5 +81,11 @@ runs:
       uses: actions/upload-artifact@v6
       with:
         name: ${{ steps.tarball_name.outputs.tarball_name }}
-        path: ${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}
+        path: ./${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}
         retention-days: 1
+
+    - name: Finished message
+      if: steps.check.outputs.needs_publish == 'true'
+      shell: bash
+      run: |
+        echo "Successfully uploaded package tarball as name \"${{ steps.tarball_name.outputs.tarball_name }}\""
