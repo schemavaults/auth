@@ -61,16 +61,18 @@ runs:
       run: |
         REPO_ROOT_DIR="$(pwd)"
         PACKAGE_DIR="$REPO_ROOT_DIR/${{ inputs.package_path }}"
+        ls -la $PACKAGE_DIR
+        TARBALL_FILENAME="$PACKAGE_DIR/${{ steps.tarball_name.outputs.tarball_name }}.tgz"
         cd $PACKAGE_DIR && \
-          bun pm pack --filename ${{ steps.tarball_name.outputs.tarball_name }} --gzip-level 9
+          bun pm pack --filename "$TARBALL_FILENAME" --gzip-level 9
 
     - name: Assert tarball exists
       if: steps.check.outputs.needs_publish == 'true'
       shell: bash
       run: |
         echo "Checking if tarball exists at path \"${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}\" from working directory \"$(pwd)\""
-        if [ ! -f "${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}" ]; then
-          echo "Error: Tarball ${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }} does not exist"
+        if [ ! -f "$(pwd)/${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }}" ]; then
+          echo "Error: Tarball $(pwd)/${{ inputs.package_path }}/${{ steps.tarball_name.outputs.tarball_name }} does not exist"
           exit 1
         fi
 
