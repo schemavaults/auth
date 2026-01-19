@@ -12,8 +12,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
-  id-token: write
 
 jobs:
   SetupCiCdConfig:
@@ -222,6 +220,10 @@ jobs:
       - SetupCiCdConfig
       - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
     if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.app_definitions_tarball_name != '' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.app_definitions_tarball_name }}
@@ -235,6 +237,10 @@ jobs:
       - SetupCiCdConfig
       - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
     if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_common_tarball_name != '' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_common_tarball_name }}
@@ -248,6 +254,10 @@ jobs:
       - SetupCiCdConfig
       - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
     if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.jwt_tarball_name != '' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.jwt_tarball_name }}
@@ -261,6 +271,10 @@ jobs:
       - SetupCiCdConfig
       - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
     if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_server_sdk_tarball_name != '' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_server_sdk_tarball_name }}
@@ -274,6 +288,10 @@ jobs:
       - SetupCiCdConfig
       - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
     if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_client_sdk_tarball_name != '' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_client_sdk_tarball_name }}
@@ -287,6 +305,10 @@ jobs:
       - SetupCiCdConfig
       - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
     if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_react_provider_tarball_name != '' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_react_provider_tarball_name }}
@@ -300,6 +322,10 @@ jobs:
       - SetupCiCdConfig
       - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
     if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_ui_tarball_name != '' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_ui_tarball_name }}
