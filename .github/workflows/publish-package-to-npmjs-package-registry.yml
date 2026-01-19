@@ -54,8 +54,10 @@ jobs:
       - name: Publish package to NPMJS registry
         working-directory: ./${{ inputs.package_path }}
         run: |
-          if [ ! -f ./${{ inputs.tarball_name }} ]; then
-            echo "Error: ./${{ inputs.tarball_name }} not found!"
+          TARBALL_PATH="$(pwd)/${{ inputs.tarball_name }}"
+          echo "Publishing tarball at: $TARBALL_PATH"
+          if [ ! -f "$TARBALL_PATH" ]; then
+            echo "Error: $TARBALL_PATH not found!"
             exit 1
           fi
-          npm publish ./${{ inputs.tarball_name }} --provenance
+          npm publish "$TARBALL_PATH" --provenance
