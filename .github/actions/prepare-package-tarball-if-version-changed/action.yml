@@ -62,7 +62,7 @@ runs:
         REPO_ROOT_DIR="$(pwd)"
         PACKAGE_DIR="$REPO_ROOT_DIR/${{ inputs.package_path }}"
         ls -la $PACKAGE_DIR
-        TARBALL_FILENAME="$PACKAGE_DIR/${{ steps.tarball_name.outputs.tarball_name }}.tgz"
+        TARBALL_FILENAME="$PACKAGE_DIR/${{ steps.tarball_name.outputs.tarball_name }}"
         cd $PACKAGE_DIR && \
           bun pm pack --filename "$TARBALL_FILENAME" --gzip-level 9
 
