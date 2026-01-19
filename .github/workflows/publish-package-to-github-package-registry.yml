@@ -54,6 +54,10 @@ jobs:
       - name: Configure .npmrc file
         working-directory: ./${{ inputs.package_path }}
         run: |
+          if [ -f ./.npmrc ]; then
+            echo "Error: Expected .npmrc file to not exist yet!"
+            exit 1
+          fi
           echo "@schemavaults:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:username=\${SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER}" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=\${SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN}" >> .npmrc
@@ -74,6 +78,15 @@ jobs:
             echo "Contents of .npmrc:"
             cat .npmrc
           fi
+          if [ -z "$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER" ]; then
+            echo "Missing user to publish with from environment variables!"
+            exit 1
+          fi
+          if [ -z "$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN" ]; then
+            echo "Missing auth token to publish with from secrets!"
+            exit 1
+          fi
+
           SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN bun publish "$TARBALL_PATH" --registry=https://npm.pkg.github.com
         env:
           SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER: ${{ github.actor }}
