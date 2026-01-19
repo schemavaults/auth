@@ -62,7 +62,7 @@ runs:
         REPO_ROOT_DIR="$(pwd)"
         PACKAGE_DIR="$REPO_ROOT_DIR/${{ inputs.package_path }}"
         cd $PACKAGE_DIR && \
-          bun pm pack --destination . --filename ${{ steps.tarball_name.outputs.tarball_name }} --gzip-level 9
+          bun pm pack --filename ${{ steps.tarball_name.outputs.tarball_name }} --gzip-level 9
 
     - name: Assert tarball exists
       if: steps.check.outputs.needs_publish == 'true'
