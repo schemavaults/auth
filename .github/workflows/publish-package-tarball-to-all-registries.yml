@@ -21,6 +21,11 @@ on:
         type: string
         default: "24"
 
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
 jobs:
   Publish-To-Github:
     uses: ./.github/workflows/publish-package-to-github-package-registry.yml

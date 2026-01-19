@@ -16,6 +16,10 @@ on:
         required: true
         type: string
 
+permissions:
+  packages: write
+  contents: read
+
 jobs:
   Publish-Package-To-Github:
     runs-on: ubuntu-latest
