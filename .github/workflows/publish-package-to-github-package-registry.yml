@@ -67,7 +67,13 @@ jobs:
             echo "Error: $TARBALL_PATH not found!"
             exit 1
           fi
-          bun publish "$TARBALL_PATH" --registry=https://npm.pkg.github.com
+          if [ ! -f .npmrc ]; then
+            echo "Error: .npmrc configuration file not found!"
+            exit 1
+          else
+            cat .npmrc
+          fi
+          SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN=$SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN bun publish "$TARBALL_PATH" --registry=https://npm.pkg.github.com
         env:
           SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_USER: ${{ github.actor }}
           SCHEMAVAULTS_GITHUB_PACKAGE_REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
