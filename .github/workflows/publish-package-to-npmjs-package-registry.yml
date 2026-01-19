@@ -27,12 +27,12 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.tarball_name }}
-          path: ./${{ inputs.tarball_name }}
+          path: .
 
       - name: Assert package tarball exists at expected location
         run: |
-          echo "$(pwd)"
-          echo "$(ls -la)"
+          echo "Working Directory: \"$(pwd)\""
+          echo "Working Directory Contents:\n$(ls -la)"
           if [ ! -f ./${{ inputs.tarball_name }} ]; then
             echo "Error: ./${{ inputs.tarball_name }} not found!"
             exit 1
