@@ -225,6 +225,7 @@ jobs:
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.app_definitions_tarball_name }}
+      package_path: "packages/app-definitions"
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
     secrets: inherit
@@ -237,6 +238,7 @@ jobs:
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_common_tarball_name }}
+      package_path: "packages/auth-common"
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
     secrets: inherit
@@ -249,6 +251,7 @@ jobs:
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.jwt_tarball_name }}
+      package_path: "packages/jwt"
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
     secrets: inherit
@@ -261,6 +264,7 @@ jobs:
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_server_sdk_tarball_name }}
+      package_path: "packages/auth-server-sdk"
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
     secrets: inherit
@@ -273,6 +277,7 @@ jobs:
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_client_sdk_tarball_name }}
+      package_path: "packages/auth-client-sdk"
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
     secrets: inherit
@@ -285,6 +290,7 @@ jobs:
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_react_provider_tarball_name }}
+      package_path: "packages/auth-react-provider"
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
     secrets: inherit
@@ -297,6 +303,7 @@ jobs:
     uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_ui_tarball_name }}
+      package_path: "packages/auth-ui"
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
     secrets: inherit
