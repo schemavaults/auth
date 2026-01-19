@@ -60,7 +60,7 @@ runs:
       shell: bash
       run: |
         REPO_ROOT_DIR="$(pwd)"
-        PACKAGE_DIR="${{ inputs.package_path}}/${{ steps.tarball_name.outputs.tarball_name }}"
+        PACKAGE_DIR="$REPO_ROOT_DIR/${{ inputs.package_path }}"
         cd $PACKAGE_DIR && \
           bun pm pack --destination . --filename ${{ steps.tarball_name.outputs.tarball_name }} --gzip-level 9
 
