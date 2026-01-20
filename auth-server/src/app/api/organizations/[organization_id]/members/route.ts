@@ -33,7 +33,7 @@ async function GET_organization_members_handler(
 
   // Check access: user must be admin OR member of the organization
   if (!user.admin) {
-    const userMemberships = await registry.listUserOrganizationMemberships(user.uid);
+    const userMemberships = await registry.listUserOrganizationMemberships(user.uid, user.admin ?? false);
     const isMember = userMemberships.includes(organization_id);
     if (!isMember) {
       return NextResponse.json(

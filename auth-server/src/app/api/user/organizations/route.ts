@@ -8,7 +8,7 @@ import type { OrganizationDefinition } from "@schemavaults/auth-common";
 export const GET = withAuthenticatedApiRouteGuard(async ({ user, dbh }) => {
   const organizationsRegistry = new OrganizationsRegistry(dbh.db);
 
-  const organizationIds = await organizationsRegistry.listUserOrganizationMemberships(user.uid);
+  const organizationIds = await organizationsRegistry.listUserOrganizationMemberships(user.uid, user.admin ?? false);
 
   const organizations: OrganizationDefinition[] = [];
   for (const orgId of organizationIds) {

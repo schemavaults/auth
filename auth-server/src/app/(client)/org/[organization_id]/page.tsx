@@ -57,6 +57,7 @@ async function PreloadedOrgPage(
   if (!user.admin) {
     const userMemberships = await registry.listUserOrganizationMemberships(
       user.uid,
+      user.admin
     );
     const isMember = userMemberships.includes(organization_id);
     if (!isMember) {

@@ -12,6 +12,7 @@ async function isUserInOwnerOrganization(
   api_server_id: string,
   dbh: Parameters<typeof withAuthenticatedApiRouteGuard>[0] extends (props: infer P) => unknown ? P extends { dbh: infer D } ? D : never : never
 ): Promise<boolean> {
+  const isAdmin = false as const;
   const apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
   const apiServer = await apiServerRegistry.getApiServer(api_server_id);
 
@@ -20,7 +21,7 @@ async function isUserInOwnerOrganization(
   }
 
   const organizationsRegistry = new OrganizationsRegistry(dbh.db);
-  const memberships = await organizationsRegistry.listUserOrganizationMemberships(uid);
+  const memberships = await organizationsRegistry.listUserOrganizationMemberships(uid, isAdmin satisfies boolean);
 
   return memberships.includes(apiServer.owner_organization_id);
 }

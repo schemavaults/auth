@@ -294,7 +294,9 @@ export class OrganizationsRegistry
 
   public async listUserOrganizationMemberships(
     uid: string,
+    admin: boolean = false
   ): Promise<readonly OrganizationID[]> {
+    const debug: boolean = this.debug;
     if (!(await this.hasBeenInitialized())) {
       await this.performSetupTasks();
     }
@@ -305,24 +307,24 @@ export class OrganizationsRegistry
       );
     }
 
-    if (this.debug) {
+    if (debug) {
       console.log(
         `[OrganizationsRegistry] listUserOrganizationMemberships(uid = '${uid}')`,
       );
     }
 
-    let organization_ids: readonly OrganizationID[];
-    try {
-      const membershipsQuery = this.db
+    const db = this.db;
+    async function listMembershipsForUserFromDatabase(): Promise<readonly OrganizationID[]> {
+      const membershipsQuery = db
         .selectFrom("organization_membership_roles")
         .where("uid", "=", uid)
         .select("organization_id");
 
       const memberships = await membershipsQuery.execute();
       if (memberships.length === 0) {
-        if (this.debug) {
+        if (debug) {
           console.log(
-            `[OrganizationsRegistry] listUserOrganizationMemberships(uid = '${uid}') -> []`,
+            `[OrganizationsRegistry] listMembershipsForUserFromDatabase(uid = '${uid}') -> []`,
           );
         }
         return [];
@@ -335,13 +337,43 @@ export class OrganizationsRegistry
         }
         return result.organization_id
       });
+      return all_organization_ids;
+    }
 
-      const org_ids: Set<OrganizationID> = new Set(
-        all_organization_ids
-      );
-      const unique_org_ids: SetIterator<OrganizationID> = org_ids.values();
+    // Initialize list of organizations to store.
+    // First load from hardcoded set, then load from db.
+    const organization_ids: OrganizationID[] = []
 
-      organization_ids = [...unique_org_ids];
+    const hardcodedOrganizations = this.hardcodedOrganizations;
+    (function addAnyHardcodedIdsForUser(): void {
+      if (admin) {
+        if (!hardcodedOrganizations.has(SCHEMAVAULTS_ORGANIZATION_ID)) {
+          throw new Error("Expected there to be a hardcoded organization with ID: \"" + SCHEMAVAULTS_ORGANIZATION_ID + "\"")
+        }
+        organization_ids.push(SCHEMAVAULTS_ORGANIZATION_ID);
+      }
+    })(); // immediately invoke add-any-hardcoded-ids
+
+    try {
+      // Organization IDs that are recorded in the database
+      const all_associated_organization_ids_from_db: readonly OrganizationID[] = await listMembershipsForUserFromDatabase();
+
+      if (
+        !Array.isArray(all_associated_organization_ids_from_db) ||
+        !all_associated_organization_ids_from_db.every(
+          org_id => typeof org_id === 'string' && organizationIdSchema.safeParse(org_id).success
+        )
+      ) {
+        throw new TypeError("Loaded bad organization IDs from database")
+      }
+
+      if (all_associated_organization_ids_from_db.some((org_id_from_db): boolean => {
+        return this.hardcodedOrganizations.has(org_id_from_db)
+      })) {
+        throw new Error("One of the organization IDs from the database conflicts with a hardcoded organization ID!")
+      }
+
+      organization_ids.push(...all_associated_organization_ids_from_db);
     } catch (e: unknown) {
       console.error(
         `Failed to load associated organization IDs for user '${uid}': `,

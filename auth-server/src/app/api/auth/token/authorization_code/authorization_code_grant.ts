@@ -197,6 +197,7 @@ export async function handleAuthorizationCodeGrant(
   try {
     user_organizations = await orgRegistry.listUserOrganizationMemberships(
       user.uid,
+      user.admin ?? false
     );
   } catch (e: unknown) {
     console.error("Failed to list user's associated organizations: ", e);
