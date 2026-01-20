@@ -26,6 +26,8 @@ export class OrganizationsRegistry
   extends AbstractDatabaseResourceGroup
   implements IOrganizationsRegistry
 {
+  private readonly hardcodedOrganizations: Map<string, OrganizationDefinition> = new Map(hardcodedOrgs.map(hardcodedOrg => [hardcodedOrg.organization_id, hardcodedOrg]))
+
   public async hasBeenInitialized(): Promise<boolean> {
     if (this.initialized) {
       return true;
@@ -134,40 +136,67 @@ export class OrganizationsRegistry
       );
     }
 
-    const lookupOrgQuery = this.db
-      .selectFrom("organizations")
-      .where("organization_id", "=", organization_id)
-      .selectAll()
-      .limit(1);
-
-    const orgDefinition: OrganizationRow =
-      await lookupOrgQuery.executeTakeFirstOrThrow();
-    const parsed_org_def = await organizationDefinitionSchema.safeParseAsync({
-      ...orgDefinition,
-      created_at:
-        typeof orgDefinition.created_at === "number"
-          ? orgDefinition.created_at
-          : Number.parseInt(orgDefinition.created_at),
-    } satisfies OrganizationDefinition);
-    if (!parsed_org_def.success) {
-      console.error(
-        "Failed to parse organization definition from database row: ",
-        parsed_org_def.error,
-      );
-      throw new Error(
-        "Failed to parse organization definition from database row!",
-      );
+    const getHardcodedOrg = (): OrganizationDefinition | null => {
+      if (!this.hardcodedOrganizations.has(organization_id)) {
+        return null;
+      }
+      const hardcodedOrganization = this.hardcodedOrganizations.get(organization_id);
+      return hardcodedOrganization ?? null;
     }
-    const output: OrganizationDefinition = parsed_org_def.data;
-
-    if (this.debug) {
-      console.log(
-        `[OrganizationsRegistry] lookupOrganization(org_id = '${org_id}') => `,
-        output,
-      );
+    const hardcodedOrg: OrganizationDefinition | null = getHardcodedOrg();
+    if (hardcodedOrg) {
+      if (this.debug) {
+        console.log(
+          `[OrganizationsRegistry] lookupOrganization(org_id = '${org_id}') => Hardcoded Org: `,
+          hardcodedOrg,
+        );
+      }
+      return hardcodedOrg;
     }
 
-    return output;
+    const db = this.db;
+    async function loadOrganizationFromDatabase(): Promise<OrganizationDefinition> {
+      const lookupOrgQuery = db
+        .selectFrom("organizations")
+        .where("organization_id", "=", organization_id)
+        .selectAll()
+        .limit(1);
+
+      const orgDefinition: OrganizationRow =
+        await lookupOrgQuery.executeTakeFirstOrThrow();
+      const parsed_org_def = await organizationDefinitionSchema.safeParseAsync({
+        ...orgDefinition,
+        created_at:
+          typeof orgDefinition.created_at === "number"
+            ? orgDefinition.created_at
+            : Number.parseInt(orgDefinition.created_at),
+      } satisfies OrganizationDefinition);
+      if (!parsed_org_def.success) {
+        console.error(
+          "Failed to parse organization definition from database row: ",
+          parsed_org_def.error,
+        );
+        throw new Error(
+          "Failed to parse organization definition from database row!",
+        );
+      }
+      const output: OrganizationDefinition = parsed_org_def.data;
+      return output;
+    }
+
+    try {
+      const org: OrganizationDefinition = await loadOrganizationFromDatabase()
+      if (this.debug) {
+        console.log(
+          `[OrganizationsRegistry] lookupOrganization(org_id = '${org_id}') => `,
+          org,
+        );
+      }
+      return org;
+    } catch (e: unknown) {
+      console.error("Error looking up organization from database:", e)
+      throw new Error("Error looking up organization from database!")
+    }
   }
 
   public async createOrganization(
