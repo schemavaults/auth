@@ -5,15 +5,18 @@ import {
   apiServerIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
 } from "@schemavaults/app-definitions";
+import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
 
 export interface IRemoteJwtKeyManagerConstructorOpts {
-  auth_server_uri: string;
+  auth_server_uri?: string;
 }
 
 export class RemoteJwtKeyManager implements IJwtKeyManager {
   private readonly auth_server_uri: string;
 
-  public constructor({ auth_server_uri }: IRemoteJwtKeyManagerConstructorOpts) {
+  public constructor({
+    auth_server_uri = getSchemaVaultsAuthServerUri(),
+  }: IRemoteJwtKeyManagerConstructorOpts) {
     this.auth_server_uri = auth_server_uri;
   }
 

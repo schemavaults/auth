@@ -1,33 +1,13 @@
-import { type RedirectType, redirect as nextRedirect } from "next/navigation";
-import {
-  isValidErrorId,
-  type SchemaVaultsAuthErrorId,
-} from "./error-message-catalog";
-import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import "server-only";
+import { redirectWithError as _redirectWithError } from "@schemavaults/auth-server-sdk";
+import { redirect } from "next/navigation";
+import { SchemaVaultsAuthErrorId } from "@schemavaults/auth-server-sdk/auth-server-error-message-catalog";
 
-const errorEndpoint = "/error" as const;
+const errorPage: string = "/error"
 
-export function redirectWithError(
-  redirect: (url: string, redirect_type?: RedirectType) => never = nextRedirect,
+export default function redirectWithError(
   error_code: number = 500,
-  error_id: SchemaVaultsAuthErrorId = "unknown",
+  error_id: SchemaVaultsAuthErrorId = "unknown"
 ): never {
-  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-  if (!isValidErrorId(error_id)) {
-    throw new Error("Invalid error ID to redirect to error page with!");
-  }
-
-  const searchParams = new URLSearchParams();
-
-  searchParams.set("error", `${error_code}` as const);
-  searchParams.set("error_id", error_id);
-
-  const errorPageUrl = `${errorEndpoint}?${searchParams.toString()}` as const;
-
-  if (environment === "development") {
-    console.log("[redirectWithError] Redirecting to URL: ", errorPageUrl);
-  }
-  redirect(errorPageUrl);
+  return _redirectWithError(redirect, error_code, error_id, errorPage)
 }
-
-export default redirectWithError;

@@ -53,6 +53,7 @@ function generateEnvContent(
   lines.push(`NODE_ENV="development"`);
   lines.push(`SCHEMAVAULTS_APP_ENVIRONMENT="development"`);
   lines.push(`NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT="development"`);
+  lines.push(`SCHEMAVAULTS_API_SERVER_ID="schemavaults-auth"`);
   lines.push("");
 
   lines.push(`# Password Hashing`);

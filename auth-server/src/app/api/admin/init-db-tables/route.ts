@@ -2,7 +2,6 @@ import "server-only";
 
 import {
   initializeAuthDbTables,
-  ServerlessDatabase,
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
@@ -11,10 +10,11 @@ import { type IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type { ServerRuntime } from "next";
 
-
-
-async function POST_handler({ req, dbh }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
+export const runtime: ServerRuntime = "edge"
+async function POST_handler({ req, dbh }: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
 
   // Load user data and make sure they're authorized to do things!
   let userData: UserData;
@@ -109,4 +109,7 @@ async function POST_handler({ req, dbh }: IProtectedAdminApiRouteProps): Promise
   );
 }
 
-export const POST: (req: NextRequest) => Promise<NextResponse> = withAdminApiRouteGuard(POST_handler);
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  const protected_route = await withAdminApiRouteGuard(POST_handler);
+  return await protected_route(req);
+}

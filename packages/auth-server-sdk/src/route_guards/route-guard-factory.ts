@@ -1,6 +1,6 @@
 import AdminRequiredRouteGuard from "./admin";
 import AuthenticationRequiredRouteGuard from "./authenticated";
-import type { IRouteGuard } from "./base-route-guard";
+import type { IRouteGuard } from "./IRouteGuard";
 import { z } from "zod";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
 import {
@@ -8,6 +8,8 @@ import {
   type PotentiallyValidTokenSource,
   type UserData,
   type DecodeTokenFn,
+  OrganizationID,
+  organizationIdSchema,
 } from "@schemavaults/auth-common";
 import {
   type CustomJWTPayload,
@@ -94,7 +96,7 @@ export class RouteGuardFactory {
     return validGuardTypeSchema.safeParse(type).success;
   }
 
-  public createGuardFromOptions(
+  public static createGuardFromOptions(
     type: RouteGuardType,
     opts: InitRouteGuardCheckOptions,
   ): IRouteGuard {
@@ -104,9 +106,16 @@ export class RouteGuardFactory {
       );
     }
     const GUARD_LOADER = GUARDS[type];
-    const GUARD = GUARD_LOADER(opts);
+    const GUARD: IRouteGuard = GUARD_LOADER(opts);
 
     return GUARD;
+  }
+
+  public createGuardFromOptions(
+    type: RouteGuardType,
+    opts: InitRouteGuardCheckOptions,
+  ): IRouteGuard {
+    return RouteGuardFactory.createGuardFromOptions(type, opts);
   }
 
   public async createGuardFromTokenSources(
@@ -130,7 +139,7 @@ export class RouteGuardFactory {
     }
 
     let user: UserData | null = null;
-
+    let user_organizations: readonly OrganizationID[] | null = null;
     try {
       user = await decodeFirstOfSeveralJwts(
         {
@@ -198,20 +207,41 @@ export class RouteGuardFactory {
         },
         debug,
       );
+      if (!("orgs" in user) || !Array.isArray(user.orgs)) {
+        throw new Error("No 'orgs' field in decoded user object!");
+      }
+
+      if (
+        user.orgs.every(
+          (org_id) =>
+            typeof org_id === "string" &&
+            organizationIdSchema.safeParse(org_id).success,
+        )
+      ) {
+        user_organizations = user.orgs;
+      }
+
+      if (!Array.isArray(user_organizations)) {
+        throw new TypeError(
+          "Failed to load user organizations associated with user from token!",
+        );
+      }
     } catch (e: unknown) {
       console.error(
         "No-op error creating route-guard... Failed to decode JWTs, setting user = null",
         e,
       );
       user = null;
+      user_organizations = null;
     }
 
     const init_opts: InitRouteGuardCheckOptions = {
       user,
       environment: getAppEnvironment(),
+      user_organizations: user_organizations ?? [],
     };
 
-    if (this.environment !== "production") {
+    if (this.debug) {
       console.log(
         `[RouteGuardFactory] Creating route guard with init options: `,
         init_opts,

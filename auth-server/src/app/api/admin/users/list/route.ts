@@ -1,13 +1,18 @@
 import "server-only";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import {
   type ResourceCreationResponse,
   UserRegistry,
   type UserDocument,
 } from "@/lib/auth-db";
-import { IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
+import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type { ServerRuntime } from "next";
+export const dynamic = "force-dynamic"; // defaults to auto
+export const runtime: ServerRuntime = "edge";
 
-async function GET_list_users_handler({ user, dbh }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
+
+async function GET_list_users_handler({ user, dbh }: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
   if (!user.admin) {
     return NextResponse.json(
       {
@@ -51,4 +56,7 @@ async function GET_list_users_handler({ user, dbh }: IProtectedAdminApiRouteProp
   );
 }
 
-export const GET = withAdminApiRouteGuard(GET_list_users_handler)
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const protected_route = await withAdminApiRouteGuard(GET_list_users_handler)
+  return await protected_route(req);
+}

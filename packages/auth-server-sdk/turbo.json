@@ -1,0 +1,11 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": ["src/**", "package.json", "tsconfig.json"],
+      "outputs": ["dist/**"],
+      "persistent": false,
+      "cache": true
+    }
+  }
+}

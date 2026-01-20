@@ -401,6 +401,10 @@ export class ReactAuthClientSdkAdapter
     try {
       deleteCookie(AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY);
     } catch (e: unknown) {
+      console.error(
+        `Failed to ensure cookie '${AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY}' was deleted after logout: `,
+        e,
+      );
       throw new Error(
         `Failed to ensure cookie '${AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY}' was deleted after logout!`,
       );

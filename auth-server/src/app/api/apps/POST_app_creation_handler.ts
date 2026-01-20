@@ -8,14 +8,16 @@ import {
   type SchemaVaultsApp,
   schemaVaultsAppDefinitionSchema,
 } from "@schemavaults/app-definitions";
-import { NextResponse } from "next/server";
-import { withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
+import { NextRequest, NextResponse } from "next/server";
+import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 /**
  * Create a new frontend application
  */
-export const POST = withAuthenticatedApiRouteGuard(
-  async ({ req, user, dbh, environment }) => {
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const protected_route = await withAuthenticatedApiRouteGuard(
+  async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
     if (environment === "development") {
       console.log("[/api/apps] POST request received");
     }
@@ -97,6 +99,8 @@ export const POST = withAuthenticatedApiRouteGuard(
       );
     }
   },
-);
+  );
+  return await protected_route(request);
+}
 
 export const dynamic = "force-dynamic"; // defaults to auto

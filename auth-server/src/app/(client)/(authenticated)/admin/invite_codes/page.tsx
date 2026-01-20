@@ -7,13 +7,14 @@ import {
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import { UserRegistry } from "@/lib/auth-db/users/user-registry";
-import { InviteCodeDefinition } from "@schemavaults/auth-common";
-import { ServerRuntime } from "next";
+import type { InviteCodeDefinition } from "@schemavaults/auth-common";
+import type { ServerRuntime } from "next";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 async function PreloadedInviteCodesPage({
   user,
   dbh
-}: IProtectedAdminServerComponentPageProps): Promise<ReactElement> {
+}: IProtectedAdminServerComponentPageProps<AuthDatabase>): Promise<ReactElement> {
   if (!user.admin) {
     throw new Error(
       "Expected user to have been asserted to be an admin by this point!",

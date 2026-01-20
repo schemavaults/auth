@@ -1,14 +1,12 @@
-import type { UserData } from "@schemavaults/auth-common";
+import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import {
   schemaVaultsApiServerDefinitionSchema,
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDomainRefSchema,
   type SchemaVaultsApiServerDomainRef,
-  type ListApiServersQueryType,
-  listApiServersQueryTypeSchema,
 } from "@schemavaults/app-definitions";
 import { Kysely, sql } from "@schemavaults/dbh";
-import type { AuthDatabase } from "../auth-database-types";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 
 /**
@@ -155,64 +153,103 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     await createApiServerDomainsTable.execute(db);
   }
 
-  public async listApiServers(
-    type: ListApiServersQueryType,
+  private async parseApiServerDefinitionsFromDbRows(rows: unknown[]): Promise<readonly SchemaVaultsApiServerDefinition[]> {
+    const parsed = await schemaVaultsApiServerDefinitionSchema
+      .array()
+      .safeParseAsync(
+        rows.map((row) => {
+          if (typeof row !== "object" || !row)
+            throw new Error("Expected row to be an object");
+          if (!Object.hasOwn(row, "created_at")) {
+            throw new Error("Missing api server creation time ('created_at')");
+          }
+          const created_at: number = parseInt(
+            (row as { created_at: string }).created_at,
+          );
+          if (isNaN(created_at)) {
+            throw new TypeError("Failed to parse 'created_at' from database");
+          }
+
+          return {
+            ...row,
+            created_at,
+          };
+        }),
+      );
+    if (!parsed.success) throw parsed.error;
+    return parsed.data;
+  }
+
+  public async listAllApiServers(
     user: UserData,
-  ): Promise<SchemaVaultsApiServerDefinition[]> {
-    if (!this.hasBeenInitialized()) {
+  ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
+    if (!await this.hasBeenInitialized()) {
       await this.performSetupTasks();
     }
 
     if (!user)
       throw new Error("You must be logged in to list SchemaVaults API servers");
-    if (type === "all" && !user.admin)
+    if (!user.admin)
       throw new Error(
         "You must be an admin to list all SchemaVaults API servers",
       );
-    if (!(await listApiServersQueryTypeSchema.safeParseAsync(type)).success)
-      throw new Error("Invalid API servers query type");
 
     let rows: unknown[];
     try {
-      if (type === "all") {
-        rows = await this.db
-          .selectFrom("api_servers")
-          .limit(50)
-          .selectAll()
-          .execute();
-      } else {
-        throw new Error("Unhandled API servers query type");
+      if (!user.admin) {
+        throw new Error("Must be an admin to list all API servers")
       }
+      rows = await this.db
+        .selectFrom("api_servers")
+        .limit(100)
+        .selectAll()
+        .execute();
     } catch (e: unknown) {
       console.error(e);
       throw new Error("Failed to list API servers");
     }
 
     try {
-      const parsed = await schemaVaultsApiServerDefinitionSchema
-        .array()
-        .safeParseAsync(
-          rows.map((row) => {
-            if (typeof row !== "object" || !row)
-              throw new Error("Expected row to be an object");
-            if (!Object.hasOwn(row, "created_at")) {
-              throw new Error("Missing api server creation time");
-            }
-            const created_at: number = parseInt(
-              (row as { created_at: string }).created_at,
-            );
-            if (isNaN(created_at)) {
-              throw new Error("Failed to parse created_at from database");
-            }
+      return await this.parseApiServerDefinitionsFromDbRows(rows);
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error(
+        "Failed to parse the API servers data received from database",
+      );
+    }
+  }
 
-            return {
-              ...row,
-              created_at,
-            };
-          }),
-        );
-      if (!parsed.success) throw parsed.error;
-      return parsed.data;
+  public async listOrganizationApiServers(
+    org_id: OrganizationID,
+    user: UserData,
+  ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
+    if (!await this.hasBeenInitialized()) {
+      await this.performSetupTasks();
+    }
+
+    if (!organizationIdSchema.safeParse(org_id).success) {
+      throw new TypeError("Invalid organization ID to list API servers for!")
+    }
+
+    if (!user) {
+      throw new Error("You must be logged in to list SchemaVaults API servers");
+    }
+
+    let rows: unknown[];
+    try {
+      rows = await this.db
+        .selectFrom("api_servers")
+        .where("owner_organization_id", '=', org_id)
+        .limit(100)
+        .selectAll()
+        .execute();
+    } catch (e: unknown) {
+      console.error(`Failed to list API servers for organization with ID '${org_id}':`, e);
+      throw new Error(`Failed to list API servers for organization with ID: '${org_id}'`);
+    }
+
+    try {
+      return await this.parseApiServerDefinitionsFromDbRows(rows);
     } catch (e: unknown) {
       console.error(e);
       throw new Error(
@@ -264,3 +301,5 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     return false;
   }
 }
+
+export default SchemaVaultsApiServerRegistry;

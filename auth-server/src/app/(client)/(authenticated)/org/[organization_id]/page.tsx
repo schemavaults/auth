@@ -18,6 +18,7 @@ import {
 } from "@schemavaults/auth-common";
 import { redirect } from "next/navigation";
 import type { OrganizationMemberTableData } from "@schemavaults/auth-ui";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 interface PageParams {
   params: Promise<{ organization_id: string }>;
@@ -40,7 +41,7 @@ function memberToTableData(
 }
 
 async function PreloadedOrgPage(
-  { user, dbh }: IProtectedAuthenticatedServerComponentPageProps,
+  { user, dbh }: IProtectedAuthenticatedServerComponentPageProps<AuthDatabase>,
   pageParams: PageParams,
 ): Promise<ReactElement> {
   const { organization_id: org_id_param } = await pageParams.params;

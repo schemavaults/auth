@@ -80,7 +80,7 @@ export async function determineOnSuccessfulAuthenticateActionMightThrow({
         `[SchemaVaultsAuthRouteServerRouter] Failed to load app with ID "${app_id}".`,
       );
       if (debug) console.error(e);
-      redirectWithError(redirect, 404, "app_id_not_found");
+      redirectWithError(404, "app_id_not_found");
     }
     console.assert(!!app);
     if (!app) throw new Error("Failed to load frontend application definition");
@@ -99,7 +99,7 @@ export async function determineOnSuccessfulAuthenticateActionMightThrow({
     !on_successful_authenticate ||
     !isValidOnSuccessfulAuthenticateAction(on_successful_authenticate)
   ) {
-    redirectWithError(redirect, 500, "internal_server_error");
+    redirectWithError(500, "internal_server_error");
   }
 
   return on_successful_authenticate satisfies OnSuccessfulAuthenticateAction;
@@ -115,7 +115,7 @@ export async function determineOnSuccessfulAuthenticateAction(
       "Error determining action to undertake when authentication is successful: ",
       e,
     );
-    redirectWithError(redirect, 500, "internal_server_error");
+    redirectWithError(500, "internal_server_error");
   }
 }
 

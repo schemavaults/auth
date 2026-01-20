@@ -6,13 +6,14 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { OrganizationsRegistry, type OrganizationMemberWithUserData } from "@/lib/auth-db/organizations";
 import { type OrganizationID, organizationIdSchema } from "@schemavaults/auth-common";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 interface RouteContext {
   params: Promise<{ organization_id: string }>;
 }
 
 async function GET_organization_members_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
+  { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>,
   context: RouteContext,
 ): Promise<NextResponse> {
   const { organization_id: org_id_param } = await context.params;
@@ -72,8 +73,8 @@ async function GET_organization_members_handler(
   );
 }
 
-export function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return withAuthenticatedApiRouteGuard(
+export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
+  return (await withAuthenticatedApiRouteGuard(
     (props) => GET_organization_members_handler(props, context),
-  )(req);
+  ))(req);
 }

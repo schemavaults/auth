@@ -18,6 +18,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 async function listAuthorizedAppsForUser(
   appsRegistry: SchemaVaultsAppRegistry,
@@ -108,12 +109,12 @@ export async function GET_app_list_handler(
   }
   const list_apps_query_type: ListAppsQueryType = parsed_query_type.data;
 
-  const protected_route = withAuthenticatedApiRouteGuard(
+  const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
       environment,
-    }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+    }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>): Promise<NextResponse> => {
       if (environment === "development") {
         console.log("[/api/apps] GET request received");
       }

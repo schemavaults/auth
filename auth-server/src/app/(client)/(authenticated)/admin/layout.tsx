@@ -9,7 +9,6 @@ import {
 import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { cookies } from "next/headers";
-import { redirect, type RedirectType } from "next/navigation";
 import type { ReactNode } from "react";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import shouldEnableDebug from "@/lib/should-enable-debug";
@@ -50,10 +49,6 @@ export default async function AdminPathsRouteGuardServerComponent({
   );
   if (!route_guard.isAccessAllowed) {
     redirectWithError(
-      (url: string, type: RedirectType | undefined): never => {
-        void type;
-        return redirect(url);
-      },
       401,
       "unauthenticated",
     );
@@ -61,10 +56,6 @@ export default async function AdminPathsRouteGuardServerComponent({
   const user = route_guard.user;
   if (!user) {
     redirectWithError(
-      (url: string, type: RedirectType | undefined): never => {
-        void type;
-        return redirect(url);
-      },
       401,
       "load_user_data_failure",
     );

@@ -9,18 +9,19 @@ import {
   type OrganizationDefinition,
   organizationDefinitionSchema,
 } from "@schemavaults/auth-common";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   type IProtectedAdminApiRouteProps,
   withAdminApiRouteGuard,
 } from "@/lib/withAdminRouteGuard";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 async function POST_create_organization_handler({
   req,
   user,
   dbh,
   environment,
-}: IProtectedAdminApiRouteProps): Promise<NextResponse> {
+}: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
   if (environment === "development") {
     console.log("[/api/admin/organizations] POST request received");
   }
@@ -118,6 +119,8 @@ async function POST_create_organization_handler({
   }
 }
 
-export const POST = withAdminApiRouteGuard(POST_create_organization_handler);
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  return await (await withAdminApiRouteGuard(POST_create_organization_handler))(req)
+}
 
 export const dynamic = "force-dynamic";

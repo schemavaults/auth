@@ -5,16 +5,17 @@ import {
   type ResourceCreationResponse,
   UserRegistry,
 } from "@/lib/auth-db";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import type { UserData } from "@schemavaults/auth-common";
-import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import RouteGuardFactory from "@/lib/RouteGuardFactory";
-import { IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
+import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type { ServerRuntime } from "next";
+
+export const runtime: ServerRuntime = "edge"
+export const dynamic = "force-dynamic"; // defaults to auto
 
 async function POST_admin_promotion_handler(
-  { req, user }: IProtectedAdminApiRouteProps,
+  { user }: IProtectedAdminApiRouteProps<AuthDatabase>,
   new_superuser_uid: string
 ): Promise<NextResponse> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
@@ -116,8 +117,10 @@ export async function POST(
       },
     );
   }
-  const protected_route: (req: NextRequest) => Promise<NextResponse> = withAdminApiRouteGuard(async (opts: IProtectedAdminApiRouteProps): Promise<NextResponse> => {
-    return await POST_admin_promotion_handler(opts, new_superuser_uid);
-  })
+  const protected_route: (req: NextRequest) => Promise<NextResponse> = await withAdminApiRouteGuard(
+    async (opts: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> => {
+      return await POST_admin_promotion_handler(opts, new_superuser_uid) satisfies NextResponse;
+    }
+  )
   return await protected_route(req);
 }

@@ -1,14 +1,19 @@
-
 "use client";
 
 import type { ReactElement } from "react";
-import type { SWRResponse} from "swr";
+import type { SWRResponse } from "swr";
 import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
 import { columns } from "./columns";
-import type { ListApiServersQueryType, SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
+import type {
+  ListApiServersQueryType,
+  SchemaVaultsApiServerDefinition,
+} from "@schemavaults/app-definitions";
 import { Loader2 } from "lucide-react";
-import { clearUseApiServersCache, useApiServersList } from "./useApiServersList";
+import {
+  clearUseApiServersCache,
+  useApiServersList,
+} from "./useApiServersList";
 import { CreateApiServerDialog } from "@/components/CreateApiServerDialog";
 import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
 
@@ -16,9 +21,12 @@ export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
 }
 
-export function ApiServersTable({ queryType }: ApiServersDatatableProps): ReactElement {
-  const {toast} = useToast()
-  const apis: SWRResponse<SchemaVaultsApiServerDefinition[], Error> = useApiServersList({ toast, queryType });
+export function ApiServersTable({
+  queryType,
+}: ApiServersDatatableProps): ReactElement {
+  const { toast } = useToast();
+  const apis: SWRResponse<readonly SchemaVaultsApiServerDefinition[], Error> =
+    useApiServersList({ toast, queryType });
   const { isLoading, data } = apis;
 
   if (!data && isLoading) {
@@ -31,7 +39,7 @@ export function ApiServersTable({ queryType }: ApiServersDatatableProps): ReactE
 
   return (
     <Datatable<SchemaVaultsApiServerDefinition>
-      data={data ? (data.length > 0 ? data : []) : []}
+      data={[...(data ? (data.length > 0 ? data : []) : [])]}
       columns={columns}
       initialVisibleColumns={{
         actions: true,
@@ -43,15 +51,23 @@ export function ApiServersTable({ queryType }: ApiServersDatatableProps): ReactE
       HeaderButtons={(): ReactElement => {
         return (
           <>
-            { queryType === 'all' && <CreateApiServerDialog clearApiServersCache={clearUseApiServersCache} />}
-            { queryType === 'all' && <ConnectAppToApiDialog />}
+            {queryType === "all" && (
+              <CreateApiServerDialog
+                clearApiServersCache={clearUseApiServersCache}
+              />
+            )}
+            {queryType === "all" && <ConnectAppToApiDialog />}
           </>
         );
       }}
       datatypeLabel="Server"
-      searchColumn={['api_server_id', 'api_server_name', 'api_server_description']}
+      searchColumn={[
+        "api_server_id",
+        "api_server_name",
+        "api_server_description",
+      ]}
     />
-  )
+  );
 }
 
 export default ApiServersTable;

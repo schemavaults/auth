@@ -3,7 +3,7 @@ import type { UserData } from "@schemavaults/auth-common";
 import type { NextRequest } from "next/server";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { ServerlessDatabase } from "./auth-db";
-import RefreshTokenCookieName, { RefreshTokenExpiryCookieName } from "./RefreshTokenCookieNames";
+import { RefreshTokenExpiryCookieName, RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
 import SCHEMAVAULTS_AUTH_APP_ID from "./SCHEMAVAULTS_AUTH_APP_ID";
 import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { cookies } from "next/headers";
@@ -22,7 +22,7 @@ async function doesCookiesStoreHaveValidRefreshToken(cookies: RequestCookies | N
   if (!refresh_token) {
     return false;
   }
-  
+
   await using dbh = ServerlessDatabase.createDBH();
   const route_guard_factory: RouteGuardFactory = new RouteGuardFactory(dbh.db);
   const route_guard: IRouteGuard = await route_guard_factory.createGuardFromTokenSources('authenticated', [{

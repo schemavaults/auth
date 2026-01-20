@@ -2,7 +2,7 @@ import "server-only";
 import { deleteCookie } from "cookies-next/server";
 import { type NextRequest, NextResponse } from "next/server";
 import getHostname from "@/lib/hostname";
-import { RefreshTokenCookieName,  RefreshTokenExpiryCookieName } from "@/lib/RefreshTokenCookieNames";
+import { RefreshTokenCookieName,  RefreshTokenExpiryCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 

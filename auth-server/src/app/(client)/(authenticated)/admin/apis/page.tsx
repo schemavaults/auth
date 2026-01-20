@@ -7,8 +7,12 @@ import {
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { ReactElement } from "react";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
-async function AdminApisPageServerComponent({ dbh, user }: IProtectedAdminServerComponentPageProps): Promise<ReactElement> {
+async function AdminApisPageServerComponent({ user }: IProtectedAdminServerComponentPageProps<AuthDatabase>): Promise<ReactElement> {
+  if (!user.admin) {
+    throw new Error("Expected user to be an admin!")
+  }
   return <AdminAPIsPageView />
 }
 

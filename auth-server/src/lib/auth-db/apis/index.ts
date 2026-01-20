@@ -1,4 +1,4 @@
-export { SchemaVaultsApiServerRegistry } from './api-server-registry';
+export { SchemaVaultsApiServerRegistry, SchemaVaultsApiServerRegistry as default } from './api-server-registry';
 export type * from './api-server-registry';
 export { SchemaVaultsAppToApiPermissionsRegistry } from './app-to-api-permissions-registry'
 export type * from './app-to-api-permissions-registry';

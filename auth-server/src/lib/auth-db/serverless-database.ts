@@ -47,3 +47,5 @@ export class ServerlessDatabase
     await this.destroy();
   }
 }
+
+export default ServerlessDatabase;

@@ -16,8 +16,8 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
-import RefreshTokenCookieName, { RefreshTokenExpiryCookieName } from "@/lib/RefreshTokenCookieNames";
-import getStringByteSize from "@/lib/getStringByteSize";
+import { RefreshTokenCookieName, RefreshTokenExpiryCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
+import getStringByteSize from "@schemavaults/auth-server-sdk/getStringByteSize";
 import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
 
 const grant_type = 'refresh_token' as const;

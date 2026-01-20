@@ -1,19 +1,20 @@
 import "server-only";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   type ResourceCreationResponse,
   OrganizationsRegistry,
 } from "@/lib/auth-db";
 import {
-  IProtectedAdminApiRouteProps,
+  type IProtectedAdminApiRouteProps,
   withAdminApiRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 async function GET_list_organizations_handler({
   user,
   dbh,
-}: IProtectedAdminApiRouteProps): Promise<NextResponse> {
+}: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
   if (!user.admin) {
     return NextResponse.json(
       {
@@ -57,4 +58,6 @@ async function GET_list_organizations_handler({
   );
 }
 
-export const GET = withAdminApiRouteGuard(GET_list_organizations_handler);
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  return await (await withAdminApiRouteGuard(GET_list_organizations_handler))(req);
+}

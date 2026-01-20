@@ -11,6 +11,10 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type { ServerRuntime } from "next";
+
+export const runtime: ServerRuntime = "edge"
 
 export type ListAppDomainsResponse =
   | {
@@ -47,12 +51,12 @@ export async function POST(
   }
   const app_id: string = parsed_app_id.data;
 
-  const protected_route = withAuthenticatedApiRouteGuard(
+  const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
       environment,
-    }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+    }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>): Promise<NextResponse> => {
       if (environment === "development") {
         console.log(`[/api/apps/domains/${app_id}/list] POST request received`);
       }

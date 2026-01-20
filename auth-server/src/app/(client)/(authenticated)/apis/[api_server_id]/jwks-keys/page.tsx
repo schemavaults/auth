@@ -6,11 +6,12 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import JwksKeysPageView from "./jwks-keys-page-view";
+import { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 async function JwksKeysPageServerComponent({
   dbh: _dbh,
   user: _user,
-}: IProtectedAuthenticatedServerComponentPageProps): Promise<ReactElement> {
+}: IProtectedAuthenticatedServerComponentPageProps<AuthDatabase>): Promise<ReactElement> {
   return <JwksKeysPageView />;
 }
 

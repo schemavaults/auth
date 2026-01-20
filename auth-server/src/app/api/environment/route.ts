@@ -5,7 +5,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { NextResponse } from "next/server";
 
-export function GET(): NextResponse {
+export async function GET(): Promise<NextResponse> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   return NextResponse.json({ environment });
 }

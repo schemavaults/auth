@@ -5,8 +5,8 @@ import type {
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { setCookie } from "cookies-next/server";
-import { RefreshTokenCookieName, RefreshTokenExpiryCookieName } from "@/lib/RefreshTokenCookieNames";
-import getStringByteSize from "@/lib/getStringByteSize";
+import { RefreshTokenCookieName, RefreshTokenExpiryCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
+import getStringByteSize from "@schemavaults/auth-server-sdk/getStringByteSize";
 import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
 
 export interface IReturnGeneratedTokensToUserOpts {
@@ -97,8 +97,8 @@ export default async function returnGeneratedTokensToUser({
       }
 
       await setCookie(RefreshTokenCookieName, refresh_token.token satisfies string, refreshTokenSetCookieOpts);
-      
-      
+
+
       // set a non-http-only cookie with the refresh token expiry time
       // this way client should know if it is authenticated or not.
       // don't use this cookie for auth, just for client-side logic

@@ -18,9 +18,11 @@ import {
   OrganizationsRegistry,
 } from "@/lib/auth-db";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import SchemaVaultsPostgresNeonProxyAdapter from "@schemavaults/dbh";
 
 async function attemptToPreloadAppsAndDomains(
-  dbh: ServerlessDatabase,
+  dbh: SchemaVaultsPostgresNeonProxyAdapter<AuthDatabase>,
   userData: UserData,
 ): Promise<PreloadedAppsTableDataWithDomainRefs> {
   let appsRegistry: SchemaVaultsAppRegistry | undefined;
@@ -49,7 +51,7 @@ async function attemptToPreloadAppsAndDomains(
 }
 
 async function attemptToPreloadUserOrganizations(
-  dbh: ServerlessDatabase,
+  dbh: SchemaVaultsPostgresNeonProxyAdapter<AuthDatabase>,
   userData: UserData,
 ): Promise<readonly OrganizationDefinition[]> {
   const organizationsRegistry = new OrganizationsRegistry(dbh.db);
@@ -70,7 +72,7 @@ async function attemptToPreloadUserOrganizations(
 }
 
 async function AuthServerAccountDashboardPageServerComponent(
-  { user, dbh }: IProtectedAuthenticatedServerComponentPageProps
+  { user, dbh }: IProtectedAuthenticatedServerComponentPageProps<AuthDatabase>
 ): Promise<ReactElement> {
 
   if (!user) {

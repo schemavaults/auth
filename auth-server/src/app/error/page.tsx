@@ -1,7 +1,7 @@
 import {
   ERROR_MESSAGE_CATALOG,
   isValidErrorId,
-} from "@/lib/error-message-catalog";
+} from "@schemavaults/auth-server-sdk/auth-server-error-message-catalog";
 import type { ReactElement } from "react";
 import "server-only";
 import ErrorPageView from "./error_page_view";

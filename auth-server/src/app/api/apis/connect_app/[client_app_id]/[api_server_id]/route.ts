@@ -13,6 +13,10 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type { ServerRuntime } from "next";
+
+export const runtime: ServerRuntime = "edge"
 
 /**
  * Connect a frontend app client to an API server
@@ -53,12 +57,12 @@ export async function POST(
     );
   }
 
-  const protected_route = withAuthenticatedApiRouteGuard(
+  const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
       environment,
-    }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+    }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>): Promise<NextResponse> => {
       if (environment === "development") {
         console.log("[/api/apis/connect_app] POST request received");
       }

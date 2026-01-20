@@ -6,12 +6,13 @@ import {
   UserRegistry,
 } from "@/lib/auth-db";
 import type { InviteCodeDefinition, UserData } from "@schemavaults/auth-common";
-import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type { ServerRuntime } from "next";
 
-async function GET_handler({ req, user }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
+export const runtime: ServerRuntime = "edge"
+
+async function GET_handler({ user }: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   // Load user data and make sure they're authorized to do things!
@@ -60,4 +61,7 @@ async function GET_handler({ req, user }: IProtectedAdminApiRouteProps): Promise
   );
 }
 
-export const GET: (req: NextRequest) => Promise<NextResponse> = withAdminApiRouteGuard(GET_handler);
+export async function GET(req: NextRequest): Promise <NextResponse> {
+  const protected_route = await withAdminApiRouteGuard(GET_handler)
+  return await protected_route(req);
+}
