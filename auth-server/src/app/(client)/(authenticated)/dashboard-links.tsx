@@ -5,6 +5,7 @@ import type {
 } from "@schemavaults/ui";
 import {
   AppWindow,
+  Building2,
   Server,
   ShieldUser,
   SwatchBook,
@@ -50,6 +51,14 @@ export function getAuthenticatedUserDashboardLinks(
           url: "/admin/users",
           icon: ({ className }: { className: string }): ReactElement => (
             <Users className={className} />
+          ),
+        },
+        {
+          type: "dashboard-sidebar-item-definition" as const,
+          title: "Organizations",
+          url: "/admin/organizations",
+          icon: ({ className }: { className: string }): ReactElement => (
+            <Building2 className={className} />
           ),
         },
         {

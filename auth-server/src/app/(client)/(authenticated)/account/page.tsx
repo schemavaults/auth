@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 
 import AccountPageView from "./auth-dashboard-account-page-view";
 import type {
+  OrganizationDefinition,
   UserData,
 } from "@schemavaults/auth-common";
 import {
@@ -14,6 +15,7 @@ import {
   type ServerlessDatabase,
   preloadAppsTable,
   SchemaVaultsAppRegistry,
+  OrganizationsRegistry,
 } from "@/lib/auth-db";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 
@@ -46,6 +48,26 @@ async function attemptToPreloadAppsAndDomains(
   );
 }
 
+async function attemptToPreloadUserOrganizations(
+  dbh: ServerlessDatabase,
+  userData: UserData,
+): Promise<readonly OrganizationDefinition[]> {
+  const organizationsRegistry = new OrganizationsRegistry(dbh.db);
+  const organizationIds = await organizationsRegistry.listUserOrganizationMemberships(userData.uid);
+
+  const organizations: OrganizationDefinition[] = [];
+  for (const orgId of organizationIds) {
+    try {
+      const org = await organizationsRegistry.lookupOrganization(orgId);
+      organizations.push(org);
+    } catch (e: unknown) {
+      console.error(`Failed to lookup organization ${orgId}:`, e);
+    }
+  }
+
+  return organizations;
+}
+
 async function AuthServerAccountDashboardPageServerComponent(
   { user, dbh }: IProtectedAuthenticatedServerComponentPageProps
 ): Promise<ReactElement> {
@@ -67,9 +89,18 @@ async function AuthServerAccountDashboardPageServerComponent(
     /** no-op error */
   }
 
+  let preloaded_organizations: readonly OrganizationDefinition[] | undefined = undefined;
+  try {
+    preloaded_organizations = await attemptToPreloadUserOrganizations(dbh, user);
+  } catch (e: unknown) {
+    console.error("Failed to preload user organizations:", e);
+    /** no-op error */
+  }
+
   return (
     <AccountPageView
       preloaded_authorized_apps_data={preloaded_authorized_apps}
+      preloaded_organizations={preloaded_organizations}
     />
   );
 }

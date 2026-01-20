@@ -7,6 +7,7 @@ import {
   type RequestTokensResult,
   audienceRefSchema,
   type OrganizationID,
+  organizationIdSchema,
 } from "@schemavaults/auth-common";
 import {
   appIdSchema,
@@ -68,6 +69,21 @@ export class JWT_Factory {
     }
     this.environment = parsed_app_environment.data;
 
+    if (!Array.isArray(opts.user_organizations)) {
+      throw new TypeError(
+        "Invalid user organizations, expected 'user_organizations' field to be an array",
+      );
+    } else if (
+      !opts.user_organizations.every(
+        (item) =>
+          typeof item === "string" &&
+          organizationIdSchema.safeParse(item).success,
+      )
+    ) {
+      throw new TypeError(
+        "Invalid user organizations, expected 'user_organizations' field to be an array of valid organization IDs",
+      );
+    }
     this.user_organizations = opts.user_organizations;
   }
 
@@ -126,6 +142,8 @@ export class JWT_Factory {
       }
     }
 
+    const orgs: readonly OrganizationID[] = this.user_organizations;
+
     const generateTokenOptions: GenerateJWTOptions<typeof type> = {
       user: this.user,
       type,
@@ -134,7 +152,7 @@ export class JWT_Factory {
       client_app_id: this.client_app_id,
       jwt_keys: this.jwt_keys satisfies I_JWT_Keys,
       env: this.environment satisfies SchemaVaultsAppEnvironment,
-      orgs: this.user_organizations satisfies readonly OrganizationID[],
+      orgs: orgs,
     };
 
     const jwt: AuthToken = await generateJWT(generateTokenOptions);

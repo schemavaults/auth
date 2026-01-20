@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { type NextRequest, NextResponse } from "next/server";
 import {
+  organizationIdSchema,
   type OrganizationID,
   type RequestTokensResult,
   type UserData,
@@ -209,6 +210,10 @@ export async function handleAuthorizationCodeGrant(
         status: 500,
       },
     );
+  }
+
+  if (!Array.isArray(user_organizations) || !user_organizations.every((org) => typeof org === "string" && organizationIdSchema.safeParse(org).success)) {
+    throw new TypeError("'user_organizations' must be an array of valid organization IDs, received bad value from organizations registry!");
   }
 
   let jwt_keys_manager: AuthServerJwtKeysManager;

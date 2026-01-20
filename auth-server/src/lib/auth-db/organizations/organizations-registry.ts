@@ -11,6 +11,7 @@ import {
   type OrganizationID,
   organizationIdSchema,
   SCHEMAVAULTS_ORGANIZATION_ID,
+  hardcodedOrgs
 } from "@schemavaults/auth-common";
 import type { OrganizationRow } from "./organizations-table";
 import isValidUuid from "@/lib/is-valid-uuid";
@@ -19,6 +20,7 @@ import {
   type OrganizationMembershipRoleType,
 } from "./organization-membership-role-types";
 import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
+import type { OrganizationMemberWithUserData } from "./organization-member-with-user-data";
 
 export class OrganizationsRegistry
   extends AbstractDatabaseResourceGroup
@@ -196,6 +198,12 @@ export class OrganizationsRegistry
       );
     }
 
+    if (hardcodedOrgs.some(hardcodedOrganization => hardcodedOrganization.organization_id === organization_definition.organization_id)) {
+      throw new Error(
+        `'${organization_definition.organization_id}' is a reserved organization ID!`,
+      );
+    }
+
     if (this.debug) {
       console.log(
         `[OrganizationsRegistry] createOrganization(${JSON.stringify(organization_definition)})`,
@@ -207,6 +215,52 @@ export class OrganizationsRegistry
       .values(organization_definition);
 
     await insertionQuery.executeTakeFirstOrThrow();
+  }
+
+  public async listAllOrganizations(): Promise<readonly OrganizationDefinition[]> {
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
+
+    if (this.debug) {
+      console.log(`[OrganizationsRegistry] listAllOrganizations()`);
+    }
+
+    const query = this.db
+      .selectFrom("organizations")
+      .selectAll()
+      .orderBy("created_at", "desc");
+
+    const rows: OrganizationRow[] = await query.execute();
+
+    const organizations: OrganizationDefinition[] = [];
+    for (const row of rows) {
+      const parsed = await organizationDefinitionSchema.safeParseAsync({
+        ...row,
+        created_at:
+          typeof row.created_at === "number"
+            ? row.created_at
+            : Number.parseInt(row.created_at),
+      } satisfies OrganizationDefinition);
+      if (!parsed.success) {
+        console.error(
+          "Failed to parse organization definition from database row: ",
+          parsed.error,
+        );
+        continue;
+      }
+      organizations.push(parsed.data);
+    }
+
+    organizations.push(...hardcodedOrgs satisfies readonly OrganizationDefinition[]);
+
+    if (this.debug) {
+      console.log(
+        `[OrganizationsRegistry] listAllOrganizations() => ${organizations.length} organizations`,
+      );
+    }
+
+    return organizations;
   }
 
   public async listUserOrganizationMemberships(
@@ -236,10 +290,27 @@ export class OrganizationsRegistry
         .select("organization_id");
 
       const memberships = await membershipsQuery.execute();
-      const orgs: Set<OrganizationID> = new Set(
-        ...memberships.map((result) => result.organization_id),
+      if (memberships.length === 0) {
+        if (this.debug) {
+          console.log(
+            `[OrganizationsRegistry] listUserOrganizationMemberships(uid = '${uid}') -> []`,
+          );
+        }
+        return [];
+      }
+      const all_organization_ids = memberships.map((result) => {
+        if (!organizationIdSchema.safeParse(result.organization_id).success) {
+          throw new TypeError(
+            `Failed to load associated organization IDs for user '${uid}', received bad value from database query!`,
+          );
+        }
+        return result.organization_id
+      });
+
+      const org_ids: Set<OrganizationID> = new Set(
+        all_organization_ids
       );
-      const unique_org_ids: SetIterator<OrganizationID> = orgs.values();
+      const unique_org_ids: SetIterator<OrganizationID> = org_ids.values();
 
       organization_ids = [...unique_org_ids];
     } catch (e: unknown) {
@@ -252,7 +323,93 @@ export class OrganizationsRegistry
       );
     }
 
+    if (!Array.isArray(organization_ids) || !organization_ids.every((org) => typeof org === "string" && organizationIdSchema.safeParse(org).success)) {
+      throw new TypeError(
+        `Failed to load associated organization IDs for user '${uid}', received bad value from organizations registry!`,
+      );
+    }
+
+    if (this.debug) {
+      console.log(
+        `[OrganizationsRegistry] listUserOrganizationMemberships(uid = '${uid}') -> ${JSON.stringify(organization_ids)}`
+      );
+    }
+
     return organization_ids;
+  }
+
+  public async listOrganizationMembers(
+    org_id: OrganizationID,
+  ): Promise<readonly OrganizationMemberWithUserData[]> {
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
+
+    const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id);
+    if (!parsed_org_id.success) {
+      throw new Error(
+        "OrganizationsRegistry.listOrganizationMembers() received invalid organization ID!",
+      );
+    }
+    const organization_id: OrganizationID = parsed_org_id.data;
+
+    if (this.debug) {
+      console.log(
+        `[OrganizationsRegistry] listOrganizationMembers(org_id = '${org_id}')`,
+      );
+    }
+
+    try {
+      const membersQuery = this.db
+        .selectFrom("organization_membership_roles")
+        .innerJoin("users", "organization_membership_roles.uid", "users.uid")
+        .where("organization_membership_roles.organization_id", "=", organization_id)
+        .select([
+          "organization_membership_roles.membership_declaration_id",
+          "organization_membership_roles.organization_id",
+          "organization_membership_roles.uid",
+          "organization_membership_roles.role",
+          "organization_membership_roles.created_at as membership_created_at",
+          "users.email",
+          "users.email_verified",
+          "users.admin",
+          "users.disabled",
+        ])
+        .orderBy("organization_membership_roles.created_at", "desc");
+
+      const rows = await membersQuery.execute();
+
+      const members: OrganizationMemberWithUserData[] = rows.map((row) => ({
+        membership_declaration_id: row.membership_declaration_id,
+        organization_id: row.organization_id as OrganizationID,
+        uid: row.uid,
+        role: row.role as OrganizationMembershipRoleType,
+        membership_created_at:
+          typeof row.membership_created_at === "number"
+            ? row.membership_created_at
+            : Number.parseInt(row.membership_created_at as string),
+        email: row.email,
+        email_verified: row.email_verified ?? undefined,
+        admin: row.admin ?? undefined,
+        disabled: row.disabled ?? undefined,
+      }));
+
+      if (this.debug) {
+        console.log(
+          `[OrganizationsRegistry] listOrganizationMembers(org_id = '${org_id}') => ${members.length} members`,
+        );
+      }
+
+      return members;
+    } catch (e: unknown) {
+      console.error(
+        `Failed to list organization members for organization '${organization_id}': `,
+        e,
+      );
+      throw new Error(
+        `Failed to list organization members for organization '${organization_id}'!`,
+      );
+    }
   }
 
   public async addMembership(

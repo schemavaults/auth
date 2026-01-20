@@ -14,6 +14,7 @@ import {
   requestTokensResultSchema,
   type RequestTokensResult,
   type UserData,
+  organizationIdSchema,
 } from "@schemavaults/auth-common";
 import generateRefreshToken from "./generateRefreshToken";
 import generateAccessToken from "./generateAccessToken";
@@ -28,6 +29,13 @@ export interface IGenerateTokensForAuthenticatedUserOpts {
   generate_refresh: boolean;
 }
 
+function isValidUserOrganizations(user_organizations: readonly string[]): boolean {
+  if (!Array.isArray(user_organizations)) {
+    throw new TypeError("'user_organizations' must be an array");
+  }
+  return user_organizations.every((org) => typeof org === "string" && organizationIdSchema.safeParse(org).success);
+}
+
 export default async function generateTokensForAuthenticatedUser({
   auth_jwt_manager,
   client_app_id,
@@ -37,6 +45,10 @@ export default async function generateTokensForAuthenticatedUser({
   environment,
   generate_refresh,
 }: IGenerateTokensForAuthenticatedUserOpts): Promise<RequestTokensResult> {
+  if (!isValidUserOrganizations(user_organizations)) {
+    throw new Error("'user_organizations' must be an array of valid organization IDs");
+  }
+
   let refresh_token: RefreshToken | undefined = undefined;
   if (generate_refresh) {
     refresh_token = await generateRefreshToken({

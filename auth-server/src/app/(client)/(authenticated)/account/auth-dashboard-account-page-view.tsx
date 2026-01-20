@@ -4,20 +4,23 @@ import { AccountDetailsCard, AppsCard } from "@schemavaults/auth-ui";
 import { useRouter } from "next/navigation";
 import type { ReactElement } from "react";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
+import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import {
   useAdmin,
   useAppEnvironment,
   useCurrentUser,
 } from "@schemavaults/auth-react-provider";
 import Link from "next/link";
-import { PageContainer } from "@/components/PageContainer";
+import PageContainer from "@/components/PageContainer";
 
 export interface AuthAccountPageViewProps {
   preloaded_authorized_apps_data?: PreloadedAppsTableDataWithDomainRefs;
+  preloaded_organizations?: readonly OrganizationDefinition[];
 }
 
 export default function AccountPageView({
   preloaded_authorized_apps_data,
+  preloaded_organizations,
 }: AuthAccountPageViewProps): ReactElement {
   const router = useRouter();
   const environment = useAppEnvironment();
@@ -53,6 +56,7 @@ export default function AccountPageView({
         isAdmin={admin}
         user={user}
         appEnvironment={environment}
+        organizations={preloaded_organizations}
       />
       <AppsCard
         cardTitle="Authorized Applications"

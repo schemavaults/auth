@@ -45,6 +45,7 @@ export {
   organizationIdSchema,
   isValidOrganizationID,
   organizationDefinitionSchema,
+  hardcodedOrgs,
   SCHEMAVAULTS_ORGANIZATION_ID,
 } from "./organizations";
 export type { OrganizationID, OrganizationDefinition } from "./organizations";

@@ -83,7 +83,8 @@ export async function generateJWT<T extends AuthTokenTypes>(
   if (type === "refresh") {
     if (typeof audience !== "string" || audience !== refresh_token_audience) {
       throw new Error(
-        `Audience for a refresh token must be the auth server. Received "${audience}", but expected "${refresh_token_audience}".`,
+        `Audience for a refresh token must be the auth server. ` +
+          `Received "${audience}", but expected "${refresh_token_audience}".`,
       );
     } else {
       aud = refresh_token_audience;
@@ -129,12 +130,29 @@ export async function generateJWT<T extends AuthTokenTypes>(
 
   const env: SchemaVaultsAppEnvironment = opts.env;
 
+  if (!Array.isArray(opts.orgs) || typeof opts.orgs.length !== "number") {
+    throw new TypeError("Invalid organization IDs 'orgs' field; not an array!");
+  }
+
   const parsed_organization_ids = await organizationIdsSchema.safeParseAsync(
     opts.orgs,
   );
   if (!parsed_organization_ids.success) {
+    if (opts.orgs.length === 0) {
+      console.warn("No organization IDs provided");
+    } else {
+      console.log(
+        `[generateJWT] Error parsing list of '${opts.orgs.length}' organization IDs`,
+      );
+      if (env === "development") {
+        console.warn(
+          "[generateJWT] Organization IDs causing the error:",
+          opts.orgs,
+        );
+      }
+    }
     console.error(
-      "Received invalid list of organization IDs that user is a member of: ",
+      "[generateJWT] Received invalid list of organization IDs that user is a member of! Data parse error: ",
       parsed_organization_ids.error,
     );
     throw new Error(

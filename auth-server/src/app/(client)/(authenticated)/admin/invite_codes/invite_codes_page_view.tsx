@@ -2,7 +2,7 @@
 
 import { InviteCodesCard } from "@schemavaults/auth-ui";
 import type { ReactElement } from "react";
-import { PageContainer } from "@/components/PageContainer";
+import PageContainer from "@/components/PageContainer";
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";
 
 export interface InviteCodesPageViewProps {
