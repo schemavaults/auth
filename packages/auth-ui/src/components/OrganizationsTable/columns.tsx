@@ -46,11 +46,33 @@ export const columns: ColumnDef<OrganizationDefinition>[] = [
     id: "organization_id",
     accessorKey: "organization_id",
     header: "Organization ID",
+    cell: ({ row }): ReactElement => {
+      const org: OrganizationDefinition = row.original;
+      return (
+        <Link
+          href={`/org/${org.organization_id}`}
+          className="hover:underline text-primary"
+        >
+          {org.organization_id}
+        </Link>
+      );
+    },
   },
   {
     id: "name",
     accessorKey: "name",
     header: "Name",
+    cell: ({ row }): ReactElement => {
+      const org: OrganizationDefinition = row.original;
+      return (
+        <Link
+          href={`/org/${org.organization_id}`}
+          className="hover:underline text-primary"
+        >
+          {org.name}
+        </Link>
+      );
+    },
   },
   {
     id: "created_at",
