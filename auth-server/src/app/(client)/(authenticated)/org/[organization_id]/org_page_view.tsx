@@ -4,10 +4,26 @@ import { OrganizationMembersCard, type OrganizationMemberTableData } from "@sche
 import type { ReactElement } from "react";
 import PageContainer from "@/components/PageContainer";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 
 export interface OrgPageViewProps {
   organization: OrganizationDefinition;
   preloaded_members: readonly OrganizationMemberTableData[];
+}
+
+function OrgTitleCard({ organization }: Pick<OrgPageViewProps, 'organization'>): ReactElement {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{ organization.name }</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CardDescription>
+          Organization ID: <span className="font-bold">{organization.organization_id}</span>
+        </CardDescription>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function OrgPageView({
@@ -16,12 +32,8 @@ export default function OrgPageView({
 }: OrgPageViewProps): ReactElement {
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">{organization.name}</h1>
-        <p className="text-muted-foreground text-sm">
-          Organization ID: {organization.organization_id}
-        </p>
-      </div>
+      <OrgTitleCard organization={organization} />
+
       <OrganizationMembersCard
         organization_id={organization.organization_id}
         cardClassName={"w-full"}

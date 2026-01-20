@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
   cn,
@@ -19,9 +18,8 @@ import {
   organizationDefinitionSchema,
   type OrganizationDefinition,
 } from "@schemavaults/auth-common";
-import useSWR, { type useSWRConfig } from "swr";
+import useSWR from "swr";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import { CreateOrganizationDialog } from "@/components/CreateOrganizationDialog";
 
 export interface OrganizationsCardProps {
   cardTitle?: string;
@@ -31,12 +29,6 @@ export interface OrganizationsCardProps {
 }
 
 const listAllOrganizationsEndpoint = "/api/admin/organizations";
-
-function clearOrganizationsCache(
-  mutate: ReturnType<typeof useSWRConfig>["mutate"],
-): void {
-  mutate(listAllOrganizationsEndpoint);
-}
 
 export function OrganizationsCard(props: OrganizationsCardProps): ReactElement {
   const authClient = useAuth();
@@ -143,13 +135,6 @@ export function OrganizationsCard(props: OrganizationsCardProps): ReactElement {
       <CardContent>
         <OrganizationsTable organizations={organizations} />
       </CardContent>
-      <CardFooter>
-        <div className="flex flex-row items-start justify-start gap-2">
-          <CreateOrganizationDialog
-            clearOrganizationsCache={clearOrganizationsCache}
-          />
-        </div>
-      </CardFooter>
     </Card>
   );
 }

@@ -1,14 +1,21 @@
 "use client";
 
-import type { ReactElement } from "react";
-import type { SWRResponse } from "swr";
+import { type ReactElement } from "react";
+import type { SWRResponse, useSWRConfig } from "swr";
 import { Datatable } from "@schemavaults/ui";
 import { columns } from "./columns";
 import { Loader2 } from "lucide-react";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import CreateOrganizationDialog from "@/components/CreateOrganizationDialog";
 
 export interface OrganizationsDatatableProps {
   organizations: SWRResponse<readonly OrganizationDefinition[], Error>;
+}
+
+function clearOrganizationsCache(
+  mutate: ReturnType<typeof useSWRConfig>["mutate"],
+): void {
+  mutate("/api/admin/organizations");
 }
 
 export function OrganizationsTable({
@@ -36,7 +43,11 @@ export function OrganizationsTable({
         created_at: true,
       }}
       HeaderButtons={(): ReactElement => {
-        return <></>;
+        return (
+          <CreateOrganizationDialog
+            clearOrganizationsCache={clearOrganizationsCache}
+          />
+        );
       }}
       datatypeLabel="Organization"
       searchColumn={["organization_id", "name"]}

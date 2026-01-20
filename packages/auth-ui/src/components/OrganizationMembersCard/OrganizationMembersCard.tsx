@@ -34,8 +34,7 @@ export function OrganizationMembersCard(
   const authClient = useAuth();
 
   const cardTitle = props.cardTitle ?? "Members";
-  const cardDescription =
-    props.cardDescription ?? "View organization members.";
+  const cardDescription = props.cardDescription ?? "View organization members.";
 
   const cardClassName: string = cn("w-full", props.cardClassName);
 
@@ -96,13 +95,11 @@ export function OrganizationMembersCard(
           !("members" in body.data) ||
           !Array.isArray(body.data.members)
         ) {
-          throw new Error(
-            "Failed to extract 'members' array from response!",
-          );
+          throw new Error("Failed to extract 'members' array from response!");
         }
 
-        const members: readonly OrganizationMemberTableData[] =
-          body.data.members as OrganizationMemberTableData[];
+        const members: readonly OrganizationMemberTableData[] = body.data
+          .members as OrganizationMemberTableData[];
         return members;
       } catch (e: unknown) {
         console.error(`Failed to list organization members: `, e);
@@ -123,9 +120,9 @@ export function OrganizationMembersCard(
       <CardContent>
         <OrganizationMembersTable members={members} />
       </CardContent>
-      <CardFooter>
+      {/*<CardFooter>
         <div className="flex flex-row items-start justify-start gap-2"></div>
-      </CardFooter>
+      </CardFooter>*/}
     </Card>
   );
 }

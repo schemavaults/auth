@@ -1,2 +1,5 @@
-export { CreateOrganizationDialog } from "./CreateOrganizationDialog";
+export {
+  CreateOrganizationDialog,
+  CreateOrganizationDialog as default,
+} from "./CreateOrganizationDialog";
 export type * from "./CreateOrganizationDialog";

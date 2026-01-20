@@ -12,7 +12,7 @@ import {
   Input,
   useToast,
 } from "@schemavaults/ui";
-import { type ReactElement, useMemo, useTransition } from "react";
+import { type ReactElement, useMemo, useState, useTransition } from "react";
 
 import {
   Dialog,
@@ -44,6 +44,7 @@ interface CreateOrganizationDialogProps {
 export function CreateOrganizationDialog({
   clearOrganizationsCache,
 }: CreateOrganizationDialogProps): ReactElement {
+  const [open, setOpen] = useState<boolean>(false);
   const { toast } = useToast();
 
   const defaultValues: Partial<OrganizationDefinition> = useMemo(() => {
@@ -161,13 +162,14 @@ export function CreateOrganizationDialog({
         title: "Created new organization successfully",
       });
       clearOrganizationsCache(mutate);
+      setOpen(false);
       return;
     });
     return;
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
           <Building2 className="h-4 w-4 mr-2" /> Create organization
