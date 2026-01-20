@@ -65,10 +65,12 @@ bun run e2e        # Run Cypress / Docker Compose testing pipeline
 ```
 
 ### auth-server Structure
+- `src/app/` - Next.js App Directory
 - `src/app/api/` - Next.js API routes (auth endpoints, admin endpoints, token management)
 - `src/app/(client)/` - Client-side pages with route groups
 - `src/app/(client)/(authenticated)/` - Routes requiring authentication
 - `src/lib/auth-db/` - Database resource groups for users, organizations, apps, APIs, JWT keys
+- `src/components/` - Next.js/React.js client components specific to the auth server
 - `src/lib/AuthServerJwtKeysManager/` - JWT key lifecycle management
 
 ### Database
