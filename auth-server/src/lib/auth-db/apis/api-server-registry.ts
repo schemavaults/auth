@@ -132,7 +132,12 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
         api_server_description TEXT NOT NULL,
         public BOOLEAN DEFAULT FALSE,
         created_at BIGINT NOT NULL,
-        hardcoded BOOLEAN DEFAULT FALSE
+        hardcoded BOOLEAN DEFAULT FALSE,
+        owner_organization_id TEXT,
+        CONSTRAINT fk_owner_org
+          FOREIGN KEY (owner_organization_id)
+          REFERENCES ORGANIZATIONS(organization_id)
+          ON DELETE SET NULL
       );
     `;
     await createApiServersTable.execute(db);

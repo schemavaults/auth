@@ -8,6 +8,8 @@ export type { CustomJWTPayload } from "./payload_data";
 export {
   JWT_Keys,
   generateNewJwtKeySet,
+  generateJwtSigningKeyPair,
+  generateJwtContentEncryptionKeyPair,
   to_public_jwks,
   importAsymmetricJWK,
   jsonSerializedJwtKeySchema,
@@ -19,3 +21,7 @@ export { getKeysetIdFromToken } from "./get_keyset_id_from_token";
 export { default as getAudienceFromToken } from "./get_audience_from_token";
 
 export { refreshTokenExpiry, accessTokenExpiry } from "./expiry";
+
+// Re-export jose functions for JWKS access key verification
+export { jwtVerify, importSPKI, SignJWT } from "jose";
+export type { JWTPayload, JWTVerifyResult } from "jose";

@@ -8,6 +8,7 @@ import { AuthorizedAppsRegistry, SchemaVaultsAppRegistry } from "./apps";
 import { UserRegistry } from "./users";
 import { OrganizationsRegistry } from "./organizations";
 import { AuthServerJwtKeysStore } from "./jwt_keys";
+import { JwksAccessKeysRegistry } from "./jwks-access-keys";
 
 export async function initializeAuthDbTables(
   db: Kysely<AuthDatabase>,
@@ -51,4 +52,8 @@ export async function initializeAuthDbTables(
 
   const jwtKeysRegistry = new AuthServerJwtKeysStore(db);
   await jwtKeysRegistry.performSetupTasks();
+
+  // jwks_access_keys depends on api_servers (already initialized above)
+  const jwksAccessKeysRegistry = new JwksAccessKeysRegistry(db);
+  await jwksAccessKeysRegistry.performSetupTasks();
 }

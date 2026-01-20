@@ -15,6 +15,7 @@ import type {
   UsersTable,
   InviteCodesTable,
 } from "./users";
+import type { JwksAccessKeysTable } from "./jwks-access-keys";
 
 export type AuthDatabase = {
   apps: AppsTable;
@@ -30,4 +31,5 @@ export type AuthDatabase = {
   organizations: OrganizationsTable;
   organization_membership_roles: OrganizationMembershipRolesTable;
   jwt_keys: JwtKeysTable;
+  jwks_access_keys: JwksAccessKeysTable;
 };

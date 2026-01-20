@@ -3,40 +3,76 @@ import { type NextRequest, NextResponse } from "next/server";
 import { AuthServerJwtKeysManager } from "@/lib/AuthServerJwtKeysManager";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import { type ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
+import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
+import { jwtVerify, importSPKI } from "@schemavaults/jwt";
 
 function isValidApiServerId(val: unknown): val is ApiServerId {
   return typeof val === "string" && apiServerIdSchema.safeParse(val).success
 }
 
-async function isLoadJwksRequestAuthenticated(req: Request): Promise<boolean> {
-  const headers: Headers = req.headers;
+async function verifyJwksAccessAssertion(
+  assertion: string,
+  audience: string,
+  db: ReturnType<typeof ServerlessDatabase.createDBH>["db"]
+): Promise<boolean> {
+  const accessKeysRegistry = new JwksAccessKeysRegistry(db);
+  const activeKey = await accessKeysRegistry.getActiveKeyForAudience(audience);
 
-  const authorization = headers.get("Authorization");
-  if (!authorization) return false;
+  if (!activeKey) {
+    console.warn(`No active JWKS access key found for audience "${audience}"`);
+    return false;
+  }
 
-  const [type, token] = authorization.split(" ");
-  if (type !== "Bearer") return false;
+  try {
+    const publicKey = await importSPKI(activeKey.public_key, "RS256");
+    const { payload } = await jwtVerify(assertion, publicKey, {
+      algorithms: ["RS256"],
+    });
 
-  const key_manager = new AuthServerJwtKeysManager(ServerlessDatabase.createDBH().db);
-  const payload = await key_manager.verifyJwt(token);
-  if (!payload) return false;
+    // Verify the assertion is for this specific audience
+    if (payload.sub !== audience) {
+      console.warn(`Assertion subject "${payload.sub}" does not match audience "${audience}"`);
+      return false;
+    }
 
-  return payload.aud === "auth-server-jwks";
+    return true;
+  } catch (e: unknown) {
+    console.error("Failed to verify JWKS access assertion:", e);
+    return false;
+  }
 }
 
-export async function GET(request: NextRequest, ctx: RouteContext<'/api/jwks/[audience]'>) {
-  const { audience } = await ctx.params;
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ audience: string }> }
+) {
+  const { audience } = await props.params;
 
   if (!audience || !isValidApiServerId(audience)) {
     return NextResponse.json({ error: "Invalid audience" }, { status: 400 });
   }
 
-  if (!await isLoadJwksRequestAuthenticated(request)) {
-    console.warn(`Received unauthorized request to load jwks audience "${audience}"`);
+  await using dbh = ServerlessDatabase.createDBH();
+
+  // Extract assertion from Authorization header
+  const authorization = request.headers.get("Authorization");
+  if (!authorization) {
+    console.warn(`Received request to load jwks audience "${audience}" without Authorization header`);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  await using dbh = ServerlessDatabase.createDBH();
+  const [type, assertion] = authorization.split(" ");
+  if (type !== "Bearer" || !assertion) {
+    console.warn(`Invalid Authorization header format for jwks audience "${audience}"`);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Verify the signed assertion using audience-specific public key
+  const isAuthenticated = await verifyJwksAccessAssertion(assertion, audience, dbh.db);
+  if (!isAuthenticated) {
+    console.warn(`Received unauthorized request to load jwks audience "${audience}"`);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const key_manager = new AuthServerJwtKeysManager(dbh.db);
 

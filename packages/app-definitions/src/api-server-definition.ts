@@ -8,7 +8,8 @@ export const schemaVaultsApiServerDefinitionSchema = z.object({
   api_server_description: z.string().max(512),
   created_at: z.number().nonnegative(),
   public: z.boolean(), // whether the app is publicly listed
-  hardcoded: z.boolean()
+  hardcoded: z.boolean(),
+  owner_organization_id: z.string().nullable().optional()
 }).required({
   api_server_id: true,
   api_server_name: true,
