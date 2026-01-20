@@ -4,41 +4,41 @@
       "settings": {
         "workingDirectories": [
           {
-            "mode": "auto"
-          }
+            "mode": "auto",
+          },
         ],
         "experimental": {
-          "useFlatConfig": true
+          "useFlatConfig": true,
         },
         "validate": [
           "javascript",
           "javascriptreact",
           "typescript",
-          "typescriptreact"
+          "typescriptreact",
         ],
         "run": "onSave",
         "nodePath": null,
         "options": {
-          "flags": []
-        }
-      }
-    }
+          "flags": [],
+        },
+      },
+    },
   },
   "languages": {
     "TypeScript": {
       "code_actions_on_format": {
-        "source.fixAll.eslint": true
-      }
+        "source.fixAll.eslint": true,
+      },
     },
     "JavaScript": {
       "code_actions_on_format": {
-        "source.fixAll.eslint": true
-      }
+        "source.fixAll.eslint": true,
+      },
     },
     "TSX": {
       "code_actions_on_format": {
-        "source.fixAll.eslint": true
-      }
-    }
-  }
+        "source.fixAll.eslint": true,
+      },
+    },
+  },
 }
