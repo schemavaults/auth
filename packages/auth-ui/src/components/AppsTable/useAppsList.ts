@@ -15,13 +15,18 @@ export interface UseAppsListOptions {
   queryType: ListAppsQueryType;
   toast: ReturnType<typeof useToast>["toast"];
   initialData?: readonly SchemaVaultsApp[] | undefined;
+  organization_id?: string;
 }
 
 function getAppsListEndpoint(
   queryType: ListAppsQueryType,
+  organization_id?: string,
 ): `/api/apps?${string}` {
   const searchParams = new URLSearchParams();
   searchParams.set("list_apps_query_type", queryType);
+  if (queryType === "org" && organization_id) {
+    searchParams.set("organization_id", organization_id);
+  }
   return `/api/apps?${searchParams.toString()}` as const;
 }
 
@@ -37,10 +42,11 @@ export function useAppsList({
   toast,
   queryType,
   initialData,
+  organization_id,
 }: UseAppsListOptions) {
   const auth = useAuth();
   const environment = useAppEnvironment();
-  const endpoint = getAppsListEndpoint(queryType);
+  const endpoint = getAppsListEndpoint(queryType, organization_id);
 
   return useSWR(
     endpoint,

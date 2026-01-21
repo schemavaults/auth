@@ -18,6 +18,7 @@ export interface ApiServersCardProps {
   cardDescription?: string;
   cardClassName?: string;
   queryType: ListApiServersQueryType;
+  organization_id?: string;
 }
 
 export function ApiServersCard(props: ApiServersCardProps): ReactElement {
@@ -35,7 +36,7 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
         <CardDescription>{cardDescription}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ApiServersTable queryType={props.queryType} />
+        <ApiServersTable queryType={props.queryType} organization_id={props.organization_id} />
       </CardContent>
       <CardFooter>
         <div className="flex flex-row items-start justify-start gap-2"></div>

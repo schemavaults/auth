@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-ui",
-  "version": "0.5.49",
+  "version": "0.5.50",
   "private": false,
   "license": "UNLICENSED",
   "description": "React.js UI components for authentication/authorization shared between different SchemaVaults apps",

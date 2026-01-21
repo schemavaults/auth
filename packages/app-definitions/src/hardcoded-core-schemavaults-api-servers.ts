@@ -11,6 +11,7 @@ export const SCHEMAVAULTS_REGISTRY_SERVER = {
   public: true,
   created_at: createdAt,
   hardcoded: true,
+  owner_organization_id: "schemavaults",
 } as const satisfies SchemaVaultsApiServerDefinition;
 
 export const SCHEMAVAULTS_MAIL_SERVER = {
@@ -21,6 +22,7 @@ export const SCHEMAVAULTS_MAIL_SERVER = {
   public: true,
   created_at: createdAt,
   hardcoded: true,
+  owner_organization_id: "schemavaults",
 } as const satisfies SchemaVaultsApiServerDefinition;
 
 export const HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS = [

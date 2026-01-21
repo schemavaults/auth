@@ -19,14 +19,16 @@ import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
 
 export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
+  organization_id?: string;
 }
 
 export function ApiServersTable({
   queryType,
+  organization_id,
 }: ApiServersDatatableProps): ReactElement {
   const { toast } = useToast();
   const apis: SWRResponse<readonly SchemaVaultsApiServerDefinition[], Error> =
-    useApiServersList({ toast, queryType });
+    useApiServersList({ toast, queryType, organization_id });
   const { isLoading, data } = apis;
 
   if (!data && isLoading) {

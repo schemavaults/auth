@@ -13,7 +13,7 @@ import {
   type ListAppsQueryResponse,
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
-import type { UserData } from "@schemavaults/auth-common";
+import { organizationIdSchema, type UserData } from "@schemavaults/auth-common";
 import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
@@ -108,6 +108,33 @@ export async function GET_app_list_handler(
     );
   }
   const list_apps_query_type: ListAppsQueryType = parsed_query_type.data;
+
+  if (list_apps_query_type === "org" && !searchParams.has("organization_id")) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Missing 'organization_id' search param to accompany query type!",
+      } satisfies ListAppsQueryResponse,
+      {
+        status: 400,
+      },
+    );
+  }
+  const organization_id: string | null = searchParams.get("organization_id") ?? null;
+  if (
+    list_apps_query_type === "org" &&
+    (!organization_id || !organizationIdSchema.safeParse(organization_id).success)
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Invalid 'organization_id' search param!",
+      } satisfies ListAppsQueryResponse,
+      {
+        status: 400,
+      },
+    );
+  }
 
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
@@ -220,6 +247,40 @@ export async function GET_app_list_handler(
                 },
               );
             }
+
+          case "org":
+            if (!organization_id) {
+              throw new Error(
+                "Expected there to be a valid 'organization_id' set if this point was reached!",
+              );
+            }
+            try {
+              return NextResponse.json(
+                {
+                  success: true,
+                  message: "Successfully listed all SchemaVaults apps for organization",
+                  list: await appsRegistry.listOrganizationApps(
+                    organization_id,
+                    user,
+                  ),
+                } satisfies ListAppsQueryResponse,
+                {
+                  status: 200,
+                },
+              );
+            } catch (e: unknown) {
+              console.error("Failed to list apps for organization:", e);
+              return NextResponse.json(
+                {
+                  success: false,
+                  message: "Failed to list apps for organization",
+                } satisfies ListAppsQueryResponse,
+                {
+                  status: 500,
+                },
+              );
+            }
+          // end 'org' case
 
           default:
             return NextResponse.json(

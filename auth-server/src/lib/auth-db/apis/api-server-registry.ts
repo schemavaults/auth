@@ -1,13 +1,15 @@
-import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
+import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import {
   schemaVaultsApiServerDefinitionSchema,
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDomainRefSchema,
   type SchemaVaultsApiServerDomainRef,
+  HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS,
 } from "@schemavaults/app-definitions";
 import { Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
+import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 
 /**
  * @name SchemaVaultsApiServerRegistry
@@ -235,27 +237,40 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
       throw new Error("You must be logged in to list SchemaVaults API servers");
     }
 
-    let rows: unknown[];
-    try {
-      rows = await this.db
-        .selectFrom("api_servers")
-        .where("owner_organization_id", '=', org_id)
-        .limit(100)
-        .selectAll()
-        .execute();
-    } catch (e: unknown) {
-      console.error(`Failed to list API servers for organization with ID '${org_id}':`, e);
-      throw new Error(`Failed to list API servers for organization with ID: '${org_id}'`);
+
+    const loadOrgApiServerDefinitionsFromDb = async (organization_id: OrganizationID): Promise<readonly SchemaVaultsApiServerDefinition[]> => {
+      let rows: unknown[];
+      try {
+        rows = await this.db
+          .selectFrom("api_servers")
+          .where("owner_organization_id", '=', organization_id)
+          .limit(100)
+          .selectAll()
+          .execute();
+      } catch (e: unknown) {
+        console.error(`Failed to list API servers for organization with ID '${organization_id}':`, e);
+        throw new Error(`Failed to list API servers for organization with ID: '${organization_id}'`);
+      }
+
+      return await this.parseApiServerDefinitionsFromDbRows(rows);
     }
 
+    const api_server_definitions: SchemaVaultsApiServerDefinition[] = []
+
     try {
-      return await this.parseApiServerDefinitionsFromDbRows(rows);
+      api_server_definitions.push(...await loadOrgApiServerDefinitionsFromDb(org_id))
     } catch (e: unknown) {
       console.error(e);
       throw new Error(
         "Failed to parse the API servers data received from database",
       );
     }
+
+    if (org_id === SCHEMAVAULTS_ORGANIZATION_ID) {
+      api_server_definitions.push(...HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS.filter(s => s.owner_organization_id === 'schemavaults'))
+    }
+
+    return api_server_definitions;
   }
 
   public async setup(): Promise<void> {
@@ -282,11 +297,18 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
       return true;
     }
 
+    const organizationsRegistry = new OrganizationsRegistry(this.db);
+    const orgsRegistryInitialized: Promise<boolean> = organizationsRegistry.hasBeenInitialized()
+
     // Promises checking if SQL tables exist
     const apiServers: Promise<boolean> =
       this.hasTableBeenInitialized("api_servers");
     const apiServerDomains: Promise<boolean> =
       this.hasTableBeenInitialized("api_server_domains");
+
+    if (!(await orgsRegistryInitialized)) {
+      await organizationsRegistry.performSetupTasks();
+    }
 
     const allTablesInitialized = await Promise.all([
       apiServers,

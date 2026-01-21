@@ -9,6 +9,7 @@ export const SCHEMAVAULTS_WEB = {
   created_at: defaultHardcodedAppCreationTime,
   web: true as const,
   hardcoded: true as const,
+  owner_organization_id: "schemavaults",
 } as const satisfies SchemaVaultsApp;
 
 export const SCHEMAVAULTS_CLI = {
@@ -20,6 +21,7 @@ export const SCHEMAVAULTS_CLI = {
   created_at: defaultHardcodedAppCreationTime,
   hardcoded: true as const,
   web: false as const,
+  owner_organization_id: "schemavaults",
 } as const satisfies SchemaVaultsApp;
 
 export const SCHEMAVAULTS_AUTH_APP_DEFINITION = {
@@ -30,6 +32,7 @@ export const SCHEMAVAULTS_AUTH_APP_DEFINITION = {
   created_at: defaultHardcodedAppCreationTime,
   web: true as const,
   hardcoded: true as const,
+  owner_organization_id: "schemavaults",
 } as const satisfies SchemaVaultsApp;
 
 export const SCHEMAVAULTS_MAIL_APP_DEFINITION = {
@@ -40,6 +43,7 @@ export const SCHEMAVAULTS_MAIL_APP_DEFINITION = {
   created_at: defaultHardcodedAppCreationTime,
   web: true as const,
   hardcoded: true as const,
+  owner_organization_id: "schemavaults",
 } as const satisfies SchemaVaultsApp;
 
 export const HARDCODED_CORE_SCHEMAVAULTS_APPS = [

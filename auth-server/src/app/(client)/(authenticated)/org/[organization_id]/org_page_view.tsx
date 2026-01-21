@@ -1,6 +1,6 @@
 "use client";
 
-import { OrganizationMembersCard, type OrganizationMemberTableData } from "@schemavaults/auth-ui";
+import { OrganizationMembersCard, ApiServersCard, AppsCard, type OrganizationMemberTableData } from "@schemavaults/auth-ui";
 import type { ReactElement } from "react";
 import PageContainer from "@/components/PageContainer";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
@@ -38,6 +38,22 @@ export default function OrgPageView({
         organization_id={organization.organization_id}
         cardClassName={"w-full"}
         preloaded={preloaded_members}
+      />
+
+      <ApiServersCard
+        queryType="org"
+        organization_id={organization.organization_id}
+        cardTitle="API Servers"
+        cardDescription="API servers owned by this organization."
+        cardClassName="w-full"
+      />
+
+      <AppsCard
+        queryType="org"
+        organization_id={organization.organization_id}
+        cardTitle="Applications"
+        cardDescription="Applications owned by this organization."
+        cardClassName="w-full"
       />
     </PageContainer>
   );

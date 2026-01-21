@@ -15,13 +15,18 @@ import {
 export interface UseApiServersListOptions {
   queryType: ListApiServersQueryType;
   toast: ReturnType<typeof useToast>["toast"];
+  organization_id?: string;
 }
 
 function getApiServersListEndpoint(
   queryType: ListApiServersQueryType,
+  organization_id?: string,
 ): `/api/apis?${string}` {
   const searchParams = new URLSearchParams();
   searchParams.set("list_apis_query_type", queryType);
+  if (queryType === "org" && organization_id) {
+    searchParams.set("organization_id", organization_id);
+  }
   return `/api/apis?${searchParams.toString()}` as const;
 }
 
@@ -36,11 +41,12 @@ export function clearUseApiServersCache(
 export function useApiServersList({
   toast,
   queryType,
+  organization_id,
 }: UseApiServersListOptions) {
   const auth = useAuth();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
-  const endpoint = getApiServersListEndpoint(queryType);
+  const endpoint = getApiServersListEndpoint(queryType, organization_id);
 
   return useSWR(endpoint, async () => {
     if (!auth.ready) {

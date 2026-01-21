@@ -11,6 +11,7 @@ export interface AppsCardProps {
   cardClassName?: string;
   queryType: ListAppsQueryType;
   preloaded?: PreloadedAppsTableDataWithDomainRefs;
+  organization_id?: string;
 }
 
 export function AppsCard(props: AppsCardProps): ReactElement {
@@ -32,6 +33,7 @@ export function AppsCard(props: AppsCardProps): ReactElement {
           <AppsTable
             queryType={props.queryType}
             preloaded={props.preloaded}
+            organization_id={props.organization_id}
           />
         </CardContent>
         <CardFooter>

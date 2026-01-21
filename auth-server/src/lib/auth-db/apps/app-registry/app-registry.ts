@@ -12,11 +12,12 @@ import {
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
-import type { UserData } from "@schemavaults/auth-common";
+import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import { type Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../../auth-database-types";
 import { z } from "zod";
 import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
+import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 
 /**
  * @name SchemaVaultsAppRegistry
@@ -181,6 +182,8 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
   public async getAppDomains(
     app_id: string,
   ): Promise<SchemaVaultsAppDomainRef[]> {
+
+
     if (!(await this.hasBeenInitialized())) {
       await this.performSetupTasks();
     }
@@ -254,7 +257,12 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
         app_description TEXT NOT NULL,
         environment TEXT NOT NULL,
         created_at BIGINT NOT NULL,
-        hardcoded BOOLEAN DEFAULT FALSE
+        hardcoded BOOLEAN DEFAULT FALSE,
+        owner_organization_id TEXT,
+        CONSTRAINT fk_owner_org
+          FOREIGN KEY (owner_organization_id)
+          REFERENCES ORGANIZATIONS(organization_id)
+          ON DELETE SET NULL
       );
     `;
     const createAppDomainsSql = sql`
@@ -271,6 +279,30 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
     await createAppSql.execute(db);
     await createAppDomainsSql.execute(db);
   }
+
+  private parseAppDefinitionDatabaseRow(row: unknown): SchemaVaultsApp {
+    if (typeof row !== "object" || !row)
+      throw new Error("Expected row to be an object");
+    if (!Object.hasOwn(row, "created_at") || !("created_at" in row)) {
+      throw new Error("Missing app creation timestamp");
+    }
+    const created_at: number =
+      typeof row.created_at === "string"
+        ? parseInt(row.created_at)
+        : Number(row.created_at);
+    if (isNaN(created_at)) {
+      throw new Error("Failed to parse created_at from database");
+    }
+
+    const parsed = schemaVaultsAppDefinitionSchema.safeParse({
+      ...row,
+      created_at,
+    })
+
+    if (!parsed.success) throw parsed.data;
+
+    return parsed.data;
+  } // end of parseAppDefinitionDatabaseRow()
 
   public async listApps(
     type: Exclude<ListAppsQueryType, "authorized">,
@@ -348,25 +380,7 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
         .array()
         .safeParseAsync(
           transformed_output.map(
-            function parseAppDefinitionDatabaseRow(row) {
-              if (typeof row !== "object")
-                throw new Error("Expected row to be an object");
-              if (!Object.hasOwn(row, "created_at")) {
-                throw new Error("Missing app creation timestamp");
-              }
-              const created_at: number =
-                typeof row.created_at === "string"
-                  ? parseInt(row.created_at)
-                  : Number(row.created_at);
-              if (isNaN(created_at)) {
-                throw new Error("Failed to parse created_at from database");
-              }
-
-              return {
-                ...row,
-                created_at,
-              };
-            }, // end of parseAppDefinitionDatabaseRow()
+            this.parseAppDefinitionDatabaseRow
           ),
         ); // end parsing app definitions array
       if (!parsed.success) throw parsed.error;
@@ -375,6 +389,76 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
       console.error(e);
       throw new Error("Failed to parse the apps data received from database");
     }
+  }
+
+  public async listOrganizationApps(
+    org_id: OrganizationID,
+    user: UserData,
+  ): Promise<readonly SchemaVaultsApp[]> {
+    if (!(await this.hasBeenInitialized())) {
+      await this.performSetupTasks();
+    }
+
+    if (!organizationIdSchema.safeParse(org_id).success) {
+      throw new TypeError("Invalid organization ID to list apps for!");
+    }
+
+    if (!user) {
+      throw new Error("You must be logged in to list SchemaVaults apps");
+    }
+
+    if (this.debug) {
+      console.log(
+        `[SchemaVaultsAppRegistry] Attempting to list apps for organization: ${org_id}`,
+      );
+    }
+
+    const MAX_PAGE_SIZE: number = 50;
+
+    let result: SchemaVaultsApp[];
+    try {
+      result = await this.db
+        .selectFrom("apps")
+        .where("owner_organization_id", "=", org_id)
+        .limit(MAX_PAGE_SIZE)
+        .selectAll()
+        .execute();
+    } catch (e: unknown) {
+      console.error(
+        `Failed to list apps for organization with ID '${org_id}':`,
+        e,
+      );
+      throw new Error(`Failed to list apps for organization with ID: '${org_id}'`);
+    }
+
+    if (!Array.isArray(result)) {
+      throw new Error("Expected database query result to be an array of rows");
+    }
+
+    const app_definitions: SchemaVaultsApp[] = [];
+
+    try {
+      const parsed = await schemaVaultsAppDefinitionSchema
+        .array()
+        .safeParseAsync(
+          result.map(this.parseAppDefinitionDatabaseRow),
+        );
+      if (!parsed.success) {
+        throw parsed.error;
+      }
+      app_definitions.push(...parsed.data)
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error(
+        "Failed to parse the apps data received from database for organization",
+      );
+    }
+
+    if (org_id === SCHEMAVAULTS_ORGANIZATION_ID) {
+      app_definitions.push(...HARDCODED_CORE_SCHEMAVAULTS_APPS.filter(s => s.owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID))
+    }
+
+    return app_definitions
   }
 
   protected async setup(): Promise<void> {
@@ -433,6 +517,11 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
   public async hasBeenInitialized(): Promise<boolean> {
     if (this.initialized) {
       return true;
+    }
+
+    const organizationsRegistry = new OrganizationsRegistry(this.db);
+    if (!(await organizationsRegistry.hasBeenInitialized())) {
+      await organizationsRegistry.performSetupTasks();
     }
 
     const appDomainsTableExists = this.hasTableBeenInitialized("app_domains");

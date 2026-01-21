@@ -1,13 +1,15 @@
-
 "use client";
 
 import { useMemo, type ReactElement } from "react";
-import type { SWRResponse} from "swr";
+import type { SWRResponse } from "swr";
 import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
 import { getAppsTableColumns } from "./columns";
 import { clearUseAppsListCache, useAppsList } from "./useAppsList";
-import type { ListAppsQueryType, SchemaVaultsApp } from "@schemavaults/app-definitions";
+import type {
+  ListAppsQueryType,
+  SchemaVaultsApp,
+} from "@schemavaults/app-definitions";
 import { CreateAppDialog } from "../CreateAppDialog";
 import { Loader2 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -15,17 +17,21 @@ import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_tabl
 
 export interface AppsDatatableProps {
   queryType: ListAppsQueryType;
-  preloaded?: PreloadedAppsTableDataWithDomainRefs | undefined
+  preloaded?: PreloadedAppsTableDataWithDomainRefs | undefined;
+  organization_id?: string;
 }
 
-export function AppsTable(
-  { queryType, preloaded }: AppsDatatableProps
-): ReactElement {
-  const {toast} = useToast()
+export function AppsTable({
+  queryType,
+  preloaded,
+  organization_id,
+}: AppsDatatableProps): ReactElement {
+  const { toast } = useToast();
   const apps: SWRResponse<SchemaVaultsApp[], Error> = useAppsList({
     toast,
     queryType,
-    initialData: (preloaded) ? preloaded.apps : undefined
+    initialData: preloaded ? preloaded.apps : undefined,
+    organization_id,
   });
   const { isLoading, data } = apps;
   const columns = useMemo((): ColumnDef<SchemaVaultsApp>[] => {
@@ -50,24 +56,21 @@ export function AppsTable(
         app_id: false,
         app_name: true,
         app_description: true,
-        domains: true
+        domains: true,
       }}
+      searchColumn={["app_id", "app_name"]}
       HeaderButtons={() => {
         return (
           <>
-            {
-              queryType === 'all' && (
-                <CreateAppDialog
-                  clearFrontendAppsCache={clearUseAppsListCache}
-                />
-              )
-            }
+            {queryType === "all" && (
+              <CreateAppDialog clearFrontendAppsCache={clearUseAppsListCache} />
+            )}
           </>
         );
       }}
       datatypeLabel="App"
     />
-  )
+  );
 }
 
 export default AppsTable;
