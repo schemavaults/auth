@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const organizationMembershipRoleTypes = [
   "owner",
+  "admin",  // For virtual admin memberships in the schemavaults org
 ] as const satisfies readonly string[];
 
 export type OrganizationMembershipRoleType =

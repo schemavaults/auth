@@ -455,6 +455,40 @@ export class OrganizationsRegistry
         disabled: row.disabled ?? undefined,
       }));
 
+      // Add virtual memberships for admin users in the schemavaults organization
+      if (organization_id === SCHEMAVAULTS_ORGANIZATION_ID) {
+        const adminUsersQuery = this.db
+          .selectFrom("users")
+          .where("admin", "=", true)
+          .selectAll();
+
+        const adminUsers = await adminUsersQuery.execute();
+
+        // Get set of uids already in explicit memberships
+        const existingMemberUids = new Set(members.map(m => m.uid));
+
+        // Get the hardcoded org creation date for virtual memberships
+        const hardcodedOrg = this.hardcodedOrganizations.get(SCHEMAVAULTS_ORGANIZATION_ID);
+        const virtualMembershipCreatedAt = hardcodedOrg?.created_at ?? Date.now();
+
+        // Add virtual memberships for admin users not already in list
+        for (const adminUser of adminUsers) {
+          if (!existingMemberUids.has(adminUser.uid)) {
+            members.push({
+              membership_declaration_id: `admin-virtual-${adminUser.uid}`,
+              organization_id: SCHEMAVAULTS_ORGANIZATION_ID,
+              uid: adminUser.uid,
+              role: "admin" as OrganizationMembershipRoleType,
+              membership_created_at: virtualMembershipCreatedAt,
+              email: adminUser.email,
+              email_verified: adminUser.email_verified ?? undefined,
+              admin: adminUser.admin ?? undefined,
+              disabled: adminUser.disabled ?? undefined,
+            });
+          }
+        }
+      }
+
       if (this.debug) {
         console.log(
           `[OrganizationsRegistry] listOrganizationMembers(org_id = '${org_id}') => ${members.length} members`,

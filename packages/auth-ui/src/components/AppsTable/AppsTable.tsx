@@ -27,7 +27,7 @@ export function AppsTable({
   organization_id,
 }: AppsDatatableProps): ReactElement {
   const { toast } = useToast();
-  const apps: SWRResponse<SchemaVaultsApp[], Error> = useAppsList({
+  const apps: SWRResponse<readonly SchemaVaultsApp[], Error> = useAppsList({
     toast,
     queryType,
     initialData: preloaded ? preloaded.apps : undefined,
@@ -48,7 +48,7 @@ export function AppsTable({
 
   return (
     <Datatable<SchemaVaultsApp>
-      data={data ? (data.length > 0 ? data : []) : []}
+      data={[...(data ? (data.length > 0 ? data : []) : [])]}
       columns={columns}
       initialVisibleColumns={{
         actions: true,
