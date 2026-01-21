@@ -9,6 +9,7 @@ import type {
   ListApiServersQueryType,
   SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 import { Loader2 } from "lucide-react";
 import {
   clearUseApiServersCache,
@@ -53,9 +54,14 @@ export function ApiServersTable({
       HeaderButtons={(): ReactElement => {
         return (
           <>
-            {queryType === "all" && (
+            {(queryType === "all" || queryType === "org") && (
               <CreateApiServerDialog
                 clearApiServersCache={clearUseApiServersCache}
+                owner_organization_id={
+                  queryType === "all"
+                    ? SCHEMAVAULTS_ORGANIZATION_ID
+                    : organization_id
+                }
               />
             )}
             {queryType === "all" && <ConnectAppToApiDialog />}

@@ -27,7 +27,7 @@ import type {
 } from "@/middleware_types";
 import BaseMiddleware from "@/middlewares/BaseMiddleware";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
-import loadJwtDecodingKeys, {
+import doLoadJwtDecodingKeys, {
   type IDecodeAuthTokenKeys,
 } from "@/JwtKeyManager/loadJwtDecodingKeys";
 
@@ -82,11 +82,12 @@ class AuthJwtValidationMiddleware
     keyset_id: string,
   ): Promise<IDecodeAuthTokenKeys> {
     const audience_id: string = this.audience;
-    const decoding_keys: IDecodeAuthTokenKeys = await loadJwtDecodingKeys({
+    const debug: boolean = this.debug;
+    const decoding_keys: IDecodeAuthTokenKeys = await doLoadJwtDecodingKeys({
       keyset_id,
       keys_manager: this.keys_manager,
       audience_id,
-      debug: this.debug,
+      debug,
     });
     return decoding_keys;
   }

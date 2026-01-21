@@ -42,10 +42,12 @@ interface CreateFrontendAppDialogProps {
   clearFrontendAppsCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
+  owner_organization_id?: string | null;
 }
 
 export function CreateAppDialog({
   clearFrontendAppsCache,
+  owner_organization_id,
 }: CreateFrontendAppDialogProps): ReactElement {
   const { toast } = useToast();
 
@@ -111,7 +113,10 @@ export function CreateAppDialog({
       try {
         const response = await fetch("/api/apps", {
           method: "POST",
-          body: JSON.stringify(values),
+          body: JSON.stringify({
+            ...values,
+            owner_organization_id: owner_organization_id ?? null,
+          }),
           headers: {
             Authorization: `Bearer ${auth_access_jwt.token}}`,
           },

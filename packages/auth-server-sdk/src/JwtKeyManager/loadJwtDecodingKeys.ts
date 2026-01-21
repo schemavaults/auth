@@ -25,45 +25,79 @@ export async function loadJwtDecodingKeysFromJwks(
   },
   debug: boolean = false,
 ): Promise<IDecodeAuthTokenKeys> {
-  const verification_kid: string = `${keyset_id}-verification`;
-  const decryption_kid: string = `${keyset_id}-decryption`;
+  if (jwks.keys.length === 0) {
+    throw new Error(
+      "JWKS appears to be empty, cannot extract decoding keys from empty set!",
+    );
+  }
+
+  // Loop over keys in JWKS and find the required keys
   let verification_key: CryptoKey | undefined = undefined;
   let decryption_key: CryptoKey | undefined = undefined;
+  function allRequiredKeysFound(): boolean {
+    return verification_key && decryption_key ? true : false;
+  }
   for (const key of jwks.keys) {
     const kid = key.kid;
     if (typeof kid !== "string") {
       throw new TypeError(`Invalid JWK in JWKS; missing 'kid' string!`);
     }
-    if (kid === verification_kid) {
+    if (kid === `${keyset_id}-verification`) {
       verification_key = await importAsymmetricJWK(key);
-    } else if (kid === decryption_kid) {
+      if (allRequiredKeysFound()) {
+        break; // exit early if keys have been found
+      } else {
+        continue;
+      }
+    } else if (kid === `${keyset_id}-decryption`) {
       decryption_key = await importAsymmetricJWK(key);
+      if (allRequiredKeysFound()) {
+        break; // exit early if keys have been found
+      } else {
+        continue;
+      }
     } else {
       continue; // not a match
     }
   }
 
-  if (!verification_key || !decryption_key) {
-    if (debug) {
-      console.group(
-        `loadJwtDecodingKeysFromJwks(keyset_id=${keyset_id}) failed due to missing verification_key or decryption_key`,
-      );
-      console.error(
-        "jwks.keys[].kid = ",
-        jwks.keys.map((k) => `'${k.kid}'`).join(", "),
-      );
-      console.groupEnd();
-    }
-    throw new Error(
-      `Missing verification or decryption key for keyset '${keyset_id}'`,
-    );
+  const foundRequiredDecodingKeys: boolean = allRequiredKeysFound();
+  if (foundRequiredDecodingKeys && verification_key && decryption_key) {
+    return {
+      keyset_id,
+      verification_key,
+      decryption_key,
+    } satisfies IDecodeAuthTokenKeys;
   }
 
-  return {
-    keyset_id,
-    verification_key,
-    decryption_key,
-  };
+  // Else, not all keys were found-- handle failure gracefully
+
+  const listOfKidsInJwks: string = jwks.keys
+    .map((k) => `'${k.kid}'`)
+    .join(", ");
+  if (!verification_key && !decryption_key) {
+    console.error(
+      `Missing both verification and decryption keys for keyset '${keyset_id}' from available keys: `,
+      listOfKidsInJwks,
+    );
+    throw new Error(
+      `Missing both verification and decryption keys for keyset '${keyset_id}'`,
+    );
+  } else if (!verification_key) {
+    console.error(
+      `Missing verification key for keyset '${keyset_id}' from available keys: `,
+      listOfKidsInJwks,
+    );
+    throw new Error(`Missing verification key for keyset '${keyset_id}'`);
+  } else if (!decryption_key) {
+    console.error(
+      `Missing decryption key for keyset '${keyset_id}' from available keys: `,
+      listOfKidsInJwks,
+    );
+    throw new Error(`Missing decryption key for keyset '${keyset_id}'`);
+  } else {
+    throw new Error("Error handling missing JWT decoding keys gracefully!");
+  }
 }
 
 export async function loadJwtDecodingKeys({
@@ -90,7 +124,10 @@ export async function loadJwtDecodingKeys({
     throw new TypeError("Invalid JWKS; not an object or missing 'keys' array!");
   }
 
-  return await loadJwtDecodingKeysFromJwks({ keyset_id, jwks }, debug);
+  const jwt_decoding_keys: IDecodeAuthTokenKeys =
+    await loadJwtDecodingKeysFromJwks({ keyset_id, jwks }, debug);
+
+  return jwt_decoding_keys;
 }
 
 export default loadJwtDecodingKeys;

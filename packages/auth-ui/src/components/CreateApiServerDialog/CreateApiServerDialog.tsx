@@ -42,6 +42,7 @@ interface CreateApiServerDialogProps {
   clearApiServersCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
+  owner_organization_id?: string | null;
 }
 
 function generateDefaultApiServerId(): string {
@@ -55,6 +56,7 @@ function generateDefaultApiServerId(): string {
 
 export function CreateApiServerDialog({
   clearApiServersCache,
+  owner_organization_id,
 }: CreateApiServerDialogProps): ReactElement {
   const { toast } = useToast();
 
@@ -121,7 +123,10 @@ export function CreateApiServerDialog({
     try {
       const response = await fetch("/api/apis", {
         method: "POST",
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          ...values,
+          owner_organization_id: owner_organization_id ?? null,
+        }),
         headers: {
           Authorization: `Bearer ${auth_access_jwt.token}}`,
         },

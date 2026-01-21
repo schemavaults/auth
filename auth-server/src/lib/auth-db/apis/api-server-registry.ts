@@ -98,10 +98,15 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     api_server_id: string,
     api_server_name: string,
     api_server_description: string,
-    publicly_listed?: boolean,
+    publicly_listed: boolean,
+    owner_organization_id: OrganizationID,
   ): Promise<void> {
     if (!(await this.hasBeenInitialized())) {
       await this.performSetupTasks();
+    }
+
+    if (!organizationIdSchema.safeParse(owner_organization_id).success) {
+      throw new TypeError("Received invalid organization ID to register API server to!")
     }
 
     const parsed_app =
@@ -112,6 +117,7 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
         created_at: Date.now(),
         public: publicly_listed ?? false,
         hardcoded: false,
+        owner_organization_id: owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID ? null : owner_organization_id,
       } satisfies SchemaVaultsApiServerDefinition);
     if (!parsed_app.success) {
       console.error(parsed_app.error.errors);

@@ -11,6 +11,8 @@ import {
 import { NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import isUserInOrganization from "@/lib/isUserInOrganization";
+import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 
 /**
  * Create a new API server
@@ -20,19 +22,6 @@ export default async function POST_api_creation_handler(request: NextRequest): P
     async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
       if (environment === "development") {
         console.log("[/api/apis] POST request received");
-      }
-
-      if (!user.admin) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "You must be an admin to create a new SchemaVaults API server",
-          } satisfies ResourceCreationResponse,
-          {
-            status: 403,
-          },
-        );
       }
 
       let newResource: SchemaVaultsApiServerDefinition;
@@ -58,6 +47,45 @@ export default async function POST_api_creation_handler(request: NextRequest): P
         );
       }
 
+      let owner_organization_id: OrganizationID | null | undefined = newResource.owner_organization_id;
+
+      // If owner_organization_id is specified, verify user has access
+      if (owner_organization_id) {
+        const hasAccess = await isUserInOrganization(
+          user,
+          owner_organization_id satisfies OrganizationID,
+          dbh.db
+        );
+        if (!hasAccess && !user.admin) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "You must be a member of the organization to create API servers for it",
+            } satisfies ResourceCreationResponse,
+            {
+              status: 403,
+            },
+          );
+        }
+      } else {
+        // If no owner_organization_id, only admins can create API servers
+        if (!user.admin) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "You must be an admin to create a new SchemaVaults API server without an organization",
+            } satisfies ResourceCreationResponse,
+            {
+              status: 403,
+            },
+          );
+        } else {
+          // User is an admin, and no owner_organization_id has been set-- default to 'schemavaults' org
+          owner_organization_id = SCHEMAVAULTS_ORGANIZATION_ID;
+        }
+      }
+
       let apiServerRegistry: SchemaVaultsApiServerRegistry;
       try {
         apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
@@ -79,7 +107,8 @@ export default async function POST_api_creation_handler(request: NextRequest): P
           newResource.api_server_id,
           newResource.api_server_name,
           newResource.api_server_description,
-          newResource.public,
+          newResource.public satisfies boolean,
+          owner_organization_id,
         );
 
         return NextResponse.json({

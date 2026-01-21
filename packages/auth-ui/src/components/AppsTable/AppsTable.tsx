@@ -10,6 +10,7 @@ import type {
   ListAppsQueryType,
   SchemaVaultsApp,
 } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 import { CreateAppDialog } from "../CreateAppDialog";
 import { Loader2 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -59,11 +60,18 @@ export function AppsTable({
         domains: true,
       }}
       searchColumn={["app_id", "app_name"]}
-      HeaderButtons={() => {
+      HeaderButtons={(): ReactElement => {
         return (
           <>
-            {queryType === "all" && (
-              <CreateAppDialog clearFrontendAppsCache={clearUseAppsListCache} />
+            {(queryType === "all" || queryType === "org") && (
+              <CreateAppDialog
+                clearFrontendAppsCache={clearUseAppsListCache}
+                owner_organization_id={
+                  queryType === "all"
+                    ? SCHEMAVAULTS_ORGANIZATION_ID
+                    : organization_id
+                }
+              />
             )}
           </>
         );
