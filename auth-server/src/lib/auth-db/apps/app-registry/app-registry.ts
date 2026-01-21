@@ -266,7 +266,6 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
         app_id UUID PRIMARY KEY,
         app_name TEXT NOT NULL,
         app_description TEXT NOT NULL,
-        environment TEXT NOT NULL,
         created_at BIGINT NOT NULL,
         hardcoded BOOLEAN DEFAULT FALSE,
         public BOOLEAN DEFAULT FALSE,
