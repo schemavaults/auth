@@ -11,7 +11,7 @@ import {
   cn,
 } from "@schemavaults/ui";
 import type { ListApiServersQueryType } from "@schemavaults/app-definitions";
-import { ApiServersTable } from "@/components/ApiServersTable";
+import { ApiServersTable, type PreloadedApiServersTableData } from "@/components/ApiServersTable";
 
 export interface ApiServersCardProps {
   cardTitle?: string;
@@ -19,6 +19,7 @@ export interface ApiServersCardProps {
   cardClassName?: string;
   queryType: ListApiServersQueryType;
   organization_id?: string;
+  preloaded?: PreloadedApiServersTableData;
 }
 
 export function ApiServersCard(props: ApiServersCardProps): ReactElement {
@@ -36,7 +37,7 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
         <CardDescription>{cardDescription}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ApiServersTable queryType={props.queryType} organization_id={props.organization_id} />
+        <ApiServersTable queryType={props.queryType} organization_id={props.organization_id} preloaded={props.preloaded} />
       </CardContent>
       <CardFooter>
         <div className="flex flex-row items-start justify-start gap-2"></div>

@@ -17,19 +17,27 @@ import {
 } from "./useApiServersList";
 import { CreateApiServerDialog } from "@/components/CreateApiServerDialog";
 import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
+import type { PreloadedApiServersTableData } from "./preloaded_api_servers_table_data";
 
 export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
   organization_id?: string;
+  preloaded?: PreloadedApiServersTableData | undefined;
 }
 
 export function ApiServersTable({
   queryType,
   organization_id,
+  preloaded,
 }: ApiServersDatatableProps): ReactElement {
   const { toast } = useToast();
   const apis: SWRResponse<readonly SchemaVaultsApiServerDefinition[], Error> =
-    useApiServersList({ toast, queryType, organization_id });
+    useApiServersList({
+      toast,
+      queryType,
+      initialData: preloaded ? preloaded.api_servers : undefined,
+      organization_id,
+    });
   const { isLoading, data } = apis;
 
   if (!data && isLoading) {

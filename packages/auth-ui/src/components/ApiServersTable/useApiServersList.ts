@@ -10,11 +10,13 @@ import {
   type ListApiServersQueryResponse,
   type ListApiServersQueryType,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  type SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
 
 export interface UseApiServersListOptions {
   queryType: ListApiServersQueryType;
   toast: ReturnType<typeof useToast>["toast"];
+  initialData?: readonly SchemaVaultsApiServerDefinition[] | undefined;
   organization_id?: string;
 }
 
@@ -41,6 +43,7 @@ export function clearUseApiServersCache(
 export function useApiServersList({
   toast,
   queryType,
+  initialData,
   organization_id,
 }: UseApiServersListOptions) {
   const auth = useAuth();
@@ -125,5 +128,7 @@ export function useApiServersList({
       });
       throw error;
     }
+  }, {
+    fallbackData: initialData ? [...initialData] : undefined,
   });
 }

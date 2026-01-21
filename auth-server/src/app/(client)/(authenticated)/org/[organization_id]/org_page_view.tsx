@@ -1,6 +1,13 @@
 "use client";
 
-import { OrganizationMembersCard, ApiServersCard, AppsCard, type OrganizationMemberTableData } from "@schemavaults/auth-ui";
+import {
+  OrganizationMembersCard,
+  ApiServersCard,
+  AppsCard,
+  type OrganizationMemberTableData,
+  type PreloadedAppsTableDataWithDomainRefs,
+  type PreloadedApiServersTableData,
+} from "@schemavaults/auth-ui";
 import type { ReactElement } from "react";
 import PageContainer from "@/components/PageContainer";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
@@ -9,6 +16,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@sche
 export interface OrgPageViewProps {
   organization: OrganizationDefinition;
   preloaded_members: readonly OrganizationMemberTableData[];
+  preloaded_apps: PreloadedAppsTableDataWithDomainRefs;
+  preloaded_api_servers: PreloadedApiServersTableData;
 }
 
 function OrgTitleCard({ organization }: Pick<OrgPageViewProps, 'organization'>): ReactElement {
@@ -29,6 +38,8 @@ function OrgTitleCard({ organization }: Pick<OrgPageViewProps, 'organization'>):
 export default function OrgPageView({
   organization,
   preloaded_members,
+  preloaded_apps,
+  preloaded_api_servers,
 }: OrgPageViewProps): ReactElement {
   return (
     <PageContainer>
@@ -46,6 +57,7 @@ export default function OrgPageView({
         cardTitle="Organization Client Applications"
         cardDescription="Applications owned by this organization."
         cardClassName="w-full"
+        preloaded={preloaded_apps}
       />
 
       <ApiServersCard
@@ -54,6 +66,7 @@ export default function OrgPageView({
         cardTitle="Organization API Servers"
         cardDescription="API servers owned by this organization."
         cardClassName="w-full"
+        preloaded={preloaded_api_servers}
       />
 
 

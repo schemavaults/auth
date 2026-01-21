@@ -19,6 +19,15 @@ import {
 import { redirect } from "next/navigation";
 import type { OrganizationMemberTableData } from "@schemavaults/auth-ui";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import {
+  SchemaVaultsAppRegistry,
+  AuthorizedAppsRegistry,
+  preloadAppsTable,
+} from "@/lib/auth-db/apps";
+import {
+  SchemaVaultsApiServerRegistry,
+  preloadApiServersTable,
+} from "@/lib/auth-db/apis";
 
 interface PageParams {
   params: Promise<{ organization_id: string }>;
@@ -74,8 +83,29 @@ async function PreloadedOrgPage(
     redirect("/account?error=organization_not_found");
   }
 
-  const members: readonly OrganizationMemberWithUserData[] =
-    await registry.listOrganizationMembers(organization_id);
+  // Create registries for apps and API servers
+  const appsRegistry = new SchemaVaultsAppRegistry(dbh.db);
+  const authorizedAppsRegistry = new AuthorizedAppsRegistry(dbh.db);
+  const apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
+
+  // Fetch members, apps, and API servers in parallel
+  const [members, preloaded_apps, preloaded_api_servers] = await Promise.all([
+    registry.listOrganizationMembers(organization_id),
+    preloadAppsTable({
+      list_apps_query_type: "org",
+      user,
+      appsRegistry,
+      authorizedAppsRegistry,
+      organization_id,
+    }),
+    preloadApiServersTable({
+      list_api_servers_query_type: "org",
+      user,
+      apiServerRegistry,
+      organization_id,
+    }),
+  ]);
+
   const preloaded_members: readonly OrganizationMemberTableData[] =
     members.map(memberToTableData);
 
@@ -83,6 +113,8 @@ async function PreloadedOrgPage(
     <OrgPageView
       organization={organization}
       preloaded_members={preloaded_members}
+      preloaded_apps={preloaded_apps}
+      preloaded_api_servers={preloaded_api_servers}
     />
   );
 }

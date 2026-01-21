@@ -1,4 +1,4 @@
-import type { UserData } from "@schemavaults/auth-common";
+import type { OrganizationID, UserData } from "@schemavaults/auth-common";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import type { SchemaVaultsAppRegistry } from "./app-registry";
 import type {
@@ -18,6 +18,7 @@ export interface QueryAppsInputOptions {
   user: UserData;
   appsRegistry: SchemaVaultsAppRegistry;
   authorizedAppsRegistry: AuthorizedAppsRegistry;
+  organization_id?: OrganizationID;
 }
 
 async function loadDomainsForApps(
@@ -163,6 +164,17 @@ export async function preloadAppsTable(
           ),
           opts.appsRegistry,
         );
+
+      case "org": {
+        if (!opts.organization_id) {
+          throw new Error("organization_id is required for 'org' query type");
+        }
+        const org_apps = await opts.appsRegistry.listOrganizationApps(
+          opts.organization_id,
+          userData,
+        );
+        return await returnAppsWithDomains([...org_apps], opts.appsRegistry);
+      }
 
       default:
         throw new Error("Unsupported apps query type");
