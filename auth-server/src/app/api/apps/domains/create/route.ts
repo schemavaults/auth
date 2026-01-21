@@ -8,7 +8,7 @@ import {
   type SchemaVaultsAppDomainRef,
   schemaVaultsAppDomainRefSchema,
 } from "@schemavaults/app-definitions";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { ServerRuntime } from "next";

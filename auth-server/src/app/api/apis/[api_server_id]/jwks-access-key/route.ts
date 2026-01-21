@@ -1,6 +1,6 @@
 import "server-only";
 
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";

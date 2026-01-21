@@ -15,7 +15,7 @@ import type {
   IProtectedAuthenticatedApiRouteProps as _IProtectedAuthenticatedApiRouteProps,
   IProtectedAuthenticatedServerComponentPageProps as _IProtectedAuthenticatedServerComponentPageProps
 } from "@schemavaults/auth-server-sdk/route_guards";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 export type IProtectedAuthenticatedApiRouteProps<Db extends AuthDatabase = AuthDatabase> = _IProtectedAuthenticatedApiRouteProps<Db>;
 export type IProtectedAuthenticatedServerComponentPageProps<Db extends AuthDatabase = AuthDatabase> = _IProtectedAuthenticatedServerComponentPageProps<Db>;

@@ -7,7 +7,7 @@ import {
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
 import { type IRouteGuard } from "@schemavaults/auth-server-sdk";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
