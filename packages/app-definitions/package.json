@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/app-definitions",
   "description": "Define frontend or API server applications",
-  "version": "0.6.7",
+  "version": "0.6.8",
   "license": "UNLICENSED",
   "private": false,
   "repository": {

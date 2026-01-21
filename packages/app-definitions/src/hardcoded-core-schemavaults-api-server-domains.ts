@@ -1,6 +1,7 @@
 import type { SchemaVaultsApiServerDomainRef } from "./api-server-definition";
 import { defaultHardcodedAppCreationTime } from "./default-hardcoded-app-creation-time";
 import {
+  SCHEMAVAULTS_AUTH_SERVER,
   SCHEMAVAULTS_MAIL_SERVER,
   SCHEMAVAULTS_REGISTRY_SERVER,
 } from "./hardcoded-core-schemavaults-api-servers";
@@ -91,9 +92,53 @@ export const HARDCODED_SCHEMAVAULTS_MAIL_SERVER_DOMAINS = [
   SCHEMAVAULTS_MAIL_SERVER_PRODUCTION_DOMAIN,
 ] as const;
 
+export const SCHEMAVAULTS_AUTH_SERVER_DEVELOPMENT_DOMAIN = {
+  api_server_domain_ref_id: "7b2d301b-e7a5-4805-a165-c566b77d0b47",
+  api_server_id: SCHEMAVAULTS_AUTH_SERVER.api_server_id,
+  domain: "http://localhost:6767",
+  environment: "development",
+  hardcoded: true,
+  created_at: defaultHardcodedAppCreationTime,
+} as const satisfies SchemaVaultsApiServerDomainRef;
+
+export const SCHEMAVAULTS_AUTH_SERVER_TEST_DOMAIN = {
+  api_server_domain_ref_id: "7df3761e-920c-49f8-bcb6-752987135879",
+  api_server_id: SCHEMAVAULTS_AUTH_SERVER.api_server_id,
+  domain: "http://schemavaults-auth",
+  environment: "test",
+  hardcoded: true,
+  created_at: defaultHardcodedAppCreationTime,
+} as const satisfies SchemaVaultsApiServerDomainRef;
+
+export const SCHEMAVAULTS_AUTH_SERVER_STAGING_DOMAIN = {
+  api_server_domain_ref_id: "d38e47ab-bb36-46f1-ac35-ff38659007a8",
+  api_server_id: SCHEMAVAULTS_AUTH_SERVER.api_server_id,
+  domain: "https://auth-staging.schemavaults.com",
+  environment: "staging",
+  hardcoded: true,
+  created_at: defaultHardcodedAppCreationTime,
+} as const satisfies SchemaVaultsApiServerDomainRef;
+
+export const SCHEMAVAULTS_AUTH_SERVER_PRODUCTION_DOMAIN = {
+  api_server_domain_ref_id: "a06b59ca-2a9f-43c1-821c-b86dfe8efd1f",
+  api_server_id: SCHEMAVAULTS_AUTH_SERVER.api_server_id,
+  domain: "https://auth.schemavaults.com",
+  environment: "production",
+  hardcoded: true,
+  created_at: defaultHardcodedAppCreationTime,
+} as const satisfies SchemaVaultsApiServerDomainRef;
+
+export const HARDCODED_SCHEMAVAULTS_AUTH_SERVER_DOMAINS = [
+  SCHEMAVAULTS_AUTH_SERVER_DEVELOPMENT_DOMAIN,
+  SCHEMAVAULTS_AUTH_SERVER_TEST_DOMAIN,
+  SCHEMAVAULTS_AUTH_SERVER_STAGING_DOMAIN,
+  SCHEMAVAULTS_AUTH_SERVER_PRODUCTION_DOMAIN,
+] as const;
+
 export const HARDCODED_CORE_SCHEMAVAULTS_API_SERVER_DOMAINS = [
   ...HARDCODED_SCHEMAVAULTS_REGISTRY_SERVER_DOMAINS,
   ...HARDCODED_SCHEMAVAULTS_MAIL_SERVER_DOMAINS,
+  ...HARDCODED_SCHEMAVAULTS_AUTH_SERVER_DOMAINS,
 ];
 
 HARDCODED_CORE_SCHEMAVAULTS_API_SERVER_DOMAINS satisfies readonly SchemaVaultsApiServerDomainRef[];
