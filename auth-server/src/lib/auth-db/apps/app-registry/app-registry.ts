@@ -269,6 +269,7 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
         environment TEXT NOT NULL,
         created_at BIGINT NOT NULL,
         hardcoded BOOLEAN DEFAULT FALSE,
+        public BOOLEAN DEFAULT FALSE,
         owner_organization_id TEXT,
         CONSTRAINT fk_owner_org
           FOREIGN KEY (owner_organization_id)
