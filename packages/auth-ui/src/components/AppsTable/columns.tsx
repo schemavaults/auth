@@ -57,6 +57,11 @@ export function getAppsTableColumns(
       header: "Description",
     },
     {
+      id: "owner_organization_id",
+      accessorKey: "owner_organization_id",
+      header: "Owner Organization",
+    },
+    {
       id: "domains",
       header: "Domains",
       cell: ({ row }) => {

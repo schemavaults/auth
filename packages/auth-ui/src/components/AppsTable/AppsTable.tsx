@@ -57,6 +57,7 @@ export function AppsTable({
         app_id: false,
         app_name: true,
         app_description: true,
+        owner_organization_id: false,
         domains: true,
       }}
       searchColumn={["app_id", "app_name"]}

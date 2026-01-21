@@ -58,6 +58,7 @@ export function ApiServersTable({
         api_server_id: false,
         api_server_name: true,
         api_server_description: true,
+        owner_organization_id: false,
       }}
       HeaderButtons={(): ReactElement => {
         return (

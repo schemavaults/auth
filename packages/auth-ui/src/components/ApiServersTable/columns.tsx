@@ -48,6 +48,11 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
     header: "Description"
   },
   {
+    id: "owner_organization_id",
+    accessorKey: "owner_organization_id",
+    header: "Owner Organization",
+  },
+  {
     id: "actions",
     cell: ({ row }): ReactElement => {
       const api = row.original
