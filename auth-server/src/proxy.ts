@@ -16,7 +16,7 @@ import {
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import loadAuthServerMiddlewareRules from "@/lib/auth-server-middleware-rules";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
-import { ServerlessDatabase } from "./lib/auth-db";
+import ServerlessDatabase from "./lib/auth-db/serverless-database";
 
 const SchemaVaultsAuthServerMiddleware = async (
   req: NextRequest,
