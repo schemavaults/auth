@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useTransition } from "react";
 import { useParams } from "next/navigation";
 import PageContainer from "@/components/PageContainer";
 import useSWR from "swr";
 import type { ReactElement } from "react";
+import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardHeader, CardTitle } from "@schemavaults/ui";
 
 interface KeyMetadata {
   key_id: string;
@@ -31,58 +33,65 @@ const fetcher = (url: string) =>
 function JwksAccessKeysPageView(): ReactElement {
   const params = useParams();
   const api_server_id = params?.api_server_id as string;
+  if (typeof api_server_id !== 'string') {
+    throw new TypeError("Expected 'api_server_id' to be a string!")
+  }
 
   const [generatedPrivateKey, setGeneratedPrivateKey] = useState<string | null>(
     null
   );
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isGenerating, startGenerating] = useTransition();
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const {
     data: keyData,
-    error: keyError,
+    error: loadKeyError,
     mutate,
   } = useSWR<KeyMetadataResponse>(
     api_server_id ? `/api/apis/${api_server_id}/jwks-access-key` : null,
     fetcher
   );
 
-  const handleGenerateKey = useCallback(async () => {
+  const handleGenerateKey = useCallback((): void => {
     if (!api_server_id) return;
 
-    setIsGenerating(true);
-    setError(null);
+    setGenerationError(null);
     setGeneratedPrivateKey(null);
 
-    try {
-      const response = await fetch(
-        `/api/apis/${api_server_id}/jwks-access-key`,
-        {
-          method: "POST",
-          credentials: "include",
-        }
-      );
-
-      const data: GenerateKeyResponse = await response.json();
-
-      if (!response.ok || !data.success) {
-        setError(data.message || "Failed to generate key");
+    startGenerating(async () => {
+      const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(api_server_id)
+      if (!parsed_api_server_id.success) {
+        setGenerationError(`Bad API server ID to generate key for: ${JSON.stringify(parsed_api_server_id.error)}`);
         return;
       }
 
-      if (data.private_key) {
-        setGeneratedPrivateKey(data.private_key);
-      }
+      try {
+        const response = await fetch(
+          `/api/apis/${api_server_id}/jwks-access-key`,
+          {
+            method: "POST",
+            credentials: "include",
+          }
+        );
 
-      mutate();
-    } catch (e: unknown) {
-      setError("Failed to generate key. Please try again.");
-      console.error(e);
-    } finally {
-      setIsGenerating(false);
-    }
+        const data: GenerateKeyResponse = await response.json();
+
+        if (!response.ok || !data.success) {
+          setGenerationError(data.message || "Failed to generate key");
+          return;
+        }
+
+        if (data.private_key) {
+          setGeneratedPrivateKey(data.private_key);
+        }
+
+        mutate();
+      } catch (e: unknown) {
+        setGenerationError("Failed to generate key. Please try again.");
+        console.error(e);
+      }
+    })
   }, [api_server_id, mutate]);
 
   const handleRegenerateKey = useCallback(async () => {
@@ -94,37 +103,36 @@ function JwksAccessKeysPageView(): ReactElement {
 
     if (!confirmed) return;
 
-    setIsRegenerating(true);
-    setError(null);
+    setGenerationError(null);
     setGeneratedPrivateKey(null);
 
-    try {
-      const response = await fetch(
-        `/api/apis/${api_server_id}/jwks-access-key/regenerate`,
-        {
-          method: "POST",
-          credentials: "include",
+    startGenerating(async () => {
+      try {
+        const response = await fetch(
+          `/api/apis/${api_server_id}/jwks-access-key/regenerate`,
+          {
+            method: "POST",
+            credentials: "include",
+          }
+        );
+
+        const data: GenerateKeyResponse = await response.json();
+
+        if (!response.ok || !data.success) {
+          setGenerationError(data.message || "Failed to regenerate key");
+          return;
         }
-      );
 
-      const data: GenerateKeyResponse = await response.json();
+        if (data.private_key) {
+          setGeneratedPrivateKey(data.private_key);
+        }
 
-      if (!response.ok || !data.success) {
-        setError(data.message || "Failed to regenerate key");
-        return;
+        mutate();
+      } catch (e: unknown) {
+        setGenerationError("Failed to regenerate key. Please try again.");
+        console.error(e);
       }
-
-      if (data.private_key) {
-        setGeneratedPrivateKey(data.private_key);
-      }
-
-      mutate();
-    } catch (e: unknown) {
-      setError("Failed to regenerate key. Please try again.");
-      console.error(e);
-    } finally {
-      setIsRegenerating(false);
-    }
+    })
   }, [api_server_id, mutate]);
 
   const handleCopyKey = useCallback(async () => {
@@ -156,24 +164,31 @@ function JwksAccessKeysPageView(): ReactElement {
   return (
     <PageContainer>
       <div className="p-6 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-2">JWKS Access Keys</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Manage JWKS access keys for API server: <code>{api_server_id}</code>
-        </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>JWKS Access Keys</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>Manage JWKS access keys for API server: <code>{api_server_id}</code></p>
+          </CardContent>
+        </Card>
 
-        {keyError && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-600 dark:text-red-400">
-              Failed to load key information. You may not have permission to
-              manage this API server&apos;s keys.
-            </p>
-          </div>
+        {loadKeyError && (
+          <Alert variant={'destructive'}>
+            <AlertTitle>Error loading JWKS access key status</AlertTitle>
+            <AlertDescription>
+              { loadKeyError instanceof Error ? loadKeyError.message : "An unknown error occurred!"}
+            </AlertDescription>
+          </Alert>
         )}
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-          </div>
+        {generationError && (
+          <Alert variant={'destructive'}>
+            <AlertTitle>Error generating JWKS access keyset</AlertTitle>
+            <AlertDescription>
+              { generationError }
+            </AlertDescription>
+          </Alert>
         )}
 
         {generatedPrivateKey && (
@@ -190,12 +205,12 @@ function JwksAccessKeysPageView(): ReactElement {
               <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs whitespace-pre-wrap break-all">
                 {generatedPrivateKey}
               </pre>
-              <button
+              <Button
                 onClick={handleCopyKey}
                 className="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded"
               >
                 {copied ? "Copied!" : "Copy"}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -203,7 +218,7 @@ function JwksAccessKeysPageView(): ReactElement {
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Current Key Status</h2>
 
-          {!keyData && !keyError && (
+          {!keyData && !loadKeyError && (
             <p className="text-gray-500">Loading...</p>
           )}
 
@@ -212,13 +227,13 @@ function JwksAccessKeysPageView(): ReactElement {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 No JWKS access key has been generated for this API server yet.
               </p>
-              <button
+              <Button
                 onClick={handleGenerateKey}
                 disabled={isGenerating}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium"
               >
                 {isGenerating ? "Generating..." : "Generate Keys"}
-              </button>
+              </Button>
             </div>
           )}
 
@@ -259,10 +274,10 @@ function JwksAccessKeysPageView(): ReactElement {
 
               <button
                 onClick={handleRegenerateKey}
-                disabled={isRegenerating}
+                disabled={isGenerating}
                 className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg font-medium"
               >
-                {isRegenerating ? "Regenerating..." : "Regenerate Keys"}
+                {isGenerating ? "Regenerating..." : "Regenerate Keys"}
               </button>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 Regenerating will invalidate the current key.
