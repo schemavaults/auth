@@ -117,7 +117,7 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
               Server ID
             </DropdownMenuItem>
             <Link
-              href={`/apis/${api_server_id}/jwks-keys`}
+              href={`/apis/${api_server_id}/jwks-access-keys`}
               className="hover:cursor-pointer"
             >
               <DropdownMenuItem className={menuItemClassname}>

@@ -5,10 +5,10 @@ import {
   type IProtectedAuthenticatedServerComponentPageProps,
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
-import JwksKeysPageView from "./jwks-keys-page-view";
+import JwksKeysPageView from "./jwks-access-keys-page-view";
 import { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
-async function JwksKeysPageServerComponent({
+async function JwksAccessKeysPageServerComponent({
   dbh: _dbh,
   user: _user,
 }: IProtectedAuthenticatedServerComponentPageProps<AuthDatabase>): Promise<ReactElement> {
@@ -17,6 +17,6 @@ async function JwksKeysPageServerComponent({
 
 export default async function JwksKeysPage(): Promise<ReactElement> {
   return await withAuthenticatedServerComponentRouteGuard(
-    JwksKeysPageServerComponent
+    JwksAccessKeysPageServerComponent
   );
 }

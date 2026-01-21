@@ -28,7 +28,7 @@ interface GenerateKeyResponse {
 const fetcher = (url: string) =>
   fetch(url, { credentials: "include" }).then((res) => res.json());
 
-function JwksKeysPageView(): ReactElement {
+function JwksAccessKeysPageView(): ReactElement {
   const params = useParams();
   const api_server_id = params?.api_server_id as string;
 
@@ -295,4 +295,4 @@ function JwksKeysPageView(): ReactElement {
   );
 }
 
-export default JwksKeysPageView;
+export default JwksAccessKeysPageView;
