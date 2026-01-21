@@ -188,6 +188,33 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     return parsed.data;
   }
 
+  private async listAllApiServersFromDatabase(): Promise<readonly SchemaVaultsApiServerDefinition[]> {
+    let rows: unknown[];
+    try {
+      rows = await this.db
+        .selectFrom("api_servers")
+        .limit(100)
+        .selectAll()
+        .execute();
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error("Failed to list all API servers from database");
+    }
+
+    try {
+      return await this.parseApiServerDefinitionsFromDbRows(rows);
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error(
+        "Failed to parse the API servers data received from database",
+      );
+    }
+  }
+
+  private listAllHardcodedApiServers(): readonly SchemaVaultsApiServerDefinition[] {
+    return HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS;
+  }
+
   public async listAllApiServers(
     user: UserData,
   ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
@@ -202,29 +229,20 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
         "You must be an admin to list all SchemaVaults API servers",
       );
 
-    let rows: unknown[];
-    try {
-      if (!user.admin) {
-        throw new Error("Must be an admin to list all API servers")
-      }
-      rows = await this.db
-        .selectFrom("api_servers")
-        .limit(100)
-        .selectAll()
-        .execute();
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to list API servers");
+    const all_api_servers: SchemaVaultsApiServerDefinition[] = []
+
+    const hardcoded_api_servers: readonly SchemaVaultsApiServerDefinition[] = this.listAllHardcodedApiServers()
+    const hardcodedApiServerIds: Set<string> = new Set(hardcoded_api_servers.map(srv => srv.api_server_id));
+
+    const api_servers_from_db: readonly SchemaVaultsApiServerDefinition[] = await this.listAllApiServersFromDatabase()
+    if (api_servers_from_db.some(db_api_server => hardcodedApiServerIds.has(db_api_server.api_server_id))) {
+      throw new Error("API server ID from database conflicts with hardcoded API server definition!")
     }
 
-    try {
-      return await this.parseApiServerDefinitionsFromDbRows(rows);
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error(
-        "Failed to parse the API servers data received from database",
-      );
-    }
+    // Combine hardcoded + DB API servers
+    all_api_servers.push(...hardcoded_api_servers);
+    all_api_servers.push(...api_servers_from_db);
+    return all_api_servers;
   }
 
   public async listOrganizationApiServers(
