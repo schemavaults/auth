@@ -68,8 +68,10 @@ export function CreateApiServerDialog({
         api_server_description: "",
         public: false,
         created_at: Date.now(),
+        hardcoded: false,
+        owner_organization_id,
       };
-    }, []);
+    }, [owner_organization_id]);
 
   const form = useForm<SchemaVaultsApiServerDefinition>({
     resolver: zodResolver(schemaVaultsApiServerDefinitionSchema),
@@ -272,3 +274,5 @@ export function CreateApiServerDialog({
     </Dialog>
   );
 }
+
+export default CreateApiServerDialog;

@@ -33,7 +33,7 @@ export function OrganizationMembersCard(
 ): ReactElement {
   const authClient = useAuth();
 
-  const cardTitle = props.cardTitle ?? "Members";
+  const cardTitle = props.cardTitle ?? "Organization Members";
   const cardDescription = props.cardDescription ?? "View organization members.";
 
   const cardClassName: string = cn("w-full", props.cardClassName);

@@ -40,21 +40,23 @@ export default function OrgPageView({
         preloaded={preloaded_members}
       />
 
+      <AppsCard
+        queryType="org"
+        organization_id={organization.organization_id}
+        cardTitle="Organization Client Applications"
+        cardDescription="Applications owned by this organization."
+        cardClassName="w-full"
+      />
+
       <ApiServersCard
         queryType="org"
         organization_id={organization.organization_id}
-        cardTitle="API Servers"
+        cardTitle="Organization API Servers"
         cardDescription="API servers owned by this organization."
         cardClassName="w-full"
       />
 
-      <AppsCard
-        queryType="org"
-        organization_id={organization.organization_id}
-        cardTitle="Applications"
-        cardDescription="Applications owned by this organization."
-        cardClassName="w-full"
-      />
+
     </PageContainer>
   );
 }

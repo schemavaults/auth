@@ -13,6 +13,7 @@ import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGua
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import shouldEnableDebug from "@/lib/should-enable-debug";
 
 /**
  * Create a new frontend application
@@ -23,22 +24,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (environment === "development") {
       console.log("[/api/apps] POST request received");
     }
+    const debug: boolean = shouldEnableDebug(environment);
 
     let newResource: SchemaVaultsApp;
     try {
-      const parsed = await schemaVaultsAppDefinitionSchema.safeParseAsync(
+      const parsed = await schemaVaultsAppDefinitionSchema.refine(function noHardcodedApps(values) {
+        return typeof values.hardcoded === 'boolean' && !values.hardcoded;
+      }, "Hardcoded apps are not allowed to be dynamically created.").safeParseAsync(
         await req.json(),
       );
-      if (!parsed.success) throw parsed.error;
+      if (!parsed.success) {
+        throw parsed.error;
+      }
       newResource = parsed.data;
     } catch (e: unknown) {
-      const errorMessage =
+      const genericBadRequestErrMsg: string =
         "Failed to parse new SchemaVaults frontend app details from request body";
-      console.error(e);
+      console.error(`${genericBadRequestErrMsg}: `, e);
       return NextResponse.json(
         {
           success: false,
-          message: errorMessage,
+          message: genericBadRequestErrMsg,
         } satisfies ResourceCreationResponse,
         {
           status: 400,
@@ -102,6 +108,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     try {
+      if (debug) {
+        console.log("[POST /api/apps] Attempting to register new app: ", newResource)
+      }
       await appRegistry.registerApp(
         newResource.app_id,
         newResource.app_name,

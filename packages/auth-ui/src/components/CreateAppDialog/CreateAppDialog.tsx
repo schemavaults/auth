@@ -45,6 +45,15 @@ interface CreateFrontendAppDialogProps {
   owner_organization_id?: string | null;
 }
 
+function generateDefaultAppId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch (e: unknown) {
+    console.error("Failed to generate default APP UUID: ", e);
+    return "";
+  }
+}
+
 export function CreateAppDialog({
   clearFrontendAppsCache,
   owner_organization_id,
@@ -54,12 +63,14 @@ export function CreateAppDialog({
   const defaultValues: Partial<SchemaVaultsApp> = useMemo(() => {
     return {
       app_name: "My Web App",
-      app_id: crypto.randomUUID(),
+      app_id: generateDefaultAppId(),
       app_description: "Interact with my API",
       public: false,
       created_at: Date.now(),
+      hardcoded: false,
+      owner_organization_id,
     };
-  }, []);
+  }, [owner_organization_id]);
 
   const form = useForm<SchemaVaultsApp>({
     resolver: zodResolver(schemaVaultsAppDefinitionSchema),
@@ -110,13 +121,42 @@ export function CreateAppDialog({
         return;
       }
 
+      const createAppRequestBody: Partial<SchemaVaultsApp> = {
+        ...values,
+      };
+
+      if (typeof owner_organization_id === "string") {
+        createAppRequestBody["owner_organization_id"] = owner_organization_id;
+      }
+
+      // if we're creating it from this form then it must be non-hardcoded/dynamic...
+      createAppRequestBody["hardcoded"] = false;
+      createAppRequestBody["created_at"] = Date.now();
+
+      const validatedAppRequestBody =
+        await schemaVaultsAppDefinitionSchema.safeParseAsync(
+          createAppRequestBody,
+        );
+      if (!validatedAppRequestBody.success) {
+        console.error(
+          "Failed to prepare application creation request:",
+          validatedAppRequestBody.error,
+        );
+        toast({
+          variant: "destructive",
+          title: "Failed to prepare application creation request",
+          description:
+            "See your console for the full validation error message!",
+        });
+        return;
+      }
+
       try {
         const response = await fetch("/api/apps", {
           method: "POST",
-          body: JSON.stringify({
-            ...values,
-            owner_organization_id: owner_organization_id ?? null,
-          }),
+          body: JSON.stringify(
+            validatedAppRequestBody.data satisfies SchemaVaultsApp,
+          ),
           headers: {
             Authorization: `Bearer ${auth_access_jwt.token}}`,
           },
@@ -267,3 +307,5 @@ export function CreateAppDialog({
     </Dialog>
   );
 }
+
+export default CreateAppDialog;

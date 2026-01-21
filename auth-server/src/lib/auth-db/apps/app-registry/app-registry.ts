@@ -234,6 +234,10 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
       throw new TypeError("Received invalid organization ID to register application to!")
     }
 
+    if (typeof publicly_listed !== 'boolean') {
+      throw new TypeError("Expected 'publicly_listed' to be a boolean!")
+    }
+
     const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
       app_id,
       app_name,
@@ -241,7 +245,8 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
       created_at: Date.now(),
       public: publicly_listed ?? false,
       owner_organization_id: owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID ? null : owner_organization_id,
-    });
+      hardcoded: false
+    } satisfies SchemaVaultsApp);
     if (!parsed_app.success) {
       console.error(parsed_app.error.errors);
       throw new Error("Failed to parse app");

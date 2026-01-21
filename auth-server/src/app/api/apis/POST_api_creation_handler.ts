@@ -27,7 +27,9 @@ export default async function POST_api_creation_handler(request: NextRequest): P
       let newResource: SchemaVaultsApiServerDefinition;
       try {
         const parsed =
-          await schemaVaultsApiServerDefinitionSchema.safeParseAsync(
+          await schemaVaultsApiServerDefinitionSchema.refine(function noHardcodedApiServers(values) {
+            return typeof values.hardcoded === 'boolean' && !values.hardcoded
+          }, "Hardcoded API server definitions may not be dynamically created at this endpoint.").safeParseAsync(
             await req.json(),
           );
         if (!parsed.success) throw parsed.error;
