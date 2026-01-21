@@ -1,12 +1,19 @@
 "use client";
 
-import type { ReactElement } from "react"
+import type { ReactElement } from "react";
 
-import type { ColumnDef } from "@tanstack/react-table"
+import type { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { MoreHorizontal } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@schemavaults/ui";
+import { MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@schemavaults/ui";
 import type { SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
 
 export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
@@ -18,7 +25,9 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
           table.getIsAllPageRowsSelected() ||
           (table.getIsSomePageRowsSelected() && "indeterminate")
         }
-        onCheckedChange={(value: boolean) => table.toggleAllPageRowsSelected(!!value)}
+        onCheckedChange={(value: boolean) =>
+          table.toggleAllPageRowsSelected(!!value)
+        }
         aria-label="Select all"
       />
     ),
@@ -33,19 +42,19 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
     enableHiding: false,
   },
   {
-    id: 'api_server_id',
+    id: "api_server_id",
     accessorKey: "api_server_id",
-    header: "API Server ID"
+    header: "API Server ID",
   },
   {
-    id: 'api_server_name',
+    id: "api_server_name",
     accessorKey: "api_server_name",
-    header: "API Server Name"
+    header: "API Server Name",
   },
   {
-    id: 'api_server_description',
+    id: "api_server_description",
     accessorKey: "api_server_description",
-    header: "Description"
+    header: "Description",
   },
   {
     id: "owner_organization_id",
@@ -55,7 +64,7 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
   {
     id: "actions",
     cell: ({ row }): ReactElement => {
-      const api = row.original
+      const api = row.original;
 
       return (
         <DropdownMenu>
@@ -72,11 +81,9 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
             >
               Copy API Server ID
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {/* <DropdownMenuItem>Authorize app</DropdownMenuItem> */}
           </DropdownMenuContent>
         </DropdownMenu>
-      )
+      );
     },
-  }
-]
+  },
+];
