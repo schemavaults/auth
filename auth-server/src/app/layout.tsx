@@ -14,7 +14,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className="w-screen min-h-[100dvh] overflow-x-hidden overflow-y-scroll flex flex-col justify-start items-stretch"
+      className={
+        [
+          "w-screen min-h-[100dvh]",
+          "overflow-x-hidden overflow-y-scroll",
+          "flex flex-col justify-start items-stretch",
+          "no-scrollbar"
+        ].join(" ")
+      }
     >
       <body
         className={[
@@ -23,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           "grow",
           "min-h-[100dvh] overflow-y-scroll",
           "flex flex-col justify-start items-stretch",
+          "no-scrollbar"
         ].join(" ")}
       >
         {children}
