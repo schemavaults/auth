@@ -1,6 +1,8 @@
 const ERROR_IDS = [
   "unknown",
+  "bad_request",
   "app_id_not_found",
+  "api_server_id_not_found",
   "unauthenticated",
   "forbidden",
   "load_user_data_failure",
@@ -11,7 +13,9 @@ export type SchemaVaultsAuthErrorId = (typeof ERROR_IDS)[number];
 
 export const ERROR_MESSAGE_CATALOG: Record<SchemaVaultsAuthErrorId, string> = {
   unknown: "An unknown error occurred",
+  bad_request: "Your request was malformed or invalid.",
   app_id_not_found: "App with specified ID not found!",
+  api_server_id_not_found: "API server with specified ID not found",
   unauthenticated:
     "Failed to authenticate to figure out who you are! Try logging in again or contacting support...",
   forbidden:
