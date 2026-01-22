@@ -7,36 +7,19 @@ import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-
-async function isUserInOwnerOrganization(
-  uid: string,
-  api_server_id: string,
-  dbh: Parameters<typeof withAuthenticatedApiRouteGuard>[0] extends (props: infer P) => unknown ? P extends { dbh: infer D } ? D : never : never
-): Promise<boolean> {
-  const apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
-  const apiServer = await apiServerRegistry.getApiServer(api_server_id);
-
-  if (!apiServer.owner_organization_id) {
-    return false;
-  }
-
-  const organizationsRegistry = new OrganizationsRegistry(dbh.db);
-  const memberships = await organizationsRegistry.listUserOrganizationMemberships(uid);
-
-  return memberships.includes(apiServer.owner_organization_id);
-}
+import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
+import type { JwksAccessKeyStatusQueryResponse } from '@/lib/auth-db/jwks-access-keys';
 
 /**
  * POST /api/apis/[api_server_id]/jwks-access-key
  * Generate initial JWKS access key pair for an API server
  * Only organization owners can generate keys
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: NextRequest, ctx: RouteContext<"/api/apis/[api_server_id]/jwks-access-key">): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ req, user, dbh, environment: _environment }) => {
-      const url = new URL(req.url);
-      const pathParts = url.pathname.split("/");
-      const api_server_id = pathParts[pathParts.indexOf("apis") + 1];
+    async ({ user, dbh }) => {
+      const params = await ctx.params;
+      const api_server_id = params.api_server_id;
 
       if (!api_server_id || !apiServerIdSchema.safeParse(api_server_id).success) {
         return NextResponse.json(
@@ -47,7 +30,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       // Verify user is in the owner organization
       try {
-        const isAuthorized = await isUserInOwnerOrganization(user.uid, api_server_id, dbh);
+        const isAuthorized = await isUserInApiOwnerOrganization(user.uid, api_server_id, dbh.db);
         if (!isAuthorized && !user.admin) {
           return NextResponse.json(
             { success: false, message: "You must be a member of the owner organization to manage JWKS access keys" },
@@ -64,11 +47,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       // Check if a key already exists
       const jwksAccessKeysRegistry = new JwksAccessKeysRegistry(dbh.db);
-      const existingKey = await jwksAccessKeysRegistry.getKeyMetadata(api_server_id);
+      const existingKey: JwksAccessKeyStatusQueryResponse | null = await jwksAccessKeysRegistry.getKeyMetadata(api_server_id);
 
       if (existingKey) {
         return NextResponse.json(
-          { success: false, message: "A JWKS access key already exists. Use the regenerate endpoint to create a new one." },
+          {
+            success: false,
+            message: "A JWKS access key already exists. Use the regenerate endpoint to create a new one."
+          },
           { status: 409 }
         );
       }
@@ -100,12 +86,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * Get key metadata (not the actual keys)
  * Only organization owners can view key metadata
  */
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest, ctx: RouteContext<"/api/apis/[api_server_id]/jwks-access-key">): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ req, user, dbh, environment: _environment }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
-      const url = new URL(req.url);
-      const pathParts = url.pathname.split("/");
-      const api_server_id = pathParts[pathParts.indexOf("apis") + 1];
+    async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
+      const params = await ctx.params;
+      const api_server_id = params.api_server_id;
 
       if (!api_server_id || !apiServerIdSchema.safeParse(api_server_id).success) {
         return NextResponse.json(
@@ -116,7 +101,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
       // Verify user is in the owner organization
       try {
-        const isAuthorized = await isUserInOwnerOrganization(user.uid, api_server_id, dbh);
+        const isAuthorized = await isUserInApiOwnerOrganization(user.uid, api_server_id, dbh.db);
         if (!isAuthorized && !user.admin) {
           return NextResponse.json(
             { success: false, message: "You must be a member of the owner organization to view JWKS access keys" },
@@ -138,15 +123,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       if (!keyMetadata) {
         return NextResponse.json({
           success: true,
-          has_key: false,
-          key: null,
+          key_metadata: false
         });
       }
 
       return NextResponse.json({
         success: true,
-        has_key: true,
-        key: keyMetadata,
+        key_metadata: keyMetadata,
       });
     }
   );

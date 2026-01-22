@@ -9,3 +9,5 @@ export type * from './apps-to-apis-permissions-table';
 
 export { preloadApiServersTable } from './preload-api-servers-table';
 export type { QueryApiServersInputOptions } from './preload-api-servers-table';
+
+export { default as loadApiServerDefinitionFromDatabase } from './load-api-server-definition-from-db';

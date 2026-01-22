@@ -45,7 +45,7 @@ bun run e2e        # Run Cypress / Docker Compose testing pipeline
 
 ### Monorepo Structure
 - **auth-server/**: Next.js 16 App Router application - the main auth server deployed at auth.schemavaults.com
-- **packages/**: Shared TypeScript libraries published to npm
+- **packages/**: Shared TypeScript libraries published to npm & GitHub Packages
 - **tests/e2e-auth-tests/**: Cypress E2E test suite
 
 ### Package Dependency Hierarchy
@@ -72,6 +72,15 @@ bun run e2e        # Run Cypress / Docker Compose testing pipeline
 - `src/lib/auth-db/` - Database resource groups for users, organizations, apps, APIs, JWT keys
 - `src/components/` - Next.js/React.js client components specific to the auth server
 - `src/lib/AuthServerJwtKeysManager/` - JWT key lifecycle management
+
+### Building UI Components
+
+All user interfaces should be built using `@schemavaults/ui` and `@schemavaults/theme`. Most shadcn & radixui components are available from here.
+
+### UI Components
+
+- `@schemavaults/auth-ui` - React components for working with auth datatypes (e.g. users table, organizations table, apps table, APIs table)
+- `@schemavaults/auth-server/src/components` - React components for auth-server flows (login, register, etc.)
 
 ### Database
 Uses `@schemavaults/dbh` with Kysely for Postgres (Neon serverless compatible). Tables are managed via resource groups in `src/lib/auth-db/`.

@@ -273,7 +273,7 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
         CONSTRAINT fk_owner_org
           FOREIGN KEY (owner_organization_id)
           REFERENCES ORGANIZATIONS(organization_id)
-          ON DELETE SET NULL
+          ON DELETE CASCADE
       );
     `;
     const createAppDomainsSql = sql`

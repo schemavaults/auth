@@ -28,6 +28,7 @@ import {
   SchemaVaultsApiServerRegistry,
   preloadApiServersTable,
 } from "@/lib/auth-db/apis";
+import redirectWithError from "@/lib/redirect-with-error";
 
 interface PageParams {
   params: Promise<{ organization_id: string }>;
@@ -57,7 +58,7 @@ async function PreloadedOrgPage(
 
   const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id_param);
   if (!parsed_org_id.success) {
-    redirect("/account?error=invalid_organization_id");
+    redirectWithError(400, 'bad_request')
   }
   const organization_id: OrganizationID = parsed_org_id.data;
 
@@ -71,7 +72,7 @@ async function PreloadedOrgPage(
     );
     const isMember = userMemberships.includes(organization_id);
     if (!isMember) {
-      redirect("/account?error=forbidden");
+      redirectWithError(403, 'forbidden')
     }
   }
 

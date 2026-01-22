@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ReactElement } from "react";
+import type { ReactElement } from "react";
 
 export interface LogoProps {
   height: number;

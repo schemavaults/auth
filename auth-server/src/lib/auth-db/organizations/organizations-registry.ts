@@ -559,3 +559,5 @@ export class OrganizationsRegistry
     }
   }
 }
+
+export default OrganizationsRegistry;

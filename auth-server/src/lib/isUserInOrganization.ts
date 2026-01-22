@@ -8,7 +8,6 @@ import type { OrganizationID, UserData } from "@schemavaults/auth-common";
  * @param uid - The user's unique identifier
  * @param organization_id - The organization ID to check membership for
  * @param db - The database connection
- * @param isAdmin - Whether the user is an admin (admins have access to all organizations)
  * @returns true if the user is a member of the organization
  */
 export async function isUserInOrganization(

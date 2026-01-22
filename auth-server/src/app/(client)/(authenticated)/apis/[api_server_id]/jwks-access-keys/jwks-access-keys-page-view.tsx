@@ -1,24 +1,26 @@
 "use client";
 
 import { useState, useCallback, useTransition } from "react";
-import { useParams } from "next/navigation";
 import PageContainer from "@/components/PageContainer";
-import useSWR from "swr";
+import useSWR, { SWRResponse } from "swr";
 import type { ReactElement } from "react";
-import { apiServerIdSchema } from "@schemavaults/app-definitions";
-import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardHeader, CardTitle } from "@schemavaults/ui";
+import { type ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
+import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, cn } from "@schemavaults/ui";
+import { CheckCircle, ClipboardCopy, KeyRound, Loader2, RotateCcw } from "lucide-react";
+import JwksAccessKeysUsageInstructions from "./jwks-access-keys-usage-instructions";
+import type { JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
 
-interface KeyMetadata {
-  key_id: string;
-  created_at: number;
-  is_active: boolean;
+export interface JwksAccessKeysPageViewProps {
+  api_server_id: ApiServerId
+  preloaded_latest_jwks_access_keys_metadata: JwksAccessKeyStatusQueryResponse | false;
 }
 
-interface KeyMetadataResponse {
-  success: boolean;
-  has_key: boolean;
-  key: KeyMetadata | null;
+interface SuccessKeyMetadataResponse {
+  success: true;
+  key_metadata: JwksAccessKeyStatusQueryResponse | false;
 }
+
+type KeyMetadataResponse = SuccessKeyMetadataResponse | { success: false };
 
 interface GenerateKeyResponse {
   success: boolean;
@@ -30,11 +32,206 @@ interface GenerateKeyResponse {
 const fetcher = (url: string) =>
   fetch(url, { credentials: "include" }).then((res) => res.json());
 
-function JwksAccessKeysPageView(): ReactElement {
-  const params = useParams();
-  const api_server_id = params?.api_server_id as string;
+function formatDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleString();
+}
+
+function DisplayGeneratedPrivateKeyForOneTimeCopy({ generatedPrivateKey }: { generatedPrivateKey: string }): ReactElement {
+  const [copied, setCopied] = useState<boolean>(false);
+  const handleCopyKey = useCallback(async () => {
+    if (!generatedPrivateKey) return;
+
+    try {
+      await navigator.clipboard.writeText(generatedPrivateKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error("Failed to copy to clipboard:", e);
+    }
+  }, [generatedPrivateKey]);
+
+  return (
+    <Card className={cn(
+    "bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800"
+    )}>
+      <CardHeader>
+        <CardTitle>Private Key Generated - Save This Now!</CardTitle>
+        <CardDescription>
+          This private key will only be shown once. Store it securely in
+          your API server configuration. You will not be able to retrieve it again.
+        </CardDescription>
+      </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs whitespace-pre-wrap break-all">
+              {generatedPrivateKey}
+            </pre>
+            <Button
+              onClick={handleCopyKey}
+              className={cn(
+                "absolute top-2 right-2",
+                "px-3 py-1",
+                "bg-gray-700 hover:bg-gray-600",
+                "text-white text-xs",
+                "rounded",
+                "flex flex-row flex-nowrap gap-2"
+              )}
+            >
+              { copied ? <CheckCircle className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4"/> } {copied ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+
+        </CardContent>
+    </Card>
+  )
+}
+
+interface ApiJwksAccessKeysStatusCardProps {
+  isGenerating: boolean;
+  keypairStatus: SWRResponse<KeyMetadataResponse>;
+  handleGenerateKey: () => void;
+  handleRegenerateKey: () => void;
+}
+
+function ApiJwksAccessKeysStatusCard(
+  { isGenerating, keypairStatus, handleGenerateKey, handleRegenerateKey }: ApiJwksAccessKeysStatusCardProps
+): ReactElement {
+  const {
+    data: keyData,
+    error: loadKeyError
+  } = keypairStatus;
+
+  function KeyStatusCardContent(): ReactElement {
+    if (!keyData && !loadKeyError) {
+      return (
+        <div className="flex flex-row flex-nowrap items-center justify-center gap-4">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      )
+    }
+
+    if (loadKeyError || !keyData || !keyData.success) {
+      return (
+        <Alert variant={'destructive'}>
+          <AlertTitle>Error loading JWKS access key status</AlertTitle>
+          <AlertDescription>
+            { loadKeyError instanceof Error ? loadKeyError.message : "An unknown error occurred!"}
+          </AlertDescription>
+        </Alert>
+      )
+    }
+
+    if (keyData && !keyData.key_metadata) {
+      return (
+        <p className="text-gray-600 dark:text-gray-400">
+          No JWKS access key has been generated for this API server yet.
+        </p>
+      );
+    }
+
+    if (keyData && keyData.key_metadata) {
+      return (
+        <div>
+          <dl className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div>
+              <dt className="text-sm text-gray-500 dark:text-gray-400">
+                Key Pair ID
+              </dt>
+              <dd className="font-mono text-sm">{keyData.key_metadata.key_id}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-gray-500 dark:text-gray-400">
+                Created At
+              </dt>
+              <dd className="text-sm">
+                {formatDate(keyData.key_metadata.created_at)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-gray-500 dark:text-gray-400">
+                Status
+              </dt>
+              <dd>
+                <span
+                  className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                    keyData.key_metadata.is_active
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                      : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                  }`}
+                >
+                  {keyData.key_metadata.is_active ? "Active" : "Inactive"}
+                </span>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      )
+    }
+
+    return (
+      <Alert variant={'destructive'}>
+        <AlertTitle>Failed to resolve JWKS access key status</AlertTitle>
+        <AlertDescription>
+          Failed to parse JWKS access key metadata from query
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  const footerButtonStyles: string  = cn(
+    "px-4 py-2 rounded-lg font-medium",
+    "flex flex-row flex-nowrap gap-2 items-center"
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Current Key Status</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <KeyStatusCardContent />
+      </CardContent>
+      { // Card Footer Action Button (generate/regenerate)
+        keyData && (
+          <CardFooter className="flex flex-row flex-wrap gap-2 justify-start items-center">
+            {keyData.success && !keyData.key_metadata ? (
+              <Button
+                onClick={handleGenerateKey}
+                disabled={isGenerating}
+                className={footerButtonStyles}
+              >
+                <KeyRound className="h-4 w-4" /> {isGenerating ? "Generating..." : "Generate Keys"}
+              </Button>
+            ) : (
+                <>
+                  <Button
+                    onClick={handleRegenerateKey}
+                    disabled={isGenerating}
+                    className={footerButtonStyles}
+                    variant={'destructive'}
+                  >
+                    <KeyRound className={cn(
+                      "h-4 w-4",
+                    )} /> {isGenerating ? "Regenerating..." : "Regenerate Keys"}
+                  </Button>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    Regenerating will invalidate the current key.
+                  </p>
+                </>
+            )}
+          </CardFooter>
+        )
+      }
+    </Card>
+  )
+}
+
+function JwksAccessKeysPageView({ api_server_id, preloaded_latest_jwks_access_keys_metadata }: JwksAccessKeysPageViewProps): ReactElement {
   if (typeof api_server_id !== 'string') {
     throw new TypeError("Expected 'api_server_id' to be a string!")
+  } else {
+    console.log(`[JwksAccessKeysPageView] api_server_id: '${api_server_id}'`)
   }
 
   const [generatedPrivateKey, setGeneratedPrivateKey] = useState<string | null>(
@@ -42,16 +239,19 @@ function JwksAccessKeysPageView(): ReactElement {
   );
   const [isGenerating, startGenerating] = useTransition();
   const [generationError, setGenerationError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
-  const {
-    data: keyData,
-    error: loadKeyError,
-    mutate,
-  } = useSWR<KeyMetadataResponse>(
+
+  const keypairStatus: SWRResponse<KeyMetadataResponse> = useSWR<KeyMetadataResponse>(
     api_server_id ? `/api/apis/${api_server_id}/jwks-access-key` : null,
-    fetcher
+    fetcher,
+    {
+      fallbackData: typeof preloaded_latest_jwks_access_keys_metadata === 'object' ? {
+        success: true,
+        key_metadata: preloaded_latest_jwks_access_keys_metadata
+      } : undefined
+    }
   );
+  const mutate = keypairStatus.mutate;
 
   const handleGenerateKey = useCallback((): void => {
     if (!api_server_id) return;
@@ -135,177 +335,35 @@ function JwksAccessKeysPageView(): ReactElement {
     })
   }, [api_server_id, mutate]);
 
-  const handleCopyKey = useCallback(async () => {
-    if (!generatedPrivateKey) return;
-
-    try {
-      await navigator.clipboard.writeText(generatedPrivateKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e) {
-      console.error("Failed to copy to clipboard:", e);
-    }
-  }, [generatedPrivateKey]);
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString();
-  };
-
-  if (!api_server_id) {
-    return (
-      <PageContainer>
-        <div className="p-6">
-          <p className="text-red-500">Invalid API server ID</p>
-        </div>
-      </PageContainer>
-    );
-  }
-
   return (
     <PageContainer>
-      <div className="p-6 max-w-4xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>JWKS Access Keys</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Manage JWKS access keys for API server: <code>{api_server_id}</code></p>
-          </CardContent>
-        </Card>
+      {/** Header Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>JWKS Access Keys</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Manage JWKS access keys for API server: <code>{api_server_id}</code></p>
+        </CardContent>
+      </Card>
 
-        {loadKeyError && (
-          <Alert variant={'destructive'}>
-            <AlertTitle>Error loading JWKS access key status</AlertTitle>
-            <AlertDescription>
-              { loadKeyError instanceof Error ? loadKeyError.message : "An unknown error occurred!"}
-            </AlertDescription>
-          </Alert>
-        )}
+      {generationError && (
+        <Alert variant={'destructive'} className="bg-background">
+          <AlertTitle>Error generating JWKS access keyset</AlertTitle>
+          <AlertDescription>
+            { generationError }
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {generationError && (
-          <Alert variant={'destructive'}>
-            <AlertTitle>Error generating JWKS access keyset</AlertTitle>
-            <AlertDescription>
-              { generationError }
-            </AlertDescription>
-          </Alert>
-        )}
+      {generatedPrivateKey && (
+        <DisplayGeneratedPrivateKeyForOneTimeCopy generatedPrivateKey={generatedPrivateKey} />
+      )}
 
-        {generatedPrivateKey && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <h3 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-              Private Key Generated - Save This Now!
-            </h3>
-            <p className="text-yellow-700 dark:text-yellow-300 text-sm mb-4">
-              This private key will only be shown once. Store it securely in
-              your API server configuration. You will not be able to retrieve it
-              again.
-            </p>
-            <div className="relative">
-              <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs whitespace-pre-wrap break-all">
-                {generatedPrivateKey}
-              </pre>
-              <Button
-                onClick={handleCopyKey}
-                className="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded"
-              >
-                {copied ? "Copied!" : "Copy"}
-              </Button>
-            </div>
-          </div>
-        )}
+      <ApiJwksAccessKeysStatusCard isGenerating={isGenerating} keypairStatus={keypairStatus} handleGenerateKey={handleGenerateKey} handleRegenerateKey={handleRegenerateKey} />
 
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Current Key Status</h2>
+      <JwksAccessKeysUsageInstructions api_server_id={api_server_id} />
 
-          {!keyData && !loadKeyError && (
-            <p className="text-gray-500">Loading...</p>
-          )}
-
-          {keyData && !keyData.has_key && (
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                No JWKS access key has been generated for this API server yet.
-              </p>
-              <Button
-                onClick={handleGenerateKey}
-                disabled={isGenerating}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium"
-              >
-                {isGenerating ? "Generating..." : "Generate Keys"}
-              </Button>
-            </div>
-          )}
-
-          {keyData && keyData.has_key && keyData.key && (
-            <div>
-              <dl className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <dt className="text-sm text-gray-500 dark:text-gray-400">
-                    Key ID
-                  </dt>
-                  <dd className="font-mono text-sm">{keyData.key.key_id}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-gray-500 dark:text-gray-400">
-                    Created At
-                  </dt>
-                  <dd className="text-sm">
-                    {formatDate(keyData.key.created_at)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-gray-500 dark:text-gray-400">
-                    Status
-                  </dt>
-                  <dd>
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                        keyData.key.is_active
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
-                      }`}
-                    >
-                      {keyData.key.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </dd>
-                </div>
-              </dl>
-
-              <button
-                onClick={handleRegenerateKey}
-                disabled={isGenerating}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg font-medium"
-              >
-                {isGenerating ? "Regenerating..." : "Regenerate Keys"}
-              </button>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Regenerating will invalidate the current key.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-6 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Usage Instructions</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            To authenticate requests to the JWKS endpoint, your API server needs
-            to create a signed JWT assertion using the private key:
-          </p>
-          <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
-            <li>
-              Create a JWT with <code>sub</code> set to your API server ID
-            </li>
-            <li>
-              Sign it using RS256 algorithm with your private key
-            </li>
-            <li>
-              Send it as a Bearer token in the Authorization header when calling{" "}
-              <code>/api/jwks/{"{audience}"}</code>
-            </li>
-          </ol>
-        </div>
-      </div>
     </PageContainer>
   );
 }

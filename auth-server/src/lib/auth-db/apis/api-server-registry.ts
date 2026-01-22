@@ -5,11 +5,15 @@ import {
   schemaVaultsApiServerDomainRefSchema,
   type SchemaVaultsApiServerDomainRef,
   HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS,
+  type ApiServerId,
+  HARDCODED_CORE_SCHEMAVAULTS_API_SERVER_DOMAINS,
 } from "@schemavaults/app-definitions";
 import { Kysely, sql } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
+import shouldEnableDebug from "@/lib/should-enable-debug";
+import isHardcodedApiServerId from "@/lib/isHardcodedApiServerId";
 
 /**
  * @name SchemaVaultsApiServerRegistry
@@ -18,11 +22,35 @@ import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
  * @see AuthorizedAppsRegistry To manage which frontend apps a user has actually authorized
  */
 export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup {
+  private readonly debug: boolean;
+
+  public constructor(protected db: Kysely<AuthDatabase>, initialized?: boolean, debug: boolean = shouldEnableDebug()) {
+    super(db, initialized);
+    this.debug = debug;
+  }
+
   public async getApiServer(
-    api_server_id: string,
+    api_server_id: ApiServerId,
   ): Promise<SchemaVaultsApiServerDefinition> {
     if (!(await this.hasBeenInitialized())) {
       await this.performSetupTasks();
+    }
+
+    if (this.debug) {
+      console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}')`)
+    }
+
+    const hardcoded_api_server: SchemaVaultsApiServerDefinition | undefined = HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS.find(hardcoded_api => {
+      return hardcoded_api.api_server_id === api_server_id
+    })
+    if (hardcoded_api_server) {
+      if (hardcoded_api_server.owner_organization_id !== SCHEMAVAULTS_ORGANIZATION_ID) {
+        throw new Error("Expected hardcoded API servers to be owned by the hardcoded SchemaVaults organization!")
+      }
+      if (this.debug) {
+        console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}') -> Found hardcoded API: `, hardcoded_api_server)
+      }
+      return hardcoded_api_server satisfies SchemaVaultsApiServerDefinition;
     }
 
     const getApiServerQuery = this.db
@@ -56,23 +84,39 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
       throw new Error("Failed to parse created_at from database");
     }
 
-    const parsed_app =
+    const parsed_api_server =
       await schemaVaultsApiServerDefinitionSchema.safeParseAsync({
         ...first_row,
         created_at: createdAt,
       });
-    if (!parsed_app.success) {
-      console.error(parsed_app.error.errors);
+    if (!parsed_api_server.success) {
+      console.error(parsed_api_server.error.errors);
       throw new Error("Failed to parse API server from database");
     }
-    return parsed_app.data;
+    const output: SchemaVaultsApiServerDefinition = parsed_api_server.data;
+
+    if (this.debug) {
+      console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}') -> Loaded API from DB: `, output)
+    }
+
+    return output;
   }
 
   public async getApiServerDomains(
-    api_server_id: string,
+    api_server_id: ApiServerId,
   ): Promise<SchemaVaultsApiServerDomainRef[]> {
     if (!(await this.hasBeenInitialized())) {
       await this.performSetupTasks();
+    }
+
+    if (this.debug) {
+      console.log(`[SchemaVaultsApiServerRegistry] getApiServerDomains('${api_server_id}')`)
+    }
+
+    if (isHardcodedApiServerId(api_server_id)) {
+      return HARDCODED_CORE_SCHEMAVAULTS_API_SERVER_DOMAINS.filter(
+        hardcoded_api_domain => hardcoded_api_domain.api_server_id === api_server_id
+      )
     }
 
     const queryApiServers = this.db
@@ -143,7 +187,7 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
         CONSTRAINT fk_owner_org
           FOREIGN KEY (owner_organization_id)
           REFERENCES ORGANIZATIONS(organization_id)
-          ON DELETE SET NULL
+          ON DELETE CASCADE
       );
     `;
     await createApiServersTable.execute(db);
@@ -215,19 +259,10 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     return HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS;
   }
 
-  public async listAllApiServers(
-    user: UserData,
-  ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
+  public async listAllApiServers(): Promise<readonly SchemaVaultsApiServerDefinition[]> {
     if (!await this.hasBeenInitialized()) {
       await this.performSetupTasks();
     }
-
-    if (!user)
-      throw new Error("You must be logged in to list SchemaVaults API servers");
-    if (!user.admin)
-      throw new Error(
-        "You must be an admin to list all SchemaVaults API servers",
-      );
 
     const all_api_servers: SchemaVaultsApiServerDefinition[] = []
 
@@ -291,7 +326,7 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     }
 
     if (org_id === SCHEMAVAULTS_ORGANIZATION_ID) {
-      api_server_definitions.push(...HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS.filter(s => s.owner_organization_id === 'schemavaults'))
+      api_server_definitions.push(...HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS.filter(s => s.owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID))
     }
 
     return api_server_definitions;
@@ -306,10 +341,6 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
       console.error(e);
       throw new Error("Failed to ensure that API servers tables were created");
     }
-  }
-
-  public constructor(protected db: Kysely<AuthDatabase>) {
-    super(db);
   }
 
   public async performSetupTasks(): Promise<void> {

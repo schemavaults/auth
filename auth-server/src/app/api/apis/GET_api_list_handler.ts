@@ -111,9 +111,7 @@ async function GET_api_list_handler(
                 {
                   success: true,
                   message: "Successfully listed all SchemaVaults API servers",
-                  list: (await apiServerRegistry.listAllApiServers(
-                    user,
-                  )) satisfies readonly SchemaVaultsApiServerDefinition[],
+                  list: (await apiServerRegistry.listAllApiServers()) satisfies readonly SchemaVaultsApiServerDefinition[],
                 } satisfies ListApiServersQueryResponse,
                 {
                   status: 200,
