@@ -25,3 +25,7 @@ export { refreshTokenExpiry, accessTokenExpiry } from "./expiry";
 // Re-export jose functions for JWKS access key verification
 export { jwtVerify, importSPKI, SignJWT } from "jose";
 export type { JWTPayload, JWTVerifyResult } from "jose";
+
+// Algorithms used
+export { sign_verify_alg } from "./sign_verify_alg";
+export { encrypt_decrypt_alg } from "./encrypt_decrypt_alg";
