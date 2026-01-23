@@ -350,14 +350,14 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
 
     query = query.limit(MAX_PAGE_SIZE);
 
-    let result: SchemaVaultsApp[] = await query.selectAll().execute();
+    const query_result: readonly SchemaVaultsApp[] = await query.selectAll().execute();
 
-    if (!Array.isArray(result)) {
+    if (!Array.isArray(query_result)) {
       throw new Error("Expected database query result to be an array of rows");
     }
 
     // result => transformed_output => transform => (actually) transformed_output
-    let transformed_output: SchemaVaultsApp[] = [...result];
+    const transformed_output: SchemaVaultsApp[] = [...query_result];
 
     // Add hardcoded apps to query result
     if (type === "all") {
@@ -365,13 +365,12 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
     } else if (type === "public") {
       const hardcodedAppsLength: number =
         HARDCODED_CORE_SCHEMAVAULTS_APPS.length;
-      const resultLength = result.length;
       transformed_output.push(
         ...HARDCODED_CORE_SCHEMAVAULTS_APPS.filter((a) => a.public),
       );
       if (this.debug) {
         console.log(
-          `[SchemaVaultsAppRegistry] Number of public apps from database: ${resultLength}`,
+          `[SchemaVaultsAppRegistry] Number of public apps from database: ${query_result.length}`,
         );
         console.log(
           `[SchemaVaultsAppRegistry] Number of public hardcoded apps: ${hardcodedAppsLength}`,

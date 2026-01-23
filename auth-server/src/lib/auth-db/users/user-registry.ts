@@ -159,7 +159,7 @@ export class UserRegistry extends AbstractDatabaseResourceGroup {
 
       if (typeof e === "object" && !!e && "type" in e && e.type === "error") {
         if ("error" in e) {
-          let error = e.error;
+          const error: unknown = e.error;
           console.error("Type of DB setup error: ", typeof e.error);
           if (typeof error === "object") {
             console.error("UserRegistry setup error <object error>: ", error);

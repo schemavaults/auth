@@ -3,6 +3,7 @@ const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
 const globals = require("globals");
 const nextVitals = require('eslint-config-next/core-web-vitals')
+const nextTypescript = require('eslint-config-next/typescript')
 
 
 module.exports = [
@@ -11,6 +12,8 @@ module.exports = [
 
   // NextJS Web Vitals recommended rules
   ...nextVitals,
+
+  ...nextTypescript,
 
   // Main config
   {
@@ -69,6 +72,6 @@ module.exports = [
 
   // Ignore patterns
   {
-    ignores: ["dist/**", "node_modules/**", "*.config.js", ".next/**", "out/**", "build/**", "next-env.d.ts"],
+    ignores: ["dist/**", "node_modules/**", "*.config.js", ".next/**", "out/**", "build/**"],
   },
 ];

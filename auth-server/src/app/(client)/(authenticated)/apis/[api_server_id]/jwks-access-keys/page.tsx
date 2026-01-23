@@ -48,9 +48,9 @@ export default async function JwksAccessKeysPage(
         redirectWithError(403, 'forbidden');
       }
 
-      let owner_organization_id: OrganizationID | null | undefined;
+
       const api_server = await loadApiServerDefinitionFromDatabase({ api_server_id, db: dbh.db });
-      owner_organization_id = api_server['owner_organization_id'];
+      const owner_organization_id: OrganizationID | null | undefined = api_server['owner_organization_id'];
       if (!owner_organization_id || typeof owner_organization_id !== 'string') {
         console.error(`Failed to resolve 'owner_organization_id' for API server: '${api_server_id}'`);
         redirectWithError(500, "internal_server_error");
