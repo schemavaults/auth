@@ -27,9 +27,7 @@ export default function createApiServer(
   }
 
   // Navigate to the appropriate page based on whether organization_id is provided
-  const targetUrl = organization_id
-    ? `/org/${organization_id}`
-    : "/admin/apis";
+  const targetUrl = organization_id ? `/org/${organization_id}` : "/admin/apis";
 
   return cy.visit(targetUrl).then(() => {
     cy.url().should("include", targetUrl);
@@ -88,14 +86,16 @@ export default function createApiServer(
       .should("not.be.disabled")
       .click();
 
+    cy.log("Create API server dialog submitted!");
+
+    cy.wait(2000);
+
     return cy
       .wait("@createApiServerRequest", { timeout: 20000 })
       .then((interception) => {
         interception.response?.statusCode &&
           cy.wrap(interception.response?.statusCode).should("eq", 200);
-        cy.log(
-          "API server creation request appears to have been a success!",
-        );
+        cy.log("API server creation request appears to have been a success!");
         cy.get(`#${createApiServerDialogContentId}`, {
           log: false,
         }).should("not.exist");

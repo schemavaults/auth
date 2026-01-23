@@ -41,6 +41,11 @@ interface CreateOrganizationDialogProps {
   ) => void;
 }
 
+const createOrganizationDialogContentId: string =
+  "create-organization-dialog-content";
+const openOrganizationCreationDialogButtonId: string =
+  "open-create-organization-dialog-button";
+
 export function CreateOrganizationDialog({
   clearOrganizationsCache,
 }: CreateOrganizationDialogProps): ReactElement {
@@ -171,12 +176,12 @@ export function CreateOrganizationDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button id="open-create-organization-dialog-button">
+        <Button id={openOrganizationCreationDialogButtonId}>
           <Building2 className="h-4 w-4 mr-2" /> Create organization
         </Button>
       </DialogTrigger>
       <DialogContent
-        id="create-organization-dialog-content"
+        id={createOrganizationDialogContentId}
         className="sm:max-w-[425px]"
       >
         <Form {...form}>

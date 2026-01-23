@@ -24,9 +24,7 @@ export default function createApp(
   }
 
   // Navigate to the appropriate page based on whether organization_id is provided
-  const targetUrl = organization_id
-    ? `/org/${organization_id}`
-    : "/admin/apps";
+  const targetUrl = organization_id ? `/org/${organization_id}` : "/admin/apps";
 
   return cy.visit(targetUrl).then(() => {
     cy.url().should("include", targetUrl);
@@ -36,9 +34,7 @@ export default function createApp(
     // Allow hydration before clicking on button
     cy.wait(2000);
 
-    cy.get(`button#${openCreateAppDialogButtonId}`)
-      .should("exist")
-      .click();
+    cy.get(`button#${openCreateAppDialogButtonId}`).should("exist").click();
 
     // Wait for dialog animation
     cy.wait(750);
@@ -67,7 +63,6 @@ export default function createApp(
         .should("exist")
         .click();
     }
-
     cy.url({ log: false }).should("include", targetUrl);
 
     // Submit form
@@ -82,6 +77,9 @@ export default function createApp(
       .should("exist")
       .should("not.be.disabled")
       .click();
+
+    cy.log("Create app dialog submitted!");
+    cy.wait(2000);
 
     return cy
       .wait("@createAppRequest", { timeout: 20000 })

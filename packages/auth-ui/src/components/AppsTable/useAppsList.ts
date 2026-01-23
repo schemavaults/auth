@@ -2,7 +2,7 @@
 
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR, { type SWRResponse, useSWRConfig } from "swr";
 import type { AccessToken } from "@schemavaults/auth-common";
 import {
   type ListAppsQueryResponse,
@@ -43,7 +43,7 @@ export function useAppsList({
   queryType,
   initialData,
   organization_id,
-}: UseAppsListOptions) {
+}: UseAppsListOptions): SWRResponse<readonly SchemaVaultsApp[]> {
   const auth = useAuth();
   const environment = useAppEnvironment();
   const endpoint = getAppsListEndpoint(queryType, organization_id);
@@ -119,7 +119,14 @@ export function useAppsList({
         ) {
           throw new Error("List apps response has success = false");
         }
-        return listAppsResponseObject.list;
+        const appsList: readonly SchemaVaultsApp[] =
+          listAppsResponseObject.list;
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[useAppsList] Received list of apps: ", appsList);
+        }
+
+        return appsList;
       } catch (error: unknown) {
         toast({
           variant: "destructive",
@@ -134,3 +141,5 @@ export function useAppsList({
     },
   );
 }
+
+export default useAppsList;
