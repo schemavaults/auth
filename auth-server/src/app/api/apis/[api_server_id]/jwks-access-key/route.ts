@@ -2,14 +2,11 @@ import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
-import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
-import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import { apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
 import type { JwksAccessKeyStatusQueryResponse } from '@/lib/auth-db/jwks-access-keys';
-
 /**
  * POST /api/apis/[api_server_id]/jwks-access-key
  * Generate initial JWKS access key pair for an API server
@@ -25,6 +22,14 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/apis/[a
         return NextResponse.json(
           { success: false, message: "Invalid API server ID" },
           { status: 400 }
+        );
+      }
+
+      // Block JWKS access key management for schemavaults-auth - it is the JWKS provider
+      if (api_server_id === SCHEMAVAULTS_AUTH_SERVER.api_server_id) {
+        return NextResponse.json(
+          { success: false, message: "JWKS access keys cannot be managed for the schemavaults-auth API server" },
+          { status: 403 }
         );
       }
 
@@ -96,6 +101,14 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/apis/[ap
         return NextResponse.json(
           { success: false, message: "Invalid API server ID" },
           { status: 400 }
+        );
+      }
+
+      // Block JWKS access key management for schemavaults-auth - it is the JWKS provider
+      if (api_server_id === SCHEMAVAULTS_AUTH_SERVER.api_server_id) {
+        return NextResponse.json(
+          { success: false, message: "JWKS access keys cannot be managed for the schemavaults-auth API server" },
+          { status: 403 }
         );
       }
 

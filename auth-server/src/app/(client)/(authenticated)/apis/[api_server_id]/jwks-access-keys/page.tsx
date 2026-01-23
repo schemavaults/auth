@@ -6,7 +6,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import JwksAccessKeysPageView from "./jwks-access-keys-page-view";
-import { type ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
+import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
@@ -35,6 +35,12 @@ export default async function JwksAccessKeysPage(
       } catch (e: unknown) {
         console.error("[JwksAccessKeysPage] There was an attempt to load a page with an invalid 'api_server_id': ", e);
         redirectWithError(400, "bad_request");
+      }
+
+      // Block access to JWKS access keys page for schemavaults-auth - it is the JWKS provider
+      if (api_server_id === SCHEMAVAULTS_AUTH_SERVER.api_server_id) {
+        console.warn("[JwksAccessKeysPage] Blocking access - schemavaults-auth is the JWKS provider");
+        redirectWithError(403, 'forbidden');
       }
 
       const hardcoded: boolean = isHardcodedApiServerId(api_server_id)

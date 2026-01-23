@@ -5,7 +5,7 @@ import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGua
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
-import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import { apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 async function isUserInOwnerOrganization(
@@ -44,6 +44,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json(
           { success: false, message: "Invalid API server ID" },
           { status: 400 }
+        );
+      }
+
+      // Block JWKS access key management for schemavaults-auth - it is the JWKS provider
+      if (api_server_id === SCHEMAVAULTS_AUTH_SERVER.api_server_id) {
+        return NextResponse.json(
+          { success: false, message: "JWKS access keys cannot be managed for the schemavaults-auth API server" },
+          { status: 403 }
         );
       }
 

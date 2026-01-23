@@ -14,9 +14,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
-import type {
-  ApiServerId,
-  SchemaVaultsApiServerDefinition,
+import {
+  SCHEMAVAULTS_AUTH_SERVER,
+  type ApiServerId,
+  type SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
 import Link from "next/link";
 import type { OrganizationID } from "@schemavaults/auth-common";
@@ -116,14 +117,16 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
               <ClipboardCopy className={menuItemIconClassname} /> Copy API
               Server ID
             </DropdownMenuItem>
-            <Link
-              href={`/apis/${api_server_id}/jwks-access-keys`}
-              className="hover:cursor-pointer"
-            >
-              <DropdownMenuItem className={menuItemClassname}>
-                <Key className={menuItemIconClassname} /> Manage Access Keys
-              </DropdownMenuItem>
-            </Link>
+            {api_server_id !== SCHEMAVAULTS_AUTH_SERVER.api_server_id && (
+              <Link
+                href={`/apis/${api_server_id}/jwks-access-keys`}
+                className="hover:cursor-pointer"
+              >
+                <DropdownMenuItem className={menuItemClassname}>
+                  <Key className={menuItemIconClassname} /> Manage Access Keys
+                </DropdownMenuItem>
+              </Link>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       );
