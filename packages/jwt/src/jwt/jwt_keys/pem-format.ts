@@ -1,3 +1,6 @@
+import isValidBase64UrlEncoding from "@/utils/isValidBase64UrlEncoding";
+import { base64url } from "jose";
+
 /**
  * @name PEMFormat
  * @class
@@ -6,7 +9,22 @@
  * @see PEMFormat.isPemFormat()
  */
 export class PEMFormat {
-  private constructor() {}
+  private readonly _pem: string;
+  private readonly _key_type: "PUBLIC" | "PRIVATE";
+
+  private constructor(pem: string, key_type: "PUBLIC" | "PRIVATE") {
+    if (typeof pem !== "string") {
+      throw new TypeError("Expected 'pem' key to be a string!");
+    }
+    if (key_type !== "PUBLIC" && key_type !== "PRIVATE") {
+      throw new TypeError("Expected 'key_type' to be 'PUBLIC' or 'PRIVATE'");
+    }
+    if (!PEMFormat.isPemFormat(pem, key_type)) {
+      throw new TypeError("Key does not appear to be in valid PEM format!");
+    }
+    this._pem = pem;
+    this._key_type = key_type;
+  }
 
   private static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string {
     let byteArray: Uint8Array = new Uint8Array(arrayBuffer);
@@ -79,6 +97,52 @@ export class PEMFormat {
     }
 
     return true;
+  }
+
+  public static parsePem(
+    pem: string,
+    key_type: "PUBLIC" | "PRIVATE",
+  ): PEMFormat {
+    if (key_type !== "PUBLIC" && key_type !== "PRIVATE") {
+      throw new TypeError("Expected 'key_type' to be 'PUBLIC' or 'PRIVATE'");
+    }
+
+    return new PEMFormat(pem, key_type);
+  }
+
+  public get value(): string {
+    return this._pem;
+  }
+
+  public get key_type(): "PUBLIC" | "PRIVATE" {
+    return this._key_type;
+  }
+
+  public toBase64Url(): string {
+    return base64url.encode(this._pem);
+  }
+
+  public static fromBase64Url(
+    base64url_encoded_pem_key: string,
+    key_type: "PUBLIC" | "PRIVATE",
+  ) {
+    if (typeof base64url_encoded_pem_key !== "string") {
+      throw new TypeError(
+        "Expected 'base64url_encoded_pem_key' key to be a string!",
+      );
+    } else if (!isValidBase64UrlEncoding(base64url_encoded_pem_key)) {
+      throw new TypeError(
+        "'base64url_encoded_pem_key' does not appear to be base64url-encoded!",
+      );
+    }
+    if (key_type !== "PUBLIC" && key_type !== "PRIVATE") {
+      throw new TypeError("Expected 'key_type' to be 'PUBLIC' or 'PRIVATE'");
+    }
+    const decoded = base64url.decode(base64url_encoded_pem_key).toString();
+    if (typeof decoded !== "string") {
+      throw new TypeError("Expected 'decoded' key to be a string!");
+    }
+    return new PEMFormat(decoded, key_type);
   }
 }
 

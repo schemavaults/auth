@@ -5,7 +5,6 @@ export interface BaseKeyPairFactoryOptions {
   debug?: boolean;
 }
 
-
 export abstract class AbstractBaseKeyPairFactory {
   protected readonly debug: boolean;
 
@@ -13,11 +12,17 @@ export abstract class AbstractBaseKeyPairFactory {
     this.debug = options.debug || false;
   }
 
-  protected static toPemFormat(key: ArrayBuffer, key_type: "PUBLIC" | "PRIVATE") {
+  protected static toPemFormat(
+    key: ArrayBuffer,
+    key_type: "PUBLIC" | "PRIVATE",
+  ) {
     return PEMFormat.toPemFormat(key, key_type);
   }
 
-  protected static exportKeyPair([privateKey, publicKey]: readonly [privateKey: string, publicKey: string], export_method: "pem" | "base64url") {
+  protected static exportKeyPair(
+    [privateKey, publicKey]: readonly [privateKey: string, publicKey: string],
+    export_method: "pem" | "base64url",
+  ) {
     switch (export_method) {
       case "pem":
         return [privateKey, publicKey] as const satisfies readonly [
@@ -26,8 +31,8 @@ export abstract class AbstractBaseKeyPairFactory {
         ];
       case "base64url":
         return [
-          base64url.encode(privateKey),
-          base64url.encode(publicKey),
+          PEMFormat.parsePem(privateKey, "PRIVATE").toBase64Url(),
+          PEMFormat.parsePem(publicKey, "PUBLIC").toBase64Url(),
         ] as const satisfies readonly [string, string];
       default:
         throw new Error(
@@ -36,7 +41,9 @@ export abstract class AbstractBaseKeyPairFactory {
     }
   }
 
-  public abstract generate(export_method: "pem" | "base64url"): Promise<readonly [privateKey: string, publicKey: string]>;
+  public abstract generate(
+    export_method: "pem" | "base64url",
+  ): Promise<readonly [privateKey: string, publicKey: string]>;
 }
 
 export default AbstractBaseKeyPairFactory;

@@ -25,7 +25,7 @@ export { default as getAudienceFromToken } from "./get_audience_from_token";
 export { refreshTokenExpiry, accessTokenExpiry } from "./expiry";
 
 // Re-export jose functions for JWKS access key verification
-export { jwtVerify, importSPKI, SignJWT } from "jose";
+export { jwtVerify, importSPKI, SignJWT, importPKCS8 } from "jose";
 export type { JWTPayload, JWTVerifyResult } from "jose";
 
 // Algorithms used
