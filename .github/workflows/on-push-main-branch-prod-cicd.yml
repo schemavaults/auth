@@ -65,34 +65,11 @@ jobs:
           bun run test
 
   Run-E2E-Tests:
-    runs-on: ubuntu-latest
     needs:
       - SetupCiCdConfig
       - Run-Unit-Tests
       - Run-ESLint
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
-      - name: Run Tests with Docker Compose
-        run: |
-          /bin/bash ./e2e.sh
-        working-directory: tests/e2e-auth-tests
-      - name: Check if screenshots directory exists
-        id: check_screenshots_existence
-        run: |
-          if [ -d "tests/e2e-auth-tests/cypress/screenshots/" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-        if: always()
-      - name: Upload screenshots of failing tests
-        uses: actions/upload-artifact@v6
-        with:
-          name: failed-test-screenshots-${{ github.sha }}
-          path: tests/e2e-auth-tests/cypress/screenshots/
-          retention-days: 2
-        if: always() && steps.check_screenshots_existence.outputs.exists == 'true'
+    uses: ./.github/workflows/run-e2e-tests.yml
 
   Deploy-Vercel-Production:
     runs-on: ubuntu-latest
