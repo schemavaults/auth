@@ -14,6 +14,8 @@ export {
   importAsymmetricJWK,
   jsonSerializedJwtKeySchema,
   PEMFormat,
+  ContentEncryptionKeyPairFactory,
+  SigningKeyPairFactory,
 } from "./jwt_keys";
 export type * from "./jwt_keys";
 
