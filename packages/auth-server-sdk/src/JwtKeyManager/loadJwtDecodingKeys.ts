@@ -31,6 +31,10 @@ export async function loadJwtDecodingKeysFromJwks(
     );
   }
 
+  if (debug) {
+    console.log(`loadJwtDecodingKeysFromJwks(keyset_id='${keyset_id}', jwks)`);
+  }
+
   // Loop over keys in JWKS and find the required keys
   let verification_key: CryptoKey | undefined = undefined;
   let decryption_key: CryptoKey | undefined = undefined;

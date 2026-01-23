@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
   cn,
@@ -126,3 +125,5 @@ export function OrganizationMembersCard(
     </Card>
   );
 }
+
+export default OrganizationMembersCard;

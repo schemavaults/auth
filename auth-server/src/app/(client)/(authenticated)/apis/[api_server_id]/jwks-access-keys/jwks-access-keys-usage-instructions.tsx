@@ -18,7 +18,7 @@ export default function JwksAccessKeysUsageInstructions(
       <CardHeader>
         <CardTitle>Usage Instructions</CardTitle>
         <CardDescription>
-          To authenticate requests to the JWKS endpoint, your API server needs to create a signed JWT assertion using your 'JWKS Access Key' private key:
+          To authenticate requests to the JWKS endpoint, your API server needs to create a signed JWT assertion using your {"'JWKS Access Key'"} private key:
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -11,7 +11,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
 import {
@@ -20,7 +19,6 @@ import {
   type SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
 import Link from "next/link";
-import type { OrganizationID } from "@schemavaults/auth-common";
 
 export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
   {

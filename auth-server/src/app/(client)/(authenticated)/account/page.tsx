@@ -12,7 +12,6 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import {
   AuthorizedAppsRegistry,
-  type ServerlessDatabase,
   preloadAppsTable,
   SchemaVaultsAppRegistry,
   OrganizationsRegistry,

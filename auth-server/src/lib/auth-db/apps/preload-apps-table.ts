@@ -17,7 +17,7 @@ export interface QueryAppsInputOptions {
   list_apps_query_type: ListAppsQueryType;
   user: UserData;
   appsRegistry: SchemaVaultsAppRegistry;
-  authorizedAppsRegistry: AuthorizedAppsRegistry;
+  authorizedAppsRegistry?: AuthorizedAppsRegistry;
   organization_id?: OrganizationID;
 }
 
@@ -156,6 +156,10 @@ export async function preloadAppsTable(
         );
 
       case "authorized":
+        if (!opts.authorizedAppsRegistry) {
+          throw new TypeError("'authorizedAppsRegistry' must be passed for this preload-query-type!")
+        }
+
         return await returnAppsWithDomains(
           await preloadAuthorizedApps(
             opts.appsRegistry,

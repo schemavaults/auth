@@ -5,10 +5,22 @@ import {
   type IProtectedAdminServerComponentPageProps,
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
-import { ReactElement } from "react";
+import type { ReactElement } from "react";
+import { preloadAppsTable, SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
+import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 
-async function AdminAppsPageServerComponent(): Promise<ReactElement> {
-  return <AdminAppsPageView />
+async function AdminAppsPageServerComponent(
+  { dbh, user }: IProtectedAdminServerComponentPageProps
+): Promise<ReactElement> {
+  const appsRegistry = new SchemaVaultsAppRegistry(dbh.db)
+
+  const preloaded: PreloadedAppsTableDataWithDomainRefs = await preloadAppsTable({
+    list_apps_query_type: 'all',
+    user,
+    appsRegistry,
+  });
+
+  return <AdminAppsPageView preloaded={preloaded} />
 }
 
 export default async function AdminAppsPage(): Promise<ReactElement> {

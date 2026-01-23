@@ -67,7 +67,7 @@ export default async function JwksAccessKeysPage(
       try {
         key_metadata = await jwks_access_key_registry.getKeyMetadata(api_server_id);
       } catch (e: unknown) {
-        console.error()
+        console.error(`Error loading key metadata for API server with ID '${api_server_id}': `, e);
         redirectWithError(500, 'internal_server_error');
       }
 

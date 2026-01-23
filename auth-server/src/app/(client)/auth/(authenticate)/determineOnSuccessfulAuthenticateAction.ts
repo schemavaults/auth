@@ -6,7 +6,6 @@ import {
   appIdSchema,
   type SchemaVaultsApp,
 } from "@schemavaults/app-definitions";
-import { redirect } from "next/navigation";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 
 export interface IDetermineOnSuccessfulAuthenticateActionInputs {

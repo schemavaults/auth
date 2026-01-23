@@ -82,7 +82,7 @@ export async function decodeFirstOfSeveralJwts(
   function validateSameInfoAcrossTokens(): void {
     const uids_set: Set<string> = new Set();
     const subs_set: Set<string> = new Set();
-    const auds_set: Set<string> = new Set();
+    const emails_set: Set<string> = new Set();
 
     for (const decoded of successfulDecodeResults) {
       uids_set.add(decoded.uid);
@@ -90,9 +90,12 @@ export async function decodeFirstOfSeveralJwts(
       if (decoded.uid !== decoded.sub) {
         throw new Error("uid not equal to sub");
       }
+      emails_set.add(decoded.email);
     }
     if (uids_set.size !== 1 || subs_set.size !== 1) {
       throw new Error("Token decoding produced different user IDs!");
+    } else if (emails_set.size !== 1) {
+      throw new Error("Token decoding produced different user emails!");
     }
   }
   validateSameInfoAcrossTokens();
