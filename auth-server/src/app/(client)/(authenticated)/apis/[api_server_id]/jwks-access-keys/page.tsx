@@ -68,7 +68,10 @@ export default async function JwksAccessKeysPage(
       return (
         <JwksAccessKeysPageView
           api_server_id={api_server_id}
-          preloaded_latest_jwks_access_keys_metadata={key_metadata ?? null}
+          preloaded_latest_jwks_access_keys_metadata={{
+            success: true,
+            key_metadata: key_metadata ?? false
+          }}
         />
       );
     }

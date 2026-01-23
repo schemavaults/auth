@@ -10,17 +10,17 @@ import { CheckCircle, ClipboardCopy, KeyRound, Loader2, RotateCcw } from "lucide
 import JwksAccessKeysUsageInstructions from "./jwks-access-keys-usage-instructions";
 import type { JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
 
-export interface JwksAccessKeysPageViewProps {
-  api_server_id: ApiServerId
-  preloaded_latest_jwks_access_keys_metadata: JwksAccessKeyStatusQueryResponse | null;
-}
-
 interface SuccessKeyMetadataResponse {
   success: true;
   key_metadata: JwksAccessKeyStatusQueryResponse | false;
 }
 
 type KeyMetadataResponse = SuccessKeyMetadataResponse | { success: false };
+
+export interface JwksAccessKeysPageViewProps {
+  api_server_id: ApiServerId
+  preloaded_latest_jwks_access_keys_metadata: SuccessKeyMetadataResponse;
+}
 
 interface GenerateKeyResponse {
   success: boolean;
@@ -98,11 +98,12 @@ function ApiJwksAccessKeysStatusCard(
 ): ReactElement {
   const {
     data: keyData,
-    error: loadKeyError
+    error: loadKeyError,
+    isLoading
   } = keypairStatus;
 
   function KeyStatusCardContent(): ReactElement {
-    if (!keyData && !loadKeyError) {
+    if (!keyData && !loadKeyError && isLoading) {
       return (
         <div className="flex flex-row flex-nowrap items-center justify-center gap-4">
           <Loader2 className="h-6 w-6 animate-spin" />
@@ -122,7 +123,7 @@ function ApiJwksAccessKeysStatusCard(
       )
     }
 
-    if (keyData && !keyData.key_metadata) {
+    if (keyData && keyData.success && !keyData.key_metadata) {
       return (
         <p className="text-gray-600 dark:text-gray-400">
           No JWKS access key has been generated for this API server yet.
@@ -130,7 +131,7 @@ function ApiJwksAccessKeysStatusCard(
       );
     }
 
-    if (keyData && keyData.key_metadata) {
+    if (keyData && keyData.success && keyData.key_metadata) {
       return (
         <div>
           <dl className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -245,10 +246,7 @@ function JwksAccessKeysPageView({ api_server_id, preloaded_latest_jwks_access_ke
     api_server_id ? `/api/apis/${api_server_id}/jwks-access-key` : null,
     fetcher,
     {
-      fallbackData: typeof preloaded_latest_jwks_access_keys_metadata === 'object' && preloaded_latest_jwks_access_keys_metadata ? {
-        success: true,
-        key_metadata: preloaded_latest_jwks_access_keys_metadata ?? false
-      } : undefined
+      fallbackData: typeof preloaded_latest_jwks_access_keys_metadata === 'object' && preloaded_latest_jwks_access_keys_metadata ? preloaded_latest_jwks_access_keys_metadata : undefined
     }
   );
   const mutate = keypairStatus.mutate;
