@@ -171,11 +171,14 @@ export function CreateOrganizationDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button id="open-create-organization-dialog-button">
           <Building2 className="h-4 w-4 mr-2" /> Create organization
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        id="create-organization-dialog-content"
+        className="sm:max-w-[425px]"
+      >
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -230,7 +233,11 @@ export function CreateOrganizationDialog({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={submitting}>
+              <Button
+                id="submit-create-organization-form-button"
+                type="submit"
+                disabled={submitting}
+              >
                 <Building2 className="h-4 w-4 mr-2" />
                 Create organization
               </Button>

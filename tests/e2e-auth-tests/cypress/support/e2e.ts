@@ -16,6 +16,7 @@
 // Import commands.js using ES2015 syntax:
 import "./commands";
 import type { RegularUserCredentials } from "./actions/create_and_login_as_regular_user";
+import type { CreateOrganizationParams } from "./actions/create_organization";
 
 declare global {
   namespace Cypress {
@@ -38,6 +39,7 @@ declare global {
         invite_code: string,
         max_uses: number,
       ): Chainable<boolean>;
+      create_organization(params: CreateOrganizationParams): Chainable<boolean>;
       generate_random_code(length: number): Chainable<string>;
     }
   }
