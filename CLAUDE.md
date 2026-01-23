@@ -29,6 +29,13 @@ bun run lint --filter @schemavaults/auth-server      # Lint auth-server only
 bun run lint --filter @schemavaults/auth-client-sdk  # Lint specific package
 ```
 
+### One-off Commands
+```bash
+# We use bun, not npm/yarn
+# So use bunx where you would use npx
+bunx tsc --noEmit
+```
+
 ### Testing
 ```bash
 # Unit tests (per-package using bun test)
