@@ -2,6 +2,7 @@
 
 import createAndLoginAsRegularUser from "./actions/create_and_login_as_regular_user";
 import createAndLoginAsSuperuser from "./actions/create_and_login_as_superuser";
+import createApp from "./actions/create_app";
 import createInviteCode from "./actions/create_invite_code";
 import createApiServer from "./actions/create_api_server";
 import createOrganization from "./actions/create_organization";
@@ -79,3 +80,5 @@ Cypress.Commands.add(
 Cypress.Commands.add("create_organization", createOrganization);
 
 Cypress.Commands.add("create_api_server", createApiServer);
+
+Cypress.Commands.add("create_app", createApp);

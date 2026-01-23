@@ -216,11 +216,11 @@ export function CreateAppDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button>
+        <Button id="open-create-app-dialog-button">
           <AppWindow className="h-4 w-4 mr-2" /> Create app
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent id="create-app-dialog-content" className="sm:max-w-[425px]">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -296,7 +296,11 @@ export function CreateAppDialog({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={submitting}>
+              <Button
+                id="submit-create-app-form-button"
+                type="submit"
+                disabled={submitting}
+              >
                 <AppWindow className="h-4 w-4 mr-2" />
                 Create client application
               </Button>
