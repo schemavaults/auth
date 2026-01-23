@@ -18,23 +18,22 @@ export default function JwksAccessKeysUsageInstructions(
       <CardHeader>
         <CardTitle>Usage Instructions</CardTitle>
         <CardDescription>
-          To authenticate requests to the JWKS endpoint, your API server needs to create a signed JWT assertion using your {"'JWKS Access Key'"} private key:
+          To authenticate requests to the JWKS endpoint, your API server needs to create a signed JWT assertion using your {"'JWKS Access Private Key'"}.
+          If you are using @schemavaults/auth-server-sdk, you can simply set the <code>SCHEMAVAULTS_API_SERVER_ID</code> and <code>SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY</code> environment variables.
+          Otherwise, you can manually sign a token (see the <code>createJwksAccessProofToken</code> method of <code>@schemavaults/jwt</code>) to prove that you are allowed to download the JSON Web Key Set:
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
           <li>
-            Create a JWT with <code>sub</code> set to your API server ID (i.e. <code>{ api_server_id }</code>).
-          </li>
-          <li>
-            Sign it using the { sign_verify_alg } algorithm with your private key.
+            Create a signed token with the <code>createJwksAccessProofToken</code> method of the <code>@schemavaults/jwt</code> package (and your private key!).
           </li>
           <li>
             Send it as a Bearer token in the Authorization header when calling the {" "}
             <code>/api/jwks/{"{audience}"}</code> endpoint (i.e. Get your JWKS for this API server from: <code>{ jwks_endpoint }</code>).
           </li>
           <li>
-            This should allow you to receive the JWKS for your API server-- you can use the keys you receive to verify that users have authenticated with SchemaVaults Auth!
+            This should allow you to receive the JWKS for your API server-- you can use the keys you receive to verify that tokens were signed and encrypted by <code>@schemavaults/auth-server</code>!
           </li>
         </ol>
       </CardContent>

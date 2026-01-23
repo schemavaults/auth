@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useTransition, useMemo } from "react";
 import PageContainer from "@/components/PageContainer";
 import useSWR, { SWRResponse } from "swr";
 import type { ReactElement } from "react";
@@ -10,6 +10,7 @@ import { CheckCircle, ClipboardCopy } from "lucide-react";
 import JwksAccessKeysUsageInstructions from "./jwks-access-keys-usage-instructions";
 import type { SuccessKeyMetadataResponse, KeyMetadataResponse } from "./KeyMetadataResponse";
 import ApiJwksAccessKeysStatusCard from "./jwks-access-keys-status-card";
+import { PEMFormat } from "@schemavaults/jwt";
 
 export interface JwksAccessKeysPageViewProps {
   api_server_id: ApiServerId
@@ -26,20 +27,56 @@ interface GenerateKeyResponse {
 const fetcher = (url: string) =>
   fetch(url, { credentials: "include" }).then((res) => res.json());
 
+type PrivateKeyDisplayFormat = "pem" | "base64url" | "env";
 
-function DisplayGeneratedPrivateKeyForOneTimeCopy({ generatedPrivateKey }: { generatedPrivateKey: string }): ReactElement {
+function getFormattedPrivateKey(
+  pemKey: string,
+  format: PrivateKeyDisplayFormat,
+  apiServerId: ApiServerId
+): string {
+  switch (format) {
+    case "pem":
+      return pemKey;
+    case "base64url": {
+      const parsed = PEMFormat.parsePem(pemKey, "PRIVATE");
+      return parsed.toBase64Url();
+    }
+    case "env": {
+      const parsed = PEMFormat.parsePem(pemKey, "PRIVATE");
+      const base64urlKey = parsed.toBase64Url();
+      return `SCHEMAVAULTS_API_SERVER_ID="${apiServerId}"\nSCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY="${base64urlKey}"`;
+    }
+  }
+}
+
+interface DisplayGeneratedPrivateKeyForOneTimeCopyProps {
+  generatedPrivateKey: string;
+  api_server_id: ApiServerId;
+}
+
+function DisplayGeneratedPrivateKeyForOneTimeCopy({
+  generatedPrivateKey,
+  api_server_id
+}: DisplayGeneratedPrivateKeyForOneTimeCopyProps): ReactElement {
   const [copied, setCopied] = useState<boolean>(false);
+  const [displayFormat, setDisplayFormat] = useState<PrivateKeyDisplayFormat>("env");
+
+  const formattedContent = useMemo(
+    () => getFormattedPrivateKey(generatedPrivateKey, displayFormat, api_server_id),
+    [generatedPrivateKey, displayFormat, api_server_id]
+  );
+
   const handleCopyKey = useCallback(async () => {
-    if (!generatedPrivateKey) return;
+    if (!formattedContent) return;
 
     try {
-      await navigator.clipboard.writeText(generatedPrivateKey);
+      await navigator.clipboard.writeText(formattedContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
       console.error("Failed to copy to clipboard:", e);
     }
-  }, [generatedPrivateKey]);
+  }, [formattedContent]);
 
   return (
     <Card className={cn(
@@ -53,9 +90,35 @@ function DisplayGeneratedPrivateKeyForOneTimeCopy({ generatedPrivateKey }: { gen
         </CardDescription>
       </CardHeader>
         <CardContent>
+          <div className="flex flex-row gap-1 mb-4">
+            <Button
+              size="sm"
+              variant={displayFormat === "env" ? "default" : "outline"}
+              onClick={() => setDisplayFormat("env")}
+              className="text-xs"
+            >
+              .env Variables
+            </Button>
+            <Button
+              size="sm"
+              variant={displayFormat === "base64url" ? "default" : "outline"}
+              onClick={() => setDisplayFormat("base64url")}
+              className="text-xs"
+            >
+              Base64URL
+            </Button>
+            <Button
+              size="sm"
+              variant={displayFormat === "pem" ? "default" : "outline"}
+              onClick={() => setDisplayFormat("pem")}
+              className="text-xs"
+            >
+              PEM
+            </Button>
+          </div>
           <div className="relative">
             <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs whitespace-pre-wrap break-all">
-              {generatedPrivateKey}
+              {formattedContent}
             </pre>
             <Button
               onClick={handleCopyKey}
@@ -206,7 +269,10 @@ function JwksAccessKeysPageView({ api_server_id, preloaded_latest_jwks_access_ke
       )}
 
       {generatedPrivateKey && (
-        <DisplayGeneratedPrivateKeyForOneTimeCopy generatedPrivateKey={generatedPrivateKey} />
+        <DisplayGeneratedPrivateKeyForOneTimeCopy
+          generatedPrivateKey={generatedPrivateKey}
+          api_server_id={api_server_id}
+        />
       )}
 
       <ApiJwksAccessKeysStatusCard isGenerating={isGenerating} keypairStatus={keypairStatus} handleGenerateKey={handleGenerateKey} handleRegenerateKey={handleRegenerateKey} />
