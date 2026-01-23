@@ -1,6 +1,6 @@
 "use client";
 
-import type { PropsWithChildren, ReactElement, ReactNode } from "react";
+import type { PropsWithChildren, ReactElement, ReactNode, FC } from "react";
 import {
   Button,
   Card,
@@ -39,6 +39,7 @@ export function AccountDetailsCard(
   props: AccountDetailsCardProps,
 ): ReactElement {
   const currentUser = props.user;
+  const Link: FC<PropsWithChildren<{ href: string }>> = props.Link;
 
   const auth_server_uri: string = getHardcodedClientWebAppDomain(
     SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
@@ -59,30 +60,40 @@ export function AccountDetailsCard(
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col items-start justify-start">
+        <div className="flex flex-col items-start justify-start gap-2">
           <KeyValueWithSkeleton label="User ID" value={currentUser?.uid} />
           <KeyValueWithSkeleton label="Email" value={currentUser?.email} />
-        </div>
 
-        {props.isAuthServerAccountPage && (
-          <div className="mt-6">
-            <h3 className="text-sm font-medium mb-3">Organizations</h3>
-            {props.organizations && props.organizations.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {props.organizations.map((org) => (
-                  <props.Link key={org.organization_id} href={`/org/${org.organization_id}`}>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Building2 className="h-4 w-4" />
-                      {org.name}
-                    </Button>
-                  </props.Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No organizations</p>
-            )}
-          </div>
-        )}
+          {/** User Organizations */}
+          {props.isAuthServerAccountPage && (
+            <div className="flex flex-row items-center justify-start gap-2 flex-wrap">
+              <h3 className="text-lg font-bold">Organizations:</h3>
+              {props.organizations && props.organizations.length > 0 ? (
+                <>
+                  {props.organizations.map((org) => (
+                    <Link
+                      key={org.organization_id}
+                      href={`/org/${org.organization_id}`}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex flex-row flex-nowrap gap-2"
+                      >
+                        <Building2 className="h-4 w-4" />
+                        {org.name}
+                      </Button>
+                    </Link>
+                  ))}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No organizations
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
       <CardFooter>
         <div className="flex flex-row items-start justify-start flex-wrap gap-2">
