@@ -60,6 +60,7 @@ describe("JwksAccessProofToken", async () => {
         SCHEMAVAULTS_AUTH_SERVER.api_server_id,
       );
     } catch (e: unknown) {
+      void e;
       errorThrown = true;
     }
     expect(errorThrown).toBeTrue();

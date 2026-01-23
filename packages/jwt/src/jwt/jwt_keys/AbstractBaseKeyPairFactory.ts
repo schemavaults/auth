@@ -1,5 +1,4 @@
-import { base64url } from "jose";
-import { PEMFormat } from "./pem-format";
+import PEMFormat from "./pem-format";
 
 export interface BaseKeyPairFactoryOptions {
   debug?: boolean;

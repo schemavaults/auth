@@ -4,7 +4,6 @@ import {
   type ApiServerId,
   apiServerIdSchema,
 } from "@schemavaults/app-definitions";
-import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey";
 
 export interface ILoadRemoteJwksOpts {
   auth_server_uri: string;
