@@ -29,40 +29,18 @@ jobs:
           echo "node_version=${{ env.NODE_VERSION }}" >> "$GITHUB_OUTPUT"
 
   Run-ESLint:
-    runs-on: ubuntu-latest
     needs:
       - SetupCiCdConfig
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
-      - name: Install dependencies
-        run: |
-          bun install
-      - name: Run ESLint with Bun
-        run: |
-          bun run lint
+    uses: ./.github/workflows/run-eslint.yml
+    with:
+      BUN_VERSION: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Run-Unit-Tests:
-    runs-on: ubuntu-latest
     needs:
       - SetupCiCdConfig
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
-      - name: Install dependencies
-        run: |
-          bun install
-      - name: Run unit tests with bun
-        run: |
-          bun run test
+    uses: ./.github/workflows/run-unit-tests.yml
+    with:
+      BUN_VERSION: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Run-E2E-Tests:
     needs:
