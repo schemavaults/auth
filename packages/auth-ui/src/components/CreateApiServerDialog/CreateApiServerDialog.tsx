@@ -186,11 +186,14 @@ export function CreateApiServerDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button>
+        <Button id="open-create-api-server-dialog-button">
           <Server className="h-4 w-4 mr-2" /> Create API
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        id="create-api-server-dialog-content"
+        className="sm:max-w-[425px]"
+      >
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit, (e: unknown) =>
@@ -263,7 +266,7 @@ export function CreateApiServerDialog({
               )}
             />
             <DialogFooter>
-              <Button type="submit">
+              <Button id="submit-create-api-server-form-button" type="submit">
                 <Server className="h-4 w-4 mr-2" />
                 Create Server Application
               </Button>

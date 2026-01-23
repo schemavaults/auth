@@ -16,6 +16,7 @@
 // Import commands.js using ES2015 syntax:
 import "./commands";
 import type { RegularUserCredentials } from "./actions/create_and_login_as_regular_user";
+import type { CreateApiServerParams } from "./actions/create_api_server";
 import type { CreateOrganizationParams } from "./actions/create_organization";
 
 declare global {
@@ -40,6 +41,7 @@ declare global {
         max_uses: number,
       ): Chainable<boolean>;
       create_organization(params: CreateOrganizationParams): Chainable<boolean>;
+      create_api_server(params: CreateApiServerParams): Chainable<boolean>;
       generate_random_code(length: number): Chainable<string>;
     }
   }

@@ -3,6 +3,7 @@
 import createAndLoginAsRegularUser from "./actions/create_and_login_as_regular_user";
 import createAndLoginAsSuperuser from "./actions/create_and_login_as_superuser";
 import createInviteCode from "./actions/create_invite_code";
+import createApiServer from "./actions/create_api_server";
 import createOrganization from "./actions/create_organization";
 import generate_random_code from "./actions/generate_random_code";
 import hasErrorToast from "./actions/has_error_toast";
@@ -76,3 +77,5 @@ Cypress.Commands.add(
 );
 
 Cypress.Commands.add("create_organization", createOrganization);
+
+Cypress.Commands.add("create_api_server", createApiServer);
