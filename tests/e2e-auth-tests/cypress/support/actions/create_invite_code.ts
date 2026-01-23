@@ -32,7 +32,7 @@ export default function createInviteCode(
       );
 
       // Allow hydration before clicking on button
-      cy.wait(1000);
+      cy.wait(2000);
 
       cy.get(`button#${openInviteCodeCreationDialogButtonId}`)
         .should("exist")
