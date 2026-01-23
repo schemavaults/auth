@@ -12,7 +12,7 @@ import type { JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access
 
 export interface JwksAccessKeysPageViewProps {
   api_server_id: ApiServerId
-  preloaded_latest_jwks_access_keys_metadata: JwksAccessKeyStatusQueryResponse | false;
+  preloaded_latest_jwks_access_keys_metadata: JwksAccessKeyStatusQueryResponse | null;
 }
 
 interface SuccessKeyMetadataResponse {
@@ -245,9 +245,9 @@ function JwksAccessKeysPageView({ api_server_id, preloaded_latest_jwks_access_ke
     api_server_id ? `/api/apis/${api_server_id}/jwks-access-key` : null,
     fetcher,
     {
-      fallbackData: typeof preloaded_latest_jwks_access_keys_metadata === 'object' ? {
+      fallbackData: typeof preloaded_latest_jwks_access_keys_metadata === 'object' && preloaded_latest_jwks_access_keys_metadata ? {
         success: true,
-        key_metadata: preloaded_latest_jwks_access_keys_metadata
+        key_metadata: preloaded_latest_jwks_access_keys_metadata ?? false
       } : undefined
     }
   );

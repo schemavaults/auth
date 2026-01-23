@@ -22,7 +22,9 @@ import MaximumBrowserCookieSize from "@/MaximumBrowserCookieSize";
 import RefreshTokenCookieName from "@/RefreshTokenCookieNames";
 import type { SchemaVaultsPostgresNeonProxyAdapter } from "@schemavaults/dbh";
 import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
-import { IJwtKeyManager } from "@/JwtKeyManager";
+import type { IJwtKeyManager } from "@/JwtKeyManager";
+import redirectToLogin from "@/redirect-to-login";
+import { redirect } from "next/navigation";
 
 interface Dbh<Db extends object>
   extends AsyncDisposable,
@@ -79,6 +81,10 @@ export async function withAuthenticatedServerComponentRouteGuard<
     });
   }
 
+  if (token_sources.length === 0) {
+    redirectToLogin(redirect);
+  }
+
   const route_guard_factory = new RouteGuardFactory({
     environment,
     is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
@@ -92,7 +98,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     );
 
   if (!route_guard.user) {
-    redirectWithNextAppDirError(401, "unauthenticated");
+    redirectToLogin(redirect);
   }
   const user: UserData = route_guard.user;
 

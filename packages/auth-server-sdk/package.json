@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server-sdk",
   "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
-  "version": "0.17.7",
+  "version": "0.17.8",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -114,6 +114,11 @@
       "types": "./dist/getStringByteSize.d.ts",
       "import": "./dist/getStringByteSize.js",
       "require": "./dist/getStringByteSize.js"
+    },
+    "./redirect-to-login": {
+      "types": "./dist/redirect-to-login.d.ts",
+      "import": "./dist/redirect-to-login.js",
+      "require": "./dist/redirect-to-login.js"
     }
   }
 }
