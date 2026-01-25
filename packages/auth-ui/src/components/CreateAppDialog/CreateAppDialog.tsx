@@ -28,7 +28,10 @@ import {
 } from "@schemavaults/ui";
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
-import type { AccessToken } from "@schemavaults/auth-common";
+import {
+  SCHEMAVAULTS_ORGANIZATION_ID,
+  type AccessToken,
+} from "@schemavaults/auth-common";
 import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsApp,
@@ -127,6 +130,9 @@ export function CreateAppDialog({
 
       if (typeof owner_organization_id === "string") {
         createAppRequestBody["owner_organization_id"] = owner_organization_id;
+      } else if (!owner_organization_id && authClient.currentUser?.admin) {
+        createAppRequestBody["owner_organization_id"] =
+          SCHEMAVAULTS_ORGANIZATION_ID;
       }
 
       // if we're creating it from this form then it must be non-hardcoded/dynamic...
@@ -220,7 +226,10 @@ export function CreateAppDialog({
           <AppWindow className="h-4 w-4 mr-2" /> Create app
         </Button>
       </DialogTrigger>
-      <DialogContent id="create-app-dialog-content" className="sm:max-w-[425px]">
+      <DialogContent
+        id="create-app-dialog-content"
+        className="sm:max-w-[425px]"
+      >
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
