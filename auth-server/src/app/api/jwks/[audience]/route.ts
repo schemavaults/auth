@@ -1,6 +1,6 @@
 import "server-only";
 import { type NextRequest, NextResponse } from "next/server";
-import { AuthServerJwtKeysManager } from "@/lib/AuthServerJwtKeysManager";
+import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import { type ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
@@ -71,12 +71,21 @@ export async function GET(
   const isAuthenticated = await verifyJwksAccessAssertion(assertion, audience, dbh.db);
   if (!isAuthenticated) {
     console.warn(`Received unauthorized request to load jwks audience "${audience}"`);
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized", success: false }, { status: 401 });
   }
 
   const key_manager = new AuthServerJwtKeysManager(dbh.db);
 
   const jwks = await key_manager.loadJwks(audience);
+
+  if (!Array.isArray(jwks.keys) || jwks.keys.length === 0 || !jwks.keys.every(k => typeof k === 'object')) {
+    return NextResponse.json({
+      success: false,
+      error: "Expected 'keys' field of loaded JWKS to be a non-empty array."
+    }, {
+      status: 500
+    });
+  }
 
   return NextResponse.json(jwks, {
     headers: new Headers({
