@@ -9,17 +9,12 @@ import {
   CardTitle,
   cn,
 } from "@schemavaults/ui";
-import {
-  type ISchemaVaultsAuthClient,
-  useAuth,
-} from "@schemavaults/auth-react-provider";
 import OrganizationsTable from "@/components/OrganizationsTable";
 import {
   organizationDefinitionSchema,
   type OrganizationDefinition,
 } from "@schemavaults/auth-common";
 import useSWR from "swr";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 
 export interface OrganizationsCardProps {
   cardTitle?: string;
@@ -31,8 +26,6 @@ export interface OrganizationsCardProps {
 const listAllOrganizationsEndpoint = "/api/organizations";
 
 export function OrganizationsCard(props: OrganizationsCardProps): ReactElement {
-  const authClient = useAuth();
-
   const cardTitle = props.cardTitle ?? "Organizations";
   const cardDescription =
     props.cardDescription ?? "View and manage organizations.";
@@ -42,34 +35,10 @@ export function OrganizationsCard(props: OrganizationsCardProps): ReactElement {
   const organizations = useSWR(
     listAllOrganizationsEndpoint,
     async (): Promise<readonly OrganizationDefinition[]> => {
-      if (!authClient.ready || !authClient.client.current) {
-        throw new Error("Auth client is not ready to list data!");
-      }
-      const auth: ISchemaVaultsAuthClient = authClient.client.current;
-
-      let jwt: string;
-      try {
-        const accessToken = await auth.acquireAccessToken({
-          audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-          token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-        });
-        jwt = accessToken.token;
-      } catch (e: unknown) {
-        console.error(
-          "Failed to acquire access token in order to list organizations: ",
-          e,
-        );
-        throw new Error(
-          "Failed to acquire access token in order to list organizations!",
-        );
-      }
-
       try {
         const response = await fetch(listAllOrganizationsEndpoint, {
           method: "GET",
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
+          credentials: "include",
         });
         if (!response.ok || response.status !== 200) {
           throw new Error(

@@ -25,17 +25,13 @@ import {
   DialogTrigger,
   useForm,
 } from "@schemavaults/ui";
-import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
   type InviteCodeDefinition,
   inviteCodeDefinitionSchema,
-  type AccessToken,
 } from "@schemavaults/auth-common";
-import {
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
+import { type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SwatchBook } from "lucide-react";
 
@@ -50,7 +46,6 @@ export function CreateInviteCodeDialog(): ReactElement {
       created_at: Date.now(),
     },
   });
-  const auth = useAuth();
   const { mutate } = useSWRConfig();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
@@ -76,41 +71,11 @@ export function CreateInviteCodeDialog(): ReactElement {
       created_at: Date.now(),
     };
 
-    const authClient = auth.ready ? auth.client.current : undefined;
-    if (!authClient) {
-      toast({
-        variant: "destructive",
-        title: "Auth client not ready",
-        description: `Cannot acquire an access token yet`,
-      });
-      return;
-    }
-
-    let auth_access_jwt: AccessToken;
-    try {
-      const auth_jwt = await authClient.acquireAccessToken({
-        token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-        audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      });
-      if (!auth_jwt) throw new Error("Failed to acquire auth access token");
-      auth_access_jwt = auth_jwt;
-    } catch (e: unknown) {
-      toast({
-        variant: "destructive",
-        title: "Error loading authentication access token",
-        description:
-          e instanceof Error ? e.message : `Failed to prepare network request`,
-      });
-      return;
-    }
-
     try {
       const response = await fetch(`/api/admin/invite-codes` as const, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${auth_access_jwt.token}}`,
-        },
         body: JSON.stringify(newInviteCode),
+        credentials: "include",
       });
       if (!response.ok || response.status !== 200) {
         throw new Error(

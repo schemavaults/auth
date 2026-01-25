@@ -24,14 +24,12 @@ import {
   DialogTrigger,
   useForm,
 } from "@schemavaults/ui";
-import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
-  type AccessToken,
   type OrganizationDefinition,
   organizationDefinitionSchema,
 } from "@schemavaults/auth-common";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Building2 } from "lucide-react";
 
@@ -64,7 +62,6 @@ export function CreateOrganizationDialog({
     resolver: zodResolver(organizationDefinitionSchema),
     defaultValues,
   });
-  const auth = useAuth();
   const environment = useAppEnvironment();
   const { mutate } = useSWRConfig();
   const [submitting, startSubmitting] = useTransition();
@@ -79,36 +76,6 @@ export function CreateOrganizationDialog({
     }
 
     startSubmitting(async () => {
-      const authClient = auth.ready ? auth.client.current : undefined;
-      if (!authClient) {
-        toast({
-          variant: "destructive",
-          title: "Auth client not ready!",
-          description: `Cannot acquire an access token to create organization yet.`,
-        });
-        return;
-      }
-
-      let auth_access_jwt: AccessToken;
-      try {
-        const auth_jwt = await authClient.acquireAccessToken({
-          token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-          audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-        });
-        if (!auth_jwt) throw new Error("Failed to acquire auth access token");
-        auth_access_jwt = auth_jwt;
-      } catch (e: unknown) {
-        toast({
-          variant: "destructive",
-          title: "Error loading authentication access token",
-          description:
-            e instanceof Error
-              ? e.message
-              : `Failed to prepare network request`,
-        });
-        return;
-      }
-
       try {
         const response = await fetch("/api/organizations", {
           method: "POST",
@@ -116,9 +83,7 @@ export function CreateOrganizationDialog({
             ...values,
             created_at: Date.now(),
           }),
-          headers: {
-            Authorization: `Bearer ${auth_access_jwt.token}`,
-          },
+          credentials: "include",
         });
         if (!response.ok || response.status !== 200) {
           throw new Error(

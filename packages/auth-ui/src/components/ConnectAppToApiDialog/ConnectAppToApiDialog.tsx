@@ -24,12 +24,10 @@ import {
   DialogTrigger,
   useForm,
 } from "@schemavaults/ui";
-import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
-import type { AccessToken } from "@schemavaults/auth-common";
+import { useAppEnvironment } from "@schemavaults/auth-react-provider";
 import {
   type AppToApiPermission,
   appToApiPermissionSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,7 +43,6 @@ export function ConnectAppToApiDialog(): ReactElement {
       created_at: Date.now(),
     },
   });
-  const auth = useAuth();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
   async function onSubmit(values: AppToApiPermission): Promise<void> {
@@ -57,42 +54,12 @@ export function ConnectAppToApiDialog(): ReactElement {
       });
     }
 
-    const authClient = auth.ready ? auth.client.current : undefined;
-    if (!authClient) {
-      toast({
-        variant: "destructive",
-        title: "Auth client not ready",
-        description: `Cannot acquire an access token yet`,
-      });
-      return;
-    }
-
-    let auth_access_jwt: AccessToken;
-    try {
-      const auth_jwt = await authClient.acquireAccessToken({
-        token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-        audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      });
-      if (!auth_jwt) throw new Error("Failed to acquire auth access token");
-      auth_access_jwt = auth_jwt;
-    } catch (e: unknown) {
-      toast({
-        variant: "destructive",
-        title: "Error loading authentication access token",
-        description:
-          e instanceof Error ? e.message : `Failed to prepare network request`,
-      });
-      return;
-    }
-
     try {
       const response = await fetch(
         `/api/apis/connect_app/${values.client_app_id}/${values.api_server_id}` as const,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${auth_access_jwt.token}}`,
-          },
+          credentials: "include",
         },
       );
       if (!response.ok || response.status !== 200) {

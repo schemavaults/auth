@@ -1,15 +1,12 @@
 import {
   useAppEnvironment,
-  useAuth,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
 import useSWR, { useSWRConfig } from "swr";
-import type { AccessToken } from "@schemavaults/auth-common";
 import {
   type ListApiServersQueryResponse,
   type ListApiServersQueryType,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
 
@@ -46,52 +43,12 @@ export function useApiServersList({
   initialData,
   organization_id,
 }: UseApiServersListOptions) {
-  const auth = useAuth();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const endpoint = getApiServersListEndpoint(queryType, organization_id);
 
   return useSWR(
     endpoint,
     async () => {
-      if (!auth.ready) {
-        toast({
-          variant: "destructive",
-          title: "Auth client not ready",
-          description: "Unable to acquire access token to list API servers",
-        });
-        throw new Error("Auth client not ready");
-      }
-      const authClient = auth.client.current;
-      if (!authClient) {
-        toast({
-          variant: "destructive",
-          title: "Auth client not ready",
-          description: "Unable to acquire access token to list API servers",
-        });
-        throw new Error("Auth client not ready");
-      }
-
-      let auth_access_jwt: AccessToken;
-      try {
-        const auth_jwt = await authClient.acquireAccessToken({
-          token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-          audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-        });
-        if (!auth_jwt) throw new Error("Failed to acquire auth access token");
-        auth_access_jwt = auth_jwt;
-      } catch (e: unknown) {
-        console.error("[useApiServersList] ", e);
-        toast({
-          variant: "destructive",
-          title: "Error loading authentication access token",
-          description:
-            e instanceof Error
-              ? e.message
-              : `Failed to prepare network request`,
-        });
-        throw e;
-      }
-
       try {
         const origin = window.location.origin;
         if (environment !== "development" && environment !== "test") {
@@ -104,10 +61,8 @@ export function useApiServersList({
           );
         }
         const listApiServersResponse: Response = await fetch(endpoint, {
-          headers: new Headers({
-            Authorization: `Bearer ${auth_access_jwt.token satisfies string}`,
-          }),
           method: "GET",
+          credentials: "include",
         });
         if (!listApiServersResponse.ok || listApiServersResponse.status !== 200)
           throw new Error("Network request to list-apps endpoint failed");

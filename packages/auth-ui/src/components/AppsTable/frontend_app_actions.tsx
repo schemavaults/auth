@@ -6,7 +6,7 @@ import { cn, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import { AppWindow, ClipboardCopy, EarthLock, MoreHorizontal, PlayCircle, PlugZap, Trash } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@schemavaults/ui";
-import { useAdmin, useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
+import { useAdmin, useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { sendAuthorizeFrontendAppRequest } from "./send-authorize-app-request";
 import { getUseAppDomainsListEndpoint, useAppDomains } from "./useAppDomains";
 import { CreateAppDomainDialog } from "../CreateAppDomainDialog";
@@ -26,7 +26,6 @@ export function FrontendApplicationActions(
   const app_id: string = app.app_id;
   const hardcoded: boolean = app.hardcoded && isHardcodedAppId(app_id);
   const {toast} = useToast();
-  const auth = useAuth();
   const [authorizingApp, startAuthorizingApp] = useTransition();
 
   let preloadedAppDomains: SchemaVaultsAppDomainRef[] | undefined = undefined;
@@ -146,7 +145,6 @@ export function FrontendApplicationActions(
                   startAuthorizingApp(async (): Promise<void> => {
                     try {
                       await sendAuthorizeFrontendAppRequest({
-                        auth,
                         toast,
                         app_id: app.app_id
                       });

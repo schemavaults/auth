@@ -10,17 +10,12 @@ import {
   CardTitle,
   cn,
 } from "@schemavaults/ui";
-import {
-  type ISchemaVaultsAuthClient,
-  useAuth,
-} from "@schemavaults/auth-react-provider";
 import InviteCodesTable from "@/components/InviteCodesTable";
 import {
   inviteCodeDefinitionSchema,
   type InviteCodeDefinition,
 } from "@schemavaults/auth-common";
 import useSWR from "swr";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 
 export interface InviteCodesCardProps {
   cardTitle?: string;
@@ -30,8 +25,6 @@ export interface InviteCodesCardProps {
 }
 
 export function InviteCodesCard(props: InviteCodesCardProps): ReactElement {
-  const authClient = useAuth();
-
   const cardTitle = props.cardTitle ?? "Invite Codes";
   const cardDescription =
     props.cardDescription ??
@@ -44,34 +37,10 @@ export function InviteCodesCard(props: InviteCodesCardProps): ReactElement {
   const invite_codes = useSWR(
     listAllInviteCodesEndpoint,
     async (): Promise<readonly InviteCodeDefinition[]> => {
-      if (!authClient.ready || !authClient.client.current) {
-        throw new Error("Auth client is not ready to list data!");
-      }
-      const auth: ISchemaVaultsAuthClient = authClient.client.current;
-
-      let jwt: string;
-      try {
-        const accessToken = await auth.acquireAccessToken({
-          audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-          token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-        });
-        jwt = accessToken.token;
-      } catch (e: unknown) {
-        console.error(
-          "Failed to acquire access token in order to list invite codes: ",
-          e,
-        );
-        throw new Error(
-          "Failed to acquire access token in order to list invite codes!",
-        );
-      }
-
       try {
         const response = await fetch(listAllInviteCodesEndpoint, {
           method: "GET",
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
+          credentials: "include",
         });
         if (!response.ok || response.status !== 200) {
           throw new Error(

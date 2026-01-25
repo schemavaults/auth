@@ -28,12 +28,8 @@ import {
 } from "@schemavaults/ui";
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
+import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 import {
-  SCHEMAVAULTS_ORGANIZATION_ID,
-  type AccessToken,
-} from "@schemavaults/auth-common";
-import {
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsApp,
   schemaVaultsAppDefinitionSchema,
   type SchemaVaultsAppEnvironment,
@@ -95,34 +91,6 @@ export function CreateAppDialog({
 
     startSubmitting(async () => {
       const authClient = auth.ready ? auth.client.current : undefined;
-      if (!authClient) {
-        toast({
-          variant: "destructive",
-          title: "Auth client not ready!",
-          description: `Cannot acquire an access token to create app yet.`,
-        });
-        return;
-      }
-
-      let auth_access_jwt: AccessToken;
-      try {
-        const auth_jwt = await authClient.acquireAccessToken({
-          token_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-          audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-        });
-        if (!auth_jwt) throw new Error("Failed to acquire auth access token");
-        auth_access_jwt = auth_jwt;
-      } catch (e: unknown) {
-        toast({
-          variant: "destructive",
-          title: "Error loading authentication access token",
-          description:
-            e instanceof Error
-              ? e.message
-              : `Failed to prepare network request`,
-        });
-        return;
-      }
 
       const createAppRequestBody: Partial<SchemaVaultsApp> = {
         ...values,
@@ -130,7 +98,7 @@ export function CreateAppDialog({
 
       if (typeof owner_organization_id === "string") {
         createAppRequestBody["owner_organization_id"] = owner_organization_id;
-      } else if (!owner_organization_id && authClient.currentUser?.admin) {
+      } else if (!owner_organization_id && authClient?.currentUser?.admin) {
         createAppRequestBody["owner_organization_id"] =
           SCHEMAVAULTS_ORGANIZATION_ID;
       }
@@ -163,9 +131,7 @@ export function CreateAppDialog({
           body: JSON.stringify(
             validatedAppRequestBody.data satisfies SchemaVaultsApp,
           ),
-          headers: {
-            Authorization: `Bearer ${auth_access_jwt.token}}`,
-          },
+          credentials: "include",
         });
         if (!response.ok || response.status !== 200) {
           throw new Error(
