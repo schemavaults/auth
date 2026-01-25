@@ -33,68 +33,59 @@ export default function createOrganization(
     return cy.visit("/admin/organizations").then(() => {
       cy.url().should("include", "/admin/organizations");
 
-      cy.get(`#${createOrganizationDialogContentId}`, { log: false }).should(
-        "not.exist",
-      );
-
-      // Allow hydration before clicking on button
-      cy.wait(2000);
-
-      cy.get(`button#${openOrganizationCreationDialogButtonId}`)
-        .should("exist")
-        .click();
-
-      // Wait for dialog animation
-      cy.wait(750);
-
-      cy.get(`#${createOrganizationDialogContentId}`, { log: false }).should(
-        "be.visible",
-      );
-      cy.url({ log: false }).should("include", "/admin/organizations");
-
-      // Fill out form within new dialog
-      cy.get(`input[name="organization_id"]`, { log: false })
-        .should("exist")
-        .should("be.visible")
-        .should("not.be.disabled")
-        .type(organization_id, { force: true });
-
-      cy.get(`input[name="name"]`, { log: false })
-        .should("exist")
-        .should("be.visible")
-        .should("not.be.disabled")
-        .type(name, { force: true });
-
-      cy.url({ log: false }).should("include", "/admin/organizations");
-
-      // Submit form
-      cy.intercept({
-        method: "POST",
-        url: "**/api/organizations",
-        times: 1,
-      }).as("createOrganizationRequest");
-      cy.get(`button#${submitOrganizationCreationDialogButtonId}`, {
-        log: false,
-      })
-        .should("exist")
-        .should("not.be.disabled")
-        .click();
-
       return cy
-        .wait("@createOrganizationRequest", { timeout: 20000 })
-        .then((interception) => {
-          interception.response?.statusCode &&
-            cy.wrap(interception.response?.statusCode).should("eq", 200);
-          cy.log(
-            "Organization creation request appears to have been a success!",
-          );
-          cy.get(`#${createOrganizationDialogContentId}`, {
+        .open_dialog_with_button(
+          openOrganizationCreationDialogButtonId,
+          createOrganizationDialogContentId,
+        )
+        .then(() => {
+          cy.url({ log: false }).should("include", "/admin/organizations");
+
+          // Fill out form within new dialog
+          cy.get(`input[name="organization_id"]`, { log: false })
+            .should("exist")
+            .should("be.visible")
+            .should("not.be.disabled")
+            .type(organization_id, { force: true });
+
+          cy.get(`input[name="name"]`, { log: false })
+            .should("exist")
+            .should("be.visible")
+            .should("not.be.disabled")
+            .type(name, { force: true });
+
+          cy.url({ log: false }).should("include", "/admin/organizations");
+
+          // Submit form
+          cy.intercept({
+            method: "POST",
+            url: "**/api/organizations",
+            times: 1,
+          }).as("createOrganizationRequest");
+          cy.get(`button#${submitOrganizationCreationDialogButtonId}`, {
             log: false,
-          }).should("not.exist");
-          return cy.wrap(true, { log: false });
-        })
-        .then((val: JQuery<boolean>): boolean => {
-          return typeof val === "boolean" ? val : val[0];
+          })
+            .should("exist")
+            .should("not.be.disabled")
+            .click();
+
+          return cy
+            .wait("@createOrganizationRequest", { timeout: 20000 })
+            .then((interception) => {
+              interception.response?.statusCode &&
+                cy.wrap(interception.response?.statusCode).should("eq", 200);
+              cy.log(
+                "Organization creation request appears to have been a success!",
+              );
+              cy.get(`#${createOrganizationDialogContentId}`, {
+                log: false,
+              }).should("not.exist");
+              return cy.wrap(true, { log: false });
+            })
+            .then((val): boolean => {
+              if (typeof val === "boolean") return val;
+              return val[0];
+            });
         });
     });
   });

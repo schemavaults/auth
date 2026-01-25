@@ -30,9 +30,7 @@ declare global {
         invite_code?: string,
       ): Chainable<number>;
       create_and_login_as_superuser(): Chainable<boolean>;
-      create_and_login_as_regular_user(): Chainable<
-        JQuery<RegularUserCredentials>
-      >;
+      create_and_login_as_regular_user(): Chainable<RegularUserCredentials>;
       has_error_toast(containing_message?: string): Chainable<boolean>;
       logout(): Chainable<void>;
       is_authenticated(): Chainable<boolean>;
@@ -45,6 +43,12 @@ declare global {
       create_api_server(params: CreateApiServerParams): Chainable<boolean>;
       create_app(params: CreateAppParams): Chainable<boolean>;
       generate_random_code(length: number): Chainable<string>;
+      open_dialog_with_button(
+        // Button to click to open the dialog
+        open_dialog_button_id: string,
+        // Selector to ensure that the dialog opened successfully
+        dialog_content_container_id: string,
+      ): Chainable<JQuery<HTMLElement>>;
     }
   }
 }

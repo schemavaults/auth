@@ -95,7 +95,7 @@ export default function createInviteCode(
           }).should("not.exist");
           return cy.wrap(true, { log: false });
         })
-        .then((val: JQuery<boolean>): boolean => {
+        .then((val: boolean): boolean => {
           return typeof val === "boolean" ? val : val[0];
         });
     });

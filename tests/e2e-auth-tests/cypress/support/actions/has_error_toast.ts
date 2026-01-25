@@ -7,9 +7,9 @@ export default function hasErrorToast(
       : "",
   );
 
-  const isToastFound: Cypress.Chainable<JQuery<boolean>> = cy
+  const isToastFound: Cypress.Chainable<boolean> = cy
     .get("body", { log: false })
-    .then(($body): Cypress.Chainable<JQuery<boolean>> => {
+    .then(($body): Cypress.Chainable<boolean> => {
       const $errorToasts = $body.find("li.toast[data-variant='destructive']");
 
       if ($errorToasts.length === 0) {
@@ -41,8 +41,8 @@ export default function hasErrorToast(
       return cy.wrap<boolean>(found, { log: false });
     });
 
-  return isToastFound.then((found: JQuery<boolean>) => {
-    const boolValue: boolean = found[0];
-    return boolValue;
+  return isToastFound.then((found) => {
+    if (typeof found === "boolean") return found;
+    else return found[0];
   });
 }

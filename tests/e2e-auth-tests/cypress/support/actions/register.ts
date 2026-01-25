@@ -59,9 +59,9 @@ export default function register(
 
   cy.log("Submitted register form");
 
-  const register_result: Cypress.Chainable<JQuery<number>> = cy
+  const register_result: Cypress.Chainable<number> = cy
     .wait("@registerRequest", { timeout: 10000 })
-    .then((register_interception): Cypress.Chainable<JQuery<number>> => {
+    .then((register_interception): Cypress.Chainable<number> => {
       cy.log(
         `Register API response status: ${register_interception.response?.statusCode}`,
       );
@@ -118,17 +118,27 @@ export default function register(
             }
           });
       } else {
+        if (typeof register_interception.response?.statusCode !== "number") {
+          throw new TypeError(
+            "Failed to parse 'statusCode' from registration request interception!",
+          );
+        }
+        const statusCode: number = register_interception.response?.statusCode;
         cy.log(
-          `Register request failed with status ${register_interception.response?.statusCode} ${register_interception.response?.statusMessage}`,
+          `Register request failed with status ${statusCode} ${register_interception.response?.statusMessage}`,
         );
-        return cy.wrap(register_interception.response?.statusCode ?? 500, {
+        return cy.wrap(statusCode, {
           log: false,
         });
       }
     });
 
-  return register_result.then((res: JQuery<number>) => {
-    const val: number = res[0];
-    return val;
+  return register_result.then((res: number) => {
+    if (typeof res === "number") return res;
+    else if (typeof res[0] === "number") return res[0];
+    else
+      throw new TypeError(
+        "Failed to parse status code to return from 'register' Cypress command!",
+      );
   });
 }

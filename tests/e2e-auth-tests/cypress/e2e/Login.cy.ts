@@ -33,7 +33,7 @@ describe("Login", () => {
 
   it("can create and login as a regular user", () => {
     cy.create_and_login_as_regular_user().then(
-      (credentialsResult: JQuery<RegularUserCredentials>) => {
+      (credentialsResult: RegularUserCredentials) => {
         let credentials: RegularUserCredentials;
         if (
           typeof credentialsResult === "object" &&
@@ -45,7 +45,9 @@ describe("Login", () => {
         ) {
           credentials = credentialsResult as RegularUserCredentials;
         } else {
-          credentials = credentialsResult.get(0);
+          credentials = (
+            credentialsResult as any as JQuery<RegularUserCredentials>
+          ).get(0);
         }
         cy.log(`Logged in as regular user: ${credentials.email}`);
 

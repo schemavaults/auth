@@ -32,77 +32,69 @@ export default function createApiServer(
   return cy.visit(targetUrl).then(() => {
     cy.url().should("include", targetUrl);
 
-    cy.get(`#${createApiServerDialogContentId}`, { log: false }).should(
-      "not.exist",
-    );
-
-    // Allow hydration before clicking on button
-    cy.wait(2000);
-
-    cy.get(`button#${openCreateApiServerDialogButtonId}`)
-      .should("exist")
-      .click();
-
-    // Wait for dialog animation
-    cy.wait(750);
-
-    cy.get(`#${createApiServerDialogContentId}`, { log: false }).should(
-      "be.visible",
-    );
-    cy.url({ log: false }).should("include", targetUrl);
-
-    // Fill out form within new dialog
-    cy.get(`input[name="api_server_name"]`, { log: false })
-      .should("exist")
-      .should("be.visible")
-      .should("not.be.disabled")
-      .type(api_server_name, { force: true });
-
-    cy.get(`textarea[name="api_server_description"]`, { log: false })
-      .should("exist")
-      .should("be.visible")
-      .should("not.be.disabled")
-      .type(api_server_description, { force: true });
-
-    // Toggle public checkbox if requested
-    if (isPublic) {
-      cy.get(`button[role="checkbox"][name="public"]`, { log: false })
-        .should("exist")
-        .click();
-    }
-
-    cy.url({ log: false }).should("include", targetUrl);
-
-    // Submit form
-    cy.intercept({
-      method: "POST",
-      url: "**/api/apis",
-      times: 1,
-    }).as("createApiServerRequest");
-    cy.get(`button#${submitCreateApiServerDialogButtonId}`, {
-      log: false,
-    })
-      .should("exist")
-      .should("not.be.disabled")
-      .click();
-
-    cy.log("Create API server dialog submitted!");
-
-    cy.wait(2000);
-
     return cy
-      .wait("@createApiServerRequest", { timeout: 20000 })
-      .then((interception) => {
-        interception.response?.statusCode &&
-          cy.wrap(interception.response?.statusCode).should("eq", 200);
-        cy.log("API server creation request appears to have been a success!");
-        cy.get(`#${createApiServerDialogContentId}`, {
+      .open_dialog_with_button(
+        openCreateApiServerDialogButtonId,
+        createApiServerDialogContentId,
+      )
+      .then(() => {
+        cy.url({ log: false }).should("include", targetUrl);
+
+        // Fill out form within new dialog
+        cy.get(`input[name="api_server_name"]`, { log: false })
+          .should("exist")
+          .should("be.visible")
+          .should("not.be.disabled")
+          .type(api_server_name, { force: true });
+
+        cy.get(`textarea[name="api_server_description"]`, { log: false })
+          .should("exist")
+          .should("be.visible")
+          .should("not.be.disabled")
+          .type(api_server_description, { force: true });
+
+        // Toggle public checkbox if requested
+        if (isPublic) {
+          cy.get(`button[role="checkbox"][name="public"]`, { log: false })
+            .should("exist")
+            .click();
+        }
+
+        cy.url({ log: false }).should("include", targetUrl);
+
+        // Submit form
+        cy.intercept({
+          method: "POST",
+          url: "**/api/apis",
+          times: 1,
+        }).as("createApiServerRequest");
+        cy.get(`button#${submitCreateApiServerDialogButtonId}`, {
           log: false,
-        }).should("not.exist");
-        return cy.wrap(true, { log: false });
-      })
-      .then((val: JQuery<boolean>): boolean => {
-        return typeof val === "boolean" ? val : val[0];
+        })
+          .should("exist")
+          .should("not.be.disabled")
+          .click();
+
+        cy.log("Create API server dialog submitted!");
+
+        cy.wait(2000);
+
+        return cy
+          .wait("@createApiServerRequest", { timeout: 20000 })
+          .then((interception) => {
+            interception.response?.statusCode &&
+              cy.wrap(interception.response?.statusCode).should("eq", 200);
+            cy.log(
+              "API server creation request appears to have been a success!",
+            );
+            cy.get(`#${createApiServerDialogContentId}`, {
+              log: false,
+            }).should("not.exist");
+            return cy.wrap(true, { log: false });
+          })
+          .then((val): boolean => {
+            return typeof val === "boolean" ? val : val[0];
+          });
       });
   });
 }

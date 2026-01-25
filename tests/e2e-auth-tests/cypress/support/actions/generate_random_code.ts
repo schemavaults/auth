@@ -22,7 +22,7 @@ export default function generateRandomCode(
     .wrap(generate_random_alphanumeric_code_of_given_length(length), {
       log: false,
     })
-    .then((code: JQuery<string>): string => {
+    .then((code): string => {
       if (typeof code === "string") return code;
       else if (Array.isArray(code) && typeof code[0] === "string")
         return code[0];

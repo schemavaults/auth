@@ -13,6 +13,7 @@ import is_authenticated from "./actions/is_authenticated";
 import login from "./actions/login";
 import logout from "./actions/logout";
 import register from "./actions/register";
+import open_dialog_with_button from "./actions/open_dialog_with_button";
 
 // ***********************************************
 // This example commands.ts shows you how to
@@ -68,7 +69,7 @@ Cypress.Commands.add("is_authenticated", is_authenticated);
 
 Cypress.Commands.add("is_admin", is_admin);
 
-Cypress.Commands.add('create_invite_code', createInviteCode)
+Cypress.Commands.add("create_invite_code", createInviteCode);
 
 Cypress.Commands.add("generate_random_code", generate_random_code);
 
@@ -82,3 +83,5 @@ Cypress.Commands.add("create_organization", createOrganization);
 Cypress.Commands.add("create_api_server", createApiServer);
 
 Cypress.Commands.add("create_app", createApp);
+
+Cypress.Commands.add("open_dialog_with_button", open_dialog_with_button);

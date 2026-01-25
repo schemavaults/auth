@@ -12,16 +12,12 @@ export interface RegularUserCredentials {
   password: string;
 }
 
-export default function createAndLoginAsRegularUser(): Cypress.Chainable<
-  JQuery<RegularUserCredentials>
-> {
+export default function createAndLoginAsRegularUser(): Cypress.Chainable<RegularUserCredentials> {
   // Step 1: Sign in as superuser
-  const regular_user_login_result: Cypress.Chainable<
-    JQuery<RegularUserCredentials>
-  > = cy
-    .create_and_login_as_superuser()
-    .then(
-      (success: boolean): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
+  const regular_user_login_result: Cypress.Chainable<RegularUserCredentials> =
+    cy
+      .create_and_login_as_superuser()
+      .then((success: boolean): Cypress.Chainable<RegularUserCredentials> => {
         if (!success) {
           throw new Error("Failed to create/login as superuser");
         }
@@ -35,7 +31,7 @@ export default function createAndLoginAsRegularUser(): Cypress.Chainable<
           .then(
             (
               invite_code: string,
-            ): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
+            ): Cypress.Chainable<RegularUserCredentials> => {
               if (
                 typeof invite_code !== "string" ||
                 invite_code.length !== INVITE_CODE_LENGTH
@@ -52,7 +48,7 @@ export default function createAndLoginAsRegularUser(): Cypress.Chainable<
                 .then(
                   (
                     created: boolean,
-                  ): Cypress.Chainable<JQuery<RegularUserCredentials>> => {
+                  ): Cypress.Chainable<RegularUserCredentials> => {
                     if (!created) {
                       throw new Error("Failed to create invite code");
                     }
@@ -68,9 +64,7 @@ export default function createAndLoginAsRegularUser(): Cypress.Chainable<
                       .then(
                         (
                           random_suffix: string,
-                        ): Cypress.Chainable<
-                          JQuery<RegularUserCredentials>
-                        > => {
+                        ): Cypress.Chainable<RegularUserCredentials> => {
                           const credentials: RegularUserCredentials = {
                             email: `test-user-${random_suffix}@example.com`,
                             password: "TestPassword123!",
@@ -89,9 +83,7 @@ export default function createAndLoginAsRegularUser(): Cypress.Chainable<
                             .then(
                               (
                                 status_code: number,
-                              ): Cypress.Chainable<
-                                JQuery<RegularUserCredentials>
-                              > => {
+                              ): Cypress.Chainable<RegularUserCredentials> => {
                                 if (status_code !== 200) {
                                   throw new Error(
                                     `Failed to register regular user, got status: ${status_code}`,
@@ -112,8 +104,7 @@ export default function createAndLoginAsRegularUser(): Cypress.Chainable<
                 );
             },
           );
-      },
-    );
+      });
 
   return regular_user_login_result;
 }

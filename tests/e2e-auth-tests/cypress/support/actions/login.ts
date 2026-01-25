@@ -55,7 +55,7 @@ export default function login(
   // Wait for the actual API request to complete
   const submit_result: Cypress.Chainable<boolean> = cy
     .wait("@loginRequest", { timeout: 15000 })
-    .then((login_interception): Cypress.Chainable<JQuery<boolean>> => {
+    .then((login_interception): Cypress.Chainable<boolean> => {
       cy.log(
         `Login API response status: ${login_interception.response?.statusCode}`,
       );
@@ -125,12 +125,12 @@ export default function login(
         cy.log(
           `Login request failed with status ${login_interception.response?.statusCode} ${login_interception.response?.statusMessage}`,
         );
-        return cy.wrap(false, { log: false });
+        return cy.wrap<boolean>(false, { log: false });
       }
     })
     .then((res) => {
-      const val: boolean = res[0];
-      return val;
+      if (typeof res === "boolean") return res;
+      else return res[0];
     });
 
   return submit_result;

@@ -29,71 +29,73 @@ export default function createApp(
   return cy.visit(targetUrl).then(() => {
     cy.url().should("include", targetUrl);
 
-    cy.get(`#${createAppDialogContentId}`, { log: false }).should("not.exist");
-
-    // Allow hydration before clicking on button
-    cy.wait(2000);
-
-    cy.get(`button#${openCreateAppDialogButtonId}`).should("exist").click();
-
-    // Wait for dialog animation
-    cy.wait(750);
-
-    cy.get(`#${createAppDialogContentId}`, { log: false }).should("be.visible");
-    cy.url({ log: false }).should("include", targetUrl);
-
-    // Fill out form within new dialog
-    cy.get(`input[name="app_name"]`, { log: false })
-      .should("exist")
-      .should("be.visible")
-      .should("not.be.disabled")
-      .clear()
-      .type(app_name, { force: true });
-
-    cy.get(`textarea[name="app_description"]`, { log: false })
-      .should("exist")
-      .should("be.visible")
-      .should("not.be.disabled")
-      .clear()
-      .type(app_description, { force: true });
-
-    // Toggle public checkbox if requested
-    if (isPublic) {
-      cy.get(`button[role="checkbox"][name="public"]`, { log: false })
-        .should("exist")
-        .click();
-    }
-    cy.url({ log: false }).should("include", targetUrl);
-
-    // Submit form
-    cy.intercept({
-      method: "POST",
-      url: "**/api/apps",
-      times: 1,
-    }).as("createAppRequest");
-    cy.get(`button#${submitCreateAppDialogButtonId}`, {
-      log: false,
-    })
-      .should("exist")
-      .should("not.be.disabled")
-      .click();
-
-    cy.log("Create app dialog submitted!");
-    cy.wait(2000);
-
     return cy
-      .wait("@createAppRequest", { timeout: 20000 })
-      .then((interception) => {
-        interception.response?.statusCode &&
-          cy.wrap(interception.response?.statusCode).should("eq", 200);
-        cy.log("App creation request appears to have been a success!");
-        cy.get(`#${createAppDialogContentId}`, {
+      .open_dialog_with_button(
+        openCreateAppDialogButtonId,
+        createAppDialogContentId,
+      )
+      .then(() => {
+        cy.url({ log: false }).should("include", targetUrl);
+
+        // Fill out form within new dialog
+        cy.get(`input[name="app_name"]`, { log: false })
+          .should("exist")
+          .should("be.visible")
+          .should("not.be.disabled")
+          .clear()
+          .type(app_name, { force: true });
+
+        cy.get(`textarea[name="app_description"]`, { log: false })
+          .should("exist")
+          .should("be.visible")
+          .should("not.be.disabled")
+          .clear()
+          .type(app_description, { force: true });
+
+        // Toggle public checkbox if requested
+        if (isPublic) {
+          cy.get(`button[role="checkbox"][name="public"]`, { log: false })
+            .should("exist")
+            .click();
+        }
+        cy.url({ log: false }).should("include", targetUrl);
+
+        // Submit form
+        cy.intercept({
+          method: "POST",
+          url: "**/api/apps",
+          times: 1,
+        }).as("createAppRequest");
+        cy.get(`button#${submitCreateAppDialogButtonId}`, {
           log: false,
-        }).should("not.exist");
-        return cy.wrap(true, { log: false });
-      })
-      .then((val: JQuery<boolean>): boolean => {
-        return typeof val === "boolean" ? val : val[0];
+        })
+          .should("exist")
+          .should("not.be.disabled")
+          .click();
+
+        cy.log("Create app dialog submitted!");
+        cy.wait(2000);
+
+        return cy
+          .wait("@createAppRequest", { timeout: 20000 })
+          .then((interception) => {
+            interception.response?.statusCode &&
+              cy.wrap(interception.response?.statusCode).should("eq", 200);
+            cy.log("App creation request appears to have been a success!");
+            cy.get(`#${createAppDialogContentId}`, {
+              log: false,
+            }).should("not.exist");
+            return cy.wrap(true, { log: false });
+          })
+          .then((val): boolean => {
+            if (typeof val === "boolean") return val;
+            else if (typeof val[0] === "boolean") return val[0];
+            else {
+              throw new TypeError(
+                "Failed to resolve whether app creation was a success!",
+              );
+            }
+          });
       });
   });
 }
