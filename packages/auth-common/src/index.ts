@@ -47,5 +47,13 @@ export {
   organizationDefinitionSchema,
   hardcodedOrgs,
   SCHEMAVAULTS_ORGANIZATION_ID,
+  inviteMemberInputModes,
+  inviteMemberFormSchema,
 } from "./organizations";
-export type { OrganizationID, OrganizationDefinition } from "./organizations";
+export type {
+  OrganizationID,
+  OrganizationDefinition,
+  InviteMemberInputMode,
+  InviteMemberFormValues,
+  InviteMemberSubmitData,
+} from "./organizations";

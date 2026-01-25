@@ -5,12 +5,25 @@ import type { SWRResponse } from "swr";
 import { Datatable } from "@schemavaults/ui";
 import { columns, type OrganizationMemberTableData } from "./columns";
 import { Loader2 } from "lucide-react";
+import InviteMemberDialog from "@/components/InviteMemberDialog";
+import type {
+  InviteMemberSubmitData,
+  OrganizationID,
+} from "@schemavaults/auth-common";
 
 export interface OrganizationMembersDatatableProps {
+  organization_id: OrganizationID;
   members: SWRResponse<readonly OrganizationMemberTableData[], Error>;
+  inviteMember: (
+    inviteMemberFormSubmissionData: InviteMemberSubmitData,
+  ) => Promise<void>;
 }
 
-export function OrganizationMembersTable({ members }: OrganizationMembersDatatableProps): ReactElement {
+export function OrganizationMembersTable({
+  organization_id,
+  members,
+  inviteMember,
+}: OrganizationMembersDatatableProps): ReactElement {
   const { isLoading, data } = members;
 
   if (!data && isLoading) {
@@ -35,10 +48,17 @@ export function OrganizationMembersTable({ members }: OrganizationMembersDatatab
         membership_created_at: true,
       }}
       HeaderButtons={(): ReactElement => {
-        return <></>;
+        return (
+          <>
+            <InviteMemberDialog
+              organization_id={organization_id}
+              onSubmit={inviteMember}
+            />
+          </>
+        );
       }}
       datatypeLabel="Member"
-      searchColumn={['email']}
+      searchColumn={["email"]}
     />
   );
 }

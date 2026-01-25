@@ -40,3 +40,6 @@ export type { OrganizationMembersDatatableProps, OrganizationMemberTableData } f
 
 export { OrganizationMembersCard } from "./OrganizationMembersCard";
 export type { OrganizationMembersCardProps } from "./OrganizationMembersCard";
+
+export { InviteMemberDialog } from "./InviteMemberDialog";
+export type { InviteMemberDialogProps, InviteMemberSubmitData } from "./InviteMemberDialog";

@@ -18,6 +18,7 @@ import OrganizationMembersTable, {
 } from "@/components/OrganizationMembersTable";
 import useSWR from "swr";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import type { InviteMemberSubmitData } from "@schemavaults/auth-common";
 
 export interface OrganizationMembersCardProps {
   organization_id: string;
@@ -25,6 +26,9 @@ export interface OrganizationMembersCardProps {
   cardDescription?: string;
   cardClassName?: string;
   preloaded?: readonly OrganizationMemberTableData[];
+  inviteMember: (
+    inviteMemberFormSubmissionData: InviteMemberSubmitData,
+  ) => Promise<void>;
 }
 
 export function OrganizationMembersCard(
@@ -117,7 +121,11 @@ export function OrganizationMembersCard(
         <CardDescription>{cardDescription}</CardDescription>
       </CardHeader>
       <CardContent>
-        <OrganizationMembersTable members={members} />
+        <OrganizationMembersTable
+          organization_id={props.organization_id}
+          members={members}
+          inviteMember={props.inviteMember}
+        />
       </CardContent>
       {/*<CardFooter>
         <div className="flex flex-row items-start justify-start gap-2"></div>
