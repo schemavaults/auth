@@ -17,7 +17,7 @@ import {
   type ApiServerId,
   apiServerIdSchema,
   getAppEnvironment,
-  SchemaVaultsAppEnvironment,
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import hasTableBeenInitialized from "@/lib/auth-db/hasTableBeenInitialized";
 import extractDbhErrorEventDetails from "@/lib/auth-db/extractDbhErrorEventDetails";

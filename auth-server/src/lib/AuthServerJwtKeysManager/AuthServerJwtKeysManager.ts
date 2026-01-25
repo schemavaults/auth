@@ -25,20 +25,25 @@ export class AuthServerJwtKeysManager
     refreshTokenExpiry;
   private static readonly keyset_valid_duration: number =
     refreshTokenExpiry * 3;
+  private readonly db: Kysely<AuthDatabase>;
 
   public constructor(dbh: Kysely<AuthDatabase>) {
     super(new AuthServerJwtKeysStore(dbh));
+    this.db = dbh;
   }
 
   private isValidApiServerId(val: unknown): val is ApiServerId {
     return typeof val === "string" && apiServerIdSchema.safeParse(val).success;
   }
 
-  private async createAndSaveNewJwtKeySet(
-    audience_id: string,
-  ): Promise<I_JWT_Keys> {
+  /**
+   * @description Generates a new keyset object (WITHOUT saving it)
+   * @param audience_id API server that this keyset is for
+   * @returns The generated JWT_Keys keyset
+   */
+  private async generateNewJwtKeySet(audience_id: ApiServerId): Promise<I_JWT_Keys> {
     if (!this.isValidApiServerId(audience_id)) {
-      throw new TypeError("Invalid audience ID");
+      throw new TypeError("Invalid audience ID to generate new JWT keyset for!");
     }
 
     const newKeySet: I_JWT_Keys = await generateNewJwtKeySet({
@@ -47,12 +52,33 @@ export class AuthServerJwtKeysManager
       audience_id,
     });
 
-    const newKeySetId: string = newKeySet.keyset_id;
-    if (!this.isValidKeysetId(newKeySetId)) {
+    if (!this.isValidKeysetId(newKeySet.keyset_id)) {
       throw new Error("Invalid keyset ID for generated keyset!");
     }
 
-    await this.store.storeKeySet(newKeySet);
+    return newKeySet;
+  }
+
+  private async storeKeySet(keyset: I_JWT_Keys): Promise<void> {
+    return await this.store.storeKeySet(keyset);
+  }
+
+  private async createAndSaveNewJwtKeySet(
+    audience_id: ApiServerId,
+  ): Promise<I_JWT_Keys> {
+    if (!this.isValidApiServerId(audience_id)) {
+      throw new TypeError("Invalid audience ID to create and save new JWT keyset for!");
+    }
+
+    const newKeySet: I_JWT_Keys = await this.generateNewJwtKeySet(audience_id);
+
+    try {
+      await this.storeKeySet(newKeySet);
+    } catch (e: unknown) {
+      console.error("Failed to store key set after successful creation: ", e);
+      throw new Error("Failed to store key set after successful creation!")
+    }
+
     return newKeySet;
   }
 
@@ -111,7 +137,7 @@ export class AuthServerJwtKeysManager
   }
 
   public async getKeyset(
-    audience_id: string,
+    audience_id: ApiServerId,
     keyset_id: string,
   ): Promise<I_JWT_Keys> {
     if (!this.isValidApiServerId(audience_id)) {
@@ -129,6 +155,25 @@ export class AuthServerJwtKeysManager
       throw new Error(`Keyset with ID '${keyset_id}' has expired`);
     }
     return keyset;
+  }
+
+  /**
+   * @name createAndSaveKeysetIfNoneExists
+   * @description Initially created for the /api/jwks/{audience_api_server_id} endpoint.
+   * Creates and saves a new keyset if no active keys exist for the audience.
+   * Does nothing if active keys already exist.
+   */
+  public async createAndSaveKeysetIfNoneExists(audience_id: ApiServerId): Promise<void> {
+    if (!this.isValidApiServerId(audience_id)) {
+      throw new TypeError("Invalid audience ID");
+    }
+
+    const activeKeysets = await this.store.listActiveKeySets(audience_id);
+    if (activeKeysets.length > 0) {
+      return;
+    }
+
+    await this.createAndSaveNewJwtKeySet(audience_id);
   }
 }
 

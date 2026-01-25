@@ -1,6 +1,6 @@
-import { I_JWT_Keys } from "@schemavaults/jwt";
+import type { I_JWT_Keys } from "@schemavaults/jwt";
 import AbstractJsonWebKeySetsStore from "./AbstractJsonWebKeySetsStore";
-import { IJsonWebKeySetsStore } from "./IJsonWebKeySetsStore";
+import type { IJsonWebKeySetsStore } from "./IJsonWebKeySetsStore";
 
 export class MockJwtKeySetsStore
   extends AbstractJsonWebKeySetsStore

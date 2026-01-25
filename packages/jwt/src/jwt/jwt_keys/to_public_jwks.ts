@@ -47,8 +47,13 @@ export async function to_public_jwks(
     }
   }
 
+  const keys: readonly JWK[] = output_jwks;
+  if (keys.length === 0) {
+    throw new Error("[to_public_jwks] Output 'keys' array is empty!");
+  }
+
   return {
-    keys: output_jwks,
+    keys,
   };
 }
 

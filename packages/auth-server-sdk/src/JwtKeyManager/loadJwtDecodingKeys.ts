@@ -1,9 +1,12 @@
 import type { IJwtKeyManager } from "@/JwtKeyManager";
-import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import {
+  type ApiServerId,
+  apiServerIdSchema,
+} from "@schemavaults/app-definitions";
 import { type JWKS, importAsymmetricJWK } from "@schemavaults/jwt";
 
 export interface ILoadJwtDecodingKeysOptions {
-  audience_id: string;
+  audience_id: ApiServerId;
   keyset_id: string;
   keys_manager: IJwtKeyManager;
   debug?: boolean;
@@ -118,7 +121,14 @@ export async function loadJwtDecodingKeys({
     );
   }
 
-  const jwks: JWKS = await keys_manager.loadJwks(audience_id);
+  let jwks: JWKS;
+  try {
+    jwks = await keys_manager.loadJwks(audience_id);
+  } catch (e: unknown) {
+    console.error("Failed to load JWKS from key manager: ", e);
+    throw new Error("Failed to load JWKS from key manager!");
+  }
+
   if (
     !jwks ||
     typeof jwks !== "object" ||
@@ -126,6 +136,10 @@ export async function loadJwtDecodingKeys({
     !Array.isArray(jwks.keys)
   ) {
     throw new TypeError("Invalid JWKS; not an object or missing 'keys' array!");
+  }
+
+  if (jwks.keys.length === 0) {
+    throw new Error("Invalid JWKS; 'keys' array is empty!");
   }
 
   const jwt_decoding_keys: IDecodeAuthTokenKeys =

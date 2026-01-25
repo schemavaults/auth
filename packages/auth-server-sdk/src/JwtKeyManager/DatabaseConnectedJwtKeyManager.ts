@@ -13,7 +13,17 @@ export class DatabaseConnectedJwtKeyManager
   }
 
   public async loadJwks(audienceId: string): Promise<JWKS> {
-    return await this.store.getJwks(audienceId);
+    const jwks: JWKS = await this.store.getJwks(audienceId);
+    if (
+      !("keys" in jwks) ||
+      !Array.isArray(jwks.keys) ||
+      jwks.keys.length === 0
+    ) {
+      throw new TypeError(
+        "Expected loaded JWKS to have a non-empty 'keys' array property!",
+      );
+    }
+    return jwks;
   }
 
   public async hasBeenInitialized(): Promise<boolean> {
