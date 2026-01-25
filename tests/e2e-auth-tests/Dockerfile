@@ -19,6 +19,9 @@ WORKDIR /schemavaults/auth
 COPY package.json package.json
 COPY bun.lock bun.lock
 
+# Copy auth-server package.json for resolving workspace
+COPY auth-server/package.json auth-server/package.json
+
 # Copy package sources for building
 COPY packages/app-definitions/package.json packages/app-definitions/package.json
 COPY packages/app-definitions/src packages/app-definitions/src
