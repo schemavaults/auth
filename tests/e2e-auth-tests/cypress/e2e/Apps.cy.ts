@@ -27,15 +27,19 @@ describe("Apps", () => {
         }
 
         cy.generate_random_code(8).then((randomCode: string) => {
-          const app_name = `Test App ${randomCode}`;
-          const app_description = `E2E test app ${randomCode}`;
+          const app_name: string = `Test App ${randomCode}`;
+          const app_description: string = `E2E test app ${randomCode}`;
 
-          cy.create_app({ app_name, app_description }).then(() => {
-            cy.log(`Successfully created app '${app_name}'`);
-
-            // Verify app appears in list
-            cy.contains(app_name).should("exist");
-          });
+          cy.create_app({ app_name, app_description }).then(
+            (success: boolean) => {
+              if (typeof success !== "boolean" || !success) {
+                throw new Error(
+                  "Cypress 'create_app' command does not appear to have been a success",
+                );
+              }
+              cy.log(`Successfully created app '${app_name}'`);
+            },
+          );
         });
       });
     });
@@ -68,20 +72,23 @@ describe("Apps", () => {
             );
 
             cy.generate_random_code(8).then((appCode: string) => {
-              const app_name = `Org App ${appCode}`;
-              const app_description = `E2E test org app ${appCode}`;
+              const app_name: string = `Org App ${appCode}`;
+              const app_description: string = `E2E test org app ${appCode}`;
 
               cy.create_app({
                 app_name,
                 app_description,
                 organization_id,
-              }).then(() => {
+              }).then((success: boolean) => {
+                if (typeof success !== "boolean" || !success) {
+                  throw new Error(
+                    "Cypress 'create_app' command does not appear to have been a success",
+                  );
+                }
+
                 cy.log(
                   `Successfully created app '${app_name}' for organization '${organization_id}'`,
                 );
-
-                // Verify app appears in list
-                cy.contains(app_name).should("exist");
               });
             });
           });

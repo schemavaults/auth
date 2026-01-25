@@ -31,10 +31,12 @@ export default function open_dialog_with_button(
   // Retry clicking until the dialog opens (handles hydration timing)
   const maxAttempts: number = 10;
   const clickUntilDialogOpens = (attempt = 1): void => {
+    cy.get(`button#${open_dialog_button_id}`).should("exist").scrollIntoView();
+
     cy.get(`button#${open_dialog_button_id}`)
-      .should("exist")
       .should("be.visible")
-      .then($button => {
+      .should("not.be.disabled")
+      .then(($button) => {
         $button[0].click();
       });
     cy.wait(500);

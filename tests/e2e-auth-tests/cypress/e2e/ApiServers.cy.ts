@@ -30,16 +30,17 @@ describe("API Servers", () => {
           const api_server_name = `Test API ${randomCode}`;
           const api_server_description = `E2E test API server ${randomCode}`;
 
-          cy.create_api_server({ api_server_name, api_server_description }).then(
-            () => {
-              cy.log(
-                `Successfully created API server '${api_server_name}'`,
+          cy.create_api_server({
+            api_server_name,
+            api_server_description,
+          }).then((success: boolean) => {
+            if (typeof success !== "boolean" || !success) {
+              throw new Error(
+                "Cypress 'create_api_server' command does not appear to have been a success",
               );
-
-              // Verify API server appears in list
-              cy.contains(api_server_name).should("exist");
-            },
-          );
+            }
+            cy.log(`Successfully created API server '${api_server_name}'`);
+          });
         });
       });
     });
@@ -69,13 +70,16 @@ describe("API Servers", () => {
                 api_server_name,
                 api_server_description,
                 organization_id,
-              }).then(() => {
+              }).then((success: boolean) => {
+                if (typeof success !== "boolean" || !success) {
+                  throw new Error(
+                    "Cypress 'create_api_server' command does not appear to have been a success",
+                  );
+                }
+
                 cy.log(
                   `Successfully created API server '${api_server_name}' for organization '${organization_id}'`,
                 );
-
-                // Verify API server appears in list
-                cy.contains(api_server_name).should("exist");
               });
             });
           });
