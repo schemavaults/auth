@@ -110,7 +110,7 @@ export function CreateOrganizationDialog({
       }
 
       try {
-        const response = await fetch("/api/admin/organizations", {
+        const response = await fetch("/api/organizations", {
           method: "POST",
           body: JSON.stringify({
             ...values,

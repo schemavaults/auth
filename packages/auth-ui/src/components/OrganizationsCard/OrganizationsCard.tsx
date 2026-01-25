@@ -28,7 +28,7 @@ export interface OrganizationsCardProps {
   preloaded?: readonly OrganizationDefinition[];
 }
 
-const listAllOrganizationsEndpoint = "/api/admin/organizations";
+const listAllOrganizationsEndpoint = "/api/organizations";
 
 export function OrganizationsCard(props: OrganizationsCardProps): ReactElement {
   const authClient = useAuth();

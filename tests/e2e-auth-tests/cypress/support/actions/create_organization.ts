@@ -70,7 +70,7 @@ export default function createOrganization(
       // Submit form
       cy.intercept({
         method: "POST",
-        url: "**/api/admin/organizations",
+        url: "**/api/organizations",
         times: 1,
       }).as("createOrganizationRequest");
       cy.get(`button#${submitOrganizationCreationDialogButtonId}`, {

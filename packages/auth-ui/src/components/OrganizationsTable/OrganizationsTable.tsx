@@ -15,7 +15,7 @@ export interface OrganizationsDatatableProps {
 function clearOrganizationsCache(
   mutate: ReturnType<typeof useSWRConfig>["mutate"],
 ): void {
-  mutate("/api/admin/organizations");
+  mutate("/api/organizations");
 }
 
 export function OrganizationsTable({

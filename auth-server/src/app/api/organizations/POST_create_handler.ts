@@ -23,7 +23,7 @@ async function POST_create_organization_handler({
   environment,
 }: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
   if (environment === "development") {
-    console.log("[/api/admin/organizations] POST request received");
+    console.log("POST => /api/organizations");
   }
 
   if (!user.admin) {

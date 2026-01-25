@@ -15,6 +15,18 @@ async function GET_list_organizations_handler({
   user,
   dbh,
 }: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
+  if (!user) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to load your user data in API route handler.",
+      } satisfies ResourceCreationResponse,
+      {
+        status: 401,
+      },
+    );
+  }
+
   if (!user.admin) {
     return NextResponse.json(
       {
