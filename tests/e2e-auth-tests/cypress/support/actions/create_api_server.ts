@@ -80,7 +80,10 @@ export default function createApiServer(
         cy.wait(2000);
 
         return cy
-          .wait("@createApiServerRequest", { timeout: 20000 })
+          .wait("@createApiServerRequest", {
+            timeout: 20000,
+            requestTimeout: 20000,
+          })
           .then((interception) => {
             interception.response?.statusCode &&
               cy.wrap(interception.response?.statusCode).should("eq", 200);

@@ -77,7 +77,7 @@ export default function createApp(
         cy.wait(2000);
 
         return cy
-          .wait("@createAppRequest", { timeout: 20000 })
+          .wait("@createAppRequest", { timeout: 20000, requestTimeout: 20000 })
           .then((interception) => {
             interception.response?.statusCode &&
               cy.wrap(interception.response?.statusCode).should("eq", 200);

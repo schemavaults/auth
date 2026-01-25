@@ -1,7 +1,7 @@
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "./auth-db/auth-database-types";
 import { OrganizationsRegistry } from "./auth-db/organizations";
-import type { OrganizationID, UserData } from "@schemavaults/auth-common";
+import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 
 /**
  * Check if a user is a member of an organization
@@ -15,7 +15,15 @@ export async function isUserInOrganization(
   organization_id: OrganizationID,
   db: Kysely<AuthDatabase>,
 ): Promise<boolean> {
+  if (!organizationIdSchema.safeParse(organization_id).success) {
+    throw new TypeError("Invalid organization ID to check if user is a member of!")
+  }
+
   const { uid, admin } = user;
+
+  if (organization_id === SCHEMAVAULTS_ORGANIZATION_ID && !admin) {
+    return false;
+  }
 
   const organizationsRegistry = new OrganizationsRegistry(db);
   const userMemberships = await organizationsRegistry.listUserOrganizationMemberships(

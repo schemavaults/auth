@@ -52,7 +52,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    let owner_organization_id: OrganizationID | null | undefined = newResource.owner_organization_id;
+      if (!newResource.owner_organization_id) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "No 'owner_organization_id' was set in request body.",
+          } satisfies ResourceCreationResponse,
+          {
+            status: 400,
+          },
+        );
+    }
+
+      let owner_organization_id: OrganizationID | null | undefined = newResource.owner_organization_id;
 
     // If owner_organization_id is specified, verify user has access
     if (owner_organization_id) {
