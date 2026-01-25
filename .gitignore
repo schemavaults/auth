@@ -24,3 +24,5 @@ postgres-data/
 .vercel/
 
 PLAN.md
+
+package.json.tmp

@@ -9,6 +9,7 @@ RUN apt-get update
 RUN apt-get install -y git
 RUN apt-get install -y libgtk-3-0 libgbm-dev libnotify-dev libnss3 libxss1 libasound2 libxtst6 xauth xvfb
 RUN apt-get install -y unzip
+RUN apt-get install -y jq
 
 FROM bunbase AS deps
 
@@ -19,8 +20,12 @@ WORKDIR /schemavaults/auth
 COPY package.json package.json
 COPY bun.lock bun.lock
 
-# Copy auth-server package.json for resolving workspace
-COPY auth-server/package.json auth-server/package.json
+# Copy helper script for removing "./auth-server" from 'workspaces' definitions
+COPY scripts/remove-auth-server-from-workspaces-definition.sh scripts/remove-auth-server-from-workspaces-definition.sh
+
+# Set permissions for the helper script
+RUN chmod +x scripts/remove-auth-server-from-workspaces-definition.sh
+RUN /bin/bash ./scripts/remove-auth-server-from-workspaces-definition.sh
 
 # Copy package sources for building
 COPY packages/app-definitions/package.json packages/app-definitions/package.json
