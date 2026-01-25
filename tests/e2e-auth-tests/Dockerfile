@@ -15,10 +15,40 @@ FROM bunbase AS deps
 # Set working directory
 WORKDIR /schemavaults/auth
 
+# Copy root workspace files
+COPY package.json package.json
+COPY bun.lock bun.lock
+
+# Copy package sources for building
+COPY packages/app-definitions/package.json packages/app-definitions/package.json
+COPY packages/app-definitions/src packages/app-definitions/src
+COPY packages/app-definitions/tsconfig.json packages/app-definitions/tsconfig.json
+
+COPY packages/auth-common/package.json packages/auth-common/package.json
+COPY packages/auth-common/src packages/auth-common/src
+COPY packages/auth-common/tsconfig.json packages/auth-common/tsconfig.json
+
+COPY packages/jwt/package.json packages/jwt/package.json
+COPY packages/jwt/src packages/jwt/src
+COPY packages/jwt/tsconfig.json packages/jwt/tsconfig.json
+
 COPY tests/e2e-auth-tests/package.json tests/e2e-auth-tests/package.json
 
-WORKDIR /schemavaults/auth/tests/e2e-auth-tests
+# Install all workspace dependencies
 RUN bun install
+
+# Build packages in dependency order
+WORKDIR /schemavaults/auth/packages/app-definitions
+RUN bun run build
+
+WORKDIR /schemavaults/auth/packages/auth-common
+RUN bun run build
+
+WORKDIR /schemavaults/auth/packages/jwt
+RUN bun run build
+
+# Install Cypress
+WORKDIR /schemavaults/auth/tests/e2e-auth-tests
 RUN bun run cy:install
 
 FROM deps as test-runner

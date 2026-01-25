@@ -7,6 +7,7 @@ import createInviteCode from "./actions/create_invite_code";
 import createApiServer from "./actions/create_api_server";
 import createOrganization from "./actions/create_organization";
 import generate_random_code from "./actions/generate_random_code";
+import generateJwksAccessKey from "./actions/generate_jwks_access_key";
 import hasErrorToast from "./actions/has_error_toast";
 import is_admin from "./actions/is_admin";
 import is_authenticated from "./actions/is_authenticated";
@@ -85,3 +86,5 @@ Cypress.Commands.add("create_api_server", createApiServer);
 Cypress.Commands.add("create_app", createApp);
 
 Cypress.Commands.add("open_dialog_with_button", open_dialog_with_button);
+
+Cypress.Commands.add("generate_jwks_access_key", generateJwksAccessKey);

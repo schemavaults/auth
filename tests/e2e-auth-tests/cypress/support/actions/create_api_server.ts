@@ -12,9 +12,14 @@ export interface CreateApiServerParams {
   organization_id?: string;
 }
 
+export interface CreateApiServerResult {
+  success: boolean;
+  api_server_id: string | null;
+}
+
 export default function createApiServer(
   params: CreateApiServerParams,
-): Cypress.Chainable<boolean> {
+): Cypress.Chainable<CreateApiServerResult> {
   const { api_server_name, api_server_description, organization_id } = params;
   const isPublic = params.public ?? false;
 
@@ -85,18 +90,23 @@ export default function createApiServer(
             requestTimeout: 20000,
           })
           .then((interception) => {
-            interception.response?.statusCode &&
-              cy.wrap(interception.response?.statusCode).should("eq", 200);
-            cy.log(
-              "API server creation request appears to have been a success!",
-            );
+            const statusCode = interception.response?.statusCode;
+            const responseBody = interception.response?.body;
+            const success = statusCode === 200;
+            const api_server_id = responseBody?.resource_id ?? null;
+
+            if (success) {
+              cy.wrap(statusCode).should("eq", 200);
+              cy.log(
+                "API server creation request appears to have been a success!",
+              );
+            }
+
             cy.get(`#${createApiServerDialogContentId}`, {
               log: false,
             }).should("not.exist");
-            return cy.wrap(true, { log: false });
-          })
-          .then((val): boolean => {
-            return typeof val === "boolean" ? val : val[0];
+
+            return cy.wrap({ success, api_server_id }, { log: false });
           });
       });
   });

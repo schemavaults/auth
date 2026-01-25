@@ -33,8 +33,8 @@ describe("API Servers", () => {
           cy.create_api_server({
             api_server_name,
             api_server_description,
-          }).then((success: boolean) => {
-            if (typeof success !== "boolean" || !success) {
+          }).then(({ success }) => {
+            if (!success) {
               throw new Error(
                 "Cypress 'create_api_server' command does not appear to have been a success",
               );
@@ -70,8 +70,8 @@ describe("API Servers", () => {
                 api_server_name,
                 api_server_description,
                 organization_id,
-              }).then((success: boolean) => {
-                if (typeof success !== "boolean" || !success) {
+              }).then(({ success }) => {
+                if (!success) {
                   throw new Error(
                     "Cypress 'create_api_server' command does not appear to have been a success",
                   );

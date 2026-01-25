@@ -17,8 +17,12 @@
 import "./commands";
 import type { RegularUserCredentials } from "./actions/create_and_login_as_regular_user";
 import type { CreateAppParams } from "./actions/create_app";
-import type { CreateApiServerParams } from "./actions/create_api_server";
+import type {
+  CreateApiServerParams,
+  CreateApiServerResult,
+} from "./actions/create_api_server";
 import type { CreateOrganizationParams } from "./actions/create_organization";
+import type { GenerateJwksAccessKeyResult } from "./actions/generate_jwks_access_key";
 
 declare global {
   namespace Cypress {
@@ -40,8 +44,13 @@ declare global {
         max_uses: number,
       ): Chainable<boolean>;
       create_organization(params: CreateOrganizationParams): Chainable<boolean>;
-      create_api_server(params: CreateApiServerParams): Chainable<boolean>;
+      create_api_server(
+        params: CreateApiServerParams,
+      ): Chainable<CreateApiServerResult>;
       create_app(params: CreateAppParams): Chainable<boolean>;
+      generate_jwks_access_key(
+        api_server_id: string,
+      ): Chainable<GenerateJwksAccessKeyResult>;
       generate_random_code(length: number): Chainable<string>;
       open_dialog_with_button(
         // Button to click to open the dialog
