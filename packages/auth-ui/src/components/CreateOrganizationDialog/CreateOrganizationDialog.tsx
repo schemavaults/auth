@@ -86,8 +86,29 @@ export function CreateOrganizationDialog({
           credentials: "include",
         });
         if (!response.ok || response.status !== 200) {
+          try {
+            const body = await response.json();
+            if (typeof body === "object" && body) {
+              if ("error" in body && typeof body.error === "string") {
+                throw new Error(
+                  `${response.status} ${response.statusText} - ${body.error}`,
+                );
+              }
+            } else if ("message" in body && typeof body.message === "string") {
+              throw new Error(
+                `${response.status} ${response.statusText} - ${body.message}`,
+              );
+            }
+          } catch (e: unknown) {
+            if (
+              e instanceof Error &&
+              e.message.startsWith(`${response.status} ${response.statusText}`)
+            ) {
+              throw e;
+            }
+          }
           throw new Error(
-            `Organization creation request has bad status: ${response.status}`,
+            `Organization creation request has bad status: ${response.status} ${response.statusText}`,
           );
         }
 
