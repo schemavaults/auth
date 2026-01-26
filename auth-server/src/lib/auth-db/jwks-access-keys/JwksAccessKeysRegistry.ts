@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Kysely } from "@schemavaults/dbh";
-import type { AuthDatabase } from "../auth-database-types";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type {
   JwksAccessKeyRecord,
   NewJwksAccessKeyRecord,
