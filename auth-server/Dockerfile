@@ -110,9 +110,14 @@ WORKDIR /schemavaults/auth
 ARG NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS
 ENV NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS=$NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS
 
+# Build server
 ENV NEXT_STANDALONE_DOCKER_BUILD true
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN bun run build --filter @schemavaults/auth-server
+
+# Build database migrations
+WORKDIR /schemavaults/auth/auth-server
+RUN bun run build:migrations
 
 FROM nodejsbase AS production
 
@@ -123,6 +128,9 @@ COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/sta
 COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ auth-server/.next/standalone/auth-server/.next/static/
 COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/.next/standalone/auth-server/public/
 
+# Copy compiled migrations for runtime DB migrations
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ auth-server/migrations/
+
 WORKDIR /schemavaults/auth/auth-server
 
 EXPOSE 80
@@ -131,4 +139,8 @@ ENV HOSTNAME 0.0.0.0
 
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_STANDALONE_DOCKER_BUILD true
+
+# Set migrations path for production
+ENV MIGRATIONS_PATH /schemavaults/auth/auth-server/migrations
+
 CMD [ "node", "./.next/standalone/auth-server/server.js" ]
