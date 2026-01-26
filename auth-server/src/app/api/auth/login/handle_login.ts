@@ -66,27 +66,6 @@ export async function handleLogin({
     );
   }
 
-  try {
-    if (!(await userRegistry.hasBeenInitialized())) {
-      await userRegistry.performSetupTasks();
-    }
-  } catch (e: unknown) {
-    console.error(
-      "[handleLogin] Error ensuring user registry database is ready: ",
-      e,
-    );
-    return NextResponse.json(
-      {
-        success: false,
-        error: true,
-        message: "Error ensuring user registry database is ready",
-      },
-      {
-        status: 500,
-      },
-    );
-  }
-
   // Check if email exists in db
   let user: UserDocument | null;
   try {
