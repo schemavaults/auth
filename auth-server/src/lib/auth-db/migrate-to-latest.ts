@@ -2,6 +2,7 @@ import "server-only";
 import { join } from "path";
 import type { Kysely } from "@schemavaults/dbh";
 import { existsSync, readdirSync } from "fs";
+import ServerlessDatabase from "./serverless-database";
 
 export default async function migrateToLatest(db: Kysely<any>): Promise<void> {
   const migrationFolder = join(__dirname, "migrations")
@@ -21,4 +22,12 @@ export default async function migrateToLatest(db: Kysely<any>): Promise<void> {
     migrationFolder,
     version: undefined // use latest
   })
+}
+
+if (require.main === module) {
+  const runAsScript = async (): Promise<void> => {
+    await using dbh = ServerlessDatabase.createDBH();
+    await migrateToLatest(dbh.db);
+  }
+  runAsScript();
 }
