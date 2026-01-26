@@ -37,11 +37,35 @@ export default defineConfig({
 
         if (environment === "test") {
           await (async function triggerTestEnvironmentDbMigration(): Promise<void> {
-            await fetch(
-              `${config.baseUrl}/api/admin/migrate-test-environment-db`,
-              {
+            const endpoint: string = `${config.baseUrl}/api/admin/migrate-test-environment-db`;
+            console.log(
+              "[triggerTestEnvironmentDbMigration] Sending POST request to: ",
+              endpoint,
+            );
+            try {
+              const response = await fetch(endpoint, {
                 method: "POST",
-              },
+              });
+              if (response.status !== 200) {
+                throw new Error(
+                  "Received bad response status " +
+                    response.status +
+                    " " +
+                    response.statusText,
+                );
+              }
+            } catch (e: unknown) {
+              console.error(
+                "Failed to trigger test environment DB migration: ",
+                e,
+              );
+              throw new Error(
+                "Failed to trigger test environment DB migration!",
+              );
+            }
+
+            console.log(
+              `[triggerTestEnvironmentDbMigration] DB migration appears to have been a success!`,
             );
           })();
           return;
