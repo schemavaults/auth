@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.15.3",
+  "version": "0.15.4",
   "private": true,
   "repository": {
     "type": "git",
@@ -47,7 +47,7 @@
   },
   "scripts": {
     "dev": "NEXT_TELEMETRY_DISABLED=1 next dev --port 6767",
-    "build:migrations": "bunx tsc src/lib/auth-db/migrations/*.ts --outDir dist/migrations --module ESNext --target ES2022 --moduleResolution bundler --esModuleInterop --skipLibCheck",
+    "build:migrations": "bun run ./build-db-migrations.ts",
     "build": "NEXT_TELEMETRY_DISABLED=1 next build",
     "build:standalone": "NEXT_STANDALONE_DOCKER_BUILD=true NEXT_TELEMETRY_DISABLED=1 next build",
     "start": "NEXT_TELEMETRY_DISABLED=1 next start",

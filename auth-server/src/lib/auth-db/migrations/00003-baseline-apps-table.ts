@@ -1,6 +1,7 @@
 // 00003-baseline-apps-table.ts
 
-import { sql, type Kysely } from "@schemavaults/dbh";
+import type { Kysely } from "@schemavaults/dbh";
+import { sql } from "@/sql";
 
 async function createAppAndAppDomainsTable(db: Kysely<any>): Promise<void> {
   const createAppSql = sql`

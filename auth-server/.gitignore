@@ -16,4 +16,4 @@ next-env.d.ts
 
 tsconfig.tsbuildinfo
 
-migrations/
+./migrations/

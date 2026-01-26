@@ -1,6 +1,7 @@
 // 00005-baseline-jwt-keys-table.ts
 
-import { sql, type Kysely } from "@schemavaults/dbh";
+import type { Kysely } from "@schemavaults/dbh";
+import { sql } from "@/sql";
 
 async function createJwtKeysTable(
   dbh: Kysely<any>,

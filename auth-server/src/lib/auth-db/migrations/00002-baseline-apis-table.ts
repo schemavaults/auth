@@ -1,7 +1,7 @@
 // 00002-baseline-apis-table.ts
 
-import { type Kysely, sql } from "@schemavaults/dbh";
-
+import type { Kysely } from "@schemavaults/dbh";
+import { sql } from "@/sql";
 
 async function createApiServersTableAndApiServerDomainsTable(db: Kysely<any>): Promise<void> {
   const createApiServersTable = sql`

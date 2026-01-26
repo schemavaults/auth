@@ -1,7 +1,8 @@
 // 00001-baseline-user-and-org-tables.ts
 // SQL extracted out of user-registry.ts and organizations-registry.ts modules
 
-import { sql, type Kysely } from "@schemavaults/dbh";
+import type { Kysely } from "@schemavaults/dbh";
+import { sql } from "@/sql";
 
 async function createOrganizationsTable(db: Kysely<any>): Promise<void> {
   const createOrganizationsTableSql = sql`

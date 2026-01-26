@@ -1,6 +1,7 @@
 // 00006-baseline-app-to-api-permissions-table.ts
 
-import { sql, type Kysely } from "@schemavaults/dbh";
+import type { Kysely } from "@schemavaults/dbh";
+import { sql } from "@/sql";
 
 async function createAppToApiPermissionsTable(db: Kysely<any>) {
   const createPermissionsTable = sql`

@@ -1,6 +1,7 @@
 // 00000-template-migration.ts
 
 import type { Kysely } from "@schemavaults/dbh";
+// import { sql } from "@/sql";
 
 export async function up(db: Kysely<any>): Promise<void> { }
 

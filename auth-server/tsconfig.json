@@ -26,10 +26,14 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@/sql": [
+        "./src/lib/auth-db/sql"
       ]
     },
     "downlevelIteration": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "types": ["bun-types"]
   },
   "include": [
     "next-env.d.ts",

@@ -1,6 +1,7 @@
 // 00004-baseline-jwks-access-keys-table.ts
 
-import { sql, type Kysely } from "@schemavaults/dbh";
+import type { Kysely } from "@schemavaults/dbh";
+import { sql } from "@/sql";
 
 async function setupJwksAccessKeysSQLTable(
   db: Kysely<any>,

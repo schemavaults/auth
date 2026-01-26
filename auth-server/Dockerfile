@@ -129,7 +129,8 @@ COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/sta
 COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/.next/standalone/auth-server/public/
 
 # Copy compiled migrations for runtime DB migrations
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ auth-server/migrations/
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/sql.js auth-server/dist/sql.js
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ auth-server/dist/migrations/
 
 WORKDIR /schemavaults/auth/auth-server
 
@@ -141,6 +142,6 @@ ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_STANDALONE_DOCKER_BUILD true
 
 # Set migrations path for production
-ENV MIGRATIONS_PATH /schemavaults/auth/auth-server/migrations
+ENV MIGRATIONS_PATH /schemavaults/auth/auth-server/dist/migrations
 
 CMD [ "node", "./.next/standalone/auth-server/server.js" ]
