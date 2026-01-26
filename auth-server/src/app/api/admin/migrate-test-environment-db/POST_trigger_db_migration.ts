@@ -28,7 +28,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     try {
       if (debug) {
-        console.log("")
+        console.log("Triggering database migration...")
       }
       await trigger_db_migration(dbh.db)
     } catch (e: unknown) {
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         success: true,
-        message: "Initialized @schemavaults/auth-server postgres database!",
+        message: "Successfully applied @schemavaults/auth-server database migrations!",
       },
       {
         status: 200,

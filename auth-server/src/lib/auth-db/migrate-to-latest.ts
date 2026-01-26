@@ -12,7 +12,7 @@ function resolveMigrationFolder(): string {
   return join(__dirname, "migrations");
 }
 
-export default async function migrateToLatest(db: Kysely<any>, migrationFolder: string = resolveMigrationFolder()): Promise<void> {
+export default async function migrateToLatest(db: Kysely<any>, migrationFolder: string = resolveMigrationFolder()) {
   if (typeof migrationFolder !== 'string') {
     throw new TypeError("Expected 'migrationFolder' to be a string!");
   }
@@ -27,17 +27,19 @@ export default async function migrateToLatest(db: Kysely<any>, migrationFolder: 
   }
 
   const migrate = await import("@schemavaults/dbh/migrate").then(mod => mod.migrate);
-  return await migrate({
+  const result = await migrate({
     db: db,
     migrationFolder,
     version: undefined // use latest
   })
+  return result;
 }
 
 if (require.main === module) {
   const runAsScript = async (): Promise<void> => {
     await using dbh = ServerlessDatabase.createDBH();
-    await migrateToLatest(dbh.db);
+    const result = await migrateToLatest(dbh.db);
+    console.log("Migration Result(s): ", result)
   }
   runAsScript();
 }
