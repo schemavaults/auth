@@ -60,12 +60,14 @@ export default function createApp(
         }
         cy.url({ log: false }).should("include", targetUrl);
 
-        // Submit form
+        // Intercept creation request
         cy.intercept({
           method: "POST",
           url: "**/api/apps",
           times: 1,
         }).as("createAppRequest");
+
+        // Submit form
         cy.get(`button#${submitCreateAppDialogButtonId}`, {
           log: false,
         })

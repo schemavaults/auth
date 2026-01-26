@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
 import { Datatable } from "@schemavaults/ui";
 import { columns } from "./columns";
@@ -15,6 +15,8 @@ import CreateInviteCodeDialog from "@/components/CreateInviteCodeDialog";
 export function InviteCodesTable({
   invite_codes,
 }: InviteCodesDatatableProps): ReactElement {
+  const [createInviteCodeDialogOpen, setCreateInviteCodeDialogOpen] =
+    useState<boolean>(false);
   const { isLoading, data } = invite_codes;
 
   if (!data && isLoading) {
@@ -40,12 +42,17 @@ export function InviteCodesTable({
       HeaderButtons={(): ReactElement => {
         return (
           <>
-            <CreateInviteCodeDialog />
+            <CreateInviteCodeDialog
+              open={createInviteCodeDialogOpen}
+              onOpenChange={setCreateInviteCodeDialogOpen}
+            />
           </>
         );
       }}
       datatypeLabel="Invite Code"
-      searchColumn={['invite_code', 'description']}
+      searchColumn={["invite_code", "description"]}
     />
   );
 }
+
+export default InviteCodesTable;

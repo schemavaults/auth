@@ -67,12 +67,13 @@ export default function createApiServer(
 
         cy.url({ log: false }).should("include", targetUrl);
 
-        // Submit form
         cy.intercept({
           method: "POST",
           url: "**/api/apis",
           times: 1,
         }).as("createApiServerRequest");
+
+        // Submit form
         cy.get(`button#${submitCreateApiServerDialogButtonId}`, {
           log: false,
         })
