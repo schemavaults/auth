@@ -9,28 +9,58 @@ import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { Kysely } from "@schemavaults/dbh";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import { existsSync, statSync } from "fs";
+import type MigrateToLatestFn from "@/lib/auth-db/migrate-to-latest";
+type MigrateToLatestResult = Awaited<ReturnType<typeof MigrateToLatestFn>>;
+type MigrationResult = NonNullable<MigrateToLatestResult>[number]
 
 async function trigger_db_migration(
-  db: Kysely<AuthDatabase>
-): Promise<void> {
-  const migrateToLatest: (db: Kysely<any>) => Promise<void> = await import(
+  db: Kysely<AuthDatabase>,
+  MIGRATIONS_PATH: string
+) {
+  const migrateToLatest = await import(
     "@/lib/auth-db/migrate-to-latest"
   ).then(mod => mod.default);
-  await migrateToLatest(db);
+  return await migrateToLatest(db, MIGRATIONS_PATH);
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  void req;
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const debug: boolean = shouldEnableDebug(environment);
 
   if (environment === 'test') {
     await using dbh = ServerlessDatabase.createDBH();
 
+    if (!process.env.MIGRATIONS_PATH || typeof process.env.MIGRATIONS_PATH !== 'string') {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "MIGRATIONS_PATH environment variable must be configured in order to use this feature.",
+        } satisfies ResourceCreationResponse,
+        {
+          status: 500,
+        },
+      );
+    }
+
+    let result: readonly MigrationResult[] = [];
     try {
+      const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH as string;
       if (debug) {
-        console.log("Triggering database migration...")
+        console.log("Triggering database migration from migrations path: ", MIGRATIONS_PATH);
       }
-      await trigger_db_migration(dbh.db)
+
+      if (!existsSync(MIGRATIONS_PATH)) {
+        throw new Error("Path specified by MIGRATIONS_PATH does not exist!")
+      } else if (!statSync(MIGRATIONS_PATH).isDirectory()) {
+        throw new Error("Path specified by MIGRATIONS_PATH is not a directory!")
+      }
+
+      const migrationResults = await trigger_db_migration(dbh.db, MIGRATIONS_PATH);
+      if (migrationResults) {
+        result = migrationResults;
+      }
     } catch (e: unknown) {
       const baseErrorMessage: string = "Error attempting to initialize @schemavaults/auth-server postgres database";
       console.error(
@@ -54,6 +84,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         },
       );
     }
+
+    console.log("Successfully applied @schemavaults/auth-server database migrations: ", result);
 
     return NextResponse.json(
       {
