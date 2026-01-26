@@ -1,5 +1,4 @@
 export { ServerlessDatabase } from "./serverless-database";
-export { initializeAuthDbTables } from "./initialize-auth-db-tables";
 export type { ResourceCreationResponse } from "./resource-creation-response";
 
 export * from "./apps";
