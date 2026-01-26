@@ -7,18 +7,7 @@ import {
 import { type NextRequest, NextResponse } from "next/server";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { Kysely } from "@schemavaults/dbh";
-import type { UserData } from "@schemavaults/auth-common";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
-
-async function canTriggerDatabaseMigration(
-  user: UserData,
-  environment: SchemaVaultsAppEnvironment
-): Promise<boolean> {
-  if (environment === 'test') {
-    return true;
-  }
-  return user.admin ?? false;
-}
 
 async function trigger_db_migration(
   db: Kysely<AuthDatabase>
@@ -29,15 +18,22 @@ async function trigger_db_migration(
     ).then(mod => mod.default);
     await migrateToLatest(db);
   } catch (e: unknown) {
+    const baseErrorMessage: string = "Error attempting to initialize @schemavaults/auth-server postgres database";
     console.error(
-      "Error attempting to initialize @schemavaults/auth-server postgres database: ",
+      `${baseErrorMessage}: `,
       e,
     );
+
+    let errorMessage: string = baseErrorMessage;
+    if (e instanceof Error) {
+      errorMessage += ". ";
+      errorMessage += e.message;
+    }
+
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Error attempting to initialize @schemavaults/auth-server postgres database!",
+        message: errorMessage,
       } satisfies ResourceCreationResponse,
       {
         status: 500,

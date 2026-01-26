@@ -47,6 +47,12 @@ export default defineConfig({
                 method: "POST",
               });
               if (response.status !== 200) {
+                try {
+                  const body = await response.json();
+                  console.error(body);
+                } catch (e: unknown) {
+                  void e;
+                }
                 throw new Error(
                   "Received bad response status " +
                     response.status +
