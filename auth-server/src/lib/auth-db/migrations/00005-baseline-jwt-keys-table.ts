@@ -1,8 +1,9 @@
-import { sql, type Kysely } from "@schemavaults/dbh";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+// 00005-baseline-jwt-keys-table.ts
 
-export async function setupJwtKeysTable(
-  dbh: Kysely<AuthDatabase>,
+import { sql, type Kysely } from "@schemavaults/dbh";
+
+async function createJwtKeysTable(
+  dbh: Kysely<any>,
 ): Promise<void> {
   const createJwtKeysTableSql = sql`
     CREATE TABLE IF NOT EXISTS JWT_KEYS (
@@ -20,4 +21,10 @@ export async function setupJwtKeysTable(
   await createJwtKeysTableSql.execute(dbh);
 }
 
-export default setupJwtKeysTable;
+export async function up(db: Kysely<any>): Promise<void> {
+  await createJwtKeysTable(db);
+}
+
+export async function down(db: Kysely<any>): Promise<void> {
+  await db.schema.dropTable('jwt_keys').execute()
+}

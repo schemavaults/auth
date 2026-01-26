@@ -22,21 +22,7 @@ import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatab
  * @see AuthorizedAppsRegistry To manage which frontend apps a user has actually authorized
  * @see SchemaVaultsApiServerRegistry To manage the list of backend API servers
  */
-export class SchemaVaultsAppToApiPermissionsRegistry extends AbstractDatabaseResourceGroup {
-  public async hasBeenInitialized(): Promise<boolean> {
-    if (this.initialized) {
-      return true;
-    }
-
-    return await this.hasTableBeenInitialized("apps_to_apis_permissions");
-  }
-  public async performSetupTasks(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-    return await this.setup();
-  }
-
+export class SchemaVaultsAppToApiPermissionsRegistry {
   private readonly environment: SchemaVaultsAppEnvironment =
     getAppEnvironment();
 
@@ -205,15 +191,23 @@ export class SchemaVaultsAppToApiPermissionsRegistry extends AbstractDatabaseRes
   public async allow(
     client_app_id: string,
     api_server_id: string,
+    created_by: string | null | undefined = undefined
   ): Promise<void> {
+    const parsed = await appToApiPermissionSchema.safeParseAsync({
+      client_app_id,
+      api_server_id,
+      created_at: Date.now(),
+      created_by: created_by ?? null
+    });
+
+    if (!parsed.success) {
+      throw new Error
+    }
+
     try {
       await this.db
         .insertInto("apps_to_apis_permissions")
-        .values({
-          client_app_id,
-          api_server_id,
-          created_at: Date.now(),
-        })
+        .values(parsed.data)
         .execute();
     } catch (e: unknown) {
       console.error(e);
@@ -221,44 +215,8 @@ export class SchemaVaultsAppToApiPermissionsRegistry extends AbstractDatabaseRes
     }
   }
 
-  private static async setupAppToApiPermissionsRegistrySQLTables(
-    db: Kysely<AuthDatabase>,
-    debug: boolean = false,
-  ): Promise<void> {
-    if (debug) {
-      console.log(
-        "[SchemaVaultsAppToApiPermissionsRegistry] Creating Apps-to-APIs Permissions Table (if not exists)",
-      );
-    }
-    const createPermissionsTable = sql`
-      CREATE TABLE IF NOT EXISTS APPS_TO_APIS_PERMISSIONS (
-        client_app_id UUID NOT NULL,
-        api_server_id UUID NOT NULL,
-        created_at BIGINT NOT NULL,
-        CONSTRAINT fk_app FOREIGN KEY (client_app_id) REFERENCES APPS(app_id) ON DELETE CASCADE,
-        CONSTRAINT fk_api FOREIGN KEY (api_server_id) REFERENCES API_SERVERS(api_server_id) ON DELETE CASCADE,
-        PRIMARY KEY (client_app_id, api_server_id)
-      );
-    `;
-    await createPermissionsTable.execute(db);
-    if (debug) {
-      console.log(
-        "[SchemaVaultsAppToApiPermissionsRegistry] Created Apps-to-APIs Permissions Table...",
-      );
-    }
-  }
-
-  protected async setup(): Promise<void> {
-    await SchemaVaultsAppToApiPermissionsRegistry.setupAppToApiPermissionsRegistrySQLTables(
-      this.db,
-      this.debug,
-    );
-  }
-
   public constructor(
     protected readonly db: Kysely<AuthDatabase>,
     private readonly debug: boolean = false,
-  ) {
-    super(db);
-  }
+  ) {}
 }

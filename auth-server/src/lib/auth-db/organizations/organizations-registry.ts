@@ -23,87 +23,18 @@ import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatab
 import type { OrganizationMemberWithUserData } from "./organization-member-with-user-data";
 
 export class OrganizationsRegistry
-  extends AbstractDatabaseResourceGroup
   implements IOrganizationsRegistry
 {
   private readonly hardcodedOrganizations: Map<string, OrganizationDefinition> = new Map(hardcodedOrgs.map(hardcodedOrg => [hardcodedOrg.organization_id, hardcodedOrg]))
 
-  public async hasBeenInitialized(): Promise<boolean> {
-    if (this.initialized) {
-      return true;
-    }
-    const tablesInitializedPromises = await Promise.all([
-      this.hasTableBeenInitialized("organizations"),
-      this.hasTableBeenInitialized("organaization_membership_roles"),
-    ]);
-
-    const initialized: boolean =
-      tablesInitializedPromises[0] && tablesInitializedPromises[1];
-
-    if (initialized) {
-      this.initialized = true;
-      return true;
-    }
-    return false;
-  }
-
-  public async performSetupTasks(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-    await this.setup();
-    this.initialized = true;
-  }
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
 
-  private static async setupOrganizationsSQLTable(
-    db: Kysely<AuthDatabase>,
-  ): Promise<void> {
-    const createOrganizationsTableSql = sql`
-      CREATE TABLE IF NOT EXISTS ORGANIZATIONS (
-        organization_id TEXT PRIMARY KEY,
-        created_at BIGINT NOT NULL,
-        name TEXT NOT NULL
-      );
-    `;
-
-    await createOrganizationsTableSql.execute(db);
-  }
-
-  private static async setupOrganizationMembershipRolesSQLTable(
-    db: Kysely<AuthDatabase>,
-  ): Promise<void> {
-    const createOrganizationMembershipRolesTableSql = sql`
-      CREATE TABLE IF NOT EXISTS ORGANIZATION_MEMBERSHIP_ROLES (
-        membership_declaration_id UUID PRIMARY KEY,
-        organization_id TEXT NOT NULL,
-        uid UUID NOT NULL,
-        created_at BIGINT NOT NULL,
-        role TEXT NOT NULL,
-        CONSTRAINT fk_user FOREIGN KEY (uid) REFERENCES USERS(uid) ON DELETE CASCADE,
-        CONSTRAINT fk_org FOREIGN KEY (organization_id) REFERENCES ORGANIZATIONS(organization_id) ON DELETE CASCADE,
-        UNIQUE (organization_id, uid, role)
-      );
-    `;
-
-    await createOrganizationMembershipRolesTableSql.execute(db);
-  }
-
-  private static async setup(db: Kysely<AuthDatabase>): Promise<void> {
-    await OrganizationsRegistry.setupOrganizationsSQLTable(db);
-    await OrganizationsRegistry.setupOrganizationMembershipRolesSQLTable(db);
-  }
-
-  protected async setup(): Promise<void> {
-    await OrganizationsRegistry.setup(this.db);
-  }
 
   public constructor(
     protected readonly db: Kysely<AuthDatabase>,
     debug: boolean | undefined = undefined,
   ) {
-    super(db);
     this.env = getAppEnvironment();
 
     const defaultDebugState: boolean =
@@ -118,10 +49,6 @@ export class OrganizationsRegistry
   public async lookupOrganization(
     org_id: OrganizationID,
   ): Promise<OrganizationDefinition> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
-
     const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id);
     if (!parsed_org_id.success) {
       throw new Error(
@@ -202,10 +129,6 @@ export class OrganizationsRegistry
   public async createOrganization(
     org_def: OrganizationDefinition,
   ): Promise<void> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
-
     const parsedOrgDef =
       await organizationDefinitionSchema.safeParseAsync(org_def);
     if (!parsedOrgDef.success) {
@@ -247,9 +170,6 @@ export class OrganizationsRegistry
   }
 
   public async listAllOrganizations(): Promise<readonly OrganizationDefinition[]> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     if (this.debug) {
       console.log(`[OrganizationsRegistry] listAllOrganizations()`);
@@ -297,9 +217,6 @@ export class OrganizationsRegistry
     admin: boolean = false
   ): Promise<readonly OrganizationID[]> {
     const debug: boolean = this.debug;
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     if (!isValidUuid(uid)) {
       throw new Error(
@@ -402,9 +319,6 @@ export class OrganizationsRegistry
   public async listOrganizationMembers(
     org_id: OrganizationID,
   ): Promise<readonly OrganizationMemberWithUserData[]> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id);
     if (!parsed_org_id.success) {
@@ -512,9 +426,6 @@ export class OrganizationsRegistry
     uid: string,
     role: OrganizationMembershipRoleType,
   ): Promise<void> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id);
     if (!parsed_org_id.success) {

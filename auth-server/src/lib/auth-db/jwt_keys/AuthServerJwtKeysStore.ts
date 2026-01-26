@@ -1,3 +1,5 @@
+import "server-only";
+
 import {
   AbstractJsonWebKeySetsStore,
   type IJsonWebKeySetsStore,
@@ -9,73 +11,18 @@ import {
 } from "@schemavaults/jwt";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { Kysely } from "@schemavaults/dbh";
-import setupJwtKeysTable from "./setup_jwt_keys_table";
 import { type JwtKeyRecord, isValidJwtKeyRecord } from "./jwt_keys_table";
 import isValidUuid from "@/lib/is-valid-uuid";
-import type { IDatabaseResourceGroup } from "@schemavaults/auth-server-sdk";
 import {
   type ApiServerId,
   apiServerIdSchema,
-  getAppEnvironment,
-  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import hasTableBeenInitialized from "@/lib/auth-db/hasTableBeenInitialized";
-import extractDbhErrorEventDetails from "@/lib/auth-db/extractDbhErrorEventDetails";
 
 export class AuthServerJwtKeysStore
   extends AbstractJsonWebKeySetsStore
-  implements IJsonWebKeySetsStore, IDatabaseResourceGroup
+  implements IJsonWebKeySetsStore
 {
-  private readonly dbh: Kysely<AuthDatabase>;
-
-  private async hasSqlTableBeenInitialized(
-    table_name: string,
-  ): Promise<boolean> {
-    const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-    const debug: boolean =
-      environment === "development" || environment === "test";
-    return await hasTableBeenInitialized(this.dbh, table_name, debug);
-  }
-
-  // Setup required database tables
-  public async setup(): Promise<void> {
-    await setupJwtKeysTable(this.dbh);
-    return;
-  }
-
-  public async hasBeenInitialized(): Promise<boolean> {
-    try {
-      const jwtKeysTableSetup: boolean =
-        await this.hasSqlTableBeenInitialized("jwt_keys");
-      return jwtKeysTableSetup;
-    } catch (e: unknown) {
-      const errorDetails: string = extractDbhErrorEventDetails(e);
-      console.error(
-        "Error checking if SQL tables are ready for storing JWT signing/encryption keys: ",
-        e,
-        errorDetails,
-      );
-      throw new Error(
-        "Error checking if SQL tables are ready for storing JWT signing/encryption keys!",
-      );
-    }
-  }
-
-  public async performSetupTasks(): Promise<void> {
-    try {
-      await this.setup();
-    } catch (e: unknown) {
-      const errorDetails: string = extractDbhErrorEventDetails(e);
-      console.error(
-        "Error setting up SQL tables for storing JWT signing/encryption keys: ",
-        e,
-        errorDetails,
-      );
-      throw new Error(
-        "Error setting up SQL tables for storing JWT signing/encryption keys!",
-      );
-    }
-  }
+  protected readonly dbh: Kysely<AuthDatabase>;
 
   private parseJwtKeyRow(row: JwtKeyRecord): JwtKeyRecord {
     const withParsedExpiry = {

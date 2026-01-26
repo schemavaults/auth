@@ -13,11 +13,9 @@ import {
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
-import { type Kysely, sql } from "@schemavaults/dbh";
-import type { AuthDatabase } from "../../auth-database-types";
+import type { Kysely } from "@schemavaults/dbh";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { z } from "zod";
-import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
-import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 
 /**
  * @name SchemaVaultsAppRegistry
@@ -25,16 +23,13 @@ import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
  * @see AuthorizedAppsRegistry To manage which apps a user has actually authorized
  * @see SchemaVaultsApiServerRegistry Backend API servers which frontend applications can actually access
  */
-export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
+export class SchemaVaultsAppRegistry {
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
 
   private hardcodedApps: Map<string, SchemaVaultsApp>;
 
   public async getApp(app_id: string): Promise<SchemaVaultsApp | null> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     if (this.debug) {
       console.log(
@@ -184,9 +179,6 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
   ): Promise<SchemaVaultsAppDomainRef[]> {
 
 
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     const isValidAppId: boolean = (await appIdSchema.safeParseAsync(app_id))
       .success;
@@ -226,9 +218,6 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
     publicly_listed: boolean,
     owner_organization_id: OrganizationID,
   ): Promise<void> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     if (!organizationIdSchema.safeParse(owner_organization_id).success) {
       throw new TypeError("Received invalid organization ID to register application to!")
@@ -256,39 +245,6 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
     const insertAppQuery = this.db.insertInto("apps").values(app);
 
     await insertAppQuery.execute();
-  }
-
-  private static async setupAppRegistrySQLTables(
-    db: Kysely<AuthDatabase>,
-  ): Promise<void> {
-    const createAppSql = sql`
-      CREATE TABLE IF NOT EXISTS APPS (
-        app_id UUID PRIMARY KEY,
-        app_name TEXT NOT NULL,
-        app_description TEXT NOT NULL,
-        created_at BIGINT NOT NULL,
-        hardcoded BOOLEAN DEFAULT FALSE,
-        public BOOLEAN DEFAULT FALSE,
-        owner_organization_id TEXT,
-        CONSTRAINT fk_owner_org
-          FOREIGN KEY (owner_organization_id)
-          REFERENCES ORGANIZATIONS(organization_id)
-          ON DELETE CASCADE
-      );
-    `;
-    const createAppDomainsSql = sql`
-      CREATE TABLE IF NOT EXISTS APP_DOMAINS (
-        app_domain_ref_id UUID PRIMARY KEY,
-        app_id UUID NOT NULL,
-        domain TEXT NOT NULL,
-        environment TEXT NOT NULL,
-        created_at BIGINT NOT NULL,
-        hardcoded BOOLEAN DEFAULT FALSE,
-        CONSTRAINT fk_app FOREIGN KEY (app_id) REFERENCES APPS(app_id) ON DELETE CASCADE
-      );
-    `;
-    await createAppSql.execute(db);
-    await createAppDomainsSql.execute(db);
   }
 
   private parseAppDefinitionDatabaseRow(row: unknown): SchemaVaultsApp {
@@ -319,9 +275,6 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
     type: Exclude<ListAppsQueryType, "authorized">,
     user: UserData,
   ): Promise<SchemaVaultsApp[]> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     if (!user) {
       throw new Error("You must be logged in to list SchemaVaults apps");
@@ -405,9 +358,6 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
     org_id: OrganizationID,
     user: UserData,
   ): Promise<readonly SchemaVaultsApp[]> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     if (!organizationIdSchema.safeParse(org_id).success) {
       throw new TypeError("Invalid organization ID to list apps for!");
@@ -471,17 +421,7 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
     return app_definitions
   }
 
-  protected async setup(): Promise<void> {
-    try {
-      await SchemaVaultsAppRegistry.setupAppRegistrySQLTables(this.db);
-    } catch (e: unknown) {
-      console.error("Failed to set up app registry SQL tables: ", e);
-      throw new Error("Failed to set up app registry SQL tables");
-    }
-  }
-
-  public constructor(protected db: Kysely<AuthDatabase>) {
-    super(db);
+  public constructor(protected readonly db: Kysely<AuthDatabase>) {
     this.env = getAppEnvironment();
     this.debug =
       this.env === "development" ||
@@ -501,9 +441,6 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
     app_id: string,
     new_app_domain: SchemaVaultsAppDomainRef,
   ) {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     const parsed =
       await schemaVaultsAppDomainRefSchema.safeParseAsync(new_app_domain);
@@ -523,36 +460,6 @@ export class SchemaVaultsAppRegistry extends AbstractDatabaseResourceGroup {
       throw new Error("Failed to add new app domain; db insert failed");
     }
   }
-
-  public async hasBeenInitialized(): Promise<boolean> {
-    if (this.initialized) {
-      return true;
-    }
-
-    const organizationsRegistry = new OrganizationsRegistry(this.db);
-    if (!(await organizationsRegistry.hasBeenInitialized())) {
-      await organizationsRegistry.performSetupTasks();
-    }
-
-    const appDomainsTableExists = this.hasTableBeenInitialized("app_domains");
-    const appsTableExists = this.hasTableBeenInitialized("apps");
-
-    const initialized: boolean = await Promise.all([
-      appDomainsTableExists,
-      appsTableExists,
-    ]).then(([appDomainsExists, appsExists]) => {
-      return appDomainsExists && appsExists;
-    });
-
-    if (initialized) {
-      // cache result
-      this.initialized = true;
-    }
-
-    return initialized;
-  }
-
-  public async performSetupTasks(): Promise<void> {
-    return await this.setup();
-  }
 }
+
+export default SchemaVaultsAppRegistry;

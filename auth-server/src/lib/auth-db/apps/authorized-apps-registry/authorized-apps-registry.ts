@@ -8,10 +8,8 @@ import {
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { Kysely, sql } from "@schemavaults/dbh";
-import type { AuthDatabase } from "../../auth-database-types";
-import { SchemaVaultsAppRegistry } from "../app-registry";
-import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
+import type { Kysely } from "@schemavaults/dbh";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 const authorizedAppDeclarationSchema = z
   .object({
@@ -32,87 +30,11 @@ export type AuthorizedAppDeclaration = z.infer<
   typeof authorizedAppDeclarationSchema
 >;
 
-export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
-  public async hasBeenInitialized(): Promise<boolean> {
-    if (this.initialized) {
-      return true;
-    }
-
-    return await this.hasTableBeenInitialized("authorized_apps");
-  }
-
-  public async performSetupTasks(): Promise<void> {
-    // Ensure app registry is configured before attempting to configure the authorized apps registry
-    if (!(await this.appRegistry.hasBeenInitialized())) {
-      await this.appRegistry.performSetupTasks();
-    }
-    return await this.setup();
-  }
-
+export class AuthorizedAppsRegistry {
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
   private hardcodedApps: Map<string, SchemaVaultsApp> =
     HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP;
-
-  private appRegistry: SchemaVaultsAppRegistry;
-
-  private async setupAuthorizedAppsRegistrySQLTables(): Promise<void> {
-    if (
-      this.env === "development" ||
-      this.env === "test" ||
-      this.env === "staging"
-    ) {
-      console.log(
-        "[AuthorizedAppsRegistry] Setting up authorized apps table...",
-      );
-    }
-    const createAuthorizedAppsTable = sql`
-      CREATE TABLE IF NOT EXISTS AUTHORIZED_APPS (
-        user_app_authorization_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        app_id UUID NOT NULL,
-        uid UUID NOT NULL,
-        authorized_at BIGINT NOT NULL CHECK (authorized_at > 0),
-        CONSTRAINT fk_app FOREIGN KEY (app_id) REFERENCES apps(app_id) ON DELETE CASCADE,
-        CONSTRAINT fk_user FOREIGN KEY (uid) REFERENCES users(uid) ON DELETE CASCADE,
-        UNIQUE (app_id, uid)
-      );
-    `;
-    await createAuthorizedAppsTable.execute(this.db);
-    if (this.env === "development") {
-      console.log("[AuthorizedAppsRegistry] Set up authorized apps table.");
-    }
-  }
-
-  protected async setup(): Promise<void> {
-    if (this.initialized) {
-      if (this.debug) {
-        console.log("Authorized apps registry is already set up");
-      }
-      return;
-    }
-
-    if (!(await this.appRegistry.hasBeenInitialized())) {
-      await this.appRegistry.performSetupTasks();
-    }
-
-    try {
-      await Promise.all([
-        this.setupAuthorizedAppsRegistrySQLTables(),
-        // UserRegistry.setup()
-      ]);
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error(
-        "Failed to ensure that app & user registry were set up before setting up authorized user apps registry",
-      );
-    }
-
-    if (this.debug) {
-      console.log("Authorized apps registry is now set up.");
-    }
-
-    this.initialized = true;
-  }
 
   public async listAuthorizedAppsForUser(
     uid: string,
@@ -122,10 +44,6 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
         "[AuthorizedAppsRegistry] Attempting to list authorized apps for user: ",
         uid,
       );
-    }
-
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
     }
 
     if (typeof uid !== "string")
@@ -213,10 +131,6 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
       );
     }
 
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
-
     if (typeof uid !== "string")
       throw new Error("Expected user ID to be a string");
     const parsed_uid = await z.string().uuid().safeParseAsync(uid);
@@ -265,10 +179,6 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
       );
     }
 
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
-
     if (typeof uid !== "string")
       throw new Error("Expected user ID to be a string");
     const parsed_uid = await z.string().uuid().safeParseAsync(uid);
@@ -301,10 +211,6 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
         app_id,
         authorized_at: Date.now() - 1,
       } satisfies AuthorizedAppDeclaration;
-    }
-
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
     }
 
     if (typeof uid !== "string")
@@ -380,10 +286,6 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
     uid: string,
     app_id: string,
   ): Promise<boolean> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
-
     if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
       return true;
     }
@@ -408,14 +310,11 @@ export class AuthorizedAppsRegistry extends AbstractDatabaseResourceGroup {
     }
   }
 
-  public constructor(protected db: Kysely<AuthDatabase>) {
-    super(db);
+  public constructor(protected readonly db: Kysely<AuthDatabase>) {
     this.env = getAppEnvironment();
     this.debug =
       this.env === "development" ||
       this.env === "staging" ||
       this.env === "test";
-
-    this.appRegistry = new SchemaVaultsAppRegistry(db);
   }
 }

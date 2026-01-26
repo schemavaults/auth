@@ -21,6 +21,7 @@ export const organizationDefinitionSchema = z
     organization_id: organizationIdSchema,
     name: organizationNameSchema,
     created_at: z.number().positive(),
+    created_by: z.string().uuid().optional().nullable(),
   })
   .required({
     organization_id: true,

@@ -21,21 +21,16 @@ import isHardcodedApiServerId from "@/lib/isHardcodedApiServerId";
  * @see SchemaVaultsAppRegistry To manage the list of frontend applications
  * @see AuthorizedAppsRegistry To manage which frontend apps a user has actually authorized
  */
-export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup {
+export class SchemaVaultsApiServerRegistry {
   private readonly debug: boolean;
 
-  public constructor(protected db: Kysely<AuthDatabase>, initialized?: boolean, debug: boolean = shouldEnableDebug()) {
-    super(db, initialized);
+  public constructor(protected readonly db: Kysely<AuthDatabase>, debug: boolean = shouldEnableDebug()) {
     this.debug = debug;
   }
 
   public async getApiServer(
     api_server_id: ApiServerId,
   ): Promise<SchemaVaultsApiServerDefinition> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
-
     if (this.debug) {
       console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}')`)
     }
@@ -105,9 +100,6 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
   public async getApiServerDomains(
     api_server_id: ApiServerId,
   ): Promise<SchemaVaultsApiServerDomainRef[]> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     if (this.debug) {
       console.log(`[SchemaVaultsApiServerRegistry] getApiServerDomains('${api_server_id}')`)
@@ -145,9 +137,6 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     publicly_listed: boolean,
     owner_organization_id: OrganizationID,
   ): Promise<void> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     if (!organizationIdSchema.safeParse(owner_organization_id).success) {
       throw new TypeError("Received invalid organization ID to register API server to!")
@@ -170,39 +159,6 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     const app: SchemaVaultsApiServerDefinition = parsed_app.data;
 
     await this.db.insertInto("api_servers").values(app).execute();
-  }
-
-  private static async setupApiServerRegistrySQLTables(
-    db: Kysely<AuthDatabase>,
-  ): Promise<void> {
-    const createApiServersTable = sql`
-      CREATE TABLE IF NOT EXISTS API_SERVERS (
-        api_server_id UUID PRIMARY KEY,
-        api_server_name TEXT NOT NULL,
-        api_server_description TEXT NOT NULL,
-        public BOOLEAN DEFAULT FALSE,
-        created_at BIGINT NOT NULL,
-        hardcoded BOOLEAN DEFAULT FALSE,
-        owner_organization_id TEXT,
-        CONSTRAINT fk_owner_org
-          FOREIGN KEY (owner_organization_id)
-          REFERENCES ORGANIZATIONS(organization_id)
-          ON DELETE CASCADE
-      );
-    `;
-    await createApiServersTable.execute(db);
-    const createApiServerDomainsTable = sql`
-      CREATE TABLE IF NOT EXISTS API_SERVER_DOMAINS (
-        api_server_domain_ref_id UUID PRIMARY KEY,
-        api_server_id UUID NOT NULL,
-        domain TEXT NOT NULL,
-        environment TEXT NOT NULL,
-        created_at BIGINT NOT NULL,
-        hardcoded BOOLEAN DEFAULT FALSE,
-        CONSTRAINT fk_api FOREIGN KEY (api_server_id) REFERENCES API_SERVERS(api_server_id) ON DELETE CASCADE
-      );
-    `;
-    await createApiServerDomainsTable.execute(db);
   }
 
   private async parseApiServerDefinitionsFromDbRows(rows: unknown[]): Promise<readonly SchemaVaultsApiServerDefinition[]> {
@@ -260,10 +216,6 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
   }
 
   public async listAllApiServers(): Promise<readonly SchemaVaultsApiServerDefinition[]> {
-    if (!await this.hasBeenInitialized()) {
-      await this.performSetupTasks();
-    }
-
     const all_api_servers: SchemaVaultsApiServerDefinition[] = []
 
     const hardcoded_api_servers: readonly SchemaVaultsApiServerDefinition[] = this.listAllHardcodedApiServers()
@@ -284,9 +236,6 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     org_id: OrganizationID,
     user: UserData,
   ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
-    if (!await this.hasBeenInitialized()) {
-      await this.performSetupTasks();
-    }
 
     if (!organizationIdSchema.safeParse(org_id).success) {
       throw new TypeError("Invalid organization ID to list API servers for!")
@@ -330,52 +279,6 @@ export class SchemaVaultsApiServerRegistry extends AbstractDatabaseResourceGroup
     }
 
     return api_server_definitions;
-  }
-
-  public async setup(): Promise<void> {
-    try {
-      await SchemaVaultsApiServerRegistry.setupApiServerRegistrySQLTables(
-        this.db,
-      );
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to ensure that API servers tables were created");
-    }
-  }
-
-  public async performSetupTasks(): Promise<void> {
-    return await this.setup();
-  }
-
-  public async hasBeenInitialized(): Promise<boolean> {
-    if (this.initialized) {
-      return true;
-    }
-
-    const organizationsRegistry = new OrganizationsRegistry(this.db);
-    const orgsRegistryInitialized: Promise<boolean> = organizationsRegistry.hasBeenInitialized()
-
-    // Promises checking if SQL tables exist
-    const apiServers: Promise<boolean> =
-      this.hasTableBeenInitialized("api_servers");
-    const apiServerDomains: Promise<boolean> =
-      this.hasTableBeenInitialized("api_server_domains");
-
-    if (!(await orgsRegistryInitialized)) {
-      await organizationsRegistry.performSetupTasks();
-    }
-
-    const allTablesInitialized = await Promise.all([
-      apiServers,
-      apiServerDomains,
-    ]);
-
-    if (allTablesInitialized.every((e) => e)) {
-      this.initialized = true;
-      return true;
-    }
-
-    return false;
   }
 }
 

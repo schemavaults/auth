@@ -4,12 +4,11 @@ import {
 } from "@schemavaults/app-definitions";
 import type { IJsonWebKeySetsStore } from "./IJsonWebKeySetsStore";
 import { to_public_jwks, type I_JWT_Keys } from "@schemavaults/jwt";
-import type { IDatabaseResourceGroup } from "@/DatabaseResourceGroup";
 
 type JWKS = Awaited<ReturnType<typeof to_public_jwks>>;
 
 export abstract class AbstractJsonWebKeySetsStore
-  implements IJsonWebKeySetsStore, IDatabaseResourceGroup
+  implements IJsonWebKeySetsStore
 {
   abstract get(
     audienceId: string,
@@ -67,9 +66,6 @@ export abstract class AbstractJsonWebKeySetsStore
     }
     return jwks;
   }
-
-  abstract hasBeenInitialized(): Promise<boolean>;
-  abstract performSetupTasks(): Promise<void>;
 }
 
 export default AbstractJsonWebKeySetsStore;

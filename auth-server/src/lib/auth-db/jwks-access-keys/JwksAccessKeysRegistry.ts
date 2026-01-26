@@ -15,79 +15,11 @@ const DEFAULT_KEY_ALGORITHM = sign_verify_alg;
 import isValidUuid from "@/lib/is-valid-uuid";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 
-export class JwksAccessKeysRegistry extends AbstractDatabaseResourceGroup {
+export class JwksAccessKeysRegistry {
   private readonly debug: boolean;
 
-  public constructor(protected db: Kysely<AuthDatabase>, debug: boolean = shouldEnableDebug()) {
-    super(db);
+  public constructor(protected readonly db: Kysely<AuthDatabase>, debug: boolean = shouldEnableDebug()) {
     this.debug = debug;
-  }
-
-  public async hasBeenInitialized(): Promise<boolean> {
-    if (this.initialized) {
-      return true;
-    }
-
-    const results = await Promise.all([
-      this.hasTableBeenInitialized("jwks_access_keys") satisfies Promise<boolean>,
-      this.hasTableBeenInitialized("jwks_access_keys_for_hardcoded") satisfies Promise<boolean>
-    ]);
-    if (results[0] && results[1]) {
-      this.initialized = true;
-      return true;
-    }
-
-    return false;
-  }
-
-  public async performSetupTasks(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-    await this.setup();
-    this.initialized = true;
-  }
-
-  private static async setupJwksAccessKeysSQLTable(
-    db: Kysely<AuthDatabase>,
-  ): Promise<void> {
-    const createJwksAccessKeysTable = sql`
-      CREATE TABLE IF NOT EXISTS JWKS_ACCESS_KEYS (
-        key_id UUID PRIMARY KEY,
-        api_server_id UUID NOT NULL,
-        public_key TEXT NOT NULL,
-        key_algorithm VARCHAR(16) NOT NULL DEFAULT 'RS256',
-        created_at BIGINT NOT NULL,
-        is_active BOOLEAN NOT NULL DEFAULT TRUE,
-        CONSTRAINT fk_api_server
-          FOREIGN KEY (api_server_id)
-          REFERENCES API_SERVERS(api_server_id)
-          ON DELETE CASCADE
-      );
-    `;
-    await createJwksAccessKeysTable.execute(db);
-
-    const createJwksAccessKeysForHardcodedTable = sql`
-      CREATE TABLE IF NOT EXISTS JWKS_ACCESS_KEYS_FOR_HARDCODED (
-        key_id UUID PRIMARY KEY,
-        api_server_id TEXT NOT NULL,
-        public_key TEXT NOT NULL,
-        key_algorithm VARCHAR(16) NOT NULL DEFAULT 'RS256',
-        created_at BIGINT NOT NULL,
-        is_active BOOLEAN NOT NULL DEFAULT TRUE
-      );
-    `;
-    await createJwksAccessKeysForHardcodedTable.execute(db);
-
-    const createIndexForHardcoded = sql`
-      CREATE INDEX IF NOT EXISTS idx_jwks_access_keys_for_hardcoded_api_server
-        ON JWKS_ACCESS_KEYS_FOR_HARDCODED(api_server_id) WHERE is_active = TRUE;
-    `;
-    await createIndexForHardcoded.execute(db);
-  }
-
-  protected async setup(): Promise<void> {
-    await JwksAccessKeysRegistry.setupJwksAccessKeysSQLTable(this.db);
   }
 
   /**
@@ -97,9 +29,6 @@ export class JwksAccessKeysRegistry extends AbstractDatabaseResourceGroup {
     api_server_id: ApiServerId,
     table_name: 'jwks_access_keys' | 'jwks_access_keys_for_hardcoded'
   ): Promise<JwksAccessKeyRecord | null> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
 
     if (table_name !== 'jwks_access_keys' && table_name !== 'jwks_access_keys_for_hardcoded') {
       throw new TypeError("Invalid table name to load active key for!")
@@ -164,9 +93,6 @@ export class JwksAccessKeysRegistry extends AbstractDatabaseResourceGroup {
    * Store a new JWKS access key
    */
   public async storeNewKey(record: NewJwksAccessKeyRecord): Promise<void> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
     if (this.debug) {
       console.log(`[JwksAccessKeysRegistry] storeNewKey(${JSON.stringify(record)})`)
     }
@@ -187,10 +113,6 @@ export class JwksAccessKeysRegistry extends AbstractDatabaseResourceGroup {
   public async deactivateAllKeysForAudience(
     api_server_id: ApiServerId,
   ): Promise<void> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
-
     if (this.debug) {
       console.log(`[JwksAccessKeysRegistry] deactivateAllKeysForAudience('${api_server_id}')`)
     }
@@ -221,10 +143,6 @@ export class JwksAccessKeysRegistry extends AbstractDatabaseResourceGroup {
   public async generateNewKeyForAudience(
     api_server_id: ApiServerId,
   ): Promise<{ privateKey: string; keyId: string }> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
-
     if (this.debug) {
       console.log(`[JwksAccessKeysRegistry] generateNewKeyForAudience('${api_server_id}')`)
     }
@@ -253,10 +171,6 @@ export class JwksAccessKeysRegistry extends AbstractDatabaseResourceGroup {
   public async regenerateKey(
     api_server_id: ApiServerId,
   ): Promise<{ privateKey: string; keyId: string }> {
-    if (!(await this.hasBeenInitialized())) {
-      await this.performSetupTasks();
-    }
-
     if (this.debug) {
       console.log(`[JwksAccessKeysRegistry] regenerateKey('${api_server_id}')`)
     }
