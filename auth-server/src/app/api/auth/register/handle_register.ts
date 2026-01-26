@@ -190,27 +190,6 @@ export async function handleRegister({
     console.log("[handleRegister] Loaded UserRegistry database interface...");
   }
 
-  try {
-    if (!(await userRegistry.hasBeenInitialized())) {
-      await userRegistry.performSetupTasks();
-    }
-  } catch (e: unknown) {
-    console.error(
-      "[handleRegister] Error ensuring user registry database is ready: ",
-      e,
-    );
-    return NextResponse.json(
-      {
-        success: false,
-        error: true,
-        message: "Error ensuring user registry database is ready",
-      },
-      {
-        status: 500,
-      },
-    );
-  }
-
   async function saveSuperuserInviteCodeDefinitionIfSet(): Promise<void> {
     const superuserInviteCode: string | undefined | null =
       loadSuperuserInviteCode();
