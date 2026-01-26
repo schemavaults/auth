@@ -22,6 +22,7 @@ COPY --chown=bun:bun auth-server/tailwind.config.ts auth-server/tailwind.config.
 COPY --chown=bun:bun auth-server/next.config.ts auth-server/next.config.ts
 COPY --chown=bun:bun auth-server/eslint.config.cjs auth-server/eslint.config.cjs
 COPY --chown=bun:bun auth-server/tsconfig.json auth-server/tsconfig.json
+COPY --chown=bun:bun auth-server/build-db-migrations.ts auth-server/build-db-migrations.ts
 
 ### Supporting Auth Packages (Config Files) ###
 
