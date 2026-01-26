@@ -261,12 +261,19 @@ export class SchemaVaultsAppRegistry {
       throw new Error("Failed to parse created_at from database");
     }
 
+    let owner_organization_id: string | undefined = (
+      "owner_organization_id" in row && typeof row['owner_organization_id'] === 'string'
+    ) ? (row.owner_organization_id) : SCHEMAVAULTS_ORGANIZATION_ID
+
     const parsed = schemaVaultsAppDefinitionSchema.safeParse({
       ...row,
       created_at,
-    })
+      owner_organization_id
+    });
 
-    if (!parsed.success) throw parsed.data;
+    if (!parsed.success) {
+      throw parsed.data;
+    }
 
     return parsed.data;
   } // end of parseAppDefinitionDatabaseRow()
