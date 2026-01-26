@@ -1,3 +1,5 @@
+import "server-only";
+
 import { z } from "zod";
 import {
   PKCE_ProofKeyManager,
@@ -7,7 +9,7 @@ import {
   type InviteCode,
 } from "@schemavaults/auth-common";
 import { hashPassword as saltAndHashPassword } from "@/lib/hash_password";
-import { type Kysely, sql } from "@schemavaults/dbh";
+import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { type PasswordRecord, passwordRecordSchema } from "./passwords-table";
 import {
@@ -20,7 +22,6 @@ import {
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { isPrivateBetaEnabled } from "@/lib/private-beta";
-import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 import loadSuperuserInviteCode from "@/lib/TestSuperuserInviteCode";
 
 const userDocumentSchema = z

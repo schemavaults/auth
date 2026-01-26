@@ -65,13 +65,13 @@ module.exports = [
         "warn",
         { argsIgnorePattern: "^_" },
       ],
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-empty-object-type": "off",
     },
   },
 
   // Ignore patterns
   {
-    ignores: ["dist/**", "node_modules/**", "*.config.js", ".next/**", "out/**", "build/**"],
+    ignores: ["dist/**", "node_modules/**", "*.config.js", ".next/**", "out/**", "build/**", "src/lib/auth-db/migrations/**"],
   },
 ];

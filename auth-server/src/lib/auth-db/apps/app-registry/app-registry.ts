@@ -261,7 +261,7 @@ export class SchemaVaultsAppRegistry {
       throw new Error("Failed to parse created_at from database");
     }
 
-    let owner_organization_id: string | undefined = (
+    const owner_organization_id: string | undefined = (
       "owner_organization_id" in row && typeof row['owner_organization_id'] === 'string'
     ) ? (row.owner_organization_id) : SCHEMAVAULTS_ORGANIZATION_ID
 

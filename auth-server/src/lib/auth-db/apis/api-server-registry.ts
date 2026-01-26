@@ -1,3 +1,5 @@
+import "server-only";
+
 import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import {
   schemaVaultsApiServerDefinitionSchema,
@@ -8,10 +10,8 @@ import {
   type ApiServerId,
   HARDCODED_CORE_SCHEMAVAULTS_API_SERVER_DOMAINS,
 } from "@schemavaults/app-definitions";
-import { Kysely, sql } from "@schemavaults/dbh";
+import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
-import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import isHardcodedApiServerId from "@/lib/isHardcodedApiServerId";
 

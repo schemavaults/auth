@@ -26,7 +26,7 @@ export default function JwksAccessKeysUsageInstructions(
       <CardContent>
         <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
           <li>
-            Create a signed token with the <code>createJwksAccessProofToken</code> method of the <code>@schemavaults/jwt</code> package (and your private key!).
+            Create a signed token (<code>{ sign_verify_alg satisfies string }</code>) with the <code>createJwksAccessProofToken</code> method of the <code>@schemavaults/jwt</code> package (and your private key!).
           </li>
           <li>
             Send it as a Bearer token in the Authorization header when calling the {" "}

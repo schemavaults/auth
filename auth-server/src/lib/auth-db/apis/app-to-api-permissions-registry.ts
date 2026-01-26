@@ -1,4 +1,6 @@
-import { type Kysely, sql } from "@schemavaults/dbh";
+import "server-only";
+
+import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
 import {
   type AppToApiPermission,
@@ -13,7 +15,6 @@ import {
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
-import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 
 /**
  * @name SchemaVaultsAppToApiPermissionsRegistry

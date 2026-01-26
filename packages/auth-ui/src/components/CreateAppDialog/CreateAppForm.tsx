@@ -17,19 +17,16 @@ import {
 import { type ReactElement, useMemo, useTransition } from "react";
 
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   useForm,
 } from "@schemavaults/ui";
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
-  OrganizationID,
+  type OrganizationID,
   SCHEMAVAULTS_ORGANIZATION_ID,
 } from "@schemavaults/auth-common";
 import {

@@ -1,4 +1,4 @@
-import { sql, type Kysely } from "@schemavaults/dbh";
+import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
 import {
   getAppEnvironment,
@@ -19,7 +19,6 @@ import {
   isValidOrganizationMembershipRoleType,
   type OrganizationMembershipRoleType,
 } from "./organization-membership-role-types";
-import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 import type { OrganizationMemberWithUserData } from "./organization-member-with-user-data";
 
 export class OrganizationsRegistry

@@ -1,6 +1,7 @@
-import { sql, type Kysely } from "@schemavaults/dbh";
+import "server-only";
+
+import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "../auth-database-types";
-import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
 import type {
   JwksAccessKeyRecord,
   NewJwksAccessKeyRecord,
