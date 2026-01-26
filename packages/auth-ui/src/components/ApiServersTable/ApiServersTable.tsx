@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
 import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
@@ -39,6 +39,7 @@ export function ApiServersTable({
       organization_id,
     });
   const { isLoading, data } = apis;
+  const [addApiDialogOpen, setAddApiDialogOpen] = useState<boolean>(false);
 
   if (!data && isLoading) {
     return (
@@ -71,6 +72,8 @@ export function ApiServersTable({
                     ? SCHEMAVAULTS_ORGANIZATION_ID
                     : organization_id
                 }
+                open={addApiDialogOpen}
+                onOpenChange={setAddApiDialogOpen}
               />
             )}
             {queryType === "all" && <ConnectAppToApiDialog />}

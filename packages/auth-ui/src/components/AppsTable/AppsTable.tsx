@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
 import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
@@ -38,6 +38,7 @@ export function AppsTable({
   const columns = useMemo((): ColumnDef<SchemaVaultsApp>[] => {
     return getAppsTableColumns(queryType, preloaded);
   }, [queryType, preloaded]);
+  const [addAppDialogOpen, setAddAppDialogOpen] = useState<boolean>(false);
 
   if (!data && isLoading) {
     return (
@@ -72,6 +73,8 @@ export function AppsTable({
                     ? SCHEMAVAULTS_ORGANIZATION_ID
                     : organization_id
                 }
+                open={addAppDialogOpen}
+                onOpenChange={setAddAppDialogOpen}
               />
             )}
           </>
