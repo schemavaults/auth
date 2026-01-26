@@ -1,5 +1,4 @@
-import "server-only";
-
+// serverless-database.ts
 // This file sets up kysely to connect to postgres-neon
 
 import type { AuthDatabase } from "./auth-database-types";

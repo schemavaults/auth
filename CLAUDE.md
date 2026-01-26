@@ -13,6 +13,7 @@ This is the **SchemaVaults Auth Platform** monorepo - an authentication/authoriz
 bun install                              # Install all dependencies
 bun run dev --filter @schemavaults/auth-server  # Run auth-server dev (port 6767)
 bun run dev:server                       # Shortcut for the above
+bun run dev:migrate                      # Run database migrations for dev auth-server
 ```
 
 ### Building
@@ -92,12 +93,35 @@ All user interfaces should be built using `@schemavaults/ui` and `@schemavaults/
 ### Database
 Uses `@schemavaults/dbh` with Kysely for Postgres (Neon serverless compatible). Tables are managed via resource groups in `src/lib/auth-db/`.
 
+##### Starting development database
+```bash
+bun run dev:db
+# you may also need to run migrations (if changing database schema or first run)
+```
+
+#### Database Migrations
+
+##### Database Migration in Development
+Database migrations need to be run before starting the auth-server (if changing database schema or first run):
+```bash
+bun run dev:migrate
+```
+
+##### Database Migration for E2E tests
+POST => `{api_server_base_url}/api/admin/migrate-test-environment-db`
+
+The E2E Cypress tests will automatically run migrations before the test suite by using this endpoint.
+
 ### Environment Variables
 Copy `auth-server/.env.example` to `.env.local`. Key variables:
 - `POSTGRES_*` - Database connection
 - `PRIVATE_GLOBAL_PASSWORD_SALT` - For password hashing
 - `PRIVATE_SUPERUSER_INVITE_CODE` - Creates admin invite code on first registration
 
-## Continuous Integration & Continuous Delivery (C.I. & C.D. )
+There is an interactive helper script for initializing environment variables for the development environment:
+```bash
+bun run dev:init-env
+```
 
+## Continuous Integration & Continuous Delivery (C.I. & C.D. )
 The `.github/workflows` directory contains GitHub Actions workflows for automatically testing & publishing the `@schemavaults/auth` application/package suite.

@@ -19,6 +19,7 @@
     "dev:server": "bun run dev --filter @schemavaults/auth-server",
     "dev:db": "cd auth-postgres-db && /bin/bash ./start-dev-db.sh",
     "dev:init-env": "bun run auth-server/init-dev-env.ts",
+    "dev:migrate": "cd auth-server && /bin/bash ./migrate-db.sh .env.development",
     "build": "turbo build",
     "build:server": "bun run build --filter @schemavaults/auth-server",
     "build:packages": "bun run build --filter=\"./packages/*\"",

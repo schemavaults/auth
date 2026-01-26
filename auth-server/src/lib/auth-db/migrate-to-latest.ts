@@ -1,4 +1,3 @@
-import "server-only";
 import { join } from "path";
 import type { Kysely } from "@schemavaults/dbh";
 import { existsSync, readdirSync } from "fs";
@@ -13,8 +12,10 @@ function resolveMigrationFolder(): string {
   return join(__dirname, "migrations");
 }
 
-export default async function migrateToLatest(db: Kysely<any>): Promise<void> {
-  const migrationFolder = resolveMigrationFolder()
+export default async function migrateToLatest(db: Kysely<any>, migrationFolder: string = resolveMigrationFolder()): Promise<void> {
+  if (typeof migrationFolder !== 'string') {
+    throw new TypeError("Expected 'migrationFolder' to be a string!");
+  }
 
   if (!existsSync(migrationFolder)) {
     throw new Error(`Failed to resolve migrations directory from path: '${migrationFolder}'`)

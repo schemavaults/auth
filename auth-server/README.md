@@ -15,27 +15,71 @@ See the [`@schemavaults/auth-client-sdk`](../packages/auth-client-sdk/) and [`@s
 
 ## Development
 
-### First time setup
+### First-Time Setup
 
-There is a helper script `init-dev-env.ts` that will generate the `.env.development` file for you. You can run `bun run dev:init-env` from the monorepo root.
+#### 1. Install Dependencies
 
-### Launch services
+You will need some staples:
+- [Bun](https://bun.sh/)
+- [Docker](https://www.docker.com/products/docker-desktop)
+
+Install the necessary dependencies for all packages and the auth server by running:
+```bash
+bun install
+```
+
+#### 2. Configure Environment Variables
+
+There is a helper script `init-dev-env.ts` that will generate the `.env.development` file for you, prompting you for environment variables. Run it from the monorepo root:
+```bash
+bun run dev:init-env
+```
+
+#### 3. Configure Database
+
+You'll need to launch the database and run migrations in order for the server to properly read/write data:
 
 ```bash
 # From the monorepo root:
 # Launch the database
 bun run dev:db
+# In a separate terminal, run migrations while the database is running
+bun run dev:migrate
+```
+
+### Launch dev services
+
+#### 1. Launch development database
+```bash
+# From the monorepo root:
+# Launch the database
+bun run dev:db
+```
+
+#### 2. Launch development auth server
+```bash
+# From the monorepo root:
 # Launch the auth server
 bun run dev:server
 ```
 
-## Build as a standalone Docker container (for E2E testing offline)
+#### 3. Connect to local development auth server
+
+By default the development auth server will run at [http://localhost:6767](http://localhost:6767).
+
+## Production / Build
+
+### Production
+
+**[https://auth.schemavaults.com](https://auth.schemavaults.com)**
+
+
+### Build as a standalone Docker container (for E2E testing offline)
 
 ```bash
 # From the monorepo root
-# cd ~/schemavaults
 docker build \
     -t schemavaults/auth-server:latest \
-    -f ./apps/auth-server/Dockerfile \
+    -f ./auth-server/Dockerfile \
     .
 ```
