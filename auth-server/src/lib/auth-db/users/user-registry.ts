@@ -512,14 +512,14 @@ export class UserRegistry {
         .selectAll()
         .execute();
       if (rows.length === 0) {
-        if (this.env !== "production") {
+        if (this.debug) {
           console.error(
             "[UserRegistry] Authorization code row not found in database..",
           );
         }
         throw new Error("Authorization code not found");
       } else if (rows.length > 1) {
-        if (this.env !== "production") {
+        if (this.debug) {
           console.error(
             "[UserRegistry] Multiple authorization codes found in database: ",
             rows,
@@ -535,7 +535,7 @@ export class UserRegistry {
       );
       const row = rows[0]!;
 
-      if (this.env !== "production") {
+      if (this.debug) {
         console.log(
           "[UserRegistry] Found authorization code row in database! Parsing...",
         );
@@ -577,7 +577,7 @@ export class UserRegistry {
       const codeVerifierSchema = PKCE_ProofKeyManager.codeVerifierSchema;
       const parsed = codeVerifierSchema.safeParse(code_verifier);
       if (!parsed.success) {
-        if (this.env !== "production") {
+        if (this.debug) {
           console.error("[UserRegistry] Invalid code verifier", parsed.error);
         }
         throw parsed.error;
