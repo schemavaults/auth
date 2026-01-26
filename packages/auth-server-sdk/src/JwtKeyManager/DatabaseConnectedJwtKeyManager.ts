@@ -1,14 +1,13 @@
 import type { JWKS } from "@schemavaults/jwt";
 import type { IJsonWebKeySetsStore } from "./JsonWebKeySetsStore";
 import type { IJwtKeyManager } from "./IJwtKeyManager";
-import type { IDatabaseResourceGroup } from "@/DatabaseResourceGroup";
 
 export class DatabaseConnectedJwtKeyManager
-  implements IJwtKeyManager, IDatabaseResourceGroup
+  implements IJwtKeyManager
 {
-  protected readonly store: IJsonWebKeySetsStore & IDatabaseResourceGroup;
+  protected readonly store: IJsonWebKeySetsStore;
 
-  public constructor(store: IJsonWebKeySetsStore & IDatabaseResourceGroup) {
+  public constructor(store: IJsonWebKeySetsStore) {
     this.store = store;
   }
 
@@ -24,14 +23,6 @@ export class DatabaseConnectedJwtKeyManager
       );
     }
     return jwks;
-  }
-
-  public async hasBeenInitialized(): Promise<boolean> {
-    return await this.store.hasBeenInitialized();
-  }
-
-  public async performSetupTasks(): Promise<void> {
-    return await this.store.performSetupTasks();
   }
 }
 
