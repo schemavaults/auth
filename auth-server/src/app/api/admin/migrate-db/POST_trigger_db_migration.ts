@@ -6,9 +6,7 @@ import type {
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import migrateToLatest from "@/lib/auth-db/migrate-to-latest";
-
-
+import type { Kysely } from "@schemavaults/dbh";
 
 async function POST_handler({ req, dbh, user }: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
   if (!user.admin) {
@@ -24,6 +22,9 @@ async function POST_handler({ req, dbh, user }: IProtectedAdminApiRouteProps<Aut
   }
 
   try {
+    const migrateToLatest: (db: Kysely<any>) => Promise<void> = await import(
+      "@/lib/auth-db/migrate-to-latest"
+    ).then(mod => mod.default);
     await migrateToLatest(dbh.db);
   } catch (e: unknown) {
     console.error(
