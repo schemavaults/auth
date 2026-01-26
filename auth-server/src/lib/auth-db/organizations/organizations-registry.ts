@@ -142,15 +142,23 @@ export class OrganizationsRegistry
     }
     const organization_definition: OrganizationDefinition = parsedOrgDef.data;
 
-    if (
-      organization_definition.organization_id === SCHEMAVAULTS_ORGANIZATION_ID
-    ) {
-      throw new Error(
-        `'${SCHEMAVAULTS_ORGANIZATION_ID}' is a reserved organization ID!`,
-      );
+    function isReservedId() {
+      if (organization_definition.organization_id === SCHEMAVAULTS_ORGANIZATION_ID) {
+        return true;
+      }
+
+      if (hardcodedOrgs.some(
+        (hardcodedOrganization): boolean => (
+          hardcodedOrganization.organization_id === organization_definition.organization_id
+        )
+      )) {
+        return true;
+      }
+
+      return false;
     }
 
-    if (hardcodedOrgs.some(hardcodedOrganization => hardcodedOrganization.organization_id === organization_definition.organization_id)) {
+    if (isReservedId()) {
       throw new Error(
         `'${organization_definition.organization_id}' is a reserved organization ID!`,
       );
@@ -160,6 +168,10 @@ export class OrganizationsRegistry
       console.log(
         `[OrganizationsRegistry] createOrganization(${JSON.stringify(organization_definition)})`,
       );
+    }
+
+    if (!organization_definition.created_by) {
+      throw new TypeError("Missing 'created_by' field for new organization!")
     }
 
     const insertionQuery = this.db
