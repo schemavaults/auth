@@ -68,6 +68,8 @@ export default async function POST_create_handler({ req, dbh, user }: IProtected
     );
   }
 
+  new_invite_code['created_by'] = user.uid;
+
   try {
     const registry = new UserRegistry(dbh.db);
 

@@ -24,7 +24,7 @@ async function createInviteCodesTable(db: Kysely<any>): Promise<void> {
       created_at BIGINT NOT NULL,
       max_uses BIGINT NOT NULL,
       description TEXT,
-      created_by UUID NOT NULL
+      created_by UUID
     );
   `;
 

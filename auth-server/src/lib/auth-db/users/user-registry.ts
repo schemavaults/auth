@@ -21,6 +21,7 @@ import {
 import isValidUuid from "@/lib/is-valid-uuid";
 import { isPrivateBetaEnabled } from "@/lib/private-beta";
 import AbstractDatabaseResourceGroup from "@/lib/auth-db/AbstractAuthServerDatabaseResourceGroup";
+import loadSuperuserInviteCode from "@/lib/TestSuperuserInviteCode";
 
 const userDocumentSchema = z
   .object({
@@ -790,6 +791,8 @@ export class UserRegistry {
     return true;
   }
 
+  private readonly superuserInviteCode: string | undefined = loadSuperuserInviteCode();
+
   public async createInviteCode(
     invite_code_def: InviteCodeDefinition,
   ): Promise<void> {
@@ -803,6 +806,11 @@ export class UserRegistry {
       throw new Error(
         "Invalid invite code definition to insert into database!",
       );
+    }
+
+    const isSuperuserCode: boolean = typeof this.superuserInviteCode === 'string' ? this.superuserInviteCode === invite_code_def.invite_code : false;
+    if (!isSuperuserCode && !invite_code_def.created_by) {
+      throw new Error("A 'created_by' field must be set for each invite code definition.")
     }
 
     const insertInviteCodeQuery = this.db
