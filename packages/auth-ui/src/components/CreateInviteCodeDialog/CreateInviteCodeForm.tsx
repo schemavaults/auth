@@ -13,7 +13,7 @@ import {
   Textarea,
   useToast,
 } from "@schemavaults/ui";
-import { useCallback, type ReactElement } from "react";
+import { useCallback, useTransition, type ReactElement } from "react";
 
 import {
   DialogDescription,
@@ -51,6 +51,7 @@ export function CreateInviteCodeForm({
   });
   const { mutate } = useSWRConfig();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
+  const [submitting, startSubmitting] = useTransition();
 
   const clearInviteCodesCache = useCallback((): void => {
     mutate(
@@ -74,62 +75,80 @@ export function CreateInviteCodeForm({
       created_at: Date.now(),
     };
 
-    try {
-      const response = await fetch(`/api/admin/invite-codes` as const, {
-        method: "POST",
-        body: JSON.stringify(newInviteCode),
-        credentials: "include",
-      });
-      if (!response.ok || response.status !== 200) {
-        throw new Error(
-          `Invite code creation request has bad status: ${response.status}`,
+    startSubmitting(async () => {
+      const parsedNewInviteCode =
+        await inviteCodeDefinitionSchema.safeParseAsync(newInviteCode);
+      if (!parsedNewInviteCode.success) {
+        console.error(
+          "Failed to parse new invite code object: ",
+          parsedNewInviteCode.error,
         );
+        toast({
+          variant: "destructive",
+          title: "Failed to parse new invite code object",
+          description: "Not prepared to send creation request!",
+        });
+        return;
       }
 
-      const body: object = await response.json();
-      if (typeof body !== "object") {
-        throw new Error(
-          "Expected JSON object response from invite code creation attempt",
-        );
+      try {
+        const response = await fetch(`/api/admin/invite-codes` as const, {
+          method: "POST",
+          body: JSON.stringify(newInviteCode),
+          credentials: "include",
+        });
+        if (!response.ok || response.status !== 200) {
+          throw new Error(
+            `Invite code creation request has bad status: ${response.status}`,
+          );
+        }
+
+        const body: object = await response.json();
+        if (typeof body !== "object") {
+          throw new Error(
+            "Expected JSON object response from invite code creation attempt",
+          );
+        }
+
+        if (!Object.hasOwn(body, "success")) {
+          throw new Error("No success field in response");
+        }
+
+        if (
+          !(
+            typeof (body as { success: unknown }).success === "boolean" &&
+            (body as { success: boolean }).success
+          )
+        ) {
+          console.error(body);
+          throw new Error(
+            "Invite code creation response has success flag set to false",
+          );
+        }
+
+        if (environment === "development") {
+          console.log("Received response: ", body);
+        }
+      } catch (e: unknown) {
+        toast({
+          variant: "destructive",
+          title: "Failed to create new invite code!",
+          description:
+            e instanceof Error ? e.message : `Failed to send network request`,
+        });
+        return;
       }
 
-      if (!Object.hasOwn(body, "success")) {
-        throw new Error("No success field in response");
-      }
-
-      if (
-        !(
-          typeof (body as { success: unknown }).success === "boolean" &&
-          (body as { success: boolean }).success
-        )
-      ) {
-        console.error(body);
-        throw new Error(
-          "Invite code creation response has success flag set to false",
-        );
-      }
-
-      if (environment === "development") {
-        console.log("Received response: ", body);
-      }
-    } catch (e: unknown) {
       toast({
-        variant: "destructive",
-        title: "Failed to create new invite code!",
-        description:
-          e instanceof Error ? e.message : `Failed to send network request`,
+        variant: "default",
+        title: "Created new invite code successfully!",
+        description: "New users should now be able to use it to register!",
       });
+      clearInviteCodesCache();
+      onSuccess();
+      form.reset();
       return;
-    }
-
-    toast({
-      variant: "default",
-      title: "Created new invite code successfully!",
-      description: "New users should now be able to use it to register!",
     });
-    clearInviteCodesCache();
-    onSuccess();
-    form.reset();
     return;
   }
 
@@ -146,6 +165,7 @@ export function CreateInviteCodeForm({
               description:
                 "Failed to parse form into a valid invite code definition object!",
             });
+            return;
           },
         )}
         className="flex flex-col justify-start gap-4"
@@ -168,6 +188,7 @@ export function CreateInviteCodeForm({
                   placeholder={"BLAHBLAHBLAH420"}
                   {...field}
                   name="invite_code"
+                  disabled={field.disabled || submitting}
                 />
               </FormControl>
               <FormDescription>Enter the new invite code.</FormDescription>
@@ -187,6 +208,7 @@ export function CreateInviteCodeForm({
                   placeholder={"e.g. Facebook Ad Campaign"}
                   {...field}
                   name="description"
+                  disabled={field.disabled || submitting}
                 />
               </FormControl>
               <FormDescription>
@@ -218,6 +240,7 @@ export function CreateInviteCodeForm({
                   type="number"
                   step={1}
                   min={1}
+                  disabled={field.disabled || submitting}
                 />
               </FormControl>
               <FormDescription>
