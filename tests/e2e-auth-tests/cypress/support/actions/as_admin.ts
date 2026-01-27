@@ -1,7 +1,7 @@
-export default function as_admin(
-  callback: () => Cypress.Chainable<void>,
-): Cypress.Chainable<void> {
-  return cy.is_admin().then((admin: boolean): Cypress.Chainable<void> => {
+export default function as_admin<T>(
+  callback: () => Cypress.Chainable<T>,
+): Cypress.Chainable<T> {
+  return cy.is_admin().then((admin: boolean): Cypress.Chainable<T> => {
     if (admin) {
       return callback();
     }

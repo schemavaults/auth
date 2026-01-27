@@ -15,7 +15,6 @@
 
 // Import commands.js using ES2015 syntax:
 import "./commands";
-import type { RegularUserCredentials } from "./actions/create_and_login_as_regular_user";
 import type { CreateAppParams } from "./actions/create_app";
 import type {
   CreateApiServerParams,
@@ -34,14 +33,17 @@ declare global {
         invite_code?: string,
       ): Chainable<number>;
       create_and_login_as_superuser(): Chainable<boolean>;
-      create_and_login_as_regular_user(): Chainable<RegularUserCredentials>;
+      create_and_login_as_regular_user(credentials: {
+        email: string;
+        password: string;
+      }): Chainable<boolean>;
       has_error_toast(containing_message?: string): Chainable<boolean>;
       // returns a list of all the text content within any active toasts. also prints it to the Cypress console.
       log_active_toasts(): Chainable<readonly string[]>;
       logout(): Chainable<void>;
       is_authenticated(): Chainable<boolean>;
       is_admin(): Chainable<boolean>;
-      as_admin(run_once_admin: () => Chainable<void>): Chainable<void>;
+      as_admin<T>(run_once_admin: () => Chainable<T>): Chainable<T>;
       create_invite_code(
         invite_code: string,
         max_uses: number,
@@ -55,12 +57,17 @@ declare global {
         api_server_id: string,
       ): Chainable<GenerateJwksAccessKeyResult>;
       generate_random_code(length: number): Chainable<string>;
+      generate_random_test_user_credentials(): Chainable<{
+        email: string;
+        password: string;
+      }>;
       open_dialog_with_button(
         // Button to click to open the dialog
         open_dialog_button_id: string,
         // Selector to ensure that the dialog opened successfully
         dialog_content_container_id: string,
       ): Chainable<JQuery<HTMLElement>>;
+      is_invite_code_required(): Chainable<boolean>;
     }
   }
 }

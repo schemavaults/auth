@@ -1,5 +1,3 @@
-import type { RegularUserCredentials } from "../support/actions/create_and_login_as_regular_user";
-
 describe("Login", () => {
   it("can load the login page", () => {
     cy.visit("/auth/login");
@@ -32,46 +30,36 @@ describe("Login", () => {
   });
 
   it("can create and login as a regular user", () => {
-    cy.create_and_login_as_regular_user().then(
-      (credentialsResult: RegularUserCredentials) => {
-        let credentials: RegularUserCredentials;
-        if (
-          typeof credentialsResult === "object" &&
-          credentialsResult &&
-          "email" in credentialsResult &&
-          "password" in credentialsResult &&
-          typeof credentialsResult.email === "string" &&
-          typeof credentialsResult.password === "string"
-        ) {
-          credentials = credentialsResult as RegularUserCredentials;
-        } else {
-          credentials = (
-            credentialsResult as any as JQuery<RegularUserCredentials>
-          ).get(0);
-        }
-        cy.log(`Logged in as regular user: ${credentials.email}`);
+    cy.generate_random_test_user_credentials().then((credentials) => {
+      cy.create_and_login_as_regular_user(credentials).then(
+        (result: boolean) => {
+          if (!result) {
+            throw new Error("Failed to create and login as regular user!");
+          }
+          cy.log(`Logged in as regular user: ${credentials.email}`);
 
-        cy.wait(1000);
+          cy.wait(1000);
 
-        cy.getCookie("refresh_token", { timeout: 10000 }).should("exist");
-        cy.getCookie("refresh_token_expiry", { timeout: 10000 }).should(
-          "exist",
-        );
-        cy.url().should("include", "/account");
+          cy.getCookie("refresh_token", { timeout: 10000 }).should("exist");
+          cy.getCookie("refresh_token_expiry", { timeout: 10000 }).should(
+            "exist",
+          );
+          cy.url().should("include", "/account");
 
-        // Regular user should not be an admin
-        cy.is_admin().should("be.false");
+          // Regular user should not be an admin
+          cy.is_admin().should("be.false");
 
-        // Verify user can logout and login again with same credentials
-        cy.logout();
+          // Verify user can logout and login again with same credentials
+          cy.logout();
 
-        cy.login(credentials.email, credentials.password).then(
-          (login_success: boolean) => {
-            expect(login_success).to.be.true;
-            cy.url().should("include", "/account");
-          },
-        );
-      },
-    );
+          cy.login(credentials.email, credentials.password).then(
+            (login_success: boolean) => {
+              expect(login_success).to.be.true;
+              cy.url().should("include", "/account");
+            },
+          );
+        },
+      );
+    });
   });
 });

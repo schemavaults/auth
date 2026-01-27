@@ -17,6 +17,8 @@ import logout from "./actions/logout";
 import register from "./actions/register";
 import open_dialog_with_button from "./actions/open_dialog_with_button";
 import log_active_toasts from "./actions/log_active_toasts";
+import is_invite_code_required from "./actions/is_invite_code_required";
+import generate_random_test_user_credentials from "./actions/generate_random_test_user_credentials";
 
 // ***********************************************
 // This example commands.ts shows you how to
@@ -80,6 +82,11 @@ Cypress.Commands.add("create_invite_code", createInviteCode);
 Cypress.Commands.add("generate_random_code", generate_random_code);
 
 Cypress.Commands.add(
+  "generate_random_test_user_credentials",
+  generate_random_test_user_credentials,
+);
+
+Cypress.Commands.add(
   "create_and_login_as_regular_user",
   createAndLoginAsRegularUser,
 );
@@ -93,3 +100,5 @@ Cypress.Commands.add("create_app", createApp);
 Cypress.Commands.add("open_dialog_with_button", open_dialog_with_button);
 
 Cypress.Commands.add("generate_jwks_access_key", generateJwksAccessKey);
+
+Cypress.Commands.add("is_invite_code_required", is_invite_code_required);

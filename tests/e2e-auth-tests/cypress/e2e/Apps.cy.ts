@@ -47,10 +47,12 @@ describe("Apps", () => {
 
   describe("Regular User Access Restrictions", () => {
     it("non-admin users are redirected from admin apps page with 403 forbidden", () => {
-      cy.create_and_login_as_regular_user().then(() => {
-        cy.visit("/admin/apps", { failOnStatusCode: false });
-        cy.url().should("include", "/error");
-        cy.url().should("include", "error=403");
+      cy.generate_random_test_user_credentials().then((credentials) => {
+        cy.create_and_login_as_regular_user(credentials).then(() => {
+          cy.visit("/admin/apps", { failOnStatusCode: false });
+          cy.url().should("include", "/error");
+          cy.url().should("include", "error=403");
+        });
       });
     });
   });

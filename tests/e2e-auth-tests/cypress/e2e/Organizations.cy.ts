@@ -75,14 +75,18 @@ describe("Organizations", () => {
             cy.logout();
 
             // Login as a regular user (non-member)
-            cy.create_and_login_as_regular_user().then(() => {
-              // Attempt to visit the organization page
-              cy.visit(`/org/${organization_id}`, { failOnStatusCode: false });
+            cy.generate_random_test_user_credentials().then((credentials) => {
+              cy.create_and_login_as_regular_user(credentials).then(() => {
+                // Attempt to visit the organization page
+                cy.visit(`/org/${organization_id}`, {
+                  failOnStatusCode: false,
+                });
 
-              // Should be redirected to error page with 403 forbidden
-              cy.url().should("include", "/error");
-              cy.url().should("include", "error=403");
-              cy.url().should("include", "error_id=forbidden");
+                // Should be redirected to error page with 403 forbidden
+                cy.url().should("include", "/error");
+                cy.url().should("include", "error=403");
+                cy.url().should("include", "error_id=forbidden");
+              });
             });
           });
         });

@@ -98,3 +98,12 @@ export default function createInviteCode(
     });
   });
 }
+
+export function createInviteCodeAsAdmin(
+  invite_code: string,
+  max_uses: number,
+): Cypress.Chainable<boolean> {
+  return cy.as_admin(() => {
+    return createInviteCode(invite_code, max_uses);
+  });
+}
