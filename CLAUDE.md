@@ -30,6 +30,14 @@ bun run lint --filter @schemavaults/auth-server      # Lint auth-server only
 bun run lint --filter @schemavaults/auth-client-sdk  # Lint specific package
 ```
 
+### Type Checking
+```bash
+bun run typecheck                                          # Type check all packages via Turborepo
+bun run typecheck --filter @schemavaults/auth-server       # Type check auth-server only
+bun run typecheck --filter @schemavaults/auth-client-sdk   # Type check specific package
+bun run typecheck --filter @schemavaults/auth-server-sdk   # Type check specific package
+```
+
 ### One-off Commands
 ```bash
 # We use bun, not npm/yarn
