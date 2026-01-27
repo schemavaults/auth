@@ -6,12 +6,12 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import JwksAccessKeysPageView from "./jwks-access-keys-page-view";
-import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
+import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER, type SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import isHardcodedApiServerId from "@/lib/isHardcodedApiServerId";
-import { JwksAccessKeysRegistry, JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
+import { JwksAccessKeysRegistry, type JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
 
 interface PageParams {
   params: Promise<{ api_server_id: string }>;
@@ -24,6 +24,7 @@ export default async function JwksAccessKeysPage(
     async function JwksAccessKeysPageServerComponent({
       dbh,
       user,
+      user_organizations
     }: IProtectedAuthenticatedServerComponentPageProps): Promise<ReactElement> {
       let api_server_id: ApiServerId;
       try {
@@ -49,7 +50,7 @@ export default async function JwksAccessKeysPage(
       }
 
 
-      const api_server = await loadApiServerDefinitionFromDatabase({ api_server_id, db: dbh.db });
+      const api_server: SchemaVaultsApiServerDefinition = await loadApiServerDefinitionFromDatabase({ api_server_id, db: dbh.db });
       const owner_organization_id: OrganizationID | null | undefined = api_server['owner_organization_id'];
       if (!owner_organization_id || typeof owner_organization_id !== 'string') {
         console.error(`Failed to resolve 'owner_organization_id' for API server: '${api_server_id}'`);
@@ -58,6 +59,10 @@ export default async function JwksAccessKeysPage(
 
       if (owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID && !user.admin) {
         console.warn("Blocking request to view JWKS access keys page for SchemaVaults-owned API server for non-admin user!")
+        redirectWithError(403, 'forbidden');
+      }
+
+      if (!user.admin && !user_organizations.includes(owner_organization_id)) {
         redirectWithError(403, 'forbidden');
       }
 
