@@ -10,9 +10,14 @@ import type { Kysely } from "@schemavaults/dbh";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { existsSync, statSync } from "fs";
-import type MigrateToLatestFn from "@/lib/auth-db/migrate-to-latest";
-type MigrateToLatestResult = Awaited<ReturnType<typeof MigrateToLatestFn>>;
-type MigrationResult = NonNullable<MigrateToLatestResult>[number]
+import type { IMigrationResult } from "@schemavaults/dbh/migrate";
+
+interface ISuccessfulTestEnvironmentDbMigrationResponse {
+  success: true;
+  error: false;
+  message: string;
+  migrations_applied?: readonly string[];
+}
 
 async function trigger_db_migration(
   db: Kysely<AuthDatabase>,
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    let result: readonly MigrationResult[] = [];
+    let result: readonly IMigrationResult[] = [];
     try {
       const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH as string;
       if (debug) {
@@ -87,11 +92,34 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     console.log("Successfully applied @schemavaults/auth-server database migrations: ", result);
 
+
+
+    const responseBody: ISuccessfulTestEnvironmentDbMigrationResponse = {
+      success: true,
+      error: false,
+      message: "Successfully applied @schemavaults/auth-server database migrations!",
+    }
+
+    if (Array.isArray(result) && result.length > 0) {
+      const migrations_applied: readonly string[] = result.map((migration: IMigrationResult): string | undefined => {
+        if (typeof migration !== 'object') {
+          return undefined;
+        }
+
+        if ("migrationName" in migration && typeof migration.migrationName === 'string') {
+          return migration.migrationName;
+        }
+
+        return undefined;
+      }).filter(migration_id => typeof migration_id === 'string');
+
+      if (migrations_applied.length > 0) {
+        responseBody['migrations_applied'] = migrations_applied;
+      }
+    }
+
     return NextResponse.json(
-      {
-        success: true,
-        message: "Successfully applied @schemavaults/auth-server database migrations!",
-      },
+      responseBody satisfies ISuccessfulTestEnvironmentDbMigrationResponse,
       {
         status: 200,
       },

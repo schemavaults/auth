@@ -42,6 +42,7 @@ export default defineConfig({
               "[triggerTestEnvironmentDbMigration] Sending POST request to: ",
               endpoint,
             );
+            let result: object;
             try {
               const response = await fetch(endpoint, {
                 method: "POST",
@@ -60,6 +61,14 @@ export default defineConfig({
                     response.statusText,
                 );
               }
+
+              const response_body = await response.json();
+              if (typeof response_body !== "object" || !response_body) {
+                throw new TypeError(
+                  "Expected response body to be a JSON object!",
+                );
+              }
+              result = response_body;
             } catch (e: unknown) {
               console.error(
                 "Failed to trigger test environment DB migration: ",
@@ -71,7 +80,8 @@ export default defineConfig({
             }
 
             console.log(
-              `[triggerTestEnvironmentDbMigration] DB migration appears to have been a success!`,
+              `[triggerTestEnvironmentDbMigration] DB migration appears to have been a success: `,
+              result,
             );
           })();
           return;
