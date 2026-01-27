@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
 import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
@@ -40,6 +40,22 @@ export function ApiServersTable({
     });
   const { isLoading, data } = apis;
   const [addApiDialogOpen, setAddApiDialogOpen] = useState<boolean>(false);
+
+  // Assert that 'owner_organization_id' field is present from server
+  useMemo(() => {
+    if (apis.data && Array.isArray(apis.data)) {
+      if (
+        !apis.data.every(
+          (api_server_definition) =>
+            api_server_definition.owner_organization_id,
+        )
+      ) {
+        throw new TypeError(
+          "Received API server definition that is missing 'owner_organization_id' field!",
+        );
+      }
+    }
+  }, [apis.data]);
 
   if (!data && isLoading) {
     return (

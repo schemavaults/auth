@@ -178,9 +178,14 @@ export class SchemaVaultsApiServerRegistry {
             throw new TypeError("Failed to parse 'created_at' from database");
           }
 
+          const owner_organization_id: OrganizationID = (
+            "owner_organization_id" in row && typeof row['owner_organization_id'] === 'string'
+          ) ? row['owner_organization_id'] : SCHEMAVAULTS_ORGANIZATION_ID;
+
           return {
             ...row,
             created_at,
+            owner_organization_id
           };
         }),
       );
