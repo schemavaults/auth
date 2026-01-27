@@ -2,9 +2,7 @@ import type { JWKS } from "@schemavaults/jwt";
 import type { IJsonWebKeySetsStore } from "./JsonWebKeySetsStore";
 import type { IJwtKeyManager } from "./IJwtKeyManager";
 
-export class DatabaseConnectedJwtKeyManager
-  implements IJwtKeyManager
-{
+export abstract class DatabaseConnectedJwtKeyManager implements IJwtKeyManager {
   protected readonly store: IJsonWebKeySetsStore;
 
   public constructor(store: IJsonWebKeySetsStore) {

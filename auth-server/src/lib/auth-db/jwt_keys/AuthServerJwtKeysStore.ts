@@ -17,12 +17,20 @@ import {
   type ApiServerId,
   apiServerIdSchema,
 } from "@schemavaults/app-definitions";
+import shouldEnableDebug from "@/lib/should-enable-debug";
 
 export class AuthServerJwtKeysStore
   extends AbstractJsonWebKeySetsStore
   implements IJsonWebKeySetsStore
 {
   protected readonly dbh: Kysely<AuthDatabase>;
+  protected readonly debug: boolean;
+
+  public constructor(dbh: Kysely<AuthDatabase>, debug: boolean = shouldEnableDebug()) {
+    super();
+    this.dbh = dbh;
+    this.debug = debug;
+  }
 
   private parseJwtKeyRow(row: JwtKeyRecord): JwtKeyRecord {
     const withParsedExpiry = {
@@ -256,8 +264,18 @@ export class AuthServerJwtKeysStore
     audience_id: string,
     currentTimestamp?: number,
   ): Promise<readonly I_JWT_Keys[]> {
-    const now =
+    const now: number =
       typeof currentTimestamp === "number" ? currentTimestamp : Date.now();
+    const nowDate: Date = new Date(now);
+
+    if (this.debug) {
+      console.log(
+        `[AuthServerJwtKeysStore] listActiveKeySets(` +
+        `audience_id="${audience_id}", ` +
+        `timestamp="${nowDate.toLocaleDateString()} ${nowDate.toLocaleTimeString()}"` +
+        `)`
+      );
+    }
 
     if (!this.isValidApiServerId(audience_id)) {
       throw new TypeError(
@@ -290,9 +308,23 @@ export class AuthServerJwtKeysStore
       {} as Record<string, JwtKeyRecord[]>,
     );
 
-    return Object.values(keysets).map(
+    const jwt_keyset_instances: readonly I_JWT_Keys[] = Object.values(keysets).map(
       AuthServerJwtKeysStore.initJwtKeysetInstanceFromSerializedKeys,
     );
+
+    if (this.debug) {
+      if (jwt_keyset_instances.length > 0) {
+        console.log(
+          `[AuthServerJwtKeysStore] listActiveKeySets(audience_id="${audience_id}") => ` +
+          `Loaded ${jwt_keyset_instances.length} JWT Keysets! ` +
+          `(Keyset IDs: ${jwt_keyset_instances.map(kst => `"${kst.keyset_id}"`).join(", ")})`
+        );
+      } else {
+        console.warn(`[AuthServerJwtKeysStore] listActiveKeySets(audience_id="${audience_id}") => No active keysets!`)
+      }
+    }
+
+    return jwt_keyset_instances;
   }
 
   public async clearOutdatedKeySets(currentTimestamp?: number): Promise<void> {
@@ -307,11 +339,6 @@ export class AuthServerJwtKeysStore
       console.error(`Error clearing outdated JWT keys:`, e);
       throw new Error(`Failed to clear outdated JWT keys`);
     }
-  }
-
-  public constructor(dbh: Kysely<AuthDatabase>) {
-    super();
-    this.dbh = dbh;
   }
 }
 

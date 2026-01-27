@@ -31,8 +31,12 @@ export class AuthServerJwtKeysManager
     this.db = dbh;
   }
 
-  private isValidApiServerId(val: unknown): val is ApiServerId {
+  private static isValidApiServerId(val: unknown): val is ApiServerId {
     return typeof val === "string" && apiServerIdSchema.safeParse(val).success;
+  }
+
+  private isValidApiServerId(val: unknown): val is ApiServerId {
+    return AuthServerJwtKeysManager.isValidApiServerId(val);
   }
 
   /**

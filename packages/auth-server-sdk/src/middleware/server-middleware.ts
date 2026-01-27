@@ -1,8 +1,6 @@
 // server-middleware.ts
 
-import type {
-   AuthMiddlewareRules,
-} from "@schemavaults/auth-common";
+import type { AuthMiddlewareRules } from "@schemavaults/auth-common";
 import {
   type IMiddlewareChainInitOptions,
   MiddlewareChain,
@@ -30,7 +28,7 @@ import type {
   ISchemaVaultsMiddlewareFnInputs,
 } from "./middleware_types";
 import BaseMiddleware from "@/middlewares/BaseMiddleware";
-import { IJwtKeyManager } from "@/JwtKeyManager";
+import type { IJwtKeyManager } from "@/JwtKeyManager";
 import RemoteJwtKeyManager from "@/JwtKeyManager/RemoteJwtKeyManager";
 
 export interface IServerMiddlewareInitializationOptions {
@@ -46,11 +44,14 @@ export class SchemaVaultsServerMiddleware
   extends BaseMiddleware
   implements ISchemaVaultsMiddleware
 {
-
-  private static isValidApiServerId(api_server_id: unknown): api_server_id is ApiServerId {
+  private static isValidApiServerId(
+    api_server_id: unknown,
+  ): api_server_id is ApiServerId {
     if (!api_server_id) {
-      console.error("[SchemaVaultsServerMiddleware] Did not receive a 'api_server_id' (falsy!) to initialize middleware with!")
-      throw new TypeError("Did not receive a valid API server ID!")
+      console.error(
+        "[SchemaVaultsServerMiddleware] Did not receive a 'api_server_id' (falsy!) to initialize middleware with!",
+      );
+      throw new TypeError("Did not receive a valid API server ID!");
     }
     const parsed_api_server_id = apiServerIdSchema.safeParse(api_server_id);
     if (!parsed_api_server_id.success) {
@@ -62,7 +63,7 @@ export class SchemaVaultsServerMiddleware
         "Error parsing API server ID to initialize SchemaVaultsServerMiddleware with!",
       );
     }
-    return parsed_api_server_id.success
+    return parsed_api_server_id.success;
   }
 
   private static getDefaultCorsPolicy(
@@ -78,23 +79,28 @@ export class SchemaVaultsServerMiddleware
     opts: IServerMiddlewareInitializationOptions,
   ): ISchemaVaultsMiddleware {
     if (!SchemaVaultsServerMiddleware.isValidApiServerId(opts.api_server_id)) {
-      throw new TypeError("Invalid 'api_server_id' for server middleware!")
+      throw new TypeError("Invalid 'api_server_id' for server middleware!");
     }
     const audience: ApiServerId = opts.api_server_id;
 
     const environment: SchemaVaultsAppEnvironment =
       opts.environment ?? getAppEnvironment();
 
-    const isAuthServer: boolean = audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    const isAuthServer: boolean =
+      audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
     let jwt_keys_manager: IJwtKeyManager;
     if (isAuthServer) {
       if (!opts.jwt_keys_manager) {
-        throw new Error("Missing 'jwt_keys_manager' option for auth server middleware!");
+        throw new Error(
+          "Missing 'jwt_keys_manager' option for auth server middleware!",
+        );
       }
       jwt_keys_manager = opts.jwt_keys_manager;
     } else {
       if (audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
-        throw new Error("Expected this to not be the auth server if this point was reached!")
+        throw new Error(
+          "Expected this to not be the auth server if this point was reached!",
+        );
       }
       if (opts.jwt_keys_manager) {
         jwt_keys_manager = opts.jwt_keys_manager;
@@ -102,9 +108,9 @@ export class SchemaVaultsServerMiddleware
         jwt_keys_manager = new RemoteJwtKeyManager({
           auth_server_uri: getHardcodedClientWebAppDomain(
             SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-            environment
-          )
-        })
+            environment,
+          ),
+        });
       }
     }
 
@@ -132,7 +138,7 @@ export class SchemaVaultsServerMiddleware
           middleware_rules: opts.auth_middleware_rules,
           debug: debug,
           environment: environment,
-          keys_manager: jwt_keys_manager
+          keys_manager: jwt_keys_manager,
         }),
       ] as const satisfies readonly ISchemaVaultsMiddlewareFactory[],
       debug,
@@ -167,3 +173,5 @@ export class SchemaVaultsServerMiddleware
     return await next.handle({ req, ...inputs });
   }
 }
+
+export default SchemaVaultsServerMiddleware;
