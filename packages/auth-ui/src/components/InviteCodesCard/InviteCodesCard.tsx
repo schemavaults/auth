@@ -32,7 +32,7 @@ export function InviteCodesCard(props: InviteCodesCardProps): ReactElement {
 
   const cardClassName: string = cn("w-full", props.cardClassName);
 
-  const listAllInviteCodesEndpoint = "/api/admin/invite-codes/list";
+  const listAllInviteCodesEndpoint = "/api/admin/invite-codes";
 
   const invite_codes = useSWR(
     listAllInviteCodesEndpoint,
