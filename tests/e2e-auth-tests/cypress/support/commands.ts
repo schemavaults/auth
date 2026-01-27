@@ -15,6 +15,7 @@ import login from "./actions/login";
 import logout from "./actions/logout";
 import register from "./actions/register";
 import open_dialog_with_button from "./actions/open_dialog_with_button";
+import log_active_toasts from "./actions/log_active_toasts";
 
 // ***********************************************
 // This example commands.ts shows you how to
@@ -63,6 +64,8 @@ Cypress.Commands.add(
 );
 
 Cypress.Commands.add("has_error_toast", hasErrorToast);
+
+Cypress.Commands.add("log_active_toasts", log_active_toasts);
 
 Cypress.Commands.add("logout", logout);
 

@@ -76,7 +76,9 @@ export default function createApp(
           .click();
 
         cy.log("Create app dialog submitted!");
-        cy.wait(2000);
+        cy.wait(1500);
+
+        cy.log_active_toasts();
 
         return cy
           .wait("@createAppRequest", { timeout: 20000, requestTimeout: 20000 })

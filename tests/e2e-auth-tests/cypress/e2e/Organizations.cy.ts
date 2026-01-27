@@ -63,8 +63,8 @@ describe("Organizations", () => {
         }
 
         cy.generate_random_code(12).then((randomCode: string) => {
-          const organization_id = `restricted-org-${randomCode.toLowerCase()}`;
-          const name = `Restricted Organization ${randomCode}`;
+          const organization_id: string = `restricted-org-${randomCode.toLowerCase()}`;
+          const name: string = `Restricted Organization ${randomCode}`;
 
           cy.create_organization({ organization_id, name }).then(() => {
             cy.log(

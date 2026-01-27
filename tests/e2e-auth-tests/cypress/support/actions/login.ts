@@ -54,7 +54,7 @@ export default function login(
 
   // Wait for the actual API request to complete
   const submit_result: Cypress.Chainable<boolean> = cy
-    .wait("@loginRequest", { timeout: 15000 })
+    .wait("@loginRequest", { timeout: 15000, requestTimeout: 15000 })
     .then((login_interception): Cypress.Chainable<boolean> => {
       cy.log(
         `Login API response status: ${login_interception.response?.statusCode}`,

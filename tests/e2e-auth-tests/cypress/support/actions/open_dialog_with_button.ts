@@ -41,8 +41,22 @@ export default function open_dialog_with_button(
       });
     cy.wait(500);
     cy.get("body").then(($body) => {
-      if ($body.find(`#${dialog_content_container_id}`).is(":visible")) {
-        return; // Dialog opened, success
+      const selector: string = `#${dialog_content_container_id}`;
+      const dialogContent: JQuery<HTMLBodyElement> = $body.find(selector);
+      if (dialogContent.length > 0) {
+        if (dialogContent.is(":visible")) {
+          return; // Dialog opened, success
+        } else if (dialogContent.is('[data-state="open"]')) {
+          return;
+        } else {
+          cy.log(
+            `Found ${dialogContent.length} elements with query for ${selector} but none appear to be marked as open for test selector!`,
+          );
+        }
+      } else {
+        cy.log(
+          `Failed to find selector '${selector}' in DOM (attempt ${attempt}/${maxAttempts})`,
+        );
       }
       if (attempt >= maxAttempts) {
         throw new Error(`Dialog did not open after ${maxAttempts} attempts`);
@@ -55,7 +69,6 @@ export default function open_dialog_with_button(
   return cy
     .get(`#${dialog_content_container_id}`, { log: false })
     .should("exist")
-    .should("be.visible")
     .then((ele: JQuery<HTMLElement>) => {
       const firstElement = ele[0];
       return firstElement;

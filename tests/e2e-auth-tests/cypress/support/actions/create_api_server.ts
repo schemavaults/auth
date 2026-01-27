@@ -82,8 +82,9 @@ export default function createApiServer(
           .click();
 
         cy.log("Create API server dialog submitted!");
+        cy.wait(1500);
 
-        cy.wait(2000);
+        cy.log_active_toasts();
 
         return cy
           .wait("@createApiServerRequest", {

@@ -15,6 +15,10 @@ function generate_random_alphanumeric_code_of_given_length(
   return result;
 }
 
+/**
+ * @param length Numbers of characters in random string code
+ * @returns Chainable<{length} x char random alphanumeric string>
+ */
 export default function generateRandomCode(
   length: number,
 ): Cypress.Chainable<string> {

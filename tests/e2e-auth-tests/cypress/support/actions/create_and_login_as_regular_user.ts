@@ -1,9 +1,6 @@
 /**
  * Creates a regular user by:
- * 1. Signing in as superuser
- * 2. Creating an invite code
- * 3. Signing out
- * 4. Registering as a new regular user with that invite code
+ * Registering as a new regular user with that invite code
  *
  * Returns the credentials of the newly created user
  */
@@ -12,7 +9,15 @@ export interface RegularUserCredentials {
   password: string;
 }
 
-export default function createAndLoginAsRegularUser(): Cypress.Chainable<RegularUserCredentials> {
+export default function createAndLoginAsRegularUser(
+  invite_code: string | undefined = undefined,
+): Cypress.Chainable<RegularUserCredentials> {
+  cy.is_authenticated().then((authenticated: boolean) => {
+    if (authenticated) {
+      cy.logout();
+    }
+  });
+
   // Step 1: Sign in as superuser
   const regular_user_login_result: Cypress.Chainable<RegularUserCredentials> =
     cy

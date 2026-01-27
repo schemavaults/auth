@@ -36,6 +36,8 @@ declare global {
       create_and_login_as_superuser(): Chainable<boolean>;
       create_and_login_as_regular_user(): Chainable<RegularUserCredentials>;
       has_error_toast(containing_message?: string): Chainable<boolean>;
+      // returns a list of all the text content within any active toasts. also prints it to the Cypress console.
+      log_active_toasts(): Chainable<readonly string[]>;
       logout(): Chainable<void>;
       is_authenticated(): Chainable<boolean>;
       is_admin(): Chainable<boolean>;

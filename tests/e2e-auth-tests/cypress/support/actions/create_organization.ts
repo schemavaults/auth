@@ -68,9 +68,15 @@ export default function createOrganization(
             .should("exist")
             .should("not.be.disabled")
             .click();
+          cy.log("Create organization form submitted!");
+          cy.wait(1500);
+          cy.log_active_toasts();
 
           return cy
-            .wait("@createOrganizationRequest", { timeout: 20000 })
+            .wait("@createOrganizationRequest", {
+              timeout: 20000,
+              requestTimeout: 20000,
+            })
             .then((interception) => {
               interception.response?.statusCode &&
                 cy.wrap(interception.response?.statusCode).should("eq", 200);
