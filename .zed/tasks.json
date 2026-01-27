@@ -60,7 +60,7 @@
     "tags": ["docker", "reset"],
   },
   {
-    "label": "Run/launch @schemavaults/auth-server development server",
+    "label": "dev @schemavaults/auth-server",
     "command": "bun run dev --filter @schemavaults/auth-server",
     //"args": [],
     // Env overrides for the command, will be appended to the terminal's environment from the settings.
