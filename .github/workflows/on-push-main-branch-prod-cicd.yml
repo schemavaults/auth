@@ -308,7 +308,4 @@ jobs:
     uses: ./.github/workflows/apply-latest-db-migrations-to-production.yml
     with:
       BUN_VERSION: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     secrets: inherit
