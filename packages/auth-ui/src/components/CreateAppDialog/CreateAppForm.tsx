@@ -61,9 +61,9 @@ export default function CreateAppForm({
 }: CreateAppFormProps): ReactElement {
   const defaultValues: Partial<SchemaVaultsApp> = useMemo(() => {
     return {
-      app_name: "My Web App",
+      app_name: "",
       app_id: generateDefaultAppId(),
-      app_description: "Interact with my API",
+      app_description: "",
       public: false,
       created_at: Date.now(),
       hardcoded: false,
