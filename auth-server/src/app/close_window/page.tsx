@@ -33,7 +33,8 @@ function CloseWindowNowPage(): ReactElement {
 export default CloseWindowNowPage;
 
 //  Force static rendering and cache the data of a layout or page by causing an error if any components use Dynamic APIs or uncached data
-export const dynamic = "error";
+export const dynamic = "force-static";
+export const dynamicParams: boolean = false;
 
 export const revalidate: boolean = false;
 
