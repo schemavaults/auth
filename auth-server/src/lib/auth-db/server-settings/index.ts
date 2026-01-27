@@ -4,7 +4,6 @@ export { ServerSettingsRegistry } from "./server-settings-registry";
 
 export {
   getServerSetting,
-  getServerSettingWithEnvFallback,
   envParsers,
 } from "./get-server-setting";
 
