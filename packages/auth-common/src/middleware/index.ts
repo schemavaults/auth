@@ -14,7 +14,4 @@ export { determineAuthStatus } from "./determine-auth-status";
 
 export type { DecodeTokenFn } from "./decode-token-type";
 export type { PotentiallyValidTokenSource } from "./token-source";
-export {
-  decodeFirstOfSeveralJwts,
-  type DecodeFirstOfSeveralJwtsInputOptions,
-} from "./decode-first-of-several-jwts";
+export { decodeJWTs, type IDecodeSeveralJwtsInputOptions } from "./decode-jwts";

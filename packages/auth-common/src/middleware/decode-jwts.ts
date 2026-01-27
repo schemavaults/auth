@@ -2,7 +2,7 @@ import type { PotentiallyValidTokenSource } from "./token-source";
 import type { AuthTokenTypes } from "@/token-data";
 import type { DecodeTokenFn } from "./decode-token-type";
 
-export interface DecodeFirstOfSeveralJwtsInputOptions {
+export interface IDecodeSeveralJwtsInputOptions {
   token_sources: readonly PotentiallyValidTokenSource[];
   decodeJWT: DecodeTokenFn;
   jwt_audience: string;
@@ -10,12 +10,8 @@ export interface DecodeFirstOfSeveralJwtsInputOptions {
 
 type DecodeTokenOutput = Awaited<ReturnType<DecodeTokenFn>>;
 
-export async function decodeFirstOfSeveralJwts(
-  {
-    token_sources,
-    decodeJWT,
-    jwt_audience,
-  }: DecodeFirstOfSeveralJwtsInputOptions,
+export async function decodeJWTs(
+  { token_sources, decodeJWT, jwt_audience }: IDecodeSeveralJwtsInputOptions,
   debug: boolean = false,
 ): Promise<DecodeTokenOutput> {
   const n_token_sources: number = token_sources.length;
@@ -65,7 +61,7 @@ export async function decodeFirstOfSeveralJwts(
 
   if (debug) {
     console.log(
-      `[decodeFirstOfSeveralJwts] Decoded ${n_successful_decode_results}/${n_token_sources satisfies number} tokens successfully.`,
+      `[decodeJWTs] Decoded ${n_successful_decode_results}/${n_token_sources satisfies number} tokens successfully.`,
     );
   }
 
@@ -109,3 +105,5 @@ export async function decodeFirstOfSeveralJwts(
 
   return firstSuccessfulResult;
 }
+
+export default decodeJWTs;

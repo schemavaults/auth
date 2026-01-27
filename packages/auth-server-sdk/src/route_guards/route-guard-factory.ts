@@ -4,11 +4,11 @@ import type { IRouteGuard } from "./IRouteGuard";
 import { z } from "zod";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
 import {
-  decodeFirstOfSeveralJwts,
+  decodeJWTs,
   type PotentiallyValidTokenSource,
   type UserData,
   type DecodeTokenFn,
-  OrganizationID,
+  type OrganizationID,
   organizationIdSchema,
 } from "@schemavaults/auth-common";
 import {
@@ -141,7 +141,7 @@ export class RouteGuardFactory {
     let user: UserData | null = null;
     let user_organizations: readonly OrganizationID[] | null = null;
     try {
-      user = await decodeFirstOfSeveralJwts(
+      user = await decodeJWTs(
         {
           token_sources,
           jwt_audience,

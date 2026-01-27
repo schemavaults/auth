@@ -1,5 +1,5 @@
 import type { UserData } from "@/user_data";
-import { decodeFirstOfSeveralJwts } from "./decode-first-of-several-jwts";
+import decodeJWTs from "./decode-jwts";
 import type { DecodeTokenFn } from "./decode-token-type";
 import type { AuthenticationStatus } from "./middleware-rules";
 import type { PotentiallyValidTokenSource } from "./token-source";
@@ -92,7 +92,7 @@ export async function determineAuthStatus(
 
     let decoded_jwt: UserData;
     try {
-      const decoded = await decodeFirstOfSeveralJwts(
+      const decoded = await decodeJWTs(
         {
           token_sources,
           decodeJWT: opts.decodeJWT,
