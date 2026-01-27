@@ -39,6 +39,7 @@ interface CreateApiServerFormProps {
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
   owner_organization_id: OrganizationID;
+  onSuccess: () => void;
 }
 
 function generateDefaultApiServerId(): string {
@@ -53,6 +54,7 @@ function generateDefaultApiServerId(): string {
 export function CreateApiServerForm({
   clearApiServersCache,
   owner_organization_id,
+  onSuccess,
 }: CreateApiServerFormProps): ReactElement {
   const { toast } = useToast();
 
@@ -143,6 +145,8 @@ export function CreateApiServerForm({
       title: "Created new API server successfully",
     });
     clearApiServersCache(mutate);
+    form.reset();
+    onSuccess();
     return;
   }
 

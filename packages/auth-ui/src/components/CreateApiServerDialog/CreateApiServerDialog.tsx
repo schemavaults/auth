@@ -42,6 +42,7 @@ export function CreateApiServerDialog({
               ? owner_organization_id
               : SCHEMAVAULTS_ORGANIZATION_ID
           }
+          onSuccess={() => onOpenChange(false)}
         />
       </DialogContent>
     </Dialog>

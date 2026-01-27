@@ -51,11 +51,13 @@ export interface CreateAppFormProps {
   clearFrontendAppsCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
+  onSuccess: () => void;
 }
 
 export default function CreateAppForm({
   owner_organization_id,
   clearFrontendAppsCache,
+  onSuccess,
 }: CreateAppFormProps): ReactElement {
   const defaultValues: Partial<SchemaVaultsApp> = useMemo(() => {
     return {
@@ -181,6 +183,8 @@ export default function CreateAppForm({
         title: "Created new frontend client application successfully",
       });
       clearFrontendAppsCache(mutate);
+      onSuccess();
+      form.reset();
       return;
     });
     return;

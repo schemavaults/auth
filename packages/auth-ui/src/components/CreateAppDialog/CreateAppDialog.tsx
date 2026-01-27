@@ -39,6 +39,7 @@ export function CreateAppDialog({
             owner_organization_id ?? SCHEMAVAULTS_ORGANIZATION_ID
           }
           clearFrontendAppsCache={clearFrontendAppsCache}
+          onSuccess={() => props.onOpenChange(false)}
         />
       </DialogContent>
     </Dialog>
