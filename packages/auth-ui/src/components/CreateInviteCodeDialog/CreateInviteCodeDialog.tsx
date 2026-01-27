@@ -27,7 +27,7 @@ export function CreateInviteCodeDialog({
         id="create-invite-code-dialog-content"
         className="sm:max-w-[425px]"
       >
-        <CreateInviteCodeForm />
+        <CreateInviteCodeForm onSuccess={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   );

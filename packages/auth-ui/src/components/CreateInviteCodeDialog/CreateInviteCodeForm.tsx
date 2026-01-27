@@ -32,7 +32,13 @@ import { type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SwatchBook } from "lucide-react";
 
-export function CreateInviteCodeForm(): ReactElement {
+export interface CreateInviteCodeFormProps {
+  onSuccess: () => void;
+}
+
+export function CreateInviteCodeForm({
+  onSuccess,
+}: CreateInviteCodeFormProps): ReactElement {
   const { toast } = useToast();
   const form = useForm<InviteCodeDefinition>({
     resolver: zodResolver(inviteCodeDefinitionSchema),
@@ -122,6 +128,8 @@ export function CreateInviteCodeForm(): ReactElement {
       description: "New users should now be able to use it to register!",
     });
     clearInviteCodesCache();
+    onSuccess();
+    form.reset();
     return;
   }
 
