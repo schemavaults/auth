@@ -6,10 +6,8 @@ describe("Invite Codes", () => {
   });
 
   it("can create a new invite code as a superuser", () => {
-    cy.create_and_login_as_superuser().then((success) => {
-      if (!success) {
-        throw new Error("Failed to create and login as superuser");
-      }
+    cy.as_admin(() => {
+      cy.is_admin().should("be.true");
 
       const INVITE_CODE_LENGTH: number = 24;
       cy.generate_random_code(INVITE_CODE_LENGTH).then(
@@ -38,6 +36,7 @@ describe("Invite Codes", () => {
           });
         },
       );
+      return cy.wrap(null, { log: false });
     });
   });
 });
