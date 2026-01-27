@@ -18,6 +18,7 @@
     "open": "bun run cy:open",
     "cy:open": "cypress open",
     "e2e": "cypress run",
-    "cy:install": "cypress install"
+    "cy:install": "cypress install",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-common",
   "description": "Types and utility functions for authentication and authorization",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -23,7 +23,8 @@
     "cleanup:compiled-tests-output": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
     "cleanup": "bun run cleanup:compiled-tests-output",
     "postbuild": "bun run cleanup",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {
     "typescript": "5.8.3",

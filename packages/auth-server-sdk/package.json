@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server-sdk",
   "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
-  "version": "0.17.13",
+  "version": "0.17.14",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -25,7 +25,8 @@
     "cleanup:compiled-tests-output": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
     "cleanup": "bun run cleanup:compiled-tests-output",
     "postbuild": "bun run cleanup",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@schemavaults/dbh": "0.7.4",

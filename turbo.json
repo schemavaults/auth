@@ -25,6 +25,11 @@
       "dependsOn": [],
       "outputs": [],
       "persistent": false
+    },
+    "typecheck": {
+      "dependsOn": [],
+      "outputs": [],
+      "persistent": false
     }
   }
 }
