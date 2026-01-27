@@ -27,6 +27,7 @@
     "lint": "turbo lint",
     "start": "turbo start",
     "start:server": "bun run start --filter @schemavaults/auth-server",
-    "e2e": "cd tests/e2e-auth-tests && /bin/bash ./e2e.sh"
+    "e2e": "cd tests/e2e-auth-tests && /bin/bash ./e2e.sh",
+    "typecheck": "turbo typecheck"
   }
 }
