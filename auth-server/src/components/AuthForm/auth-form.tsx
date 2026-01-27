@@ -42,11 +42,11 @@ import { handleAuthFormSubmit } from "./handle-auth-form-submit";
 import type { AuthFormData } from "./auth-form-data";
 import type { AuthFormType } from "./auth-form-type";
 import AuthFormSwapLink from "./swap-auth-type-link";
-import { isPrivateBetaEnabled } from "@/lib/private-beta";
 
 interface AuthFormProps<T extends "login" | "register">
   extends AuthFormType<T> {
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
+  invite_code_required?: boolean;
   debug?: boolean;
 }
 
@@ -158,6 +158,8 @@ export function AuthForm<T extends "login" | "register">({
       return;
     }
   }
+
+  const invite_code_required: boolean = typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true;
 
   return (
     <Card
@@ -284,11 +286,12 @@ export function AuthForm<T extends "login" | "register">({
                         {...field}
                         name={field.name}
                         disabled={field.disabled || submitting}
+                        required={invite_code_required}
                       />
                     </FormControl>
                     <FormDescription>
-                      {isPrivateBetaEnabled() &&
-                        "SchemaVaults is currently in closed beta. "}
+                      {invite_code_required &&
+                        "An invite code is currently required to register using this form. "}
                       {"If you have an invite code, enter it here."}
                     </FormDescription>
                     <FormMessage />

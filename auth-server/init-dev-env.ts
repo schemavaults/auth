@@ -43,7 +43,6 @@ function promptWithDefault(message: string, defaultValue: string): string {
 
 function generateEnvContent(
   superuserInviteCode: string,
-  privateBeta: string,
   passwordSalt: string,
   passwordHashRounds: number,
 ): string {
@@ -61,13 +60,11 @@ function generateEnvContent(
   lines.push(`PRIVATE_PASSWORD_HASH_ROUNDS=${passwordHashRounds}`);
   lines.push("");
 
-  lines.push(`# Superuser Invite Code`);
-  lines.push(`PRIVATE_SUPERUSER_INVITE_CODE="${superuserInviteCode}"`);
-  lines.push("");
-
-  lines.push(`# Private Beta Flag`);
-  lines.push(`NEXT_PUBLIC_SCHEMAVAULTS_PRIVATE_BETA="${privateBeta}"`);
-  lines.push("");
+  if (superuserInviteCode) {
+    lines.push(`# Superuser Invite Code`);
+    lines.push(`PRIVATE_SUPERUSER_INVITE_CODE="${superuserInviteCode}"`);
+    lines.push("");
+  }
 
   // Add postgres credentials from the existing script
   lines.push(postgresCredentialEnvironmentVariables());
@@ -98,11 +95,6 @@ async function main(): Promise<void> {
     "superuser",
   );
 
-  const privateBeta = promptWithDefault(
-    "Enter NEXT_PUBLIC_SCHEMAVAULTS_PRIVATE_BETA (true/false)",
-    "true",
-  );
-
   const passwordSalt = promptWithDefault(
     "Enter PRIVATE_GLOBAL_PASSWORD_SALT",
     "blahblahblah",
@@ -120,7 +112,6 @@ async function main(): Promise<void> {
 
   const envContent = generateEnvContent(
     superuserInviteCode,
-    privateBeta,
     passwordSalt,
     passwordHashRounds,
   );

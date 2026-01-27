@@ -233,6 +233,10 @@ function AppEnvironmentAwareAuthProvider(
       debug,
       authorize_uri,
       environment: appEnvironment,
+      invite_code_required:
+        typeof props.invite_code_required === "boolean"
+          ? props.invite_code_required
+          : true,
     };
 
   // Initialize auth client, store in the authClientRef

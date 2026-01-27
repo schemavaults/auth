@@ -16,6 +16,7 @@ import type {
   InviteCodesTable,
 } from "./users";
 import type { JwksAccessKeysForHardcodedTable, JwksAccessKeysTable } from "./jwks-access-keys";
+import type { ServerSettingsTable } from "./server-settings";
 
 export type AuthDatabase = {
   apps: AppsTable;
@@ -33,4 +34,5 @@ export type AuthDatabase = {
   jwt_keys: JwtKeysTable;
   jwks_access_keys: JwksAccessKeysTable;
   jwks_access_keys_for_hardcoded: JwksAccessKeysForHardcodedTable;
+  server_settings: ServerSettingsTable;
 };

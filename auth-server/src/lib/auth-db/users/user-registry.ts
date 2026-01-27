@@ -21,8 +21,8 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
-import { isPrivateBetaEnabled } from "@/lib/private-beta";
 import loadSuperuserInviteCode from "@/lib/TestSuperuserInviteCode";
+import inviteCodesRequired from "@/lib/config/invite-codes-required";
 
 const userDocumentSchema = z
   .object({
@@ -205,6 +205,19 @@ export class UserRegistry {
       throw new TypeError("'invite_code' must be a string (if passed)");
     }
 
+    const inviteCodesRequiredPromise: Promise<boolean> = inviteCodesRequired(this.db);
+
+    if (invite_code) {
+      const parsed = await inviteCodeFormatSchema.safeParseAsync(invite_code);
+      if (!parsed.success) {
+        console.warn("Received invalid invite code!");
+        if (this.debug) {
+          console.error(parsed.error);
+        }
+        throw new TypeError("Received invalid invite code!")
+      }
+    }
+
     if (typeof create_as_admin !== "boolean") {
       throw new TypeError("'create_as_admin' must be a boolean");
     }
@@ -247,6 +260,13 @@ export class UserRegistry {
       throw new Error("Failed to hash password");
     }
 
+    const inviteCodeRequired: boolean = await inviteCodesRequiredPromise;
+    if (inviteCodeRequired && (
+      !invite_code || !parsed_user.data.invite_code
+    )) {
+      throw new Error("No invite code was supplied but @schemavaults/auth-server config currently requires an invite code!")
+    }
+
     try {
       if (debug) {
         console.log(
@@ -256,6 +276,7 @@ export class UserRegistry {
       const lookupInviteCode = this.lookupInviteCode.bind(this);
       const countInviteCodeUsages = this.countInviteCodeUsages.bind(this);
       // Run create user insert operation as a transaction (multiple tables written to)
+
       await this.db
         .transaction()
         .execute(async function createUserTransaction(trx): Promise<void> {
@@ -987,8 +1008,7 @@ export class UserRegistry {
     const defaultDebugState: boolean =
       this.env === "development" ||
       this.env === "staging" ||
-      this.env === "test" ||
-      isPrivateBetaEnabled();
+      this.env === "test";
 
     this.debug = typeof debug === "boolean" ? debug : defaultDebugState;
   }

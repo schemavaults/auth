@@ -9,15 +9,7 @@ export interface RegularUserCredentials {
   password: string;
 }
 
-export default function createAndLoginAsRegularUser(
-  invite_code: string | undefined = undefined,
-): Cypress.Chainable<RegularUserCredentials> {
-  cy.is_authenticated().then((authenticated: boolean) => {
-    if (authenticated) {
-      cy.logout();
-    }
-  });
-
+export default function createAndLoginAsRegularUser(): Cypress.Chainable<RegularUserCredentials> {
   // Step 1: Sign in as superuser
   const regular_user_login_result: Cypress.Chainable<RegularUserCredentials> =
     cy

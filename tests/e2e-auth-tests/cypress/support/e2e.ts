@@ -41,6 +41,7 @@ declare global {
       logout(): Chainable<void>;
       is_authenticated(): Chainable<boolean>;
       is_admin(): Chainable<boolean>;
+      as_admin(run_once_admin: () => Chainable<void>): Chainable<void>;
       create_invite_code(
         invite_code: string,
         max_uses: number,

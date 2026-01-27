@@ -30,6 +30,9 @@ export interface IAuthClientConstructorOptions {
 
   // SchemaVaults App Environment ('development', 'test', 'staging', 'production')
   app_env: SchemaVaultsAppEnvironment;
+
+  // Whether we should enforce invite code presence during registration flows
+  invite_code_required?: boolean;
 }
 
 export type { IAuthClientConstructorOptions as InitializeAuthClientOptions };

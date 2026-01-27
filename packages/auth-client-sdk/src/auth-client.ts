@@ -36,7 +36,6 @@ import {
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
-import isPrivateBeta from "@/lib/is-private-beta";
 import debugPrintTokensAsTable from "@/lib/debugPrintTokensAsTable";
 import debugPrintUserDataAsTable from "@/lib/debugPrintUserDataAsTable";
 import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
@@ -79,6 +78,8 @@ export class SchemaVaultsAuthClient
 
   private readonly _default_audiences: string[];
 
+  private readonly _invite_code_required: boolean;
+
   // Initialize the auth client
   constructor(opts: IAuthClientConstructorOptions) {
     // Set up event emitter
@@ -106,8 +107,6 @@ export class SchemaVaultsAuthClient
         this.environment === "test" ||
         this.environment === "staging"
       ) {
-        this.DEBUG = true;
-      } else if (isPrivateBeta()) {
         this.DEBUG = true;
       } else {
         this.DEBUG = false;
@@ -203,6 +202,12 @@ export class SchemaVaultsAuthClient
     // Get default audiences
     // E.g. the web app has https://api.schemavaults.com('s app ID) as an audience
     this._default_audiences = opts.default_audiences ?? [];
+
+    // Should we require an invite code?
+    this._invite_code_required =
+      typeof opts.invite_code_required === "boolean"
+        ? opts.invite_code_required
+        : true;
 
     // Set up auth state change listener
     this.addEventListener(
@@ -1349,6 +1354,7 @@ export class SchemaVaultsAuthClient
       credentials,
       code_challenge,
       app_environment: this.environment,
+      invite_code_required: this._invite_code_required,
     });
   }
 

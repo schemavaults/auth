@@ -17,6 +17,7 @@ export interface IAuthClientFactoryInitOpts {
   successful_authentication_redirect_uri: string;
   successful_logout_redirect_uri: string;
   authorize_uri?: string | undefined;
+  invite_code_required?: boolean;
 }
 
 export class AuthClientFactory {
@@ -29,6 +30,7 @@ export class AuthClientFactory {
   private readonly successful_authentication_redirect_uri: string;
   private readonly successful_logout_redirect_uri: string;
   private readonly authorize_uri: string | undefined;
+  private readonly invite_code_required: boolean;
 
   public constructor(opts: IAuthClientFactoryInitOpts) {
     const environment: SchemaVaultsAppEnvironment = opts.environment;
@@ -50,6 +52,10 @@ export class AuthClientFactory {
       opts.successful_authentication_redirect_uri;
     this.successful_logout_redirect_uri = opts.successful_logout_redirect_uri;
     this.authorize_uri = opts.authorize_uri;
+    this.invite_code_required =
+      typeof opts.invite_code_required === "boolean"
+        ? opts.invite_code_required
+        : true;
   }
 
   private async createAuthClientWithUuidGenerator(): Promise<ISchemaVaultsAuthClient> {
@@ -101,6 +107,7 @@ export class AuthClientFactory {
       default_audiences: this.default_audiences,
       debug: this.debug,
       app_env: environment,
+      invite_code_required: this.invite_code_required,
     };
 
     const auth: ISchemaVaultsAuthClient = new SchemaVaultsAuthClient(

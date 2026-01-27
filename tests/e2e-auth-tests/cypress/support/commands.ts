@@ -10,6 +10,7 @@ import generate_random_code from "./actions/generate_random_code";
 import generateJwksAccessKey from "./actions/generate_jwks_access_key";
 import hasErrorToast from "./actions/has_error_toast";
 import is_admin from "./actions/is_admin";
+import as_admin from "./actions/as_admin";
 import is_authenticated from "./actions/is_authenticated";
 import login from "./actions/login";
 import logout from "./actions/logout";
@@ -72,6 +73,7 @@ Cypress.Commands.add("logout", logout);
 Cypress.Commands.add("is_authenticated", is_authenticated);
 
 Cypress.Commands.add("is_admin", is_admin);
+Cypress.Commands.add("as_admin", as_admin);
 
 Cypress.Commands.add("create_invite_code", createInviteCode);
 

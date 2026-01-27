@@ -3,7 +3,6 @@ import {
   type ServerlessDatabase,
   SchemaVaultsAppToApiPermissionsRegistry,
 } from "@/lib/auth-db";
-import isPrivateBeta from "@/lib/private-beta";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import {
   apiServerIdSchema,
@@ -39,6 +38,11 @@ async function validateOneAudience(
     return "auth-server-only";
   }
 
+  console.assert(
+    audience !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    `Expected this to be a non-auth server API server if this point was reached`
+  );
+
   const parsed_aud = await audienceRefSchema.safeParseAsync(audience);
   const isSemanticallyValidAudience = parsed_aud.success satisfies boolean;
   if (!isSemanticallyValidAudience || !parsed_aud.data) {
@@ -52,28 +56,13 @@ async function validateOneAudience(
 
   const aud: string = parsed_aud.data;
 
-  let audienceType: "fs" | "api" | "auth";
-  if (aud.startsWith("schemavaults-fs:")) {
-    audienceType = "fs";
-  } else if (aud === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
-    audienceType = "auth";
+  if (aud === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
     return "auth-server-only";
   } else if (apiServerIdSchema.safeParse(aud).success) {
-    audienceType = "api";
+    // pass
   } else {
     console.error("Not prepared to handle audience: ", aud);
     throw new Error("Unhandled audience reference type!");
-  }
-
-  if (audienceType === "fs") {
-    console.warn(
-      "TODO: Validate whether access should be granted to the FS server here!!! Do they have enough credits to read/write?? Is this a public storage region??",
-    );
-    if (!isPrivateBeta()) {
-      throw new Error("This implementation is not suitable for public access!");
-    }
-
-    return "api-resource-server";
   }
 
   // Validate that the frontend app has authorized API server audience

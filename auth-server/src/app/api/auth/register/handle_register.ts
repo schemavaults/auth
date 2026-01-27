@@ -17,14 +17,10 @@ import {
   UserRegistry,
   type UserDocument,
 } from "@/lib/auth-db";
-import { isPrivateBetaEnabled } from "@/lib/private-beta";
-import {
-  getAppEnvironment,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
 import loadSuperuserInviteCode, {
   superuserInviteCodeEnvVarKey,
 } from "@/lib/TestSuperuserInviteCode";
+import inviteCodesRequired from "@/lib/config/invite-codes-required";
 
 export interface HandleRegisterOptions {
   body: unknown;
@@ -56,15 +52,10 @@ function wasInviteCodeSupplied(
 
 export async function handleRegister({
   body,
-}: HandleRegisterOptions): Promise<NextResponse> {
-  const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
-
-  const private_beta: boolean = isPrivateBetaEnabled();
-  const debug: boolean = appEnv !== "production" || private_beta;
-
+}: HandleRegisterOptions, debug: boolean = false): Promise<NextResponse> {
   if (debug) {
     console.log(
-      `[handleRegister] Received register request!${private_beta ? " (PRIVATE_BETA = True)" : ""}`,
+      `[handleRegister] Received register request!`,
     );
   }
 
@@ -87,8 +78,22 @@ export async function handleRegister({
   const challenge_time: number = registrationData.challenge_time;
   const invite_code: string | undefined = registrationData.invite_code;
 
+  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
   // Details on invite code
-  const inviteCodeRequired: boolean = private_beta;
+  let inviteCodeRequired: boolean;
+  try {
+    inviteCodeRequired = await inviteCodesRequired(dbh.db);
+  } catch (e: unknown) {
+    console.error(e);
+    return NextResponse.json({
+      error: true,
+      success: false,
+      message: "Failed to check the 'invite_code_required' server configuration! Please try again later."
+    }, {
+      status: 500
+    })
+  }
   const inviteCodeSupplied: boolean = wasInviteCodeSupplied(invite_code);
 
   // Ensure an invite code was supplied if one is required!
@@ -162,8 +167,6 @@ export async function handleRegister({
 
   const email: string = email_credentials.email;
   const password: string = email_credentials.password;
-
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   let userRegistry: UserRegistry;
   try {

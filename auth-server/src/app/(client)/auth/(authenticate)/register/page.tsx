@@ -13,6 +13,9 @@ import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcom
 import type { UserData } from "@schemavaults/auth-common";
 import { doesSsrContextHaveValidRefreshToken } from "@/lib/doesRequestHaveValidRefreshToken";
 import { redirect } from "next/navigation";
+import inviteCodesRequired from "@/lib/config/invite-codes-required";
+import redirectWithError from "@/lib/redirect-with-error";
+import { ServerlessDatabase } from "@/lib/auth-db/serverless-database";
 
 export default async function RegisterPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -35,10 +38,21 @@ export default async function RegisterPage(props: {
       }
     }
 
+  await using dbh = ServerlessDatabase.createDBH();
+
+  let inviteCodeRequired: boolean
+  try {
+    inviteCodeRequired = await inviteCodesRequired(dbh.db);
+  } catch (e: unknown) {
+    console.error("Failed to load server setting on whether invite codes are required: ", e);
+    redirectWithError(500, "load_server_config_failure");
+  }
+
   return (
     <LoginOrRegisterForm
       type={"register"}
       onSuccessfulAuthenticate={on_successful_authenticate}
+      invite_code_required={inviteCodeRequired}
       debug={debug}
     />
   );

@@ -13,17 +13,6 @@ export function useDebug(environment: SchemaVaultsAppEnvironment): boolean {
       return true;
     }
 
-    try {
-      if (
-        typeof process.env.NEXT_PUBLIC_SCHEMAVAULTS_PRIVATE_BETA === "string" &&
-        process.env.NEXT_PUBLIC_SCHEMAVAULTS_PRIVATE_BETA.includes("true")
-      ) {
-        return true;
-      }
-    } catch (e: unknown) {
-      void e; /** no-op */
-    }
-
     return false;
   }, [environment]);
 }

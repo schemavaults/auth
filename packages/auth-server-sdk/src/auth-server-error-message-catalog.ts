@@ -7,6 +7,7 @@ const ERROR_IDS = [
   "forbidden",
   "load_user_data_failure",
   "internal_server_error",
+  "load_server_config_failure",
 ] as const satisfies readonly string[];
 
 export type SchemaVaultsAuthErrorId = (typeof ERROR_IDS)[number];
@@ -24,6 +25,8 @@ export const ERROR_MESSAGE_CATALOG: Record<SchemaVaultsAuthErrorId, string> = {
     "There was an error loading data associated with your SchemaVaults account!",
   internal_server_error:
     "There was a problem in the SchemaVaults backend logic and something caused a crash!",
+  load_server_config_failure:
+    "There was a problem loading server configuration settings.",
 };
 
 export function isValidErrorId(id: string): id is SchemaVaultsAuthErrorId {

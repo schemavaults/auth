@@ -1,6 +1,5 @@
 "use client";
 
-import { isPrivateBetaEnabled } from "@/lib/private-beta";
 import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
@@ -8,29 +7,22 @@ import {
 import { defaultAuthMiddlewareRules } from "@schemavaults/auth-common";
 import AuthProvider from "@schemavaults/auth-react-provider";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useMemo, type ReactElement } from "react";
+import { type ReactNode, type ReactElement } from "react";
 
 export interface ClientAuthProviderProps {
   children: ReactNode | ReactElement;
   environment: SchemaVaultsAppEnvironment;
+  debug?: boolean;
+  invite_code_required?: boolean;
 }
 
 export function ClientAuthProvider({
   children,
   environment,
+  ...props
 }: ClientAuthProviderProps): ReactElement {
   const router = useRouter();
   const path = usePathname();
-  const debug: boolean = useMemo(() => {
-    if (isPrivateBetaEnabled()) {
-      return true;
-    } else if (environment === "development") {
-      return true;
-    } else if (environment === "test") {
-      return true;
-    }
-    return false;
-  }, [environment]);
 
   return (
     <AuthProvider
@@ -41,7 +33,8 @@ export function ClientAuthProvider({
       authMiddlewareRules={defaultAuthMiddlewareRules}
       app_id={SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}
       environment={environment}
-      debug={debug}
+      debug={typeof props.debug === 'boolean' ? props.debug : false}
+      invite_code_required={typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true}
     >
       {children}
     </AuthProvider>

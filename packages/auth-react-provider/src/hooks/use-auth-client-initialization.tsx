@@ -21,6 +21,7 @@ export interface UseAuthClientInitializationOptions {
   debug?: boolean;
   default_audiences?: InitializeAuthClientOptions["default_audiences"];
   environment: SchemaVaultsAppEnvironment;
+  invite_code_required?: boolean;
 }
 
 export function useAuthClientInitialization(
@@ -73,6 +74,10 @@ export function useAuthClientInitialization(
             authorize_uri,
             environment,
             app_id,
+            invite_code_required:
+              typeof opts.invite_code_required === "boolean"
+                ? opts.invite_code_required
+                : true,
           });
 
           factory

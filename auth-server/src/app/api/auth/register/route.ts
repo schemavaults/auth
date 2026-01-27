@@ -6,6 +6,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
 import handleRegister from "./handle_register";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import shouldEnableDebug from "@/lib/should-enable-debug";
 
 export async function POST(
   req: NextRequest,
@@ -30,8 +31,10 @@ export async function POST(
     );
   }
 
+  const debug: boolean = shouldEnableDebug(environment);
+
   try {
-    return await handleRegister({ body: body_json });
+    return await handleRegister({ body: body_json }, debug);
   } catch (e: unknown) {
     console.error(
       "Internal server error attempting to handle /api/auth/register request",

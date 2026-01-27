@@ -1,4 +1,3 @@
-import isPrivateBetaEnabled from "@/lib/is-private-beta";
 import {
   type CodeChallengeWithDetails,
   PKCE_ProofKeyManager,
@@ -15,8 +14,6 @@ import {
 } from "./authentication-outcome-type";
 import type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
 import type { Credentials } from "@/types/credentials";
-
-const PRIVATE_BETA: boolean = isPrivateBetaEnabled();
 
 // Send an authentication request to the auth server, hopefully get an authorization code back, else throw an error
 export async function sendAuthenticateRequest(
@@ -81,7 +78,7 @@ export async function sendAuthenticateRequest(
       throw new Error("Passwords do not match");
     }
 
-    if (PRIVATE_BETA && !credentials.invite_code) {
+    if (opts.invite_code_required && !credentials.invite_code) {
       throw new Error("Invite code is required while in private beta");
     }
   }

@@ -10,6 +10,7 @@ export interface ISendAuthenticateRequestOptions {
   credentials: Credentials;
   code_challenge: CodeChallengeWithDetails;
   app_environment: SchemaVaultsAppEnvironment;
+  invite_code_required: boolean;
 }
 
 export type { ISendAuthenticateRequestOptions as SendAuthenticateRequestOptions };

@@ -13,6 +13,7 @@ import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenti
 export interface CredentialsFormViewProps {
   type: AuthenticationOutcomeType;
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
+  invite_code_required?: boolean;
   debug?: boolean;
 }
 
@@ -23,7 +24,7 @@ export interface CredentialsFormViewProps {
 export function LoginOrRegisterForm({
   type,
   onSuccessfulAuthenticate,
-  debug
+  ...props
 }: CredentialsFormViewProps): ReactElement {
   if (!isValidAuthenticationOutcomeType(type)) {
     throw new Error("Invalid authentication type! Expected one of ");
@@ -47,7 +48,8 @@ export function LoginOrRegisterForm({
       <AuthForm
         type={type}
         onSuccessfulAuthenticate={onSuccessfulAuthenticate}
-        debug={debug}
+        invite_code_required={typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true}
+        debug={props.debug}
       />
     </ThemedPageBackground>
   );
