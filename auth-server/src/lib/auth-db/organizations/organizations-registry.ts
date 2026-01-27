@@ -20,6 +20,7 @@ import {
   type OrganizationMembershipRoleType,
 } from "./organization-membership-role-types";
 import type { OrganizationMemberWithUserData } from "./organization-member-with-user-data";
+import type { OrganizationMembershipRoleDefinition } from "./organization-membership-role-definition";
 
 export class OrganizationsRegistry
   implements IOrganizationsRegistry
@@ -226,7 +227,7 @@ export class OrganizationsRegistry
   public async listUserOrganizationMemberships(
     uid: string,
     admin: boolean = false
-  ): Promise<readonly OrganizationID[]> {
+  ): Promise<readonly OrganizationMembershipRoleDefinition[]> {
     const debug: boolean = this.debug;
 
     if (!isValidUuid(uid)) {
@@ -242,11 +243,11 @@ export class OrganizationsRegistry
     }
 
     const db = this.db;
-    async function listMembershipsForUserFromDatabase(): Promise<readonly OrganizationID[]> {
+    async function listMembershipsForUserFromDatabase(): Promise<readonly OrganizationMembershipRoleDefinition[]> {
       const membershipsQuery = db
         .selectFrom("organization_membership_roles")
         .where("uid", "=", uid)
-        .select("organization_id");
+        .selectAll();
 
       const memberships = await membershipsQuery.execute();
       if (memberships.length === 0) {
@@ -257,74 +258,85 @@ export class OrganizationsRegistry
         }
         return [];
       }
-      const all_organization_ids = memberships.map((result) => {
-        if (!organizationIdSchema.safeParse(result.organization_id).success) {
+      const all_memberships: OrganizationMembershipRoleDefinition[] = memberships.map((row) => {
+        if (!organizationIdSchema.safeParse(row.organization_id).success) {
           throw new TypeError(
             `Failed to load associated organization IDs for user '${uid}', received bad value from database query!`,
           );
         }
-        return result.organization_id
+        return {
+          membership_declaration_id: row.membership_declaration_id,
+          organization_id: row.organization_id as OrganizationID,
+          uid: row.uid,
+          created_at: typeof row.created_at === "number"
+            ? row.created_at
+            : Number.parseInt(row.created_at as string),
+          role: row.role as OrganizationMembershipRoleType,
+        };
       });
-      return all_organization_ids;
+      return all_memberships;
     }
 
-    // Initialize list of organizations to store.
+    // Initialize list of memberships to store.
     // First load from hardcoded set, then load from db.
-    const organization_ids: OrganizationID[] = []
+    const memberships: OrganizationMembershipRoleDefinition[] = []
 
     const hardcodedOrganizations = this.hardcodedOrganizations;
-    (function addAnyHardcodedIdsForUser(): void {
-      if (admin) {
-        if (!hardcodedOrganizations.has(SCHEMAVAULTS_ORGANIZATION_ID)) {
-          throw new Error("Expected there to be a hardcoded organization with ID: \"" + SCHEMAVAULTS_ORGANIZATION_ID + "\"")
-        }
-        organization_ids.push(SCHEMAVAULTS_ORGANIZATION_ID);
+    // Add virtual membership for admin users in the schemavaults organization
+    if (admin) {
+      const hardcodedOrg = hardcodedOrganizations.get(SCHEMAVAULTS_ORGANIZATION_ID);
+      if (!hardcodedOrg) {
+        throw new Error("Expected there to be a hardcoded organization with ID: \"" + SCHEMAVAULTS_ORGANIZATION_ID + "\"")
       }
-    })(); // immediately invoke add-any-hardcoded-ids
+      memberships.push({
+        membership_declaration_id: `admin-virtual-${uid}`,
+        organization_id: SCHEMAVAULTS_ORGANIZATION_ID,
+        uid,
+        created_at: hardcodedOrg.created_at,
+        role: "admin",
+      });
+    }
 
     try {
-      // Organization IDs that are recorded in the database
-      const all_associated_organization_ids_from_db: readonly OrganizationID[] = await listMembershipsForUserFromDatabase();
+      // Memberships that are recorded in the database
+      const all_memberships_from_db: readonly OrganizationMembershipRoleDefinition[] = await listMembershipsForUserFromDatabase();
 
-      if (
-        !Array.isArray(all_associated_organization_ids_from_db) ||
-        !all_associated_organization_ids_from_db.every(
-          org_id => typeof org_id === 'string' && organizationIdSchema.safeParse(org_id).success
-        )
-      ) {
-        throw new TypeError("Loaded bad organization IDs from database")
+      if (!Array.isArray(all_memberships_from_db)) {
+        throw new TypeError("Loaded bad memberships from database")
       }
 
-      if (all_associated_organization_ids_from_db.some((org_id_from_db): boolean => {
-        return this.hardcodedOrganizations.has(org_id_from_db)
+      if (all_memberships_from_db.some((membership): boolean => {
+        return this.hardcodedOrganizations.has(membership.organization_id)
       })) {
         throw new Error("One of the organization IDs from the database conflicts with a hardcoded organization ID!")
       }
 
-      organization_ids.push(...all_associated_organization_ids_from_db);
+      memberships.push(...all_memberships_from_db);
     } catch (e: unknown) {
       console.error(
-        `Failed to load associated organization IDs for user '${uid}': `,
+        `Failed to load associated organization memberships for user '${uid}': `,
         e,
       );
       throw new Error(
-        `Failed to load associated organization IDs for user '${uid}'!`,
-      );
-    }
-
-    if (!Array.isArray(organization_ids) || !organization_ids.every((org) => typeof org === "string" && organizationIdSchema.safeParse(org).success)) {
-      throw new TypeError(
-        `Failed to load associated organization IDs for user '${uid}', received bad value from organizations registry!`,
+        `Failed to load associated organization memberships for user '${uid}'!`,
       );
     }
 
     if (this.debug) {
       console.log(
-        `[OrganizationsRegistry] listUserOrganizationMemberships(uid = '${uid}') -> ${JSON.stringify(organization_ids)}`
+        `[OrganizationsRegistry] listUserOrganizationMemberships(uid = '${uid}') -> ${memberships.length} memberships`
       );
     }
 
-    return organization_ids;
+    return memberships;
+  }
+
+  public async listUserOrganizationMembershipIds(
+    uid: string,
+    admin: boolean = false
+  ): Promise<readonly OrganizationID[]> {
+    const memberships = await this.listUserOrganizationMemberships(uid, admin);
+    return memberships.map((membership) => membership.organization_id);
   }
 
   public async listOrganizationMembers(

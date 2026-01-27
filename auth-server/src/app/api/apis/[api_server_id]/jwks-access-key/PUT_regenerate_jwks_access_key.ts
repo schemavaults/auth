@@ -2,39 +2,19 @@ import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
-import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import { apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-
-async function isUserInOwnerOrganization(
-  uid: string,
-  api_server_id: string,
-  dbh: Parameters<typeof withAuthenticatedApiRouteGuard>[0] extends (props: infer P) => unknown ? P extends { dbh: infer D } ? D : never : never
-): Promise<boolean> {
-  const isAdmin = false as const;
-  const apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
-  const apiServer = await apiServerRegistry.getApiServer(api_server_id);
-
-  if (!apiServer.owner_organization_id) {
-    return false;
-  }
-
-  const organizationsRegistry = new OrganizationsRegistry(dbh.db);
-  const memberships = await organizationsRegistry.listUserOrganizationMemberships(uid, isAdmin satisfies boolean);
-
-  return memberships.includes(apiServer.owner_organization_id);
-}
+import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
 
 /**
- * POST /api/apis/[api_server_id]/jwks-access-key/regenerate
+ * PUT /api/apis/[api_server_id]/jwks-access-key
  * Regenerate JWKS access key - deactivates all old keys and creates a new one
  * Only organization owners can regenerate keys
  */
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export async function PUT_regenerate_jwks_access_key(req: NextRequest): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ req, user, dbh, environment: _environment }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
+    async ({ req, user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
       const url = new URL(req.url);
       const pathParts = url.pathname.split("/");
       const apisIndex = pathParts.indexOf("apis");
@@ -57,7 +37,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
       // Verify user is in the owner organization
       try {
-        const isAuthorized = await isUserInOwnerOrganization(user.uid, api_server_id, dbh);
+        const isAuthorized = await isUserInApiOwnerOrganization(user, api_server_id, dbh.db);
         if (!isAuthorized && !user.admin) {
           return NextResponse.json(
             { success: false, message: "You must be a member of the owner organization to regenerate JWKS access keys" },
@@ -96,4 +76,4 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   return await protected_route(req);
 }
 
-export const dynamic = "force-dynamic";
+export default PUT_regenerate_jwks_access_key;

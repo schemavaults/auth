@@ -221,9 +221,9 @@ function JwksAccessKeysPageView({ api_server_id, preloaded_latest_jwks_access_ke
     startGenerating(async () => {
       try {
         const response = await fetch(
-          `/api/apis/${api_server_id}/jwks-access-key/regenerate`,
+          `/api/apis/${api_server_id}/jwks-access-key`,
           {
-            method: "POST",
+            method: "PUT", // PUT instead of POST to regenerate instead of 1st-time generation
             credentials: "include",
           }
         );

@@ -55,7 +55,7 @@ async function attemptToPreloadUserOrganizations(
 ): Promise<readonly OrganizationDefinition[]> {
   const organizationsRegistry = new OrganizationsRegistry(dbh.db);
   const admin: boolean = userData.admin ?? false;
-  const organizationIds = await organizationsRegistry.listUserOrganizationMemberships(userData.uid, admin);
+  const organizationIds = await organizationsRegistry.listUserOrganizationMembershipIds(userData.uid, admin);
 
   const organizations: OrganizationDefinition[] = [];
   for (const orgId of organizationIds) {

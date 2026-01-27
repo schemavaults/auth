@@ -3,7 +3,8 @@ import "server-only";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import SchemaVaultsApiServerRegistry from "@/lib/auth-db/apis";
-import OrganizationsRegistry from "@/lib/auth-db/organizations";
+import type { OrganizationID, UserData } from "@schemavaults/auth-common";
+import isUserInOrganization from "@/lib/isUserInOrganization";
 
 /**
  * @name isUserInApiOwnerOrganization
@@ -13,7 +14,7 @@ import OrganizationsRegistry from "@/lib/auth-db/organizations";
  * @returns A promise resolving to true if user with ID 'uid' is in an organization that owns API server with ID 'api_server_id'
  */
 export default async function isUserInApiOwnerOrganization(
-  uid: string,
+  user: UserData,
   api_server_id: string,
   db: Kysely<AuthDatabase>
 ): Promise<boolean> {
@@ -25,8 +26,10 @@ export default async function isUserInApiOwnerOrganization(
     return false;
   }
 
-  const organizationsRegistry = new OrganizationsRegistry(db);
-  const memberships = await organizationsRegistry.listUserOrganizationMemberships(uid);
-
-  return memberships.includes(apiServer.owner_organization_id);
+  const owner_organization_id: OrganizationID = apiServer.owner_organization_id;
+  return await isUserInOrganization(
+    user,
+    owner_organization_id,
+    db
+  );
 }

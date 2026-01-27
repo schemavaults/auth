@@ -203,7 +203,7 @@ export async function handleRefreshTokenGrant(
 
   let user_organizations: readonly OrganizationID[];
   try {
-    user_organizations = await orgRegistry.listUserOrganizationMemberships(
+    user_organizations = await orgRegistry.listUserOrganizationMembershipIds(
       user.uid,
       user.admin ?? false
     );

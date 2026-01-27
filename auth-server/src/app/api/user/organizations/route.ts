@@ -9,7 +9,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps) => {
     const organizationsRegistry = new OrganizationsRegistry(dbh.db);
 
-    const organizationIds = await organizationsRegistry.listUserOrganizationMemberships(user.uid, user.admin ?? false);
+    const organizationIds = await organizationsRegistry.listUserOrganizationMembershipIds(user.uid, user.admin ?? false);
 
     const organizations: OrganizationDefinition[] = [];
     for (const orgId of organizationIds) {

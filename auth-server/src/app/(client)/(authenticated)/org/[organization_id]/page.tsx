@@ -66,11 +66,11 @@ async function PreloadedOrgPage(
 
   // Check access: user must be admin OR member of the organization
   if (!user.admin) {
-    const userMemberships = await registry.listUserOrganizationMemberships(
+    const userMembershipIds: readonly OrganizationID[] = await registry.listUserOrganizationMembershipIds(
       user.uid,
       user.admin
     );
-    const isMember = userMemberships.includes(organization_id);
+    const isMember = userMembershipIds.includes(organization_id);
     if (!isMember) {
       redirectWithError(403, 'forbidden')
     }

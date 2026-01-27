@@ -195,7 +195,7 @@ export async function handleAuthorizationCodeGrant(
   // Load organizations that user is associated with
   let user_organizations: readonly OrganizationID[];
   try {
-    user_organizations = await orgRegistry.listUserOrganizationMemberships(
+    user_organizations = await orgRegistry.listUserOrganizationMembershipIds(
       user.uid,
       user.admin ?? false
     );
