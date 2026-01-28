@@ -1,3 +1,4 @@
+import isValidUuid from "@/is-valid-uuid";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 import {
   type ApiServerId,
@@ -116,9 +117,11 @@ export async function loadJwtDecodingKeys({
   const debug: boolean = opts.debug ?? false;
 
   if (!apiServerIdSchema.safeParse(audience_id).success) {
-    throw new Error(
+    throw new TypeError(
       `Invalid audience ID to load JWT decoding keys for: '${audience_id}'`,
     );
+  } else if (!isValidUuid(keyset_id)) {
+    throw new TypeError("Expected 'keyset_id' to be a valid UUID!");
   }
 
   let jwks: JWKS;
@@ -139,7 +142,11 @@ export async function loadJwtDecodingKeys({
   }
 
   if (jwks.keys.length === 0) {
-    throw new Error("Invalid JWKS; 'keys' array is empty!");
+    throw new Error(
+      "Received JWKS from JwtKeyManager but it does not appear to include any keys." +
+        " " +
+        `(including the requested keyset_id '${keyset_id}')`,
+    );
   }
 
   const jwt_decoding_keys: IDecodeAuthTokenKeys =

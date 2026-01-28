@@ -11,13 +11,9 @@ export abstract class DatabaseConnectedJwtKeyManager implements IJwtKeyManager {
 
   public async loadJwks(audienceId: string): Promise<JWKS> {
     const jwks: JWKS = await this.store.getJwks(audienceId);
-    if (
-      !("keys" in jwks) ||
-      !Array.isArray(jwks.keys) ||
-      jwks.keys.length === 0
-    ) {
+    if (!("keys" in jwks) || !Array.isArray(jwks.keys)) {
       throw new TypeError(
-        "Expected loaded JWKS to have a non-empty 'keys' array property!",
+        "Expected loaded JWKS to have a 'keys' array property!",
       );
     }
     return jwks;

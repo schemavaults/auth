@@ -58,10 +58,19 @@ export async function GET(
 
   const jwks = await key_manager.loadJwks(audience);
 
-  if (!Array.isArray(jwks.keys) || jwks.keys.length === 0 || !jwks.keys.every(k => typeof k === 'object')) {
+  if (!Array.isArray(jwks.keys)) {
     return NextResponse.json({
       success: false,
-      error: "Expected 'keys' field of loaded JWKS to be a non-empty array."
+      error: "Expected 'keys' field of loaded JWKS to be an array."
+    }, {
+      status: 500
+    });
+  }
+
+  if (jwks.keys.length > 0 && !jwks.keys.every(k => typeof k === 'object')) {
+    return NextResponse.json({
+      success: false,
+      error: "Expected 'keys' field of loaded JWKS to be an array of objects."
     }, {
       status: 500
     });

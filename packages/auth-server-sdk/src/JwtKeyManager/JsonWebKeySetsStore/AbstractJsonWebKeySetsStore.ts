@@ -55,13 +55,9 @@ export abstract class AbstractJsonWebKeySetsStore
 
     const jwks_promise: Promise<JWKS> = to_public_jwks(keysets);
     const jwks: JWKS = await jwks_promise;
-    if (
-      !("keys" in jwks) ||
-      !Array.isArray(jwks.keys) ||
-      jwks.keys.length === 0
-    ) {
+    if (!("keys" in jwks) || !Array.isArray(jwks.keys)) {
       throw new TypeError(
-        "Expected loaded JWKS to have a non-empty 'keys' array property!",
+        "Expected loaded JWKS to have a 'keys' array property!",
       );
     }
     return jwks;
