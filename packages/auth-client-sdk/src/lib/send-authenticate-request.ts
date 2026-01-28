@@ -157,7 +157,9 @@ export async function sendAuthenticateRequest(
       ) {
         throw new Error("Conflict; user already exists!");
       }
-      throw new Error("Failed to authenticate");
+      throw new Error(
+        `Failed to authenticate (response status ${response.status})`,
+      );
     }
     const response_body_json = response.data;
 
