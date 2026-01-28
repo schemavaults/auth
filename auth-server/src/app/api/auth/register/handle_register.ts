@@ -192,6 +192,11 @@ export async function handleRegister({
     console.log("[handleRegister] Loaded UserRegistry database interface...");
   }
 
+  const AS_ADMIN: boolean = (invite_code && typeof invite_code === 'string') ? shouldCreateAsSuperuser(invite_code) : false;
+  if (typeof AS_ADMIN !== 'boolean') {
+    throw new TypeError("Expected result of shouldCreateAsSuperuser to be a boolean!");
+  }
+
   // Validate that invite code is valid / in database if one was supplied!
   if (wasInviteCodeSupplied(invite_code)) {
     console.assert(
@@ -203,24 +208,36 @@ export async function handleRegister({
         `[handleRegister] Checking if invite code '${invite_code}' exists...`,
       );
     }
+
+    // Throw if invite code doesn't exist in database (and this isn't the superuser code from env vars)
     try {
       const inviteCodeDef: InviteCodeDefinition | null =
         await lookupInviteCode(dbh.db, invite_code, debug);
-      if (!inviteCodeDef) {
+
+      // Supplied invite code was not found
+      if (!inviteCodeDef && !AS_ADMIN) {
+        // Invite code must exist in database in order to use it (except the admin code, which exists in env vars)
         return NextResponse.json(
           {
             success: false,
-            message: "Invalid invite code!",
+            message: "Invalid invite code; was not found in database",
+            error: true
           },
           {
-            status: 403,
+            status: 404,
           },
         );
-      } else {
+      } else if (AS_ADMIN) {
+        if (debug) {
+          console.log(
+            `[handleRegister] Invite code '${invite_code}' appears to be the superuser invite code!`
+          );
+        }
+      }  else {
         // inviteCodeDef is truthy
         if (debug) {
           console.log(
-            `[handleRegister] Invite code '${invite_code}' appears to exist: `,
+            `[handleRegister] Invite code '${invite_code}' appears to exist in database: `,
             inviteCodeDef,
           );
         }
@@ -277,11 +294,6 @@ export async function handleRegister({
         status: 409,
       },
     );
-  }
-
-  const AS_ADMIN: boolean = invite_code ? shouldCreateAsSuperuser(invite_code) : false;
-  if (typeof AS_ADMIN !== 'boolean') {
-    throw new TypeError("Expected result of shouldCreateAsSuperuser to be a boolean!");
   }
 
   let newUser: UserDocument;
