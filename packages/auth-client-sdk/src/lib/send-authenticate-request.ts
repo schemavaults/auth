@@ -151,6 +151,11 @@ export async function sendAuthenticateRequest(
         throw new Error(
           "User does not exist! Ensure that you have the correct credentials!",
         );
+      } else if (
+        response.status === 409 &&
+        authentication_type === "register"
+      ) {
+        throw new Error("Conflict; user already exists!");
       }
       throw new Error("Failed to authenticate");
     }
