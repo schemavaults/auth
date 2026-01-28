@@ -167,9 +167,6 @@ export async function handleRegister({
   const email: string = email_credentials.email;
   const password: string = email_credentials.password;
 
-  // Generate a new user ID
-  const NEW_RANDOM_UID: string = crypto.randomUUID();
-
   let userRegistry: UserRegistry;
   try {
     if (debug) {
@@ -295,18 +292,15 @@ export async function handleRegister({
         email,
       );
     }
-    if (AS_ADMIN) {
-      if (!invite_code) {
-        throw new TypeError("Expected 'invite_code' to be defined if AS_ADMIN flag has been set; presumably it was set by an invite code matching superuser environment variable")
-      }
-      newUser = await userRegistry.createFirstSuperuser(email, password, invite_code)
-    } else {
-      newUser = await userRegistry.createUser(
-        email,
-        password,
-        invite_code,
-      );
+    if (AS_ADMIN && !invite_code) {
+      throw new TypeError("Expected 'invite_code' to be defined if AS_ADMIN flag has been set; presumably it was set by an invite code matching superuser environment variable")
     }
+
+    newUser = await userRegistry.createUser({
+      email,
+      password,
+      invite_code,
+    });
   } catch (e: unknown) {
     console.error("[handleRegister] Failed to create user: ", e);
     return NextResponse.json(
@@ -320,12 +314,14 @@ export async function handleRegister({
     );
   }
 
-  const uid: string = newUser.uid;
+  if (typeof newUser.uid !== 'string') {
+    throw new TypeError("Expected to receive the 'uid' from newly created user document")
+  }
 
   let authorization_code: string;
   try {
     authorization_code = await userRegistry.generateAuthorizationCode(
-      uid,
+      newUser.uid satisfies string,
       code_challenge,
       "S256",
       challenge_time,

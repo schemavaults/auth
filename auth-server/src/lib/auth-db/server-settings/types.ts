@@ -1,7 +1,6 @@
 // Types-only file - safe to import from client components
 // This file must NOT have any runtime dependencies on server-only code
 
-import type { ServerSettingValueType } from "./server-settings-table";
 export type { ServerSettingValueType } from "./server-settings-table";
 export type {
   ServerSettingsTable,

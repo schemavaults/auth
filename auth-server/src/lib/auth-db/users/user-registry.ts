@@ -6,8 +6,6 @@ import {
   inviteCodeFormatSchema,
   type InviteCodeDefinition,
   inviteCodeDefinitionSchema,
-  type InviteCode,
-  UserData,
   passwordSchema,
 } from "@schemavaults/auth-common";
 import { hashPassword as saltAndHashPassword } from "@/lib/hash_password";

@@ -44,6 +44,7 @@ export default async function LoginPage(props: {
   try {
     inviteCodeRequired = await inviteCodesRequired(dbh.db);
   } catch (e: unknown) {
+    console.error("Failed to load server config setting on whether invite codes are required: ", e);
     redirectWithError(500, "load_server_config_failure");
   }
 

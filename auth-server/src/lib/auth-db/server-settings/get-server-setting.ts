@@ -5,7 +5,6 @@ import type {
   ServerSettingKey,
   ServerSettingValueTypes,
 } from "./server-setting-keys";
-import { getDefaultValue } from "./server-setting-keys";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 

@@ -53,7 +53,7 @@ export async function GET_jwks_access_key_metadata(request: NextRequest, ctx: Ro
 
       // Get key metadata
       const jwksAccessKeysRegistry = new JwksAccessKeysRegistry(dbh.db);
-      const keyMetadata = await jwksAccessKeysRegistry.getKeyMetadata(api_server_id);
+      const keyMetadata: JwksAccessKeyStatusQueryResponse | null = await jwksAccessKeysRegistry.getKeyMetadata(api_server_id);
 
       if (!keyMetadata) {
         return NextResponse.json({
@@ -64,7 +64,7 @@ export async function GET_jwks_access_key_metadata(request: NextRequest, ctx: Ro
 
       return NextResponse.json({
         success: true,
-        key_metadata: keyMetadata,
+        key_metadata: keyMetadata satisfies JwksAccessKeyStatusQueryResponse
       });
     }
   );
