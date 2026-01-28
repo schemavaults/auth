@@ -1,6 +1,6 @@
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";
 
-import { Insertable, Selectable, Updateable } from "@schemavaults/dbh";
+import type { Insertable, Selectable, Updateable } from "@schemavaults/dbh";
 
 export type InviteCodesTable = InviteCodeDefinition;
 

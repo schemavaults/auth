@@ -7,6 +7,8 @@ import {
   type InviteCodeDefinition,
   inviteCodeDefinitionSchema,
   type InviteCode,
+  UserData,
+  passwordSchema,
 } from "@schemavaults/auth-common";
 import { hashPassword as saltAndHashPassword } from "@/lib/hash_password";
 import type { Kysely } from "@schemavaults/dbh";
@@ -21,8 +23,13 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
-import loadSuperuserInviteCode from "@/lib/TestSuperuserInviteCode";
+import loadSuperuserInviteCode, { superuserInviteCodeEnvVarKey } from "@/lib/SuperuserInviteCode";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
+import isValidEmail from "@/lib/is-valid-email";
+import type { ICreateUserOptions } from "./ICreateUserOptions";
+import lookupInviteCode from "./lookup-invite-code";
+import countInviteCodeUsages from "./count-invite-code-usages";
+import doesSomeAdminUserExist from "./does-some-admin-user-exist";
 
 const userDocumentSchema = z
   .object({
@@ -187,18 +194,22 @@ export class UserRegistry {
     return parsed_user;
   }
 
-  public async createUser(
-    email: string,
-    password: string,
-    invite_code: string | undefined = undefined,
-    create_as_admin: boolean = false,
-  ): Promise<UserDocument> {
+  /**
+   * @name createUser
+   * @param opts ICreateUserOptions
+   * @returns A copy of the user document that was inserted into the database.
+   */
+  public async createUser({ email, password, invite_code, ...opts }: ICreateUserOptions): Promise<UserDocument> {
     const debug: boolean = this.debug;
 
     if (typeof email !== "string") {
       throw new TypeError("'email' must be a string");
     } else if (typeof password !== "string") {
       throw new TypeError("'password' must be a string");
+    } else if (!isValidEmail(email)) {
+      throw new TypeError("'email' is invalid!")
+    } else if (!passwordSchema.safeParse(password).success) {
+      throw new TypeError("'password' is invalid!")
     }
 
     if (typeof invite_code !== "string" && typeof invite_code !== "undefined") {
@@ -218,26 +229,40 @@ export class UserRegistry {
       }
     }
 
+    const SUPERUSER_INVITE_CODE: string | undefined = loadSuperuserInviteCode();
+    const IS_SUPERUSER_INVITE_CODE_PROVIDED: boolean = (
+      typeof SUPERUSER_INVITE_CODE === 'string' &&
+      SUPERUSER_INVITE_CODE.length > 0 &&
+      typeof invite_code === 'string' &&
+      invite_code.length > 0 &&
+      SUPERUSER_INVITE_CODE === invite_code
+    );
+    const create_as_admin = IS_SUPERUSER_INVITE_CODE_PROVIDED;
     if (typeof create_as_admin !== "boolean") {
       throw new TypeError("'create_as_admin' must be a boolean");
     }
 
-    if (this.env !== "production") {
+    if (debug) {
       console.log(
         `[UserRegistry] Attempting to create ${create_as_admin ? "admin" : "regular"} user with email: `,
         email,
       );
     }
 
-    const uid = crypto.randomUUID();
+    const uid: string = typeof opts.uid === 'string' ? opts.uid : crypto.randomUUID();
+    if (!isValidUuid(uid)) {
+      throw new TypeError("Did not receive valid UUID for new user ID ('uid') in createUser()")
+    }
+
+    const created_at: number = Date.now();
 
     const parsed_user = await userDocumentSchema.safeParseAsync({
       email,
       email_verified: false,
       uid,
       invite_code,
-      created_at: Date.now(),
-      admin: create_as_admin satisfies boolean,
+      created_at,
+      admin: IS_SUPERUSER_INVITE_CODE_PROVIDED,
       disabled: false,
     } satisfies UserDocument);
     if (!parsed_user.success) {
@@ -248,7 +273,8 @@ export class UserRegistry {
 
     if (debug) {
       console.log(
-        `[UserRegistry::createUser] Creating ${create_as_admin ? "admin" : "regular"} user: "${user.email}" with uid: "${user.uid}" [Invite code: ${user.invite_code}]`,
+        `[UserRegistry::createUser] Creating ${create_as_admin ? "admin" : "regular"} user: "${user.email}" with uid: "${user.uid}"`
+        + user.invite_code ? ` [Invite code: ${user.invite_code}]` : " [No invite code provided]",
       );
     }
 
@@ -273,10 +299,9 @@ export class UserRegistry {
           `[UserRegistry::createUser] Running database transaction to create user...`,
         );
       }
-      const lookupInviteCode = this.lookupInviteCode.bind(this);
-      const countInviteCodeUsages = this.countInviteCodeUsages.bind(this);
-      // Run create user insert operation as a transaction (multiple tables written to)
 
+      // Run create user insert operation as a transaction
+      // (multiple tables written to, need to ensure that max_uses is not exceeded for invite code so need consistency)
       await this.db
         .transaction()
         .execute(async function createUserTransaction(trx): Promise<void> {
@@ -286,24 +311,45 @@ export class UserRegistry {
             typeof parsed_user.data.invite_code === "string"
           ) {
             inviteCodeDefinition = await lookupInviteCode(
+              trx,
               parsed_user.data.invite_code,
+              debug
             );
+            let maxInviteCodeUsages: number = 1;
             if (!inviteCodeDefinition) {
-              throw new Error(
-                "Failed to find invite code to create user with!",
-              );
-            }
-            const maxInviteCodeUsages: number = inviteCodeDefinition.max_uses;
-
-            const nInviteCodeUsages: number = await countInviteCodeUsages(
-              parsed_user.data.invite_code,
-            );
-            if (nInviteCodeUsages < maxInviteCodeUsages) {
-              // this invite code still has usages remaining
+              if (!IS_SUPERUSER_INVITE_CODE_PROVIDED) {
+                throw new Error(
+                  "Failed to find invite code definition specified to create user with!"
+                  + " " +
+                  "Cannot verify that 'max_uses' has not been exceeded without finding the invite code definition!"
+                );
+              } else {
+                // Superuser invite code is the only exception for codes that do not need to exist in the database to use them
+                maxInviteCodeUsages = 1;
+              }
             } else {
-              throw new Error(
-                `Invite code '${inviteCodeDefinition.invite_code}' has exceeded its usage limit (${nInviteCodeUsages}/${maxInviteCodeUsages})!`,
+              // An invite code definition was defined
+              maxInviteCodeUsages = inviteCodeDefinition.max_uses;
+
+              const nInviteCodeUsages: number = await countInviteCodeUsages(
+                trx,
+                parsed_user.data.invite_code,
+                debug
               );
+              if (nInviteCodeUsages < maxInviteCodeUsages) {
+                // this invite code still has usages remaining
+              } else {
+                throw new Error(
+                  `Invite code '${inviteCodeDefinition.invite_code}' has exceeded its usage limit (${nInviteCodeUsages}/${maxInviteCodeUsages})!`,
+                );
+              }
+            }
+          }
+
+          if (IS_SUPERUSER_INVITE_CODE_PROVIDED) {
+            const someAdminAlreadyExists = await doesSomeAdminUserExist(trx, debug);
+            if (someAdminAlreadyExists) {
+              throw new Error(`Cannot use the superuser code from '${superuserInviteCodeEnvVarKey}' once an admin user already exists!`)
             }
           }
 
@@ -311,18 +357,30 @@ export class UserRegistry {
           await trx
             .insertInto("passwords")
             .values({
-              uid: user.uid,
+              uid,
               password: hashed_password,
               created_at: user.created_at,
             })
             .executeTakeFirstOrThrow();
+          if (invite_code && IS_SUPERUSER_INVITE_CODE_PROVIDED) {
+            // Store that superuser invite code has been used
+            await trx.insertInto("invite_codes")
+              .values({
+                max_uses: 1,
+                created_by: uid,
+                invite_code: invite_code,
+                created_at,
+                description: `Invite code created by superuser access code (set by environment variable '${superuserInviteCodeEnvVarKey}')`
+              })
+              .executeTakeFirstOrThrow();
+          }
         });
     } catch (e: unknown) {
       console.error("Failed to insert new user into database", e);
       throw new Error("Failed to insert user into database");
     }
 
-    if (this.env === "development") {
+    if (debug) {
       console.log(
         `[UserRegistry::createUser] Created user: "${user.email}" with uid: "${user.uid}"! [Invite code: ${user.invite_code}]`,
       );
@@ -677,110 +735,6 @@ export class UserRegistry {
     }
   }
 
-  public async lookupInviteCode(
-    invite_code: InviteCode,
-  ): Promise<InviteCodeDefinition | null> {
-    if (this.debug) {
-      console.log(`[UserRegistry] lookupInviteCode("${invite_code}")`);
-    }
-
-    if (typeof invite_code !== "string") {
-      throw new TypeError("Invalid format for invite code; expected a string!");
-    }
-
-    const parsedInviteCode =
-      await inviteCodeFormatSchema.safeParseAsync(invite_code);
-    if (!parsedInviteCode.success) {
-      if (this.debug) {
-        console.error(
-          "Invalid format for 'lookup_code' to perform database lookup: ",
-          parsedInviteCode.error,
-        );
-      } else {
-        console.error(
-          "Invalid format for 'lookup_code' to perform database lookup!",
-        );
-      }
-
-      throw new Error(
-        "Invalid format for 'lookup_code' to perform database lookup!",
-      );
-    }
-    const INVITE_CODE: InviteCode = parsedInviteCode.data;
-
-    if (INVITE_CODE !== invite_code) {
-      throw new Error(
-        "Parsing of invite code using 'inviteCodeFormatSchema' appears to have modified the invite code value somehow!",
-      );
-    }
-
-    if (this.debug) {
-      console.log(
-        `[UserRegistry] lookupInviteCode("${INVITE_CODE}") | Invite code appears to be semantically valid! (but still need to check if it actually exists...)`,
-      );
-    }
-
-    console.assert(
-      typeof INVITE_CODE === "string" && !!INVITE_CODE,
-      "Expected invite code to have been confirmed to be in a valid format if this point was reached!",
-    );
-
-    const lookupQuery = this.db
-      .selectFrom("invite_codes")
-      .where("invite_code", "=", INVITE_CODE)
-      .selectAll()
-      .limit(1);
-
-    let inviteCodeDefinition: InviteCodeDefinition | undefined;
-    try {
-      inviteCodeDefinition = await lookupQuery.executeTakeFirst();
-    } catch (e: unknown) {
-      console.error("Failed to run query for invite code on database: ", e);
-      throw new Error("Failed to run query for invite code on database!");
-    }
-
-    if (!inviteCodeDefinition) {
-      if (this.debug) {
-        console.log(
-          `[UserRegistry] lookupInviteCode("${INVITE_CODE}") -> Not Found!`,
-        );
-      }
-      return null;
-    }
-
-    const parsed = await inviteCodeDefinitionSchema.safeParseAsync({
-      ...inviteCodeDefinition,
-      created_at:
-        typeof inviteCodeDefinition.created_at === "number"
-          ? inviteCodeDefinition.created_at
-          : Number.parseInt(inviteCodeDefinition.created_at),
-      max_uses:
-        typeof inviteCodeDefinition.max_uses === "number"
-          ? inviteCodeDefinition.max_uses
-          : Number.parseInt(inviteCodeDefinition.max_uses),
-      created_by:
-        typeof inviteCodeDefinition.created_by === "string"
-          ? inviteCodeDefinition.created_by
-          : undefined,
-    } satisfies InviteCodeDefinition);
-    if (!parsed.success) {
-      console.error(
-        "Parsed invalid invite code definition from database: ",
-        parsed.error,
-      );
-      throw new Error("Parsed invalid invite code definition from database!");
-    }
-    const INVITE_CODE_DEFINITION: InviteCodeDefinition = parsed.data;
-
-    if (this.debug) {
-      console.log(
-        `[UserRegistry] lookupInviteCode("${INVITE_CODE}") = ${JSON.stringify(INVITE_CODE_DEFINITION)}`,
-      );
-    }
-
-    return INVITE_CODE_DEFINITION;
-  }
-
   private static isValidInviteCodeDefinition(
     maybe_invite_code_definition: object,
   ): maybe_invite_code_definition is InviteCodeDefinition {
@@ -847,70 +801,6 @@ export class UserRegistry {
     }
   }
 
-  public async countInviteCodeUsages(invite_code: InviteCode): Promise<number> {
-    if (this.debug) {
-      console.log(`[UserRegistry] countInviteCodeUsages("${invite_code}")`);
-    }
-    const parsedInviteCode =
-      await inviteCodeFormatSchema.safeParseAsync(invite_code);
-    if (!parsedInviteCode.success) {
-      if (this.debug) {
-        console.error(
-          "Invalid format for 'lookup_code' to count usages for: ",
-          parsedInviteCode.error,
-        );
-      } else {
-        console.error("Invalid format for 'lookup_code' to count usages for!");
-      }
-
-      throw new Error("Invalid format for 'lookup_code' to count usages for!");
-    }
-
-    let count: number;
-    try {
-      const countUsagesQuery = this.db
-        .selectFrom("users")
-        .where("invite_code", "=", parsedInviteCode.data)
-        .select(this.db.fn.countAll().as("count"));
-
-      const countUsages = await countUsagesQuery.executeTakeFirstOrThrow();
-      const rowCount: string | number | bigint = countUsages.count;
-      if (typeof rowCount === "number") {
-        count = rowCount;
-      } else if (typeof rowCount === "bigint") {
-        count = Number(rowCount);
-      } else if (typeof rowCount === "string") {
-        const parsedCountInt = Number.parseInt(rowCount);
-        if (isNaN(parsedCountInt)) {
-          throw new Error(
-            "Failed to parse # of invite code usages as an integer!",
-          );
-        }
-        count = parsedCountInt;
-      } else {
-        throw new Error(
-          `Received unexpected datatype '${typeof rowCount}' when attempting to count invite code usages!`,
-        );
-      }
-    } catch (e: unknown) {
-      console.error(
-        "Failed to count number of usages for invite code in database: ",
-        e,
-      );
-      throw new Error(
-        "Failed to count number of usages for invite code in database!",
-      );
-    }
-
-    if (this.debug) {
-      console.log(
-        `[UserRegistry] countInviteCodeUsages("${invite_code}") = ${count}`,
-      );
-    }
-
-    return count;
-  }
-
   public async listAllInviteCodes(): Promise<readonly InviteCodeDefinition[]> {
     try {
       const allInviteCodesQuery = this.db
@@ -957,7 +847,6 @@ export class UserRegistry {
   }
 
   public async listAllUsers(): Promise<readonly UserDocument[]> {
-
     if (this.debug) {
       console.log("[UserRegistry] listAllUsers()");
     }

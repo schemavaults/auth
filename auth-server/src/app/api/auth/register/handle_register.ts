@@ -17,10 +17,9 @@ import {
   UserRegistry,
   type UserDocument,
 } from "@/lib/auth-db";
-import loadSuperuserInviteCode, {
-  superuserInviteCodeEnvVarKey,
-} from "@/lib/TestSuperuserInviteCode";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
+import shouldCreateAsSuperuser from "./shouldCreateAsSuperuser";
+import lookupInviteCode from "@/lib/auth-db/users/lookup-invite-code";
 
 export interface HandleRegisterOptions {
   body: unknown;
@@ -168,6 +167,9 @@ export async function handleRegister({
   const email: string = email_credentials.email;
   const password: string = email_credentials.password;
 
+  // Generate a new user ID
+  const NEW_RANDOM_UID: string = crypto.randomUUID();
+
   let userRegistry: UserRegistry;
   try {
     if (debug) {
@@ -193,41 +195,6 @@ export async function handleRegister({
     console.log("[handleRegister] Loaded UserRegistry database interface...");
   }
 
-  async function saveSuperuserInviteCodeDefinitionIfSet(): Promise<void> {
-    const superuserInviteCode: string | undefined | null =
-      loadSuperuserInviteCode();
-    if (
-      superuserInviteCode &&
-      superuserInviteCode?.length > 0 &&
-      invite_code &&
-      invite_code.length > 0 &&
-      invite_code === superuserInviteCode
-    ) {
-      const inviteCodeDefinition: InviteCodeDefinition | null =
-        await userRegistry.lookupInviteCode(invite_code);
-      if (!inviteCodeDefinition) {
-        await userRegistry.createInviteCode({
-          invite_code: invite_code,
-          created_at: Date.now(),
-          description: `Created by environment variable with key '${superuserInviteCodeEnvVarKey}'`,
-          max_uses: 1,
-        });
-      }
-    } else {
-      return;
-    }
-  } // end of saveSuperuserInviteCodeDefinitionIfSet
-
-  try {
-    await saveSuperuserInviteCodeDefinitionIfSet();
-  } catch (error: unknown) {
-    console.warn(
-      "Failed to save superuser invite code definition to database:",
-      error,
-    );
-    // no-op
-  }
-
   // Validate that invite code is valid / in database if one was supplied!
   if (wasInviteCodeSupplied(invite_code)) {
     console.assert(
@@ -241,7 +208,7 @@ export async function handleRegister({
     }
     try {
       const inviteCodeDef: InviteCodeDefinition | null =
-        await userRegistry.lookupInviteCode(invite_code);
+        await lookupInviteCode(dbh.db, invite_code, debug);
       if (!inviteCodeDef) {
         return NextResponse.json(
           {
@@ -315,46 +282,31 @@ export async function handleRegister({
     );
   }
 
-  async function shouldCreateAsSuperuser(): Promise<boolean> {
-    let superuserInviteCode: string | undefined | null = null;
-    try {
-      const SUPERUSER_CODE = loadSuperuserInviteCode();
-      if (typeof SUPERUSER_CODE === "string" && SUPERUSER_CODE.length > 0) {
-        superuserInviteCode = SUPERUSER_CODE;
-      }
-    } catch (e: unknown) {
-      void e;
-    }
-
-    if (
-      !superuserInviteCode ||
-      typeof superuserInviteCode !== "string" ||
-      superuserInviteCode.length === 0
-    ) {
-      return false;
-    }
-    if (typeof invite_code !== "string" || invite_code.length === 0) {
-      return false;
-    }
-
-    return superuserInviteCode === invite_code;
+  const AS_ADMIN: boolean = invite_code ? shouldCreateAsSuperuser(invite_code) : false;
+  if (typeof AS_ADMIN !== 'boolean') {
+    throw new TypeError("Expected result of shouldCreateAsSuperuser to be a boolean!");
   }
 
   let newUser: UserDocument;
   try {
-    const AS_ADMIN: boolean = await shouldCreateAsSuperuser();
     if (debug) {
       console.log(
         `[handleRegister] Creating ${AS_ADMIN ? "admin" : "regular"} user with email:`,
         email,
       );
     }
-    newUser = await userRegistry.createUser(
-      email,
-      password,
-      invite_code,
-      AS_ADMIN,
-    );
+    if (AS_ADMIN) {
+      if (!invite_code) {
+        throw new TypeError("Expected 'invite_code' to be defined if AS_ADMIN flag has been set; presumably it was set by an invite code matching superuser environment variable")
+      }
+      newUser = await userRegistry.createFirstSuperuser(email, password, invite_code)
+    } else {
+      newUser = await userRegistry.createUser(
+        email,
+        password,
+        invite_code,
+      );
+    }
   } catch (e: unknown) {
     console.error("[handleRegister] Failed to create user: ", e);
     return NextResponse.json(
