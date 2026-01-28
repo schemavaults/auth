@@ -29,7 +29,7 @@ async function trigger_db_migration(
   return await migrateToLatest(db, MIGRATIONS_PATH);
 }
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export default async function trigger_database_migration(req: NextRequest): Promise<NextResponse> {
   void req;
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const debug: boolean = shouldEnableDebug(environment);
