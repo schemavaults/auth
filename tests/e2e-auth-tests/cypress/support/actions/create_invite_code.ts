@@ -39,6 +39,8 @@ export default function createInviteCode(
         .then(() => {
           cy.url({ log: false }).should("include", "/admin/invite_codes");
 
+          cy.get(`#${createInviteCodeDialogContentId}`).should("exist");
+
           // Fill out form within new dialog
           cy.get(`input[name="invite_code"]`, { log: false })
             .should("exist")
@@ -64,12 +66,14 @@ export default function createInviteCode(
             .should("exist")
             .should("have.value", invite_code);
 
-          // Submit form
+          // Capture form submission network request
           cy.intercept({
             method: "POST",
             url: "**/api/admin/invite-codes",
             times: 1,
           }).as("createInviteCodeRequest");
+
+          // Click submit button
           cy.get(`button#${submitInviteCodeCreationDialogButtonId}`, {
             log: false,
           })
@@ -77,7 +81,9 @@ export default function createInviteCode(
             .should("not.be.disabled")
             .click();
           cy.log("Create invite code form submitted!");
-          cy.log_active_toasts();
+          cy.has_error_toast().then((error: boolean) => {
+            cy.log_active_toasts();
+          });
 
           return cy
             .wait("@createInviteCodeRequest", { timeout: 20000 })
