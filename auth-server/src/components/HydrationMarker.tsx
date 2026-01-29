@@ -1,18 +1,19 @@
 "use client";
 
-import { type ReactElement, useEffect, useState } from "react";
+import { type ReactElement, useSyncExternalStore } from "react";
 import { useAuth } from "@schemavaults/auth-react-provider";
 
-export function HydrationMarker(): ReactElement {
-  const [hydrated, setHydrated] = useState<boolean>(false);
-  const auth = useAuth();
+const emptySubscribe = (): (() => void) => () => {};
+const getClientSnapshot = (): boolean => true;
+const getServerSnapshot = (): boolean => false;
 
-  // Mark basic hydration (component mounted = React hydration complete)
-  useEffect(() => {
-    if (!hydrated) {
-      setHydrated(true)
-    }
-  }, [hydrated, setHydrated]);
+export function HydrationMarker(): ReactElement {
+  const hydrated = useSyncExternalStore(
+    emptySubscribe,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+  const auth = useAuth();
 
   return (
     <div
@@ -22,5 +23,5 @@ export function HydrationMarker(): ReactElement {
       data-auth-ready={auth.ready ?? false}
       suppressHydrationWarning
     />
-  )
+  );
 }
