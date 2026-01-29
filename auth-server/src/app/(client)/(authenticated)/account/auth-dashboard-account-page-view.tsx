@@ -12,6 +12,7 @@ import {
 } from "@schemavaults/auth-react-provider";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
+import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface AuthAccountPageViewProps {
   preloaded_authorized_apps_data?: PreloadedAppsTableDataWithDomainRefs;
@@ -63,6 +64,7 @@ export default function AccountPageView({
         cardClassName={cardsClassName}
         queryType="authorized"
         preloaded={preloaded_authorized_apps_data}
+        uuid={uuidSync}
       />
     </PageContainer>
   );

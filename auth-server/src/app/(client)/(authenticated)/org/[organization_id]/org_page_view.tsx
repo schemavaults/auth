@@ -12,6 +12,7 @@ import type { ReactElement } from "react";
 import PageContainer from "@/components/PageContainer";
 import type { InviteMemberSubmitData, OrganizationDefinition } from "@schemavaults/auth-common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, useToast } from "@schemavaults/ui";
+import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface OrgPageViewProps {
   organization: OrganizationDefinition;
@@ -68,6 +69,7 @@ export default function OrgPageView({
         cardDescription="Applications owned by this organization."
         cardClassName="w-full"
         preloaded={preloaded_apps}
+        uuid={uuidSync}
       />
 
       <ApiServersCard
@@ -77,6 +79,7 @@ export default function OrgPageView({
         cardDescription="API servers owned by this organization."
         cardClassName="w-full"
         preloaded={preloaded_api_servers}
+        uuid={uuidSync}
       />
 
 

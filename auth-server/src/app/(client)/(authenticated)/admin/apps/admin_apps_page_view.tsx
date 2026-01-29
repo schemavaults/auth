@@ -3,6 +3,7 @@
 import { AppsCard, type PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import type { ReactElement } from "react";
 import PageContainer from "@/components/PageContainer";
+import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface AdminAppsPageViewProps {
   preloaded: PreloadedAppsTableDataWithDomainRefs;
@@ -17,6 +18,7 @@ function AdminAppsPageView({ preloaded }: AdminAppsPageViewProps): ReactElement 
         queryType="all"
         cardClassName={"w-full"}
         preloaded={preloaded}
+        uuid={uuidSync}
       />
     </PageContainer>
   );
