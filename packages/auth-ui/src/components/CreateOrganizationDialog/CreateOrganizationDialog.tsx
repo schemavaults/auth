@@ -214,6 +214,7 @@ export function CreateOrganizationDialog({
                       placeholder="My Organization"
                       {...field}
                       disabled={submitting}
+                      autoComplete="organization"
                     />
                   </FormControl>
                   <FormDescription>
