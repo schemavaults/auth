@@ -3,7 +3,7 @@
 import { Button } from "@schemavaults/ui";
 import type { ReactElement } from "react";
 
-import { Dialog, DialogContent, DialogTrigger } from "@schemavaults/ui";
+import { Dialog, DialogContent } from "@schemavaults/ui";
 import { SwatchBook } from "lucide-react";
 import CreateInviteCodeForm from "./CreateInviteCodeForm";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useState, type ReactElement } from "react";
+import { useContext, type ReactElement } from "react";
 import { Datatable, useToast } from "@schemavaults/ui";
 import { columns } from "./columns";
 import { Loader2 } from "lucide-react";
