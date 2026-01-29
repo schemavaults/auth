@@ -180,6 +180,10 @@ export async function createUser(
           }
         }
 
+        if (typeof uid !== 'string') {
+          throw new TypeError("Expected 'uid' to be a string!")
+        }
+
         await trx.insertInto("users").values(user).executeTakeFirstOrThrow();
         await trx
           .insertInto("passwords")
