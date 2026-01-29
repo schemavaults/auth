@@ -22,7 +22,7 @@ export default function register(
   }).as("loadAccountPage");
 
   cy.visit("/auth/register");
-  cy.wait(1250, { log: false });
+  cy.wait_for_page_hydration();
   cy.log(`Attempting to register as user: '${email}'`);
   cy.url({ log: false }).should("include", "/auth/register");
 

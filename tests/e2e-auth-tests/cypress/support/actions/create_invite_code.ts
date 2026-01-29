@@ -26,6 +26,7 @@ export default function createInviteCode(
 
     return cy.visit("/admin/invite_codes").then(() => {
       cy.url().should("include", "/admin/invite_codes");
+      cy.wait_for_page_hydration();
 
       cy.get(`#${createInviteCodeDialogContentId}`, { log: false }).should(
         "not.exist",
@@ -38,14 +39,18 @@ export default function createInviteCode(
         )
         .then(() => {
           cy.url({ log: false }).should("include", "/admin/invite_codes");
-
           cy.get(`#${createInviteCodeDialogContentId}`).should("exist");
 
           // Fill out form within new dialog
+
+          // Validate the 'invite_code' input is visible and actionable
           cy.get(`input[name="invite_code"]`, { log: false })
             .should("exist")
-            .should("not.be.disabled")
-            .type(invite_code);
+            .should("be.visible")
+            .should("not.be.disabled");
+
+          // Type into input
+          cy.get(`input[name="invite_code"]`, { log: false }).type(invite_code);
 
           const description: string = `Invite code '${invite_code}' generated within Cypress E2E test`;
 
@@ -82,7 +87,9 @@ export default function createInviteCode(
             .click();
           cy.log("Create invite code form submitted!");
           cy.has_error_toast().then((error: boolean) => {
-            cy.log_active_toasts();
+            if (error) {
+              cy.log_active_toasts();
+            }
           });
 
           return cy

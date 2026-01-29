@@ -32,6 +32,7 @@ export default function createOrganization(
 
     return cy.visit("/admin/organizations").then(() => {
       cy.url().should("include", "/admin/organizations");
+      cy.wait_for_page_hydration();
 
       return cy
         .open_dialog_with_button(

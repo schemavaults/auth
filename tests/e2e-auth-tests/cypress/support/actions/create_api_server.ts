@@ -36,6 +36,7 @@ export default function createApiServer(
 
   return cy.visit(targetUrl).then(() => {
     cy.url().should("include", targetUrl);
+    cy.wait_for_page_hydration();
 
     return cy
       .open_dialog_with_button(

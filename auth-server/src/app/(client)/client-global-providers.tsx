@@ -8,6 +8,7 @@ import {
   TooltipProvider,
 } from "@schemavaults/ui";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { HydrationMarker } from "@/components/HydrationMarker";
 
 export interface ClientOnlyGlobalProvidersProps extends PropsWithChildren {
   environment: SchemaVaultsAppEnvironment;
@@ -27,6 +28,7 @@ export default function ClientOnlyGlobalProviders({
       debug={debug}
       invite_code_required={typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true}
     >
+      <HydrationMarker />
       <LazyFramerMotionProvider>
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster />

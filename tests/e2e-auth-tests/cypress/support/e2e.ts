@@ -22,6 +22,7 @@ import type {
 } from "./actions/create_api_server";
 import type { CreateOrganizationParams } from "./actions/create_organization";
 import type { GenerateJwksAccessKeyResult } from "./actions/generate_jwks_access_key";
+import type { WaitForPageHydrationOptions } from "./actions/wait_for_page_hydration";
 
 declare global {
   namespace Cypress {
@@ -68,6 +69,9 @@ declare global {
         dialog_content_container_id: string,
       ): Chainable<JQuery<HTMLElement>>;
       is_invite_code_required(): Chainable<boolean>;
+      wait_for_page_hydration(
+        options?: WaitForPageHydrationOptions,
+      ): Chainable<void>;
     }
   }
 }

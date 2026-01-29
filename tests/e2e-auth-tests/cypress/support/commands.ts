@@ -19,6 +19,7 @@ import open_dialog_with_button from "./actions/open_dialog_with_button";
 import log_active_toasts from "./actions/log_active_toasts";
 import is_invite_code_required from "./actions/is_invite_code_required";
 import generate_random_test_user_credentials from "./actions/generate_random_test_user_credentials";
+import wait_for_page_hydration from "./actions/wait_for_page_hydration";
 
 // ***********************************************
 // This example commands.ts shows you how to
@@ -102,3 +103,5 @@ Cypress.Commands.add("open_dialog_with_button", open_dialog_with_button);
 Cypress.Commands.add("generate_jwks_access_key", generateJwksAccessKey);
 
 Cypress.Commands.add("is_invite_code_required", is_invite_code_required);
+
+Cypress.Commands.add("wait_for_page_hydration", wait_for_page_hydration);
