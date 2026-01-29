@@ -9,7 +9,7 @@ import type {
   SchemaVaultsApp,
 } from "@schemavaults/app-definitions";
 import { FrontendApplicationActions } from "./frontend_app_actions";
-import { AppDomainsList } from "./AppDomainsList";
+import AppDomainsList from "./AppDomainsList";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
 
 export function getAppsTableColumns(
