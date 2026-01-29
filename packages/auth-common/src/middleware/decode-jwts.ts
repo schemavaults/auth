@@ -59,19 +59,20 @@ export async function decodeJWTs(
 
   const n_successful_decode_results: number = successfulDecodeResults.length;
 
-  if (debug) {
+  const successfulDecodeResult: boolean = n_successful_decode_results >= 1;
+
+  if (debug && successfulDecodeResult) {
     console.log(
       `[decodeJWTs] Decoded ${n_successful_decode_results}/${n_token_sources satisfies number} tokens successfully.`,
     );
   }
-
-  const successfulDecodeResult: boolean = n_successful_decode_results >= 1;
 
   if (!successfulDecodeResult) {
     const errorMessage: string =
       n_token_sources > 1
         ? `Failed to decode any of the ${n_token_sources} provided JWTs`
         : "Failed to decode the single JWT that was provided!";
+    console.warn(errorMessage);
     throw new Error(errorMessage);
   }
 

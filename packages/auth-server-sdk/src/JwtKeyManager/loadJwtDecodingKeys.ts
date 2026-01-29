@@ -5,6 +5,7 @@ import {
   apiServerIdSchema,
 } from "@schemavaults/app-definitions";
 import { type JWKS, importAsymmetricJWK } from "@schemavaults/jwt";
+import { JwtDecodingKeysetNotFoundError } from "./JwtDecodingKeysetNotFoundError";
 
 export interface ILoadJwtDecodingKeysOptions {
   audience_id: ApiServerId;
@@ -30,7 +31,8 @@ export async function loadJwtDecodingKeysFromJwks(
   debug: boolean = false,
 ): Promise<IDecodeAuthTokenKeys> {
   if (jwks.keys.length === 0) {
-    throw new Error(
+    throw new JwtDecodingKeysetNotFoundError(
+      keyset_id,
       "JWKS appears to be empty, cannot extract decoding keys from empty set!",
     );
   }
@@ -86,25 +88,32 @@ export async function loadJwtDecodingKeysFromJwks(
     .map((k) => `'${k.kid}'`)
     .join(", ");
   if (!verification_key && !decryption_key) {
-    console.error(
+    console.warn(
       `Missing both verification and decryption keys for keyset '${keyset_id}' from available keys: `,
       listOfKidsInJwks,
     );
-    throw new Error(
+    throw new JwtDecodingKeysetNotFoundError(
+      keyset_id,
       `Missing both verification and decryption keys for keyset '${keyset_id}'`,
     );
   } else if (!verification_key) {
-    console.error(
+    console.warn(
       `Missing verification key for keyset '${keyset_id}' from available keys: `,
       listOfKidsInJwks,
     );
-    throw new Error(`Missing verification key for keyset '${keyset_id}'`);
+    throw new JwtDecodingKeysetNotFoundError(
+      keyset_id,
+      `Missing verification key for keyset '${keyset_id}'`,
+    );
   } else if (!decryption_key) {
-    console.error(
+    console.warn(
       `Missing decryption key for keyset '${keyset_id}' from available keys: `,
       listOfKidsInJwks,
     );
-    throw new Error(`Missing decryption key for keyset '${keyset_id}'`);
+    throw new JwtDecodingKeysetNotFoundError(
+      keyset_id,
+      `Missing decryption key for keyset '${keyset_id}'`,
+    );
   } else {
     throw new Error("Error handling missing JWT decoding keys gracefully!");
   }
@@ -144,10 +153,9 @@ export async function loadJwtDecodingKeys({
   }
 
   if (jwks.keys.length === 0) {
-    throw new Error(
-      "Received JWKS from JwtKeyManager but it does not appear to include any keys." +
-        " " +
-        `(including the requested keyset_id '${keyset_id}')`,
+    throw new JwtDecodingKeysetNotFoundError(
+      keyset_id,
+      "Received JWKS from JwtKeyManager but it does not appear to include any keys.",
     );
   }
 

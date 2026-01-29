@@ -26,7 +26,12 @@ import {
 import loadJwtDecodingKeys, {
   type IDecodeAuthTokenKeys,
 } from "@/JwtKeyManager/loadJwtDecodingKeys";
-import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
+import {
+  RemoteJwtKeyManager,
+  type IJwtKeyManager,
+  JwtDecodingKeysetNotFoundError,
+} from "@/JwtKeyManager";
+import isValidUuid from "@/is-valid-uuid";
 
 export interface RouteGuardFactoryInitOptions {
   environment: SchemaVaultsAppEnvironment;
@@ -138,6 +143,13 @@ export class RouteGuardFactory {
       );
     }
 
+    const keys_manager: IJwtKeyManager = this.jwt_keys_manager;
+    if (!keys_manager) {
+      throw new Error(
+        "Failed to resolve reference to JWT keys manager to operate this route guard!",
+      );
+    }
+
     let user: UserData | null = null;
     let user_organizations: readonly OrganizationID[] | null = null;
     try {
@@ -158,10 +170,9 @@ export class RouteGuardFactory {
               throw new Error("Failed to load 'keyset_id' from auth token!");
             }
 
-            const keys_manager: IJwtKeyManager = this.jwt_keys_manager;
-            if (!keys_manager) {
-              throw new Error(
-                "Failed to resolve reference to JWT keys manager to operate this route guard!",
+            if (!keyset_id || !isValidUuid(keyset_id)) {
+              throw new TypeError(
+                "Expected 'keyset_id' from token to be a valid UUID!",
               );
             }
 
@@ -179,10 +190,13 @@ export class RouteGuardFactory {
                 );
               }
             } catch (e: unknown) {
-              console.error(
-                `Failed to load keys associated with token-associated keyset '${keyset_id}': `,
+              console.warn(
+                `[createGuardFromTokenSources] Failed to load keys associated with token-associated keyset '${keyset_id}': `,
                 e,
               );
+              if (e instanceof JwtDecodingKeysetNotFoundError) {
+                throw e;
+              }
               throw new Error(
                 "Failed to load keys associated with token-associated keyset!",
               );
@@ -227,10 +241,17 @@ export class RouteGuardFactory {
         );
       }
     } catch (e: unknown) {
-      console.error(
-        "No-op error creating route-guard... Failed to decode JWTs, setting user = null",
-        e,
-      );
+      if (e instanceof JwtDecodingKeysetNotFoundError) {
+        console.warn(
+          `[createdGuardFromTokenSources] Failed to load keyset '${e.keyset_id}' associated with provided token: `,
+          e,
+        );
+      } else {
+        console.warn(
+          "No-op error creating route-guard... Failed to decode JWTs, setting user = null",
+          e,
+        );
+      }
       user = null;
       user_organizations = null;
     }

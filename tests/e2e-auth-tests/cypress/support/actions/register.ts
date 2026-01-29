@@ -29,10 +29,12 @@ export default function register(
   cy.get("input[name='email']", { log: false })
     .should("exist")
     .should("not.be.disabled")
+    .should("be.visible")
     .type(email, { force: true });
   cy.get("input[name='password']", { log: false })
     .should("exist")
     .should("not.be.disabled")
+    .should("be.visible")
     .type(password, { force: true });
   cy.get("input[name='confirm']", { log: false })
     .should("exist")
@@ -43,6 +45,18 @@ export default function register(
       .should("not.be.disabled")
       .type(invite_code, { force: true });
   }
+
+  cy.get("input[name='email']", { log: false }).should("have.value", email);
+  cy.get("input[name='password']", { log: false }).should(
+    "have.value",
+    password,
+  );
+  cy.get("input[name='confirm']", { log: false }).should(
+    "have.value",
+    password,
+  );
+
+  // Submit Form
   cy.get("button[type='submit']")
     .should("exist")
     .should("not.be.disabled")
