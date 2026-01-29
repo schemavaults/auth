@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import {
   Card,
   CardContent,
@@ -10,11 +10,10 @@ import {
   cn,
 } from "@schemavaults/ui";
 import OrganizationsTable from "@/components/OrganizationsTable";
-import {
-  organizationDefinitionSchema,
-  type OrganizationDefinition,
-} from "@schemavaults/auth-common";
-import useSWR from "swr";
+import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import CreateOrganizationDialog, {
+  CreateOrganizationDialogDispatchContext,
+} from "@/components/CreateOrganizationDialog";
 
 export interface OrganizationsCardProps {
   cardTitle?: string;
@@ -23,87 +22,31 @@ export interface OrganizationsCardProps {
   preloaded?: readonly OrganizationDefinition[];
 }
 
-const listAllOrganizationsEndpoint = "/api/organizations";
-
 export function OrganizationsCard(props: OrganizationsCardProps): ReactElement {
   const cardTitle = props.cardTitle ?? "Organizations";
   const cardDescription =
     props.cardDescription ?? "View and manage organizations.";
-
+  const [createOrganizationDialogOpen, setCreateOrganizationDialogOpen] =
+    useState<boolean>(false);
   const cardClassName: string = cn("w-full", props.cardClassName);
 
-  const organizations = useSWR(
-    listAllOrganizationsEndpoint,
-    async (): Promise<readonly OrganizationDefinition[]> => {
-      try {
-        const response = await fetch(listAllOrganizationsEndpoint, {
-          method: "GET",
-          credentials: "include",
-        });
-        if (!response.ok || response.status !== 200) {
-          throw new Error(
-            `Failed to list organizations (response status: ${response.status})!`,
-          );
-        }
-        const body: unknown = await response.json();
-        if (
-          typeof body !== "object" ||
-          !body ||
-          !("success" in body) ||
-          !body.success
-        ) {
-          throw new Error(
-            "Received failure response when attempting to list organizations",
-          );
-        }
-        if (
-          !("data" in body) ||
-          typeof body.data !== "object" ||
-          !body.data ||
-          !("organizations" in body.data) ||
-          !Array.isArray(body.data.organizations)
-        ) {
-          throw new Error(
-            "Failed to extract 'organizations' array from response!",
-          );
-        }
-
-        const parsed_organizations = await organizationDefinitionSchema
-          .array()
-          .safeParseAsync(body.data.organizations);
-
-        if (!parsed_organizations.success) {
-          console.error(
-            `Failed to parse 'organizations' from response object: `,
-            parsed_organizations.error,
-          );
-          throw new Error(
-            "Failed to parse 'organizations' from response object!",
-          );
-        }
-
-        const organizations: readonly OrganizationDefinition[] =
-          parsed_organizations.data;
-        return organizations;
-      } catch (e: unknown) {
-        console.error(`Failed to list organizations: `, e);
-        throw new Error(`Failed to list organizations!`);
-      }
-    },
-    {
-      fallbackData: props.preloaded,
-    },
-  );
-
   return (
-    <Card className={cardClassName}>
-      <CardHeader>
-        <CardTitle>{cardTitle}</CardTitle>
-        <CardDescription>{cardDescription}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <OrganizationsTable organizations={organizations} />
-      </CardContent>
-    </Card>
+    <CreateOrganizationDialogDispatchContext.Provider
+      value={setCreateOrganizationDialogOpen}
+    >
+      <Card className={cardClassName}>
+        <CardHeader>
+          <CardTitle>{cardTitle}</CardTitle>
+          <CardDescription>{cardDescription}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OrganizationsTable preloaded_organizations={props.preloaded} />
+        </CardContent>
+      </Card>
+      <CreateOrganizationDialog
+        open={createOrganizationDialogOpen}
+        onOpenChange={setCreateOrganizationDialogOpen}
+      />
+    </CreateOrganizationDialogDispatchContext.Provider>
   );
 }

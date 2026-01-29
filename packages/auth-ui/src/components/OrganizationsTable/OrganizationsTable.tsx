@@ -1,28 +1,31 @@
 "use client";
 
-import { useState, type ReactElement } from "react";
-import type { SWRResponse, useSWRConfig } from "swr";
+import { useContext, type ReactElement } from "react";
 import { Datatable } from "@schemavaults/ui";
 import { columns } from "./columns";
 import { Loader2 } from "lucide-react";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
-import CreateOrganizationDialog from "@/components/CreateOrganizationDialog";
+import { CreateOrganizationDialogTrigger } from "@/components/CreateOrganizationDialog";
+import { CreateOrganizationDialogDispatchContext } from "@/components/CreateOrganizationDialog";
+import useAllOrganizationsList from "./useAllOrganizationsList";
 
 export interface OrganizationsDatatableProps {
-  organizations: SWRResponse<readonly OrganizationDefinition[], Error>;
+  preloaded_organizations: readonly OrganizationDefinition[] | undefined;
 }
 
-function clearOrganizationsCache(
-  mutate: ReturnType<typeof useSWRConfig>["mutate"],
-): void {
-  mutate("/api/organizations");
+function OrganizationsTableHeaderButtons(): ReactElement {
+  const onOpenChange: (val: boolean) => void = useContext(
+    CreateOrganizationDialogDispatchContext,
+  );
+  return <CreateOrganizationDialogTrigger onOpenChange={onOpenChange} />;
 }
 
 export function OrganizationsTable({
-  organizations,
+  preloaded_organizations,
 }: OrganizationsDatatableProps): ReactElement {
-  const { isLoading, data } = organizations;
-  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
+  const { isLoading, data } = useAllOrganizationsList({
+    initialData: preloaded_organizations,
+  });
 
   if (!data && isLoading) {
     return (
@@ -43,15 +46,7 @@ export function OrganizationsTable({
         name: true,
         created_at: true,
       }}
-      HeaderButtons={(): ReactElement => {
-        return (
-          <CreateOrganizationDialog
-            clearOrganizationsCache={clearOrganizationsCache}
-            open={createDialogOpen}
-            onOpenChange={setCreateDialogOpen}
-          />
-        );
-      }}
+      HeaderButtons={OrganizationsTableHeaderButtons}
       datatypeLabel="Organization"
       searchColumn={["organization_id", "name"]}
     />
