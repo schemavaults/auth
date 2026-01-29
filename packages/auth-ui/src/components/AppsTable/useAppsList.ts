@@ -11,7 +11,6 @@ import {
 
 export interface UseAppsListOptions {
   queryType: ListAppsQueryType;
-  toast: ReturnType<typeof useToast>["toast"];
   initialData?: readonly SchemaVaultsApp[] | undefined;
   organization_id?: string;
 }
@@ -37,11 +36,11 @@ export function clearUseAppsListCache(
 }
 
 export function useAppsList({
-  toast,
   queryType,
   initialData,
   organization_id,
 }: UseAppsListOptions): SWRResponse<readonly SchemaVaultsApp[]> {
+  const { toast } = useToast();
   const environment = useAppEnvironment();
   const endpoint = getAppsListEndpoint(queryType, organization_id);
 
@@ -84,6 +83,7 @@ export function useAppsList({
 
         return appsList;
       } catch (error: unknown) {
+        console.error("Error loading list of apps: ", error);
         toast({
           variant: "destructive",
           title: "Error loading list of apps",

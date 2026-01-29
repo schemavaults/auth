@@ -3,7 +3,7 @@
 import { Button } from "@schemavaults/ui";
 import type { ReactElement } from "react";
 
-import { Dialog, DialogContent, DialogTrigger } from "@schemavaults/ui";
+import { Dialog, DialogContent } from "@schemavaults/ui";
 import { useSWRConfig } from "swr";
 import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 import { AppWindow } from "lucide-react";
@@ -26,11 +26,6 @@ export function CreateAppDialog({
 }: CreateFrontendAppDialogProps): ReactElement {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogTrigger asChild>
-        <Button id="open-create-app-dialog-button">
-          <AppWindow className="h-4 w-4 mr-2" /> Create app
-        </Button>
-      </DialogTrigger>
       <DialogContent
         id="create-app-dialog-content"
         className="sm:max-w-[425px]"
@@ -45,6 +40,26 @@ export function CreateAppDialog({
         />
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface CreateFrontendAppDialogTriggerProps {
+  onOpenChange: (val: boolean) => void;
+}
+
+export function CreateAppDialogTrigger({
+  onOpenChange,
+}: CreateFrontendAppDialogTriggerProps): ReactElement {
+  return (
+    <Button
+      id="open-create-app-dialog-button"
+      onClick={(e) => {
+        e.preventDefault();
+        onOpenChange(true);
+      }}
+    >
+      <AppWindow className="h-4 w-4 mr-2" /> Create app
+    </Button>
   );
 }
 

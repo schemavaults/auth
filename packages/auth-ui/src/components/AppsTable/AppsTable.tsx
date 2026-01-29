@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactElement } from "react";
+import { useContext, useMemo, useState, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
 import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
@@ -11,7 +11,11 @@ import type {
   SchemaVaultsApp,
 } from "@schemavaults/app-definitions";
 import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
-import { CreateAppDialog } from "../CreateAppDialog";
+import {
+  CreateAppDialog,
+  CreateAppDialogOpenDispatchContext,
+  CreateAppDialogTrigger,
+} from "@/components/CreateAppDialog";
 import { Loader2 } from "lucide-react";
 import type { ColumnDef } from "@schemavaults/ui";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
@@ -23,15 +27,18 @@ export interface AppsDatatableProps {
   uuid: () => string;
 }
 
+function AppsTableHeaderButtons(): ReactElement {
+  const onOpenChange = useContext(CreateAppDialogOpenDispatchContext);
+  return <CreateAppDialogTrigger onOpenChange={onOpenChange} />;
+}
+
 export function AppsTable({
   queryType,
   preloaded,
   organization_id,
   ...props
 }: AppsDatatableProps): ReactElement {
-  const { toast } = useToast();
   const apps: SWRResponse<readonly SchemaVaultsApp[], Error> = useAppsList({
-    toast,
     queryType,
     initialData: preloaded ? preloaded.apps : undefined,
     organization_id,
@@ -64,25 +71,7 @@ export function AppsTable({
         domains: true,
       }}
       searchColumn={["app_id", "app_name"]}
-      HeaderButtons={(): ReactElement => {
-        return (
-          <>
-            {(queryType === "all" || queryType === "org") && (
-              <CreateAppDialog
-                clearFrontendAppsCache={clearUseAppsListCache}
-                owner_organization_id={
-                  queryType === "all"
-                    ? SCHEMAVAULTS_ORGANIZATION_ID
-                    : organization_id
-                }
-                open={addAppDialogOpen}
-                onOpenChange={setAddAppDialogOpen}
-                uuid={props.uuid}
-              />
-            )}
-          </>
-        );
-      }}
+      HeaderButtons={AppsTableHeaderButtons}
       datatypeLabel="App"
     />
   );
