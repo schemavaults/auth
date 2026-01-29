@@ -12,7 +12,6 @@ function onSuperuserAlreadyExistsError(credentials: {
     .login(credentials.email, credentials.password)
     .then((login_success: boolean): Cypress.Chainable<boolean> => {
       if (login_success) {
-        cy.wait(3000);
         cy.url().should("include", "/account");
         cy.log(
           "Logging in as existing superuser appears to have been a success!",
@@ -52,7 +51,6 @@ export default function createAndLoginAsSuperuser(): Cypress.Chainable<boolean> 
           cy.log("Failed to login as existing superuser!");
           return cy.wrap(false, { log: false });
         }
-        cy.wait(3000);
         cy.url({ log: false }).should("not.include", "/auth/login");
         cy.url({ log: false }).should("include", "/account");
         return cy.wrap(true, { log: false });
@@ -84,12 +82,10 @@ export default function createAndLoginAsSuperuser(): Cypress.Chainable<boolean> 
     .then((register_success_code: number): Cypress.Chainable<boolean> => {
       if (register_success_code === 200) {
         cy.log("Registration appears to have been successful!");
-        return cy.wait(4000).then(() => {
-          cy.url().should("not.include", "/auth/register");
-          cy.url().should("include", "/account");
-          SuperuserCreatedCache.created = true;
-          return cy.wrap(true, { log: false });
-        });
+        cy.url().should("not.include", "/auth/register");
+        cy.url().should("include", "/account");
+        SuperuserCreatedCache.created = true;
+        return cy.wrap(true, { log: false });
       } else {
         cy.log("Registration failed");
 

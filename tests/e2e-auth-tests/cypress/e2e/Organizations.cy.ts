@@ -2,13 +2,11 @@ describe("Organizations", () => {
   describe("Unauthenticated Access", () => {
     it("unauthenticated users are redirected from the organizations admin page", () => {
       cy.visit("/admin/organizations");
-      cy.wait(1000);
       cy.url().should("include", "/login");
     });
 
     it("unauthenticated users are redirected from organization pages", () => {
       cy.visit("/org/test-organization");
-      cy.wait(1000);
       cy.url().should("include", "/login");
     });
   });

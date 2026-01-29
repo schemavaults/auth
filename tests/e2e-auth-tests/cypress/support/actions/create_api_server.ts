@@ -48,13 +48,11 @@ export default function createApiServer(
         // Fill out form within new dialog
         cy.get(`input[name="api_server_name"]`, { log: false })
           .should("exist")
-          .should("be.visible")
           .should("not.be.disabled")
           .type(api_server_name, { force: true });
 
         cy.get(`textarea[name="api_server_description"]`, { log: false })
           .should("exist")
-          .should("be.visible")
           .should("not.be.disabled")
           .type(api_server_description, { force: true });
 
@@ -82,7 +80,6 @@ export default function createApiServer(
           .click();
 
         cy.log("Create API server dialog submitted!");
-        cy.wait(1500);
 
         cy.log_active_toasts();
 

@@ -1,7 +1,6 @@
 describe("Invite Codes", () => {
   it("unauthenticated users are redirected from the invite codes page", () => {
     cy.visit("/admin/invite_codes");
-    cy.wait(1000);
     cy.url().should("include", "/login");
   });
 

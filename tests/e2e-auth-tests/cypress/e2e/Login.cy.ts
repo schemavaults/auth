@@ -23,7 +23,6 @@ describe("Login", () => {
       cy.getCookie("refresh_token_expiry").should("exist");
 
       cy.visit("/auth/login");
-      cy.wait(2000);
       cy.url().should("not.include", "/auth/login");
       cy.url().should("include", "/account");
     });
@@ -37,8 +36,6 @@ describe("Login", () => {
             throw new Error("Failed to create and login as regular user!");
           }
           cy.log(`Logged in as regular user: ${credentials.email}`);
-
-          cy.wait(1000);
 
           cy.getCookie("refresh_token", { timeout: 10000 }).should("exist");
           cy.getCookie("refresh_token_expiry", { timeout: 10000 }).should(

@@ -5,15 +5,13 @@ describe("Superuser Creation", () => {
         throw new Error("Failed to create/login as superuser");
       }
 
+      // Make sure we end up on the account page
       cy.log("Superuser created or logged in");
-      cy.wait(4000).then(() => {
-        cy.url().should("include", "/account");
+      cy.url().should("include", "/account");
 
-        // Go to the admin page after
-        cy.visit("/admin");
-        cy.wait(3000);
-        cy.url().should("include", "/admin");
-      });
+      // go to the admin dashboard
+      cy.visit("/admin");
+      cy.url().should("include", "/admin");
     });
   });
 
@@ -24,13 +22,11 @@ describe("Superuser Creation", () => {
       }
 
       cy.log("Superuser created or logged in");
-      cy.wait(4000).then(() => {
-        cy.url().should("include", "/account");
+      cy.url().should("include", "/account");
 
-        // Go to the admin page after
-        cy.get("#view-admin-dashboard-link").should("exist").click();
-        cy.url().should("include", "/admin");
-      });
+      // Go to the admin page after
+      cy.get("#view-admin-dashboard-link").should("exist").click();
+      cy.url().should("include", "/admin");
     });
   });
 

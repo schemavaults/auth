@@ -75,7 +75,6 @@ export default function createInviteCode(
             .should("not.be.disabled")
             .click();
           cy.log("Create invite code form submitted!");
-          cy.wait(1500);
           cy.log_active_toasts();
 
           return cy

@@ -2,7 +2,6 @@ describe("API Servers", () => {
   describe("Unauthenticated Access", () => {
     it("unauthenticated users are redirected from the API servers admin page", () => {
       cy.visit("/admin/apis");
-      cy.wait(1000);
       cy.url().should("include", "/login");
     });
   });

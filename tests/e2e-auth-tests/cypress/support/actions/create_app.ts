@@ -40,14 +40,12 @@ export default function createApp(
         // Fill out form within new dialog
         cy.get(`input[name="app_name"]`, { log: false })
           .should("exist")
-          .should("be.visible")
           .should("not.be.disabled")
           .clear()
           .type(app_name, { force: true });
 
         cy.get(`textarea[name="app_description"]`, { log: false })
           .should("exist")
-          .should("be.visible")
           .should("not.be.disabled")
           .clear()
           .type(app_description, { force: true });
@@ -76,7 +74,6 @@ export default function createApp(
           .click();
 
         cy.log("Create app dialog submitted!");
-        cy.wait(1500);
 
         cy.log_active_toasts();
 

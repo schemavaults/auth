@@ -2,7 +2,6 @@ describe("Apps", () => {
   describe("Unauthenticated Access", () => {
     it("unauthenticated users are redirected from the apps admin page", () => {
       cy.visit("/admin/apps");
-      cy.wait(1000);
       cy.url().should("include", "/login");
     });
   });

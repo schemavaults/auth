@@ -26,15 +26,6 @@ export default function register(
   cy.log(`Attempting to register as user: '${email}'`);
   cy.url({ log: false }).should("include", "/auth/register");
 
-  cy.get("input[name='email']", { log: false }).then(($input) => {
-    if ($input.is(":disabled")) {
-      cy.log("Email input is disabled, waiting a few seconds...");
-      cy.wait(3000, { log: false });
-    } else {
-      cy.log("Email input does not appear to be disabled...");
-    }
-  });
-
   cy.get("input[name='email']", { log: false })
     .should("exist")
     .should("not.be.disabled")
@@ -72,41 +63,32 @@ export default function register(
           .then((exchange_tokens_interception) => {
             if (exchange_tokens_interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
-              return cy.wait(2500).then(() => {
-                cy.getCookie("refresh_token", { timeout: 10000 }).should(
-                  "exist",
-                );
-                cy.getCookie("refresh_token_expiry", { timeout: 10000 }).should(
-                  "exist",
-                );
-                return cy
-                  .wait("@loadAccountPage", {
-                    timeout: 20000,
-                    requestTimeout: 20000,
-                  })
-                  .then((account_interception) => {
-                    const statusCode: number =
-                      account_interception.response?.statusCode ?? 500;
-                    if (statusCode < 400) {
-                      return cy.wait(4000).then(() => {
-                        cy.url({ timeout: 10000 }).should(
-                          "include",
-                          "/account",
-                        );
-                        // Wait for page to be interactive
-                        cy.get("body", { timeout: 10000 }).should("be.visible");
-                        cy.log("Account page loaded successfully");
-                        return cy.wrap(200, { log: false });
-                      });
-                    } else {
-                      cy.log(
-                        "Failed to load account page with status code: " +
-                          statusCode,
-                      );
-                      return cy.wrap(statusCode, { log: false });
-                    }
-                  });
-              });
+              cy.getCookie("refresh_token", { timeout: 10000 }).should("exist");
+              cy.getCookie("refresh_token_expiry", { timeout: 10000 }).should(
+                "exist",
+              );
+              return cy
+                .wait("@loadAccountPage", {
+                  timeout: 20000,
+                  requestTimeout: 20000,
+                })
+                .then((account_interception) => {
+                  const statusCode: number =
+                    account_interception.response?.statusCode ?? 500;
+                  if (statusCode < 400) {
+                    cy.url({ timeout: 10000 }).should("include", "/account");
+                    // Wait for page to be interactive
+                    cy.get("body", { timeout: 10000 }).should("be.visible");
+                    cy.log("Account page loaded successfully");
+                    return cy.wrap(200, { log: false });
+                  } else {
+                    cy.log(
+                      "Failed to load account page with status code: " +
+                        statusCode,
+                    );
+                    return cy.wrap(statusCode, { log: false });
+                  }
+                });
             } else {
               cy.log(
                 `Exchange token request failed with status ${exchange_tokens_interception.response?.statusCode} ${exchange_tokens_interception.response?.statusMessage}`,

@@ -18,7 +18,6 @@ describe("Logout", () => {
 
       // Perform logout
       cy.logout().then(() => {
-        cy.wait(500);
         cy.getCookie("refresh_token").should("not.exist");
         cy.getCookie("refresh_token_expiry").should("not.exist");
       });

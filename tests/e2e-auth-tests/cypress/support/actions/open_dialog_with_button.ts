@@ -39,7 +39,7 @@ export default function open_dialog_with_button(
       .then(($button) => {
         $button[0].click();
       });
-    cy.wait(500);
+    cy.wait(200);
     cy.get("body").then(($body) => {
       const selector: string = `#${dialog_content_container_id}`;
       const dialogContent: JQuery<HTMLBodyElement> = $body.find(selector);
