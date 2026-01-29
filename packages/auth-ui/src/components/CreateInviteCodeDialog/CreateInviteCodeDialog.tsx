@@ -18,11 +18,6 @@ export function CreateInviteCodeDialog({
 }: CreateInviteCodeDialogProps): ReactElement {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button id="open-create-invite-code-dialog-button">
-          <SwatchBook className="h-4 w-4 mr-2" /> Create Invite Code
-        </Button>
-      </DialogTrigger>
       <DialogContent
         id="create-invite-code-dialog-content"
         className="sm:max-w-[425px]"
@@ -30,6 +25,26 @@ export function CreateInviteCodeDialog({
         <CreateInviteCodeForm onSuccess={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
+  );
+}
+
+export interface CreateInviteCodeDialogTriggerProps {
+  onOpenChange: (val: boolean) => void;
+}
+
+export function CreateInviteCodeDialogTrigger({
+  onOpenChange,
+}: CreateInviteCodeDialogTriggerProps) {
+  return (
+    <Button
+      id="open-create-invite-code-dialog-button"
+      onClick={(e) => {
+        e.preventDefault();
+        onOpenChange(true);
+      }}
+    >
+      <SwatchBook className="h-4 w-4 mr-2" /> Create Invite Code
+    </Button>
   );
 }
 

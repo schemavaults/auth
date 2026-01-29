@@ -1,23 +1,30 @@
 "use client";
 
-import { useState, type ReactElement } from "react";
+import { useContext, useState, type ReactElement } from "react";
 import { Datatable, useToast } from "@schemavaults/ui";
 import { columns } from "./columns";
 import { Loader2 } from "lucide-react";
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";
-import CreateInviteCodeDialog from "@/components/CreateInviteCodeDialog";
+import { CreateInviteCodeDialogTrigger } from "@/components/CreateInviteCodeDialog";
 import { useAllInviteCodes } from "./useAllInviteCodes";
+import { CreateInviteCodeDialogDispatchContext } from "@/components/CreateInviteCodeDialog";
 
 export interface InviteCodesDatatableProps {
   preloaded?: readonly InviteCodeDefinition[] | undefined;
+}
+
+function InviteCodesTableHeaderButtons(): ReactElement {
+  const onOpenChange: (val: boolean) => void = useContext(
+    CreateInviteCodeDialogDispatchContext,
+  );
+  return <CreateInviteCodeDialogTrigger onOpenChange={onOpenChange} />;
 }
 
 export function InviteCodesTable({
   preloaded,
 }: InviteCodesDatatableProps): ReactElement {
   const { toast } = useToast();
-  const [createInviteCodeDialogOpen, setCreateInviteCodeDialogOpen] =
-    useState<boolean>(false);
+
   const invite_codes = useAllInviteCodes({
     toast,
     initialData: preloaded,
@@ -44,16 +51,7 @@ export function InviteCodesTable({
         max_uses: true,
         created_at: false,
       }}
-      HeaderButtons={(): ReactElement => {
-        return (
-          <>
-            <CreateInviteCodeDialog
-              open={createInviteCodeDialogOpen}
-              onOpenChange={setCreateInviteCodeDialogOpen}
-            />
-          </>
-        );
-      }}
+      HeaderButtons={InviteCodesTableHeaderButtons}
       datatypeLabel="Invite Code"
       searchColumn={["invite_code", "description"]}
     />
