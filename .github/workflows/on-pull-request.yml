@@ -1,0 +1,44 @@
+name: Pull Request Tests
+env:
+  BUN_VERSION: 1.3.6
+  NODE_VERSION: 24
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  SetupCiCdConfig:
+    runs-on: ubuntu-latest
+    outputs:
+      bun_version: ${{ steps.versions.outputs.bun_version }}
+      node_version: ${{ steps.versions.outputs.node_version }}
+    steps:
+      - name: Set version outputs
+        id: versions
+        run: |
+          echo "bun_version=${{ env.BUN_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "node_version=${{ env.NODE_VERSION }}" >> "$GITHUB_OUTPUT"
+
+  Run-ESLint:
+    needs:
+      - SetupCiCdConfig
+    uses: ./.github/workflows/run-eslint.yml
+    with:
+      BUN_VERSION: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+
+  Run-Unit-Tests:
+    needs:
+      - SetupCiCdConfig
+    uses: ./.github/workflows/run-unit-tests.yml
+    with:
+      BUN_VERSION: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+
+  Run-E2E-Tests:
+    needs:
+      - SetupCiCdConfig
+      - Run-Unit-Tests
+      - Run-ESLint
+    uses: ./.github/workflows/run-e2e-tests.yml
