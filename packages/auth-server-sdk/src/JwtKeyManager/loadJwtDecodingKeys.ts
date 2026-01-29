@@ -36,7 +36,9 @@ export async function loadJwtDecodingKeysFromJwks(
   }
 
   if (debug) {
-    console.log(`loadJwtDecodingKeysFromJwks(keyset_id='${keyset_id}', jwks)`);
+    console.log(
+      `loadJwtDecodingKeysFromJwks(keyset_id='${keyset_id}', jwks.keys.length='${jwks.keys.length}')`,
+    );
   }
 
   // Loop over keys in JWKS and find the required keys
