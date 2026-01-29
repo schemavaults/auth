@@ -52,22 +52,31 @@ export default function createOrganization(
             .should("not.be.disabled")
             .type(name, { force: true });
 
+          cy.get(`#${createOrganizationDialogContentId}`, {
+            log: false,
+          }).should("exist");
           cy.url({ log: false }).should("include", "/admin/organizations");
 
-          // Submit form
+          // Set up interception for org creation request
           cy.intercept({
             method: "POST",
             url: "**/api/organizations",
             times: 1,
           }).as("createOrganizationRequest");
+          // Click on submit button
           cy.get(`button#${submitOrganizationCreationDialogButtonId}`, {
             log: false,
           })
             .should("exist")
             .should("not.be.disabled")
             .click();
+
           cy.log("Create organization form submitted!");
-          cy.log_active_toasts();
+          cy.has_error_toast().then((error: boolean) => {
+            if (error) {
+              cy.log_active_toasts();
+            }
+          });
 
           return cy
             .wait("@createOrganizationRequest", {
