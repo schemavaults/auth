@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import type { SWRResponse, useSWRConfig } from "swr";
 import { Datatable } from "@schemavaults/ui";
 import { columns } from "./columns";
@@ -22,6 +22,7 @@ export function OrganizationsTable({
   organizations,
 }: OrganizationsDatatableProps): ReactElement {
   const { isLoading, data } = organizations;
+  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
 
   if (!data && isLoading) {
     return (
@@ -46,6 +47,8 @@ export function OrganizationsTable({
         return (
           <CreateOrganizationDialog
             clearOrganizationsCache={clearOrganizationsCache}
+            open={createDialogOpen}
+            onOpenChange={setCreateDialogOpen}
           />
         );
       }}

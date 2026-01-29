@@ -12,7 +12,7 @@ import {
   Input,
   useToast,
 } from "@schemavaults/ui";
-import { type ReactElement, useMemo, useState, useTransition } from "react";
+import { type ReactElement, useMemo, useTransition } from "react";
 
 import {
   Dialog,
@@ -37,6 +37,8 @@ interface CreateOrganizationDialogProps {
   clearOrganizationsCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const createOrganizationDialogContentId: string =
@@ -46,8 +48,9 @@ const openOrganizationCreationDialogButtonId: string =
 
 export function CreateOrganizationDialog({
   clearOrganizationsCache,
+  open,
+  onOpenChange,
 }: CreateOrganizationDialogProps): ReactElement {
-  const [open, setOpen] = useState<boolean>(false);
   const { toast } = useToast();
 
   const defaultValues: Partial<OrganizationDefinition> = useMemo(() => {
@@ -153,14 +156,14 @@ export function CreateOrganizationDialog({
         title: "Created new organization successfully",
       });
       clearOrganizationsCache(mutate);
-      setOpen(false);
+      onOpenChange(false);
       return;
     });
     return;
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button id={openOrganizationCreationDialogButtonId}>
           <Building2 className="h-4 w-4 mr-2" /> Create organization
