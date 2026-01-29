@@ -81,7 +81,14 @@ export default function createApiServer(
 
         cy.log("Create API server dialog submitted!");
 
-        cy.log_active_toasts();
+        cy.has_error_toast().then((error: boolean) => {
+          if (error) {
+            cy.log_active_toasts();
+            throw new Error(
+              "Received error toast after create API server dialog submission!",
+            );
+          }
+        });
 
         return cy
           .wait("@createApiServerRequest", {

@@ -75,7 +75,14 @@ export default function createApp(
 
         cy.log("Create app dialog submitted!");
 
-        cy.log_active_toasts();
+        cy.has_error_toast().then((error: boolean) => {
+          if (error) {
+            cy.log_active_toasts();
+            throw new Error(
+              "Received error toast after create app dialog submission!",
+            );
+          }
+        });
 
         return cy
           .wait("@createAppRequest", { timeout: 20000, requestTimeout: 20000 })
