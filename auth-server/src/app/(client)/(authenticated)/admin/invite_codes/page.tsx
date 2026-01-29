@@ -23,8 +23,13 @@ async function PreloadedInviteCodesPage({
 
   const registry = new UserRegistry(dbh.db);
 
-  const invite_codes: readonly InviteCodeDefinition[] =
-    await registry.listAllInviteCodes();
+  let invite_codes: readonly InviteCodeDefinition[]
+  try {
+    invite_codes = await registry.listAllInviteCodes();
+  } catch (e: unknown) {
+    console.error("Error listing invite codes:", e)
+   throw new Error("Error listing invite codes in server component!")
+  }
 
   return <InviteCodesPageView preloaded={invite_codes} />;
 }
