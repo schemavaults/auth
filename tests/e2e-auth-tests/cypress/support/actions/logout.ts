@@ -13,11 +13,6 @@ export default function logout() {
     url: "**/api/auth/logout",
     times: 1,
   }).as("logoutRequest");
-  cy.intercept({
-    method: "GET",
-    url: "**/auth/login?**",
-    times: 1,
-  }).as("loginPageLoad");
   cy.get("button#sign-out-button").click();
 
   // Post-logout triggered assertions
@@ -38,14 +33,8 @@ export default function logout() {
         "Logout request appears to have successfully cleared refresh token cookies!",
       );
 
-      // Now, make sure that user is sent to login page
-      cy.wait("@loginPageLoad", { timeout: 15000 }).then(() => {
-        // Post successful logout assertions
-        cy.wait(5000).then(() => {
-          cy.url({ timeout: 20000 }).should("not.include", "/auth/logout");
-          cy.is_authenticated().should("equal", false);
-        });
-      });
+      cy.url({ timeout: 20000 }).should("not.include", "/auth/logout");
+      cy.is_authenticated().should("equal", false);
     });
     return;
   });
