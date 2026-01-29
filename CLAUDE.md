@@ -36,6 +36,11 @@ bun run typecheck                                          # Type check all pack
 bun run typecheck --filter @schemavaults/auth-server       # Type check auth-server only
 bun run typecheck --filter @schemavaults/auth-client-sdk   # Type check specific package
 bun run typecheck --filter @schemavaults/auth-server-sdk   # Type check specific package
+bun run typecheck --filter @schemavaults/auth-common       # Type check specific package
+bun run typecheck --filter @schemavaults/jwt               # Type check specific package
+bun run typecheck --filter @schemavaults/app-definitions   # Type check specific package
+bun run typecheck --filter @schemavaults/auth-ui           # Type check specific package
+bun run typecheck --filter @schemavaults/e2e-auth-tests    # Type check test workspace
 ```
 
 ### One-off Commands
@@ -43,6 +48,7 @@ bun run typecheck --filter @schemavaults/auth-server-sdk   # Type check specific
 # We use bun, not npm/yarn
 # So use bunx where you would use npx
 bunx tsc --noEmit
+# Raw bunx calls should be avoided where possible to ensure that you have permission! For typechecking / linting use the appropriate Turborepo commands added to the root package.json
 ```
 
 ### Testing
