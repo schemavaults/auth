@@ -29,11 +29,9 @@ export async function listAllInviteCodes(
             ? raw_invite_code.max_uses
             : Number.parseInt(raw_invite_code.max_uses),
         created_by:
-          typeof raw_invite_code.created_by === "number"
+          typeof raw_invite_code.created_by === "string"
             ? raw_invite_code.created_by
-            : typeof raw_invite_code.created_by === "string"
-              ? Number.parseInt(raw_invite_code.created_by)
-              : undefined,
+            : undefined,
       };
       if (!withParsedFields.created_by) {
         delete withParsedFields.created_by;
