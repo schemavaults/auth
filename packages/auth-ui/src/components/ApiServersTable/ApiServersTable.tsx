@@ -1,22 +1,23 @@
 "use client";
 
-import { useMemo, useState, type ReactElement } from "react";
+import { type FC, useContext, useMemo, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
-import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
 import { columns } from "./columns";
 import type {
   ListApiServersQueryType,
   SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
-import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 import { Loader2 } from "lucide-react";
+import { useApiServersList } from "./useApiServersList";
 import {
-  clearUseApiServersCache,
-  useApiServersList,
-} from "./useApiServersList";
-import { CreateApiServerDialog } from "@/components/CreateApiServerDialog";
-import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
+  CreateApiServerDialogOpenDispatchContext,
+  CreateApiServerDialogTrigger,
+} from "@/components/CreateApiServerDialog";
+import {
+  ConnectAppToApiDialogOpenDispatchContext,
+  ConnectAppToApiDialogTrigger,
+} from "@/components/ConnectAppToApiDialog";
 import type { PreloadedApiServersTableData } from "./preloaded_api_servers_table_data";
 
 export interface ApiServersDatatableProps {
@@ -26,22 +27,49 @@ export interface ApiServersDatatableProps {
   uuid: () => string;
 }
 
+function ApiServersTableHeaderButtons({
+  queryType,
+}: {
+  queryType: ListApiServersQueryType;
+}) {
+  const onOpenChangeCreateApi = useContext(
+    CreateApiServerDialogOpenDispatchContext,
+  );
+  const onOpenChangeConnectAppToApi = useContext(
+    ConnectAppToApiDialogOpenDispatchContext,
+  );
+
+  return (
+    <>
+      {(queryType === "all" || queryType === "org") && (
+        <CreateApiServerDialogTrigger onOpenChange={onOpenChangeCreateApi} />
+      )}
+      {queryType === "all" && (
+        <ConnectAppToApiDialogTrigger
+          onOpenChange={onOpenChangeConnectAppToApi}
+        />
+      )}
+    </>
+  );
+}
+
 export function ApiServersTable({
   queryType,
   organization_id,
   preloaded,
   ...props
 }: ApiServersDatatableProps): ReactElement {
-  const { toast } = useToast();
   const apis: SWRResponse<readonly SchemaVaultsApiServerDefinition[], Error> =
     useApiServersList({
-      toast,
       queryType,
       initialData: preloaded ? preloaded.api_servers : undefined,
       organization_id,
     });
   const { isLoading, data } = apis;
-  const [addApiDialogOpen, setAddApiDialogOpen] = useState<boolean>(false);
+
+  const HeaderButtons: FC = useMemo(() => {
+    return () => <ApiServersTableHeaderButtons queryType={queryType} />;
+  }, [queryType]);
 
   // Assert that 'owner_organization_id' field is present from server
   useMemo(() => {
@@ -79,26 +107,7 @@ export function ApiServersTable({
         api_server_description: true,
         owner_organization_id: false,
       }}
-      HeaderButtons={(): ReactElement => {
-        return (
-          <>
-            {(queryType === "all" || queryType === "org") && (
-              <CreateApiServerDialog
-                clearApiServersCache={clearUseApiServersCache}
-                owner_organization_id={
-                  queryType === "all"
-                    ? SCHEMAVAULTS_ORGANIZATION_ID
-                    : organization_id
-                }
-                open={addApiDialogOpen}
-                onOpenChange={setAddApiDialogOpen}
-                uuid={props.uuid}
-              />
-            )}
-            {queryType === "all" && <ConnectAppToApiDialog />}
-          </>
-        );
-      }}
+      HeaderButtons={HeaderButtons}
       datatypeLabel="Server"
       searchColumn={[
         "api_server_id",

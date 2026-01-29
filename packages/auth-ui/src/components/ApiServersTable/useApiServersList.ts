@@ -12,7 +12,6 @@ import {
 
 export interface UseApiServersListOptions {
   queryType: ListApiServersQueryType;
-  toast: ReturnType<typeof useToast>["toast"];
   initialData?: readonly SchemaVaultsApiServerDefinition[] | undefined;
   organization_id?: string;
 }
@@ -38,11 +37,11 @@ export function clearUseApiServersCache(
 }
 
 export function useApiServersList({
-  toast,
   queryType,
   initialData,
   organization_id,
 }: UseApiServersListOptions) {
+  const { toast } = useToast();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const endpoint = getApiServersListEndpoint(queryType, organization_id);
 

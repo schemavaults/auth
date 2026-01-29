@@ -33,7 +33,15 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlugZap } from "lucide-react";
 
-export function ConnectAppToApiDialog(): ReactElement {
+export interface ConnectAppToApiDialogProps {
+  open: boolean;
+  onOpenChange: (val: boolean) => void;
+}
+
+export function ConnectAppToApiDialog({
+  open,
+  onOpenChange,
+}: ConnectAppToApiDialogProps): ReactElement {
   const { toast } = useToast();
   const form = useForm<AppToApiPermission>({
     resolver: zodResolver(appToApiPermissionSchema),
@@ -109,17 +117,17 @@ export function ConnectAppToApiDialog(): ReactElement {
       title: "Connected app to API server successfully!",
       description: "It can now send the API server authenticated requests.",
     });
+    form.reset();
+    onOpenChange(false);
     return;
   }
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button>
-          <PlugZap className="h-4 w-4 mr-2" /> Connect app to API
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        id="connect-app-to-api-dialog-content"
+        className="sm:max-w-[425px]"
+      >
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit, (e: unknown) => {
@@ -194,3 +202,25 @@ export function ConnectAppToApiDialog(): ReactElement {
     </Dialog>
   );
 }
+
+export interface ConnectAppToApiDialogTriggerProps {
+  onOpenChange: (val: boolean) => void;
+}
+
+export function ConnectAppToApiDialogTrigger({
+  onOpenChange,
+}: ConnectAppToApiDialogTriggerProps): ReactElement {
+  return (
+    <Button
+      id="connect-app-to-api-dialog-trigger-button"
+      onClick={(e) => {
+        e.preventDefault();
+        onOpenChange(true);
+      }}
+    >
+      <PlugZap className="h-4 w-4 mr-2" /> Connect app to API
+    </Button>
+  );
+}
+
+export default ConnectAppToApiDialog;

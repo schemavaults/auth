@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import {
   Card,
   CardContent,
@@ -13,8 +13,16 @@ import {
 import type { ListApiServersQueryType } from "@schemavaults/app-definitions";
 import {
   ApiServersTable,
+  clearUseApiServersCache,
   type PreloadedApiServersTableData,
 } from "@/components/ApiServersTable";
+import CreateApiServerDialog, {
+  CreateApiServerDialogOpenDispatchContext,
+} from "@/components/CreateApiServerDialog";
+import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import ConnectAppToApiDialog, {
+  ConnectAppToApiDialogOpenDispatchContext,
+} from "@/components/ConnectAppToApiDialog";
 
 export interface ApiServersCardProps {
   cardTitle?: string;
@@ -33,25 +41,54 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
     "View and manage backend API servers accessible from client applications.";
 
   const cardClassName: string = cn("w-full", props.cardClassName);
+  const [createApiServerDialogOpen, setCreateApiServerDialogOpen] =
+    useState<boolean>(false);
+  const [connectAppToApiDialogOpen, setConnectAppToApiDialogOpen] =
+    useState<boolean>(false);
 
   return (
-    <Card className={cardClassName}>
-      <CardHeader>
-        <CardTitle>{cardTitle}</CardTitle>
-        <CardDescription>{cardDescription}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ApiServersTable
-          queryType={props.queryType}
-          organization_id={props.organization_id}
-          preloaded={props.preloaded}
+    <CreateApiServerDialogOpenDispatchContext.Provider
+      value={setCreateApiServerDialogOpen}
+    >
+      <ConnectAppToApiDialogOpenDispatchContext.Provider
+        value={setConnectAppToApiDialogOpen}
+      >
+        <Card className={cardClassName}>
+          <CardHeader>
+            <CardTitle>{cardTitle}</CardTitle>
+            <CardDescription>{cardDescription}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ApiServersTable
+              queryType={props.queryType}
+              organization_id={props.organization_id}
+              preloaded={props.preloaded}
+              uuid={props.uuid}
+            />
+          </CardContent>
+          <CardFooter>
+            <div className="flex flex-row items-start justify-start gap-2"></div>
+          </CardFooter>
+        </Card>
+        <CreateApiServerDialog
+          clearApiServersCache={clearUseApiServersCache}
+          owner_organization_id={
+            props.queryType === "all"
+              ? SCHEMAVAULTS_ORGANIZATION_ID
+              : props.organization_id
+          }
+          open={createApiServerDialogOpen}
+          onOpenChange={setCreateApiServerDialogOpen}
           uuid={props.uuid}
         />
-      </CardContent>
-      <CardFooter>
-        <div className="flex flex-row items-start justify-start gap-2"></div>
-      </CardFooter>
-    </Card>
+        {props.queryType === "all" && (
+          <ConnectAppToApiDialog
+            open={connectAppToApiDialogOpen}
+            onOpenChange={setConnectAppToApiDialogOpen}
+          />
+        )}
+      </ConnectAppToApiDialogOpenDispatchContext.Provider>
+    </CreateApiServerDialogOpenDispatchContext.Provider>
   );
 }
 

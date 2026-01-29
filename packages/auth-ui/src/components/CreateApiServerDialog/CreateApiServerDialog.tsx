@@ -28,11 +28,6 @@ export function CreateApiServerDialog({
 }: CreateApiServerDialogProps): ReactElement {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button id="open-create-api-server-dialog-button">
-          <Server className="h-4 w-4 mr-2" /> Create API
-        </Button>
-      </DialogTrigger>
       <DialogContent
         id="create-api-server-dialog-content"
         className="sm:max-w-[425px]"
@@ -49,6 +44,25 @@ export function CreateApiServerDialog({
         />
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface CreateApiServerDialogTriggerProps {
+  onOpenChange: (val: boolean) => void;
+}
+export function CreateApiServerDialogTrigger({
+  onOpenChange,
+}: CreateApiServerDialogTriggerProps): ReactElement {
+  return (
+    <Button
+      id="open-create-api-server-dialog-button"
+      onClick={(e) => {
+        e.preventDefault();
+        onOpenChange(true);
+      }}
+    >
+      <Server className="h-4 w-4 mr-2" /> Create API
+    </Button>
   );
 }
 
