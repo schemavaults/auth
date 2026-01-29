@@ -122,9 +122,17 @@ export function ConnectAppToApiDialog(): ReactElement {
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit, (e: unknown) =>
-              console.error(e),
-            )}
+            onSubmit={form.handleSubmit(onSubmit, (e: unknown) => {
+              console.error(e);
+              toast({
+                variant: "destructive",
+                title: "Failed to validate form inputs",
+                description:
+                  e instanceof Error
+                    ? e.message
+                    : "See the console for the full error message.",
+              });
+            })}
             className="flex flex-col justify-start gap-4"
           >
             <DialogHeader>

@@ -172,7 +172,14 @@ export function CreateOrganizationDialog({
       >
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit(onSubmit, (e) => {
+              console.error(e);
+              toast({
+                variant: "destructive",
+                title: "Failed to validate create organization form inputs",
+                description: "See console for full error message",
+              });
+            })}
             className="flex flex-col justify-start gap-4"
           >
             <DialogHeader>
