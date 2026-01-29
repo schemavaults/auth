@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import { MoreHorizontal, Pencil } from "lucide-react";
 import {

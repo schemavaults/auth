@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import { ClipboardCopy, MoreHorizontal } from "lucide-react";

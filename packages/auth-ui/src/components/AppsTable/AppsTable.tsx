@@ -13,7 +13,7 @@ import type {
 import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 import { CreateAppDialog } from "../CreateAppDialog";
 import { Loader2 } from "lucide-react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@schemavaults/ui";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
 
 export interface AppsDatatableProps {

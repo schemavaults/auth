@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox } from "@schemavaults/ui";
 import type {
   ListAppsQueryType,

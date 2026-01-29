@@ -2,10 +2,15 @@
 
 import type { ReactElement } from "react";
 
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { ClipboardCopy, MoreHorizontal, ShieldCheck, ShieldX } from "lucide-react";
+import {
+  ClipboardCopy,
+  MoreHorizontal,
+  ShieldCheck,
+  ShieldX,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,7 +83,9 @@ export const columns: ColumnDef<UserData>[] = [
       const user: UserData = row.original;
       const isVerified = user.email_verified === true;
       return (
-        <span className={isVerified ? "text-green-600" : "text-muted-foreground"}>
+        <span
+          className={isVerified ? "text-green-600" : "text-muted-foreground"}
+        >
           {isVerified ? "Yes" : "No"}
         </span>
       );

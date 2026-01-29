@@ -2,10 +2,15 @@
 
 import type { ReactElement } from "react";
 
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { ClipboardCopy, MoreHorizontal, ShieldCheck, ShieldX } from "lucide-react";
+import {
+  ClipboardCopy,
+  MoreHorizontal,
+  ShieldCheck,
+  ShieldX,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,9 +68,7 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
     header: "Role",
     cell: ({ row }): ReactElement => {
       const member = row.original;
-      return (
-        <span className="capitalize">{member.role}</span>
-      );
+      return <span className="capitalize">{member.role}</span>;
     },
   },
   {
@@ -100,7 +103,9 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
       const member = row.original;
       const isVerified = member.email_verified === true;
       return (
-        <span className={isVerified ? "text-green-600" : "text-muted-foreground"}>
+        <span
+          className={isVerified ? "text-green-600" : "text-muted-foreground"}
+        >
           {isVerified ? "Yes" : "No"}
         </span>
       );
@@ -119,7 +124,9 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
   },
   {
     id: "actions",
-    cell: function OrganizationMembersTableRowActionsCell({ row }): ReactElement {
+    cell: function OrganizationMembersTableRowActionsCell({
+      row,
+    }): ReactElement {
       const { toast } = useToast();
       const member = row.original;
 

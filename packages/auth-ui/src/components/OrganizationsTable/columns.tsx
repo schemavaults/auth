@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import { ClipboardCopy, Eye, MoreHorizontal } from "lucide-react";
@@ -114,7 +114,8 @@ export const columns: ColumnDef<OrganizationDefinition>[] = [
                   .writeText(organization_id)
                   .then((): void => {
                     toast({
-                      title: "Successfully copied organization ID to clipboard!",
+                      title:
+                        "Successfully copied organization ID to clipboard!",
                       description: `You should now be able to paste '${organization_id}' from your clipboard!`,
                     });
                   })
