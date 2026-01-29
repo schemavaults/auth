@@ -54,3 +54,5 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
     </Card>
   );
 }
+
+export default ApiServersCard;

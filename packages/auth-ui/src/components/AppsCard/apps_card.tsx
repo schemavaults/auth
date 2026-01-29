@@ -54,3 +54,5 @@ export function AppsCard(props: AppsCardProps): ReactElement {
     </Card>
   );
 }
+
+export default AppsCard;

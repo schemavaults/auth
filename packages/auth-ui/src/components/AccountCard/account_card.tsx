@@ -119,3 +119,5 @@ export function AccountDetailsCard(
     </Card>
   );
 }
+
+export default AccountDetailsCard;
