@@ -45,12 +45,12 @@ export default function createInviteCode(
             .should("not.be.disabled")
             .type(invite_code);
 
+          const description: string = `Invite code '${invite_code}' generated within Cypress E2E test`;
+
           cy.get(`textarea[name="description"]`, { log: false })
             .should("exist")
             .should("not.be.disabled")
-            .type("Invite code generated within Cypress E2E test", {
-              force: true,
-            });
+            .type(description);
 
           cy.url({ log: false }).should("include", "/admin/invite_codes");
 
