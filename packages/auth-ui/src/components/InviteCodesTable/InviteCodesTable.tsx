@@ -1,22 +1,27 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
-import type { SWRResponse } from "swr";
-import { Datatable } from "@schemavaults/ui";
+import { Datatable, useToast } from "@schemavaults/ui";
 import { columns } from "./columns";
 import { Loader2 } from "lucide-react";
-
-export interface InviteCodesDatatableProps {
-  invite_codes: SWRResponse<readonly InviteCodeDefinition[], Error>;
-}
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";
 import CreateInviteCodeDialog from "@/components/CreateInviteCodeDialog";
+import { useAllInviteCodes } from "./useAllInviteCodes";
+
+export interface InviteCodesDatatableProps {
+  preloaded?: readonly InviteCodeDefinition[] | undefined;
+}
 
 export function InviteCodesTable({
-  invite_codes,
+  preloaded,
 }: InviteCodesDatatableProps): ReactElement {
+  const { toast } = useToast();
   const [createInviteCodeDialogOpen, setCreateInviteCodeDialogOpen] =
     useState<boolean>(false);
+  const invite_codes = useAllInviteCodes({
+    toast,
+    initialData: preloaded,
+  });
   const { isLoading, data } = invite_codes;
 
   if (!data && isLoading) {

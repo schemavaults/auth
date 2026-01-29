@@ -17,8 +17,8 @@ export type { PreloadedApiServersTableData } from "./ApiServersTable";
 export { InviteCodesCard } from "./InviteCodesCard";
 export type { InviteCodesCardProps } from "./InviteCodesCard";
 
-export { InviteCodesTable } from "./InviteCodesTable";
-export type { InviteCodesDatatableProps } from "./InviteCodesTable";
+export { InviteCodesTable, useAllInviteCodes, clearUseAllInviteCodesCache } from "./InviteCodesTable";
+export type { InviteCodesDatatableProps, UseAllInviteCodesOptions } from "./InviteCodesTable";
 
 export { UsersTable } from "./UsersTable";
 export type { UsersDatatableProps } from "./UsersTable";
