@@ -25,9 +25,7 @@ export default function createApiServer(
 
   if (typeof api_server_name !== "string") {
     throw new TypeError("'api_server_name' must be a string");
-  }
-
-  if (typeof api_server_description !== "string") {
+  } else if (typeof api_server_description !== "string") {
     throw new TypeError("'api_server_description' must be a string");
   }
 

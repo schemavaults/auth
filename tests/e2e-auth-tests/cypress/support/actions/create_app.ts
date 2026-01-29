@@ -17,9 +17,7 @@ export default function createApp(
 
   if (typeof app_name !== "string") {
     throw new TypeError("'app_name' must be a string");
-  }
-
-  if (typeof app_description !== "string") {
+  } else if (typeof app_description !== "string") {
     throw new TypeError("'app_description' must be a string");
   }
 
