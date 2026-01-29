@@ -46,6 +46,11 @@ export function useAuthClientInitialization(
     opts.debug,
   );
 
+  const invite_code_required: boolean =
+    typeof opts.invite_code_required === "boolean"
+      ? opts.invite_code_required
+      : true;
+
   // Auth client initialization side-effect
   useEffect(
     function initializeAuthClientEffect(): void {
@@ -74,10 +79,7 @@ export function useAuthClientInitialization(
             authorize_uri,
             environment,
             app_id,
-            invite_code_required:
-              typeof opts.invite_code_required === "boolean"
-                ? opts.invite_code_required
-                : true,
+            invite_code_required,
           });
 
           factory
@@ -127,6 +129,7 @@ export function useAuthClientInitialization(
       environment,
       authClientRef,
       default_audiences,
+      invite_code_required,
     ],
   ); // end of auth client initialization side-effect
 }
