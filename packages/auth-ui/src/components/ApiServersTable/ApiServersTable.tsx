@@ -24,7 +24,6 @@ export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
   organization_id?: string;
   preloaded?: PreloadedApiServersTableData | undefined;
-  uuid: () => string;
 }
 
 function ApiServersTableHeaderButtons({
@@ -57,7 +56,6 @@ export function ApiServersTable({
   queryType,
   organization_id,
   preloaded,
-  ...props
 }: ApiServersDatatableProps): ReactElement {
   const apis: SWRResponse<readonly SchemaVaultsApiServerDefinition[], Error> =
     useApiServersList({
@@ -68,7 +66,9 @@ export function ApiServersTable({
   const { isLoading, data } = apis;
 
   const HeaderButtons: FC = useMemo(() => {
-    return () => <ApiServersTableHeaderButtons queryType={queryType} />;
+    return function ApiServersTableHeaderButtonsWithQueryType() {
+      return <ApiServersTableHeaderButtons queryType={queryType} />;
+    };
   }, [queryType]);
 
   // Assert that 'owner_organization_id' field is present from server

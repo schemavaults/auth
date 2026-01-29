@@ -63,7 +63,6 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
               queryType={props.queryType}
               organization_id={props.organization_id}
               preloaded={props.preloaded}
-              uuid={props.uuid}
             />
           </CardContent>
           <CardFooter>

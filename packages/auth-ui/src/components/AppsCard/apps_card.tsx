@@ -53,7 +53,6 @@ export function AppsCard(props: AppsCardProps): ReactElement {
             queryType={props.queryType}
             preloaded={props.preloaded}
             organization_id={props.organization_id}
-            uuid={props.uuid}
           />
         </CardContent>
         <CardFooter>

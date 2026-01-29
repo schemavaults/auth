@@ -1,18 +1,15 @@
 "use client";
 
-import { useContext, useMemo, useState, type ReactElement } from "react";
+import { useContext, useMemo, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
-import { useToast } from "@schemavaults/ui";
 import { Datatable } from "@schemavaults/ui";
 import { getAppsTableColumns } from "./columns";
-import { clearUseAppsListCache, useAppsList } from "./useAppsList";
+import { useAppsList } from "./useAppsList";
 import type {
   ListAppsQueryType,
   SchemaVaultsApp,
 } from "@schemavaults/app-definitions";
-import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 import {
-  CreateAppDialog,
   CreateAppDialogOpenDispatchContext,
   CreateAppDialogTrigger,
 } from "@/components/CreateAppDialog";
@@ -24,7 +21,6 @@ export interface AppsDatatableProps {
   queryType: ListAppsQueryType;
   preloaded?: PreloadedAppsTableDataWithDomainRefs | undefined;
   organization_id?: string;
-  uuid: () => string;
 }
 
 function AppsTableHeaderButtons(): ReactElement {
@@ -36,7 +32,6 @@ export function AppsTable({
   queryType,
   preloaded,
   organization_id,
-  ...props
 }: AppsDatatableProps): ReactElement {
   const apps: SWRResponse<readonly SchemaVaultsApp[], Error> = useAppsList({
     queryType,
@@ -47,7 +42,6 @@ export function AppsTable({
   const columns = useMemo((): ColumnDef<SchemaVaultsApp>[] => {
     return getAppsTableColumns(queryType, preloaded);
   }, [queryType, preloaded]);
-  const [addAppDialogOpen, setAddAppDialogOpen] = useState<boolean>(false);
 
   if (!data && isLoading) {
     return (

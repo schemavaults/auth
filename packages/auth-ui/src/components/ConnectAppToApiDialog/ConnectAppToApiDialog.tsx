@@ -21,7 +21,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   useForm,
 } from "@schemavaults/ui";
 import { useAppEnvironment } from "@schemavaults/auth-react-provider";
