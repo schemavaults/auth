@@ -15,12 +15,13 @@ export default function hasErrorToast(
       if ($errorToasts.length === 0) {
         cy.log("No error toasts found");
         return cy.wrap<boolean>(false, { log: false });
+      } else {
+        cy.log(`Found ${$errorToasts.length} error toast(s)`);
       }
 
-      cy.log(`Found ${$errorToasts.length} error toast(s)`);
-
-      if (!containing_message) {
-        return cy.wrap<boolean>(false, { log: false });
+      if (typeof containing_message !== "string") {
+        // there ARE error toasts but there was no filter applied, so 'has_error_toast' = true
+        return cy.wrap<boolean>(true, { log: false });
       }
 
       // Check if any toast contains the message
