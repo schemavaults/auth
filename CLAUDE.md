@@ -109,6 +109,10 @@ bun run dev:db
 
 #### Database Migrations
 
+##### Making changes to the database schema
+- Make sure that the live database types are defined in `src/lib/auth-db/auth-database-types.ts`. New tables should be defined here.
+- Database migrations are defined in `src/lib/auth-db/migrations/` to make the database match the live database types. New migrations are in the format `<5 digit chronological migration id>_<migration_name>.ts`. If the last update was `00012_my_twelth_migration.ts`, the next migration should be `00013_my_thirteenth_migration.ts`. Each migration file should have a `up` and `down` function that defines the migration and its reverse operation.
+
 ##### Database Migration in Development
 Database migrations need to be run before starting the auth-server (if changing database schema or first run):
 ```bash
