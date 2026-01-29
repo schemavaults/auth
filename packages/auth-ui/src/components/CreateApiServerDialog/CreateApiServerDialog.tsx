@@ -16,6 +16,7 @@ interface CreateApiServerDialogProps {
   owner_organization_id?: string | null;
   open: boolean;
   onOpenChange: (val: boolean) => void;
+  uuid: () => string;
 }
 
 export function CreateApiServerDialog({
@@ -23,6 +24,7 @@ export function CreateApiServerDialog({
   owner_organization_id,
   open,
   onOpenChange,
+  uuid,
 }: CreateApiServerDialogProps): ReactElement {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,6 +45,7 @@ export function CreateApiServerDialog({
               : SCHEMAVAULTS_ORGANIZATION_ID
           }
           onSuccess={() => onOpenChange(false)}
+          uuid={uuid}
         />
       </DialogContent>
     </Dialog>

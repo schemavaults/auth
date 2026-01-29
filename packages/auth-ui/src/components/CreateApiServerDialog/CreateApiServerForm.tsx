@@ -39,21 +39,14 @@ interface CreateApiServerFormProps {
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
   owner_organization_id: OrganizationID;
+  uuid: () => string;
   onSuccess: () => void;
-}
-
-function generateDefaultApiServerId(): string {
-  try {
-    return crypto.randomUUID();
-  } catch (e: unknown) {
-    console.error("Failed to generate default API server UUID: ", e);
-    return "";
-  }
 }
 
 export function CreateApiServerForm({
   clearApiServersCache,
   owner_organization_id,
+  uuid,
   onSuccess,
 }: CreateApiServerFormProps): ReactElement {
   const { toast } = useToast();
@@ -62,14 +55,14 @@ export function CreateApiServerForm({
     useMemo(() => {
       return {
         api_server_name: "",
-        api_server_id: generateDefaultApiServerId(),
+        api_server_id: uuid(),
         api_server_description: "",
         public: false,
         created_at: Date.now(),
         hardcoded: false,
         owner_organization_id,
       };
-    }, [owner_organization_id]);
+    }, [owner_organization_id, uuid]);
 
   const form = useForm<SchemaVaultsApiServerDefinition>({
     resolver: zodResolver(schemaVaultsApiServerDefinitionSchema),

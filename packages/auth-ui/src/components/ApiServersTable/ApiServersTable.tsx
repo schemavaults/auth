@@ -23,12 +23,14 @@ export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
   organization_id?: string;
   preloaded?: PreloadedApiServersTableData | undefined;
+  uuid: () => string;
 }
 
 export function ApiServersTable({
   queryType,
   organization_id,
   preloaded,
+  ...props
 }: ApiServersDatatableProps): ReactElement {
   const { toast } = useToast();
   const apis: SWRResponse<readonly SchemaVaultsApiServerDefinition[], Error> =
@@ -90,6 +92,7 @@ export function ApiServersTable({
                 }
                 open={addApiDialogOpen}
                 onOpenChange={setAddApiDialogOpen}
+                uuid={props.uuid}
               />
             )}
             {queryType === "all" && <ConnectAppToApiDialog />}

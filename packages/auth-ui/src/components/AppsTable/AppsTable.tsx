@@ -20,12 +20,14 @@ export interface AppsDatatableProps {
   queryType: ListAppsQueryType;
   preloaded?: PreloadedAppsTableDataWithDomainRefs | undefined;
   organization_id?: string;
+  uuid: () => string;
 }
 
 export function AppsTable({
   queryType,
   preloaded,
   organization_id,
+  ...props
 }: AppsDatatableProps): ReactElement {
   const { toast } = useToast();
   const apps: SWRResponse<readonly SchemaVaultsApp[], Error> = useAppsList({
@@ -75,6 +77,7 @@ export function AppsTable({
                 }
                 open={addAppDialogOpen}
                 onOpenChange={setAddAppDialogOpen}
+                uuid={props.uuid}
               />
             )}
           </>

@@ -37,39 +37,32 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AppWindow } from "lucide-react";
 
-function generateDefaultAppId(): string {
-  try {
-    return crypto.randomUUID();
-  } catch (e: unknown) {
-    console.error("Failed to generate default APP UUID: ", e);
-    return "";
-  }
-}
-
 export interface CreateAppFormProps {
   owner_organization_id: OrganizationID;
   clearFrontendAppsCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
   onSuccess: () => void;
+  uuid: () => string;
 }
 
 export default function CreateAppForm({
   owner_organization_id,
   clearFrontendAppsCache,
   onSuccess,
+  uuid,
 }: CreateAppFormProps): ReactElement {
   const defaultValues: Partial<SchemaVaultsApp> = useMemo(() => {
     return {
       app_name: "",
-      app_id: generateDefaultAppId(),
+      app_id: uuid(),
       app_description: "",
       public: false,
       created_at: Date.now(),
       hardcoded: false,
       owner_organization_id,
     };
-  }, [owner_organization_id]);
+  }, [owner_organization_id, uuid]);
 
   const form = useForm<SchemaVaultsApp>({
     resolver: zodResolver(schemaVaultsAppDefinitionSchema),

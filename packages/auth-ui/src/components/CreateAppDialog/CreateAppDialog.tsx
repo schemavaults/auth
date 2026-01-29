@@ -16,6 +16,7 @@ interface CreateFrontendAppDialogProps {
   owner_organization_id?: string | null;
   open: boolean;
   onOpenChange: (val: boolean) => void;
+  uuid: () => string;
 }
 
 export function CreateAppDialog({
@@ -40,6 +41,7 @@ export function CreateAppDialog({
           }
           clearFrontendAppsCache={clearFrontendAppsCache}
           onSuccess={() => props.onOpenChange(false)}
+          uuid={props.uuid}
         />
       </DialogContent>
     </Dialog>
