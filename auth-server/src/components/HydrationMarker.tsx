@@ -1,26 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import { useAuth } from "@schemavaults/auth-react-provider";
 
-export function HydrationMarker(): null {
+export function HydrationMarker(): ReactElement {
+  const [hydrated, setHydrated] = useState<boolean>(false);
   const auth = useAuth();
 
   // Mark basic hydration (component mounted = React hydration complete)
   useEffect(() => {
-    document.body.setAttribute("data-hydrated", "true");
-    return () => document.body.removeAttribute("data-hydrated");
-  }, []);
-
-  // Mark auth provider ready state
-  useEffect(() => {
-    if (auth.ready) {
-      document.body.setAttribute("data-auth-ready", "true");
-    } else {
-      document.body.removeAttribute("data-auth-ready");
+    if (!hydrated) {
+      setHydrated(true)
     }
-    return () => document.body.removeAttribute("data-auth-ready");
-  }, [auth.ready]);
+  }, [hydrated, setHydrated]);
 
-  return null;
+  return (
+    <div
+      id="schemavaults-auth-server-hydration-marker"
+      className="hidden"
+      data-hydrated={hydrated}
+      data-auth-ready={auth.ready ?? false}
+      suppressHydrationWarning
+    />
+  )
 }
