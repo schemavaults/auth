@@ -36,85 +36,94 @@ export default function createApiServer(
 
   return cy.visit(targetUrl).then(() => {
     cy.url().should("include", targetUrl);
-    cy.wait_for_page_hydration();
+    return cy.wait_for_page_hydration().then(() => {
+      return cy
+        .open_dialog_with_button(
+          openCreateApiServerDialogButtonId,
+          createApiServerDialogContentId,
+        )
+        .then(() => {
+          cy.url({ log: false }).should("include", targetUrl);
 
-    return cy
-      .open_dialog_with_button(
-        openCreateApiServerDialogButtonId,
-        createApiServerDialogContentId,
-      )
-      .then(() => {
-        cy.url({ log: false }).should("include", targetUrl);
-
-        // Fill out form within new dialog
-        cy.get(`input[name="api_server_name"]`, { log: false })
-          .should("exist")
-          .should("not.be.disabled")
-          .type(api_server_name);
-
-        cy.get(`textarea[name="api_server_description"]`, { log: false })
-          .should("exist")
-          .should("not.be.disabled")
-          .type(api_server_description);
-
-        // Toggle public checkbox if requested
-        if (isPublic) {
-          cy.get(`button[role="checkbox"][name="public"]`, { log: false })
+          // Fill out form within new dialog
+          cy.get(`input[name="api_server_name"]`, { log: false })
             .should("exist")
-            .click();
-        }
+            .should("not.be.disabled")
+            .type(api_server_name);
 
-        cy.url({ log: false }).should("include", targetUrl);
+          cy.get(`textarea[name="api_server_description"]`, { log: false })
+            .should("exist")
+            .should("not.be.disabled")
+            .type(api_server_description);
 
-        cy.intercept({
-          method: "POST",
-          url: "**/api/apis",
-          times: 1,
-        }).as("createApiServerRequest");
-
-        // Submit form
-        cy.get(`button#${submitCreateApiServerDialogButtonId}`, {
-          log: false,
-        })
-          .should("exist")
-          .should("not.be.disabled")
-          .click();
-
-        cy.log("Create API server dialog submitted!");
-
-        cy.has_error_toast().then((error: boolean) => {
-          if (error) {
-            cy.log_active_toasts();
-            throw new Error(
-              "Received error toast after create API server dialog submission!",
-            );
+          // Toggle public checkbox if requested
+          if (isPublic) {
+            cy.get(`button[role="checkbox"][name="public"]`, { log: false })
+              .should("exist")
+              .click();
           }
-        });
 
-        return cy
-          .wait("@createApiServerRequest", {
-            timeout: 20000,
-            requestTimeout: 20000,
+          // Form should be filled out if this point was reached
+          // Validate inputs before submission
+          cy.url({ log: false }).should("include", targetUrl);
+          cy.get(`input[name="api_server_name"]`, { log: false }).should(
+            "have.value",
+            api_server_name,
+          );
+          cy.get(`textarea[name="api_server_description"]`, {
+            log: false,
+          }).should("have.value", api_server_description);
+
+          cy.intercept({
+            method: "POST",
+            url: "**/api/apis",
+            times: 1,
+          }).as("createApiServerRequest");
+
+          // Submit form
+          cy.get(`button#${submitCreateApiServerDialogButtonId}`, {
+            log: false,
           })
-          .then((interception) => {
-            const statusCode = interception.response?.statusCode;
-            const responseBody = interception.response?.body;
-            const success = statusCode === 200;
-            const api_server_id = responseBody?.resource_id ?? null;
+            .should("exist")
+            .should("not.be.disabled")
+            .click();
 
-            if (success) {
-              cy.wrap(statusCode).should("eq", 200);
-              cy.log(
-                "API server creation request appears to have been a success!",
+          cy.log("Create API server dialog submitted!");
+
+          cy.has_error_toast().then((error: boolean) => {
+            if (error) {
+              cy.log_active_toasts();
+              throw new Error(
+                "Received error toast after create API server dialog submission!",
               );
             }
-
-            cy.get(`#${createApiServerDialogContentId}`, {
-              log: false,
-            }).should("not.exist");
-
-            return cy.wrap({ success, api_server_id }, { log: false });
           });
-      });
+
+          return cy
+            .wait("@createApiServerRequest", {
+              timeout: 20000,
+              requestTimeout: 20000,
+            })
+            .then((interception) => {
+              const statusCode = interception.response?.statusCode;
+              const responseBody = interception.response?.body;
+              const success = statusCode === 200;
+              const api_server_id = responseBody?.resource_id ?? null;
+
+              if (success) {
+                cy.wrap(statusCode).should("eq", 200);
+                cy.log(
+                  "API server creation request appears to have been a success!",
+                );
+              }
+
+              cy.get(`#${createApiServerDialogContentId}`, {
+                log: false,
+              }).should("not.exist");
+
+              return cy.wrap({ success, api_server_id }, { log: false });
+            });
+        });
+    });
   });
 }

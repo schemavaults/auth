@@ -57,7 +57,17 @@ export default function createApp(
             .should("exist")
             .click();
         }
+
+        // Form should be filled out if this point was reached
+        // Validate inputs before submission
         cy.url({ log: false }).should("include", targetUrl);
+        cy.get(`input[name="app_name"]`, { log: false }).should(
+          "have.value",
+          app_name,
+        );
+        cy.get(`textarea[name="app_description"]`, {
+          log: false,
+        }).should("have.value", app_description);
 
         // Intercept creation request
         cy.intercept({
