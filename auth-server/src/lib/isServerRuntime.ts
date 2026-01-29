@@ -5,6 +5,7 @@ export default function isServer(): boolean {
       isServer = true;
     }
   } catch (e: unknown) {
+    void e;
     isServer = true;
   }
   return isServer;
