@@ -10,7 +10,7 @@
     "directory": "packages/auth-ui"
   },
   "dependencies": {
-    "@schemavaults/ui": "0.13.9",
+    "@schemavaults/ui": "0.13.10",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
