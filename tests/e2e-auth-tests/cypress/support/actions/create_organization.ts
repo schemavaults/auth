@@ -45,12 +45,16 @@ export default function createOrganization(
           cy.get(`input[name="organization_id"]`, { log: false })
             .should("exist")
             .should("not.be.disabled")
-            .type(organization_id, { force: true });
+            .type(organization_id);
+
+          cy.log(`Finished typing organization ID "${organization_id}"`);
 
           cy.get(`input[name="name"]`, { log: false })
             .should("exist")
             .should("not.be.disabled")
-            .type(name, { force: true });
+            .type(name);
+
+          cy.log(`Finished typing organization name "${name}"`);
 
           cy.get(`#${createOrganizationDialogContentId}`, {
             log: false,
@@ -63,6 +67,9 @@ export default function createOrganization(
             url: "**/api/organizations",
             times: 1,
           }).as("createOrganizationRequest");
+
+          cy.log("Interceptor prepared. Clicking on submit button.");
+
           // Click on submit button
           cy.get(`button#${submitOrganizationCreationDialogButtonId}`, {
             log: false,

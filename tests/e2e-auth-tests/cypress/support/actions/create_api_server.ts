@@ -49,12 +49,12 @@ export default function createApiServer(
         cy.get(`input[name="api_server_name"]`, { log: false })
           .should("exist")
           .should("not.be.disabled")
-          .type(api_server_name, { force: true });
+          .type(api_server_name);
 
         cy.get(`textarea[name="api_server_description"]`, { log: false })
           .should("exist")
           .should("not.be.disabled")
-          .type(api_server_description, { force: true });
+          .type(api_server_description);
 
         // Toggle public checkbox if requested
         if (isPublic) {

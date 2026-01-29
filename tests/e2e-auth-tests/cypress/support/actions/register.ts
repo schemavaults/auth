@@ -29,19 +29,19 @@ export default function register(
   cy.get("input[name='email']", { log: false })
     .should("exist")
     .should("not.be.disabled")
-    .type(email, { force: true });
+    .type(email);
   cy.get("input[name='password']", { log: false })
     .should("exist")
     .should("not.be.disabled")
-    .type(password, { force: true });
+    .type(password);
   cy.get("input[name='confirm']", { log: false })
     .should("exist")
     .should("not.be.disabled")
-    .type(password, { force: true });
+    .type(password);
   if (invite_code) {
     cy.get("input[name='invite_code']", { log: false })
       .should("not.be.disabled")
-      .type(invite_code, { force: true });
+      .type(invite_code);
   }
   cy.get("button[type='submit']")
     .should("exist")

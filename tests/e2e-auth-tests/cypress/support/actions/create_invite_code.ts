@@ -43,7 +43,7 @@ export default function createInviteCode(
           cy.get(`input[name="invite_code"]`, { log: false })
             .should("exist")
             .should("not.be.disabled")
-            .type(invite_code, { force: true });
+            .type(invite_code);
 
           cy.get(`textarea[name="description"]`, { log: false })
             .should("exist")
@@ -57,7 +57,7 @@ export default function createInviteCode(
           cy.get(`input[name="max_uses"]`, { log: false })
             .should("exist")
             .should("not.be.disabled")
-            .type(`{selectAll}${max_uses.toString()}`, { force: true });
+            .type(`{selectAll}${max_uses.toString()}`);
 
           cy.log("Invite code form should be finished getting filled by now.");
           cy.get(`input[name="invite_code"]`, { log: false })

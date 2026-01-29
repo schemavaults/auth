@@ -28,11 +28,11 @@ export default function login(
   cy.get("input[name='email']", { log: false })
     .should("exist")
     .should("not.be.disabled")
-    .type(email, { force: true });
+    .type(email);
   cy.get("input[name='password']", { log: false })
     .should("exist")
     .should("not.be.disabled")
-    .type(password, { force: true });
+    .type(password);
   cy.get("button[type='submit']", { log: false })
     .should("exist")
     .should("not.be.disabled")

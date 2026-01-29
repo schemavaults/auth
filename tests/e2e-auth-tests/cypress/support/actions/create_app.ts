@@ -42,13 +42,13 @@ export default function createApp(
           .should("exist")
           .should("not.be.disabled")
           .clear()
-          .type(app_name, { force: true });
+          .type(app_name);
 
         cy.get(`textarea[name="app_description"]`, { log: false })
           .should("exist")
           .should("not.be.disabled")
           .clear()
-          .type(app_description, { force: true });
+          .type(app_description);
 
         // Toggle public checkbox if requested
         if (isPublic) {
