@@ -16,6 +16,14 @@ export async function createInviteCode(
     );
   }
 
+  if (typeof invite_code_def !== 'object' || !invite_code_def) {
+    throw new TypeError("Expected 'invite_code_def' to be an object!");
+  }
+
+  if (typeof invite_code_def.created_by !== 'string' && typeof invite_code_def.created_by !== 'undefined') {
+    throw new TypeError("Expected 'created_by' to be a string or undefined!")
+  }
+
   if (!isValidInviteCodeDefinition(invite_code_def)) {
     throw new Error(
       "Invalid invite code definition to insert into database!",
