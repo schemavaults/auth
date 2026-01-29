@@ -7,6 +7,7 @@ import {
   AppWindow,
   Building2,
   Server,
+  Settings,
   ShieldUser,
   SwatchBook,
   User as UserIcon,
@@ -83,6 +84,14 @@ export function getAuthenticatedUserDashboardLinks(
           url: "/admin/invite_codes",
           icon: ({ className }: { className: string }): ReactElement => (
             <SwatchBook className={className} />
+          ),
+        },
+        {
+          type: "dashboard-sidebar-item-definition" as const,
+          title: "Settings",
+          url: "/admin/settings",
+          icon: ({ className }: { className: string }): ReactElement => (
+            <Settings className={className} />
           ),
         },
       ],
