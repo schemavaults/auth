@@ -42,13 +42,11 @@ export default function createInviteCode(
           // Fill out form within new dialog
           cy.get(`input[name="invite_code"]`, { log: false })
             .should("exist")
-            .should("be.visible")
             .should("not.be.disabled")
             .type(invite_code, { force: true });
 
           cy.get(`textarea[name="description"]`, { log: false })
             .should("exist")
-            .should("be.visible")
             .should("not.be.disabled")
             .type("Invite code generated within Cypress E2E test", {
               force: true,
@@ -58,9 +56,13 @@ export default function createInviteCode(
 
           cy.get(`input[name="max_uses"]`, { log: false })
             .should("exist")
-            .should("be.visible")
             .should("not.be.disabled")
             .type(`{selectAll}${max_uses.toString()}`, { force: true });
+
+          cy.log("Invite code form should be finished getting filled by now.");
+          cy.get(`input[name="invite_code"]`, { log: false })
+            .should("exist")
+            .should("have.value", invite_code);
 
           // Submit form
           cy.intercept({

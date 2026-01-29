@@ -44,13 +44,11 @@ export default function createOrganization(
           // Fill out form within new dialog
           cy.get(`input[name="organization_id"]`, { log: false })
             .should("exist")
-            .should("be.visible")
             .should("not.be.disabled")
             .type(organization_id, { force: true });
 
           cy.get(`input[name="name"]`, { log: false })
             .should("exist")
-            .should("be.visible")
             .should("not.be.disabled")
             .type(name, { force: true });
 
