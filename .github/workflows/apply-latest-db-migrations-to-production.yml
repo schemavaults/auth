@@ -37,6 +37,12 @@ jobs:
           bun-version: ${{ inputs.BUN_VERSION }}
       - name: Install Dependencies
         run: bun install
+      - name: Build Dependencies
+        run: |
+          bun run build \
+            --filter @schemavaults/app-definitions \
+            --filter @schemavaults/jwt \
+            --filter @schemavaults/auth-server-sdk
       - name: Build Migrations
         run: bun run build:migrations
         working-directory: auth-server
