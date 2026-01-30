@@ -10,19 +10,22 @@ import {
 } from "./use-app-environment";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "./use-debug";
 
+type OnLogoutSuccessHandler = (successful_logout_redirect_uri: string) => void;
+type OnLogoutFailureHandler = (e: unknown) => void;
+
 export interface UseLogoutEffectOptions {
-  onLogoutSuccess?: (successful_logout_redirect_uri: string) => void;
-  onLogoutFailure?: (e: unknown) => void;
+  onLogoutSuccess?: OnLogoutSuccessHandler;
+  onLogoutFailure?: OnLogoutFailureHandler;
   debug?: boolean;
 }
 
-export function useLogoutEffect({
-  onLogoutSuccess,
-  onLogoutFailure,
-  ...opts
-}: UseLogoutEffectOptions): void {
+export function useLogoutEffect(opts?: UseLogoutEffectOptions): void {
   const authContext = useAuth();
   const router = useRouter();
+  const customOnLogoutSuccess: OnLogoutSuccessHandler | undefined =
+    opts?.onLogoutSuccess;
+  const customOnLogoutFailure: OnLogoutFailureHandler | undefined =
+    opts?.onLogoutFailure;
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
   const debug: boolean = useDebugWithSpecifiedBooleanOrLookupDefault(
@@ -33,31 +36,36 @@ export function useLogoutEffect({
   const onLogoutSuccessCallback: (
     successful_logout_redirect_uri: string,
   ) => void = useMemo(() => {
-    if (typeof onLogoutSuccess === "function") {
-      return onLogoutSuccess;
+    if (typeof customOnLogoutSuccess === "function") {
+      return customOnLogoutSuccess;
     } else {
       return function defaultOnLogoutSuccessCallback(
         successful_logout_redirect_uri: string,
       ): void {
         if (debug) {
           console.warn(
-            "No 'onLogoutSuccess' callback is set! Falling back to default behaviour...",
+            "No custom 'onLogoutSuccess' callback is set! Falling back to default behaviour...",
+          );
+        }
+        if (typeof successful_logout_redirect_uri !== "string") {
+          throw new TypeError(
+            "Expected 'successful_logout_redirect_uri' to be a string in logout success callback!",
           );
         }
         router.push(successful_logout_redirect_uri);
         return;
       }; // defaultOnLogoutSuccessCallback()
     }
-  }, [debug, onLogoutSuccess, router]);
+  }, [debug, customOnLogoutSuccess, router]);
 
   const onLogoutFailureCallback: (e: unknown) => void = useMemo(() => {
-    if (typeof onLogoutFailure === "function") {
-      return onLogoutFailure;
+    if (typeof customOnLogoutFailure === "function") {
+      return customOnLogoutFailure;
     } else {
       return function defaultOnLogoutFailureCallback(e: unknown): void {
         if (debug) {
           console.warn(
-            "No 'onLogoutFailure' callback is set! Falling back to default behaviour...",
+            "No custom 'onLogoutFailure' callback is set! Falling back to default behaviour...",
           );
         }
         const errMsg: string =
@@ -68,7 +76,7 @@ export function useLogoutEffect({
         return;
       }; // defaultOnLogoutFailureCallback()
     }
-  }, [debug, onLogoutFailure]);
+  }, [debug, customOnLogoutFailure]);
 
   useEffect((): undefined | (() => void) => {
     let cancelDueToUnmount: boolean = false;
