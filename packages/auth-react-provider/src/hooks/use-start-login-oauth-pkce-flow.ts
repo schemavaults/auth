@@ -1,6 +1,6 @@
 "use client";
 
-import type { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import useEffectIfAuthenticated from "@/hooks/use-effect-if-authenticated";
 import useAuth from "@/hooks/use-auth";
 import { useEffect } from "react";
@@ -8,19 +8,21 @@ import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import useAppEnvironment, {
   type SchemaVaultsAppEnvironment,
 } from "@/hooks/use-app-environment";
-import type { UseUiToastHook } from "@/types/UiToastFn";
 import useDebug from "@/hooks/use-debug";
+import useCheckIfAuthenticatedWithServer from "@/hooks/useCheckIfAuthenticatedWithServer";
 
-export function useStartLoginOauthPKCEFlow(
-  useAppRouter: typeof useRouter,
-  checkIfAuthenticatedWithServer: () => Promise<boolean>,
-  useToast: UseUiToastHook,
-) {
-  const router: ReturnType<typeof useRouter> = useAppRouter();
+export interface IUseStartLoginOauthPKCEFlowOpts {
+  onError: (e: unknown) => void;
+}
+
+export function useStartLoginOauthPKCEFlow({
+  onError,
+}: IUseStartLoginOauthPKCEFlowOpts) {
+  const router = useRouter();
   const authContext = useAuth();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const debug: boolean = useDebug(environment);
-  const { toast } = useToast();
+  const checkIfAuthenticatedWithServer = useCheckIfAuthenticatedWithServer();
 
   useEffectIfAuthenticated((auth: ISchemaVaultsAuthClient) => {
     console.assert(
@@ -118,15 +120,8 @@ export function useStartLoginOauthPKCEFlow(
           handleAuthClientReady(auth).catch(function onFailureStartingLoginFlow(
             e: unknown,
           ): void {
-            console.error("Error start login flow: ", e);
-            toast({
-              variant: "destructive",
-              title: "Error starting login flow",
-              description:
-                e instanceof Error
-                  ? e.message
-                  : "An unknown error has occurred!",
-            });
+            console.error("Error starting login flow: ", e);
+
             return;
           });
 
@@ -147,7 +142,7 @@ export function useStartLoginOauthPKCEFlow(
         console.log("[useStartLoginOauthPKCEFlow] Auth client not ready.");
       }
     }
-  }, [authContext, debug, router, toast, checkIfAuthenticatedWithServer]);
+  }, [authContext, debug, router, onError, checkIfAuthenticatedWithServer]);
 }
 
 export default useStartLoginOauthPKCEFlow;

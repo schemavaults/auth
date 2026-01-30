@@ -4,6 +4,7 @@ import {
   OrganizationMembersCard,
   ApiServersCard,
   AppsCard,
+  SentInvitationsCard,
   type OrganizationMemberTableData,
   type PreloadedAppsTableDataWithDomainRefs,
   type PreloadedApiServersTableData,
@@ -53,13 +54,46 @@ export default function OrgPageView({
         cardClassName={"w-full"}
         preloaded={preloaded_members}
         inviteMember={async (data: InviteMemberSubmitData) => {
-          console.log(data);
-          toast({
-            title: "Submitted invite member form successfully!",
-            description: "...but this functionality is currently unimplemented."
-          });
-          return;
+          try {
+            const response = await fetch(
+              `/api/organizations/${organization.organization_id}/invitations`,
+              {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  input_mode: data.input_mode,
+                  identifier: data.input_mode === "email" ? data.email : data.uid,
+                }),
+              }
+            );
+
+            const body = await response.json();
+
+            if (!response.ok || !body.success) {
+              throw new Error(body.message || "Failed to send invitation");
+            }
+
+            toast({
+              title: "Invitation sent!",
+              description: `An invitation has been sent to the user.`,
+            });
+          } catch (error: unknown) {
+            toast({
+              variant: "destructive",
+              title: "Failed to send invitation",
+              description:
+                error instanceof Error ? error.message : "An unknown error occurred",
+            });
+          }
         }}
+      />
+
+      <SentInvitationsCard
+        organization_id={organization.organization_id}
+        cardClassName="w-full"
       />
 
       <AppsCard

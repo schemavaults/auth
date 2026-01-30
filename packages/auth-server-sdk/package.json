@@ -120,6 +120,16 @@
       "types": "./dist/redirect-to-login.d.ts",
       "import": "./dist/redirect-to-login.js",
       "require": "./dist/redirect-to-login.js"
+    },
+    "./NextjsAppDirectoryPlugin": {
+      "types": "./dist/NextjsAppDirectoryPlugin/index.d.ts",
+      "import": "./dist/NextjsAppDirectoryPlugin/index.js",
+      "require": "./dist/NextjsAppDirectoryPlugin/index.js"
+    },
+    "./NextjsAppDirectoryPlugin/*": {
+      "types": "./dist/NextjsAppDirectoryPlugin/*",
+      "import": "./dist/NextjsAppDirectoryPlugin/*",
+      "require": "./dist/NextjsAppDirectoryPlugin/*"
     }
   }
 }

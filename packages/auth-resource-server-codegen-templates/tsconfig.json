@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "declaration": true,
+    "moduleResolution": "Bundler",
+    "target": "esnext",
+    "module": "ESNext",
+    "outDir": "dist",
+    "lib": ["ESNext"],
+    "skipLibCheck": true,
+    "noEmit": false,
+    "allowJs": false,
+    "strictNullChecks": true,
+    "sourceMap": true,
+    "types": ["bun-types"],
+    "paths": {
+      "@/*": ["./src/*"],
+    },
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "rootDir": "./src",
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"],
+}

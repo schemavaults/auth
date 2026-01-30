@@ -8,6 +8,7 @@ import type { JwtKeysTable } from "./jwt_keys";
 import type {
   OrganizationMembershipRolesTable,
   OrganizationsTable,
+  OrganizationInvitationsTable,
 } from "./organizations";
 import type {
   AuthorizationCodesTable,
@@ -31,6 +32,7 @@ export type AuthDatabase = {
   invite_codes: InviteCodesTable;
   organizations: OrganizationsTable;
   organization_membership_roles: OrganizationMembershipRolesTable;
+  organization_invitations: OrganizationInvitationsTable;
   jwt_keys: JwtKeysTable;
   jwks_access_keys: JwksAccessKeysTable;
   jwks_access_keys_for_hardcoded: JwksAccessKeysForHardcodedTable;

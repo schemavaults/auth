@@ -1,6 +1,6 @@
 "use client";
 
-import { AccountDetailsCard, AppsCard } from "@schemavaults/auth-ui";
+import { AccountDetailsCard, AppsCard, PendingInvitationsCard } from "@schemavaults/auth-ui";
 import { useRouter } from "next/navigation";
 import type { ReactElement } from "react";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
@@ -59,6 +59,7 @@ export default function AccountPageView({
         appEnvironment={environment}
         organizations={preloaded_organizations}
       />
+      <PendingInvitationsCard cardClassName={cardsClassName} />
       <AppsCard
         cardTitle="Authorized Applications"
         cardClassName={cardsClassName}
