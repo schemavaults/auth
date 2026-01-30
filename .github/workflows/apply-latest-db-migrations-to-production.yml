@@ -58,5 +58,7 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          NODE_ENV: production
+          SCHEMAVAULTS_APP_ENVIRONMENT: production
         run: /bin/bash ./migrate-db.sh .env.production
         working-directory: auth-server
