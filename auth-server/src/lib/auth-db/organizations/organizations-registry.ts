@@ -492,6 +492,82 @@ export class OrganizationsRegistry
       );
     }
   }
+
+  public async updateMemberRole(
+    org_id: OrganizationID,
+    uid: string,
+    new_role: OrganizationMembershipRoleType,
+  ): Promise<void> {
+    const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id);
+    if (!parsed_org_id.success) {
+      throw new Error(
+        "OrganizationsRegistry.updateMemberRole() received invalid organization ID!",
+      );
+    }
+    const organization_id: OrganizationID = parsed_org_id.data;
+
+    if (!isValidUuid(uid)) {
+      throw new Error(
+        "OrganizationsRegistry.updateMemberRole() received invalid user ID!",
+      );
+    }
+
+    if (!isValidOrganizationMembershipRoleType(new_role)) {
+      throw new Error(
+        "OrganizationsRegistry.updateMemberRole() received invalid organization membership role!",
+      );
+    }
+
+    // Cannot update roles in hardcoded organizations (like schemavaults)
+    if (this.hardcodedOrganizations.has(organization_id)) {
+      throw new Error(
+        "Cannot update member roles in hardcoded organizations!",
+      );
+    }
+
+    // Prevent demoting the last owner
+    if (new_role !== "owner") {
+      const currentMembers = await this.listOrganizationMembers(organization_id);
+      const ownerCount = currentMembers.filter(m => m.role === "owner").length;
+      const isCurrentlyOwner = currentMembers.some(m => m.uid === uid && m.role === "owner");
+
+      if (isCurrentlyOwner && ownerCount <= 1) {
+        throw new Error(
+          "Cannot demote the last owner of an organization!",
+        );
+      }
+    }
+
+    if (this.debug) {
+      console.log(
+        `[OrganizationsRegistry] updateMemberRole(org_id = '${org_id}', uid = '${uid}', new_role = '${new_role}')`,
+      );
+    }
+
+    try {
+      const updateQuery = this.db
+        .updateTable("organization_membership_roles")
+        .set({ role: new_role })
+        .where("organization_id", "=", organization_id)
+        .where("uid", "=", uid);
+
+      const result = await updateQuery.executeTakeFirst();
+
+      if (!result || result.numUpdatedRows === BigInt(0)) {
+        throw new Error(
+          `No membership found for user '${uid}' in organization '${organization_id}'`,
+        );
+      }
+    } catch (e: unknown) {
+      console.error(
+        `Failed to update user membership role to '${new_role}' for user '${uid}' in organization '${organization_id}': `,
+        e,
+      );
+      throw new Error(
+        `Failed to update user membership role to '${new_role}' for user '${uid}' in organization '${organization_id}'!`,
+      );
+    }
+  }
 }
 
 export default OrganizationsRegistry;

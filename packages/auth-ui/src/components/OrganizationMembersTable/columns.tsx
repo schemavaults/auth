@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 
 import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox, useToast } from "@schemavaults/ui";
@@ -10,15 +10,19 @@ import {
   MoreHorizontal,
   ShieldCheck,
   ShieldX,
+  Crown,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
 import printDateTime from "@/lib/printDateTime";
+import { useSWRConfig } from "swr";
 
 export type OrganizationMemberTableData = {
   membership_declaration_id: string;
@@ -128,14 +132,68 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
       row,
     }): ReactElement {
       const { toast } = useToast();
+      const { mutate } = useSWRConfig();
       const member = row.original;
+      const [isChangingRole, setIsChangingRole] = useState(false);
+
+      const canChangeRole = member.role !== "admin"; // Cannot change virtual admin roles
+      const isOwner = member.role === "owner";
+      const isMember = member.role === "member";
+
+      const handleRoleChange = async (newRole: "owner" | "member") => {
+        setIsChangingRole(true);
+        try {
+          const response = await fetch(
+            `/api/organizations/${member.organization_id}/members/${member.uid}/role`,
+            {
+              method: "PATCH",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ role: newRole }),
+            }
+          );
+
+          const body = await response.json();
+
+          if (!response.ok || !body.success) {
+            throw new Error(body.message || `Failed to ${newRole === "owner" ? "promote" : "demote"} member`);
+          }
+
+          toast({
+            title: newRole === "owner" ? "Member promoted to owner" : "Owner demoted to member",
+            description: `${member.email} is now ${newRole === "owner" ? "an owner" : "a member"} of this organization.`,
+          });
+
+          // Refresh the members list
+          mutate(`/api/organizations/${member.organization_id}/members`);
+        } catch (error: unknown) {
+          toast({
+            variant: "destructive",
+            title: `Failed to ${newRole === "owner" ? "promote" : "demote"} member`,
+            description:
+              error instanceof Error ? error.message : "An unknown error occurred",
+          });
+        } finally {
+          setIsChangingRole(false);
+        }
+      };
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              data-testid="member-actions-button"
+            >
               <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
+              {isChangingRole ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MoreHorizontal className="h-4 w-4" />
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -163,7 +221,7 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
                   });
               }}
             >
-              <ClipboardCopy className="h-4 w-4 pr-2" /> Copy User ID
+              <ClipboardCopy className="h-4 w-4 mr-2" /> Copy User ID
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e): void => {
@@ -188,8 +246,47 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
                   });
               }}
             >
-              <ClipboardCopy className="h-4 w-4 pr-2" /> Copy Email
+              <ClipboardCopy className="h-4 w-4 mr-2" /> Copy Email
             </DropdownMenuItem>
+            {canChangeRole && (
+              <>
+                <DropdownMenuSeparator />
+                {isMember && (
+                  <DropdownMenuItem
+                    onClick={(e): void => {
+                      e.preventDefault();
+                      handleRoleChange("owner");
+                    }}
+                    disabled={isChangingRole}
+                    data-testid="promote-to-owner-menu-item"
+                  >
+                    {isChangingRole ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Crown className="h-4 w-4 mr-2" />
+                    )}
+                    Promote to Owner
+                  </DropdownMenuItem>
+                )}
+                {isOwner && (
+                  <DropdownMenuItem
+                    onClick={(e): void => {
+                      e.preventDefault();
+                      handleRoleChange("member");
+                    }}
+                    disabled={isChangingRole}
+                    data-testid="demote-to-member-menu-item"
+                  >
+                    {isChangingRole ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ShieldX className="h-4 w-4 mr-2" />
+                    )}
+                    Demote to Member
+                  </DropdownMenuItem>
+                )}
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       );

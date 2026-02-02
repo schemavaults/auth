@@ -77,9 +77,13 @@ export default async function returnGeneratedTokensToUser({
         );
       }
 
-      if (getStringByteSize(refresh_token.token satisfies string) > MaximumBrowserCookieSize) {
+      const refreshTokenSize: number = getStringByteSize(refresh_token.token satisfies string)
+      if (typeof refreshTokenSize !== 'number' || isNaN(refreshTokenSize)) {
+        throw new TypeError("Expected result of getStringByteSize to be a number!");
+      }
+      if (refreshTokenSize > MaximumBrowserCookieSize) {
         throw new Error(
-          `Refresh token size exceeds maximum browser cookie size of ${MaximumBrowserCookieSize} bytes! Cannot set refresh token as HTTP-only cookie.`,
+          `Refresh token size exceeds maximum browser cookie size of ${MaximumBrowserCookieSize} bytes (with ${refreshTokenSize} bytes)! Cannot set refresh token as HTTP-only cookie.`,
         );
       }
 
