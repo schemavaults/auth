@@ -1,7 +1,6 @@
+import { dirname, join } from "path";
+
 export default function resolveCodegenTemplatesDirectory(): string {
-  const filepath: string = require.resolve(
-    "@schemavaults/auth-resource-server-codegen-templates",
-  );
-  console.log(filepath);
-  return filepath;
+  // Templates are copied into the dist/codegen-templates directory during build
+  return join(dirname(__dirname), "codegen-templates");
 }

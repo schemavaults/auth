@@ -170,7 +170,6 @@
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
-        "@schemavaults/auth-resource-server-codegen-templates": "workspace:*",
         "@schemavaults/jwt": "workspace:*",
         "zod": "3.23.8",
       },
@@ -260,7 +259,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@schemavaults/auth-client-sdk": "workspace:*",
-        "@schemavaults/auth-resource-server-codegen-templates": "workspace:*",
+        "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/auth-server-sdk": "workspace:*",
         "@schemavaults/theme": "0.25.5",
         "@schemavaults/ui": "0.13.12",

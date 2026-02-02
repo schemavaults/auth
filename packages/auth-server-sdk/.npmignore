@@ -24,3 +24,5 @@ eslint.config.js
 eslint.config.mjs
 
 auth-server-sdk.tgz
+
+copy-codegen-templates.sh
