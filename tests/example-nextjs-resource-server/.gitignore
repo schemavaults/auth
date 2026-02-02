@@ -5,3 +5,5 @@ node_modules/
 .env.test
 .env.staging
 .env.production
+
+src/app/auth/
