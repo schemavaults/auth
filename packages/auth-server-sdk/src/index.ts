@@ -34,3 +34,6 @@ export { default as getStringByteSize } from "./getStringByteSize";
 
 export { redirectToLogin } from "./redirect-to-login";
 export type * from "./redirect-with-error";
+
+export { getAppEnvironment } from "./get-app-environment";
+export type { SchemaVaultsAppEnvironment } from "./get-app-environment";
