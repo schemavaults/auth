@@ -1,10 +1,12 @@
 "use client";
 
+import { useSWRConfig } from "swr";
 import {
   OrganizationMembersCard,
   ApiServersCard,
   AppsCard,
   SentInvitationsCard,
+  clearSentInvitationsCache,
   type OrganizationMemberTableData,
   type PreloadedAppsTableDataWithDomainRefs,
   type PreloadedApiServersTableData,
@@ -44,6 +46,7 @@ export default function OrgPageView({
   preloaded_api_servers,
 }: OrgPageViewProps): ReactElement {
   const { toast } = useToast();
+  const { mutate } = useSWRConfig();
 
   return (
     <PageContainer>
@@ -80,6 +83,8 @@ export default function OrgPageView({
               title: "Invitation sent!",
               description: `An invitation has been sent to the user.`,
             });
+
+            clearSentInvitationsCache(mutate, organization.organization_id);
           } catch (error: unknown) {
             toast({
               variant: "destructive",
