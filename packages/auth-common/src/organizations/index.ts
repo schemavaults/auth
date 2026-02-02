@@ -8,6 +8,8 @@ export { SCHEMAVAULTS_ORGANIZATION_ID } from "./schemavaults_org_id";
 
 export { hardcodedOrgs } from "./hardcoded_orgs";
 
+export { MAXIMUM_USER_ORGANIZATIONS } from "./organization_constants";
+
 export {
   inviteMemberInputModes,
   inviteMemberFormSchema,

@@ -5,6 +5,8 @@ export type * from "./organization-invitations-table";
 export { OrganizationsRegistry, OrganizationsRegistry as default } from "./organizations-registry";
 export type { IOrganizationsRegistry } from "./IOrganizationsRegistry";
 
+export { MAXIMUM_USER_ORGANIZATIONS } from "@schemavaults/auth-common";
+
 export * from "./organization-membership-role-types";
 export type * from "./organization-membership-role-definition";
 export type * from "./organization-member-with-user-data";

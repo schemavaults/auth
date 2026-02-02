@@ -3,3 +3,5 @@ export const MAXIMUM_ORGANIZATION_ID_LENGTH = 64 as const satisfies number;
 
 export const MINIMUM_ORGANIZATION_NAME_LENGTH = 1 as const satisfies number;
 export const MAXIMUM_ORGANIZATION_NAME_LENGTH = 64 as const satisfies number;
+
+export const MAXIMUM_USER_ORGANIZATIONS = 10 as const satisfies number;

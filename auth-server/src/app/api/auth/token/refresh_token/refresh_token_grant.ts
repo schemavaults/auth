@@ -15,6 +15,7 @@ import {
   type RequestTokensResult,
   type UserData,
   type refreshTokenPOSTbody,
+  MAXIMUM_USER_ORGANIZATIONS,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
@@ -218,6 +219,16 @@ export async function handleRefreshTokenGrant(
       {
         status: 500,
       },
+    );
+  }
+
+  // Warn if user has exceeded the maximum organization membership limit
+  // This should not happen if enforcement is working, but log for monitoring data inconsistencies
+  if (user_organizations.length > MAXIMUM_USER_ORGANIZATIONS) {
+    console.warn(
+      `[RefreshTokenGrant] User '${uid}' has ${user_organizations.length} organization memberships, ` +
+      `which exceeds the maximum of ${MAXIMUM_USER_ORGANIZATIONS}. ` +
+      `This may indicate a data inconsistency.`
     );
   }
 

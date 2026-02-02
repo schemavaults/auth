@@ -11,7 +11,8 @@ import {
   type OrganizationID,
   organizationIdSchema,
   SCHEMAVAULTS_ORGANIZATION_ID,
-  hardcodedOrgs
+  hardcodedOrgs,
+  MAXIMUM_USER_ORGANIZATIONS,
 } from "@schemavaults/auth-common";
 import type { OrganizationRow } from "./organizations-table";
 import isValidUuid from "@/lib/is-valid-uuid";
@@ -567,6 +568,58 @@ export class OrganizationsRegistry
         `Failed to update user membership role to '${new_role}' for user '${uid}' in organization '${organization_id}'!`,
       );
     }
+  }
+
+  public async countUserRealMemberships(uid: string): Promise<number> {
+    if (!isValidUuid(uid)) {
+      throw new Error(
+        "OrganizationsRegistry.countUserRealMemberships() received invalid user ID!",
+      );
+    }
+
+    if (this.debug) {
+      console.log(
+        `[OrganizationsRegistry] countUserRealMemberships(uid = '${uid}')`,
+      );
+    }
+
+    try {
+      const countQuery = this.db
+        .selectFrom("organization_membership_roles")
+        .where("uid", "=", uid)
+        .select((eb) => eb.fn.countAll().as("count"));
+
+      const result = await countQuery.executeTakeFirstOrThrow();
+      const count = typeof result.count === "bigint"
+        ? Number(result.count)
+        : typeof result.count === "string"
+          ? Number.parseInt(result.count)
+          : result.count;
+
+      if (this.debug) {
+        console.log(
+          `[OrganizationsRegistry] countUserRealMemberships(uid = '${uid}') => ${count}`,
+        );
+      }
+
+      return count;
+    } catch (e: unknown) {
+      console.error(
+        `Failed to count organization memberships for user '${uid}': `,
+        e,
+      );
+      throw new Error(
+        `Failed to count organization memberships for user '${uid}'!`,
+      );
+    }
+  }
+
+  public async canUserJoinOrganization(uid: string): Promise<boolean> {
+    const currentMembershipCount: number = await this.countUserRealMemberships(uid);
+    if (typeof currentMembershipCount !== 'number' || isNaN(currentMembershipCount)) {
+      throw new TypeError("Expected result of countUserRealMemberships to be a number!")
+    }
+    return currentMembershipCount < MAXIMUM_USER_ORGANIZATIONS;
   }
 }
 

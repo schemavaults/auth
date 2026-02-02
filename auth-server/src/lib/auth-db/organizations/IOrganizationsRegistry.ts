@@ -40,4 +40,8 @@ export interface IOrganizationsRegistry {
     uid: string,
     new_role: OrganizationMembershipRoleType,
   ) => Promise<void>;
+
+  countUserRealMemberships: (uid: string) => Promise<number>;
+
+  canUserJoinOrganization: (uid: string) => Promise<boolean>;
 }

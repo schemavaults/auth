@@ -6,6 +6,7 @@ import {
   type RequestTokensResult,
   type UserData,
   type authorizationCodePOSTbody,
+  MAXIMUM_USER_ORGANIZATIONS,
 } from "@schemavaults/auth-common";
 import {
   type ServerlessDatabase,
@@ -215,6 +216,16 @@ export async function handleAuthorizationCodeGrant(
 
   if (!Array.isArray(user_organizations) || !user_organizations.every((org) => typeof org === "string" && organizationIdSchema.safeParse(org).success)) {
     throw new TypeError("'user_organizations' must be an array of valid organization IDs, received bad value from organizations registry!");
+  }
+
+  // Warn if user has exceeded the maximum organization membership limit
+  // This should not happen if enforcement is working, but log for monitoring data inconsistencies
+  if (user_organizations.length > MAXIMUM_USER_ORGANIZATIONS) {
+    console.warn(
+      `[AuthorizationCodeGrant] User '${uid}' has ${user_organizations.length} organization memberships, ` +
+      `which exceeds the maximum of ${MAXIMUM_USER_ORGANIZATIONS}. ` +
+      `This may indicate a data inconsistency.`
+    );
   }
 
   let jwt_keys_manager: AuthServerJwtKeysManager;

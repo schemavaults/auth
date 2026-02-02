@@ -3,6 +3,7 @@ import "server-only";
 import {
   OrganizationsRegistry,
   type ResourceCreationResponse,
+  MAXIMUM_USER_ORGANIZATIONS,
 } from "@/lib/auth-db";
 import {
   hardcodedOrgs,
@@ -88,6 +89,20 @@ async function POST_create_organization_handler({
       } satisfies ResourceCreationResponse,
       {
         status: 500,
+      },
+    );
+  }
+
+  // Check if user has reached the maximum number of organization memberships
+  const canJoinOrg = await orgRegistry.canUserJoinOrganization(user.uid);
+  if (!canJoinOrg) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: `You have reached the maximum number of organization memberships (${MAXIMUM_USER_ORGANIZATIONS}). Please leave an organization before creating a new one.`,
+      } satisfies ResourceCreationResponse,
+      {
+        status: 403,
       },
     );
   }

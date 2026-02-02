@@ -10,6 +10,7 @@ import {
   respondToInvitation,
   revokeInvitation,
   type InvitationResponseAction,
+  MAXIMUM_USER_ORGANIZATIONS,
 } from "@/lib/auth-db/organizations";
 import {
   type OrganizationID,
@@ -116,6 +117,21 @@ async function PATCH_respond_to_invitation_handler(
       },
       { status: 403 }
     );
+  }
+
+  // Check if user has reached the maximum number of organization memberships when accepting
+  if (action === "accept") {
+    const registry = new OrganizationsRegistry(dbh.db);
+    const canJoinOrg = await registry.canUserJoinOrganization(user.uid);
+    if (!canJoinOrg) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `You have reached the maximum number of organization memberships (${MAXIMUM_USER_ORGANIZATIONS}). Please leave an organization before accepting this invitation.`,
+        },
+        { status: 403 }
+      );
+    }
   }
 
   try {
