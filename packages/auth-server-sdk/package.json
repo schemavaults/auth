@@ -17,7 +17,8 @@
     "zod": "3.23.8",
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
-    "@schemavaults/app-definitions": "workspace:*"
+    "@schemavaults/app-definitions": "workspace:*",
+    "@schemavaults/auth-resource-server-codegen-templates": "workspace:*"
   },
   "scripts": {
     "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",

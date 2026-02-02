@@ -1,2 +1,6 @@
 import NextjsAppDirectoryPlugin from "@schemavaults/auth-server-sdk/NextjsAppDirectoryPlugin";
-NextjsAppDirectoryPlugin.codegen();
+async function codegen(): Promise<void> {
+  await NextjsAppDirectoryPlugin.codegen({});
+}
+
+codegen();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LoadingPage, useToast } from "@schemavaults/ui";
 import {
@@ -14,8 +14,6 @@ import {
 interface ExchangeAuthCodeForTokensManagerComponentProps {
   auth: ISchemaVaultsAuthClient;
 }
-
-const backHref = "/";
 
 function ExchangeAuthCodeForTokensManagerComponent({
   auth,

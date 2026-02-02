@@ -109,7 +109,7 @@
     },
     "packages/auth-react-provider": {
       "name": "@schemavaults/auth-react-provider",
-      "version": "0.6.5",
+      "version": "0.6.7",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -142,15 +142,13 @@
     "packages/auth-resource-server-codegen-templates": {
       "name": "@schemavaults/auth-resource-server-codegen-templates",
       "version": "0.0.1",
-      "dependencies": {
+      "devDependencies": {
+        "@eslint/js": "9.39.1",
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/jwt": "workspace:*",
         "@schemavaults/ui": "0.13.12",
-      },
-      "devDependencies": {
-        "@eslint/js": "9.39.1",
         "@types/react": "19.0.0",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
@@ -161,6 +159,7 @@
         "eslint-plugin-react-hooks": "7.0.1",
         "globals": "16.5.0",
         "next": "16.1.4",
+        "react": "19.0.0",
         "tsc-alias": "1.8.15",
         "typescript": "5.9.3",
       },
@@ -171,6 +170,7 @@
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
+        "@schemavaults/auth-resource-server-codegen-templates": "workspace:*",
         "@schemavaults/jwt": "workspace:*",
         "zod": "3.23.8",
       },
@@ -260,6 +260,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@schemavaults/auth-client-sdk": "workspace:*",
+        "@schemavaults/auth-resource-server-codegen-templates": "workspace:*",
         "@schemavaults/auth-server-sdk": "workspace:*",
         "@schemavaults/theme": "0.25.5",
         "@schemavaults/ui": "0.13.12",
