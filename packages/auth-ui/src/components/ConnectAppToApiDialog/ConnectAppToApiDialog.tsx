@@ -162,7 +162,7 @@ export function ConnectAppToApiDialog({
                     />
                   </FormControl>
                   <FormDescription>
-                    Enter the UUID of the API server application.
+                    Enter the UUID of the frontend client application.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
