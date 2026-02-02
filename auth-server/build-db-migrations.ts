@@ -204,6 +204,9 @@ async function build() {
 }
 
 build()
+  .then(() => {
+    console.log("[build-db-migrations.ts] Successfully built database migrations!");
+  })
   .catch((e: unknown) => {
     console.error("[build-db-migrations.ts] Error building database migrations: ", e);
     process.exit(1);
