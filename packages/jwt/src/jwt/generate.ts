@@ -161,6 +161,10 @@ export async function generateJWT<T extends AuthTokenTypes>(
   }
   const orgs: readonly OrganizationID[] = parsed_organization_ids.data;
 
+  if (new Set<OrganizationID>(orgs).size !== orgs.length) {
+    throw new Error("Expected organization IDs in 'orgs' list to be unique.");
+  }
+
   if (
     type === "refresh" &&
     audience !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id

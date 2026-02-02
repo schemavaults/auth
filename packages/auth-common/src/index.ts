@@ -48,6 +48,8 @@ export {
   hardcodedOrgs,
   SCHEMAVAULTS_ORGANIZATION_ID,
   MAXIMUM_USER_ORGANIZATIONS,
+  MINIMUM_ORGANIZATION_ID_LENGTH,
+  MAXIMUM_ORGANIZATION_ID_LENGTH,
   inviteMemberInputModes,
   inviteMemberFormSchema,
   organizationInvitationStatusTypes,
