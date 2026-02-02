@@ -69,6 +69,7 @@ bun run e2e        # Run Cypress / Docker Compose testing pipeline
 - **auth-server/**: Next.js 16 App Router application - the main auth server deployed at auth.schemavaults.com
 - **packages/**: Shared TypeScript libraries published to npm & GitHub Packages
 - **tests/e2e-auth-tests/**: Cypress E2E test suite
+- **tests/example-nextjs-resource-server/**: Example Next.js resource server for testing login via OAuth2 PKCE flow
 
 ### Package Dependency Hierarchy
 ```
@@ -143,3 +144,10 @@ bun run dev:init-env
 
 ## Continuous Integration & Continuous Delivery (C.I. & C.D. )
 The `.github/workflows` directory contains GitHub Actions workflows for automatically testing & publishing the `@schemavaults/auth` application/package suite.
+
+## E2E Testing
+
+The `tests/e2e-auth-tests` directory contains Cypress E2E test suite for testing the auth server.
+- `tests/e2e-auth-tests/cypress/support/e2e.ts`, `tests/e2e-auth-tests/cypress/support/commands.ts`, and `tests/e2e-auth-tests/cypress/support/actions/` contain reusable commands (e.g. `cy.login()`, `cy.register()`, etc.) for making writing tests easier.
+
+The actual E2E tests live within the `tests/e2e-auth-tests/cypress/e2e/` directory.
