@@ -46,10 +46,16 @@ COPY --chown=bun:bun packages/auth-react-provider/package.json packages/auth-rea
 COPY --chown=bun:bun packages/auth-react-provider/tsconfig.json packages/auth-react-provider/tsconfig.json
 COPY --chown=bun:bun packages/auth-react-provider/eslint.config.cjs packages/auth-react-provider/eslint.config.cjs
 
+# @schemavaults/auth-resource-server-codegen-templates
+COPY --chown=bun:bun packages/auth-resource-server-codegen-templates/package.json packages/auth-resource-server-codegen-templates/package.json
+COPY --chown=bun:bun packages/auth-resource-server-codegen-templates/tsconfig.json packages/auth-resource-server-codegen-templates/tsconfig.json
+COPY --chown=bun:bun packages/auth-resource-server-codegen-templates/eslint.config.cjs packages/auth-resource-server-codegen-templates/eslint.config.cjs
+
 # @schemavaults/auth-server-sdk
 COPY --chown=bun:bun packages/auth-server-sdk/package.json packages/auth-server-sdk/package.json
 COPY --chown=bun:bun packages/auth-server-sdk/tsconfig.json packages/auth-server-sdk/tsconfig.json
 COPY --chown=bun:bun packages/auth-server-sdk/eslint.config.cjs packages/auth-server-sdk/eslint.config.cjs
+COPY --chown=bun:bun packages/auth-server-sdk/copy-codegen-templates.sh packages/auth-server-sdk/copy-codegen-templates.sh
 
 # @schemavaults/auth-ui
 COPY --chown=bun:bun packages/auth-ui/package.json packages/auth-ui/package.json
@@ -93,6 +99,9 @@ COPY --chown=bun:bun packages/auth-common/src/ packages/auth-common/src/
 
 # @schemavaults/auth-react-provider
 COPY --chown=bun:bun packages/auth-react-provider/src/ packages/auth-react-provider/src/
+
+# @schemavaults/auth-resource-server-codegen-templates
+COPY --chown=bun:bun packages/auth-resource-server-codegen-templates/src/ packages/auth-resource-server-codegen-templates/src/
 
 # @schemavaults/auth-server-sdk
 COPY --chown=bun:bun packages/auth-server-sdk/src/ packages/auth-server-sdk/src/
