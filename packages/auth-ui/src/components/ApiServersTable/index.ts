@@ -6,3 +6,6 @@ export {
   clearUseApiServersCache,
   useApiServersList,
 } from "./useApiServersList";
+
+export { ApiServersTableConfigContext } from "./ApiServersTableConfigContext";
+export type { ApiServersTableConfig } from "./ApiServersTableConfigContext";

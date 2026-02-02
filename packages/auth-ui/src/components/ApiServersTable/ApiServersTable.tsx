@@ -19,6 +19,7 @@ import {
   ConnectAppToApiDialogTrigger,
 } from "@/components/ConnectAppToApiDialog";
 import type { PreloadedApiServersTableData } from "./preloaded_api_servers_table_data";
+import { ApiServersTableConfigContext } from "./ApiServersTableConfigContext";
 
 export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
@@ -91,6 +92,11 @@ export function ApiServersTable({
     }
   }, [apis.data]);
 
+  const contextValue = useMemo(
+    () => ({ showConnectAppToApi: showConnectAppToApi ?? false }),
+    [showConnectAppToApi],
+  );
+
   if (!data && isLoading) {
     return (
       <div className="min-h-48 w-full flex items-center justify-center">
@@ -100,25 +106,27 @@ export function ApiServersTable({
   }
 
   return (
-    <Datatable<SchemaVaultsApiServerDefinition>
-      data={[...(data ? (data.length > 0 ? data : []) : [])]}
-      columns={columns}
-      initialVisibleColumns={{
-        actions: true,
-        select: true,
-        api_server_id: false,
-        api_server_name: true,
-        api_server_description: true,
-        owner_organization_id: false,
-      }}
-      HeaderButtons={HeaderButtons}
-      datatypeLabel="Server"
-      searchColumn={[
-        "api_server_id",
-        "api_server_name",
-        "api_server_description",
-      ]}
-    />
+    <ApiServersTableConfigContext.Provider value={contextValue}>
+      <Datatable<SchemaVaultsApiServerDefinition>
+        data={[...(data ? (data.length > 0 ? data : []) : [])]}
+        columns={columns}
+        initialVisibleColumns={{
+          actions: true,
+          select: true,
+          api_server_id: false,
+          api_server_name: true,
+          api_server_description: true,
+          owner_organization_id: false,
+        }}
+        HeaderButtons={HeaderButtons}
+        datatypeLabel="Server"
+        searchColumn={[
+          "api_server_id",
+          "api_server_name",
+          "api_server_description",
+        ]}
+      />
+    </ApiServersTableConfigContext.Provider>
   );
 }
 

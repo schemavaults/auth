@@ -12,7 +12,7 @@ import {
   Input,
   useToast,
 } from "@schemavaults/ui";
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect, useMemo } from "react";
 
 import {
   Dialog,
@@ -35,22 +35,38 @@ import { PlugZap } from "lucide-react";
 export interface ConnectAppToApiDialogProps {
   open: boolean;
   onOpenChange: (val: boolean) => void;
+  preselectedApiServerId?: string;
 }
 
 export function ConnectAppToApiDialog({
   open,
   onOpenChange,
+  preselectedApiServerId,
 }: ConnectAppToApiDialogProps): ReactElement {
   const { toast } = useToast();
-  const form = useForm<AppToApiPermission>({
-    resolver: zodResolver(appToApiPermissionSchema),
-    defaultValues: {
-      api_server_id: "",
+  const defaultValues = useMemo(
+    () => ({
+      api_server_id: preselectedApiServerId ?? "",
       client_app_id: "",
       created_at: Date.now(),
-    },
+    }),
+    [preselectedApiServerId],
+  );
+  const form = useForm<AppToApiPermission>({
+    resolver: zodResolver(appToApiPermissionSchema),
+    defaultValues,
   });
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
+
+  useEffect(() => {
+    if (open && preselectedApiServerId) {
+      form.reset({
+        api_server_id: preselectedApiServerId,
+        client_app_id: "",
+        created_at: Date.now(),
+      });
+    }
+  }, [open, preselectedApiServerId, form]);
 
   async function onSubmit(values: AppToApiPermission): Promise<void> {
     if (environment === "development") {
@@ -179,10 +195,14 @@ export function ConnectAppToApiDialog({
                     <Input
                       placeholder={"fcf06e2d-fa7f-45bf-875f-9ca5384618c9"}
                       {...field}
+                      disabled={!!preselectedApiServerId}
+                      readOnly={!!preselectedApiServerId}
                     />
                   </FormControl>
                   <FormDescription>
-                    Enter the UUID of the API server application.
+                    {preselectedApiServerId
+                      ? "API server ID is pre-selected."
+                      : "Enter the UUID of the API server application."}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
