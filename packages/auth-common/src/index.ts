@@ -65,3 +65,5 @@ export type {
   UserPendingInvitation,
   OrganizationInvitationWithUserData,
 } from "./organizations";
+
+export { MaximumBrowserCookieSize } from "./MaximumBrowserCookieSize";
