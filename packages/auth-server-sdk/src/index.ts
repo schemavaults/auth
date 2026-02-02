@@ -25,6 +25,9 @@ export { MaximumBrowserCookieSize };
 export { getSchemavaultsApiServerId } from "./get-schemavaults-api-server-id";
 export type { ApiServerId } from "@schemavaults/app-definitions";
 
+export { getSchemavaultsClientApplicationId } from "./get-schemavaults-client-application-id";
+export type { AppId } from "@schemavaults/app-definitions";
+
 export {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,

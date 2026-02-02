@@ -30,6 +30,7 @@
   },
   "scripts": {
     "codegen": "bun run ./auth-codegen.ts",
-    "dev": "next dev"
+    "dev": "bun run codegen && PORT=3007 next dev",
+    "build": "bun run codegen && next build"
   }
 }

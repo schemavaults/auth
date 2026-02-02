@@ -23,7 +23,7 @@ export interface IAuthClientConstructorOptions {
   app_id: string;
 
   // A list of API server IDs for which access tokens should be "preloaded" for
-  default_audiences?: string[];
+  default_audiences?: readonly string[];
 
   // Enable additional logging
   debug?: boolean;

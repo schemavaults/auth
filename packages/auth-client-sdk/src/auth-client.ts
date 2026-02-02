@@ -76,7 +76,7 @@ export class SchemaVaultsAuthClient
     return this.DEBUG;
   }
 
-  private readonly _default_audiences: string[];
+  private readonly _default_audiences: readonly string[];
 
   private readonly _invite_code_required: boolean;
 

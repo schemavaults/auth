@@ -3,7 +3,7 @@
 import { LoadingPage } from "@schemavaults/ui";
 import { useStartRegisterOauthPKCEFlow } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
-import { type ReactElement } from "react";
+import type { ReactElement } from "react";
 
 export default function RegisterPage(): ReactElement {
   const { toast } = useToast();

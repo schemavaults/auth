@@ -32,6 +32,54 @@ const pagesToCreate: readonly ITemplateAuthPage[] = [
   },
 ];
 
+function createClientPages(appDirectory: string, templatesDir: string) {
+  for (const page of pagesToCreate) {
+    const destPath: string = join(appDirectory, page.app_dir_path, "page.tsx");
+    if (existsSync(destPath)) {
+      console.log(
+        ` - skipping '${page.app_dir_path}/page.tsx' (already exists)`,
+      );
+      continue;
+    }
+
+    const destDir: string = dirname(destPath);
+    if (!existsSync(destDir)) {
+      mkdirSync(destDir, { recursive: true });
+    }
+
+    const templatePath: string = join(templatesDir, page.codegen_template_path);
+    const templateContent: string = readFileSync(templatePath, {
+      encoding: "utf-8",
+    });
+    writeFileSync(destPath, templateContent, { encoding: "utf-8" });
+    console.log(` - created '${page.app_dir_path}/page.tsx'`);
+  }
+}
+
+function createClientAuthProvider(appDirectory: string, templatesDir: string) {
+  const srcTemplatePath: string = join(
+    templatesDir,
+    "auth",
+    "auth-provider.tsx",
+  );
+  const destPath: string = join(appDirectory, "auth", "auth-provider.tsx");
+  if (existsSync(destPath)) {
+    console.log(` - skipping 'auth/auth-provider.tsx' (already exists)`);
+    return;
+  }
+
+  const destDir = dirname(destPath);
+  if (!existsSync(destDir)) {
+    mkdirSync(destDir, { recursive: true });
+  }
+
+  const templateContent: string = readFileSync(srcTemplatePath, {
+    encoding: "utf-8",
+  });
+  writeFileSync(destPath, templateContent, { encoding: "utf-8" });
+  console.log(` - created 'auth/auth-provider.tsx'`);
+}
+
 export default async function codegen(
   opts?: IAuthResourceServerCodegenOptions,
 ) {
@@ -55,25 +103,8 @@ export default async function codegen(
       : resolveCodegenTemplatesDirectory();
   console.log(` - resolved codegen templates directory at '${templatesDir}'`);
 
-  for (const page of pagesToCreate) {
-    const destPath: string = join(appDirectory, page.app_dir_path, "page.tsx");
-    if (existsSync(destPath)) {
-      console.log(` - skipping ${page.app_dir_path}/page.tsx (already exists)`);
-      continue;
-    }
-
-    const destDir: string = dirname(destPath);
-    if (!existsSync(destDir)) {
-      mkdirSync(destDir, { recursive: true });
-    }
-
-    const templatePath: string = join(templatesDir, page.codegen_template_path);
-    const templateContent: string = readFileSync(templatePath, {
-      encoding: "utf-8",
-    });
-    writeFileSync(destPath, templateContent, { encoding: "utf-8" });
-    console.log(` - created '${page.app_dir_path}/page.tsx'`);
-  }
+  createClientPages(appDirectory, templatesDir);
+  createClientAuthProvider(appDirectory, templatesDir);
 
   console.log(
     `[@schemavaults/auth-server-sdk/NextjsAppDirectoryPlugin] Codegen complete.`,

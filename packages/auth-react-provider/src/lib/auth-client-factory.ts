@@ -6,13 +6,16 @@ import SchemaVaultsAuthClient, {
   type ISchemaVaultsAuthClientAdapter,
 } from "@schemavaults/auth-client-sdk";
 import { ReactAuthClientSdkAdapter } from "./react-auth-client-adapter";
-import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import type {
+  ApiServerId,
+  SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 
 export interface IAuthClientFactoryInitOpts {
   environment: SchemaVaultsAppEnvironment;
   app_id: string;
   debug?: boolean;
-  default_audiences?: string[];
+  default_audiences?: readonly ApiServerId[];
   auth_server_uri: string;
   successful_authentication_redirect_uri: string;
   successful_logout_redirect_uri: string;
@@ -25,7 +28,7 @@ export class AuthClientFactory {
   private readonly secure: boolean;
   private readonly app_id: string;
   private readonly debug: boolean;
-  private default_audiences?: string[];
+  private default_audiences?: readonly ApiServerId[];
   private readonly auth_server_uri: string;
   private readonly successful_authentication_redirect_uri: string;
   private readonly successful_logout_redirect_uri: string;
