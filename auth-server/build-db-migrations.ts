@@ -1,6 +1,7 @@
 // build-db-migrations.ts
 
 import { existsSync, readdirSync, rmSync, mkdirSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { type BunPlugin } from "bun";
 
@@ -51,6 +52,8 @@ const migrationFiles = readdirSync(MIGRATIONS_SRC)
 if (migrationFiles.length === 0) {
   console.error("Error: No .ts migration files found");
   process.exit(1);
+} else {
+  console.log(`Found ${migrationFiles.length} source .ts migration files to compile!`)
 }
 
 // Marker used for sql imports - will be replaced in post-processing
@@ -89,6 +92,7 @@ const buildDbMigrationsSqlImportRewriterPlugin: BunPlugin = {
 async function buildMigrations() {
   const result = await Bun.build({
     entrypoints: [...migrationFiles],
+    root: MIGRATIONS_SRC,
     outdir: MIGRATIONS_DIST,
     target: "node",
     sourcemap: "none",
@@ -167,6 +171,16 @@ async function build() {
 
   // Post-process migration outputs to rewrite the sql import marker
   await postProcessMigrations(results[0].outputs);
+
+  async function postBuildAssertions(): Promise<void> {
+    const migrationsDirContents: readonly string[] = await readdir(MIGRATIONS_DIST, { recursive: false });
+    for (const file of migrationsDirContents) {
+      if (!file.endsWith(".js")) {
+        throw new Error("Expected all files in dist/migrations directory to end with .js!")
+      }
+    }
+  }
+  await postBuildAssertions();
 
   function printMigrationsList() {
     console.log("");
