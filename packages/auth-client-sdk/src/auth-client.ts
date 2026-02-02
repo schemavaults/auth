@@ -847,8 +847,7 @@ export class SchemaVaultsAuthClient
     }
 
     if (!response || !response.ok || response.status !== 200) {
-      const errorMsg: string =
-        "Failed to exchange authorization code for access token";
+      const errorMsg: string = `Failed to exchange authorization code for access token (status code: ${response.status})`;
       console.error(errorMsg);
       throw new Error(errorMsg);
     }
