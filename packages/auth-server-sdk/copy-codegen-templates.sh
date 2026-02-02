@@ -3,21 +3,10 @@
 
 set -e
 
-if ! command -v jq &> /dev/null
-then
-    echo "Error: jq is not installed" >&2
-    exit 1
-fi
+DIR_NAME=$(basename "$(pwd)")
 
-if [ ! -f package.json ]; then
-    echo "Error: No package.json file found. Are you in the auth-server-sdk directory?" >&2
-    exit 1
-fi
-
-PACKAGE_NAME=$(jq -r '.name' "./package.json")
-
-if [ "$PACKAGE_NAME" != "@schemavaults/auth-server-sdk" ]; then
-    echo "Error: This script is only for @schemavaults/auth-server-sdk" >&2
+if [ "$DIR_NAME" != "auth-server-sdk" ]; then
+    echo "Error: This script must be run from the auth-server-sdk directory" >&2
     exit 1
 fi
 
