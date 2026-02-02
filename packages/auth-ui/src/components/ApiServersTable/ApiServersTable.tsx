@@ -24,12 +24,15 @@ export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
   organization_id?: string;
   preloaded?: PreloadedApiServersTableData | undefined;
+  showConnectAppToApi?: boolean;
 }
 
 function ApiServersTableHeaderButtons({
   queryType,
+  showConnectAppToApi,
 }: {
   queryType: ListApiServersQueryType;
+  showConnectAppToApi?: boolean;
 }) {
   const onOpenChangeCreateApi = useContext(
     CreateApiServerDialogOpenDispatchContext,
@@ -43,7 +46,7 @@ function ApiServersTableHeaderButtons({
       {(queryType === "all" || queryType === "org") && (
         <CreateApiServerDialogTrigger onOpenChange={onOpenChangeCreateApi} />
       )}
-      {queryType === "all" && (
+      {(queryType === "all" || showConnectAppToApi) && (
         <ConnectAppToApiDialogTrigger
           onOpenChange={onOpenChangeConnectAppToApi}
         />
@@ -56,6 +59,7 @@ export function ApiServersTable({
   queryType,
   organization_id,
   preloaded,
+  showConnectAppToApi,
 }: ApiServersDatatableProps): ReactElement {
   const apis: SWRResponse<readonly SchemaVaultsApiServerDefinition[], Error> =
     useApiServersList({
@@ -67,9 +71,9 @@ export function ApiServersTable({
 
   const HeaderButtons: FC = useMemo(() => {
     return function ApiServersTableHeaderButtonsWithQueryType() {
-      return <ApiServersTableHeaderButtons queryType={queryType} />;
+      return <ApiServersTableHeaderButtons queryType={queryType} showConnectAppToApi={showConnectAppToApi} />;
     };
-  }, [queryType]);
+  }, [queryType, showConnectAppToApi]);
 
   // Assert that 'owner_organization_id' field is present from server
   useMemo(() => {

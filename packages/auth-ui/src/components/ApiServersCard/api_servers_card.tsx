@@ -32,6 +32,7 @@ export interface ApiServersCardProps {
   organization_id?: string;
   preloaded?: PreloadedApiServersTableData;
   uuid: () => string;
+  showConnectAppToApi?: boolean;
 }
 
 export function ApiServersCard(props: ApiServersCardProps): ReactElement {
@@ -63,6 +64,7 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
               queryType={props.queryType}
               organization_id={props.organization_id}
               preloaded={props.preloaded}
+              showConnectAppToApi={props.showConnectAppToApi}
             />
           </CardContent>
           <CardFooter>
@@ -80,7 +82,7 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
           onOpenChange={setCreateApiServerDialogOpen}
           uuid={props.uuid}
         />
-        {props.queryType === "all" && (
+        {(props.queryType === "all" || props.showConnectAppToApi) && (
           <ConnectAppToApiDialog
             open={connectAppToApiDialogOpen}
             onOpenChange={setConnectAppToApiDialogOpen}

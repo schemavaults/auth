@@ -65,15 +65,17 @@ async function PreloadedOrgPage(
   const registry = new OrganizationsRegistry(dbh.db);
 
   // Check access: user must be admin OR member of the organization
-  if (!user.admin) {
-    const userMembershipIds: readonly OrganizationID[] = await registry.listUserOrganizationMembershipIds(
-      user.uid,
-      user.admin
-    );
-    const isMember = userMembershipIds.includes(organization_id);
-    if (!isMember) {
+  // Also determine if user is an owner of this organization
+  let isOrgOwner = false;
+  if (user.admin) {
+    isOrgOwner = true;
+  } else {
+    const userMemberships = await registry.listUserOrganizationMemberships(user.uid, false);
+    const userMembership = userMemberships.find(m => m.organization_id === organization_id);
+    if (!userMembership) {
       redirectWithError(403, 'forbidden')
     }
+    isOrgOwner = userMembership?.role === "owner" || userMembership?.role === 'admin';
   }
 
   let organization: OrganizationDefinition;
@@ -116,6 +118,7 @@ async function PreloadedOrgPage(
       preloaded_members={preloaded_members}
       preloaded_apps={preloaded_apps}
       preloaded_api_servers={preloaded_api_servers}
+      isOrgOwner={isOrgOwner}
     />
   );
 }

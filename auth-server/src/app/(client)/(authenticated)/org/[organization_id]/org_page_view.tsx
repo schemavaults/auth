@@ -22,6 +22,7 @@ export interface OrgPageViewProps {
   preloaded_members: readonly OrganizationMemberTableData[];
   preloaded_apps: PreloadedAppsTableDataWithDomainRefs;
   preloaded_api_servers: PreloadedApiServersTableData;
+  isOrgOwner: boolean;
 }
 
 function OrgTitleCard({ organization }: Pick<OrgPageViewProps, 'organization'>): ReactElement {
@@ -44,6 +45,7 @@ export default function OrgPageView({
   preloaded_members,
   preloaded_apps,
   preloaded_api_servers,
+  isOrgOwner,
 }: OrgPageViewProps): ReactElement {
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
@@ -119,6 +121,7 @@ export default function OrgPageView({
         cardClassName="w-full"
         preloaded={preloaded_api_servers}
         uuid={uuidSync}
+        showConnectAppToApi={isOrgOwner}
       />
 
 

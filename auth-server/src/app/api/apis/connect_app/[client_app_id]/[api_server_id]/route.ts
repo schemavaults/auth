@@ -4,6 +4,9 @@ import {
   SchemaVaultsAppToApiPermissionsRegistry,
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
+import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
+import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
+import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import {
   type AppToApiPermission,
   appToApiPermissionSchema,
@@ -67,16 +70,64 @@ export async function POST(
         console.log("[/api/apis/connect_app] POST request received");
       }
 
+      // Allow admin access OR organization owner access
       if (!user.admin) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "You must be an admin to connect an app to an API server",
-          } satisfies ResourceCreationResponse,
-          {
-            status: 403,
-          },
-        );
+        const appsRegistry = new SchemaVaultsAppRegistry(dbh.db);
+        const apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
+        const organizationsRegistry = new OrganizationsRegistry(dbh.db);
+
+        // Load app and API server
+        const [app, apiServer] = await Promise.all([
+          appsRegistry.getApp(client_app_id),
+          apiServerRegistry.getApiServer(api_server_id),
+        ]);
+
+        if (!app) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "App not found",
+            } satisfies ResourceCreationResponse,
+            { status: 404 }
+          );
+        }
+        if (!apiServer) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "API server not found",
+            } satisfies ResourceCreationResponse,
+            { status: 404 }
+          );
+        }
+
+        // Both must belong to the same organization
+        const appOrgId = app.owner_organization_id;
+        const apiOrgId = apiServer.owner_organization_id;
+
+        if (!appOrgId || !apiOrgId || appOrgId !== apiOrgId) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "App and API server must belong to the same organization",
+            } satisfies ResourceCreationResponse,
+            { status: 403 }
+          );
+        }
+
+        // User must be owner of that organization
+        const userMemberships = await organizationsRegistry.listUserOrganizationMemberships(user.uid, false);
+        const userMembership = userMemberships.find(m => m.organization_id === appOrgId);
+
+        if (!userMembership || userMembership.role !== "owner") {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "You must be an organization owner to connect apps to API servers",
+            } satisfies ResourceCreationResponse,
+            { status: 403 }
+          );
+        }
       }
 
       let newPermission: AppToApiPermission;
