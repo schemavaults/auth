@@ -5,7 +5,7 @@ import PageContainer from "@/components/PageContainer";
 import useSWR, { SWRResponse } from "swr";
 import type { ReactElement } from "react";
 import { type ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
-import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn } from "@schemavaults/ui";
+import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn, useToast } from "@schemavaults/ui";
 import { CheckCircle, ClipboardCopy } from "lucide-react";
 import JwksAccessKeysUsageInstructions from "./jwks-access-keys-usage-instructions";
 import type { SuccessKeyMetadataResponse, KeyMetadataResponse } from "./KeyMetadataResponse";
@@ -58,6 +58,7 @@ function DisplayGeneratedPrivateKeyForOneTimeCopy({
   generatedPrivateKey,
   api_server_id
 }: DisplayGeneratedPrivateKeyForOneTimeCopyProps): ReactElement {
+  const { toast } = useToast();
   const [copied, setCopied] = useState<boolean>(false);
   const [displayFormat, setDisplayFormat] = useState<PrivateKeyDisplayFormat>("env");
 
@@ -73,8 +74,18 @@ function DisplayGeneratedPrivateKeyForOneTimeCopy({
       await navigator.clipboard.writeText(formattedContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (e) {
-      console.error("Failed to copy to clipboard:", e);
+    } catch (e: unknown) {
+      console.error("Failed to copy content to clipboard:", e);
+      let errorMessage: string = "An unknown error has occurred.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      }
+      toast({
+        variant: "destructive",
+        title: "Failed to copy content to clipboard!",
+        description: errorMessage
+      });
+      return;
     }
   }, [formattedContent]);
 
