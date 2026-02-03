@@ -30,7 +30,7 @@ export default function createAndLoginAsRegularUser(
   ): Cypress.Chainable<boolean> {
     return cy
       .is_authenticated()
-      .then((authenticated): Cypress.Chainable<boolean> => {
+      .then((authenticated: boolean): Cypress.Chainable<boolean> => {
         if (authenticated) {
           cy.logout();
         }
@@ -81,8 +81,9 @@ export default function createAndLoginAsRegularUser(
       } else {
         return cy
           .register(credentials.email, credentials.password)
-          .then((status_code: number) =>
-            cy.wrap(status_code === 200, { log: false }),
+          .then(
+            (status_code: number): Cypress.Chainable<boolean> =>
+              cy.wrap(status_code === 200, { log: false }),
           );
       }
     });

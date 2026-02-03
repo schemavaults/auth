@@ -146,8 +146,8 @@ export function CreateOrganizationForm({
         title: "Created new organization successfully",
       });
       clearOrganizationsCache();
-      onSuccess();
       form.reset();
+      onSuccess();
       return;
     });
     return;

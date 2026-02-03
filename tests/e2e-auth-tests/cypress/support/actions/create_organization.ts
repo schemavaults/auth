@@ -107,7 +107,7 @@ export default function createOrganization(
                 interception.response?.statusCode &&
                   cy.wrap(interception.response?.statusCode).should("eq", 200);
                 cy.log(
-                  "Organization creation request appears to have been a success!",
+                  `Organization creation request (for org with ID '${organization_id}' and name '${name}') appears to have been a success!`,
                 );
                 cy.get(`#${createOrganizationDialogContentId}`, {
                   log: false,

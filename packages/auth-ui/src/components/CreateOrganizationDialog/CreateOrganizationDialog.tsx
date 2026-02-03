@@ -22,7 +22,7 @@ export function CreateOrganizationDialog({
         id="create-organization-dialog-content"
         className="sm:max-w-[425px]"
       >
-        <CreateOrganizationForm onSuccess={() => onOpenChange(false)} />
+        <CreateOrganizationForm onSuccess={(): void => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   );

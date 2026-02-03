@@ -123,7 +123,7 @@ describe("Connect App to API Server", () => {
     });
 
     it("connecting apps from different organizations works for superuser", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser().then((success: boolean) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -188,7 +188,7 @@ describe("Connect App to API Server", () => {
   describe("Organization Owner Success Cases", () => {
     it("non-admin org owner can connect app to API within their organization", () => {
       // First create org and resources as admin
-      cy.create_and_login_as_superuser().then((adminSuccess) => {
+      cy.create_and_login_as_superuser().then((adminSuccess: boolean) => {
         if (!adminSuccess) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -229,15 +229,12 @@ describe("Connect App to API Server", () => {
                 // Create a regular user to become owner
                 cy.generate_random_test_user_credentials().then(
                   (ownerCredentials: { email: string; password: string }) => {
-                    // Get current admin credentials
-                    cy.getCookie("refresh_token").then(() => {
-                      // We need to create the regular user first
-                      // Logout admin, register the new user, then login as admin again
-                      cy.logout();
+                    // We need to create the regular user first
+                    // Logout admin, register the new user, then login as admin again
+                    cy.logout();
 
-                      cy.create_and_login_as_regular_user(
-                        ownerCredentials,
-                      ).then((regularSuccess) => {
+                    cy.create_and_login_as_regular_user(ownerCredentials).then(
+                      (regularSuccess) => {
                         if (!regularSuccess) {
                           throw new Error("Failed to create regular user");
                         }
@@ -282,56 +279,82 @@ describe("Connect App to API Server", () => {
 
                             // Now login as admin and promote the member to owner
                             cy.logout();
-                            cy.create_and_login_as_superuser().then(() => {
-                              cy.promote_member_to_owner({
-                                organization_id,
-                                user_email: ownerCredentials.email,
-                              }).then((promoteSuccess) => {
-                                if (!promoteSuccess) {
+                            cy.create_and_login_as_superuser().then(
+                              (loginAsSuperuserSuccess: boolean) => {
+                                if (!loginAsSuperuserSuccess) {
                                   throw new Error(
-                                    "Failed to promote member to owner",
+                                    "Failed to login as superuser in order to promote user to org owner!",
                                   );
                                 }
 
-                                // Now logout and login as the owner
-                                cy.logout();
-                                cy.login(
-                                  ownerCredentials.email,
-                                  ownerCredentials.password,
-                                ).then((ownerLoginSuccess) => {
-                                  if (!ownerLoginSuccess) {
-                                    throw new Error("Failed to login as owner");
+                                cy.promote_member_to_owner({
+                                  organization_id,
+                                  user_email: ownerCredentials.email,
+                                }).then((promoteSuccess) => {
+                                  if (!promoteSuccess) {
+                                    throw new Error(
+                                      "Failed to promote member to owner",
+                                    );
                                   }
 
-                                  // Verify they're NOT an admin
-                                  cy.is_admin().should("be.false");
+                                  // Now logout and login as the owner
+                                  cy.logout();
+                                  cy.login(
+                                    ownerCredentials.email,
+                                    ownerCredentials.password,
+                                  ).then((ownerLoginSuccess) => {
+                                    if (!ownerLoginSuccess) {
+                                      throw new Error(
+                                        "Failed to login as new organization owner",
+                                      );
+                                    }
 
-                                  // Now connect app to API as org owner
-                                  cy.connect_app_to_api({
-                                    client_app_id,
-                                    api_server_id,
-                                    organization_id,
-                                  }).then((result) => {
-                                    expect(result.success).to.be.true;
-                                    expect(result.status_code).to.equal(200);
+                                    cy.log(
+                                      `Successfully logged in as owner of new organization '${ownerCredentials.email}'`,
+                                    );
 
-                                    // Cleanup - login as admin to delete org
-                                    cy.logout();
-                                    cy.create_and_login_as_superuser().then(
-                                      () => {
-                                        cy.delete_organization({
-                                          organization_id,
-                                        });
+                                    // Verify they're NOT an admin
+                                    cy.is_admin().then(
+                                      (is_regular_user_an_admin: boolean) => {
+                                        if (is_regular_user_an_admin) {
+                                          throw new Error(
+                                            "Expected newly created user to not be an admin!",
+                                          );
+                                        }
                                       },
                                     );
+
+                                    cy.log(
+                                      "Attempting to connect app to API...",
+                                    );
+
+                                    // Now connect app to API as org owner
+                                    cy.connect_app_to_api({
+                                      client_app_id,
+                                      api_server_id,
+                                      organization_id,
+                                    }).then((result) => {
+                                      expect(result.success).to.be.true;
+                                      expect(result.status_code).to.equal(200);
+
+                                      // Cleanup - login as admin to delete org
+                                      cy.logout();
+                                      cy.create_and_login_as_superuser().then(
+                                        () => {
+                                          cy.delete_organization({
+                                            organization_id,
+                                          });
+                                        },
+                                      );
+                                    });
                                   });
                                 });
-                              });
-                            });
+                              },
+                            );
                           });
                         });
-                      });
-                    });
+                      },
+                    );
                   },
                 );
               });
