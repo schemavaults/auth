@@ -90,7 +90,8 @@ export default function inviteAndAcceptOrgMembership(
     .then(
       (interception): Cypress.Chainable<InviteAndAcceptOrgMembershipResult> => {
         const inviteStatusCode = interception.response?.statusCode ?? 500;
-        const inviteSuccess = inviteStatusCode === 200;
+        const inviteSuccess: boolean =
+          inviteStatusCode === 200 || inviteStatusCode === 201;
 
         if (!inviteSuccess) {
           cy.log(`Failed to create invitation with status ${inviteStatusCode}`);
