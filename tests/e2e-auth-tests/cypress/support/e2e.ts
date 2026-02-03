@@ -15,7 +15,7 @@
 
 // Import commands.js using ES2015 syntax:
 import "./commands";
-import type { CreateAppParams } from "./actions/create_app";
+import type { CreateAppParams, CreateAppResult } from "./actions/create_app";
 import type {
   CreateApiServerParams,
   CreateApiServerResult,
@@ -69,7 +69,7 @@ declare global {
       create_api_server(
         params: CreateApiServerParams,
       ): Chainable<CreateApiServerResult>;
-      create_app(params: CreateAppParams): Chainable<boolean>;
+      create_app(params: CreateAppParams): Chainable<CreateAppResult>;
       generate_jwks_access_key(
         api_server_id: string,
       ): Chainable<GenerateJwksAccessKeyResult>;

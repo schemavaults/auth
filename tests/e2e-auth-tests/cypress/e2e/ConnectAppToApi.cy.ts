@@ -20,7 +20,11 @@ describe("Connect App to API Server", () => {
               app_name,
               app_description,
               organization_id,
-            }).then(() => {
+            }).then((appResult) => {
+              if (!appResult.success || !appResult.app_id) {
+                throw new Error("Failed to create app");
+              }
+
               // Create an API server in the organization
               const api_server_name = `Test API ${randomCode}`;
               const api_server_description = "Test API server for connect test";
@@ -34,34 +38,17 @@ describe("Connect App to API Server", () => {
                   throw new Error("Failed to create API server");
                 }
 
-                // We need the app_id - let's get it from the org page
-                cy.visit(`/org/${organization_id}`);
-                cy.wait_for_page_hydration();
+                // Now connect the app to the API from the admin APIs page
+                cy.connect_app_to_api({
+                  client_app_id: appResult.app_id!,
+                  api_server_id: apiResult.api_server_id!,
+                  // Don't pass organization_id to use admin page
+                }).then((result) => {
+                  expect(result.success).to.be.true;
+                  expect(result.status_code).to.equal(200);
 
-                // Find the app row and get its ID from the Copy App ID action
-                cy.contains("tr", app_name).within(() => {
-                  cy.get('[data-testid="app-actions-button"]').click();
-                });
-
-                // Click "Copy App ID" and get the value
-                cy.get('[data-testid="copy-app-id-menu-item"]').click();
-
-                // Read from clipboard
-                cy.window().then((win) => {
-                  win.navigator.clipboard.readText().then((client_app_id) => {
-                    // Now connect the app to the API from the admin APIs page
-                    cy.connect_app_to_api({
-                      client_app_id,
-                      api_server_id: apiResult.api_server_id!,
-                      // Don't pass organization_id to use admin page
-                    }).then((result) => {
-                      expect(result.success).to.be.true;
-                      expect(result.status_code).to.equal(200);
-
-                      // Cleanup
-                      cy.delete_organization({ organization_id });
-                    });
-                  });
+                  // Cleanup
+                  cy.delete_organization({ organization_id });
                 });
               });
             });
@@ -88,7 +75,11 @@ describe("Connect App to API Server", () => {
               app_name,
               app_description,
               organization_id,
-            }).then(() => {
+            }).then((appResult) => {
+              if (!appResult.success || !appResult.app_id) {
+                throw new Error("Failed to create app");
+              }
+
               const api_server_name = `Org Page API ${randomCode}`;
               const api_server_description = "Test API from org page";
 
@@ -101,31 +92,17 @@ describe("Connect App to API Server", () => {
                   throw new Error("Failed to create API server");
                 }
 
-                cy.visit(`/org/${organization_id}`);
-                cy.wait_for_page_hydration();
+                // Connect from org page (pass organization_id)
+                cy.connect_app_to_api({
+                  client_app_id: appResult.app_id!,
+                  api_server_id: apiResult.api_server_id!,
+                  organization_id,
+                }).then((result) => {
+                  expect(result.success).to.be.true;
+                  expect(result.status_code).to.equal(200);
 
-                // Get app ID from the table
-                cy.contains("tr", app_name).within(() => {
-                  cy.get('[data-testid="app-actions-button"]').click();
-                });
-
-                cy.get('[data-testid="copy-app-id-menu-item"]').click();
-
-                cy.window().then((win) => {
-                  win.navigator.clipboard.readText().then((client_app_id) => {
-                    // Connect from org page (pass organization_id)
-                    cy.connect_app_to_api({
-                      client_app_id,
-                      api_server_id: apiResult.api_server_id!,
-                      organization_id,
-                    }).then((result) => {
-                      expect(result.success).to.be.true;
-                      expect(result.status_code).to.equal(200);
-
-                      // Cleanup
-                      cy.delete_organization({ organization_id });
-                    });
-                  });
+                  // Cleanup
+                  cy.delete_organization({ organization_id });
                 });
               });
             });
@@ -158,7 +135,13 @@ describe("Connect App to API Server", () => {
               app_name,
               app_description,
               organization_id,
-            }).then(() => {
+            }).then((appResult) => {
+              if (!appResult.success || !appResult.app_id) {
+                throw new Error("Failed to create app");
+              }
+
+              const client_app_id = appResult.app_id;
+
               cy.create_api_server({
                 api_server_name,
                 api_server_description,
@@ -170,90 +153,76 @@ describe("Connect App to API Server", () => {
 
                 const api_server_id = apiResult.api_server_id;
 
-                // Get app ID
-                cy.visit(`/org/${organization_id}`);
-                cy.wait_for_page_hydration();
+                // Create a regular user to become owner
+                cy.generate_random_test_user_credentials().then((ownerCredentials) => {
+                  // Get current admin credentials
+                  cy.getCookie("refresh_token").then(() => {
+                    // We need to create the regular user first
+                    // Logout admin, register the new user, then login as admin again
+                    cy.logout();
 
-                cy.contains("tr", app_name).within(() => {
-                  cy.get('[data-testid="app-actions-button"]').click();
-                });
+                    cy.create_and_login_as_regular_user(ownerCredentials).then((regularSuccess) => {
+                      if (!regularSuccess) {
+                        throw new Error("Failed to create regular user");
+                      }
 
-                cy.get('[data-testid="copy-app-id-menu-item"]').click();
+                      // Logout regular user
+                      cy.logout();
 
-                cy.window().then((win) => {
-                  win.navigator.clipboard.readText().then((client_app_id) => {
-                    // Create a regular user to become owner
-                    cy.generate_random_test_user_credentials().then((ownerCredentials) => {
-                      // Get current admin credentials
-                      cy.getCookie("refresh_token").then(() => {
-                        // We need to create the regular user first
-                        // Logout admin, register the new user, then login as admin again
-                        cy.logout();
+                      // Login as admin again to invite the user
+                      cy.create_and_login_as_superuser().then(() => {
+                        // Invite the regular user to the organization
+                        cy.invite_and_accept_org_membership({
+                          organization_id,
+                          inviter_credentials: {
+                            // We'll use the admin invite flow differently
+                            // Actually, let's simplify - just use the invite flow
+                            email: Cypress.env("SUPERUSER_EMAIL") || "admin@test.com",
+                            password: Cypress.env("SUPERUSER_PASSWORD") || "test-password",
+                          },
+                          invitee_credentials: ownerCredentials,
+                        }).then((inviteResult) => {
+                          // The above will fail because we don't have the admin credentials stored
+                          // Let me use a different approach - direct API invitation then accept
 
-                        cy.create_and_login_as_regular_user(ownerCredentials).then((regularSuccess) => {
-                          if (!regularSuccess) {
-                            throw new Error("Failed to create regular user");
+                          if (!inviteResult.invite_success || !inviteResult.accept_success) {
+                            throw new Error("Failed to complete invite and accept flow");
                           }
 
-                          // Logout regular user
+                          // Now login as admin and promote the member to owner
                           cy.logout();
-
-                          // Login as admin again to invite the user
                           cy.create_and_login_as_superuser().then(() => {
-                            // Invite the regular user to the organization
-                            cy.invite_and_accept_org_membership({
+                            cy.promote_member_to_owner({
                               organization_id,
-                              inviter_credentials: {
-                                // We'll use the admin invite flow differently
-                                // Actually, let's simplify - just use the invite flow
-                                email: Cypress.env("SUPERUSER_EMAIL") || "admin@test.com",
-                                password: Cypress.env("SUPERUSER_PASSWORD") || "test-password",
-                              },
-                              invitee_credentials: ownerCredentials,
-                            }).then((inviteResult) => {
-                              // The above will fail because we don't have the admin credentials stored
-                              // Let me use a different approach - direct API invitation then accept
-
-                              if (!inviteResult.invite_success || !inviteResult.accept_success) {
-                                throw new Error("Failed to complete invite and accept flow");
+                              user_email: ownerCredentials.email,
+                            }).then((promoteSuccess) => {
+                              if (!promoteSuccess) {
+                                throw new Error("Failed to promote member to owner");
                               }
 
-                              // Now login as admin and promote the member to owner
+                              // Now logout and login as the owner
                               cy.logout();
-                              cy.create_and_login_as_superuser().then(() => {
-                                cy.promote_member_to_owner({
+                              cy.login(ownerCredentials.email, ownerCredentials.password).then((ownerLoginSuccess) => {
+                                if (!ownerLoginSuccess) {
+                                  throw new Error("Failed to login as owner");
+                                }
+
+                                // Verify they're NOT an admin
+                                cy.is_admin().should("be.false");
+
+                                // Now connect app to API as org owner
+                                cy.connect_app_to_api({
+                                  client_app_id,
+                                  api_server_id,
                                   organization_id,
-                                  user_email: ownerCredentials.email,
-                                }).then((promoteSuccess) => {
-                                  if (!promoteSuccess) {
-                                    throw new Error("Failed to promote member to owner");
-                                  }
+                                }).then((result) => {
+                                  expect(result.success).to.be.true;
+                                  expect(result.status_code).to.equal(200);
 
-                                  // Now logout and login as the owner
+                                  // Cleanup - login as admin to delete org
                                   cy.logout();
-                                  cy.login(ownerCredentials.email, ownerCredentials.password).then((ownerLoginSuccess) => {
-                                    if (!ownerLoginSuccess) {
-                                      throw new Error("Failed to login as owner");
-                                    }
-
-                                    // Verify they're NOT an admin
-                                    cy.is_admin().should("be.false");
-
-                                    // Now connect app to API as org owner
-                                    cy.connect_app_to_api({
-                                      client_app_id,
-                                      api_server_id,
-                                      organization_id,
-                                    }).then((result) => {
-                                      expect(result.success).to.be.true;
-                                      expect(result.status_code).to.equal(200);
-
-                                      // Cleanup - login as admin to delete org
-                                      cy.logout();
-                                      cy.create_and_login_as_superuser().then(() => {
-                                        cy.delete_organization({ organization_id });
-                                      });
-                                    });
+                                  cy.create_and_login_as_superuser().then(() => {
+                                    cy.delete_organization({ organization_id });
                                   });
                                 });
                               });
@@ -293,7 +262,13 @@ describe("Connect App to API Server", () => {
               app_name,
               app_description,
               organization_id,
-            }).then(() => {
+            }).then((appResult) => {
+              if (!appResult.success || !appResult.app_id) {
+                throw new Error("Failed to create app");
+              }
+
+              const client_app_id = appResult.app_id;
+
               cy.create_api_server({
                 api_server_name,
                 api_server_description,
@@ -305,92 +280,78 @@ describe("Connect App to API Server", () => {
 
                 const api_server_id = apiResult.api_server_id;
 
-                // Get app ID
-                cy.visit(`/org/${organization_id}`);
-                cy.wait_for_page_hydration();
+                // Create a regular user (will be member, not owner)
+                cy.generate_random_test_user_credentials().then((memberCredentials) => {
+                  cy.logout();
 
-                cy.contains("tr", app_name).within(() => {
-                  cy.get('[data-testid="app-actions-button"]').click();
-                });
+                  cy.create_and_login_as_regular_user(memberCredentials).then((regularSuccess) => {
+                    if (!regularSuccess) {
+                      throw new Error("Failed to create regular user");
+                    }
 
-                cy.get('[data-testid="copy-app-id-menu-item"]').click();
+                    cy.logout();
+                    cy.create_and_login_as_superuser().then(() => {
+                      // Invite the user to the organization (as member, not owner)
+                      cy.visit(`/org/${organization_id}`);
+                      cy.wait_for_page_hydration();
 
-                cy.window().then((win) => {
-                  win.navigator.clipboard.readText().then((client_app_id) => {
-                    // Create a regular user (will be member, not owner)
-                    cy.generate_random_test_user_credentials().then((memberCredentials) => {
-                      cy.logout();
+                      cy.open_dialog_with_button(
+                        "open-invite-member-dialog-button",
+                        "invite-member-dialog-content",
+                      ).then(() => {
+                        cy.get('[data-testid="invite-member-identifier-input"]')
+                          .clear()
+                          .type(memberCredentials.email);
 
-                      cy.create_and_login_as_regular_user(memberCredentials).then((regularSuccess) => {
-                        if (!regularSuccess) {
-                          throw new Error("Failed to create regular user");
-                        }
+                        cy.intercept({
+                          method: "POST",
+                          url: `**/api/organizations/${organization_id}/invitations`,
+                          times: 1,
+                        }).as("inviteRequest");
 
-                        cy.logout();
-                        cy.create_and_login_as_superuser().then(() => {
-                          // Invite the user to the organization (as member, not owner)
-                          cy.visit(`/org/${organization_id}`);
-                          cy.wait_for_page_hydration();
+                        cy.get('[data-testid="submit-invite-member-form-button"]').click();
 
-                          cy.open_dialog_with_button(
-                            "open-invite-member-dialog-button",
-                            "invite-member-dialog-content",
-                          ).then(() => {
-                            cy.get('[data-testid="invite-member-identifier-input"]')
-                              .clear()
-                              .type(memberCredentials.email);
+                        cy.wait("@inviteRequest").then((interception) => {
+                          expect(interception.response?.statusCode).to.equal(200);
+
+                          cy.logout();
+
+                          // Login as member and accept invitation
+                          cy.login(memberCredentials.email, memberCredentials.password).then(() => {
+                            cy.visit("/account");
+                            cy.wait_for_page_hydration();
 
                             cy.intercept({
-                              method: "POST",
-                              url: `**/api/organizations/${organization_id}/invitations`,
+                              method: "PATCH",
+                              url: `**/api/organizations/${organization_id}/invitations/*`,
                               times: 1,
-                            }).as("inviteRequest");
+                            }).as("acceptRequest");
 
-                            cy.get('[data-testid="submit-invite-member-form-button"]').click();
+                            cy.contains("button", "Accept").first().click();
 
-                            cy.wait("@inviteRequest").then((interception) => {
-                              expect(interception.response?.statusCode).to.equal(200);
+                            cy.wait("@acceptRequest").then((acceptInterception) => {
+                              expect(acceptInterception.response?.statusCode).to.equal(200);
 
-                              cy.logout();
+                              // Now try to connect app to API as member (should fail with 403)
+                              cy.intercept({
+                                method: "POST",
+                                url: `**/api/apis/connect_app/${client_app_id}/${api_server_id}`,
+                                times: 1,
+                              }).as("connectRequest");
 
-                              // Login as member and accept invitation
-                              cy.login(memberCredentials.email, memberCredentials.password).then(() => {
-                                cy.visit("/account");
-                                cy.wait_for_page_hydration();
+                              // Make direct API call since UI might not be accessible
+                              cy.request({
+                                method: "POST",
+                                url: `/api/apis/connect_app/${client_app_id}/${api_server_id}`,
+                                failOnStatusCode: false,
+                              }).then((response) => {
+                                expect(response.status).to.equal(403);
+                                expect(response.body.message).to.include("owner");
 
-                                cy.intercept({
-                                  method: "PATCH",
-                                  url: `**/api/organizations/${organization_id}/invitations/*`,
-                                  times: 1,
-                                }).as("acceptRequest");
-
-                                cy.contains("button", "Accept").first().click();
-
-                                cy.wait("@acceptRequest").then((acceptInterception) => {
-                                  expect(acceptInterception.response?.statusCode).to.equal(200);
-
-                                  // Now try to connect app to API as member (should fail with 403)
-                                  cy.intercept({
-                                    method: "POST",
-                                    url: `**/api/apis/connect_app/${client_app_id}/${api_server_id}`,
-                                    times: 1,
-                                  }).as("connectRequest");
-
-                                  // Make direct API call since UI might not be accessible
-                                  cy.request({
-                                    method: "POST",
-                                    url: `/api/apis/connect_app/${client_app_id}/${api_server_id}`,
-                                    failOnStatusCode: false,
-                                  }).then((response) => {
-                                    expect(response.status).to.equal(403);
-                                    expect(response.body.message).to.include("owner");
-
-                                    // Cleanup - login as admin to delete org
-                                    cy.logout();
-                                    cy.create_and_login_as_superuser().then(() => {
-                                      cy.delete_organization({ organization_id });
-                                    });
-                                  });
+                                // Cleanup - login as admin to delete org
+                                cy.logout();
+                                cy.create_and_login_as_superuser().then(() => {
+                                  cy.delete_organization({ organization_id });
                                 });
                               });
                             });
@@ -425,7 +386,13 @@ describe("Connect App to API Server", () => {
                 app_name: `App in Org 1 ${randomCode}`,
                 app_description: "App in first org",
                 organization_id: org1_id,
-              }).then(() => {
+              }).then((appResult) => {
+                if (!appResult.success || !appResult.app_id) {
+                  throw new Error("Failed to create app");
+                }
+
+                const client_app_id = appResult.app_id;
+
                 // Create API in org 2
                 cy.create_api_server({
                   api_server_name: `API in Org 2 ${randomCode}`,
@@ -436,32 +403,18 @@ describe("Connect App to API Server", () => {
                     throw new Error("Failed to create API server");
                   }
 
-                  // Get app ID from org 1
-                  cy.visit(`/org/${org1_id}`);
-                  cy.wait_for_page_hydration();
+                  // Try to connect app from org1 to API from org2 (should fail)
+                  cy.request({
+                    method: "POST",
+                    url: `/api/apis/connect_app/${client_app_id}/${apiResult.api_server_id}`,
+                    failOnStatusCode: false,
+                  }).then((response) => {
+                    expect(response.status).to.equal(403);
+                    expect(response.body.message).to.include("same organization");
 
-                  cy.contains("tr", `App in Org 1 ${randomCode}`).within(() => {
-                    cy.get('[data-testid="app-actions-button"]').click();
-                  });
-
-                  cy.get('[data-testid="copy-app-id-menu-item"]').click();
-
-                  cy.window().then((win) => {
-                    win.navigator.clipboard.readText().then((client_app_id) => {
-                      // Try to connect app from org1 to API from org2 (should fail)
-                      cy.request({
-                        method: "POST",
-                        url: `/api/apis/connect_app/${client_app_id}/${apiResult.api_server_id}`,
-                        failOnStatusCode: false,
-                      }).then((response) => {
-                        expect(response.status).to.equal(403);
-                        expect(response.body.message).to.include("same organization");
-
-                        // Cleanup - delete both orgs
-                        cy.delete_organization({ organization_id: org1_id });
-                        cy.delete_organization({ organization_id: org2_id });
-                      });
-                    });
+                    // Cleanup - delete both orgs
+                    cy.delete_organization({ organization_id: org1_id });
+                    cy.delete_organization({ organization_id: org2_id });
                   });
                 });
               });
@@ -528,34 +481,26 @@ describe("Connect App to API Server", () => {
               app_name: `Valid App ${randomCode}`,
               app_description: "Valid app",
               organization_id,
-            }).then(() => {
-              // Get the app ID
-              cy.visit(`/org/${organization_id}`);
-              cy.wait_for_page_hydration();
+            }).then((appResult) => {
+              if (!appResult.success || !appResult.app_id) {
+                throw new Error("Failed to create app");
+              }
 
-              cy.contains("tr", `Valid App ${randomCode}`).within(() => {
-                cy.get('[data-testid="app-actions-button"]').click();
-              });
+              const client_app_id = appResult.app_id;
 
-              cy.get('[data-testid="copy-app-id-menu-item"]').click();
+              // Use a fake API server ID
+              const fake_api_id = "00000000-0000-0000-0000-000000000000";
 
-              cy.window().then((win) => {
-                win.navigator.clipboard.readText().then((client_app_id) => {
-                  // Use a fake API server ID
-                  const fake_api_id = "00000000-0000-0000-0000-000000000000";
+              cy.request({
+                method: "POST",
+                url: `/api/apis/connect_app/${client_app_id}/${fake_api_id}`,
+                failOnStatusCode: false,
+              }).then((response) => {
+                expect(response.status).to.equal(404);
+                expect(response.body.message).to.include("not found");
 
-                  cy.request({
-                    method: "POST",
-                    url: `/api/apis/connect_app/${client_app_id}/${fake_api_id}`,
-                    failOnStatusCode: false,
-                  }).then((response) => {
-                    expect(response.status).to.equal(404);
-                    expect(response.body.message).to.include("not found");
-
-                    // Cleanup
-                    cy.delete_organization({ organization_id });
-                  });
-                });
+                // Cleanup
+                cy.delete_organization({ organization_id });
               });
             });
           });

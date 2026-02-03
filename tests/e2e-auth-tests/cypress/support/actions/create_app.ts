@@ -9,9 +9,14 @@ export interface CreateAppParams {
   organization_id?: string;
 }
 
+export interface CreateAppResult {
+  success: boolean;
+  app_id: string | null;
+}
+
 export default function createApp(
   params: CreateAppParams,
-): Cypress.Chainable<boolean> {
+): Cypress.Chainable<CreateAppResult> {
   const { app_name, app_description, organization_id } = params;
   const isPublic = params.public ?? false;
 
@@ -96,22 +101,21 @@ export default function createApp(
         return cy
           .wait("@createAppRequest", { timeout: 20000, requestTimeout: 20000 })
           .then((interception) => {
-            interception.response?.statusCode &&
-              cy.wrap(interception.response?.statusCode).should("eq", 200);
-            cy.log("App creation request appears to have been a success!");
+            const statusCode = interception.response?.statusCode;
+            const responseBody = interception.response?.body;
+            const success = statusCode === 200;
+            const app_id = responseBody?.resource_id ?? null;
+
+            if (success) {
+              cy.wrap(statusCode).should("eq", 200);
+              cy.log("App creation request appears to have been a success!");
+            }
+
             cy.get(`#${createAppDialogContentId}`, {
               log: false,
             }).should("not.exist");
-            return cy.wrap(true, { log: false });
-          })
-          .then((val): boolean => {
-            if (typeof val === "boolean") return val;
-            else if (typeof val[0] === "boolean") return val[0];
-            else {
-              throw new TypeError(
-                "Failed to resolve whether app creation was a success!",
-              );
-            }
+
+            return cy.wrap({ success, app_id }, { log: false });
           });
       });
   });

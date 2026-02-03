@@ -29,16 +29,14 @@ describe("Apps", () => {
           const app_name: string = `Test App ${randomCode}`;
           const app_description: string = `E2E test app ${randomCode}`;
 
-          cy.create_app({ app_name, app_description }).then(
-            (success: boolean) => {
-              if (typeof success !== "boolean" || !success) {
-                throw new Error(
-                  "Cypress 'create_app' command does not appear to have been a success",
-                );
-              }
-              cy.log(`Successfully created app '${app_name}'`);
-            },
-          );
+          cy.create_app({ app_name, app_description }).then((result) => {
+            if (!result.success) {
+              throw new Error(
+                "Cypress 'create_app' command does not appear to have been a success",
+              );
+            }
+            cy.log(`Successfully created app '${app_name}'`);
+          });
         });
       });
     });
@@ -80,8 +78,8 @@ describe("Apps", () => {
                 app_name,
                 app_description,
                 organization_id,
-              }).then((success: boolean) => {
-                if (typeof success !== "boolean" || !success) {
+              }).then((result) => {
+                if (!result.success) {
                   throw new Error(
                     "Cypress 'create_app' command does not appear to have been a success",
                   );
