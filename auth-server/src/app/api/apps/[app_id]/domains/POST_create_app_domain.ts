@@ -5,23 +5,43 @@ import {
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
 import {
+  type AppId,
+  appIdSchema,
   type SchemaVaultsAppDomainRef,
   schemaVaultsAppDomainRefSchema,
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import type { ServerRuntime } from "next";
 
-export const runtime: ServerRuntime = "edge"
 /**
  * Create a new domain for an application
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST_create_app_domain(
+  request: NextRequest,
+  ctx: RouteContext<'/api/apps/[app_id]/domains'>
+): Promise<NextResponse> {
+  const params = await ctx.params;
+
+  const parsed_app_id = await appIdSchema.safeParseAsync(params.app_id);
+  if (!parsed_app_id.success) {
+    console.error("Failed to parse frontend app_id: ", parsed_app_id.error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Invalid frontend app id",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+  const app_id: AppId = parsed_app_id.data;
+
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
       if (environment === "development") {
-        console.log("[/api/apps/domains/create] POST request received");
+        console.log(`[/api/apps/${app_id}/domains] POST request received`);
       }
 
       if (!user.admin) {
@@ -41,8 +61,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const parsed = await schemaVaultsAppDomainRefSchema.safeParseAsync(
           await req.json(),
         );
-        if (!parsed.success) throw parsed.error;
+        if (!parsed.success) {
+          throw parsed.error;
+        }
         newResource = parsed.data;
+        if (newResource.app_id !== app_id) {
+          throw new Error("App ID in body does not match App ID from route params!")
+        }
       } catch (e: unknown) {
         const errorMessage =
           "Failed to parse new SchemaVaults frontend app details from request body";
@@ -99,4 +124,4 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   return await protected_route(request);
 }
 
-export const dynamic = "force-dynamic"; // defaults to auto
+export default POST_create_app_domain;

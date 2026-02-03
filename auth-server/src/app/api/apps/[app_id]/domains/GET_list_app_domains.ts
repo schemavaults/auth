@@ -2,6 +2,7 @@ import "server-only";
 
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db";
 import {
+  type AppId,
   type SchemaVaultsApp,
   type SchemaVaultsAppDomainRef,
   appIdSchema,
@@ -12,9 +13,6 @@ import {
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import type { ServerRuntime } from "next";
-
-export const runtime: ServerRuntime = "edge"
 
 export type ListAppDomainsResponse =
   | {
@@ -30,11 +28,11 @@ export type ListAppDomainsResponse =
 /**
  * List available domains for a SchemaVaults app
  */
-export async function POST(
+export async function GET_list_app_domains(
   req: NextRequest,
-  props: { params: Promise<{ app_id: string }> },
+  ctx: RouteContext<'/api/apps/[app_id]/domains'>,
 ): Promise<NextResponse> {
-  const params = await props.params;
+  const params = await ctx.params;
 
   const parsed_app_id = await appIdSchema.safeParseAsync(params.app_id);
   if (!parsed_app_id.success) {
@@ -49,7 +47,7 @@ export async function POST(
       },
     );
   }
-  const app_id: string = parsed_app_id.data;
+  const app_id: AppId = parsed_app_id.data;
 
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
@@ -58,7 +56,7 @@ export async function POST(
       environment,
     }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>): Promise<NextResponse> => {
       if (environment === "development") {
-        console.log(`[/api/apps/domains/${app_id}/list] POST request received`);
+        console.log(`[/api/apps/${app_id}/domains] GET request received`);
       }
 
       let apps: SchemaVaultsAppRegistry;
@@ -138,4 +136,4 @@ export async function POST(
   return await protected_route(req);
 }
 
-export const dynamic = "force-dynamic"; // defaults to auto
+export default GET_list_app_domains;
