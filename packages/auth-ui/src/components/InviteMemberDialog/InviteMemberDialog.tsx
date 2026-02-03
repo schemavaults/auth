@@ -19,11 +19,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   useForm,
   useToast,
 } from "@schemavaults/ui";
-import { type ReactElement, useState, useTransition } from "react";
+import { type ReactElement, useContext, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UserPlus } from "lucide-react";
 import {
@@ -32,32 +31,48 @@ import {
   type InviteMemberInputMode,
   type InviteMemberSubmitData,
 } from "@schemavaults/auth-common";
+import InviteMemberDialogDispatchContext from "./InviteMemberDialogDispatchContext";
 
 export type { InviteMemberSubmitData };
+
+export interface InviteMemberDialogOpenTriggerProps {
+  triggerButtonLabel?: string;
+}
+
+export function InviteMemberDialogTriggerButton({
+  triggerButtonLabel = "Invite Member",
+}: InviteMemberDialogOpenTriggerProps): ReactElement {
+  const onOpenChange = useContext(InviteMemberDialogDispatchContext);
+  return (
+    <Button
+      id="open-invite-member-dialog-button"
+      onClick={(e) => {
+        e.preventDefault();
+        onOpenChange(true);
+      }}
+    >
+      <UserPlus className="h-4 w-4 mr-2" />
+      {triggerButtonLabel}
+    </Button>
+  );
+}
 
 export interface InviteMemberDialogProps {
   organization_id: string;
   onSubmit: (data: InviteMemberSubmitData) => Promise<void>;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   triggerButtonLabel?: string;
 }
 
 export function InviteMemberDialog({
   organization_id,
   onSubmit,
-  open: controlledOpen,
-  onOpenChange: controlledOnOpenChange,
-  triggerButtonLabel = "Invite Member",
+  open,
+  onOpenChange,
 }: InviteMemberDialogProps): ReactElement {
-  const [internalOpen, setInternalOpen] = useState<boolean>(false);
   const [submitting, startSubmitting] = useTransition();
   const { toast } = useToast();
-
-  const isControlled =
-    controlledOpen !== undefined && controlledOnOpenChange !== undefined;
-  const open = isControlled ? controlledOpen : internalOpen;
-  const setOpen = isControlled ? controlledOnOpenChange : setInternalOpen;
 
   const form = useForm<InviteMemberFormValues>({
     resolver: zodResolver(inviteMemberFormSchema),
@@ -74,6 +89,7 @@ export function InviteMemberDialog({
     form.setValue("input_mode", value);
     form.setValue("identifier", "");
     form.clearErrors("identifier");
+    return;
   }
 
   async function handleSubmit(values: InviteMemberFormValues): Promise<void> {
@@ -103,13 +119,13 @@ export function InviteMemberDialog({
       }
 
       form.reset();
-      setOpen(false);
+      onOpenChange(false);
     });
   }
 
   function handleCancel(): void {
     form.reset();
-    setOpen(false);
+    onOpenChange(false);
   }
 
   const inputLabel = currentInputMode === "email" ? "Email Address" : "User ID";
@@ -123,15 +139,7 @@ export function InviteMemberDialog({
       : "Enter the UUID of the user to invite.";
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      {!isControlled && (
-        <DialogTrigger asChild>
-          <Button id="open-invite-member-dialog-button">
-            <UserPlus className="h-4 w-4 mr-2" />
-            {triggerButtonLabel}
-          </Button>
-        </DialogTrigger>
-      )}
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="invite-member-dialog-content"
         className="sm:max-w-[425px]"
