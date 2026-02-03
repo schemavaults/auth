@@ -23,8 +23,18 @@ function generateRandomInviteCode(): Cypress.Chainable<string> {
 }
 
 export default function createAndLoginAsRegularUser(
-  credentials: UserCredentials,
+  credentials: UserCredentialsMaybeWithInviteCode,
 ): Cypress.Chainable<boolean> {
+  const invite_code_provided_to_cy_command: boolean = credentials.invite_code
+    ? true
+    : false;
+  cy.log(
+    `Attempting to login as regular user '${credentials.email}'` +
+      invite_code_provided_to_cy_command
+      ? ` (with invite code '${credentials.invite_code}')`
+      : "",
+  );
+
   function onCreateUserReady(
     credentials: UserCredentialsMaybeWithInviteCode,
   ): Cypress.Chainable<boolean> {
@@ -53,34 +63,46 @@ export default function createAndLoginAsRegularUser(
       });
   }
 
+  function createInviteCodeAndThenRegisterIfOneNotProvided(): Cypress.Chainable<boolean> {
+    return cy
+      .as_admin((): Cypress.Chainable<string> => {
+        return generateRandomInviteCode().then((invite_code: string) => {
+          return cy
+            .create_invite_code(invite_code, 1)
+            .then((success: boolean) => {
+              if (!success) {
+                throw new Error("Failed to create new invite code!");
+              }
+              return cy.wrap(invite_code, { log: false });
+            });
+        });
+      })
+      .then((invite_code: string) => {
+        return onCreateUserReady({
+          ...credentials,
+          invite_code,
+        }).then(() => {
+          return cy.wrap(true, { log: false });
+        });
+      });
+  }
+
   return cy
     .is_invite_code_required()
     .then((invite_code_required: boolean): Cypress.Chainable<boolean> => {
       if (invite_code_required) {
-        return cy
-          .as_admin((): Cypress.Chainable<string> => {
-            return generateRandomInviteCode().then((invite_code: string) => {
-              return cy
-                .create_invite_code(invite_code, 1)
-                .then((success: boolean) => {
-                  if (!success) {
-                    throw new Error("Failed to create new invite code!");
-                  }
-                  return cy.wrap(invite_code, { log: false });
-                });
-            });
-          })
-          .then((invite_code: string) => {
-            return onCreateUserReady({
-              ...credentials,
-              invite_code,
-            }).then(() => {
-              return cy.wrap(true, { log: false });
-            });
-          });
+        if (invite_code_provided_to_cy_command) {
+          return onCreateUserReady(credentials);
+        } else {
+          return createInviteCodeAndThenRegisterIfOneNotProvided();
+        }
       } else {
         return cy
-          .register(credentials.email, credentials.password)
+          .register(
+            credentials.email,
+            credentials.password,
+            credentials.invite_code ?? undefined,
+          )
           .then(
             (status_code: number): Cypress.Chainable<boolean> =>
               cy.wrap(status_code === 200, { log: false }),
