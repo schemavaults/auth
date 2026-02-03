@@ -1,10 +1,12 @@
 import "server-only";
 
+import type { ResourceCreationResponse } from "@/lib/auth-db";
 import {
-  OrganizationsRegistry,
-  type ResourceCreationResponse,
   MAXIMUM_USER_ORGANIZATIONS,
-} from "@/lib/auth-db";
+  createOrganization,
+  addOrganizationMembership,
+  hasUserExceededMaximumOrgMemberships,
+} from "@/lib/auth-db/organizations";
 import {
   hardcodedOrgs,
   type OrganizationDefinition,
@@ -16,6 +18,8 @@ import {
   withAdminApiRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+
+class ExceededMembershipLimitError extends Error {}
 
 async function POST_create_organization_handler({
   req,
@@ -77,53 +81,34 @@ async function POST_create_organization_handler({
     );
   }
 
-  let orgRegistry: OrganizationsRegistry;
-  try {
-    orgRegistry = new OrganizationsRegistry(dbh.db);
-  } catch (e: unknown) {
-    console.error(e);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to connect to organizations registry",
-      } satisfies ResourceCreationResponse,
-      {
-        status: 500,
-      },
-    );
-  }
-
-  // Check if user has reached the maximum number of organization memberships
-  const exceededLimit: boolean = await orgRegistry.hasUserExceededMaximumOrgMemberships(user.uid);
-  if (exceededLimit) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: `You have reached the maximum number of organization memberships (${MAXIMUM_USER_ORGANIZATIONS}). Please leave an organization before creating a new one.`,
-      } satisfies ResourceCreationResponse,
-      {
-        status: 409,
-      },
-    );
-  }
+  const organization_id = newOrganization.organization_id;
+  const uid: string = user.uid;
 
   try {
-    await orgRegistry.createOrganization(newOrganization);
+    await dbh.db.transaction().execute(async (trx) => {
+      const exceededLimit: boolean = await hasUserExceededMaximumOrgMemberships(trx, uid);
+      if (exceededLimit) {
+        throw new ExceededMembershipLimitError();
+      }
 
-    // Add the creating admin as owner of the organization
-    await orgRegistry.addMembership(
-      newOrganization.organization_id,
-      user.uid,
-      "owner",
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: "Successfully created new organization",
-      resource_id: newOrganization.organization_id,
-    } satisfies ResourceCreationResponse);
+      await createOrganization(trx, newOrganization);
+      // Add the creating user as owner of the organization
+      await addOrganizationMembership(trx, organization_id, uid, "owner");
+    })
   } catch (e: unknown) {
     console.error("Failed to create organization: ", e);
+    if (e instanceof ExceededMembershipLimitError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `You have reached the maximum number of organization memberships (${MAXIMUM_USER_ORGANIZATIONS}). Please leave an organization before creating a new one.`,
+        } satisfies ResourceCreationResponse,
+        {
+          status: 409,
+        },
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
@@ -134,6 +119,12 @@ async function POST_create_organization_handler({
       },
     );
   }
+
+  return NextResponse.json({
+    success: true,
+    message: "Successfully created new organization",
+    resource_id: newOrganization.organization_id,
+  } satisfies ResourceCreationResponse);
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {

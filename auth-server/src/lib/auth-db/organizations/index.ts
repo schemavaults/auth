@@ -13,6 +13,7 @@ export type * from "./organization-membership-role-definition";
 export type * from "./organization-member-with-user-data";
 
 export * from "./organization-invitation-definition";
+export { createOrganization } from './create-organization';
 export { createOrganizationInvitation } from "./create-organization-invitation";
 export type { CreateOrganizationInvitationParams } from "./create-organization-invitation";
 export { listOrganizationInvitations } from "./list-organization-invitations";
@@ -24,3 +25,6 @@ export { respondToInvitation } from "./respond-to-invitation";
 export type { InvitationResponseAction, RespondToInvitationResult } from "./respond-to-invitation";
 export { revokeInvitation } from "./revoke-invitation";
 export type { RevokeInvitationResult } from "./revoke-invitation";
+export { addOrganizationMembership } from './add-organization-membership';
+export { countUserRealMemberships } from './count-user-real-memberships';
+export { hasUserExceededMaximumOrgMemberships } from './has-user-exceeded-maximum-org-memberships';

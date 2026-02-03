@@ -11,6 +11,8 @@ import {
   revokeInvitation,
   type InvitationResponseAction,
   MAXIMUM_USER_ORGANIZATIONS,
+  RespondToInvitationResult,
+  hasUserExceededMaximumOrgMemberships,
 } from "@/lib/auth-db/organizations";
 import {
   type OrganizationID,
@@ -23,9 +25,7 @@ import type { ServerRuntime } from "next";
 export const runtime: ServerRuntime = "edge";
 export const dynamic = "force-dynamic";
 
-interface RouteContext {
-  params: Promise<{ organization_id: string; invitation_id: string }>;
-}
+class ExceededMembershipLimitError extends Error {}
 
 const respondToInvitationSchema = z.object({
   action: z.enum(["accept", "decline"]),
@@ -33,7 +33,7 @@ const respondToInvitationSchema = z.object({
 
 async function PATCH_respond_to_invitation_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>,
-  context: RouteContext,
+  context: RouteContext<"/api/organizations/[organization_id]/invitations/[invitation_id]">,
   req: NextRequest
 ): Promise<NextResponse> {
   const { organization_id: org_id_param, invitation_id } = await context.params;
@@ -119,23 +119,19 @@ async function PATCH_respond_to_invitation_handler(
     );
   }
 
-  // Check if user has reached the maximum number of organization memberships when accepting
-  if (action === "accept") {
-    const registry = new OrganizationsRegistry(dbh.db);
-    const exceededMembershipLimit = await registry.hasUserExceededMaximumOrgMemberships(user.uid);
-    if (exceededMembershipLimit) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `You have reached the maximum number of organization memberships (${MAXIMUM_USER_ORGANIZATIONS}). Please leave an organization before accepting this invitation.`,
-        },
-        { status: 409 }
-      );
-    }
-  }
-
+  let result: RespondToInvitationResult;
   try {
-    const result = await respondToInvitation(dbh.db, invitation_id, user.uid, action);
+    result = await dbh.db.transaction().execute(async (trx): Promise<RespondToInvitationResult> => {
+      // Check if user has reached the maximum number of organization memberships when accepting
+      if (action === "accept") {
+        const exceededMembershipLimit = await hasUserExceededMaximumOrgMemberships(trx, user.uid);
+        if (exceededMembershipLimit) {
+          throw new ExceededMembershipLimitError();
+        }
+      }
+
+      return await respondToInvitation(trx, invitation_id, user.uid, action)
+    })
 
     if (!result.success) {
       return NextResponse.json(
@@ -147,18 +143,18 @@ async function PATCH_respond_to_invitation_handler(
       );
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: result.message,
-        data: {
-          invitation: result.invitation,
-        },
-      },
-      { status: 200 }
-    );
+
   } catch (e: unknown) {
     console.error("Failed to respond to invitation:", e);
+    if (e instanceof ExceededMembershipLimitError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `You have reached the maximum number of organization memberships (${MAXIMUM_USER_ORGANIZATIONS}). Please leave an organization before accepting this invitation.`,
+        },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       {
         success: false,
@@ -167,11 +163,22 @@ async function PATCH_respond_to_invitation_handler(
       { status: 500 }
     );
   }
+
+  return NextResponse.json(
+    {
+      success: true,
+      message: result.message,
+      data: {
+        invitation: result.invitation,
+      },
+    },
+    { status: 200 }
+  );
 }
 
 async function DELETE_revoke_invitation_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>,
-  context: RouteContext
+  context: RouteContext<"/api/organizations/[organization_id]/invitations/[invitation_id]">
 ): Promise<NextResponse> {
   const { organization_id: org_id_param, invitation_id } = await context.params;
 
@@ -271,13 +278,13 @@ async function DELETE_revoke_invitation_handler(
   }
 }
 
-export async function PATCH(req: NextRequest, context: RouteContext): Promise<NextResponse> {
+export async function PATCH(req: NextRequest, context: RouteContext<'/api/organizations/[organization_id]/invitations/[invitation_id]'>): Promise<NextResponse> {
   return (await withAuthenticatedApiRouteGuard(
     (props) => PATCH_respond_to_invitation_handler(props, context, req)
   ))(req);
 }
 
-export async function DELETE(req: NextRequest, context: RouteContext): Promise<NextResponse> {
+export async function DELETE(req: NextRequest, context: RouteContext<'/api/organizations/[organization_id]/invitations/[invitation_id]'>): Promise<NextResponse> {
   return (await withAuthenticatedApiRouteGuard(
     (props) => DELETE_revoke_invitation_handler(props, context)
   ))(req);
