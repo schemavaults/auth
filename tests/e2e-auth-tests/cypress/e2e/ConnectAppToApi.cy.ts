@@ -377,14 +377,14 @@ describe("Connect App to API Server", () => {
                                     // Now try to connect app to API as member (should fail with 403)
                                     cy.intercept({
                                       method: "POST",
-                                      url: `**/api/apis/connect_app/${client_app_id}/${api_server_id}`,
+                                      url: `**/api/apis/${api_server_id}/connect_app/${client_app_id}`,
                                       times: 1,
                                     }).as("connectRequest");
 
                                     // Make direct API call since UI might not be accessible
                                     cy.request({
                                       method: "POST",
-                                      url: `/api/apis/connect_app/${client_app_id}/${api_server_id}`,
+                                      url: `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
                                       failOnStatusCode: false,
                                     }).then((response) => {
                                       expect(response.status).to.equal(403);
@@ -459,11 +459,12 @@ describe("Connect App to API Server", () => {
                   if (!apiResult.success || !apiResult.api_server_id) {
                     throw new Error("Failed to create API server");
                   }
+                  const api_server_id = apiResult.api_server_id;
 
                   // Try to connect app from org1 to API from org2 (should fail)
                   cy.request({
                     method: "POST",
-                    url: `/api/apis/connect_app/${client_app_id}/${apiResult.api_server_id}`,
+                    url: `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
                     failOnStatusCode: false,
                   }).then((response) => {
                     expect(response.status).to.equal(403);
@@ -507,10 +508,13 @@ describe("Connect App to API Server", () => {
 
               // Use a fake app ID
               const fake_app_id = "00000000-0000-0000-0000-000000000000";
+              const client_app_id = fake_app_id;
+
+              const api_server_id = apiResult.api_server_id;
 
               cy.request({
                 method: "POST",
-                url: `/api/apis/connect_app/${fake_app_id}/${apiResult.api_server_id}`,
+                url: `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
                 failOnStatusCode: false,
               }).then((response) => {
                 expect(response.status).to.equal(404);
@@ -549,10 +553,11 @@ describe("Connect App to API Server", () => {
 
               // Use a fake API server ID
               const fake_api_id = "00000000-0000-0000-0000-000000000000";
+              const api_server_id = fake_api_id;
 
               cy.request({
                 method: "POST",
-                url: `/api/apis/connect_app/${client_app_id}/${fake_api_id}`,
+                url: `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
                 failOnStatusCode: false,
               }).then((response) => {
                 expect(response.status).to.equal(404);

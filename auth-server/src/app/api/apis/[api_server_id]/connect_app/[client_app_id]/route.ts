@@ -8,6 +8,8 @@ import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import {
+  apiServerIdSchema,
+  appIdSchema,
   type AppToApiPermission,
   appToApiPermissionSchema,
 } from "@schemavaults/app-definitions";
@@ -26,7 +28,7 @@ export const runtime: ServerRuntime = "edge"
  */
 export async function POST(
   req: NextRequest,
-  props: { params: Promise<{ client_app_id: string; api_server_id: string }> },
+  props: RouteContext<"/api/apis/[api_server_id]/connect_app/[client_app_id]">,
 ): Promise<NextResponse> {
   const params = await props.params;
 
@@ -44,6 +46,12 @@ export async function POST(
       throw new Error(
         "Failed to load client_app_id and api_server_id from dynamic route segments!",
       );
+    }
+    if (!(await apiServerIdSchema.safeParseAsync(params.api_server_id)).success) {
+      throw new TypeError("Invalid 'api_server_id' parameter!");
+    }
+    if (!(await appIdSchema.safeParseAsync(params.client_app_id)).success) {
+      throw new TypeError("Invalid 'client_app_id' parameter!")
     }
     client_app_id = params.client_app_id;
     api_server_id = params.api_server_id;
@@ -67,67 +75,85 @@ export async function POST(
       environment,
     }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>): Promise<NextResponse> => {
       if (environment === "development") {
-        console.log("[/api/apis/connect_app] POST request received");
+        console.log(`[/api/apis/${api_server_id}/connect_app/${client_app_id}] POST request received`);
+      }
+
+      if (!user) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Failed to determine authentication status!",
+          } satisfies ResourceCreationResponse,
+          { status: 401 }
+        );
+      }
+
+      const appsRegistry = new SchemaVaultsAppRegistry(dbh.db);
+      const apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
+
+      // Load app and API server
+      const [app, apiServer] = await Promise.all([
+        appsRegistry.getApp(client_app_id),
+        apiServerRegistry.getApiServer(api_server_id),
+      ]);
+
+      if (!app) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "App not found",
+          } satisfies ResourceCreationResponse,
+          { status: 404 }
+        );
+      }
+      if (!apiServer) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "API server not found",
+          } satisfies ResourceCreationResponse,
+          { status: 404 }
+        );
       }
 
       // Allow admin access OR organization owner access
       if (!user.admin) {
-        const appsRegistry = new SchemaVaultsAppRegistry(dbh.db);
-        const apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
         const organizationsRegistry = new OrganizationsRegistry(dbh.db);
+        const userMemberships = await organizationsRegistry.listUserOrganizationMemberships(
+          user.uid,
+          false
+        );
 
-        // Load app and API server
-        const [app, apiServer] = await Promise.all([
-          appsRegistry.getApp(client_app_id),
-          apiServerRegistry.getApiServer(api_server_id),
-        ]);
-
-        if (!app) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "App not found",
-            } satisfies ResourceCreationResponse,
-            { status: 404 }
-          );
-        }
-        if (!apiServer) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "API server not found",
-            } satisfies ResourceCreationResponse,
-            { status: 404 }
-          );
-        }
-
-        // Both must belong to the same organization
         const appOrgId = app.owner_organization_id;
         const apiOrgId = apiServer.owner_organization_id;
 
-        if (!appOrgId || !apiOrgId || appOrgId !== apiOrgId) {
+        if (!appOrgId || !apiOrgId) {
           return NextResponse.json(
             {
               success: false,
-              message: "App and API server must belong to the same organization",
+              message: "App and API server must belong to non-admin organizations if you are not an admin.",
             } satisfies ResourceCreationResponse,
             { status: 403 }
           );
         }
 
-        // User must be owner of that organization
-        const userMemberships = await organizationsRegistry.listUserOrganizationMemberships(user.uid, false);
-        const userMembership = userMemberships.find(m => m.organization_id === appOrgId);
+        const userOwnsApp: boolean = userMemberships.some(m => m.organization_id === appOrgId && m.role === 'owner');
+        const userOwnsApi: boolean = userMemberships.some(m => m.organization_id === apiOrgId && m.role === 'owner');
 
-        if (!userMembership || userMembership.role !== "owner") {
+        if (!userOwnsApp || !userOwnsApi) {
           return NextResponse.json(
             {
               success: false,
-              message: "You must be an organization owner to connect apps to API servers",
+              message: "You must have 'owner' role of the organization(s) that own the app & api server to connect them!",
             } satisfies ResourceCreationResponse,
             { status: 403 }
           );
         }
+      }
+
+      // PERMISSION HAS BEEN VALIDATED IF THIS POINT REACHED
+      if (environment === "development") {
+        console.log(`[/api/apis/${api_server_id}/connect_app/${client_app_id}] User has permission to connect app to api!`);
       }
 
       let newPermission: AppToApiPermission;

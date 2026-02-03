@@ -69,7 +69,7 @@ export default function connectAppToApi(
           // Intercept the connect request
           cy.intercept({
             method: "POST",
-            url: `**/api/apis/connect_app/${client_app_id}/${api_server_id}`,
+            url: `**/api/apis/${api_server_id}/connect_app/${client_app_id}`,
             times: 1,
           }).as("connectAppToApiRequest");
 

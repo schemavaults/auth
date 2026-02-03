@@ -79,7 +79,7 @@ export function ConnectAppToApiDialog({
 
     try {
       const response = await fetch(
-        `/api/apis/connect_app/${values.client_app_id}/${values.api_server_id}` as const,
+        `/api/apis/${values.api_server_id}/connect_app/${values.client_app_id}` as const,
         {
           method: "POST",
           credentials: "include",
