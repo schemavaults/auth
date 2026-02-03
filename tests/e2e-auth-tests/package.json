@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/e2e-auth-tests",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/schemavaults/auth.git",

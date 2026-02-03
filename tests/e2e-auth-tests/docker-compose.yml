@@ -57,8 +57,8 @@ services:
       args:
         POSTGRES_VERSION: 17.7
     restart: unless-stopped
-    volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+    # volumes:    ### We don't want to save data for E2E tests
+    #   - ./postgres-data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -86,6 +86,3 @@ services:
         condition: service_healthy
     links:
       - postgres-db
-
-volumes:
-  postgres-data:
