@@ -6,7 +6,7 @@ export default function is_admin(): Cypress.Chainable<boolean> {
       url: "/api/auth/whoami",
       failOnStatusCode: false,
     })
-    .then((response) => {
+    .then((response): boolean => {
       if (response.status === 200) {
         const body = response.body;
         if (typeof body === "object" && body && "user" in body) {

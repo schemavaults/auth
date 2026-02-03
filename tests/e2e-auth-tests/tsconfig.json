@@ -8,7 +8,11 @@
     "moduleResolution": "bundler",
     "downlevelIteration": true,
     "sourceMap": true,
-    "types": ["cypress", "node"]
+    "types": ["cypress", "node"],
+    "paths": {
+      "@/actions/*": ["./cypress/support/actions/*"],
+    },
+    "baseUrl": ".",
   },
   "include": ["cypress/**/*.ts", "cypress.config.ts"],
   "exclude": ["node_modules"],

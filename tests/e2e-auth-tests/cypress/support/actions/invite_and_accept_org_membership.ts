@@ -16,7 +16,21 @@ export default function inviteAndAcceptOrgMembership(
 
   if (typeof organization_id !== "string") {
     throw new TypeError("'organization_id' must be a string");
+  } else if (
+    typeof inviter_credentials.email !== "string" ||
+    typeof inviter_credentials.password !== "string"
+  ) {
+    throw new TypeError("Invalid types for 'inviter_credentials'");
+  } else if (
+    typeof invitee_credentials.email !== "string" ||
+    typeof invitee_credentials.password !== "string"
+  ) {
+    throw new TypeError("Invalid types for 'invitee_credentials'");
   }
+
+  cy.log(
+    `Attempting to invite user '${invitee_credentials.email}' to organization '${organization_id}' as user '${inviter_credentials.email}'...`,
+  );
 
   // Step 1: Login as inviter and send invitation
   cy.login(inviter_credentials.email, inviter_credentials.password).then(

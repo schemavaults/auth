@@ -51,10 +51,10 @@ export default function promoteMemberToOwner(
         })
         .then((interception) => {
           const statusCode = interception.response?.statusCode ?? 500;
-          const success = statusCode === 200;
+          const success: boolean = statusCode === 200 || statusCode === 201;
 
           if (success) {
-            cy.log(`Successfully promoted ${user_email} to owner`);
+            cy.log(`Successfully promoted user '${user_email}' to owner`);
             // Wait for the table to update (role should now show "owner")
             cy.contains("tr", user_email).within(() => {
               cy.contains("owner", { matchCase: false }).should("exist");

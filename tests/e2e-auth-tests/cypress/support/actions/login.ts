@@ -2,7 +2,15 @@ export default function login(
   email: string,
   password: string,
 ): Cypress.Chainable<boolean> {
-  cy.is_authenticated().should("be.false");
+  cy.is_authenticated().then((authenticated: boolean) => {
+    if (authenticated) {
+      throw new Error(
+        `cy.login() should be called from an unauthenticated user; this session is already authenticated!`,
+      );
+    } else {
+      return; // continue, we're not logged in already
+    }
+  });
 
   cy.intercept({
     method: "POST",

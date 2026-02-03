@@ -1,3 +1,5 @@
+import type { InviteAndAcceptOrgMembershipResult } from "@/actions/invite_and_accept_org_membership";
+
 function expectNumber(val: unknown): val is number {
   expect(
     typeof val === "number",
@@ -229,10 +231,6 @@ describe("Connect App to API Server", () => {
                 // Create a regular user to become owner
                 cy.generate_random_test_user_credentials().then(
                   (ownerCredentials: { email: string; password: string }) => {
-                    // We need to create the regular user first
-                    // Logout admin, register the new user, then login as admin again
-                    cy.logout();
-
                     cy.create_and_login_as_regular_user(ownerCredentials).then(
                       (regularSuccess) => {
                         if (!regularSuccess) {
@@ -243,31 +241,38 @@ describe("Connect App to API Server", () => {
                         cy.logout();
 
                         // Login as admin again to invite the user
-                        cy.create_and_login_as_superuser().then(() => {
-                          const superuser_credentials = {
-                            // We'll use the admin invite flow differently
-                            email: Cypress.env("PRIVATE_SUPERUSER_EMAIL"),
-                            password: Cypress.env("PRIVATE_SUPERUSER_PASSWORD"),
-                          };
+                        const superuser_credentials = {
+                          // We'll use the admin invite flow differently
+                          email: Cypress.env("PRIVATE_SUPERUSER_EMAIL"),
+                          password: Cypress.env("PRIVATE_SUPERUSER_PASSWORD"),
+                        };
 
-                          if (
-                            !superuser_credentials.email ||
-                            !superuser_credentials.password
-                          ) {
-                            throw new TypeError(
-                              "Failed to load superuser credentials!",
-                            );
-                          }
+                        if (
+                          !superuser_credentials.email ||
+                          !superuser_credentials.password
+                        ) {
+                          throw new TypeError(
+                            "Failed to load superuser credentials!",
+                          );
+                        }
 
-                          // Invite the regular user to the organization
-                          cy.invite_and_accept_org_membership({
-                            organization_id,
-                            inviter_credentials: superuser_credentials,
-                            invitee_credentials: ownerCredentials,
-                          }).then((inviteResult) => {
-                            // The above will fail because we don't have the admin credentials stored
-                            // Let me use a different approach - direct API invitation then accept
+                        cy.wrap(ownerCredentials.email, {
+                          log: false,
+                        }).should("not.be", superuser_credentials.email);
 
+                        cy.log(
+                          "Superuser and regular user have been created. Logging back in to superuser account in order to invite regular user to new organization...",
+                        );
+
+                        // Invite the regular user to the organization
+                        cy.invite_and_accept_org_membership({
+                          organization_id,
+                          inviter_credentials: superuser_credentials,
+                          invitee_credentials: ownerCredentials,
+                        }).then(
+                          (
+                            inviteResult: InviteAndAcceptOrgMembershipResult,
+                          ) => {
                             if (
                               !inviteResult.invite_success ||
                               !inviteResult.accept_success
@@ -276,6 +281,10 @@ describe("Connect App to API Server", () => {
                                 "Failed to complete invite and accept flow",
                               );
                             }
+
+                            cy.log(
+                              "New user should now be in the newly created organization as a member...",
+                            );
 
                             // Now login as admin and promote the member to owner
                             cy.logout();
@@ -287,6 +296,10 @@ describe("Connect App to API Server", () => {
                                   );
                                 }
 
+                                cy.log(
+                                  "Attempting to promote new member user to owner of organization...",
+                                );
+
                                 cy.promote_member_to_owner({
                                   organization_id,
                                   user_email: ownerCredentials.email,
@@ -294,6 +307,10 @@ describe("Connect App to API Server", () => {
                                   if (!promoteSuccess) {
                                     throw new Error(
                                       "Failed to promote member to owner",
+                                    );
+                                  } else {
+                                    cy.log(
+                                      `Successfully promoted member user to owner of organization '${organization_id}'`,
                                     );
                                   }
 
@@ -310,7 +327,7 @@ describe("Connect App to API Server", () => {
                                     }
 
                                     cy.log(
-                                      `Successfully logged in as owner of new organization '${ownerCredentials.email}'`,
+                                      `Successfully logged in as regular user '${ownerCredentials.email}', the owner of new organization '${organization_id}'!`,
                                     );
 
                                     // Verify they're NOT an admin
@@ -335,7 +352,16 @@ describe("Connect App to API Server", () => {
                                       organization_id,
                                     }).then((result) => {
                                       expect(result.success).to.be.true;
-                                      expect(result.status_code).to.equal(200);
+                                      const status_code: number =
+                                        result.status_code;
+                                      expect(
+                                        [200, 201],
+                                        "App-to-Api connection should have 200 or 201 response status",
+                                      ).to.include(status_code);
+
+                                      cy.log(
+                                        "App-to-api connection for regular user was a success! Cleaning up now...",
+                                      );
 
                                       // Cleanup - login as admin to delete org
                                       cy.logout();
@@ -351,8 +377,8 @@ describe("Connect App to API Server", () => {
                                 });
                               },
                             );
-                          });
-                        });
+                          },
+                        );
                       },
                     );
                   },

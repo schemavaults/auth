@@ -6,7 +6,7 @@ export default function is_authenticated(): Cypress.Chainable<boolean> {
       url: "/api/auth/whoami",
       failOnStatusCode: false,
     })
-    .then((response) => {
+    .then((response): boolean => {
       if (response.status === 200) {
         return true;
       } else {
