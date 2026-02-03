@@ -39,13 +39,17 @@ export interface InviteMemberDialogOpenTriggerProps {
   triggerButtonLabel?: string;
 }
 
+const openInviteMemberDialogTriggerButtonId: string =
+  "open-invite-member-dialog-button";
+const inviteMemberDialogContentId: string = "invite-member-dialog-content";
+
 export function InviteMemberDialogTriggerButton({
   triggerButtonLabel = "Invite Member",
 }: InviteMemberDialogOpenTriggerProps): ReactElement {
   const onOpenChange = useContext(InviteMemberDialogDispatchContext);
   return (
     <Button
-      id="open-invite-member-dialog-button"
+      id={openInviteMemberDialogTriggerButtonId}
       onClick={(e) => {
         e.preventDefault();
         onOpenChange(true);
@@ -141,7 +145,8 @@ export function InviteMemberDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        data-testid="invite-member-dialog-content"
+        id={inviteMemberDialogContentId}
+        data-testid={inviteMemberDialogContentId}
         className="sm:max-w-[425px]"
       >
         <Form {...form}>
