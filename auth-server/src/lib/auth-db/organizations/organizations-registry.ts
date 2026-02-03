@@ -621,6 +621,72 @@ export class OrganizationsRegistry
     }
     return currentMembershipCount < MAXIMUM_USER_ORGANIZATIONS;
   }
+
+  public async deleteOrganization(
+    org_id: OrganizationID,
+  ): Promise<DeleteOrganizationResult> {
+    const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id);
+    if (!parsed_org_id.success) {
+      return {
+        success: false,
+        message: "Invalid organization ID provided!",
+      };
+    }
+    const organization_id: OrganizationID = parsed_org_id.data;
+
+    // Block deletion of hardcoded organizations
+    if (this.hardcodedOrganizations.has(organization_id)) {
+      return {
+        success: false,
+        message: "Cannot delete a hardcoded organization!",
+      };
+    }
+
+    if (this.debug) {
+      console.log(
+        `[OrganizationsRegistry] deleteOrganization(org_id = '${org_id}')`,
+      );
+    }
+
+    try {
+      const deleteQuery = this.db
+        .deleteFrom("organizations")
+        .where("organization_id", "=", organization_id);
+
+      const result = await deleteQuery.executeTakeFirst();
+
+      if (!result || result.numDeletedRows === BigInt(0)) {
+        return {
+          success: false,
+          message: "Organization not found",
+        };
+      }
+
+      if (this.debug) {
+        console.log(
+          `[OrganizationsRegistry] deleteOrganization(org_id = '${org_id}') => success`,
+        );
+      }
+
+      return {
+        success: true,
+        message: "Organization deleted successfully",
+      };
+    } catch (e: unknown) {
+      console.error(
+        `Failed to delete organization '${organization_id}': `,
+        e,
+      );
+      return {
+        success: false,
+        message: "Failed to delete organization",
+      };
+    }
+  }
 }
+
+export type DeleteOrganizationResult =
+  | { success: true; message: string }
+  | { success: false; message: string };
 
 export default OrganizationsRegistry;

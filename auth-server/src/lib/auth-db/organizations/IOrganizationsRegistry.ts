@@ -5,6 +5,7 @@ import type {
 import type { OrganizationMembershipRoleType } from "./organization-membership-role-types";
 import type { OrganizationMemberWithUserData } from "./organization-member-with-user-data";
 import type { OrganizationMembershipRoleDefinition } from "./organization-membership-role-definition";
+import type { DeleteOrganizationResult } from "./organizations-registry";
 
 export interface IOrganizationsRegistry {
   lookupOrganization: (
@@ -44,4 +45,6 @@ export interface IOrganizationsRegistry {
   countUserRealMemberships: (uid: string) => Promise<number>;
 
   canUserJoinOrganization: (uid: string) => Promise<boolean>;
+
+  deleteOrganization: (org_id: OrganizationID) => Promise<DeleteOrganizationResult>;
 }

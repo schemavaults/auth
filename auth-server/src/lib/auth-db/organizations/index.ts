@@ -3,6 +3,7 @@ export type * from "./organization-membership-roles-table";
 export type * from "./organization-invitations-table";
 
 export { OrganizationsRegistry, OrganizationsRegistry as default } from "./organizations-registry";
+export type { DeleteOrganizationResult } from "./organizations-registry";
 export type { IOrganizationsRegistry } from "./IOrganizationsRegistry";
 
 export { MAXIMUM_USER_ORGANIZATIONS } from "@schemavaults/auth-common";
