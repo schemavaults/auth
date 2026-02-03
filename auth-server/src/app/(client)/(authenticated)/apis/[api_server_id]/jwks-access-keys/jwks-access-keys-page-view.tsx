@@ -87,7 +87,7 @@ function DisplayGeneratedPrivateKeyForOneTimeCopy({
       });
       return;
     }
-  }, [formattedContent]);
+  }, [formattedContent, toast, setCopied]);
 
   return (
     <Card className={cn(
