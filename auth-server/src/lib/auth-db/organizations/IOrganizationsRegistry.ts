@@ -44,7 +44,9 @@ export interface IOrganizationsRegistry {
 
   countUserRealMemberships: (uid: string) => Promise<number>;
 
-  canUserJoinOrganization: (uid: string) => Promise<boolean>;
+  hasUserExceededMaximumOrgMemberships: (uid: string) => Promise<boolean>;
 
   deleteOrganization: (org_id: OrganizationID) => Promise<DeleteOrganizationResult>;
+
+  MAXIMUM_USER_ORGANIZATIONS: number;
 }

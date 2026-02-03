@@ -614,12 +614,23 @@ export class OrganizationsRegistry
     }
   }
 
-  public async canUserJoinOrganization(uid: string): Promise<boolean> {
+  public static MAXIMUM_USER_ORGANIZATIONS = MAXIMUM_USER_ORGANIZATIONS;
+
+  public get MAXIMUM_USER_ORGANIZATIONS(): number {
+    return OrganizationsRegistry.MAXIMUM_USER_ORGANIZATIONS;
+  }
+
+  /**
+   * @param uid The user ID to count # memberships for and compare to the maximum.
+   * @returns A promise resolving to true if they have reached or exceeded 'MAXIMUM_USER_ORGANIZATIONS'
+   * @see OrganizationsRegistry.MAXIMUM_USER_ORGANIZATIONS
+   */
+  public async hasUserExceededMaximumOrgMemberships(uid: string): Promise<boolean> {
     const currentMembershipCount: number = await this.countUserRealMemberships(uid);
     if (typeof currentMembershipCount !== 'number' || isNaN(currentMembershipCount)) {
       throw new TypeError("Expected result of countUserRealMemberships to be a number!")
     }
-    return currentMembershipCount < MAXIMUM_USER_ORGANIZATIONS;
+    return currentMembershipCount >= this.MAXIMUM_USER_ORGANIZATIONS;
   }
 
   public async deleteOrganization(

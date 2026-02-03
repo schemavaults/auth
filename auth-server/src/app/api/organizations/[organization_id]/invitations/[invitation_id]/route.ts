@@ -122,14 +122,14 @@ async function PATCH_respond_to_invitation_handler(
   // Check if user has reached the maximum number of organization memberships when accepting
   if (action === "accept") {
     const registry = new OrganizationsRegistry(dbh.db);
-    const canJoinOrg = await registry.canUserJoinOrganization(user.uid);
-    if (!canJoinOrg) {
+    const exceededMembershipLimit = await registry.hasUserExceededMaximumOrgMemberships(user.uid);
+    if (exceededMembershipLimit) {
       return NextResponse.json(
         {
           success: false,
           message: `You have reached the maximum number of organization memberships (${MAXIMUM_USER_ORGANIZATIONS}). Please leave an organization before accepting this invitation.`,
         },
-        { status: 403 }
+        { status: 409 }
       );
     }
   }

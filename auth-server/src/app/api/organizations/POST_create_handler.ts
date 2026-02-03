@@ -94,15 +94,15 @@ async function POST_create_organization_handler({
   }
 
   // Check if user has reached the maximum number of organization memberships
-  const canJoinOrg = await orgRegistry.canUserJoinOrganization(user.uid);
-  if (!canJoinOrg) {
+  const exceededLimit: boolean = await orgRegistry.hasUserExceededMaximumOrgMemberships(user.uid);
+  if (exceededLimit) {
     return NextResponse.json(
       {
         success: false,
         message: `You have reached the maximum number of organization memberships (${MAXIMUM_USER_ORGANIZATIONS}). Please leave an organization before creating a new one.`,
       } satisfies ResourceCreationResponse,
       {
-        status: 403,
+        status: 409,
       },
     );
   }
