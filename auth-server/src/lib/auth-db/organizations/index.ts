@@ -28,3 +28,4 @@ export type { RevokeInvitationResult } from "./revoke-invitation";
 export { addOrganizationMembership } from './add-organization-membership';
 export { countUserRealMemberships } from './count-user-real-memberships';
 export { hasUserExceededMaximumOrgMemberships } from './has-user-exceeded-maximum-org-memberships';
+export { listAllOrganizations } from './list-all-organizations';

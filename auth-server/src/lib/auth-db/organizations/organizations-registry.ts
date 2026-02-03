@@ -26,6 +26,7 @@ import createOrganization from "./create-organization";
 import addOrganizationMembership from "./add-organization-membership";
 import countUserRealMemberships from "./count-user-real-memberships";
 import { hasUserExceededMaximumOrgMemberships } from "./has-user-exceeded-maximum-org-memberships";
+import { listAllOrganizations } from './list-all-organizations';
 
 export class OrganizationsRegistry
   implements IOrganizationsRegistry
@@ -136,46 +137,7 @@ export class OrganizationsRegistry
   }
 
   public async listAllOrganizations(): Promise<readonly OrganizationDefinition[]> {
-
-    if (this.debug) {
-      console.log(`[OrganizationsRegistry] listAllOrganizations()`);
-    }
-
-    const query = this.db
-      .selectFrom("organizations")
-      .selectAll()
-      .orderBy("created_at", "desc");
-
-    const rows: OrganizationRow[] = await query.execute();
-
-    const organizations: OrganizationDefinition[] = [];
-    for (const row of rows) {
-      const parsed = await organizationDefinitionSchema.safeParseAsync({
-        ...row,
-        created_at:
-          typeof row.created_at === "number"
-            ? row.created_at
-            : Number.parseInt(row.created_at),
-      } satisfies OrganizationDefinition);
-      if (!parsed.success) {
-        console.error(
-          "Failed to parse organization definition from database row: ",
-          parsed.error,
-        );
-        continue;
-      }
-      organizations.push(parsed.data);
-    }
-
-    organizations.push(...hardcodedOrgs satisfies readonly OrganizationDefinition[]);
-
-    if (this.debug) {
-      console.log(
-        `[OrganizationsRegistry] listAllOrganizations() => ${organizations.length} organizations`,
-      );
-    }
-
-    return organizations;
+    return await listAllOrganizations(this.db, this.debug);
   }
 
   public async listUserOrganizationMemberships(
