@@ -1,8 +1,11 @@
 function expectNumber(val: unknown): val is number {
+  expect(
+    typeof val === "number",
+    `Value should be a number, received '${typeof val}'`,
+  ).to.be.true;
   if (typeof val !== "number" || isNaN(val)) {
     return false;
   }
-  expect(typeof val).to.be("number");
   return true;
 }
 
@@ -573,7 +576,7 @@ describe("Connect App to API Server", () => {
                 url: `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
                 failOnStatusCode: false,
               }).then((response) => {
-                if (response.status !== 200) {
+                if (response.status > 299) {
                   cy.log(response.body);
                 }
                 expect(response.status).to.equal(404);
