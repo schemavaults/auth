@@ -43,6 +43,8 @@ interface FrontendApplicationActionsProps {
   queryType: ListAppsQueryType;
 }
 
+class CantCopyWithinInsecureContextError extends Error {}
+
 export function FrontendApplicationActions({
   app,
   queryType,
@@ -163,9 +165,24 @@ export function FrontendApplicationActions({
 
           <DropdownMenuItem
             className={cn(dropdownMenuActionsClassName)}
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+
+              if (!window) {
+                throw new TypeError(
+                  "Failed to load reference to 'window' global variable!",
+                );
+              }
+
               try {
-                navigator.clipboard.writeText(app.app_id);
+                if (!window.isSecureContext) {
+                  throw new CantCopyWithinInsecureContextError(
+                    "Access to clipboard is only allowed in secure contexts!",
+                  );
+                }
+
+                const clipboard: Clipboard = window.navigator.clipboard;
+                clipboard.writeText(app.app_id);
                 toast({
                   variant: "default",
                   title: "Copied app ID to clipboard",

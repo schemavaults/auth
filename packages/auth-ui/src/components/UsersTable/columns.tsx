@@ -142,51 +142,63 @@ export const columns: ColumnDef<UserData>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={(e): void => {
+              onClick={async (e): Promise<void> => {
                 e.preventDefault();
                 const uid: string = user.uid;
-                navigator.clipboard
-                  .writeText(uid)
-                  .then((): void => {
-                    toast({
-                      title: "Successfully copied user ID to clipboard!",
-                      description: `You should now be able to paste '${uid}' from your clipboard!`,
-                    });
-                  })
-                  .catch((e: unknown): void => {
-                    toast({
-                      title: "Failed to copy user ID to clipboard!",
-                      description:
-                        e instanceof Error
-                          ? e.message
-                          : "An unknown error has occurred!",
-                    });
+                try {
+                  if (!window.isSecureContext) {
+                    throw new Error(
+                      "Writing to clipboard is only allowed in secure contexts!",
+                    );
+                  }
+                  await navigator.clipboard.writeText(uid);
+                } catch (e: unknown) {
+                  toast({
+                    title: "Failed to copy user ID to clipboard!",
+                    description:
+                      e instanceof Error
+                        ? e.message
+                        : "An unknown error has occurred!",
                   });
+                  return;
+                }
+
+                toast({
+                  title: "Successfully copied user ID to clipboard!",
+                  description: `You should now be able to paste '${uid}' from your clipboard!`,
+                });
+                return;
               }}
             >
               <ClipboardCopy className="h-4 w-4 pr-2" /> Copy User ID
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={(e): void => {
+              onClick={async (e): Promise<void> => {
                 e.preventDefault();
                 const email: string = user.email;
-                navigator.clipboard
-                  .writeText(email)
-                  .then((): void => {
-                    toast({
-                      title: "Successfully copied email to clipboard!",
-                      description: `You should now be able to paste '${email}' from your clipboard!`,
-                    });
-                  })
-                  .catch((e: unknown): void => {
-                    toast({
-                      title: "Failed to copy email to clipboard!",
-                      description:
-                        e instanceof Error
-                          ? e.message
-                          : "An unknown error has occurred!",
-                    });
+                try {
+                  if (!window.isSecureContext) {
+                    throw new Error(
+                      "Writing to clipboard is only allowed in secure contexts!",
+                    );
+                  }
+                  await navigator.clipboard.writeText(email);
+                } catch (e: unknown) {
+                  toast({
+                    title: "Failed to copy email to clipboard!",
+                    description:
+                      e instanceof Error
+                        ? e.message
+                        : "An unknown error has occurred!",
                   });
+                  return;
+                }
+
+                toast({
+                  title: "Successfully copied email to clipboard!",
+                  description: `You should now be able to paste '${email}' from your clipboard!`,
+                });
+                return;
               }}
             >
               <ClipboardCopy className="h-4 w-4 pr-2" /> Copy Email

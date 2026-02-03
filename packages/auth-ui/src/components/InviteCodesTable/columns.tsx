@@ -84,26 +84,31 @@ export const columns: ColumnDef<InviteCodeDefinition>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={(e): void => {
+              onClick={async (e): Promise<void> => {
                 e.preventDefault();
                 const invite_code: string = invite_code_definition.invite_code;
-                navigator.clipboard
-                  .writeText(invite_code)
-                  .then((): void => {
-                    toast({
-                      title: "Successfully copied invite code to clipboard!",
-                      description: `You should now be able to paste '${invite_code}' from your clipboard!`,
-                    });
-                  })
-                  .catch((e: unknown): void => {
-                    toast({
-                      title: "Failed to copy invite code to clipboard!",
-                      description:
-                        e instanceof Error
-                          ? e.message
-                          : "An unknown error has occurred!",
-                    });
+                try {
+                  if (!window.isSecureContext) {
+                    throw new Error(
+                      "Writing to clipboard is only allowed in secure contexts!",
+                    );
+                  }
+                  await navigator.clipboard.writeText(invite_code);
+                } catch (e: unknown) {
+                  toast({
+                    title: "Failed to copy invite code to clipboard!",
+                    description:
+                      e instanceof Error
+                        ? e.message
+                        : "An unknown error has occurred!",
                   });
+                  return;
+                }
+
+                toast({
+                  title: "Successfully copied invite code to clipboard!",
+                  description: `You should now be able to paste '${invite_code}' from your clipboard!`,
+                });
               }}
             >
               <ClipboardCopy className="h-4 w-4 pr-2" /> Copy Invite Code

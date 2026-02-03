@@ -71,6 +71,10 @@ function DisplayGeneratedPrivateKeyForOneTimeCopy({
     if (!formattedContent) return;
 
     try {
+      if (!window.isSecureContext) {
+        throw new Error("Writing to clipboard is only allowed in secure contexts!")
+      }
+
       await navigator.clipboard.writeText(formattedContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

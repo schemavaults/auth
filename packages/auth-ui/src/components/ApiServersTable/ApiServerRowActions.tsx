@@ -54,6 +54,11 @@ export function ApiServerRowActions({
             onClick={async (e) => {
               e.preventDefault();
               try {
+                if (!window.isSecureContext) {
+                  throw new Error(
+                    "Writing to clipboard is only allowed in secure contexts!",
+                  );
+                }
                 await navigator.clipboard.writeText(api_server_id);
               } catch (e: unknown) {
                 toast({

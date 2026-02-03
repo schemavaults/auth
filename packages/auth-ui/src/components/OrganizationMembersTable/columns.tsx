@@ -152,17 +152,23 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({ role: newRole }),
-            }
+            },
           );
 
           const body = await response.json();
 
           if (!response.ok || !body.success) {
-            throw new Error(body.message || `Failed to ${newRole === "owner" ? "promote" : "demote"} member`);
+            throw new Error(
+              body.message ||
+                `Failed to ${newRole === "owner" ? "promote" : "demote"} member`,
+            );
           }
 
           toast({
-            title: newRole === "owner" ? "Member promoted to owner" : "Owner demoted to member",
+            title:
+              newRole === "owner"
+                ? "Member promoted to owner"
+                : "Owner demoted to member",
             description: `${member.email} is now ${newRole === "owner" ? "an owner" : "a member"} of this organization.`,
           });
 
@@ -173,7 +179,9 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
             variant: "destructive",
             title: `Failed to ${newRole === "owner" ? "promote" : "demote"} member`,
             description:
-              error instanceof Error ? error.message : "An unknown error occurred",
+              error instanceof Error
+                ? error.message
+                : "An unknown error occurred",
           });
         } finally {
           setIsChangingRole(false);
@@ -199,26 +207,32 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={(e): void => {
+              onClick={async (e): Promise<void> => {
                 e.preventDefault();
                 const uid: string = member.uid;
-                navigator.clipboard
-                  .writeText(uid)
-                  .then((): void => {
-                    toast({
-                      title: "Successfully copied user ID to clipboard!",
-                      description: `You should now be able to paste '${uid}' from your clipboard!`,
-                    });
-                  })
-                  .catch((e: unknown): void => {
-                    toast({
-                      title: "Failed to copy user ID to clipboard!",
-                      description:
-                        e instanceof Error
-                          ? e.message
-                          : "An unknown error has occurred!",
-                    });
+                try {
+                  if (!window.isSecureContext) {
+                    throw new Error(
+                      "Writing to clipboard is only allowed in secure contexts!",
+                    );
+                  }
+                  await navigator.clipboard.writeText(uid);
+                } catch (e: unknown) {
+                  toast({
+                    title: "Failed to copy user ID to clipboard!",
+                    description:
+                      e instanceof Error
+                        ? e.message
+                        : "An unknown error has occurred!",
                   });
+                  return;
+                }
+
+                toast({
+                  title: "Successfully copied user ID to clipboard!",
+                  description: `You should now be able to paste '${uid}' from your clipboard!`,
+                });
+                return;
               }}
             >
               <ClipboardCopy className="h-4 w-4 mr-2" /> Copy User ID

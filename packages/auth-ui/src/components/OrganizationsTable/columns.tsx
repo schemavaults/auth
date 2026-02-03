@@ -107,27 +107,32 @@ export const columns: ColumnDef<OrganizationDefinition>[] = [
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={(e): void => {
+              onClick={async (e): Promise<void> => {
                 e.preventDefault();
                 const organization_id: string = org.organization_id;
-                navigator.clipboard
-                  .writeText(organization_id)
-                  .then((): void => {
-                    toast({
-                      title:
-                        "Successfully copied organization ID to clipboard!",
-                      description: `You should now be able to paste '${organization_id}' from your clipboard!`,
-                    });
-                  })
-                  .catch((e: unknown): void => {
-                    toast({
-                      title: "Failed to copy organization ID to clipboard!",
-                      description:
-                        e instanceof Error
-                          ? e.message
-                          : "An unknown error has occurred!",
-                    });
+                try {
+                  if (!window.isSecureContext) {
+                    throw new Error(
+                      "Writing to clipboard is only allowed in secure contexts!",
+                    );
+                  }
+                  await navigator.clipboard.writeText(organization_id);
+                } catch (e: unknown) {
+                  toast({
+                    title: "Failed to copy organization ID to clipboard!",
+                    description:
+                      e instanceof Error
+                        ? e.message
+                        : "An unknown error has occurred!",
                   });
+                  return;
+                }
+
+                toast({
+                  title: "Successfully copied organization ID to clipboard!",
+                  description: `You should now be able to paste '${organization_id}' from your clipboard!`,
+                });
+                return;
               }}
             >
               <ClipboardCopy className="h-4 w-4 pr-2" /> Copy Organization ID
