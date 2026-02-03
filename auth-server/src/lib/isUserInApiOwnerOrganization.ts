@@ -5,6 +5,7 @@ import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import SchemaVaultsApiServerRegistry from "@/lib/auth-db/apis";
 import type { OrganizationID, UserData } from "@schemavaults/auth-common";
 import isUserInOrganization from "@/lib/isUserInOrganization";
+import type { SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
 
 /**
  * @name isUserInApiOwnerOrganization
@@ -19,7 +20,11 @@ export default async function isUserInApiOwnerOrganization(
   db: Kysely<AuthDatabase>
 ): Promise<boolean> {
   const apiServerRegistry = new SchemaVaultsApiServerRegistry(db);
-  const apiServer = await apiServerRegistry.getApiServer(api_server_id);
+  const apiServer: SchemaVaultsApiServerDefinition | null = await apiServerRegistry.getApiServer(api_server_id);
+
+  if (!apiServer) {
+    throw new Error(`No API server found with 'api_server_id': '${api_server_id}'`)
+  }
 
   if (!apiServer.owner_organization_id) {
     console.warn(`[isUserInOwnerOrganization] No owner organization found for API server: '${api_server_id}'`)

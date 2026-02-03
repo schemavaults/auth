@@ -12,13 +12,17 @@ import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
  * Regenerate JWKS access key - deactivates all old keys and creates a new one
  * Only organization owners can regenerate keys
  */
-export async function PUT_regenerate_jwks_access_key(req: NextRequest): Promise<NextResponse> {
+export async function PUT_regenerate_jwks_access_key(req: NextRequest, context: RouteContext<'/api/apis/[api_server_id]/jwks-access-key'>): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ req, user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
-      const url = new URL(req.url);
-      const pathParts = url.pathname.split("/");
-      const apisIndex = pathParts.indexOf("apis");
-      const api_server_id = pathParts[apisIndex + 1];
+    async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
+      const params = await context.params;
+      if (typeof params.api_server_id !== 'string') {
+        return NextResponse.json(
+          { success: false, message: "Invalid API server ID" },
+          { status: 400 }
+        );
+      }
+      const api_server_id: string = params.api_server_id;
 
       if (!api_server_id || !apiServerIdSchema.safeParse(api_server_id).success) {
         return NextResponse.json(

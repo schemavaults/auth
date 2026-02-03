@@ -30,7 +30,7 @@ export class SchemaVaultsApiServerRegistry {
 
   public async getApiServer(
     api_server_id: ApiServerId,
-  ): Promise<SchemaVaultsApiServerDefinition> {
+  ): Promise<SchemaVaultsApiServerDefinition | null> {
     if (this.debug) {
       console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}')`)
     }
@@ -56,17 +56,16 @@ export class SchemaVaultsApiServerRegistry {
 
     const rows = await getApiServerQuery.execute();
     if (rows.length === 0) {
-      throw new Error("API Server not found");
+      return null;
     } else if (rows.length > 1) {
       throw new Error("Multiple API servers found with the same api_server_id");
     }
 
-    console.assert(
-      rows.length === 1,
-      "Expected there to be exactly one API server row retrieved from the database if this point was reached!",
-    );
+    if (rows.length !== 1 || !rows[0] || typeof rows[0] !== 'object') {
+      throw new Error("Expected there to be exactly one API server row retrieved from the database if this point was reached!");
+    }
 
-    const first_row = rows[0]!;
+    const first_row = rows[0];
     if (!Object.hasOwn(first_row, "created_at")) {
       throw new Error("Missing creation time in row data");
     }
