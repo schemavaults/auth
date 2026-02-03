@@ -59,7 +59,7 @@ RUN bun run build
 WORKDIR /schemavaults/auth/tests/e2e-auth-tests
 RUN bun run cy:install
 
-FROM deps as test-runner
+FROM deps AS test-runner
 
 WORKDIR /schemavaults/auth/tests/e2e-auth-tests
 COPY tests/e2e-auth-tests/cypress.config.ts cypress.config.ts
