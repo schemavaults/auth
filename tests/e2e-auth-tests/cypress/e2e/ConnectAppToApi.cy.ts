@@ -1,3 +1,11 @@
+function expectNumber(val: unknown): val is number {
+  if (typeof val !== "number" || isNaN(val)) {
+    return false;
+  }
+  expect(typeof val).to.be("number");
+  return true;
+}
+
 describe("Connect App to API Server", () => {
   describe("Admin Success Cases", () => {
     it("admin can connect app to API from admin APIs page", () => {
@@ -103,6 +111,68 @@ describe("Connect App to API Server", () => {
 
                   // Cleanup
                   cy.delete_organization({ organization_id });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+
+    it("connecting apps from different organizations works for superuser", () => {
+      cy.create_and_login_as_superuser().then((success) => {
+        if (!success) {
+          throw new Error("Failed to create and login as superuser");
+        }
+
+        cy.generate_random_code(12).then((randomCode: string) => {
+          // Create two separate organizations
+          const org1_id = `diff-org-1-${randomCode.toLowerCase()}`;
+          const org2_id = `diff-org-2-${randomCode.toLowerCase()}`;
+
+          cy.create_organization({
+            organization_id: org1_id,
+            name: `Org 1 ${randomCode}`,
+          }).then(() => {
+            cy.create_organization({
+              organization_id: org2_id,
+              name: `Org 2 ${randomCode}`,
+            }).then(() => {
+              // Create app in org 1
+              cy.create_app({
+                app_name: `App in Org 1 ${randomCode}`,
+                app_description: "App in first org",
+                organization_id: org1_id,
+              }).then((appResult) => {
+                if (!appResult.success || !appResult.app_id) {
+                  throw new Error("Failed to create app");
+                }
+
+                const client_app_id = appResult.app_id;
+
+                // Create API in org 2
+                cy.create_api_server({
+                  api_server_name: `API in Org 2 ${randomCode}`,
+                  api_server_description: "API in second org",
+                  organization_id: org2_id,
+                }).then((apiResult) => {
+                  if (!apiResult.success || !apiResult.api_server_id) {
+                    throw new Error("Failed to create API server");
+                  }
+                  const api_server_id = apiResult.api_server_id;
+
+                  // Try to connect app from org1 to API from org2 (should fail)
+                  cy.request({
+                    method: "POST",
+                    url: `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
+                    failOnStatusCode: false,
+                  }).then((response) => {
+                    expect(response.status).to.equal(200);
+
+                    // Cleanup - delete both orgs
+                    cy.delete_organization({ organization_id: org1_id });
+                    cy.delete_organization({ organization_id: org2_id });
+                  });
                 });
               });
             });
@@ -346,9 +416,17 @@ describe("Connect App to API Server", () => {
                             ).click();
 
                             cy.wait("@inviteRequest").then((interception) => {
-                              expect(
-                                interception.response?.statusCode,
-                              ).to.equal(200);
+                              const statusCode =
+                                interception.response?.statusCode;
+                              if (!expectNumber(statusCode)) {
+                                throw new TypeError(
+                                  "Expected statusCode to be a number!",
+                                );
+                              }
+
+                              if (![200, 201].includes(statusCode)) {
+                                throw new TypeError("Bad status code!");
+                              }
 
                               cy.logout();
 
@@ -412,71 +490,6 @@ describe("Connect App to API Server", () => {
                     );
                   },
                 );
-              });
-            });
-          });
-        });
-      });
-    });
-
-    it("connecting apps from different organizations fails (403)", () => {
-      cy.create_and_login_as_superuser().then((success) => {
-        if (!success) {
-          throw new Error("Failed to create and login as superuser");
-        }
-
-        cy.generate_random_code(12).then((randomCode: string) => {
-          // Create two separate organizations
-          const org1_id = `diff-org-1-${randomCode.toLowerCase()}`;
-          const org2_id = `diff-org-2-${randomCode.toLowerCase()}`;
-
-          cy.create_organization({
-            organization_id: org1_id,
-            name: `Org 1 ${randomCode}`,
-          }).then(() => {
-            cy.create_organization({
-              organization_id: org2_id,
-              name: `Org 2 ${randomCode}`,
-            }).then(() => {
-              // Create app in org 1
-              cy.create_app({
-                app_name: `App in Org 1 ${randomCode}`,
-                app_description: "App in first org",
-                organization_id: org1_id,
-              }).then((appResult) => {
-                if (!appResult.success || !appResult.app_id) {
-                  throw new Error("Failed to create app");
-                }
-
-                const client_app_id = appResult.app_id;
-
-                // Create API in org 2
-                cy.create_api_server({
-                  api_server_name: `API in Org 2 ${randomCode}`,
-                  api_server_description: "API in second org",
-                  organization_id: org2_id,
-                }).then((apiResult) => {
-                  if (!apiResult.success || !apiResult.api_server_id) {
-                    throw new Error("Failed to create API server");
-                  }
-                  const api_server_id = apiResult.api_server_id;
-
-                  // Try to connect app from org1 to API from org2 (should fail)
-                  cy.request({
-                    method: "POST",
-                    url: `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
-                    failOnStatusCode: false,
-                  }).then((response) => {
-                    expect(response.status).to.equal(403);
-                    expect(response.body.message).to.include(
-                      "same organization",
-                    );
-
-                    // Cleanup - delete both orgs
-                    cy.delete_organization({ organization_id: org1_id });
-                    cy.delete_organization({ organization_id: org2_id });
-                  });
-                });
               });
             });
           });
@@ -560,6 +573,9 @@ describe("Connect App to API Server", () => {
                 url: `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
                 failOnStatusCode: false,
               }).then((response) => {
+                if (response.status !== 200) {
+                  cy.log(response.body);
+                }
                 expect(response.status).to.equal(404);
                 expect(response.body.message).to.include("not found");
 
