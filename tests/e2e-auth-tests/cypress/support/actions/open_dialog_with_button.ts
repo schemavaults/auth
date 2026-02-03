@@ -45,8 +45,12 @@ export default function open_dialog_with_button(
       const dialogContent: JQuery<HTMLBodyElement> = $body.find(selector);
       if (dialogContent.length > 0) {
         if (dialogContent.is(":visible")) {
+          cy.log("Dialog content appears to meet :visible selector! Ready!");
           return; // Dialog opened, success
         } else if (dialogContent.is('[data-state="open"]')) {
+          cy.log(
+            'Dialog content appears to meet data-state="open" selector! Ready!',
+          );
           return;
         } else {
           cy.log(
@@ -59,6 +63,9 @@ export default function open_dialog_with_button(
         );
       }
       if (attempt >= maxAttempts) {
+        cy.log(
+          `Dialog did not open after ${maxAttempts} attempts! Throwing error...`,
+        );
         throw new Error(`Dialog did not open after ${maxAttempts} attempts`);
       }
       clickUntilDialogOpens(attempt + 1);
