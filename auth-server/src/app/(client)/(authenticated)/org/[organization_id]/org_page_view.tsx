@@ -7,11 +7,13 @@ import {
   AppsCard,
   SentInvitationsCard,
   clearSentInvitationsCache,
+  OrganizationSettingsCard,
   type OrganizationMemberTableData,
   type PreloadedAppsTableDataWithDomainRefs,
   type PreloadedApiServersTableData,
 } from "@schemavaults/auth-ui";
 import type { ReactElement } from "react";
+import { useRouter } from "next/navigation";
 import PageContainer from "@/components/PageContainer";
 import type { InviteMemberSubmitData, OrganizationDefinition } from "@schemavaults/auth-common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, useToast } from "@schemavaults/ui";
@@ -49,6 +51,7 @@ export default function OrgPageView({
 }: OrgPageViewProps): ReactElement {
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
+  const router = useRouter();
 
   return (
     <PageContainer>
@@ -124,7 +127,13 @@ export default function OrgPageView({
         showConnectAppToApi={isOrgOwner}
       />
 
-
+      {isOrgOwner && (
+        <OrganizationSettingsCard
+          organization_id={organization.organization_id}
+          organization_name={organization.name}
+          redirect={async (url: string) => router.push(url)}
+        />
+      )}
     </PageContainer>
   );
 }

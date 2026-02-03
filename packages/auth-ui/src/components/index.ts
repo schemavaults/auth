@@ -86,3 +86,6 @@ export type { UseSentInvitationsOptions } from "./SentInvitationsTable";
 
 export { SentInvitationsCard } from "./SentInvitationsCard";
 export type { SentInvitationsCardProps } from "./SentInvitationsCard";
+
+export { OrganizationSettingsCard } from "./OrganizationSettingsCard";
+export type { OrganizationSettingsCardProps } from "./OrganizationSettingsCard";
