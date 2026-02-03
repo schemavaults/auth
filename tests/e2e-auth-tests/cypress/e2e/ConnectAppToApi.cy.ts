@@ -57,6 +57,9 @@ describe("Connect App to API Server", () => {
                     }).then((result) => {
                       expect(result.success).to.be.true;
                       expect(result.status_code).to.equal(200);
+
+                      // Cleanup
+                      cy.delete_organization({ organization_id });
                     });
                   });
                 });
@@ -118,6 +121,9 @@ describe("Connect App to API Server", () => {
                     }).then((result) => {
                       expect(result.success).to.be.true;
                       expect(result.status_code).to.equal(200);
+
+                      // Cleanup
+                      cy.delete_organization({ organization_id });
                     });
                   });
                 });
@@ -241,6 +247,12 @@ describe("Connect App to API Server", () => {
                                     }).then((result) => {
                                       expect(result.success).to.be.true;
                                       expect(result.status_code).to.equal(200);
+
+                                      // Cleanup - login as admin to delete org
+                                      cy.logout();
+                                      cy.create_and_login_as_superuser().then(() => {
+                                        cy.delete_organization({ organization_id });
+                                      });
                                     });
                                   });
                                 });
@@ -372,6 +384,12 @@ describe("Connect App to API Server", () => {
                                   }).then((response) => {
                                     expect(response.status).to.equal(403);
                                     expect(response.body.message).to.include("owner");
+
+                                    // Cleanup - login as admin to delete org
+                                    cy.logout();
+                                    cy.create_and_login_as_superuser().then(() => {
+                                      cy.delete_organization({ organization_id });
+                                    });
                                   });
                                 });
                               });
@@ -438,6 +456,10 @@ describe("Connect App to API Server", () => {
                       }).then((response) => {
                         expect(response.status).to.equal(403);
                         expect(response.body.message).to.include("same organization");
+
+                        // Cleanup - delete both orgs
+                        cy.delete_organization({ organization_id: org1_id });
+                        cy.delete_organization({ organization_id: org2_id });
                       });
                     });
                   });
@@ -481,6 +503,9 @@ describe("Connect App to API Server", () => {
               }).then((response) => {
                 expect(response.status).to.equal(404);
                 expect(response.body.message).to.include("not found");
+
+                // Cleanup
+                cy.delete_organization({ organization_id });
               });
             });
           });
@@ -526,6 +551,9 @@ describe("Connect App to API Server", () => {
                   }).then((response) => {
                     expect(response.status).to.equal(404);
                     expect(response.body.message).to.include("not found");
+
+                    // Cleanup
+                    cy.delete_organization({ organization_id });
                   });
                 });
               });

@@ -21,6 +21,10 @@ import type {
   CreateApiServerResult,
 } from "./actions/create_api_server";
 import type { CreateOrganizationParams } from "./actions/create_organization";
+import type {
+  DeleteOrganizationParams,
+  DeleteOrganizationResult,
+} from "./actions/delete_organization";
 import type { GenerateJwksAccessKeyResult } from "./actions/generate_jwks_access_key";
 import type { WaitForPageHydrationOptions } from "./actions/wait_for_page_hydration";
 import type {
@@ -59,6 +63,9 @@ declare global {
         max_uses: number,
       ): Chainable<boolean>;
       create_organization(params: CreateOrganizationParams): Chainable<boolean>;
+      delete_organization(
+        params: DeleteOrganizationParams,
+      ): Chainable<DeleteOrganizationResult>;
       create_api_server(
         params: CreateApiServerParams,
       ): Chainable<CreateApiServerResult>;

@@ -46,6 +46,9 @@ describe("Organizations", () => {
             // Verify the org page loads correctly (not redirected to error)
             cy.url().should("not.include", "/error");
             cy.contains(name).should("exist");
+
+            // Cleanup
+            cy.delete_organization({ organization_id });
           });
         });
       });
@@ -84,6 +87,12 @@ describe("Organizations", () => {
                 cy.url().should("include", "/error");
                 cy.url().should("include", "error=403");
                 cy.url().should("include", "error_id=forbidden");
+
+                // Cleanup - login as admin to delete org
+                cy.logout();
+                cy.create_and_login_as_superuser().then(() => {
+                  cy.delete_organization({ organization_id });
+                });
               });
             });
           });

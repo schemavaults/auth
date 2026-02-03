@@ -79,6 +79,9 @@ describe("API Servers", () => {
                 cy.log(
                   `Successfully created API server '${api_server_name}' for organization '${organization_id}'`,
                 );
+
+                // Cleanup - deleting the org will cascade delete the API server
+                cy.delete_organization({ organization_id });
               });
             });
           });

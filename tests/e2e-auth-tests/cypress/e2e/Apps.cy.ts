@@ -90,6 +90,9 @@ describe("Apps", () => {
                 cy.log(
                   `Successfully created app '${app_name}' for organization '${organization_id}'`,
                 );
+
+                // Cleanup - deleting the org will cascade delete the app
+                cy.delete_organization({ organization_id });
               });
             });
           });
