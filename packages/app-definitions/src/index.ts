@@ -45,3 +45,5 @@ export {
 export type { SchemaVaultsAppEnvironment } from "./app-environments";
 
 export { getAppEnvironment } from "./get-app-environment";
+
+export { getAuthServerUri } from "./get-auth-server-uri";
