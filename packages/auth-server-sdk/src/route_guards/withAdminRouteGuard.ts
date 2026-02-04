@@ -61,3 +61,10 @@ export function withAdminApiRouteGuard<
     getApiServerId,
   );
 }
+
+export type {
+  TProtectedAuthenticatedPageServerComponent as TProtectedAdminPageServerComponent,
+  TProtectedAuthenticatedApiRoute as TProtectedAdminApiRoute,
+  IBaseProtectedAuthenticatedServerComponentPageProps as IBaseProtectedAdminServerComponentPageProps,
+  IBaseProtectedAuthenticatedApiRouteInputs as IBaseProtectedAdminApiRouteInputs,
+} from "./withAuthenticatedRouteGuard";

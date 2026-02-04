@@ -12,9 +12,20 @@ export {
   withAuthenticatedServerComponentRouteGuard,
   withAuthenticatedApiRouteGuard,
 } from "./withAuthenticatedRouteGuard";
-export type * from "./withAuthenticatedRouteGuard";
+export type {
+  TProtectedAuthenticatedPageServerComponent,
+  TProtectedAuthenticatedApiRoute,
+  IBaseProtectedAuthenticatedServerComponentPageProps,
+  IBaseProtectedAuthenticatedApiRouteInputs,
+} from "./withAuthenticatedRouteGuard";
+
 export {
   withAdminServerComponentRouteGuard,
   withAdminApiRouteGuard,
 } from "./withAdminRouteGuard";
-export type * from "./withAdminRouteGuard";
+export type {
+  TProtectedAdminPageServerComponent,
+  TProtectedAdminApiRoute,
+  IBaseProtectedAdminServerComponentPageProps,
+  IBaseProtectedAdminApiRouteInputs,
+} from "./withAdminRouteGuard";
