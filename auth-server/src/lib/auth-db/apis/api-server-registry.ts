@@ -13,7 +13,7 @@ import {
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
-import isHardcodedApiServerId from "@/lib/isHardcodedApiServerId";
+import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 
 /**
  * @name SchemaVaultsApiServerRegistry

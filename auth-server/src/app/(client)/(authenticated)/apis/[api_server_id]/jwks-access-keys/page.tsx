@@ -10,7 +10,7 @@ import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER, type Sch
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
-import isHardcodedApiServerId from "@/lib/isHardcodedApiServerId";
+import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import { JwksAccessKeysRegistry, type JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
 
 interface PageParams {

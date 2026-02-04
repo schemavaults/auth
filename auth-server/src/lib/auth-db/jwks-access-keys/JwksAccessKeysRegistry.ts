@@ -9,7 +9,7 @@ import type {
 import { generateJwtSigningKeyPair, sign_verify_alg } from "@schemavaults/jwt";
 import { JwksAccessKeyStatusQueryResponse } from "./JwksAccessKeyStatusQueryResponse";
 import { ApiServerId } from "@schemavaults/app-definitions";
-import isHardcodedApiServerId from "@/lib/isHardcodedApiServerId";
+import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 
 const DEFAULT_KEY_ALGORITHM = sign_verify_alg;
 
