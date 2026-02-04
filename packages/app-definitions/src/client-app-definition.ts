@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { appIdSchema } from "./app-id";
 import { schemaVaultsAppEnvironmentSchema } from "./app-environments";
-import type { HardcodedAppId } from "./hardcoded-core-schemavaults-apps";
 
 // THIS SHOULD NOT BE USED OUTSIDE OF @schemavaults/app-definitions
 // schemaVaultsAppDefinitionSchema restricts the scope of app_id after applying hardcoded app ids
