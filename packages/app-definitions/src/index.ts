@@ -13,7 +13,10 @@ export type * from "./list-registry-apps-query-params";
 export * from "./api-server-id";
 export type * from "./api-server-id";
 
-export * from "./api-server-definition";
+export {
+  schemaVaultsApiServerDefinitionSchema,
+  schemaVaultsApiServerDomainRefSchema,
+} from "./api-server-definition";
 export type * from "./api-server-definition";
 
 export * from "./list-registry-api-servers-query-params";

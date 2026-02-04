@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { SchemaVaultsApp } from "./client-app-definition";
 import { defaultHardcodedAppCreationTime } from "./default-hardcoded-app-creation-time";
 
@@ -62,10 +63,20 @@ export const HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP = new Map(
   HARDCODED_CORE_SCHEMAVAULTS_APPS.map((app) => [app.app_id, app] as const),
 );
 
+const hardcoded_app_ids = HARDCODED_CORE_SCHEMAVAULTS_APPS.map(
+  (hardcoded_app) => hardcoded_app.app_id,
+) satisfies readonly HardcodedAppId[];
+
+export const hardcodedAppIdSchema = z
+  .string()
+  .refine((app_id: string): app_id is HardcodedAppId => {
+    return (
+      hardcoded_app_ids satisfies readonly string[] as readonly string[]
+    ).includes(app_id);
+  }, "Invalid hardcoded app ID");
+
 export function isHardcodedAppId(app_id: string): app_id is HardcodedAppId {
-  return HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP.has(
-    app_id satisfies string as HardcodedAppId,
-  );
+  return hardcodedAppIdSchema.safeParse(app_id).success;
 }
 
 export function getHardcodedApp(app_id: string): SchemaVaultsApp {
