@@ -10,7 +10,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.15.17",
+      "version": "0.15.34",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -70,7 +70,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.5.5",
+      "version": "0.5.6",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -89,7 +89,7 @@
     },
     "packages/auth-common": {
       "name": "@schemavaults/auth-common",
-      "version": "0.8.2",
+      "version": "0.8.4",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "crypto-js": "4.2.0",
@@ -165,7 +165,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.17.17",
+      "version": "0.18.1",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -174,7 +174,6 @@
       },
       "devDependencies": {
         "@eslint/js": "9.39.1",
-        "@schemavaults/dbh": "0.7.5",
         "@types/react": "19.0.0",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
@@ -188,7 +187,7 @@
     },
     "packages/auth-ui": {
       "name": "@schemavaults/auth-ui",
-      "version": "0.6.19",
+      "version": "0.6.29",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -223,7 +222,7 @@
     },
     "packages/jwt": {
       "name": "@schemavaults/jwt",
-      "version": "0.6.21",
+      "version": "0.6.22",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -243,7 +242,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.1.13",
+      "version": "0.1.19",
       "dependencies": {
         "@schemavaults/jwt": "workspace:*",
         "cypress": "15.9.0",
