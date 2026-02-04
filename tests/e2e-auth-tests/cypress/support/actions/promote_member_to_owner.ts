@@ -30,18 +30,18 @@ export default function promoteMemberToOwner(
             .click();
         });
 
-      // Wait for dropdown to open and click "Promote to Owner"
-      cy.get('[data-testid="promote-to-owner-menu-item"]')
-        .should("exist")
-        .should("be.visible")
-        .click();
-
       // Intercept the role change request
       cy.intercept({
         method: "PATCH",
         url: `**/api/organizations/${organization_id}/members/*/role`,
         times: 1,
       }).as("promoteMemberRequest");
+
+      // Wait for dropdown to open and click "Promote to Owner"
+      cy.get('[data-testid="promote-to-owner-menu-item"]')
+        .should("exist")
+        .should("be.visible")
+        .click();
 
       // Wait for the request to complete
       return cy
@@ -54,7 +54,9 @@ export default function promoteMemberToOwner(
           const success: boolean = statusCode === 200 || statusCode === 201;
 
           if (success) {
-            cy.log(`Successfully promoted user '${user_email}' to owner`);
+            cy.log(
+              `Successfully promoted user '${user_email}' to owner of organization '${organization_id}'`,
+            );
             // Wait for the table to update (role should now show "owner")
             cy.contains("tr", user_email).within(() => {
               cy.contains("owner", { matchCase: false }).should("exist");
