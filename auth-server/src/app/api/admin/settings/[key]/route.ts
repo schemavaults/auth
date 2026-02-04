@@ -3,7 +3,6 @@ import { withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
 import { type NextRequest, NextResponse } from "next/server";
 import type { IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import {
   ServerSettingsRegistry,
   isValidServerSettingKey,
@@ -20,7 +19,7 @@ interface PatchSettingRequestBody {
 }
 
 async function PATCH_update_setting(
-  { user, dbh }: IProtectedAdminApiRouteProps<AuthDatabase>,
+  { user, dbh }: IProtectedAdminApiRouteProps,
   key: string,
   body: PatchSettingRequestBody
 ): Promise<NextResponse> {

@@ -8,14 +8,13 @@ import {
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { ServerRuntime } from "next";
 
 export const runtime: ServerRuntime = "edge"
 export const dynamic = "force-dynamic"; // defaults to auto
 
 async function POST_admin_promotion_handler(
-  { user }: IProtectedAdminApiRouteProps<AuthDatabase>,
+  { user }: IProtectedAdminApiRouteProps,
   new_superuser_uid: string
 ): Promise<NextResponse> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
@@ -118,7 +117,7 @@ export async function POST(
     );
   }
   const protected_route: (req: NextRequest) => Promise<NextResponse> = await withAdminApiRouteGuard(
-    async (opts: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> => {
+    async (opts: IProtectedAdminApiRouteProps): Promise<NextResponse> => {
       return await POST_admin_promotion_handler(opts, new_superuser_uid) satisfies NextResponse;
     }
   )

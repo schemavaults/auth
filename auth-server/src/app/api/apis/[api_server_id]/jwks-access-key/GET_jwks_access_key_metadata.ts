@@ -4,7 +4,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
 import type { JwksAccessKeyStatusQueryResponse } from '@/lib/auth-db/jwks-access-keys';
 
@@ -15,7 +14,7 @@ import type { JwksAccessKeyStatusQueryResponse } from '@/lib/auth-db/jwks-access
  */
 export async function GET_jwks_access_key_metadata(request: NextRequest, ctx: RouteContext<"/api/apis/[api_server_id]/jwks-access-key">): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
+    async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps) => {
       const params = await ctx.params;
       const api_server_id = params.api_server_id;
 

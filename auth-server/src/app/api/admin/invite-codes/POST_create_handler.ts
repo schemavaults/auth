@@ -10,9 +10,10 @@ import {
 } from "@schemavaults/auth-common";
 import { NextResponse } from "next/server";
 import type { IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
-export default async function POST_create_handler({ req, dbh, user }: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
+export default async function POST_create_handler(
+  { req, dbh, user }: IProtectedAdminApiRouteProps
+): Promise<NextResponse> {
   if (!user.admin) {
     return NextResponse.json(
       {

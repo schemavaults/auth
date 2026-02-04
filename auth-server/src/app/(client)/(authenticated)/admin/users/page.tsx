@@ -9,7 +9,6 @@ import {
 import { UserRegistry, type UserDocument } from "@/lib/auth-db";
 import type { ServerRuntime } from "next";
 import type { UserData } from "@schemavaults/auth-common";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 function userDocumentToUserData(doc: UserDocument): UserData {
   return {
@@ -27,7 +26,7 @@ function userDocumentToUserData(doc: UserDocument): UserData {
 async function PreloadedUsersPage({
   user,
   dbh
-}: IProtectedAdminServerComponentPageProps<AuthDatabase>): Promise<ReactElement> {
+}: IProtectedAdminServerComponentPageProps): Promise<ReactElement> {
   if (!user.admin) {
     throw new Error(
       "Expected user to have been asserted to be an admin by this point!",

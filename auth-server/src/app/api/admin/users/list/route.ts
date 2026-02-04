@@ -6,13 +6,12 @@ import {
   type UserDocument,
 } from "@/lib/auth-db";
 import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { ServerRuntime } from "next";
 export const dynamic = "force-dynamic"; // defaults to auto
 export const runtime: ServerRuntime = "edge";
 
 
-async function GET_list_users_handler({ user, dbh }: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
+async function GET_list_users_handler({ user, dbh }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
   if (!user.admin) {
     return NextResponse.json(
       {

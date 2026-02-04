@@ -15,7 +15,6 @@ import {
   organizationIdSchema,
   inviteMemberInputModes,
 } from "@schemavaults/auth-common";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { ServerRuntime } from "next";
 import { z } from "zod";
 
@@ -43,7 +42,7 @@ const createInvitationRequestSchema = z.object({
 });
 
 async function POST_create_invitation_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>,
+  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
   context: RouteContext,
   req: NextRequest
 ): Promise<NextResponse> {
@@ -200,7 +199,7 @@ async function POST_create_invitation_handler(
 }
 
 async function GET_list_invitations_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>,
+  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
   context: RouteContext
 ): Promise<NextResponse> {
   const { organization_id: org_id_param } = await context.params;

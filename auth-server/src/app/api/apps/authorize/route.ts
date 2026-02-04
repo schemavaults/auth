@@ -7,7 +7,6 @@ import {
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { ServerRuntime } from "next";
 
 export const runtime: ServerRuntime = "edge";
@@ -24,7 +23,7 @@ const authorizeAppEndpointRequestBodySchema = z
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
+    async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps) => {
       if (environment === "development") {
         console.log("[/api/apps/authorize] POST request received");
       }

@@ -10,7 +10,6 @@ import {
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 
@@ -19,7 +18,7 @@ import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults
  */
 export default async function POST_api_creation_handler(request: NextRequest): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
+    async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps) => {
       if (environment === "development") {
         console.log("[/api/apis] POST request received");
       }

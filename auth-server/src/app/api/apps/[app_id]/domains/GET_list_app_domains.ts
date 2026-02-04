@@ -12,7 +12,6 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 export type ListAppDomainsResponse =
   | {
@@ -54,7 +53,7 @@ export async function GET_list_app_domains(
       user,
       dbh,
       environment,
-    }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>): Promise<NextResponse> => {
+    }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
       if (environment === "development") {
         console.log(`[/api/apps/${app_id}/domains] GET request received`);
       }

@@ -18,7 +18,6 @@ import {
   type OrganizationID,
   organizationIdSchema,
 } from "@schemavaults/auth-common";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { z } from "zod";
 import type { ServerRuntime } from "next";
 
@@ -32,7 +31,7 @@ const respondToInvitationSchema = z.object({
 });
 
 async function PATCH_respond_to_invitation_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>,
+  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
   context: RouteContext<"/api/organizations/[organization_id]/invitations/[invitation_id]">,
   req: NextRequest
 ): Promise<NextResponse> {
@@ -177,7 +176,7 @@ async function PATCH_respond_to_invitation_handler(
 }
 
 async function DELETE_revoke_invitation_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>,
+  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
   context: RouteContext<"/api/organizations/[organization_id]/invitations/[invitation_id]">
 ): Promise<NextResponse> {
   const { organization_id: org_id_param, invitation_id } = await context.params;

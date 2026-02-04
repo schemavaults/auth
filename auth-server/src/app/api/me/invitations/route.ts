@@ -5,14 +5,13 @@ import {
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
 import { listUserPendingInvitations } from "@/lib/auth-db/organizations";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { ServerRuntime } from "next";
 
 export const runtime: ServerRuntime = "edge";
 export const dynamic = "force-dynamic";
 
 async function GET_user_invitations_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>
+  { user, dbh }: IProtectedAuthenticatedApiRouteProps
 ): Promise<NextResponse> {
   try {
     const invitations = await listUserPendingInvitations(dbh.db, user.uid);

@@ -12,7 +12,6 @@ import {
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 /**
  * Create a new domain for an application
@@ -39,7 +38,7 @@ export async function POST_create_app_domain(
   const app_id: AppId = parsed_app_id.data;
 
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
+    async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps) => {
       if (environment === "development") {
         console.log(`[/api/apps/${app_id}/domains] POST request received`);
       }

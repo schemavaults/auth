@@ -10,7 +10,6 @@ import {
   type OrganizationMembershipRoleType,
 } from "@/lib/auth-db/organizations/organization-membership-role-types";
 import { type OrganizationID, organizationIdSchema } from "@schemavaults/auth-common";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isValidUuid from "@/lib/is-valid-uuid";
 
 interface RouteContext {
@@ -22,7 +21,7 @@ interface UpdateRoleRequestBody {
 }
 
 async function PATCH_member_role_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>,
+  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
   context: RouteContext,
   body: UpdateRoleRequestBody,
 ): Promise<NextResponse> {

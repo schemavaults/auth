@@ -9,12 +9,11 @@ import {
   withAdminApiRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 async function GET_list_organizations_handler({
   user,
   dbh,
-}: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
+}: IProtectedAdminApiRouteProps): Promise<NextResponse> {
   if (!user) {
     return NextResponse.json(
       {

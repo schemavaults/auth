@@ -1,33 +1,57 @@
 import "server-only";
+
 import {
   withAuthenticatedServerComponentRouteGuard as _withAuthenticatedServerComponentRouteGuard,
   withAuthenticatedApiRouteGuard as _withAuthenticatedApiRouteGuard,
   type TProtectedAuthenticatedPageServerComponent,
   type TProtectedAuthenticatedApiRoute,
+  IBaseProtectedAuthenticatedServerComponentPageProps,
+  IBaseProtectedAdminApiRouteInputs,
 } from "@schemavaults/auth-server-sdk/route_guards";
-import type { AuthDatabase } from "./auth-db/auth-database-types";
 import { ServerlessDatabase } from "./auth-db";
 import SCHEMAVAULTS_AUTH_APP_ID from "./SCHEMAVAULTS_AUTH_APP_ID";
 import type { ApiServerId } from "@schemavaults/app-definitions";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 
-import type {
-  IProtectedAuthenticatedApiRouteProps as _IProtectedAuthenticatedApiRouteProps,
-  IProtectedAuthenticatedServerComponentPageProps as _IProtectedAuthenticatedServerComponentPageProps
-} from "@schemavaults/auth-server-sdk/route_guards";
 import { type NextRequest, NextResponse } from "next/server";
 
-export type IProtectedAuthenticatedApiRouteProps<Db extends AuthDatabase = AuthDatabase> = _IProtectedAuthenticatedApiRouteProps<Db>;
-export type IProtectedAuthenticatedServerComponentPageProps<Db extends AuthDatabase = AuthDatabase> = _IProtectedAuthenticatedServerComponentPageProps<Db>;
-
-export async function withAuthenticatedServerComponentRouteGuard(input: TProtectedAuthenticatedPageServerComponent<AuthDatabase>) {
+export async function withAuthenticatedServerComponentRouteGuard(
+  server_component: TProtectedAuthenticatedPageServerComponent<{ dbh: ServerlessDatabase }>
+) {
   await using dbh = ServerlessDatabase.createDBH();
   const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
-  return _withAuthenticatedServerComponentRouteGuard(input, dbh, jwt_keys_manager, (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID)
+  return _withAuthenticatedServerComponentRouteGuard(
+    server_component,
+    {
+      dbh
+    },
+    'authenticated',
+    undefined,
+    jwt_keys_manager,
+    (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID)
 }
 
-export async function withAuthenticatedApiRouteGuard(input: TProtectedAuthenticatedApiRoute<AuthDatabase>): Promise<(req: NextRequest) => Promise<NextResponse>> {
+export async function withAuthenticatedApiRouteGuard(
+  api_route_handler: TProtectedAuthenticatedApiRoute<{ dbh: ServerlessDatabase }>
+): Promise<(req: NextRequest) => Promise<NextResponse>> {
   await using dbh = ServerlessDatabase.createDBH();
   const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
-  return _withAuthenticatedApiRouteGuard(input, dbh, jwt_keys_manager, (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID)
+  return _withAuthenticatedApiRouteGuard(
+    api_route_handler,
+    { dbh },
+    'authenticated',
+    undefined,
+    jwt_keys_manager,
+    (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID
+  );
 }
+
+export interface IProtectedAuthenticatedServerComponentPageProps extends IBaseProtectedAuthenticatedServerComponentPageProps {
+  dbh: ServerlessDatabase;
+}
+
+export interface IProtectedAuthenticatedApiRouteProps extends IBaseProtectedAdminApiRouteInputs {
+  dbh: ServerlessDatabase;
+}
+
+export type { IProtectedAuthenticatedApiRouteProps as IProtectedAuthenticatedApiRouteInputs }

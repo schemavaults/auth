@@ -4,7 +4,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
 
 /**
@@ -14,7 +13,7 @@ import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
  */
 export async function PUT_regenerate_jwks_access_key(req: NextRequest, context: RouteContext<'/api/apis/[api_server_id]/jwks-access-key'>): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>) => {
+    async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps) => {
       const params = await context.params;
       if (typeof params.api_server_id !== 'string') {
         return NextResponse.json(

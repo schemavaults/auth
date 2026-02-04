@@ -17,7 +17,6 @@ import {
   type IProtectedAdminApiRouteProps,
   withAdminApiRouteGuard,
 } from "@/lib/withAdminRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 class ExceededMembershipLimitError extends Error {}
 
@@ -26,7 +25,7 @@ async function POST_create_organization_handler({
   user,
   dbh,
   environment,
-}: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
+}: IProtectedAdminApiRouteProps): Promise<NextResponse> {
   if (environment === "development") {
     console.log("POST => /api/organizations");
   }

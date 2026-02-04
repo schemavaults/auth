@@ -3,7 +3,6 @@ import { withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
 import { type NextRequest, NextResponse } from "next/server";
 import type { IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { ServerSettingsRegistry } from "@/lib/auth-db/server-settings";
 import type { ServerSettingRecord } from "@/lib/auth-db/server-settings";
 
@@ -13,7 +12,7 @@ export const dynamic = "force-dynamic";
 async function GET_list_settings({
   user,
   dbh,
-}: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
+}: IProtectedAdminApiRouteProps): Promise<NextResponse> {
   if (!user.admin) {
     return NextResponse.json(
       {

@@ -4,31 +4,51 @@ import {
   withAdminApiRouteGuard as _withAdminApiRouteGuard,
   type TProtectedAdminPageServerComponent,
   type TProtectedAdminApiRoute,
+  IBaseProtectedAdminServerComponentPageProps,
+  IBaseProtectedAdminApiRouteInputs,
 } from "@schemavaults/auth-server-sdk/route_guards";
-import type { AuthDatabase } from "./auth-db/auth-database-types";
 import ServerlessDatabase from "./auth-db/serverless-database";
 import SCHEMAVAULTS_AUTH_APP_ID from "./SCHEMAVAULTS_AUTH_APP_ID";
 import type { ApiServerId } from "@schemavaults/app-definitions";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 
-import type {
-  IProtectedAdminApiRouteProps as _IProtectedAdminApiRouteProps,
-  IProtectedAdminServerComponentPageProps as _IProtectedAdminServerComponentPageProps
-} from "@schemavaults/auth-server-sdk/route_guards";
-import { ReactElement } from "react";
+import type { ReactElement } from "react";
 import type { NextRequest, NextResponse } from "next/server";
 
-export type IProtectedAdminApiRouteProps<Db extends AuthDatabase = AuthDatabase> = _IProtectedAdminApiRouteProps<Db>;
-export type IProtectedAdminServerComponentPageProps<Db extends AuthDatabase = AuthDatabase> = _IProtectedAdminServerComponentPageProps<Db>;
-
-export async function withAdminServerComponentRouteGuard(input: TProtectedAdminPageServerComponent<AuthDatabase>): Promise<ReactElement> {
+export async function withAdminServerComponentRouteGuard(server_component: TProtectedAdminPageServerComponent<{
+  dbh: ServerlessDatabase
+}>): Promise<ReactElement> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH()
   const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
-  return await _withAdminServerComponentRouteGuard(input, dbh, jwt_keys_manager, (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID)
+  return await _withAdminServerComponentRouteGuard(
+    server_component,
+    { dbh },
+    async (props) => props.user.admin === true,
+    jwt_keys_manager,
+    (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID
+  )
 }
 
-export async function withAdminApiRouteGuard(input: TProtectedAdminApiRoute<AuthDatabase>): Promise<(req: NextRequest) => Promise<NextResponse>> {
+export async function withAdminApiRouteGuard(api_server_handler: TProtectedAdminApiRoute<{
+  dbh: ServerlessDatabase
+}>): Promise<(req: NextRequest) => Promise<NextResponse>> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH()
   const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
-  return _withAdminApiRouteGuard(input, dbh, jwt_keys_manager, (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID)
+  return _withAdminApiRouteGuard(
+    api_server_handler,
+    { dbh },
+    async (props) => props.user.admin === true,
+    jwt_keys_manager,
+    (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID
+  );
 }
+
+export interface IProtectedAdminServerComponentPageProps extends IBaseProtectedAdminServerComponentPageProps {
+  dbh: ServerlessDatabase;
+}
+
+export interface IProtectedAdminApiRouteProps extends IBaseProtectedAdminApiRouteInputs {
+  dbh: ServerlessDatabase;
+}
+
+export type { IProtectedAdminApiRouteProps as IProtectedAdminApiRouteInputs }

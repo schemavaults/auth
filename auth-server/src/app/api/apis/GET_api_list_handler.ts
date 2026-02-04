@@ -13,7 +13,6 @@ import {
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
 import { organizationIdSchema } from "@schemavaults/auth-common";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 /**
  * List available SchemaVaults API servers
@@ -68,7 +67,7 @@ async function GET_api_list_handler(
       user,
       dbh,
       environment,
-    }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>): Promise<NextResponse> => {
+    }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
       if (environment === "development") {
         console.log(
           `[/api/apis] GET request received`,

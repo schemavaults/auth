@@ -10,7 +10,6 @@ import {
   organizationIdSchema,
   hardcodedOrgs,
 } from "@schemavaults/auth-common";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { ServerRuntime } from "next";
 
 export const runtime: ServerRuntime = "edge";
@@ -21,7 +20,7 @@ interface RouteContext {
 }
 
 async function DELETE_organization_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps<AuthDatabase>,
+  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
   context: RouteContext
 ): Promise<NextResponse> {
   const { organization_id: org_id_param } = await context.params;

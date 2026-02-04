@@ -7,12 +7,11 @@ import {
 } from "@/lib/auth-db";
 import type { InviteCodeDefinition, UserData } from "@schemavaults/auth-common";
 import { type IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { ServerRuntime } from "next";
 
 export const runtime: ServerRuntime = "edge"
 
-export async function GET_list_invite_codes({ user }: IProtectedAdminApiRouteProps<AuthDatabase>): Promise<NextResponse> {
+export async function GET_list_invite_codes({ user }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   // Load user data and make sure they're authorized to do things!

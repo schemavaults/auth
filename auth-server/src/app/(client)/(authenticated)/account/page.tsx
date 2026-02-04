@@ -71,7 +71,7 @@ async function attemptToPreloadUserOrganizations(
 }
 
 async function AuthServerAccountDashboardPageServerComponent(
-  { user, dbh }: IProtectedAuthenticatedServerComponentPageProps<AuthDatabase>
+  { user, dbh }: IProtectedAuthenticatedServerComponentPageProps
 ): Promise<ReactElement> {
 
   if (!user) {
