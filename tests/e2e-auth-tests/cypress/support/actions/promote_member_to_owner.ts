@@ -63,7 +63,7 @@ export default function promoteMemberToOwner(
             });
           } else {
             cy.log(
-              `Failed to promote ${user_email} to owner with status ${statusCode}`,
+              `Failed to promote user '${user_email}' to owner with status ${statusCode}`,
             );
           }
 
