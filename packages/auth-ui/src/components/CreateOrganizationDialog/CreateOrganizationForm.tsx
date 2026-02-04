@@ -156,8 +156,11 @@ export function CreateOrganizationForm({
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(onSubmit, (e) => {
-          console.error(e);
+        onSubmit={form.handleSubmit(onSubmit, (e): void => {
+          console.warn(
+            "Failed to validate create organization form inputs: ",
+            e,
+          );
           toast({
             variant: "destructive",
             title: "Failed to validate create organization form inputs",
