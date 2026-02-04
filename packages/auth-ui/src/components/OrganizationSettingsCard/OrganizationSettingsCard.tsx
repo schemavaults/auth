@@ -12,9 +12,18 @@ import {
 } from "@schemavaults/ui";
 import { Trash2 } from "lucide-react";
 import { DeleteOrganizationDialog } from "./DeleteOrganizationDialog";
+import { type OrganizationID, hardcodedOrgs } from "@schemavaults/auth-common";
+
+const hardcodedOrgIds: Set<OrganizationID> = new Set(
+  hardcodedOrgs.map((o) => o.organization_id),
+);
+
+function isHardcodedOrgId(org_id: OrganizationID): boolean {
+  return hardcodedOrgIds.has(org_id);
+}
 
 export interface OrganizationSettingsCardProps {
-  organization_id: string;
+  organization_id: OrganizationID;
   organization_name: string;
   redirect: (url: string) => Promise<void>;
   cardClassName?: string;
@@ -38,6 +47,7 @@ export function OrganizationSettingsCard({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/** Danger Zone Settings */}
           <div className="border border-destructive rounded-lg p-4">
             <div className="flex flex-col gap-4">
               <div>
@@ -58,8 +68,12 @@ export function OrganizationSettingsCard({
                 </div>
                 <Button
                   variant="destructive"
-                  onClick={() => setDeleteDialogOpen(true)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setDeleteDialogOpen(true);
+                  }}
                   data-testid="open-delete-organization-dialog-button"
+                  disabled={isHardcodedOrgId(organization_id)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
