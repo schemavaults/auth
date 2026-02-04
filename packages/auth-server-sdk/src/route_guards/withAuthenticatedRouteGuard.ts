@@ -1,17 +1,18 @@
 import "server-only";
 
 import {
-  ApiServerId,
+  type ApiServerId,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
+  getHardcodedClientWebAppDomain,
 } from "@schemavaults/app-definitions";
 import type {
   OrganizationID,
   PotentiallyValidTokenSource,
   UserData,
 } from "@schemavaults/auth-common";
-import type { IRouteGuard } from "@schemavaults/auth-server-sdk/route_guards";
+import type { IRouteGuard } from "./IRouteGuard";
 import { cookies as loadCookies } from "next/headers";
 import type { ReactElement } from "react";
 import { redirectWithNextAppDirError } from "@/redirect-with-error";
@@ -20,52 +21,64 @@ import { type NextRequest, NextResponse } from "next/server";
 import getStringByteSize from "@/getStringByteSize";
 import MaximumBrowserCookieSize from "@/MaximumBrowserCookieSize";
 import RefreshTokenCookieName from "@/RefreshTokenCookieNames";
-import type { SchemaVaultsPostgresNeonProxyAdapter } from "@schemavaults/dbh";
 import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
-import type { IJwtKeyManager } from "@/JwtKeyManager";
+import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 import redirectToLogin from "@/redirect-to-login";
 import { redirect } from "next/navigation";
+import assertValidRouteGuardType from "./assertValidRouteGuardType";
 
-interface Dbh<Db extends object>
-  extends AsyncDisposable,
-    SchemaVaultsPostgresNeonProxyAdapter<Db> {}
-
-export interface IProtectedAuthenticatedServerComponentPageProps<
-  Db extends object,
-> {
+export interface IBaseProtectedAuthenticatedServerComponentPageProps {
   user: UserData;
   user_organizations: readonly OrganizationID[];
-  dbh: Dbh<Db>;
   environment: SchemaVaultsAppEnvironment;
 }
 
-export type TProtectedAuthenticatedPageServerComponent<Db extends object> = (
-  props: IProtectedAuthenticatedServerComponentPageProps<Db>,
+export type TProtectedAuthenticatedPageServerComponent<
+  TAdditionalCustomProps extends object,
+> = (
+  props: IBaseProtectedAuthenticatedServerComponentPageProps &
+    TAdditionalCustomProps,
 ) => Promise<ReactElement>;
 
-export interface IProtectedAuthenticatedApiRouteProps<Db extends object>
-  extends IProtectedAuthenticatedServerComponentPageProps<Db> {
+export interface IBaseProtectedAuthenticatedApiRouteInputs
+  extends IBaseProtectedAuthenticatedServerComponentPageProps {
   req: NextRequest;
 }
 
-export type TProtectedAuthenticatedApiRoute<Db extends object> = (
-  props: IProtectedAuthenticatedApiRouteProps<Db>,
+export type TProtectedAuthenticatedApiRoute<
+  TAdditionalCustomRouteInputs extends object,
+> = (
+  route_inputs: TAdditionalCustomRouteInputs &
+    IBaseProtectedAuthenticatedApiRouteInputs,
 ) => Promise<NextResponse>;
 
-export interface IWithAuthenticatedRouteGuardUtilOpts<Db extends object> {
-  ProtectedAuthenticatedPageServerComponent: TProtectedAuthenticatedPageServerComponent<Db>;
+// default key manager is RemoteJwtKeyManager-- makes it easier for external apps, we can overwrite this once for the auth server
+export function initDefaultJwtKeyManagerForAuthenticatedRouteGuard(): IJwtKeyManager {
+  return new RemoteJwtKeyManager({
+    auth_server_uri: getHardcodedClientWebAppDomain(
+      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      getAppEnvironment(),
+    ),
+  });
 }
 
 export async function withAuthenticatedServerComponentRouteGuard<
-  Db extends object,
+  TAdditionalCustomProps extends object,
 >(
-  input:
-    | IWithAuthenticatedRouteGuardUtilOpts<Db>
-    | TProtectedAuthenticatedPageServerComponent<Db>,
-  dbh: Dbh<Db>,
-  jwt_keys_manager: IJwtKeyManager,
+  server_component: TProtectedAuthenticatedPageServerComponent<TAdditionalCustomProps>,
+  additional_custom_server_component_props: TAdditionalCustomProps,
+  route_guard_type: "authenticated" | "admin" = "authenticated",
+  custom_is_authorized_check:
+    | ((
+        props: IBaseProtectedAuthenticatedServerComponentPageProps &
+          TAdditionalCustomProps,
+      ) => Promise<boolean>)
+    | undefined = undefined,
+  jwt_keys_manager: IJwtKeyManager = initDefaultJwtKeyManagerForAuthenticatedRouteGuard(),
   getApiServerId: () => ApiServerId = getSchemavaultsApiServerId,
 ): Promise<ReactElement> {
+  assertValidRouteGuardType(route_guard_type);
+
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const api_server_id: ApiServerId = getApiServerId();
   const cookies = await loadCookies();
@@ -92,7 +105,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
   });
   const route_guard: IRouteGuard =
     await route_guard_factory.createGuardFromTokenSources(
-      "authenticated",
+      route_guard_type,
       token_sources,
       api_server_id,
     );
@@ -106,30 +119,63 @@ export async function withAuthenticatedServerComponentRouteGuard<
     redirectWithNextAppDirError(403, "forbidden");
   }
 
-  const ProtectedAuthenticatedPageServerComponent =
-    typeof input === "function"
-      ? input
-      : input.ProtectedAuthenticatedPageServerComponent;
-  if (typeof ProtectedAuthenticatedPageServerComponent !== "function") {
+  if (typeof server_component !== "function") {
     throw new TypeError(
-      "Expected ProtectedAuthenticatedPageServerComponent to be a function",
+      "Expected 'server_component' passed to withAuthenticatedServerComponentRouteGuard to be a function",
     );
   }
-  return (await ProtectedAuthenticatedPageServerComponent({
-    user,
-    dbh,
-    environment,
-    user_organizations: route_guard.user_organizations,
-  })) satisfies ReactElement;
+  const ProtectedAuthenticatedPageServerComponent = server_component;
+
+  const base_server_component_props: IBaseProtectedAuthenticatedServerComponentPageProps =
+    {
+      user,
+      environment,
+      user_organizations: route_guard.user_organizations,
+    };
+
+  const server_component_props: IBaseProtectedAuthenticatedServerComponentPageProps &
+    TAdditionalCustomProps = {
+    ...base_server_component_props,
+    ...additional_custom_server_component_props,
+  };
+
+  if (typeof custom_is_authorized_check === "function") {
+    let is_authorized: boolean = false;
+    try {
+      is_authorized = await custom_is_authorized_check(server_component_props);
+    } catch (e: unknown) {
+      console.error("Error in 'custom_is_authorized_check' handler: ", e);
+      redirectWithNextAppDirError(500, "internal_server_error");
+    }
+    if (!is_authorized) {
+      redirectWithNextAppDirError(403, "forbidden");
+    }
+  }
+
+  return (await ProtectedAuthenticatedPageServerComponent(
+    server_component_props,
+  )) satisfies ReactElement;
 }
 
-export function withAuthenticatedApiRouteGuard<Db extends object>(
-  input: TProtectedAuthenticatedApiRoute<Db>,
-  dbh: Dbh<Db>,
-  jwt_keys_manager: IJwtKeyManager,
+export function withAuthenticatedApiRouteGuard<
+  TAdditionalCustomRouteInputs extends object,
+>(
+  api_route_handler: TProtectedAuthenticatedApiRoute<TAdditionalCustomRouteInputs>,
+  additional_custom_api_route_inputs: TAdditionalCustomRouteInputs,
+  route_guard_type: "authenticated" | "admin" = "authenticated",
+  custom_is_authorized_check:
+    | ((
+        route_inputs: IBaseProtectedAuthenticatedServerComponentPageProps &
+          TAdditionalCustomRouteInputs,
+      ) => Promise<boolean>)
+    | undefined = undefined,
+  jwt_keys_manager: IJwtKeyManager = initDefaultJwtKeyManagerForAuthenticatedRouteGuard(),
   getApiServerId: () => ApiServerId = getSchemavaultsApiServerId,
 ): (req: NextRequest) => Promise<NextResponse> {
-  const AuthenticatedApiRoute: TProtectedAuthenticatedApiRoute<Db> = input;
+  assertValidRouteGuardType(route_guard_type);
+
+  const AuthenticatedApiRoute: TProtectedAuthenticatedApiRoute<TAdditionalCustomRouteInputs> =
+    api_route_handler;
   return async function ProtectedAuthenticatedApiRoute(
     req: NextRequest,
   ): Promise<NextResponse> {
@@ -186,7 +232,7 @@ export function withAuthenticatedApiRouteGuard<Db extends object>(
     });
     const route_guard: IRouteGuard =
       await route_guard_factory.createGuardFromTokenSources(
-        "authenticated",
+        route_guard_type,
         token_sources,
         SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
       );
@@ -229,12 +275,48 @@ export function withAuthenticatedApiRouteGuard<Db extends object>(
     const user_organizations: readonly OrganizationID[] =
       route_guard.user_organizations;
 
-    return (await AuthenticatedApiRoute({
+    const base_api_route_inputs: IBaseProtectedAuthenticatedApiRouteInputs = {
       req,
       user,
-      dbh,
       environment,
       user_organizations,
-    })) satisfies NextResponse;
+    };
+
+    const api_route_inputs: IBaseProtectedAuthenticatedApiRouteInputs &
+      TAdditionalCustomRouteInputs = {
+      ...base_api_route_inputs,
+      ...additional_custom_api_route_inputs,
+    };
+
+    if (typeof custom_is_authorized_check === "function") {
+      let is_authorized: boolean = false;
+      try {
+        is_authorized = await custom_is_authorized_check(api_route_inputs);
+      } catch (e: unknown) {
+        console.error("Error in 'custom_is_authorized_check' handler: ", e);
+        return NextResponse.json(
+          {
+            success: false,
+            error: true,
+            message: "Error while checking if access is allowed",
+          },
+          { status: 500 },
+        );
+      }
+      if (!is_authorized) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: true,
+            message: "Access is not allowed",
+          },
+          { status: 403 },
+        );
+      }
+    }
+
+    return (await AuthenticatedApiRoute(
+      api_route_inputs,
+    )) satisfies NextResponse;
   };
 }

@@ -19,7 +19,9 @@ interface CheckIfIsAllowedOriginOptions {
   debug?: boolean;
 }
 
-async function enforceValidAppIfOriginApplied(opts: CheckIfIsAllowedOriginOptions): Promise<boolean> {
+async function enforceValidAppIfOriginApplied(
+  opts: CheckIfIsAllowedOriginOptions,
+): Promise<boolean> {
   const { origin, audience, environment, debug } = opts;
   if (!origin) {
     return true;
@@ -110,7 +112,9 @@ async function enforceValidAppIfOriginApplied(opts: CheckIfIsAllowedOriginOption
   return false;
 }
 
-async function sameOriginIfOriginApplied(opts: CheckIfIsAllowedOriginOptions): Promise<boolean> {
+async function sameOriginIfOriginApplied(
+  opts: CheckIfIsAllowedOriginOptions,
+): Promise<boolean> {
   const { origin, audience, environment, debug } = opts;
   if (!origin) {
     return true;
@@ -170,3 +174,5 @@ export async function isAllowedOrigin(
       throw new Error(`Unimplemented CORS policy: ${policy}`);
   }
 }
+
+export default isAllowedOrigin;
