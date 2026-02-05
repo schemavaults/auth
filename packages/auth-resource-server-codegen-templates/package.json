@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-resource-server-codegen-templates",
   "description": "Templates used for building your own app that logs in via SchemaVaults Auth",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "UNLICENSED",
   "private": false,
   "repository": {

@@ -15,6 +15,8 @@ export interface IAppAuthProviderProps extends PropsWithChildren {
   debug?: boolean;
   authed_on_unauthed_redirect_uri: string;
   unauthed_on_authed_redirect_uri: string;
+  successful_logout_redirect_uri: string;
+  successful_authentication_redirect_uri: string;
   authorize_uri: string;
 }
 
@@ -35,6 +37,10 @@ export default function AppAuthProvider({
       app_id={app_id}
       authed_on_unauthed_redirect_uri={props.authed_on_unauthed_redirect_uri}
       unauthed_on_authed_redirect_uri={props.unauthed_on_authed_redirect_uri}
+      successful_logout_redirect_uri={props.successful_logout_redirect_uri}
+      successful_authentication_redirect_uri={
+        props.successful_authentication_redirect_uri
+      }
       authorize_uri={props.authorize_uri}
       router={router}
       path={path}

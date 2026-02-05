@@ -31,3 +31,5 @@ mkdir -p dist/codegen-templates
 mkdir -p dist/codegen-templates/auth
 
 cp -r "$CODEGEN_TEMPLATES_SOURCE_DIR"/auth/* dist/codegen-templates/auth
+
+echo "[copy-codegen-templates.sh] Successfully prepared codegen-templates/ directory in auth-server-sdk/dist..."

@@ -1295,39 +1295,7 @@ export class SchemaVaultsAuthClient
    * @description Getter that returns true/false based on whether a user is currently signed into their account
    */
   public get isAuthenticated(): boolean {
-    if (this.DEBUG) {
-      console.log(
-        "[SchemaVaultsAuthClient::isAuthenticated] Checking whether auth client has a refresh token to see if authenticated...",
-      );
-    }
-    const refreshToken: RefreshToken | null = this.getRefreshTokenFromCache();
-    if (refreshToken) {
-      if (this.DEBUG) {
-        console.log(
-          "[SchemaVaultsAuthClient::isAuthenticated] There is a refresh token stored, checking if it is expired...",
-        );
-      }
-
-      const refreshTokenExpiryTime: number = refreshToken.exp;
-      const now = this.getCurrentTimestamp();
-      if (now < refreshTokenExpiryTime) {
-        return true;
-      } else {
-        if (this.DEBUG) {
-          console.warn(
-            "[SchemaVaultsAuthClient::isAuthenticated] There is a refresh token stored, but it appears to be expired!",
-          );
-        }
-      }
-    } else {
-      if (this.DEBUG) {
-        console.warn(
-          "[SchemaVaultsAuthClient::isAuthenticated] No refresh token found from cache!",
-        );
-      }
-    }
-
-    return false;
+    return this.adapter.hasRefreshToken();
   }
 
   /**

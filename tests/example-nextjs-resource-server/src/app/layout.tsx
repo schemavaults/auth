@@ -43,6 +43,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           default_audiences={[getSchemavaultsApiServerId()]}
           authed_on_unauthed_redirect_uri="/account"
           unauthed_on_authed_redirect_uri="/auth/login"
+          successful_logout_redirect_uri="/"
+          successful_authentication_redirect_uri="/account"
           authorize_uri="/auth/authorize"
         >
           {children}

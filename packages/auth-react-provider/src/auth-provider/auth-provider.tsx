@@ -23,7 +23,10 @@ import useAuthClientInitialization, {
 } from "@/hooks/use-auth-client-initialization";
 import { AuthMiddlewareManager } from "./auth-middleware-manager";
 import {
+  type AppId,
+  getAuthServerUri,
   getHardcodedClientWebAppDomain,
+  isHardcodedAppId,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -77,17 +80,15 @@ function AppEnvironmentAwareAuthProvider(
   // throw if production/staging and not https
   assertHttpsInProduction(appEnvironment);
 
-  const app_id: string = props.app_id;
+  const app_id: AppId = props.app_id;
 
   const authServerUri: string = useMemo(() => {
     if (typeof props.auth_server_uri === "string") {
       return props.auth_server_uri;
+    } else {
+      // default auth server uri
+      return getAuthServerUri(appEnvironment);
     }
-    const hardcoded = getHardcodedClientWebAppDomain(
-      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      appEnvironment,
-    );
-    return hardcoded;
   }, [props.auth_server_uri, appEnvironment]);
 
   const debug: boolean = useDebugWithSpecifiedBooleanOrLookupDefault(
@@ -96,18 +97,36 @@ function AppEnvironmentAwareAuthProvider(
   );
 
   const successful_logout_redirect_uri: string = useMemo(() => {
-    if (typeof props.successful_logout_redirect_uri === "string")
+    if (typeof props.successful_logout_redirect_uri === "string") {
       return props.successful_logout_redirect_uri;
-    try {
-      const appDomain: string = getHardcodedClientWebAppDomain(
-        app_id,
-        appEnvironment,
-      );
-      return appDomain satisfies string;
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to query domain for app!");
     }
+    // Else, successful_logout_redirect_uri was not explicitly set
+
+    if (debug) {
+      console.warn(
+        "[AuthProvider] A 'successful_logout_redirect_uri' was not explicitly set!",
+      );
+    }
+
+    if (isHardcodedAppId(app_id)) {
+      // default to homepage of app
+      try {
+        const appDomain: string = getHardcodedClientWebAppDomain(
+          app_id,
+          appEnvironment,
+        );
+        return appDomain satisfies string;
+      } catch (e: unknown) {
+        console.error("Failed to query domain for hardcoded app: ", e);
+        throw new Error(
+          "Failed to query domain for hardcoded app to use as post-logout redirect page!",
+        );
+      }
+    }
+
+    throw new Error(
+      "No 'successful_logout_redirect_uri' was set, and failed to automatically resolve a default!",
+    );
   }, [props.successful_logout_redirect_uri, appEnvironment, app_id]);
 
   const successful_authentication_redirect_uri: string = useMemo((): string => {
@@ -120,30 +139,40 @@ function AppEnvironmentAwareAuthProvider(
       return props.successful_authentication_redirect_uri;
     }
 
-    console.assert(
-      typeof props.successful_authentication_redirect_uri === "undefined",
-      "Expected props.successful_authentication_redirect_uri to be undefined if this point was reached!",
-    );
+    if (debug) {
+      console.warn(
+        "No 'successful_authentication_redirect_uri' has been explicitly defined if this point was reached!",
+      );
+    }
 
-    try {
-      const appDomain = getHardcodedClientWebAppDomain(app_id, appEnvironment);
-      const withSuccessfulAuthenticationRedirectPath =
-        `${appDomain}${DefaultSuccessfulAuthenticationRedirectPath}` as const satisfies string;
+    if (isHardcodedAppId(app_id)) {
+      try {
+        const appDomain: string = getHardcodedClientWebAppDomain(
+          app_id,
+          appEnvironment,
+        );
+        const withSuccessfulAuthenticationRedirectPath =
+          `${appDomain}${DefaultSuccessfulAuthenticationRedirectPath}` as const satisfies string;
 
-      if (debug) {
-        console.log(
-          `[AppEnvironmentAwareAuthProvider] successful_authentication_redirect_uri="${withSuccessfulAuthenticationRedirectPath}" (source: default for app)`,
+        if (debug) {
+          console.log(
+            `[AppEnvironmentAwareAuthProvider] successful_authentication_redirect_uri="${withSuccessfulAuthenticationRedirectPath}" (source: default for app)`,
+          );
+        }
+
+        return withSuccessfulAuthenticationRedirectPath satisfies string;
+      } catch (e: unknown) {
+        console.error(
+          "Failed to load default path for successful_authentication_redirect_uri: ",
+          e,
+        );
+        throw new Error(
+          "Failed to load default path for successful_authentication_redirect_uri!",
         );
       }
-
-      return withSuccessfulAuthenticationRedirectPath satisfies string;
-    } catch (e: unknown) {
-      console.error(
-        "Failed to load default path for successful_authentication_redirect_uri: ",
-        e,
-      );
+    } else {
       throw new Error(
-        "Failed to load default path for successful_authentication_redirect_uri!",
+        "No 'successful_authentication_redirect_uri' has been explicitly defined, and failed to resolve default 'successful_authentication_redirect_uri'!",
       );
     }
   }, [
@@ -154,6 +183,18 @@ function AppEnvironmentAwareAuthProvider(
   ]);
 
   const authorize_uri: string | undefined = useMemo((): string | undefined => {
+    if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+      if (debug) {
+        console.log(
+          "[AppEnvironmentAwareAuthProvider] authorize_uri=undefined (PKCE flow not used for auth app!)",
+        );
+      }
+      console.warn(
+        "An 'authorize_uri' is set, but it is not used for the auth-server app!",
+      );
+      return undefined;
+    }
+
     if (typeof props.authorize_uri === "string") {
       if (debug) {
         console.log(
@@ -166,16 +207,22 @@ function AppEnvironmentAwareAuthProvider(
       ) {
         return props.authorize_uri;
       } else if (props.authorize_uri.startsWith("/")) {
-        let appDomain: string;
-        try {
-          appDomain = getHardcodedClientWebAppDomain(app_id, appEnvironment);
-        } catch (e: unknown) {
-          console.error("Failed to load web app domain: ", e);
-          throw new Error(
-            "Failed to load web app domain in order to build full HTTP/HTTPS authorize redirect url from supplied relative path!",
-          );
+        if (isHardcodedAppId(app_id)) {
+          try {
+            const appDomain = getHardcodedClientWebAppDomain(
+              app_id,
+              appEnvironment,
+            );
+            return `${appDomain}${props.authorize_uri}`;
+          } catch (e: unknown) {
+            console.error("Failed to load web app domain: ", e);
+            throw new Error(
+              "Failed to load web app domain in order to build full HTTP/HTTPS authorize redirect url from supplied relative path!",
+            );
+          }
+        } else {
+          return props.authorize_uri;
         }
-        return `${appDomain}${props.authorize_uri}`;
       } else {
         throw new SyntaxError(
           "Failed to parse the 'authorize_uri' passed to AuthProvider via props into a valid URL!",
@@ -183,35 +230,41 @@ function AppEnvironmentAwareAuthProvider(
       }
     }
 
-    console.assert(
-      typeof props.authorize_uri === "undefined",
-      "Expected props.authorize_uri to be undefined if this point was reached!",
-    );
-
-    if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
-      if (debug) {
-        console.log(
-          "[AppEnvironmentAwareAuthProvider] authorize_uri=undefined (PKCE flow not used for auth app!)",
-        );
-      }
-      return undefined;
+    if (props.authorize_uri) {
+      throw new Error(
+        "Expected props.authorize_uri to be undefined if this point was reached!",
+      );
     }
 
-    try {
-      const appDomain = getHardcodedClientWebAppDomain(app_id, appEnvironment);
-      const withAuthorizePath =
-        `${appDomain}${DefaultPkceAuthorizeRedirectPath}` as const satisfies string;
+    if (isHardcodedAppId(app_id)) {
+      try {
+        const appDomain = getHardcodedClientWebAppDomain(
+          app_id,
+          appEnvironment,
+        );
+        const withAuthorizePath =
+          `${appDomain}${DefaultPkceAuthorizeRedirectPath}` as const satisfies string;
 
-      if (debug) {
-        console.log(
-          `[AppEnvironmentAwareAuthProvider] authorize_uri="${props.authorize_uri}" (source: default for app)`,
+        if (debug) {
+          console.log(
+            `[AppEnvironmentAwareAuthProvider] authorize_uri="${props.authorize_uri}" (source: default for app)`,
+          );
+        }
+
+        return withAuthorizePath satisfies string;
+      } catch (e: unknown) {
+        console.error(
+          `Failed to load default path for 'authorize_uri' for hardcoded app '${app_id}': `,
+          e,
+        );
+        throw new Error(
+          `Failed to load default path for authorize_uri for hardcoded app '${app_id}'!`,
         );
       }
-
-      return withAuthorizePath satisfies string;
-    } catch (e: unknown) {
-      console.error("Failed to load default path for authorize_uri: ", e);
-      throw new Error("Failed to load default path for authorize_uri!");
+    } else {
+      throw new Error(
+        "Failed to resolve 'authorize_uri' for non-hardcoded app!",
+      );
     }
   }, [app_id, appEnvironment, props.authorize_uri, debug]);
 
