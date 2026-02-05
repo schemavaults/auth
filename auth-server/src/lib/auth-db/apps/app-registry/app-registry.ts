@@ -177,9 +177,6 @@ export class SchemaVaultsAppRegistry {
   public async getAppDomains(
     app_id: string,
   ): Promise<SchemaVaultsAppDomainRef[]> {
-
-
-
     const isValidAppId: boolean = (await appIdSchema.safeParseAsync(app_id))
       .success;
     if (!isValidAppId) {
