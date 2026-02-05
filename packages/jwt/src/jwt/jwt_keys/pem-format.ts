@@ -73,6 +73,7 @@ export class PEMFormat {
   public static isPemFormat(
     key: string,
     key_type: "PUBLIC" | "PRIVATE",
+    debug: boolean = false,
   ): boolean {
     if (key_type !== "PUBLIC" && key_type !== "PRIVATE") {
       throw new Error("Expected 'key_type' to be 'PUBLIC' or 'PRIVATE'");
@@ -81,10 +82,14 @@ export class PEMFormat {
     const prefix = PEMFormat.getPemPrefix(key_type);
     const suffix = PEMFormat.getPemSuffix(key_type);
     if (!key.startsWith(prefix)) {
-      console.error("[isPemFormat] key does not start with prefix: ", prefix);
+      if (debug) {
+        console.warn("[isPemFormat] key does not start with prefix: ", prefix);
+      }
       return false;
     } else if (!key.endsWith(suffix)) {
-      console.error("[isPemFormat] key does not end with suffix: ", suffix);
+      if (debug) {
+        console.warn("[isPemFormat] key does not end with suffix: ", suffix);
+      }
       return false;
     }
 
@@ -92,7 +97,9 @@ export class PEMFormat {
       .split("\n")
       .every((line): boolean => line.length <= 64);
     if (!allLinesLessThan64Chars) {
-      console.error("[isPemFormat] key has line length longer than 64!");
+      if (debug) {
+        console.warn("[isPemFormat] key has line length longer than 64!");
+      }
       return false;
     }
 
