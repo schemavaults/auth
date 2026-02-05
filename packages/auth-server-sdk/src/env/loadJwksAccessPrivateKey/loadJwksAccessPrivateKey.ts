@@ -33,7 +33,10 @@ export default async function loadJwksAccessPrivateKey(
       try {
         pem = PEMFormat.parsePem(environmentVariable, "PRIVATE");
       } catch (e: unknown) {
-        console.error(e);
+        console.error(
+          `Failed to import environment variable '${key}' from PEM-encoded environment variable: `,
+          e,
+        );
         throw new TypeError(
           `Failed to import environment variable '${key}' from PEM-encoded environment variable!`,
         );

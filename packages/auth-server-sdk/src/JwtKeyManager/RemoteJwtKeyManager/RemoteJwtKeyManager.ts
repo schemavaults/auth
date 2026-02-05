@@ -11,15 +11,19 @@ import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey";
 
 export interface IRemoteJwtKeyManagerConstructorOpts {
   auth_server_uri?: string;
+  debug?: boolean;
 }
 
 export class RemoteJwtKeyManager implements IJwtKeyManager {
   private readonly auth_server_uri: string;
+  private readonly debug: boolean;
 
   public constructor({
     auth_server_uri = getSchemaVaultsAuthServerUri(),
+    ...opts
   }: IRemoteJwtKeyManagerConstructorOpts) {
     this.auth_server_uri = auth_server_uri;
+    this.debug = typeof opts.debug === "boolean" ? opts.debug : false;
   }
 
   public async loadJwks(audienceId: ApiServerId): Promise<JWKS> {
@@ -49,6 +53,7 @@ export class RemoteJwtKeyManager implements IJwtKeyManager {
       auth_server_uri: this.auth_server_uri,
       api_server_id: audienceId,
       jwks_access_private_key,
+      debug: this.debug,
     });
   }
 }

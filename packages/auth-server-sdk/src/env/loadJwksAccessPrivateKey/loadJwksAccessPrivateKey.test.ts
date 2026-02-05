@@ -86,6 +86,7 @@ describe("loadJwksAccessPrivateKey", () => {
         throw new Error("Result is not an instance of crypto key!");
       }
     } catch (e: unknown) {
+      void e;
       errorThrown = true;
     }
     expect(errorThrown).toBeTrue();

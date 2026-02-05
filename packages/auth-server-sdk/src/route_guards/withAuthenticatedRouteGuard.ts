@@ -16,7 +16,7 @@ import type { IRouteGuard } from "./IRouteGuard";
 import { cookies as loadCookies } from "next/headers";
 import type { ReactElement } from "react";
 import { redirectWithNextAppDirError } from "@/redirect-with-error";
-import RouteGuardFactory from "@/route_guards/route-guard-factory";
+import RouteGuardFactory from "./route-guard-factory";
 import { type NextRequest, NextResponse } from "next/server";
 import getStringByteSize from "@/getStringByteSize";
 import MaximumBrowserCookieSize from "@/MaximumBrowserCookieSize";
@@ -53,12 +53,15 @@ export type TProtectedAuthenticatedApiRoute<
 ) => Promise<NextResponse>;
 
 // default key manager is RemoteJwtKeyManager-- makes it easier for external apps, we can overwrite this once for the auth server
-export function initDefaultJwtKeyManagerForAuthenticatedRouteGuard(): IJwtKeyManager {
+export function initDefaultJwtKeyManagerForAuthenticatedRouteGuard(
+  debug: boolean = process.env.NODE_ENV === "development",
+): IJwtKeyManager {
   return new RemoteJwtKeyManager({
     auth_server_uri: getHardcodedClientWebAppDomain(
       SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
       getAppEnvironment(),
     ),
+    debug,
   });
 }
 

@@ -92,6 +92,7 @@ export class RouteGuardFactory {
           SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
           environment,
         ),
+        debug: this.debug,
       });
     }
   }
