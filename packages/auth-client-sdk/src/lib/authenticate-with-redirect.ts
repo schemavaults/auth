@@ -124,7 +124,10 @@ export default async function authenticateWithRedirect({
   }
 
   // The user is about to be redirected to auth server. Where should they be redirected back to this app? (for PKCE flow)
-  const redirect_uri = authorize_uri;
+  const isRelativeAuthorizeUri: boolean = authorize_uri.startsWith("/");
+  const redirect_uri: string = isRelativeAuthorizeUri
+    ? adapter.relativeUrlToAbsoluteUrl(authorize_uri)
+    : authorize_uri;
   if (typeof redirect_uri !== "string") {
     throw new Error(
       "A URL to redirect to when authentication is successful was not provided. Required for PKCE flow.",

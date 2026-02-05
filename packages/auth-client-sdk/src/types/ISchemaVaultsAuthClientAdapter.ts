@@ -73,6 +73,9 @@ interface AuthClientNetworkActions {
     body: Record<string, unknown>,
     headers: Record<string, string>,
   ) => Promise<IAuthClientPOSTResultType<object>>;
+
+  // Convert a relative URL (e.g. '/auth/authorize') to an absolute URL (e.g. 'http://localhost:3210/auth/authorize')
+  relativeUrlToAbsoluteUrl: (relative_url: string) => string;
 }
 
 // To use the auth client from a framework like React.js/Next.js, you would need to create an adapter

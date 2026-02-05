@@ -371,7 +371,11 @@ export class SchemaVaultsAuthClient
   }
 
   private async authenticateWithRedirect(type: "login" | "register") {
-    if (!this.authorize_uri || typeof this.authorize_uri !== "string") {
+    if (
+      !this.authorize_uri ||
+      typeof this.authorize_uri !== "string" ||
+      this.authorize_uri.length === 0
+    ) {
       throw new TypeError("Failed to resolve 'authorize_uri'!");
     }
     return await authenticateWithRedirect({
