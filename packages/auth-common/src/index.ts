@@ -69,3 +69,8 @@ export type {
 } from "./organizations";
 
 export { MaximumBrowserCookieSize } from "./MaximumBrowserCookieSize";
+
+export {
+  RefreshTokenCookieName,
+  RefreshTokenExpiryCookieName,
+} from "./RefreshTokenCookieNames";
