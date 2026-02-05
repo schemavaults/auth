@@ -146,9 +146,9 @@ export class PEMFormat {
     if (key_type !== "PUBLIC" && key_type !== "PRIVATE") {
       throw new TypeError("Expected 'key_type' to be 'PUBLIC' or 'PRIVATE'");
     }
-    const decoded: string = base64url
-      .decode(base64url_encoded_pem_key)
-      .toString();
+    const decoded: string = Buffer.from(
+      base64url.decode(base64url_encoded_pem_key),
+    ).toString("utf-8");
     if (typeof decoded !== "string") {
       throw new TypeError("Expected 'decoded' key to be a string!");
     }
