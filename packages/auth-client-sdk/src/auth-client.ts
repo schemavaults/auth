@@ -1,4 +1,6 @@
-import AuthenticateURLEncoder from "@/lib/authenticate-url-encoder";
+// auth-client.ts
+// @schemavaults/auth-client-sdk
+
 import {
   PKCE_ProofKeyManager,
   requestTokensResultSchema,
@@ -39,6 +41,7 @@ import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-typ
 import debugPrintTokensAsTable from "@/lib/debugPrintTokensAsTable";
 import debugPrintUserDataAsTable from "@/lib/debugPrintUserDataAsTable";
 import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
+import authenticateWithRedirect from "@/lib/authenticate-with-redirect";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
@@ -367,147 +370,20 @@ export class SchemaVaultsAuthClient
     return code_challenge;
   }
 
-  private async authenticateWithRedirect(
-    type: "login" | "register",
-  ): Promise<void> {
-    if (this.DEBUG) {
-      console.log(
-        `[SchemaVaultsAuthClient] Authenticating with redirect (type "${type}")...`,
-      );
+  private async authenticateWithRedirect(type: "login" | "register") {
+    if (!this.authorize_uri || typeof this.authorize_uri !== "string") {
+      throw new TypeError("Failed to resolve 'authorize_uri'!");
     }
-
-    // This should be kept securely within the SDK
-    let code_verifier: CodeVerifierWithDetails;
-    try {
-      code_verifier = PKCE_ProofKeyManager.createCodeVerifier();
-    } catch (e: unknown) {
-      console.error(
-        "Failed to create code verifier to initialize PKCE challenge process: ",
-        e,
-      );
-      throw new Error(
-        "Failed to create code verifier to initialize PKCE challenge process",
-      );
-    }
-
-    // Do some validation
-    if (typeof code_verifier !== "object" || !code_verifier) {
-      throw new TypeError(
-        "Expected generated 'code_verifier' to be an object!",
-      );
-    } else if (typeof code_verifier.challenge_time !== "number") {
-      throw new TypeError(
-        "Expected generated 'code_verifier.challenge_time' to be a number!",
-      );
-    } else if (typeof code_verifier.code_verifier !== "string") {
-      throw new TypeError(
-        "Expected generated 'code_verifier.code_verifier' to be a string!",
-      );
-    }
-
-    // This is sent to the auth server-- it's a hash of the code verifier
-    // https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
-    let code_challenge: CodeChallengeWithDetails;
-    try {
-      const new_code_challenge: CodeChallengeWithDetails =
-        await PKCE_ProofKeyManager.createCodeChallenge(code_verifier);
-      code_challenge = new_code_challenge;
-    } catch (e: unknown) {
-      console.error(
-        "Auth client failed to create code challenge from code verifier object: ",
-        e,
-      );
-      const errMsg: string =
-        e instanceof Error && typeof e.message === "string"
-          ? e.message
-          : "Auth client encountered an unknown error while creating code challenge";
-      throw new Error(
-        `Auth client failed to create code challenge from code verifier object (error: ${errMsg})`,
-      );
-    }
-
-    // Validate code challenge a bit
-    if (typeof code_challenge.challenge_time !== "number") {
-      throw new Error(
-        "Expected challenge_time to be set (from input code_verifier)",
-      );
-    } else if (
-      typeof code_challenge.code_challenge_method !== "string" ||
-      code_challenge.code_challenge_method !== "S256"
-    ) {
-      throw new Error("Expected code_challenge_method to be set to S256");
-    } else if (typeof code_challenge.code_challenge !== "string") {
-      throw new Error("Expected code_challenge to be set");
-    }
-
-    // Store the code verifier in a secure location
-    try {
-      this.storeCodeVerifier(
-        code_verifier.code_verifier,
-        code_challenge.challenge_time,
-      ) satisfies void;
-    } catch (e: unknown) {
-      console.error("Failed to store code verifier: ", e);
-      throw new Error("Failed to store code verifier!");
-    }
-    // If the authentication is successful, the auth server will redirect the user back to the client
-    // and the code_verifier will be used to prove that the client initiating the flow is the same as the client that the authorization server issued the code to
-
-    const app_id = this.app_id;
-    if (!app_id) {
-      console.error("App ID not set, but required for PKCE flow");
-      throw new Error("App ID not set, but required for PKCE flow");
-    }
-
-    // The user is about to be redirected to auth server. Where should they be redirected back to this app? (for PKCE flow)
-    const redirect_uri = this.authorize_uri satisfies string | undefined;
-    if (typeof redirect_uri !== "string") {
-      throw new Error(
-        "A URL to redirect to when authentication is successful was not provided. Required for PKCE flow.",
-      );
-    }
-
-    if (this.DEBUG) {
-      console.log(
-        "[SchemaVaultsAuthClient] Attempting to build URL to open from client in order to start OAuth 2.0 PKCE flow with SchemaVaults Auth Server...",
-      );
-    }
-
-    // Redirect the user to the auth server
-    let authenticate_url: string;
-    try {
-      authenticate_url = AuthenticateURLEncoder.encode({
-        type,
-        code_challenge: code_challenge,
-        redirect_uri,
-        app_id,
-        auth_server_uri: this._authServerUri,
-        app_env: this.environment,
-      });
-    } catch (e: unknown) {
-      console.error("Failed to build authenticate URL: ", e);
-      throw new Error(
-        "Failed to build authenticate URL (i.e. where to login/register url not found)",
-      );
-    }
-
-    if (this.DEBUG) {
-      console.log(
-        "[SchemaVaultsAuthClient] Redirecting to authenticate URL: ",
-        authenticate_url,
-      );
-    }
-
-    try {
-      await this.adapter.redirect(authenticate_url);
-      return;
-    } catch (e: unknown) {
-      console.error(
-        "Failed to redirect to authentication server using client adapter: ",
-        e,
-      );
-      throw new Error("Failed to redirect to authentication server");
-    }
+    return await authenticateWithRedirect({
+      type,
+      adapter: this.adapter,
+      auth_server_uri: this._authServerUri,
+      client_app_id: this._app_id,
+      storeCodeVerifier: this.storeCodeVerifier.bind(this),
+      environment: this.environment,
+      authorize_uri: this.authorize_uri,
+      debug: this.debug,
+    });
   }
 
   public async login(): Promise<void> {
