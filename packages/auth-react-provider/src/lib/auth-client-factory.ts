@@ -8,12 +8,13 @@ import SchemaVaultsAuthClient, {
 import { ReactAuthClientSdkAdapter } from "./react-auth-client-adapter";
 import type {
   ApiServerId,
+  AppId,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
 export interface IAuthClientFactoryInitOpts {
   environment: SchemaVaultsAppEnvironment;
-  app_id: string;
+  app_id: AppId;
   debug?: boolean;
   default_audiences?: readonly ApiServerId[];
   auth_server_uri: string;
@@ -86,6 +87,7 @@ export class AuthClientFactory {
       environment: this.environment,
       auth_server_uri: this.auth_server_uri,
       debug: this.debug,
+      client_app_id: this.app_id,
     });
   }
 

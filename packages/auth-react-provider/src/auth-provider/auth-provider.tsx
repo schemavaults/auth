@@ -127,7 +127,7 @@ function AppEnvironmentAwareAuthProvider(
     throw new Error(
       "No 'successful_logout_redirect_uri' was set, and failed to automatically resolve a default!",
     );
-  }, [props.successful_logout_redirect_uri, appEnvironment, app_id]);
+  }, [props.successful_logout_redirect_uri, appEnvironment, app_id, debug]);
 
   const successful_authentication_redirect_uri: string = useMemo((): string => {
     if (typeof props.successful_authentication_redirect_uri === "string") {
@@ -184,14 +184,11 @@ function AppEnvironmentAwareAuthProvider(
 
   const authorize_uri: string | undefined = useMemo((): string | undefined => {
     if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
-      if (debug) {
-        console.log(
-          "[AppEnvironmentAwareAuthProvider] authorize_uri=undefined (PKCE flow not used for auth app!)",
+      if (typeof props.authorize_uri !== "undefined") {
+        throw new TypeError(
+          "An 'authorize_uri' is set, but it should not used for the @schemavaults/auth-server app!",
         );
       }
-      console.warn(
-        "An 'authorize_uri' is set, but it is not used for the auth-server app!",
-      );
       return undefined;
     }
 

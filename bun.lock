@@ -10,7 +10,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.15.34",
+      "version": "0.15.35",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -52,7 +52,7 @@
     },
     "packages/app-definitions": {
       "name": "@schemavaults/app-definitions",
-      "version": "0.6.13",
+      "version": "0.6.14",
       "dependencies": {
         "zod": "3.23.8",
       },
@@ -70,7 +70,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.5.6",
+      "version": "0.5.8",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -89,7 +89,7 @@
     },
     "packages/auth-common": {
       "name": "@schemavaults/auth-common",
-      "version": "0.8.4",
+      "version": "0.8.6",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "crypto-js": "4.2.0",
@@ -109,7 +109,7 @@
     },
     "packages/auth-react-provider": {
       "name": "@schemavaults/auth-react-provider",
-      "version": "0.6.8",
+      "version": "0.6.10",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -141,7 +141,7 @@
     },
     "packages/auth-resource-server-codegen-templates": {
       "name": "@schemavaults/auth-resource-server-codegen-templates",
-      "version": "0.0.2",
+      "version": "0.0.3",
       "devDependencies": {
         "@eslint/js": "9.39.1",
         "@schemavaults/auth-common": "workspace:*",
@@ -165,7 +165,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.18.2",
+      "version": "0.19.0",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -187,7 +187,7 @@
     },
     "packages/auth-ui": {
       "name": "@schemavaults/auth-ui",
-      "version": "0.6.29",
+      "version": "0.6.30",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -222,7 +222,7 @@
     },
     "packages/jwt": {
       "name": "@schemavaults/jwt",
-      "version": "0.6.22",
+      "version": "0.6.27",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -242,8 +242,10 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.1.19",
+      "version": "0.1.20",
       "dependencies": {
+        "@schemavaults/app-definitions": "workspace:*",
+        "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/jwt": "workspace:*",
         "cypress": "15.9.0",
       },

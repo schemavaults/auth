@@ -8,8 +8,10 @@ import { setCookie } from "cookies-next/server";
 import { RefreshTokenCookieName, RefreshTokenExpiryCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
 import getStringByteSize from "@schemavaults/auth-server-sdk/getStringByteSize";
 import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
+import type { AppId } from "@schemavaults/app-definitions";
 
 export interface IReturnGeneratedTokensToUserOpts {
+  client_app_id: AppId;
   req: NextRequest;
   tokenGenerationResult: RequestTokensResult;
   secure: boolean;
@@ -30,6 +32,7 @@ function isLocalhostDomain(hostname: string): boolean {
 }
 
 export default async function returnGeneratedTokensToUser({
+  client_app_id,
   req,
   tokenGenerationResult,
   secure,
@@ -100,7 +103,9 @@ export default async function returnGeneratedTokensToUser({
         delete (refreshTokenSetCookieOpts as Partial<typeof refreshTokenSetCookieOpts>).domain;
       }
 
-      await setCookie(RefreshTokenCookieName, refresh_token.token satisfies string, refreshTokenSetCookieOpts);
+
+
+      await setCookie(RefreshTokenCookieName(client_app_id), refresh_token.token satisfies string, refreshTokenSetCookieOpts);
 
 
       // set a non-http-only cookie with the refresh token expiry time
@@ -118,7 +123,7 @@ export default async function returnGeneratedTokensToUser({
       if (!secure && isLocalhostDomain(hostname)) {
         delete (refreshTokenExpirySetCookieOpts as Partial<typeof refreshTokenExpirySetCookieOpts>).domain;
       }
-      await setCookie(RefreshTokenExpiryCookieName, `${refresh_token.exp satisfies number}` satisfies string, refreshTokenExpirySetCookieOpts);
+      await setCookie(RefreshTokenExpiryCookieName(client_app_id), `${refresh_token.exp satisfies number}` satisfies string, refreshTokenExpirySetCookieOpts);
     }
   }
   await setRefreshTokenCookie();

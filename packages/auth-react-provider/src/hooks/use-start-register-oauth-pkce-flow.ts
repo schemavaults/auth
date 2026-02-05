@@ -15,6 +15,8 @@ export interface IUseStartRegisterOauthPKCEFlowOpts {
   onError: (e: unknown) => void;
 }
 
+type UnsubscribeFn = () => void;
+
 export function useStartRegisterOauthPKCEFlow({
   onError,
 }: IUseStartRegisterOauthPKCEFlowOpts) {
@@ -24,9 +26,15 @@ export function useStartRegisterOauthPKCEFlow({
   const debug: boolean = useDebug(environment);
   const checkIfAuthenticatedWithServer = useCheckIfAuthenticatedWithServer();
 
-  useEffectIfAuthenticated((auth: ISchemaVaultsAuthClient) => {
+  useEffectIfAuthenticated((auth: ISchemaVaultsAuthClient): UnsubscribeFn => {
+    if (!auth.isAuthenticated) {
+      return () => {};
+    }
     if (debug) {
-      console.log("[useEffectIfAuthenticated] Sending to account page...");
+      console.log(
+        "[useEffectIfAuthenticated] Sending to 'successful_authentication_redirect_uri': ",
+        auth.successful_authentication_redirect_uri,
+      );
     }
     const redirect_uri: string = auth.successful_authentication_redirect_uri;
     router.push(redirect_uri);
@@ -44,7 +52,7 @@ export function useStartRegisterOauthPKCEFlow({
       }
 
       const hasValidRefreshTokenSet: boolean =
-        await checkIfAuthenticatedWithServer();
+        await checkIfAuthenticatedWithServer(auth);
       if (!hasValidRefreshTokenSet) {
         return false;
       }

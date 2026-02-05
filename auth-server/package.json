@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.15.35",
+  "version": "0.16.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -55,7 +55,8 @@
     "start": "NEXT_TELEMETRY_DISABLED=1 next start",
     "start:standalone": "NEXT_TELEMETRY_DISABLED=1 node .next/standalone/auth-server/server.js",
     "lint": "NEXT_TELEMETRY_DISABLED=1 next typegen && eslint src --ext .ts,.tsx",
-    "typecheck": "NEXT_TELEMETRY_DISABLED=1 next typegen && tsc --project tsconfig.json --noEmit"
+    "typecheck": "NEXT_TELEMETRY_DISABLED=1 next typegen && tsc --project tsconfig.json --noEmit",
+    "typegen": "NEXT_TELEMETRY_DISABLED=1 next typegen"
   },
   "browser": {
     "crypto": false

@@ -12,6 +12,7 @@ import {
   UserRegistry,
 } from "@/lib/auth-db";
 import {
+  type AppId,
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -22,10 +23,14 @@ import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
 
 const grant_type = 'refresh_token' as const;
 
-async function extractRefreshToken(req: NextRequest): Promise<string> {
-  const { cookies, headers } = req;
-  if (cookies.has(RefreshTokenCookieName) && cookies.has(RefreshTokenExpiryCookieName)) {
-    const refresh_token_cookie: string | undefined = cookies.get(RefreshTokenCookieName)?.value;
+type RequestCookies = NextRequest['cookies'];
+type RequestHeaders = NextRequest['headers'];
+
+async function extractRefreshToken(client_app_id: AppId, cookies: RequestCookies, headers: RequestHeaders): Promise<string> {
+  const refresh_token_cookie_name = RefreshTokenCookieName(client_app_id);
+  const refresh_token_expiry_cookie_name = RefreshTokenExpiryCookieName(client_app_id);
+  if (cookies.has(refresh_token_cookie_name) && cookies.has(refresh_token_expiry_cookie_name)) {
+    const refresh_token_cookie: string | undefined = cookies.get(refresh_token_cookie_name)?.value;
     if (!refresh_token_cookie) {
       throw new Error(`Refresh token cookie '${RefreshTokenCookieName}' appears to be empty!`)
     }
@@ -139,9 +144,11 @@ export async function POST(
     );
   }
 
+  const client_app_id: AppId = body.client_app_id;
+
   let unvalidated_refresh_token: string;
   try {
-    unvalidated_refresh_token = await extractRefreshToken(req);
+    unvalidated_refresh_token = await extractRefreshToken(client_app_id, req.cookies, req.headers);
     if (typeof unvalidated_refresh_token !== 'string') {
       throw new TypeError("Expected the result of extractRefreshToken to be a string!")
     }
@@ -159,8 +166,9 @@ export async function POST(
     );
   }
 
-  if (getStringByteSize(unvalidated_refresh_token) > MaximumBrowserCookieSize) {
-    console.error("Refresh token exceeded maximum size.");
+  const refreshTokenSize: number = getStringByteSize(unvalidated_refresh_token);
+  if (refreshTokenSize > MaximumBrowserCookieSize) {
+    console.error(`Refresh token exceeded maximum size: ${refreshTokenSize} bytes > ${MaximumBrowserCookieSize} bytes`);
     return NextResponse.json(
       {
         success: false,
@@ -168,7 +176,7 @@ export async function POST(
         message: "Refresh token exceeded maximum size.",
       } satisfies RequestTokensResult,
       {
-        status: 401,
+        status: 500,
       },
     );
   }

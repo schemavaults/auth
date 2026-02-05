@@ -15,6 +15,8 @@ export interface IUseStartLoginOauthPKCEFlowOpts {
   onError: (e: unknown) => void;
 }
 
+type UnsubscribeFn = () => void;
+
 export function useStartLoginOauthPKCEFlow({
   onError,
 }: IUseStartLoginOauthPKCEFlowOpts) {
@@ -24,13 +26,16 @@ export function useStartLoginOauthPKCEFlow({
   const debug: boolean = useDebug(environment);
   const checkIfAuthenticatedWithServer = useCheckIfAuthenticatedWithServer();
 
-  useEffectIfAuthenticated((auth: ISchemaVaultsAuthClient) => {
-    console.assert(
-      !!auth.currentUser,
-      "Expected user to be logged in if this point was reached-- but current user data is falsy!",
-    );
+  useEffectIfAuthenticated((auth: ISchemaVaultsAuthClient): UnsubscribeFn => {
+    if (!auth.isAuthenticated) {
+      // this is running despite not being authenticated! exit!
+      return () => {};
+    }
     if (debug) {
-      console.log("[useEffectIfAuthenticated] Sending to account page...");
+      console.log(
+        "[useEffectIfAuthenticated] Sending to 'successful_authentication_redirect_uri': ",
+        auth.successful_authentication_redirect_uri,
+      );
     }
     const redirect_uri: string = auth.successful_authentication_redirect_uri;
     router.push(redirect_uri);
@@ -48,7 +53,7 @@ export function useStartLoginOauthPKCEFlow({
       }
 
       const hasValidRefreshTokenSet: boolean =
-        await checkIfAuthenticatedWithServer();
+        await checkIfAuthenticatedWithServer(auth);
       if (!hasValidRefreshTokenSet) {
         return false;
       }

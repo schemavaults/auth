@@ -30,6 +30,9 @@ export function ClientAuthProvider({
       router={router}
       authed_on_unauthed_redirect_uri="/account"
       unauthed_on_authed_redirect_uri="/auth/login"
+      authorize_uri={undefined} // not used for @schemavaults/auth-server
+      successful_logout_redirect_uri="/"
+      successful_authentication_redirect_uri="/account"
       authMiddlewareRules={defaultAuthMiddlewareRules}
       app_id={SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}
       environment={environment}

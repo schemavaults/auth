@@ -1,3 +1,9 @@
+import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import {
+  RefreshTokenCookieName,
+  RefreshTokenExpiryCookieName,
+} from "@schemavaults/auth-common";
+
 export default function register(
   email: string,
   password: string,
@@ -77,10 +83,16 @@ export default function register(
           .then((exchange_tokens_interception) => {
             if (exchange_tokens_interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
-              cy.getCookie("refresh_token", { timeout: 10000 }).should("exist");
-              cy.getCookie("refresh_token_expiry", { timeout: 10000 }).should(
-                "exist",
-              );
+              cy.getCookie(
+                RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+                { timeout: 10000 },
+              ).should("exist");
+              cy.getCookie(
+                RefreshTokenExpiryCookieName(
+                  SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+                ),
+                { timeout: 10000 },
+              ).should("exist");
               return cy
                 .wait("@loadAccountPage", {
                   timeout: 20000,

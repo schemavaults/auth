@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  AppId,
+  appIdSchema,
   getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
@@ -9,6 +11,7 @@ import {
   type AccessToken,
   PKCE_ProofKeyManager,
   type RefreshToken,
+  RefreshTokenExpiryCookieName,
   type UserData,
   accessTokenDataSchema,
   userDataSchema,
@@ -22,8 +25,6 @@ import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthCl
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
-  REFRESH_TOKEN = "refresh_token",
-  REFRESH_TOKEN_EXPIRY = "refresh_token_expiry",
   USER_DATA = "user_data",
 }
 
@@ -34,6 +35,7 @@ export class ReactAuthClientSdkAdapter
   private readonly environment: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
   private readonly auth_server_uri: string;
+  private readonly client_app_id: AppId;
 
   public constructor({
     uuid,
@@ -59,6 +61,12 @@ export class ReactAuthClientSdkAdapter
           SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
           this.environment,
         );
+    if (!appIdSchema.safeParse(opts.client_app_id).success) {
+      throw new TypeError(
+        "Invalid 'client_app_id' to initialize ReactAuthClientSdkAdapter with!",
+      );
+    }
+    this.client_app_id = opts.client_app_id;
   }
 
   private get ssl_enabled(): boolean {
@@ -385,7 +393,7 @@ export class ReactAuthClientSdkAdapter
   public async clearHttpOnlyRefreshToken(): Promise<void> {
     try {
       await this.sendPOSTRequest(
-        `${this.auth_server_uri}/api/auth/logout`,
+        `${this.auth_server_uri}/api/auth/logout/${this.client_app_id}`,
         {},
         {},
       );
@@ -398,37 +406,11 @@ export class ReactAuthClientSdkAdapter
         "Failed to clear HTTP-only refresh token via network request to @schemavaults/auth-server",
       );
     }
-    try {
-      deleteCookie(AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY);
-    } catch (e: unknown) {
-      console.error(
-        `Failed to ensure cookie '${AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY}' was deleted after logout: `,
-        e,
-      );
-      throw new Error(
-        `Failed to ensure cookie '${AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY}' was deleted after logout!`,
-      );
-    }
-
     return;
   }
 
   public async clearAuthTokens(): Promise<void> {
     this.clearAccessTokens();
-    try {
-      window.localStorage.removeItem(
-        AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN,
-      );
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to clear refresh token from localStorage");
-    }
-    try {
-      this.clearCookie(AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN);
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to clear refresh tokens from cookies");
-    }
     await this.clearHttpOnlyRefreshToken();
     return;
   } // end of clearAuthTokens()
@@ -544,8 +526,11 @@ export class ReactAuthClientSdkAdapter
    */
   public hasHttpOnlyRefreshToken(): boolean {
     if (this.doesSupportHttpOnlyRefreshToken()) {
+      const expiry_cookie_key: string = RefreshTokenExpiryCookieName(
+        this.client_app_id,
+      );
       const refreshTokenExpiryStr: string | undefined | null = getCookie(
-        AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY,
+        expiry_cookie_key,
         {
           httpOnly: false,
           secure: this.ssl_enabled,
@@ -554,7 +539,7 @@ export class ReactAuthClientSdkAdapter
       if (typeof refreshTokenExpiryStr !== "string") {
         if (this.debug) {
           console.log(
-            `[hasHttpOnlyRefreshToken] No refresh token expiry cookie found (key '${AuthClientSdkAdapterLocalStorageKeys.REFRESH_TOKEN_EXPIRY}').`,
+            `[hasHttpOnlyRefreshToken] No refresh token expiry cookie found (key '${expiry_cookie_key}').`,
           );
         }
         return false;

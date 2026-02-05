@@ -6,4 +6,3 @@ export {
 export { default as generateAccessToken } from "./generateAccessToken";
 export { default as generateRefreshToken } from "./generateRefreshToken";
 export { default as generateTokensForAuthenticatedUser } from "./generateTokensForAuthenticatedUser";
-export { default as shouldPassTokenViaHttpOnlyCookie } from "./shouldPassTokenViaHttpOnlyCookie";

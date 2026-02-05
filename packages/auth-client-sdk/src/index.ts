@@ -16,3 +16,8 @@ export type { ISchemaVaultsAuthClient } from "@/types/ISchemaVaultsAuthClient";
 export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
 
 export type { UserData } from "@/types/UserData";
+
+export {
+  RefreshTokenCookieName,
+  RefreshTokenExpiryCookieName,
+} from "@schemavaults/auth-common/RefreshTokenCookieNames";

@@ -1,3 +1,9 @@
+import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import {
+  RefreshTokenCookieName,
+  RefreshTokenExpiryCookieName,
+} from "@schemavaults/auth-common";
+
 describe("Login", () => {
   it("can load the login page", () => {
     cy.visit("/auth/login");
@@ -19,8 +25,12 @@ describe("Login", () => {
         throw new Error("Failed to login as superuser");
       }
 
-      cy.getCookie("refresh_token").should("exist");
-      cy.getCookie("refresh_token_expiry").should("exist");
+      cy.getCookie(
+        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+      ).should("exist");
+      cy.getCookie(
+        RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+      ).should("exist");
 
       cy.visit("/auth/login");
       cy.url().should("not.include", "/auth/login");
@@ -37,10 +47,14 @@ describe("Login", () => {
           }
           cy.log(`Logged in as regular user: ${credentials.email}`);
 
-          cy.getCookie("refresh_token", { timeout: 10000 }).should("exist");
-          cy.getCookie("refresh_token_expiry", { timeout: 10000 }).should(
-            "exist",
-          );
+          cy.getCookie(
+            RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+          ).should("exist");
+          cy.getCookie(
+            RefreshTokenExpiryCookieName(
+              SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+            ),
+          ).should("exist");
           cy.url().should("include", "/account");
 
           // Regular user should not be an admin
