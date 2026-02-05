@@ -387,6 +387,10 @@ export class SchemaVaultsAuthClient
   }
 
   public async login(): Promise<void> {
+    if (this.isClientForAuthServer) {
+      return await this.adapter.redirect("/auth/login");
+    }
+
     if (this.DEBUG) {
       console.log(
         "[SchemaVaultsAuthClient] Attempting to sign in with redirect...",
@@ -402,6 +406,10 @@ export class SchemaVaultsAuthClient
   } // login()
 
   public async register(): Promise<void> {
+    if (this.isClientForAuthServer) {
+      return await this.adapter.redirect("/auth/register");
+    }
+
     if (this.DEBUG) {
       console.log(
         "[SchemaVaultsAuthClient] Attempting to register with redirect...",
