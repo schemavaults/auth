@@ -22,6 +22,7 @@ import {
 } from "@schemavaults/auth-client-sdk";
 import { deleteCookie, getCookie } from "cookies-next/client";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
+import isClientRuntime from "./isClientRuntime";
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
@@ -566,4 +567,24 @@ export class ReactAuthClientSdkAdapter
   public hasRefreshToken(): boolean {
     return this.hasHttpOnlyRefreshToken();
   }
+
+  public relativeUrlToAbsoluteUrl(relative_url: string): string {
+    if (typeof relative_url !== "string" || relative_url.length === 0) {
+      throw new TypeError(
+        "Expected first argument to relativeUrlToAbsoluteUrl to be a string!",
+      );
+    }
+    if (!relative_url.startsWith("/")) {
+      throw new TypeError("Expected 'relative_url' to start with a '/'!");
+    }
+    if (!isClientRuntime()) {
+      throw new Error(
+        "[relativeUrlToAbsoluteUrl] This should only be called from the client!",
+      );
+    }
+    const absolute_url: string = `${window.location.origin}${relative_url}`;
+    return absolute_url;
+  }
 }
+
+export default ReactAuthClientSdkAdapter;

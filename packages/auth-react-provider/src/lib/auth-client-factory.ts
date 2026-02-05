@@ -5,7 +5,7 @@ import SchemaVaultsAuthClient, {
   type ISchemaVaultsAuthClient,
   type ISchemaVaultsAuthClientAdapter,
 } from "@schemavaults/auth-client-sdk";
-import { ReactAuthClientSdkAdapter } from "./react-auth-client-adapter";
+import ReactAuthClientSdkAdapter from "./react-auth-client-adapter";
 import type {
   ApiServerId,
   AppId,
