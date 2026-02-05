@@ -11,14 +11,16 @@ import { cookies } from "next/headers";
 type RequestCookies = NextRequest['cookies'];
 type NextjsCookiesGetterResult = Awaited<ReturnType<typeof cookies>>;
 
-async function doesCookiesStoreHaveValidRefreshToken(cookies: RequestCookies | NextjsCookiesGetterResult): Promise<UserData | false> {
-  if (!cookies.has(RefreshTokenExpiryCookieName)) {
+async function doesCookiesStoreHaveValidRefreshToken(
+  cookies: RequestCookies | NextjsCookiesGetterResult
+): Promise<UserData | false> {
+  if (!cookies.has(RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_ID))) {
     return false;
-  } else if (!cookies.has(RefreshTokenCookieName)) {
+  } else if (!cookies.has(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID))) {
     return false;
   }
 
-  const refresh_token: string | undefined = cookies.get(RefreshTokenCookieName)?.value;
+  const refresh_token: string | undefined = cookies.get(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID))?.value;
   if (!refresh_token) {
     return false;
   }
@@ -39,12 +41,12 @@ async function doesCookiesStoreHaveValidRefreshToken(cookies: RequestCookies | N
   return user;
 }
 
-export async function doesRequestHaveValidRefreshToken(req: NextRequest): Promise<UserData | false> {
+export async function doesRequestHaveValidAuthServerRefreshToken(req: NextRequest): Promise<UserData | false> {
   return await doesCookiesStoreHaveValidRefreshToken(req.cookies);
 }
 
-export async function doesSsrContextHaveValidRefreshToken(): Promise<UserData | false> {
+export async function doesSsrContextHaveValidAuthServerRefreshToken(): Promise<UserData | false> {
   return await doesCookiesStoreHaveValidRefreshToken(await cookies());
 }
 
-export default doesRequestHaveValidRefreshToken;
+export default doesRequestHaveValidAuthServerRefreshToken;

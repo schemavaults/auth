@@ -11,7 +11,7 @@ import {
 import type { ServerRuntime } from "next/types";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import type { UserData } from "@schemavaults/auth-common";
-import { doesSsrContextHaveValidRefreshToken } from "@/lib/doesRequestHaveValidRefreshToken";
+import { doesSsrContextHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import { redirect } from "next/navigation";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import redirectWithError from "@/lib/redirect-with-error";
@@ -31,7 +31,7 @@ export default async function RegisterPage(props: {
       debug,
     });
 
-  const alreadyAuthenticated: UserData | false = await doesSsrContextHaveValidRefreshToken();
+  const alreadyAuthenticated: UserData | false = await doesSsrContextHaveValidAuthServerRefreshToken();
     if (alreadyAuthenticated) {
       if (on_successful_authenticate === 'account-page') {
         return redirect("/account");
