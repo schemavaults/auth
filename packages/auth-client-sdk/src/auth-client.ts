@@ -652,20 +652,20 @@ export class SchemaVaultsAuthClient
 
     // Get the endpoint to exchange the authorization code for an access token
     // https://datatracker.ietf.org/doc/html/rfc7636#section-4.5
-    const token_endpoint =
-      `${this.auth_server_uri}/api/auth/token/authorization_code` as const;
-    if (debug) {
-      console.log(
-        "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Token Endpoint: ",
-        token_endpoint,
-      );
-    }
-
     const client_app_id: string = this.app_id;
     if (debug) {
       console.log(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Client App ID: ",
         client_app_id,
+      );
+    }
+
+    const token_endpoint =
+      `${this.auth_server_uri}/api/auth/token/authorization_code/${client_app_id}` as const;
+    if (debug) {
+      console.log(
+        "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Token Endpoint: ",
+        token_endpoint,
       );
     }
 
@@ -1316,10 +1316,10 @@ export class SchemaVaultsAuthClient
       );
     }
 
-    const token_endpoint =
-      `${this.auth_server_uri}/api/auth/token/refresh_token` as const;
-
     const client_app_id = this.app_id;
+
+    const token_endpoint =
+      `${this.auth_server_uri}/api/auth/token/refresh_token/${client_app_id}` as const;
 
     if (!audience && !replaceRefreshToo) {
       throw new Error("Type of token to acquire not specified");

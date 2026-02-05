@@ -18,7 +18,7 @@ export default function logout() {
   // Perform logout actions
   cy.intercept({
     method: "POST",
-    url: "**/api/auth/logout/**",
+    url: `**/api/auth/logout/${SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}`,
     times: 1,
   }).as("logoutRequest");
   cy.get("button#sign-out-button").click();

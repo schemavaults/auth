@@ -25,7 +25,7 @@ export default function login(
   }).as("loginRequest");
   cy.intercept({
     method: "POST",
-    url: "**/api/auth/token/authorization_code",
+    url: `**/api/auth/token/authorization_code/${SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}`,
     times: 1,
   }).as("exchangeTokenRequest");
   cy.intercept({
