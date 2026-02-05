@@ -20,7 +20,7 @@ import RouteGuardFactory from "./route-guard-factory";
 import { type NextRequest, NextResponse } from "next/server";
 import getStringByteSize from "@/getStringByteSize";
 import MaximumBrowserCookieSize from "@/MaximumBrowserCookieSize";
-import RefreshTokenCookieName from "@/RefreshTokenCookieNames";
+import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
 import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
 import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 import redirectToLogin from "@/redirect-to-login";
@@ -88,13 +88,17 @@ export async function withAuthenticatedServerComponentRouteGuard<
 
   const token_sources: PotentiallyValidTokenSource[] = [];
 
-  const refresh_token_cookie = cookies.get("refresh_token");
-  if (typeof refresh_token_cookie?.value === "string") {
-    token_sources.push({
-      sourceHint: "Auth Server Refresh Token",
-      type: "refresh",
-      token: refresh_token_cookie.value,
-    });
+  if (api_server_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+    const refresh_token_cookie = cookies.get(
+      RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+    );
+    if (typeof refresh_token_cookie?.value === "string") {
+      token_sources.push({
+        sourceHint: "Auth Server Refresh Token",
+        type: "refresh",
+        token: refresh_token_cookie.value,
+      });
+    }
   }
 
   if (token_sources.length === 0) {
@@ -187,21 +191,27 @@ export function withAuthenticatedApiRouteGuard<
 
     const token_sources: PotentiallyValidTokenSource[] = [];
 
-    const refresh_token_cookie = req.cookies.get(RefreshTokenCookieName);
-    if (
-      typeof refresh_token_cookie?.value === "string" &&
-      refresh_token_cookie.value.length > 64 &&
-      getStringByteSize(refresh_token_cookie.value) <= MaximumBrowserCookieSize
-    ) {
-      token_sources.push({
-        sourceHint: "Auth Server Refresh Token",
-        type: "refresh",
-        token: refresh_token_cookie.value satisfies string,
-      });
+    if (api_server_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+      const refresh_token_cookie = req.cookies.get(
+        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+      );
+      if (
+        typeof refresh_token_cookie?.value === "string" &&
+        refresh_token_cookie.value.length > 64 &&
+        getStringByteSize(refresh_token_cookie.value) <=
+          MaximumBrowserCookieSize
+      ) {
+        token_sources.push({
+          sourceHint: "Auth Server Refresh Token",
+          type: "refresh",
+          token: refresh_token_cookie.value satisfies string,
+        });
+      }
     }
 
-    if (req.headers.has(RefreshTokenCookieName)) {
-      const auth_header: string | null = req.headers.get("Authorization");
+    if (req.headers.has("Authorization") || req.headers.has("authorization")) {
+      const auth_header: string | null =
+        req.headers.get("Authorization") ?? req.headers.get("authorization");
       if (!auth_header || typeof auth_header !== "string") {
         throw new Error(
           "Expected 'Authorization' to be non-empty string if set.",
@@ -212,19 +222,17 @@ export function withAuthenticatedApiRouteGuard<
           "Expected header 'Authorization' to start with 'Bearer '",
         );
       }
-      const refresh_token_from_header: string =
+      const access_token_from_header: string =
         typeof auth_header === "string" && auth_header.startsWith("Bearer ")
           ? auth_header.slice("Bearer ".length)
           : "";
-      if (!refresh_token_from_header) {
-        throw new Error(
-          `Refresh token cookie from header 'Authorization' appears to be empty!`,
-        );
+      if (!access_token_from_header) {
+        throw new Error(`Header 'Authorization' appears to be empty!`);
       }
       token_sources.push({
-        sourceHint: "Auth Server Access Token",
+        sourceHint: "Access Token from Authorization Bearer header",
         type: "access",
-        token: refresh_token_from_header satisfies string,
+        token: access_token_from_header satisfies string,
       });
     }
 

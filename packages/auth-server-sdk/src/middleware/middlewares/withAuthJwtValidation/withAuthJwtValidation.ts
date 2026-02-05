@@ -18,6 +18,7 @@ import {
 } from "@schemavaults/jwt";
 import {
   apiServerIdSchema,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type {
@@ -30,6 +31,7 @@ import type { IJwtKeyManager } from "@/JwtKeyManager";
 import doLoadJwtDecodingKeys, {
   type IDecodeAuthTokenKeys,
 } from "@/JwtKeyManager/loadJwtDecodingKeys";
+import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
 
 export interface AuthJwtValidationMiddlewareOptions {
   audience: string;
@@ -121,17 +123,20 @@ class AuthJwtValidationMiddleware
     const token_sources: PotentiallyValidTokenSource[] = [];
 
     // Load Tokens from cookies
-    let refresh_token: string | undefined =
-      req.cookies.get("refresh_token")?.value;
     let access_token: string | undefined =
       req.cookies.get("access_token")?.value;
 
-    if (typeof refresh_token === "string") {
-      token_sources.push({
-        token: refresh_token,
-        type: "refresh",
-        sourceHint: "Refresh Token Cookie",
-      });
+    if (this.audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+      const refresh_token: string | undefined = req.cookies.get(
+        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+      )?.value;
+      if (typeof refresh_token === "string") {
+        token_sources.push({
+          token: refresh_token,
+          type: "refresh",
+          sourceHint: "Refresh Token Cookie",
+        });
+      }
     }
 
     if (typeof access_token === "string") {
