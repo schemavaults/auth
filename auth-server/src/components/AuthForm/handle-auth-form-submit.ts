@@ -286,7 +286,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       break;
     case "send-authorization-code-to-native-app-then-close":
       if (env !== "production") {
-        console.log("[AuthForm] Sending authorization code to client...");
+        console.log("[AuthForm] Sending authorization code to native-app client...");
       }
 
       if (!redirect_uri) {
