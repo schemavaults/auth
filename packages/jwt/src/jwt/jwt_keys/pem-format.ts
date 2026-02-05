@@ -132,6 +132,7 @@ export class PEMFormat {
   public static fromBase64Url(
     base64url_encoded_pem_key: string,
     key_type: "PUBLIC" | "PRIVATE",
+    debug: boolean = false,
   ) {
     if (typeof base64url_encoded_pem_key !== "string") {
       throw new TypeError(
@@ -145,10 +146,19 @@ export class PEMFormat {
     if (key_type !== "PUBLIC" && key_type !== "PRIVATE") {
       throw new TypeError("Expected 'key_type' to be 'PUBLIC' or 'PRIVATE'");
     }
-    const decoded = base64url.decode(base64url_encoded_pem_key).toString();
+    const decoded: string = base64url
+      .decode(base64url_encoded_pem_key)
+      .toString();
     if (typeof decoded !== "string") {
       throw new TypeError("Expected 'decoded' key to be a string!");
     }
+    if (debug) {
+      console.log(
+        `[PEMFormat::fromBase64Url] Decoded base64url string: `,
+        decoded,
+      );
+    }
+
     return new PEMFormat(decoded, key_type);
   }
 }
