@@ -11,6 +11,7 @@ import type {
 import { FrontendApplicationActions } from "./frontend_app_actions";
 import AppDomainsList from "./AppDomainsList";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
+import { AppWindowMac, Globe } from "lucide-react";
 
 export function getAppsTableColumns(
   queryType: ListAppsQueryType,
@@ -60,6 +61,24 @@ export function getAppsTableColumns(
       id: "owner_organization_id",
       accessorKey: "owner_organization_id",
       header: "Owner Organization",
+    },
+    {
+      id: "web",
+      accessorKey: "web",
+      header: "App Type",
+      cell: ({ row }) => {
+        const web: boolean = row.getValue("web");
+        return (
+          <div className="flex flex-row gap-2 items-center justify-center">
+            {web ? (
+              <Globe className="h-4 w-4" />
+            ) : (
+              <AppWindowMac className="h-4 w-4" />
+            )}
+            {web ? <p>Web</p> : <p>Native</p>}
+          </div>
+        );
+      },
     },
     {
       id: "domains",

@@ -62,9 +62,15 @@ export function AppsTable({
         app_name: true,
         app_description: true,
         owner_organization_id: false,
+        web: true,
         domains: true,
       }}
-      searchColumn={["app_id", "app_name"]}
+      searchColumn={[
+        "app_id",
+        "app_name",
+        "app_description",
+        "owner_organization_id",
+      ]}
       HeaderButtons={AppsTableHeaderButtons}
       datatypeLabel="App"
     />
