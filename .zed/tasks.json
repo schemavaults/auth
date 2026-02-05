@@ -334,7 +334,7 @@
   },
   {
     "label": "dev @schemavaults/example-nextjs-resource-server",
-    "command": "cd ./tests/example-nextjs-resource-server && bun run dev",
+    "command": "bun run dev --filter @schemavaults/example-nextjs-resource-server",
     //"args": [],
     // Env overrides for the command, will be appended to the terminal's environment from the settings.
     // "env": { "foo": "bar" },
