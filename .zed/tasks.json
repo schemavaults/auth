@@ -353,7 +353,7 @@
     // * `never` — Do nothing when the command finishes (default)
     // * `always` — always hide the terminal tab, hide the pane also if it was the last tab in it
     // * `on_success` — hide the terminal tab on task success only, otherwise behaves similar to `always`
-    "hide": "never",
+    "hide": "on_success",
     "shell": "system",
     // Whether to show the task line in the output of the spawned task, defaults to `true`.
     "show_summary": true,
