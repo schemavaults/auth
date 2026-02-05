@@ -41,10 +41,26 @@ export class AuthenticateURLEncoder {
     redirect_uri,
     app_env,
   }: ValidateAuthenticateURLOptions): void {
+    if (typeof redirect_uri !== "string") {
+      throw new TypeError("Expected 'redirect_uri' to be a string!");
+    }
+
     const requiresSSL: boolean =
       app_env !== "development" && app_env !== "test";
-    if (requiresSSL && !redirect_uri.startsWith("https://")) {
+    const usesHttps: boolean = redirect_uri.startsWith("https://");
+    if (requiresSSL && !usesHttps) {
       throw new Error("Redirect URI must use HTTPS in production");
+    }
+    const usesHttp: boolean = redirect_uri.startsWith("http://");
+
+    if (redirect_uri.startsWith("/")) {
+      throw new Error("A relative path may not be used for 'redirect_uri'!");
+    }
+
+    if (!usesHttps && !usesHttp) {
+      throw new Error(
+        "Expected 'redirect_uri' to use either http or https protocol!",
+      );
     }
   }
 
