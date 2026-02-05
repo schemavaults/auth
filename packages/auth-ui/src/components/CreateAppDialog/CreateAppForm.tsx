@@ -58,6 +58,7 @@ export default function CreateAppForm({
       app_id: uuid(),
       app_description: "",
       public: false,
+      web: true,
       created_at: Date.now(),
       hardcoded: false,
       owner_organization_id,
@@ -258,6 +259,29 @@ export default function CreateAppForm({
               <FormDescription className="w-full">
                 Is this app publicly listed to end-users? I.e. can they find it
                 without having authorized it first
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="web"
+          render={({ field }) => (
+            <FormItem className="flex flex-row gap-2 items-center flex-wrap">
+              <FormLabel className="w-full">Web Application?</FormLabel>
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={submitting}
+                  onBlur={field.onBlur}
+                />
+              </FormControl>
+              <FormDescription className="w-full">
+                Is this a web application? Web apps receive authorization codes
+                via URL redirect. Native/desktop apps receive codes via a POST
+                request.
               </FormDescription>
               <FormMessage />
             </FormItem>

@@ -12,7 +12,7 @@ const baseSchemaVaultsAppDefinitionSchema = z
     created_at: z.number().nonnegative(),
     public: z.boolean(), // whether the app is publicly listed
     hardcoded: z.boolean(),
-    web: z.boolean().optional(), // whether this app can be opened by url or requires native installation
+    web: z.boolean(), // whether this app can be opened by url or requires native installation
     owner_organization_id: z.string().nullable().optional(),
   })
   .required({
@@ -21,6 +21,7 @@ const baseSchemaVaultsAppDefinitionSchema = z
     created_at: true,
     public: true,
     hardcoded: true,
+    web: true,
   })
   .strict();
 

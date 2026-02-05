@@ -118,6 +118,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    if (typeof newResource.web !== 'boolean') {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "The 'web' field must be a boolean",
+        } satisfies ResourceCreationResponse,
+        { status: 400 },
+      );
+    }
+
     try {
       if (debug) {
         console.log("[POST /api/apps] Attempting to register new app: ", newResource)
@@ -127,7 +137,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         newResource.app_name,
         newResource.app_description,
         newResource.public,
-        owner_organization_id
+        owner_organization_id,
+        newResource.web,
       );
 
       return NextResponse.json({

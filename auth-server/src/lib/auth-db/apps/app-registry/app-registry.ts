@@ -217,6 +217,7 @@ export class SchemaVaultsAppRegistry {
     app_description: string,
     publicly_listed: boolean,
     owner_organization_id: OrganizationID,
+    web: boolean,
   ): Promise<void> {
 
     if (!organizationIdSchema.safeParse(owner_organization_id).success) {
@@ -227,6 +228,10 @@ export class SchemaVaultsAppRegistry {
       throw new TypeError("Expected 'publicly_listed' to be a boolean!")
     }
 
+    if (typeof web !== 'boolean') {
+      throw new TypeError("Expected 'web' to be a boolean!")
+    }
+
     const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
       app_id,
       app_name,
@@ -234,7 +239,8 @@ export class SchemaVaultsAppRegistry {
       created_at: Date.now(),
       public: publicly_listed ?? false,
       owner_organization_id: owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID ? null : owner_organization_id,
-      hardcoded: false
+      hardcoded: false,
+      web,
     } satisfies SchemaVaultsApp);
     if (!parsed_app.success) {
       console.error(parsed_app.error.errors);
