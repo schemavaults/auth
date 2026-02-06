@@ -5,7 +5,13 @@ import type {
   ListAppsQueryType,
   SchemaVaultsAppDomainRef,
 } from "@schemavaults/app-definitions";
-import { type ReactElement, useTransition, useState, useMemo } from "react";
+import {
+  type ReactElement,
+  useTransition,
+  useState,
+  useMemo,
+  useContext,
+} from "react";
 import { cn, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import {
@@ -27,13 +33,13 @@ import {
 } from "@schemavaults/ui";
 import { useAdmin, useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { sendAuthorizeFrontendAppRequest } from "./send-authorize-app-request";
-import { getUseAppDomainsListEndpoint, useAppDomains } from "./useAppDomains";
-import { CreateAppDomainDialog } from "../CreateAppDomainDialog";
+import { useAppDomains } from "./useAppDomains";
 import { launchWebApp } from "./launchWebApp";
 import {
   isHardcodedAppId,
   HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
 } from "@schemavaults/app-definitions";
+import { CreateAppDomainDialogOpenDispatchContext } from "@/components/CreateAppDomainDialog";
 
 const dropdownMenuActionsClassName: string =
   "hover:cursor-pointer flex flex-row gap-2 items-center justify-start pointer-events-auto" as const;
@@ -68,6 +74,9 @@ export function FrontendApplicationActions({
 
   const admin: boolean = useAdmin();
   const environment = useAppEnvironment();
+  const openAddAppDomainDialog = useContext(
+    CreateAppDomainDialogOpenDispatchContext,
+  );
 
   const launchableAppDomains: readonly SchemaVaultsAppDomainRef[] =
     useMemo(() => {
@@ -112,10 +121,10 @@ export function FrontendApplicationActions({
     appDomains.data.length === 0 ||
     launchableAppDomains.length === 0;
 
-  const [isAddWebDomainDialogOpen, setAddWebDomainDialogOpen] =
-    useState<boolean>(false);
-
   const isDeleteAppDisabled: boolean = hardcoded || !admin;
+
+  const showAddAppDomain: boolean = admin && queryType === "all";
+  const showConnectApi: boolean = admin && queryType === "all";
 
   return (
     <>
@@ -232,33 +241,31 @@ export function FrontendApplicationActions({
             </DropdownMenuItem>
           )}
 
-          {
-            // Admin 'all apps' view actions
-            admin && queryType === "all" && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className={cn(dropdownMenuActionsClassName)}
-                  onClick={(): void => {
-                    toast({
-                      variant: "default",
-                      title: "Not implemented",
-                    });
-                  }}
-                >
-                  <PlugZap className="h-4 w-4" /> Connect API
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={cn(dropdownMenuActionsClassName)}
-                  onClick={(): void => {
-                    setAddWebDomainDialogOpen(true);
-                  }}
-                >
-                  <EarthLock className="h-4 w-4" /> Add domain
-                </DropdownMenuItem>
-              </>
-            )
-          }
+          {showConnectApi && (
+            <DropdownMenuItem
+              className={cn(dropdownMenuActionsClassName)}
+              onClick={(): void => {
+                toast({
+                  variant: "default",
+                  title: "Not implemented",
+                });
+              }}
+            >
+              <PlugZap className="h-4 w-4" /> Connect API
+            </DropdownMenuItem>
+          )}
+
+          {showAddAppDomain && (
+            <DropdownMenuItem
+              className={cn(dropdownMenuActionsClassName)}
+              onClick={(): void => {
+                openAddAppDomainDialog(app.app_id);
+                return;
+              }}
+            >
+              <EarthLock className="h-4 w-4" /> Add domain
+            </DropdownMenuItem>
+          )}
 
           {!isDeleteAppDisabled && (
             <>
@@ -279,19 +286,6 @@ export function FrontendApplicationActions({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <CreateAppDomainDialog
-        app_id={app.app_id}
-        open={isAddWebDomainDialogOpen}
-        onOpenChange={setAddWebDomainDialogOpen}
-        clearFrontendWebAppDomainsCache={(mutate) => {
-          mutate(
-            (key) => key === getUseAppDomainsListEndpoint(app.app_id),
-            undefined,
-            { revalidate: true },
-          );
-        }}
-        key={`create-domain-dialog-${app.app_id}` as const}
-      />
     </>
   );
 }

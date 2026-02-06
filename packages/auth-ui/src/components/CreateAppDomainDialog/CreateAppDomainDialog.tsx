@@ -12,7 +12,13 @@ import {
   Input,
   useToast,
 } from "@schemavaults/ui";
-import { type ReactElement, useMemo, useTransition } from "react";
+import {
+  type ReactElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useTransition,
+} from "react";
 
 import {
   Dialog,
@@ -29,6 +35,7 @@ import {
 import { useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
+  AppId,
   type SchemaVaultsAppDomainRef,
   schemaVaultsAppDomainRefSchema,
   type SchemaVaultsAppEnvironment,
@@ -36,34 +43,34 @@ import {
 } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EarthLock } from "lucide-react";
+import { CreateAppDomainDialogOpenContext } from "./CreateAppDomainDialogOpenContext";
+import { getUseAppDomainsListEndpoint } from "@/components/AppsTable";
 
 interface CreateFrontendAppDialogProps {
-  clearFrontendWebAppDomainsCache: (
-    mutate: ReturnType<typeof useSWRConfig>["mutate"],
-  ) => void;
-  app_id: string;
   open: boolean;
   onOpenChange: (value: boolean) => void;
+  uuid: () => string;
 }
 
 export function CreateAppDomainDialog({
-  clearFrontendWebAppDomainsCache,
-  app_id,
   open,
   onOpenChange,
+  uuid,
 }: CreateFrontendAppDialogProps): ReactElement {
   const { toast } = useToast();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
+  const app_id: AppId | false = useContext(CreateAppDomainDialogOpenContext);
 
   const defaultValues: Partial<SchemaVaultsAppDomainRef> = useMemo(() => {
     return {
-      app_id,
+      app_id: typeof app_id === "string" ? app_id : "",
       domain: "",
-      app_domain_ref_id: "",
+      app_domain_ref_id: uuid(),
       environment,
       created_at: Date.now(),
+      hardcoded: false, // if its being created by this form then its by definition dynamic
     };
-  }, [environment, app_id]);
+  }, [environment, app_id, uuid]);
 
   const form = useForm<SchemaVaultsAppDomainRef>({
     resolver: zodResolver(schemaVaultsAppDomainRefSchema),
@@ -71,6 +78,11 @@ export function CreateAppDomainDialog({
   });
   const { mutate } = useSWRConfig();
   const [submitting, startSubmitting] = useTransition();
+
+  // Reset form when selected app changes
+  useEffect(() => {
+    form.reset();
+  }, [app_id]);
 
   async function onSubmit(values: SchemaVaultsAppDomainRef): Promise<void> {
     if (environment === "development") {
@@ -138,7 +150,11 @@ export function CreateAppDomainDialog({
         variant: "default",
         title: "Created new application domain successfully",
       });
-      clearFrontendWebAppDomainsCache(mutate);
+      mutate(
+        (key) => key === getUseAppDomainsListEndpoint(values.app_id),
+        undefined,
+        { revalidate: true },
+      );
       onOpenChange(false);
     });
 
@@ -147,11 +163,6 @@ export function CreateAppDomainDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* <DialogTrigger asChild>
-          <Button>
-            <AppWindow className="h-4 w-4 mr-2" /> Create web app domain
-          </Button>
-        </DialogTrigger> */}
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
           <form
@@ -252,3 +263,5 @@ export function CreateAppDomainDialog({
     </Dialog>
   );
 }
+
+export default CreateAppDomainDialog;

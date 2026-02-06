@@ -15,10 +15,15 @@ import {
   clearUseAppsListCache,
   type PreloadedAppsTableDataWithDomainRefs,
 } from "@/components/AppsTable";
-import type { ListAppsQueryType } from "@schemavaults/app-definitions";
+import type { AppId, ListAppsQueryType } from "@schemavaults/app-definitions";
 import CreateAppDialog, {
   CreateAppDialogOpenDispatchContext,
 } from "@/components/CreateAppDialog";
+import CreateAppDomainDialog, {
+  CreateAppDomainDialogOpenContext,
+  CreateAppDomainDialogOpenDispatchContext,
+} from "@/components/CreateAppDomainDialog";
+
 import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 
 export interface AppsCardProps {
@@ -40,40 +45,60 @@ export function AppsCard(props: AppsCardProps): ReactElement {
   const cardClassName: string = cn("w-full", props.cardClassName);
   const [createAppDialogOpen, setCreateAppDialogOpen] =
     useState<boolean>(false);
+  const [isAddAppDomainDialogOpen, setAddAppDomainDialogOpen] = useState<
+    AppId | false
+  >(false);
 
   return (
     <CreateAppDialogOpenDispatchContext.Provider value={setCreateAppDialogOpen}>
-      <Card className={cardClassName}>
-        <CardHeader>
-          <CardTitle>{cardTitle}</CardTitle>
-          <CardDescription>{cardDescription}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AppsTable
-            queryType={props.queryType}
-            preloaded={props.preloaded}
-            organization_id={props.organization_id}
-          />
-        </CardContent>
-        <CardFooter>
-          <div className="flex flex-row items-start justify-start gap-2"></div>
-        </CardFooter>
-      </Card>
-      <>
-        {(props.queryType === "all" || props.queryType === "org") && (
-          <CreateAppDialog
-            clearFrontendAppsCache={clearUseAppsListCache}
-            owner_organization_id={
-              props.queryType === "all"
-                ? SCHEMAVAULTS_ORGANIZATION_ID
-                : props.organization_id
-            }
-            open={createAppDialogOpen}
-            onOpenChange={setCreateAppDialogOpen}
-            uuid={props.uuid}
-          />
-        )}
-      </>
+      <CreateAppDomainDialogOpenDispatchContext.Provider
+        value={setAddAppDomainDialogOpen}
+      >
+        <CreateAppDomainDialogOpenContext.Provider
+          value={isAddAppDomainDialogOpen}
+        >
+          <Card className={cardClassName}>
+            <CardHeader>
+              <CardTitle>{cardTitle}</CardTitle>
+              <CardDescription>{cardDescription}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AppsTable
+                queryType={props.queryType}
+                preloaded={props.preloaded}
+                organization_id={props.organization_id}
+              />
+            </CardContent>
+            <CardFooter>
+              <div className="flex flex-row items-start justify-start gap-2"></div>
+            </CardFooter>
+          </Card>
+          <>
+            {(props.queryType === "all" || props.queryType === "org") && (
+              <CreateAppDialog
+                clearFrontendAppsCache={clearUseAppsListCache}
+                owner_organization_id={
+                  props.queryType === "all"
+                    ? SCHEMAVAULTS_ORGANIZATION_ID
+                    : props.organization_id
+                }
+                open={createAppDialogOpen}
+                onOpenChange={setCreateAppDialogOpen}
+                uuid={props.uuid}
+              />
+            )}
+            <CreateAppDomainDialog
+              open={typeof isAddAppDomainDialogOpen === "string"}
+              onOpenChange={(val: boolean): void => {
+                if (!val) {
+                  setAddAppDomainDialogOpen(false);
+                }
+              }}
+              uuid={props.uuid}
+            />
+          </>
+        </CreateAppDomainDialogOpenContext.Provider>
+      </CreateAppDomainDialogOpenDispatchContext.Provider>
     </CreateAppDialogOpenDispatchContext.Provider>
   );
 }
