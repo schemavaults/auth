@@ -188,7 +188,7 @@ export async function POST(
   );
 
   // Apply CORS headers to response if needed
-  return applyCorsHeadersToResponse(response, url_client_app_id, req, dbh);
+  return await applyCorsHeadersToResponse(response, url_client_app_id, req, dbh) satisfies NextResponse;
 }
 
 export const dynamic = "force-dynamic";
