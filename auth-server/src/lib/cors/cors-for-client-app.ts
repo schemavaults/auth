@@ -1,5 +1,5 @@
 // cors-for-client-app.ts
-// utilities for allowing a client app to access an endpoint on the auth-server
+// utilities for allowing a client app to access a POST endpoint on the auth-server
 
 import "server-only";
 
@@ -8,10 +8,12 @@ import {
   type AppId,
   appIdSchema,
   getAppEnvironment,
+  type SchemaVaultsApp,
   type SchemaVaultsAppDomainRef,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { SchemaVaultsAppRegistry, type ServerlessDatabase } from "@/lib/auth-db";
+import type { ServerlessDatabase } from "@/lib/auth-db";
+import { getApp, SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 
 /**
  * Extract the Origin header from a request
@@ -83,14 +85,14 @@ export interface CorsValidationOptions {
  */
 export async function validateCorsForClientApp(
   opts: CorsValidationOptions,
-  dbh: ServerlessDatabase
+  dbh: ServerlessDatabase,
+  debug: boolean = false
 ): Promise<CorsValidationResult> {
   const { client_app_id, request } = opts;
   const origin = getOriginFromRequest(request);
   const environment = getAppEnvironment();
 
-  const appRegistry = new SchemaVaultsAppRegistry(dbh.db);
-  const app = await appRegistry.getApp(client_app_id);
+  const app: SchemaVaultsApp | null = await getApp(dbh.db, client_app_id, debug);
 
   if (!app) {
     return { allowed: false, error: "App not found" };

@@ -134,7 +134,8 @@ export async function POST(
   // Validate CORS
   const corsResult = await validateCorsForClientApp(
     { client_app_id: url_client_app_id, request: req },
-    dbh
+    dbh,
+    debug
   );
 
   if (!corsResult.allowed) {
