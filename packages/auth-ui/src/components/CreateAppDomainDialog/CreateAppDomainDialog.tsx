@@ -81,12 +81,17 @@ export function CreateAppDomainDialog({
 
   // Reset form when selected app changes
   useEffect(() => {
-    form.reset();
+    if (typeof app_id === "string") {
+      form.setValue("app_id", app_id);
+    }
   }, [app_id]);
 
   async function onSubmit(values: SchemaVaultsAppDomainRef): Promise<void> {
     if (environment === "development") {
-      console.log("Submitting frontend app creation form...");
+      console.log(
+        "Submitting frontend app domain creation form with values: ",
+        values,
+      );
       toast({
         variant: "default",
         title: "Submitting frontend app web domain creation form...",
@@ -95,12 +100,12 @@ export function CreateAppDomainDialog({
 
     startSubmitting(async () => {
       try {
-        const response = await fetch(`/api/apps/${app_id}/domains`, {
+        const response = await fetch(`/api/apps/${values.app_id}/domains`, {
           method: "POST",
           body: JSON.stringify({
             ...values,
             created_at: Date.now(),
-            app_id,
+            app_id: values.app_id,
           }),
           credentials: "include",
         });
@@ -155,6 +160,7 @@ export function CreateAppDomainDialog({
         undefined,
         { revalidate: true },
       );
+      form.reset();
       onOpenChange(false);
     });
 
