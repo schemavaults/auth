@@ -22,6 +22,7 @@ export interface IAuthClientFactoryInitOpts {
   successful_logout_redirect_uri: string;
   authorize_uri?: string | undefined;
   invite_code_required?: boolean;
+  fetch: typeof fetch;
 }
 
 export class AuthClientFactory {
@@ -35,6 +36,7 @@ export class AuthClientFactory {
   private readonly successful_logout_redirect_uri: string;
   private readonly authorize_uri: string | undefined;
   private readonly invite_code_required: boolean;
+  private readonly fetch: typeof fetch;
 
   public constructor(opts: IAuthClientFactoryInitOpts) {
     const environment: SchemaVaultsAppEnvironment = opts.environment;
@@ -60,6 +62,7 @@ export class AuthClientFactory {
       typeof opts.invite_code_required === "boolean"
         ? opts.invite_code_required
         : true;
+    this.fetch = fetch;
   }
 
   private async createAuthClientWithUuidGenerator(): Promise<ISchemaVaultsAuthClient> {
@@ -88,6 +91,7 @@ export class AuthClientFactory {
       auth_server_uri: this.auth_server_uri,
       debug: this.debug,
       client_app_id: this.app_id,
+      fetch: this.fetch,
     });
   }
 

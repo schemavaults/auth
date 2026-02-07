@@ -32,4 +32,6 @@ export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
   environment: SchemaVaultsAppEnvironment;
 
   invite_code_required?: boolean;
+
+  fetch?: typeof fetch;
 }

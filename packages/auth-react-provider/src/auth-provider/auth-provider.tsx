@@ -287,6 +287,7 @@ function AppEnvironmentAwareAuthProvider(
         typeof props.invite_code_required === "boolean"
           ? props.invite_code_required
           : true,
+      fetch: typeof props.fetch === "function" ? props.fetch : fetch,
     };
 
   // Initialize auth client, store in the authClientRef
