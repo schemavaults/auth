@@ -9,6 +9,7 @@ import { RefreshTokenCookieName, RefreshTokenExpiryCookieName } from "@schemavau
 import getStringByteSize from "@schemavaults/auth-server-sdk/getStringByteSize";
 import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
 import type { AppId } from "@schemavaults/app-definitions";
+import SCHEMAVAULTS_AUTH_APP_ID from "./SCHEMAVAULTS_AUTH_APP_ID";
 
 export interface IReturnGeneratedTokensToUserOpts {
   client_app_id: AppId;
@@ -29,6 +30,21 @@ function isLocalhostDomain(hostname: string): boolean {
   }
 
   return false;
+}
+
+// SameSite=none | send cookie in all contexts
+// SameSite=strict | send cookie in same-site contexts (navigations and other requests)
+// SameSite=lax | send cookie in same-site requests and when navigating
+function determineCookieSameSiteValue(
+  client_app_id: AppId,
+  secure: boolean
+): 'none' | 'lax' | 'strict' {
+  const isAuthServer: boolean = SCHEMAVAULTS_AUTH_APP_ID === client_app_id;
+  if (isAuthServer) {
+    return secure ? "strict": "lax";
+  } else {
+    return "lax";
+  }
 }
 
 export default async function returnGeneratedTokensToUser({
@@ -90,11 +106,16 @@ export default async function returnGeneratedTokensToUser({
         );
       }
 
+      const sameSite: "strict" | "none" | "lax" = determineCookieSameSiteValue(
+        client_app_id,
+        secure
+      );
+
       const refreshTokenSetCookieOpts = {
         httpOnly: true,
         secure,
         expires: new Date(refresh_token.exp satisfies number),
-        sameSite: secure ? "strict" : "lax",
+        sameSite,
         domain: hostname,
         req,
         res: success_response,
@@ -115,7 +136,7 @@ export default async function returnGeneratedTokensToUser({
         httpOnly: false,
         secure,
         expires: new Date(refresh_token.exp satisfies number),
-        sameSite: secure ? "strict" : "lax",
+        sameSite,
         domain: hostname,
         req,
         res: success_response,
