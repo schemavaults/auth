@@ -1,6 +1,9 @@
 "use client";
 
-import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
+import type {
+  ISchemaVaultsAuthClient,
+  UserData,
+} from "@schemavaults/auth-client-sdk";
 import { useCallback } from "react";
 
 export default function useCheckIfAuthenticatedWithServer() {
@@ -11,6 +14,7 @@ export default function useCheckIfAuthenticatedWithServer() {
       // if client doesnt think its authenticated we wont bother double checking with the server
       return false;
     }
-    throw new Error("Unimplemented");
+    const user: UserData | null = await auth.checkIfAuthenticatedWithServer();
+    return user ? true : false;
   }, []);
 }
