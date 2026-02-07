@@ -38,7 +38,7 @@ export function ClientAuthProvider({
       environment={environment}
       debug={typeof props.debug === 'boolean' ? props.debug : false}
       invite_code_required={typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true}
-      fetch={fetch}
+      fetch={async (url: string, init: RequestInit | undefined) => await fetch(url, init)}
     >
       {children}
     </AuthProvider>

@@ -33,5 +33,5 @@ export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
 
   invite_code_required?: boolean;
 
-  fetch: typeof fetch;
+  fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }

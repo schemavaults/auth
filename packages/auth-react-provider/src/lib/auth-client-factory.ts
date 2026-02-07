@@ -22,7 +22,7 @@ export interface IAuthClientFactoryInitOpts {
   successful_logout_redirect_uri: string;
   authorize_uri?: string | undefined;
   invite_code_required?: boolean;
-  fetch: typeof fetch;
+  fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
 
 export class AuthClientFactory {
@@ -36,7 +36,10 @@ export class AuthClientFactory {
   private readonly successful_logout_redirect_uri: string;
   private readonly authorize_uri: string | undefined;
   private readonly invite_code_required: boolean;
-  private readonly fetch: typeof fetch;
+  private readonly fetch: (
+    url: string,
+    init: RequestInit | undefined,
+  ) => Promise<Response>;
 
   public constructor(opts: IAuthClientFactoryInitOpts) {
     const environment: SchemaVaultsAppEnvironment = opts.environment;

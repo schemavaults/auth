@@ -47,6 +47,9 @@ export default function AppAuthProvider({
       default_audiences={props.default_audiences}
       debug={debug}
       environment={environment}
+      fetch={async (url: string, init: RequestInit | undefined) =>
+        await fetch(url, init)
+      }
     >
       {props.children}
     </AuthProvider>

@@ -22,7 +22,7 @@ export interface UseAuthClientInitializationOptions {
   default_audiences?: InitializeAuthClientOptions["default_audiences"];
   environment: SchemaVaultsAppEnvironment;
   invite_code_required?: boolean;
-  fetch: typeof fetch;
+  fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
 
 export function useAuthClientInitialization(

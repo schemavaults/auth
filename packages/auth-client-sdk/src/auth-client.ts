@@ -1406,7 +1406,6 @@ export class SchemaVaultsAuthClient
       if (this.DEBUG) {
         console.log(`POST => ${exchange_refresh_token_endpoint}`);
       }
-
       const response = await this.adapter.fetch(
         exchange_refresh_token_endpoint,
         {

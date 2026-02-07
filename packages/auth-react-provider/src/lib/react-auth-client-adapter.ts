@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  AppId,
+  type AppId,
   appIdSchema,
   getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
@@ -34,7 +34,19 @@ export class ReactAuthClientSdkAdapter
   private readonly debug: boolean;
   private readonly auth_server_uri: string;
   private readonly client_app_id: AppId;
-  public readonly fetch: typeof fetch;
+
+  private readonly _fetch: (
+    url: string,
+    init: RequestInit | undefined,
+  ) => Promise<Response>;
+
+  public async fetch(
+    url: string,
+    init: RequestInit | undefined,
+  ): Promise<Response> {
+    const doFetch = this._fetch.bind(window);
+    return await doFetch(url, init);
+  }
 
   public constructor({
     uuid,
@@ -66,7 +78,7 @@ export class ReactAuthClientSdkAdapter
       );
     }
     this.client_app_id = opts.client_app_id;
-    this.fetch = opts.fetch;
+    this._fetch = opts.fetch.bind(window);
   }
 
   private get ssl_enabled(): boolean {
