@@ -101,6 +101,9 @@ export async function sendAuthenticateRequest(
         body: JSON.stringify(auth_request_body),
         method: "POST",
         credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
     );
     if (!authentication_request_response) {

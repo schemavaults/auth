@@ -716,6 +716,9 @@ export class SchemaVaultsAuthClient
         body: JSON.stringify(request_body),
         method: "POST",
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (this.debug) {
@@ -1351,7 +1354,9 @@ export class SchemaVaultsAuthClient
       );
     }
 
-    const exchangeAuthTokensReqHeaders: Record<string, string> = {};
+    const exchangeAuthTokensReqHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
 
     if (!refreshToken) {
       throw new Error(
