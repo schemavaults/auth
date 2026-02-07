@@ -33,14 +33,13 @@ export function useAuthClientInitialization(
     successful_authentication_redirect_uri,
     successful_logout_redirect_uri,
     authorize_uri,
-  } = opts;
-  const {
     authClientRef,
     auth_server_uri,
     app_id,
     default_audiences,
     environment,
   } = opts;
+  const httpFetch = opts.fetch;
 
   const debug: boolean = useDebugWithSpecifiedBooleanOrLookupDefault(
     environment,
@@ -81,7 +80,7 @@ export function useAuthClientInitialization(
             environment,
             app_id,
             invite_code_required,
-            fetch: opts.fetch,
+            fetch: httpFetch,
           });
 
           factory
@@ -132,6 +131,7 @@ export function useAuthClientInitialization(
       authClientRef,
       default_audiences,
       invite_code_required,
+      httpFetch,
     ],
   ); // end of auth client initialization side-effect
 }

@@ -60,7 +60,7 @@ interface AuthClientAuthTokensActions {
 }
 
 interface AuthClientNetworkActions {
-  fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
+  fetch: (url: string, init: RequestInit | undefined) => Promise<Response>; // eslint-disable-line no-undef
 
   // Convert a relative URL (e.g. '/auth/authorize') to an absolute URL (e.g. 'http://localhost:3210/auth/authorize')
   relativeUrlToAbsoluteUrl: (relative_url: string) => string;

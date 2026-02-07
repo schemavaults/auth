@@ -6,9 +6,10 @@ const DEBUG: boolean = true;
 
 describe("loadJwksAccessPrivateKey", () => {
   test("can load crypto key from base64url-encoded environment variable", async () => {
-    const [privateKey, _] = await new SigningKeyPairFactory().generate(
+    const [privateKey, _publicKey] = await new SigningKeyPairFactory().generate(
       "base64url",
     );
+    void _publicKey;
 
     let errorThrown: boolean = false;
     try {
@@ -29,7 +30,10 @@ describe("loadJwksAccessPrivateKey", () => {
   });
 
   test("can load crypto key from PEM-format environment variable", async () => {
-    const [privateKey, _] = await new SigningKeyPairFactory().generate("pem");
+    const [privateKey, _publicKey] = await new SigningKeyPairFactory().generate(
+      "pem",
+    );
+    void _publicKey;
 
     let errorThrown: boolean = false;
     try {

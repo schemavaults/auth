@@ -81,10 +81,10 @@ export function CreateAppDomainDialog({
 
   // Reset form when selected app changes
   useEffect(() => {
-    if (typeof app_id === "string") {
+    if (typeof app_id === "string" && form.getValues().app_id !== app_id) {
       form.setValue("app_id", app_id);
     }
-  }, [app_id]);
+  }, [app_id, form]);
 
   async function onSubmit(values: SchemaVaultsAppDomainRef): Promise<void> {
     if (environment === "development") {
