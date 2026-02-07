@@ -82,6 +82,10 @@ function AppEnvironmentAwareAuthProvider(
 
   const app_id: AppId = props.app_id;
 
+  if (typeof props.fetch !== "function") {
+    throw new TypeError("Expected 'fetch' to be a function!");
+  }
+
   const authServerUri: string = useMemo(() => {
     if (typeof props.auth_server_uri === "string") {
       return props.auth_server_uri;
@@ -287,7 +291,7 @@ function AppEnvironmentAwareAuthProvider(
         typeof props.invite_code_required === "boolean"
           ? props.invite_code_required
           : true,
-      fetch: typeof props.fetch === "function" ? props.fetch : fetch,
+      fetch: props.fetch,
     };
 
   // Initialize auth client, store in the authClientRef
