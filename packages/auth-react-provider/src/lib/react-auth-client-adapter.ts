@@ -16,10 +16,7 @@ import {
   accessTokenDataSchema,
   userDataSchema,
 } from "@schemavaults/auth-common";
-import {
-  type ISchemaVaultsAuthClientAdapter,
-  type IAuthClientPOSTResultType,
-} from "@schemavaults/auth-client-sdk";
+import { type ISchemaVaultsAuthClientAdapter } from "@schemavaults/auth-client-sdk";
 import { deleteCookie, getCookie } from "cookies-next/client";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
 import isClientRuntime from "./isClientRuntime";
@@ -37,6 +34,7 @@ export class ReactAuthClientSdkAdapter
   private readonly debug: boolean;
   private readonly auth_server_uri: string;
   private readonly client_app_id: AppId;
+  public readonly fetch: typeof fetch;
 
   public constructor({
     uuid,
@@ -68,6 +66,7 @@ export class ReactAuthClientSdkAdapter
       );
     }
     this.client_app_id = opts.client_app_id;
+    this.fetch = opts.fetch;
   }
 
   private get ssl_enabled(): boolean {
@@ -119,76 +118,6 @@ export class ReactAuthClientSdkAdapter
       deleteCookie(key);
     } catch (e) {
       console.error(e);
-    }
-  }
-
-  public async sendPOSTRequest(
-    url: string,
-    body: Record<string, unknown>,
-    headers: Record<string, string>,
-  ): Promise<IAuthClientPOSTResultType<object>> {
-    if (this.debug) {
-      console.log(`[ReactAuthClientSdkAdapter] POST -> "${url}"`, body);
-    }
-
-    const auth_server_uri: string = this.auth_server_uri;
-    if (typeof auth_server_uri !== "string" || auth_server_uri.length === 0) {
-      throw new TypeError("Failed to load URI to auth-server!");
-    }
-
-    const includeCrossOriginCredentials: boolean =
-      url.startsWith(auth_server_uri);
-
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...headers,
-        },
-        body: JSON.stringify(body),
-        credentials: includeCrossOriginCredentials ? "include" : "same-origin",
-      });
-
-      if (this.debug) {
-        console.log(
-          `Received response from POST request to "${url}"! ${response.ok ? "Ok" : "Error"}`,
-        );
-      }
-
-      // if (!response.ok || response.status >= 300 || response.status < 200) {
-      //   throw new Error(`HTTP response did not have a success status code: ${response.status}`)
-      // }
-
-      const response_body = await response.json();
-      if (!response_body || typeof response_body !== "object") {
-        throw new Error("Expected response to be a JSON object!");
-      }
-
-      const isOkStatusCode: boolean =
-        response.status >= 200 && response.status < 300;
-
-      const ok: boolean = response.ok && isOkStatusCode;
-
-      const output: IAuthClientPOSTResultType<object> = {
-        status: response.status,
-        ok,
-        data: response_body,
-      };
-
-      if (this.debug) {
-        console.log(`[ReactAuthClientSdkAdapter] POST -> "${url}" ->`, output);
-      }
-
-      return output;
-    } catch (e: unknown) {
-      console.error(
-        "Failed to send POST request using ReactAuthClientSdkAdapter: ",
-        e,
-      );
-      throw new Error(
-        "Failed to send POST request using ReactAuthClientSdkAdapter!",
-      );
     }
   }
 
@@ -402,10 +331,12 @@ export class ReactAuthClientSdkAdapter
 
   public async clearHttpOnlyRefreshToken(): Promise<void> {
     try {
-      await this.sendPOSTRequest(
+      await this.fetch(
         `${this.auth_server_uri}/api/auth/logout/${this.client_app_id}`,
-        {},
-        {},
+        {
+          method: "POST",
+          credentials: "include",
+        },
       );
     } catch (e: unknown) {
       console.error(

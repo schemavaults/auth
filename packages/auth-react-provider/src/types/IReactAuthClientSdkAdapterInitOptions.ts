@@ -9,4 +9,5 @@ export interface IReactAuthClientSdkAdapterInitOptions {
   auth_server_uri?: string;
   debug?: boolean;
   client_app_id: AppId;
+  fetch: typeof fetch;
 }
