@@ -1,5 +1,7 @@
 export { AuthorizedAppsRegistry, AuthorizedAppsRegistry as default } from './authorized-apps-registry';
 
+export type * from './authorized-apps-table';
+
 export { authorizedAppDeclarationSchema } from './authorized-app-declaration-schema';
 export type { AuthorizedAppDeclaration } from './authorized-app-declaration-schema';
 
