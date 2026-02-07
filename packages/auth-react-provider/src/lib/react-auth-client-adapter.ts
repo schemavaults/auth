@@ -131,6 +131,14 @@ export class ReactAuthClientSdkAdapter
       console.log(`[ReactAuthClientSdkAdapter] POST -> "${url}"`, body);
     }
 
+    const auth_server_uri: string = this.auth_server_uri;
+    if (typeof auth_server_uri !== "string" || auth_server_uri.length === 0) {
+      throw new TypeError("Failed to load URI to auth-server!");
+    }
+
+    const includeCrossOriginCredentials: boolean =
+      url.startsWith(auth_server_uri);
+
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -139,6 +147,7 @@ export class ReactAuthClientSdkAdapter
           ...headers,
         },
         body: JSON.stringify(body),
+        credentials: includeCrossOriginCredentials ? "include" : "same-origin",
       });
 
       if (this.debug) {
