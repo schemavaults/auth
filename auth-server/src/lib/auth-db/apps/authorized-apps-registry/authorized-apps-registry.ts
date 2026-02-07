@@ -1,10 +1,5 @@
 import "server-only";
-import { z } from "zod";
 import {
-  appIdSchema,
-  type SchemaVaultsApp,
-  HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -17,12 +12,10 @@ export type { AuthorizedAppDeclaration } from './authorized-app-declaration-sche
 export class AuthorizedAppsRegistry {
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
-  private hardcodedApps: Map<string, SchemaVaultsApp> =
-    HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP;
 
-  public async listAuthorizedAppsForRegistry(uid: string): Promise<AuthorizedAppDeclaration[]> {
-    const listAuthorizedApps = await import("./list-authorized-apps-for-registry").then(mod => mod.default)
-    return await listAuthorizedApps(this.db, uid, this.debug);
+  public async listAuthorizedAppsForUser(uid: string): Promise<AuthorizedAppDeclaration[]> {
+    const listAuthorizedAppsForUser = await import("./list-authorized-apps-for-user").then(mod => mod.default)
+    return await listAuthorizedAppsForUser(this.db, uid, this.debug);
   }
 
   public async authorizeAppForUser(uid: string, app_id: string): Promise<void> {
