@@ -15,10 +15,7 @@ import {
   audienceSchema,
   type SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
-import type {
-  IAuthClientPOSTResultType,
-  ISchemaVaultsAuthClientAdapter,
-} from "@/types/ISchemaVaultsAuthClientAdapter";
+import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { IAuthClientConstructorOptions } from "@/types/IAuthClientConstructorOptions";
 import { sendAuthenticateRequest } from "@/lib/send-authenticate-request";
 import type { Credentials } from "@/types/credentials";
@@ -42,6 +39,7 @@ import debugPrintTokensAsTable from "@/lib/debugPrintTokensAsTable";
 import debugPrintUserDataAsTable from "@/lib/debugPrintUserDataAsTable";
 import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
 import authenticateWithRedirect from "@/lib/authenticate-with-redirect";
+import checkIfAuthenticatedWithServer from "@/lib/check-if-authenticated-with-server";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
@@ -660,12 +658,12 @@ export class SchemaVaultsAuthClient
       );
     }
 
-    const token_endpoint =
+    const authorization_code_token_endpoint =
       `${this.auth_server_uri}/api/auth/token/authorization_code/${client_app_id}` as const;
     if (debug) {
       console.log(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Token Endpoint: ",
-        token_endpoint,
+        authorization_code_token_endpoint,
       );
     }
 
@@ -706,19 +704,19 @@ export class SchemaVaultsAuthClient
     // Send the request to the auth server
     // The auth server will hash the code_verifier and compare it to the code_challenge
 
-    let response: IAuthClientPOSTResultType<object>;
+    let response: Response;
     try {
       if (this.debug) {
         console.log(
-          `[SchemaVaultsAuthClient] Exchanging authorization code for access token; sending req body to token endpoint: "${token_endpoint}"`,
+          `[SchemaVaultsAuthClient] Exchanging authorization code for access token; sending req body to token endpoint: "${authorization_code_token_endpoint}"`,
           request_body,
         );
       }
-      response = await this.adapter.sendPOSTRequest(
-        token_endpoint,
-        request_body,
-        {}, // no headers
-      );
+      response = await this.adapter.fetch(authorization_code_token_endpoint, {
+        body: JSON.stringify(request_body),
+        method: "POST",
+        credentials: "include",
+      });
 
       if (this.debug) {
         console.log(
@@ -752,7 +750,7 @@ export class SchemaVaultsAuthClient
     let user: UserData;
     try {
       const tokens_data = await requestTokensResultSchema.safeParseAsync(
-        response.data,
+        await response.json(),
       );
       if (!tokens_data.success) {
         console.error(
@@ -1318,7 +1316,7 @@ export class SchemaVaultsAuthClient
 
     const client_app_id = this.app_id;
 
-    const token_endpoint =
+    const exchange_refresh_token_endpoint =
       `${this.auth_server_uri}/api/auth/token/refresh_token/${client_app_id}` as const;
 
     if (!audience && !replaceRefreshToo) {
@@ -1392,7 +1390,7 @@ export class SchemaVaultsAuthClient
     if (this.DEBUG) {
       console.log(
         "[SchemaVaultsAuthClient::exchangeAuthTokens()] " +
-          `Sending POST request to "${token_endpoint}" with body & headers:`,
+          `Sending POST request to "${exchange_refresh_token_endpoint}" with body & headers:`,
         request_body,
         exchangeAuthTokensReqHeaders,
       );
@@ -1401,15 +1399,17 @@ export class SchemaVaultsAuthClient
     let tokens_response_data: RequestTokensResult;
     try {
       if (this.DEBUG) {
-        console.log(`POST => ${token_endpoint}`);
+        console.log(`POST => ${exchange_refresh_token_endpoint}`);
       }
 
-      const response = await this.adapter.sendPOSTRequest(
-        token_endpoint,
-        // body
-        request_body,
-        // headers
-        exchangeAuthTokensReqHeaders,
+      const response = await this.adapter.fetch(
+        exchange_refresh_token_endpoint,
+        {
+          body: JSON.stringify(request_body),
+          method: "POST",
+          headers: exchangeAuthTokensReqHeaders,
+          credentials: "include",
+        },
       );
       if (
         !response ||
@@ -1428,7 +1428,7 @@ export class SchemaVaultsAuthClient
       }
 
       const parsed_failed_tokens_result =
-        await requestTokensResultSchema.safeParseAsync(response.data);
+        await requestTokensResultSchema.safeParseAsync(await response.json());
       if (!parsed_failed_tokens_result.success) {
         console.error(
           "Failed to parse tokens response from server: ",
@@ -1440,7 +1440,7 @@ export class SchemaVaultsAuthClient
       tokens_response_data = parsed_failed_tokens_result.data;
     } catch (e: unknown) {
       if (this.DEBUG) {
-        console.error("[this.adapter.sendPOSTRequest] FAILED: ", e);
+        console.error("[exchangeAuthTokens] FETCH FAILED: ", e);
         throw new Error("Failed to ");
       }
 
@@ -1461,7 +1461,7 @@ export class SchemaVaultsAuthClient
         console.error("Failed to exchange refresh token for access token: ", e);
       }
       throw new Error("Failed to exchange refresh token for access token");
-    } // end of this.adapter.sendPOSTRequest catch block
+    }
 
     try {
       // Parse tokens from response JSON body
@@ -1584,5 +1584,12 @@ export class SchemaVaultsAuthClient
     }
 
     return false;
+  }
+
+  public async checkIfAuthenticatedWithServer(): Promise<UserData | null> {
+    return await checkIfAuthenticatedWithServer({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+    });
   }
 }

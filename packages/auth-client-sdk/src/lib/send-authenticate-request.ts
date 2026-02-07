@@ -3,10 +3,7 @@ import {
   PKCE_ProofKeyManager,
   authenticateResultSchema,
 } from "@schemavaults/auth-common";
-import type {
-  IAuthClientPOSTResultType,
-  ISchemaVaultsAuthClientAdapter,
-} from "@/types/ISchemaVaultsAuthClientAdapter";
+import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import { credentialsSchema } from "@/lib/credentials-schema";
 import {
   isValidAuthenticationOutcomeType,
@@ -93,17 +90,19 @@ export async function sendAuthenticateRequest(
     challenge_time: code_challenge.challenge_time,
   };
 
-  let response: IAuthClientPOSTResultType<object>;
+  let response: Response;
   try {
     if (env === "development") {
       console.log("[sendAuthenticateRequest] Sending POST request via adapter");
     }
-    const authentication_request_response: IAuthClientPOSTResultType<object> =
-      await adapter.sendPOSTRequest(
-        `/api/auth/${authentication_type}`,
-        auth_request_body,
-        {},
-      );
+    const authentication_request_response: Response = await adapter.fetch(
+      `/api/auth/${authentication_type}`,
+      {
+        body: JSON.stringify(auth_request_body),
+        method: "POST",
+        credentials: "same-origin",
+      },
+    );
     if (!authentication_request_response) {
       throw new Error(
         "No response received from client auth adapter HTTP client",
@@ -119,12 +118,16 @@ export async function sendAuthenticateRequest(
     let errorMsg: string =
       "Unknown server-side error handling authentication request :(";
     try {
-      if (typeof response.data === "object" && response.data !== null) {
+      const error_response_body: unknown = await response.json();
+      if (
+        typeof error_response_body === "object" &&
+        error_response_body !== null
+      ) {
         if (
-          "message" in response.data &&
-          typeof response.data.message === "string"
+          "message" in error_response_body &&
+          typeof error_response_body.message === "string"
         ) {
-          errorMsg = response.data.message;
+          errorMsg = error_response_body.message;
         }
       }
     } catch (error: unknown) {
@@ -161,10 +164,10 @@ export async function sendAuthenticateRequest(
         `Failed to authenticate (response status ${response.status})`,
       );
     }
-    const response_body_json = response.data;
 
-    const parsed_auth_response =
-      await authenticateResultSchema.safeParseAsync(response_body_json);
+    const parsed_auth_response = await authenticateResultSchema.safeParseAsync(
+      await response.json(),
+    );
 
     if (!parsed_auth_response.success) {
       throw new Error(parsed_auth_response.error.errors.join(", "));

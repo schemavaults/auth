@@ -59,20 +59,8 @@ interface AuthClientAuthTokensActions {
   clearAccessTokens: () => void;
 }
 
-export interface IAuthClientPOSTResultType<T extends object> {
-  status: number;
-  ok: boolean;
-  data: T;
-}
-
 interface AuthClientNetworkActions {
-  // Returns the result of response.json() (not the actual response itself)
-  // Should throw if request returns an error response or does not return valid json!
-  sendPOSTRequest: (
-    url: string,
-    body: Record<string, unknown>,
-    headers: Record<string, string>,
-  ) => Promise<IAuthClientPOSTResultType<object>>;
+  fetch: typeof fetch;
 
   // Convert a relative URL (e.g. '/auth/authorize') to an absolute URL (e.g. 'http://localhost:3210/auth/authorize')
   relativeUrlToAbsoluteUrl: (relative_url: string) => string;

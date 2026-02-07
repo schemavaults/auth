@@ -89,8 +89,18 @@ export interface ISchemaVaultsAuthClient {
   /**
    * @name isAuthenticated
    * @returns Getter that returns true if there is a user currently signed in, false otherwise
+   * @description This works off the client's assumption that it is/isn't authenticated. Great for a quick 'am i logged in?' check.
+   * @see checkIfAuthenticatedWithServer
    */
   isAuthenticated: boolean;
+
+  /**
+   * @name checkIfAuthenticatedWithServer
+   * @returns A promise resolving with the current user's data (if authenticated), or null if not loggged in
+   * @description Sends a request to the auth server to check if the client is currently authenticated
+   * @see isAuthenticated
+   */
+  checkIfAuthenticatedWithServer: () => Promise<UserData | null>;
 
   /**
    * Return true if feature is supported by this auth client / adapter

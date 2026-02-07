@@ -3,10 +3,7 @@ export {
   SchemaVaultsAuthClient as default,
 } from "./auth-client";
 
-export type {
-  ISchemaVaultsAuthClientAdapter,
-  IAuthClientPOSTResultType,
-} from "@/types/ISchemaVaultsAuthClientAdapter";
+export type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 
 export type {
   InitializeAuthClientOptions,
