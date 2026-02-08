@@ -9,7 +9,7 @@ import { RefreshTokenCookieName, RefreshTokenExpiryCookieName } from "@schemavau
 import getStringByteSize from "@schemavaults/auth-server-sdk/getStringByteSize";
 import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
 import type { AppId } from "@schemavaults/app-definitions";
-import SCHEMAVAULTS_AUTH_APP_ID from "./SCHEMAVAULTS_AUTH_APP_ID";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 
 export interface IReturnGeneratedTokensToUserOpts {
   client_app_id: AppId;
