@@ -47,3 +47,5 @@ export type { SchemaVaultsAppEnvironment } from "./app-environments";
 export { getAppEnvironment } from "./get-app-environment";
 
 export { getAuthServerUri } from "./get-auth-server-uri";
+
+export { SCHEMAVAULTS_AUTH_APP_ID } from "./SCHEMAVAULTS_AUTH_APP_ID";
