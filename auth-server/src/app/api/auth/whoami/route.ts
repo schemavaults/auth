@@ -6,6 +6,10 @@ import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGua
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({ user }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      const debug: boolean = process.env.NODE_ENV === 'development';
+      if (debug) {
+        console.log(`[/api/auth/whoami] Returning user details for '${user.email}' (uid: '${user.uid}')`)
+      }
       return NextResponse.json(
         {
           success: true,
