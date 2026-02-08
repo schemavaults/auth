@@ -1079,6 +1079,7 @@ export class SchemaVaultsAuthClient
     return await checkIfAuthenticatedWithServer({
       adapter: this.adapter,
       auth_server_uri: this.auth_server_uri,
+      client_app_id: this.app_id,
     });
   }
 }

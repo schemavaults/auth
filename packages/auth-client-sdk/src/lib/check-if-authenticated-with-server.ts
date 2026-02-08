@@ -4,14 +4,16 @@ import { UserData, userDataSchema } from "@schemavaults/auth-common";
 export interface ICheckIfAuthenticatedWithServerOpts {
   auth_server_uri: string;
   adapter: ISchemaVaultsAuthClientAdapter;
+  client_app_id: string;
 }
 
 export default async function checkIfAuthenticatedWithServer({
   auth_server_uri,
   adapter,
+  client_app_id,
 }: ICheckIfAuthenticatedWithServerOpts): Promise<UserData | null> {
   try {
-    const response = await adapter.fetch(`${auth_server_uri}/api/auth/whoami`, {
+    const response = await adapter.fetch(`${auth_server_uri}/api/auth/whoami/${client_app_id}`, {
       method: "GET",
       credentials: "include",
     });

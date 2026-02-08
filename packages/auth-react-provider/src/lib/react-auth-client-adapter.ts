@@ -9,6 +9,8 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   type AccessToken,
+  AccessTokenCookieName,
+  AccessTokenExpiryCookieName,
   PKCE_ProofKeyManager,
   type RefreshToken,
   RefreshTokenExpiryCookieName,
@@ -17,7 +19,12 @@ import {
   userDataSchema,
 } from "@schemavaults/auth-common";
 import { type ISchemaVaultsAuthClientAdapter } from "@schemavaults/auth-client-sdk";
-import { deleteCookie, getCookie } from "cookies-next/client";
+import {
+  deleteCookie,
+  getCookie,
+  getCookies,
+  setCookie,
+} from "cookies-next/client";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
 import isClientRuntime from "./isClientRuntime";
 
@@ -103,8 +110,6 @@ export class ReactAuthClientSdkAdapter
       throw new Error("Failed to generate UUID! Insecure HTTP context?");
     }
   }
-
-  private accessTokens: Map<string, AccessToken> = new Map();
 
   public redirect(uri: string): void {
     if (this.debug) {
@@ -309,16 +314,35 @@ export class ReactAuthClientSdkAdapter
   }
 
   public storeAccessToken(token_id: string, access_token: AccessToken): void {
-    this.accessTokens.set(token_id, access_token);
+    const cookie_options = {
+      httpOnly: false,
+      secure: this.ssl_enabled,
+      sameSite: "lax" as const,
+      expires: new Date(access_token.exp),
+    };
+    setCookie(
+      AccessTokenCookieName(token_id),
+      JSON.stringify(access_token),
+      cookie_options,
+    );
+    setCookie(
+      AccessTokenExpiryCookieName(token_id),
+      String(access_token.exp),
+      cookie_options,
+    );
   }
 
   public getAccessToken(token_id: string): AccessToken | null {
     try {
-      const serialized = this.accessTokens.get(token_id);
-      if (!serialized) {
+      const cookie_value = getCookie(AccessTokenCookieName(token_id), {
+        httpOnly: false,
+        secure: this.ssl_enabled,
+      });
+      if (typeof cookie_value !== "string" || cookie_value.length === 0) {
         return null;
       }
-      const parsed = accessTokenDataSchema.safeParse(serialized);
+      const json: unknown = JSON.parse(cookie_value);
+      const parsed = accessTokenDataSchema.safeParse(json);
       if (!parsed.success) {
         console.error(parsed.error);
         throw new Error("Invalid access token data");
@@ -326,7 +350,7 @@ export class ReactAuthClientSdkAdapter
       return parsed.data;
     } catch (e: unknown) {
       console.error(e);
-      throw new Error("Failed to get access token from localStorage");
+      throw new Error("Failed to get access token from cookie");
     }
   }
 
@@ -337,8 +361,15 @@ export class ReactAuthClientSdkAdapter
   }
 
   public clearAccessTokens(): void {
-    this.accessTokens = new Map();
-    return;
+    const all_cookies = getCookies();
+    if (!all_cookies) {
+      return;
+    }
+    for (const cookie_name of Object.keys(all_cookies)) {
+      if (cookie_name.startsWith("access_token_")) {
+        deleteCookie(cookie_name);
+      }
+    }
   }
 
   public async clearHttpOnlyRefreshToken(): Promise<void> {
@@ -454,19 +485,9 @@ export class ReactAuthClientSdkAdapter
   }
 
   public clearAccessToken(token_id: string): void {
-    if (this.accessTokens) {
-      if (this.accessTokens.has(token_id)) {
-        this.accessTokens.delete(token_id);
-        return;
-      }
-    }
-    if (this.debug) {
-      console.warn(
-        `[clearAccessToken] No token with ID '${token_id}' found to clear; this is a no-op error.`,
-      );
-    }
-    return;
-  } // end of clearAccessToken()
+    deleteCookie(AccessTokenCookieName(token_id));
+    deleteCookie(AccessTokenExpiryCookieName(token_id));
+  }
 
   public doesSupportHttpOnlyRefreshToken(): true {
     return true;

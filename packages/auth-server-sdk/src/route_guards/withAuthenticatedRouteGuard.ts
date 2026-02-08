@@ -20,6 +20,7 @@ import RouteGuardFactory from "./route-guard-factory";
 import { type NextRequest, NextResponse } from "next/server";
 import getStringByteSize from "@/getStringByteSize";
 import MaximumBrowserCookieSize from "@/MaximumBrowserCookieSize";
+import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
 import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
 import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
 import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
@@ -97,6 +98,31 @@ export async function withAuthenticatedServerComponentRouteGuard<
         sourceHint: "Auth Server Refresh Token",
         type: "refresh",
         token: refresh_token_cookie.value,
+      });
+    }
+  }
+
+  const access_token_cookie_name: string = AccessTokenCookieName(api_server_id);
+  const access_token_cookie = cookies.get(access_token_cookie_name);
+  if (
+    typeof access_token_cookie?.value === "string" &&
+    access_token_cookie.value.length > 64
+  ) {
+    let jwt_string: string | null = null;
+    try {
+      const parsed = JSON.parse(access_token_cookie.value);
+      if (parsed && typeof parsed.token === "string") {
+        jwt_string = parsed.token;
+      }
+    } catch {
+      // Raw JWT string fallback
+      jwt_string = access_token_cookie.value;
+    }
+    if (jwt_string) {
+      token_sources.push({
+        sourceHint: `Access Token from cookie '${access_token_cookie_name}'`,
+        type: "access",
+        token: jwt_string,
       });
     }
   }
@@ -205,6 +231,33 @@ export function withAuthenticatedApiRouteGuard<
           sourceHint: "Auth Server Refresh Token",
           type: "refresh",
           token: refresh_token_cookie.value satisfies string,
+        });
+      }
+    }
+
+    const access_token_cookie_name: string =
+      AccessTokenCookieName(api_server_id);
+    const access_token_cookie = req.cookies.get(access_token_cookie_name);
+    if (
+      typeof access_token_cookie?.value === "string" &&
+      access_token_cookie.value.length > 64 &&
+      getStringByteSize(access_token_cookie.value) <= MaximumBrowserCookieSize
+    ) {
+      let jwt_string: string | null = null;
+      try {
+        const parsed = JSON.parse(access_token_cookie.value);
+        if (parsed && typeof parsed.token === "string") {
+          jwt_string = parsed.token;
+        }
+      } catch {
+        // Raw JWT string fallback
+        jwt_string = access_token_cookie.value;
+      }
+      if (jwt_string) {
+        token_sources.push({
+          sourceHint: `Access Token from cookie '${access_token_cookie_name}'`,
+          type: "access",
+          token: jwt_string,
         });
       }
     }

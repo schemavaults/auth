@@ -57,11 +57,11 @@ export function isOriginAllowedForClientApp(
 /**
  * Build CORS headers for an allowed origin
  */
-export function buildCorsHeaders(origin: string): HeadersInit {
+export function buildCorsHeaders(origin: string, methods: string = "POST, OPTIONS"): HeadersInit {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": methods,
     "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
     Vary: "Origin",
   };
@@ -138,7 +138,8 @@ export async function validateCorsForClientApp(
 export async function handleCorsPreflightForClientApp(
   client_app_id: AppId,
   req: NextRequest,
-  dbh: ServerlessDatabase
+  dbh: ServerlessDatabase,
+  methods?: string,
 ): Promise<NextResponse> {
   if (!appIdSchema.safeParse(client_app_id).success) {
     return NextResponse.json(
@@ -165,7 +166,7 @@ export async function handleCorsPreflightForClientApp(
   }
 
   // Return 204 No Content with CORS headers
-  const corsHeaders = buildCorsHeaders(corsResult.origin);
+  const corsHeaders = buildCorsHeaders(corsResult.origin, methods);
   return new NextResponse(null, {
     status: 204,
     headers: corsHeaders,
@@ -179,7 +180,8 @@ export async function applyCorsHeadersToResponse(
   response: NextResponse,
   client_app_id: AppId,
   req: NextRequest,
-  dbh: ServerlessDatabase
+  dbh: ServerlessDatabase,
+  methods?: string,
 ): Promise<NextResponse> {
   const corsResult = await validateCorsForClientApp(
     { client_app_id, request: req },
@@ -193,7 +195,7 @@ export async function applyCorsHeadersToResponse(
   }
 
   // Apply CORS headers to the response
-  const corsHeaders = buildCorsHeaders(corsResult.origin);
+  const corsHeaders = buildCorsHeaders(corsResult.origin, methods);
   for (const [key, value] of Object.entries(corsHeaders)) {
     response.headers.set(key, value);
   }
