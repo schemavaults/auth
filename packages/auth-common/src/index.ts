@@ -74,3 +74,8 @@ export {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
 } from "./RefreshTokenCookieNames";
+
+export {
+  AccessTokenCookieName,
+  AccessTokenExpiryCookieName,
+} from "./AccessTokenCookieNames";
