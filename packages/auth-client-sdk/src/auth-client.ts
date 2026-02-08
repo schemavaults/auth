@@ -40,7 +40,7 @@ import debugPrintUserDataAsTable from "@/lib/debugPrintUserDataAsTable";
 import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
 import authenticateWithRedirect from "@/lib/authenticate-with-redirect";
 import checkIfAuthenticatedWithServer from "@/lib/check-if-authenticated-with-server";
-import exchangeAuthTokens from "./lib/exchange-auth-tokens";
+import exchangeAuthTokens from "@/lib/exchange-auth-tokens";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
