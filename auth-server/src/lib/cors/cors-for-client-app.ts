@@ -104,6 +104,11 @@ export async function validateCorsForClientApp(
     return { allowed: false, error: "Web apps must include Origin header" };
   }
 
+  // GET requests are allowed for same-origin (which wouldn't include an Origin header) on web apps
+  if (app.web && !origin && method === 'GET') {
+    return { allowed: true, skipCorsHeaders: true };
+  }
+
   // Native apps without Origin are allowed (no CORS headers needed)
   if (!app.web && !origin) {
     return { allowed: true, skipCorsHeaders: true };
