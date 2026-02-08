@@ -89,7 +89,8 @@ export async function validateCorsForClientApp(
   debug: boolean = false
 ): Promise<CorsValidationResult> {
   const { client_app_id, request } = opts;
-  const origin = getOriginFromRequest(request);
+  const origin: string | null = getOriginFromRequest(request);
+  const method: string = request.method;
   const environment = getAppEnvironment();
 
   const app: SchemaVaultsApp | null = await getApp(dbh.db, client_app_id, debug);
@@ -99,7 +100,7 @@ export async function validateCorsForClientApp(
   }
 
   // Web apps MUST have an Origin header
-  if (app.web && !origin) {
+  if (app.web && !origin && method !== "GET") {
     return { allowed: false, error: "Web apps must include Origin header" };
   }
 

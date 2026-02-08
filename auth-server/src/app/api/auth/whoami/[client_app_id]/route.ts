@@ -81,6 +81,9 @@ export async function GET(
   );
 
   if (!corsResult.allowed) {
+    if (debug) {
+      console.warn("Request blocked with CORS error: ", corsResult);
+    }
     return NextResponse.json(
       { success: false, error: true, message: corsResult.error },
       { status: 403 },
