@@ -9,7 +9,7 @@ import useAppEnvironment, {
 } from "@/hooks/use-app-environment";
 import useDebug from "@/hooks/use-debug";
 import { useRouter } from "next/navigation";
-import useCheckIfAuthenticatedWithServer from "@/hooks/useCheckIfAuthenticatedWithServer";
+import useCheckIfAuthenticatedWithServer from "@/hooks/use-check-if-authenticated-with-server";
 
 export interface IUseStartRegisterOauthPKCEFlowOpts {
   onError: (e: unknown) => void;
