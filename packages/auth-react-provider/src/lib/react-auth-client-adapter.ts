@@ -4,7 +4,7 @@ import {
   type AppId,
   appIdSchema,
   getHardcodedClientWebAppDomain,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
@@ -13,9 +13,11 @@ import {
   AccessTokenExpiryCookieName,
   PKCE_ProofKeyManager,
   type RefreshToken,
+  RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
   type UserData,
   accessTokenDataSchema,
+  refreshTokenDataSchema,
   userDataSchema,
 } from "@schemavaults/auth-common";
 import { type ISchemaVaultsAuthClientAdapter } from "@schemavaults/auth-client-sdk";
@@ -76,7 +78,7 @@ export class ReactAuthClientSdkAdapter
     this.auth_server_uri = opts.auth_server_uri
       ? opts.auth_server_uri
       : getHardcodedClientWebAppDomain(
-          SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+          SCHEMAVAULTS_AUTH_APP_ID,
           this.environment,
         );
     if (!appIdSchema.safeParse(opts.client_app_id).success) {
@@ -306,11 +308,25 @@ export class ReactAuthClientSdkAdapter
     }
   }
 
-  public storeRefreshToken(refresh_token: RefreshToken): void {
-    void refresh_token;
-    throw new Error(
-      "Refresh tokens should be set by the server as HTTP-only cookies for web-based authentication.",
+  private storeLocalStorageRefreshToken(refresh_token: RefreshToken): void {
+    window.localStorage.setItem(
+      RefreshTokenCookieName(this.client_app_id),
+      JSON.stringify(refresh_token),
     );
+    window.localStorage.setItem(
+      RefreshTokenExpiryCookieName(this.client_app_id),
+      `${refresh_token.exp}`,
+    );
+  }
+
+  public storeRefreshToken(refresh_token: RefreshToken): void {
+    if (this.doesSupportHttpOnlyRefreshToken()) {
+      throw new Error(
+        "Refresh tokens should be set by the server as HTTP-only cookies for web-based authentication.",
+      );
+    } else {
+      return this.storeLocalStorageRefreshToken(refresh_token);
+    }
   }
 
   public storeAccessToken(token_id: string, access_token: AccessToken): void {
@@ -354,10 +370,38 @@ export class ReactAuthClientSdkAdapter
     }
   }
 
-  public getRefreshToken(): RefreshToken | null {
-    throw new Error(
-      "Refresh tokens should be set by the server as HTTP-only cookies for web-based authentication.",
+  private getLocalStorageRefreshToken(): RefreshToken | null {
+    const refreshTokenJson: string | null = window.localStorage.getItem(
+      RefreshTokenCookieName(this.client_app_id),
     );
+    if (!refreshTokenJson) {
+      return null;
+    }
+    const parsed_token = refreshTokenDataSchema.safeParse(
+      JSON.parse(refreshTokenJson),
+    );
+    if (!parsed_token.success) {
+      this.clearLocalStorageRefreshToken();
+      return null;
+    }
+    const refreshToken: RefreshToken = parsed_token.data;
+    const exp: number = refreshToken.exp;
+    const expired: boolean = Date.now() >= exp;
+    if (expired) {
+      this.clearLocalStorageRefreshToken();
+      return null;
+    }
+    return refreshToken;
+  }
+
+  public getRefreshToken(): RefreshToken | null {
+    if (this.doesSupportHttpOnlyRefreshToken()) {
+      throw new Error(
+        "Refresh tokens should be set by the server as HTTP-only cookies for web-based authentication.",
+      );
+    } else {
+      return this.getLocalStorageRefreshToken();
+    }
   }
 
   public clearAccessTokens(): void {
@@ -395,7 +439,11 @@ export class ReactAuthClientSdkAdapter
 
   public async clearAuthTokens(): Promise<void> {
     this.clearAccessTokens();
-    await this.clearHttpOnlyRefreshToken();
+    if (this.doesSupportHttpOnlyRefreshToken()) {
+      await this.clearHttpOnlyRefreshToken();
+    } else {
+      this.clearLocalStorageRefreshToken();
+    }
     return;
   } // end of clearAuthTokens()
 
@@ -489,7 +537,18 @@ export class ReactAuthClientSdkAdapter
     deleteCookie(AccessTokenExpiryCookieName(token_id));
   }
 
-  public doesSupportHttpOnlyRefreshToken(): true {
+  public doesSupportHttpOnlyRefreshToken(): boolean {
+    const client_app_id: AppId = this.client_app_id;
+    const isAuthServer: boolean = client_app_id === SCHEMAVAULTS_AUTH_APP_ID;
+    if (isAuthServer) {
+      return true;
+    }
+    // else, this is a client application
+    // we only use http-only refresh tokens in secure contexts
+    const environment: SchemaVaultsAppEnvironment = this.environment;
+    if (environment === "development" || environment === "test") {
+      return false;
+    }
     return true;
   }
 
@@ -531,14 +590,47 @@ export class ReactAuthClientSdkAdapter
 
       return Date.now() + 1000 < refreshTokenExpiryTime.getTime();
     } else {
-      throw new Error(
-        "Expected ReactAuthClientSdkAdapter to support HTTP-only refresh tokens",
-      );
+      return false;
     }
   }
 
+  private hasLocalStorageRefreshToken(): boolean {
+    const refreshTokenJson: string | null = window.localStorage.getItem(
+      RefreshTokenCookieName(this.client_app_id),
+    );
+    if (!refreshTokenJson) {
+      return false;
+    }
+    const parsed_token = refreshTokenDataSchema.safeParse(
+      JSON.parse(refreshTokenJson),
+    );
+    if (!parsed_token.success) {
+      this.clearLocalStorageRefreshToken();
+      return false;
+    }
+    const refreshToken: RefreshToken = parsed_token.data;
+    const exp: number = refreshToken.exp;
+    const expired: boolean = Date.now() >= exp;
+    if (expired) {
+      this.clearLocalStorageRefreshToken();
+      return false;
+    }
+    return !expired;
+  }
+
+  private clearLocalStorageRefreshToken(): void {
+    window.localStorage.removeItem(RefreshTokenCookieName(this.client_app_id));
+    window.localStorage.removeItem(
+      RefreshTokenExpiryCookieName(this.client_app_id),
+    );
+  }
+
   public hasRefreshToken(): boolean {
-    return this.hasHttpOnlyRefreshToken();
+    if (this.doesSupportHttpOnlyRefreshToken()) {
+      return this.hasHttpOnlyRefreshToken();
+    } else {
+      return this.hasLocalStorageRefreshToken();
+    }
   }
 
   public relativeUrlToAbsoluteUrl(relative_url: string): string {

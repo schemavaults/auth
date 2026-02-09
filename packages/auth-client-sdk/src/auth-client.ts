@@ -934,6 +934,11 @@ export class SchemaVaultsAuthClient
         typeof tokens.refresh === "object" &&
         tokens.refresh.type === "refresh"
       ) {
+        if (this.supports("http-only-refresh-token")) {
+          throw new Error(
+            "Received a RefreshToken object, but this client should use HTTP-only cookies to store refresh token!",
+          );
+        }
         this.storeRefreshToken(tokens.refresh);
       } else if (
         typeof tokens.refresh === "string" &&
