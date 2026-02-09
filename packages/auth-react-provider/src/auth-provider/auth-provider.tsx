@@ -34,6 +34,8 @@ import { SchemaVaultsAppEnvironmentContextProvider } from "@/subproviders/app-en
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "@/hooks/use-debug";
 import DefaultSuccessfulAuthenticationRedirectPath from "@/constants/DefaultSuccessfulAuthenticationRedirectPath";
 import DefaultPkceAuthorizeRedirectPath from "@/constants/DefaultPkceAuthorizeRedirectPath";
+import AppIdProvider from "@/subproviders/app-id-provider";
+import useAppId from "@/hooks/use-app-id";
 
 export interface AuthSideEffectsProps extends SchemaVaultsAuthProviderProps {
   children: ReactNode;
@@ -80,7 +82,7 @@ function AppEnvironmentAwareAuthProvider(
   // throw if production/staging and not https
   assertHttpsInProduction(appEnvironment);
 
-  const app_id: AppId = props.app_id;
+  const app_id: AppId = useAppId();
 
   if (typeof props.fetch !== "function") {
     throw new TypeError("Expected 'fetch' to be a function!");
@@ -328,7 +330,9 @@ export function SchemaVaultsAuthProvider(
 ): ReactElement {
   return (
     <SchemaVaultsAppEnvironmentContextProvider environment={props.environment}>
-      <AppEnvironmentAwareAuthProvider {...props} />
+      <AppIdProvider app_id={props.app_id}>
+        <AppEnvironmentAwareAuthProvider {...props} />
+      </AppIdProvider>
     </SchemaVaultsAppEnvironmentContextProvider>
   );
 }
