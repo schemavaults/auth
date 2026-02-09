@@ -126,13 +126,24 @@ export async function validateCorsForClientApp(
     dbh
   );
 
+  if (debug) {
+    console.log(`[validateCorsForClientApp] Received allowed origins for app '${client_app_id}' (environment: ${environment}): `, allowedOrigins)
+  }
+
   const allowed = isOriginAllowedForClientApp(origin, allowedOrigins);
   if (!allowed) {
+    if (debug) {
+      console.warn(`[validateCorsForClientApp] Origin '${origin}' is not allowed for app '${client_app_id}'!`)
+    }
     return {
       allowed: false,
-      error: `Origin '${origin}' is not allowed for app '${client_app_id}'`,
+      error: `Origin '${origin}' is not allowed for app '${client_app_id}'!`,
       origin,
     };
+  }
+
+  if (debug) {
+    console.log(`[validateCorsForClientApp] Allowing origin '${origin}'!`)
   }
 
   return { allowed: true, origin };
