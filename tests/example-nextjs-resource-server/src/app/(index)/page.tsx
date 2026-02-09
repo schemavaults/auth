@@ -7,7 +7,9 @@ import type { ReactElement } from "react";
 export default function IndexPage(): ReactElement {
   return (
     <main className="flex flex-col items-center justify-start gap-4 p-4">
-      <h1>@schemavaults/example-nextjs-resource-server</h1>
+      <h1 className="text-xl font-bold">
+        @schemavaults/example-nextjs-resource-server
+      </h1>
       <h2>Example Home Page</h2>
       <Link href="/auth/login">
         <Button>Login</Button>
