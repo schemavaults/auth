@@ -11,6 +11,8 @@ import useAppEnvironment, {
 import useDebug from "@/hooks/use-debug";
 import useCheckIfAuthenticatedWithServer from "@/hooks/use-check-if-authenticated-with-server";
 import useIsAuthServer from "@/hooks/use-is-auth-server";
+import useDefaultAccessTokenAudiences from "./use-default-access-token-audiences";
+import { ApiServerId } from "@schemavaults/app-definitions";
 
 export interface IUseStartLoginOauthPKCEFlowOpts {
   onError: (e: unknown) => void;
@@ -27,22 +29,8 @@ export function useStartLoginOauthPKCEFlow({
   const debug: boolean = useDebug(environment);
   const checkIfAuthenticatedWithServer = useCheckIfAuthenticatedWithServer();
   const isAuthServer: boolean = useIsAuthServer();
-
-  useEffectIfAuthenticated((auth: ISchemaVaultsAuthClient): UnsubscribeFn => {
-    if (!auth.isAuthenticated) {
-      // this is running despite not being authenticated! exit!
-      return () => {};
-    }
-    if (debug) {
-      console.log(
-        "[useEffectIfAuthenticated] Sending to 'successful_authentication_redirect_uri': ",
-        auth.successful_authentication_redirect_uri,
-      );
-    }
-    const redirect_uri: string = auth.successful_authentication_redirect_uri;
-    router.push(redirect_uri);
-    return () => {};
-  });
+  const defaultAccessTokenAudiences: readonly ApiServerId[] | undefined =
+    useDefaultAccessTokenAudiences();
 
   useEffect(() => {
     if (isAuthServer) {
@@ -53,20 +41,13 @@ export function useStartLoginOauthPKCEFlow({
 
     let cancelLoginEffect: boolean = false;
 
-    async function checkIfAlreadyAuthenticated(
+    async function hasValidRefreshTokenSaved(
       auth: ISchemaVaultsAuthClient,
     ): Promise<boolean> {
       if (!auth.isAuthenticated) {
         return false;
       }
-
-      const hasValidRefreshTokenSet: boolean =
-        await checkIfAuthenticatedWithServer(auth);
-      if (!hasValidRefreshTokenSet) {
-        return false;
-      }
-
-      return true;
+      return await checkIfAuthenticatedWithServer(auth);
     }
 
     async function startLoginPkceFlow(
@@ -78,29 +59,72 @@ export function useStartLoginOauthPKCEFlow({
       await auth.login();
     }
 
+    async function acquireDefaultAccessTokens(
+      auth: ISchemaVaultsAuthClient,
+    ): Promise<void> {
+      if (!defaultAccessTokenAudiences) return;
+      await Promise.all(
+        defaultAccessTokenAudiences.map(async (defaultAccessTokenAudience) => {
+          await auth.acquireAccessToken({
+            audience: defaultAccessTokenAudience,
+            ensure_fresh: true,
+          });
+        }),
+      );
+      return;
+    }
+
     async function handleAuthClientReady(
       auth: ISchemaVaultsAuthClient,
     ): Promise<void> {
       if (cancelLoginEffect) {
         return;
       }
-      let isAuthenticated: boolean = false;
+      let isValidRefreshTokenSaved: boolean = false;
       try {
-        isAuthenticated = await checkIfAlreadyAuthenticated(auth);
+        isValidRefreshTokenSaved = await hasValidRefreshTokenSaved(auth);
       } catch (e: unknown) {
         // no-op
         console.error(
-          "[useStartLoginOauthPKCEFlow] Error checking if user is already authenticated: ",
+          "[useStartLoginOauthPKCEFlow] (No-op) Error checking if user already has a valid refresh token: ",
           e,
         );
       }
 
-      if (isAuthenticated) {
+      if (isValidRefreshTokenSaved) {
+        if (cancelLoginEffect) {
+          return;
+        }
         if (debug) {
           console.log(
-            "[startLoginPkceFlow] User appears to already be logged in! Not triggering Oauth2 PKCE flow-- a different effect should redirect the user to the account page...",
+            "[startLoginPkceFlow] User appears to already be logged in with a valid refresh token!",
           );
         }
+        if (
+          Array.isArray(defaultAccessTokenAudiences) &&
+          defaultAccessTokenAudiences.length > 0
+        ) {
+          if (debug) {
+            console.log(
+              "[startLoginPkceFlow] They have refresh token-- but we need to make sure they have access tokens ready in order to potentially access server-side rendered account page!",
+            );
+          }
+          await acquireDefaultAccessTokens(auth);
+        }
+
+        if (debug) {
+          console.log(
+            "[startLoginPkceFlow] User appears to already be logged in! Not triggering Oauth2 PKCE flow-- but redirecting the user to 'successful_authentication_redirect_uri': ",
+            auth.successful_authentication_redirect_uri,
+          );
+        }
+        const redirect_uri: string =
+          auth.successful_authentication_redirect_uri;
+        if (cancelLoginEffect) {
+          // don't redirect if page unmounted
+          return;
+        }
+        router.push(redirect_uri);
         return;
       } else {
         if (debug) {
@@ -155,7 +179,14 @@ export function useStartLoginOauthPKCEFlow({
         console.log("[useStartLoginOauthPKCEFlow] Auth client not ready.");
       }
     }
-  }, [authContext, debug, router, onError, checkIfAuthenticatedWithServer]);
+  }, [
+    authContext,
+    debug,
+    router,
+    onError,
+    checkIfAuthenticatedWithServer,
+    defaultAccessTokenAudiences,
+  ]);
 }
 
 export default useStartLoginOauthPKCEFlow;

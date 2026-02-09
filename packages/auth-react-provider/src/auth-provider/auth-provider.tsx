@@ -23,6 +23,7 @@ import useAuthClientInitialization, {
 } from "@/hooks/use-auth-client-initialization";
 import { AuthMiddlewareManager } from "./auth-middleware-manager";
 import {
+  ApiServerId,
   type AppId,
   getAuthServerUri,
   getHardcodedClientWebAppDomain,
@@ -36,6 +37,8 @@ import DefaultSuccessfulAuthenticationRedirectPath from "@/constants/DefaultSucc
 import DefaultPkceAuthorizeRedirectPath from "@/constants/DefaultPkceAuthorizeRedirectPath";
 import AppIdProvider from "@/subproviders/app-id-provider";
 import useAppId from "@/hooks/use-app-id";
+import DefaultAccessTokenAudiencesProvider from "@/subproviders/default-access-token-audiences-provider";
+import useDefaultAccessTokenAudiences from "@/hooks/use-default-access-token-audiences";
 
 export interface AuthSideEffectsProps extends SchemaVaultsAuthProviderProps {
   children: ReactNode;
@@ -72,10 +75,10 @@ function assertHttpsInProduction(
 }
 
 /**
- * @name AppEnvironmentAwareAuthProvider
+ * @name CoreSchemaVaultsAuthProvider
  * @returns App wrapped in AuthProvider
  */
-function AppEnvironmentAwareAuthProvider(
+function CoreSchemaVaultsAuthProvider(
   props: SchemaVaultsAuthProviderProps,
 ): ReactElement {
   const appEnvironment: SchemaVaultsAppEnvironment = props.environment;
@@ -139,7 +142,7 @@ function AppEnvironmentAwareAuthProvider(
     if (typeof props.successful_authentication_redirect_uri === "string") {
       if (debug) {
         console.log(
-          `[AppEnvironmentAwareAuthProvider] successful_authentication_redirect_uri="${props.successful_authentication_redirect_uri}" (source: props)`,
+          `[CoreSchemaVaultsAuthProvider] successful_authentication_redirect_uri="${props.successful_authentication_redirect_uri}" (source: props)`,
         );
       }
       return props.successful_authentication_redirect_uri;
@@ -162,7 +165,7 @@ function AppEnvironmentAwareAuthProvider(
 
         if (debug) {
           console.log(
-            `[AppEnvironmentAwareAuthProvider] successful_authentication_redirect_uri="${withSuccessfulAuthenticationRedirectPath}" (source: default for app)`,
+            `[CoreSchemaVaultsAuthProvider] successful_authentication_redirect_uri="${withSuccessfulAuthenticationRedirectPath}" (source: default for app)`,
           );
         }
 
@@ -201,7 +204,7 @@ function AppEnvironmentAwareAuthProvider(
     if (typeof props.authorize_uri === "string") {
       if (debug) {
         console.log(
-          `[AppEnvironmentAwareAuthProvider] authorize_uri="${props.authorize_uri}" (source: props)`,
+          `[CoreSchemaVaultsAuthProvider] authorize_uri="${props.authorize_uri}" (source: props)`,
         );
       }
       if (
@@ -250,7 +253,7 @@ function AppEnvironmentAwareAuthProvider(
 
         if (debug) {
           console.log(
-            `[AppEnvironmentAwareAuthProvider] authorize_uri="${props.authorize_uri}" (source: default for app)`,
+            `[CoreSchemaVaultsAuthProvider] authorize_uri="${props.authorize_uri}" (source: default for app)`,
           );
         }
 
@@ -276,6 +279,9 @@ function AppEnvironmentAwareAuthProvider(
 
   const [ready, setReady] = useState<boolean>(false);
 
+  const default_audiences: readonly ApiServerId[] | undefined =
+    useDefaultAccessTokenAudiences();
+
   const useAuthClientInitializationOptions: UseAuthClientInitializationOptions =
     {
       auth_server_uri: authServerUri,
@@ -285,7 +291,7 @@ function AppEnvironmentAwareAuthProvider(
       successful_authentication_redirect_uri,
       successful_logout_redirect_uri,
       app_id,
-      default_audiences: props.default_audiences,
+      default_audiences,
       debug,
       authorize_uri,
       environment: appEnvironment,
@@ -322,7 +328,7 @@ function AppEnvironmentAwareAuthProvider(
 
 /**
  * @name SchemaVaultsAuthProvider
- * @see AppEnvironmentAwareAuthProvider
+ * @see CoreSchemaVaultsAuthProvider
  * @returns App wrapped in AuthProvider
  */
 export function SchemaVaultsAuthProvider(
@@ -331,7 +337,11 @@ export function SchemaVaultsAuthProvider(
   return (
     <SchemaVaultsAppEnvironmentContextProvider environment={props.environment}>
       <AppIdProvider app_id={props.app_id}>
-        <AppEnvironmentAwareAuthProvider {...props} />
+        <DefaultAccessTokenAudiencesProvider
+          default_audiences={props.default_audiences}
+        >
+          <CoreSchemaVaultsAuthProvider {...props} />
+        </DefaultAccessTokenAudiencesProvider>
       </AppIdProvider>
     </SchemaVaultsAppEnvironmentContextProvider>
   );
