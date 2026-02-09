@@ -29,4 +29,5 @@ export { useStartRegisterOauthPKCEFlow } from "./use-start-register-oauth-pkce-f
 export type * from "./use-start-register-oauth-pkce-flow";
 
 export { useAppId } from "./use-app-id";
-export type * from "./use-app-id";
+
+export { useIsAuthServer } from "./use-is-auth-server";

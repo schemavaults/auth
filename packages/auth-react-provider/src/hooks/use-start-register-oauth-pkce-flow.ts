@@ -10,6 +10,7 @@ import useAppEnvironment, {
 import useDebug from "@/hooks/use-debug";
 import { useRouter } from "next/navigation";
 import useCheckIfAuthenticatedWithServer from "@/hooks/use-check-if-authenticated-with-server";
+import useIsAuthServer from "@/hooks/use-is-auth-server";
 
 export interface IUseStartRegisterOauthPKCEFlowOpts {
   onError: (e: unknown) => void;
@@ -25,6 +26,7 @@ export function useStartRegisterOauthPKCEFlow({
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const debug: boolean = useDebug(environment);
   const checkIfAuthenticatedWithServer = useCheckIfAuthenticatedWithServer();
+  const isAuthServer: boolean = useIsAuthServer();
 
   useEffectIfAuthenticated((auth: ISchemaVaultsAuthClient): UnsubscribeFn => {
     if (!auth.isAuthenticated) {
@@ -42,6 +44,12 @@ export function useStartRegisterOauthPKCEFlow({
   });
 
   useEffect(() => {
+    if (isAuthServer) {
+      throw new Error(
+        "useStartRegisterOauthPKCEFlow should not be run from @schemavaults/auth-server!",
+      );
+    }
+
     let cancelRegisterEffect: boolean = false;
 
     async function checkIfAlreadyAuthenticated(

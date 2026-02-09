@@ -10,6 +10,7 @@ import useAppEnvironment, {
 } from "@/hooks/use-app-environment";
 import useDebug from "@/hooks/use-debug";
 import useCheckIfAuthenticatedWithServer from "@/hooks/use-check-if-authenticated-with-server";
+import useIsAuthServer from "@/hooks/use-is-auth-server";
 
 export interface IUseStartLoginOauthPKCEFlowOpts {
   onError: (e: unknown) => void;
@@ -25,6 +26,7 @@ export function useStartLoginOauthPKCEFlow({
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const debug: boolean = useDebug(environment);
   const checkIfAuthenticatedWithServer = useCheckIfAuthenticatedWithServer();
+  const isAuthServer: boolean = useIsAuthServer();
 
   useEffectIfAuthenticated((auth: ISchemaVaultsAuthClient): UnsubscribeFn => {
     if (!auth.isAuthenticated) {
@@ -43,6 +45,12 @@ export function useStartLoginOauthPKCEFlow({
   });
 
   useEffect(() => {
+    if (isAuthServer) {
+      throw new Error(
+        "useStartLoginOauthPKCEFlow should not be run from the auth-server!",
+      );
+    }
+
     let cancelLoginEffect: boolean = false;
 
     async function checkIfAlreadyAuthenticated(
