@@ -47,7 +47,7 @@ export function useStartLoginOauthPKCEFlow({
   useEffect(() => {
     if (isAuthServer) {
       throw new Error(
-        "useStartLoginOauthPKCEFlow should not be run from the auth-server!",
+        "useStartLoginOauthPKCEFlow should not be run from @schemavaults/auth-server!",
       );
     }
 
