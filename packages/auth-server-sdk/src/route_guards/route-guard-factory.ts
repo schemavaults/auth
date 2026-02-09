@@ -17,6 +17,7 @@ import {
   getKeysetIdFromToken,
 } from "@schemavaults/jwt";
 import {
+  type ApiServerId,
   apiServerIdSchema,
   getAppEnvironment,
   getHardcodedClientWebAppDomain,
@@ -87,11 +88,12 @@ export class RouteGuardFactory {
           "An argument for 'jwt_keys_manager' is required when 'is_auth_server' is true",
         );
       }
+      const auth_server_uri: string = getHardcodedClientWebAppDomain(
+        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+        environment,
+      );
       this.jwt_keys_manager = new RemoteJwtKeyManager({
-        auth_server_uri: getHardcodedClientWebAppDomain(
-          SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-          environment,
-        ),
+        auth_server_uri,
         debug: this.debug,
       });
     }
@@ -127,7 +129,7 @@ export class RouteGuardFactory {
   public async createGuardFromTokenSources(
     type: RouteGuardType,
     token_sources: readonly PotentiallyValidTokenSource[],
-    jwt_audience: string,
+    jwt_audience: ApiServerId,
   ): Promise<IRouteGuard> {
     const environment: SchemaVaultsAppEnvironment = this.environment;
     const debug: boolean = this.debug;
@@ -159,8 +161,12 @@ export class RouteGuardFactory {
           token_sources,
           jwt_audience,
           decodeJWT: async (opts): Promise<DecodeTokenFnOutput> => {
-            if (environment !== "production") {
-              console.log(`[RouteGuardFactory] Attempting to decode JWT...`);
+            if (debug) {
+              let debugMessage: string = `[RouteGuardFactory] Attempting to decode ${opts.type} JWT for audience: '${opts.jwt_audience}'`;
+              if (opts.sourceHint) {
+                debugMessage += ` (Source: '${opts.sourceHint}')`;
+              }
+              console.log(debugMessage);
             }
 
             let keyset_id: string;
