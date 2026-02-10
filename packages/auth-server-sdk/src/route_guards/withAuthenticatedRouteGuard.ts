@@ -200,7 +200,7 @@ export function withAuthenticatedApiRouteGuard<
   route_guard_type: "authenticated" | "admin" = "authenticated",
   custom_is_authorized_check:
     | ((
-        route_inputs: IBaseProtectedAuthenticatedServerComponentPageProps &
+        route_inputs: IBaseProtectedAuthenticatedApiRouteInputs &
           TAdditionalCustomRouteInputs,
       ) => Promise<boolean>)
     | undefined = undefined,
