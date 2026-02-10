@@ -10,7 +10,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.18.8",
+      "version": "0.18.9",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -165,7 +165,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.19.8",
+      "version": "0.19.9",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -191,7 +191,7 @@
     },
     "packages/auth-ui": {
       "name": "@schemavaults/auth-ui",
-      "version": "0.6.36",
+      "version": "0.6.37",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
