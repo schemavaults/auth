@@ -43,7 +43,7 @@ function determineCookieSameSiteValue(
   if (isAuthServer) {
     return secure ? "strict": "lax";
   } else {
-    return "lax";
+    return "none";
   }
 }
 
