@@ -70,7 +70,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.9.1",
+      "version": "0.9.2",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -109,7 +109,7 @@
     },
     "packages/auth-react-provider": {
       "name": "@schemavaults/auth-react-provider",
-      "version": "0.9.1",
+      "version": "0.9.2",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",

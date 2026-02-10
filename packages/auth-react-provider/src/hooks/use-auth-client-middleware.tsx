@@ -61,36 +61,48 @@ export function useAuthClientMiddleware(
 
     if (auth) {
       // Load feature support
-      if (typeof auth.supports !== 'function') {
-        throw new TypeError("Auth client does not implement 'supports' method for feature checking");
+      if (typeof auth.supports !== "function") {
+        throw new TypeError(
+          "Auth client does not implement 'supports' method for feature checking",
+        );
       }
 
       // Initalize token sources list to fill
       const token_sources: PotentiallyValidTokenSource[] = [];
 
       // Check for HTTP-only refresh token support
-      if (auth.supports('http-only-refresh-token') && auth.hasHttpOnlyRefreshToken()) {
-        token_sources.push({
-          type: "refresh",
-          token: "AS_HTTP_ONLY_COOKIE",
-          sourceHint:
-            "Auth client believes it has an HTTP-only refresh token cookie",
-        } satisfies PotentiallyValidTokenSource)
-      } else if (!auth.supports('http-only-refresh-token')) {
-        const refreshToken: RefreshToken | null = auth.getRefreshTokenFromCache();
-
-        let refresh_token: string | undefined = undefined;
-        if (refreshToken && refreshToken.exp > Date.now()) {
-          refresh_token = refreshToken.token;
-        }
-
-        if (typeof refresh_token === "string") {
+      if (auth.supports("http-only-refresh-token")) {
+        if (auth.hasHttpOnlyRefreshToken()) {
           token_sources.push({
             type: "refresh",
-            token: refresh_token,
-            sourceHint: "Refresh token",
+            token: "AS_HTTP_ONLY_COOKIE",
+            sourceHint:
+              "Auth client believes it has an HTTP-only refresh token cookie",
           } satisfies PotentiallyValidTokenSource);
-      }
+        }
+      } else if (!auth.supports("http-only-refresh-token")) {
+        try {
+          const refreshToken: RefreshToken | null =
+            auth.getRefreshTokenFromCache();
+
+          let refresh_token: string | undefined = undefined;
+          if (refreshToken && refreshToken.exp > Date.now()) {
+            refresh_token = refreshToken.token;
+          }
+
+          if (typeof refresh_token === "string") {
+            token_sources.push({
+              type: "refresh",
+              token: refresh_token,
+              sourceHint: "Refresh token",
+            } satisfies PotentiallyValidTokenSource);
+          }
+        } catch (e: unknown) {
+          console.warn(
+            "[useAuthClientMiddleware] Error attempting to load refresh token from cache: ",
+            e,
+          );
+        }
       }
 
       let user_data: UserData | undefined = undefined;

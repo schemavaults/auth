@@ -101,4 +101,10 @@ export interface ISchemaVaultsAuthClient {
    * @see isAuthenticated
    */
   checkIfAuthenticatedWithServer: () => Promise<UserData | null>;
+
+  /**
+   * @param feature_name Name of the feature to check if supported
+   * @returns true if support, false otherwise
+   */
+  supports: (feature_name: string) => boolean;
 }
