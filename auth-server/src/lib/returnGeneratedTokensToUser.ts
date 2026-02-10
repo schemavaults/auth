@@ -84,6 +84,7 @@ export default async function returnGeneratedTokensToUser({
   if (refresh_token && return_refresh_token_strategy === 'AS_HTTP_ONLY_COOKIE') {
     // replace actual token with indicator that token is set as http-only cookie
     tokenGenerationResult.tokens.refresh = "AS_HTTP_ONLY_COOKIE";
+    tokenGenerationResult.tokens.refresh_token_expiry = refresh_token.exp;
   }
 
   const success_response = NextResponse.json(

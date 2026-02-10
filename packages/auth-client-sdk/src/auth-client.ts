@@ -944,6 +944,14 @@ export class SchemaVaultsAuthClient
         typeof tokens.refresh === "string" &&
         tokens.refresh === "AS_HTTP_ONLY_COOKIE"
       ) {
+        if (
+          typeof this.adapter.storeHttpOnlyRefreshTokenMarker === "function" &&
+          typeof tokens.refresh_token_expiry === "number"
+        ) {
+          this.adapter.storeHttpOnlyRefreshTokenMarker(
+            tokens.refresh_token_expiry,
+          );
+        }
         assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie(
           this.adapter,
         );

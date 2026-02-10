@@ -248,6 +248,7 @@ export async function handleSuccessfulAuthentication({
 
   let access_tokens: Record<ApiServerId, AccessToken | "AS_HTTP_ONLY_COOKIE">;
   let refresh_token: RefreshToken | "AS_HTTP_ONLY_COOKIE";
+  let refresh_token_expiry: number | undefined;
   let user: UserData;
   try {
     const tokens_data = await requestTokensResultSchema.safeParseAsync(
@@ -306,6 +307,7 @@ export async function handleSuccessfulAuthentication({
 
     access_tokens = tokens.access;
     refresh_token = tokens.refresh;
+    refresh_token_expiry = tokens.refresh_token_expiry;
 
     if (!userData) {
       console.error("Did not receive user data in response from auth server");
@@ -328,6 +330,7 @@ export async function handleSuccessfulAuthentication({
   // Store refresh token
   const doStoreReceivedRefreshToken = () => {
     if (typeof refresh_token === "object" && refresh_token.type === "refresh") {
+      refresh_token_expiry = refresh_token.exp;
       try {
         if (debug) {
           console.log("[SchemaVaultsAuthClient] Storing refresh token...");
@@ -344,6 +347,12 @@ export async function handleSuccessfulAuthentication({
       typeof refresh_token === "string" &&
       refresh_token === "AS_HTTP_ONLY_COOKIE"
     ) {
+      if (
+        typeof adapter.storeHttpOnlyRefreshTokenMarker === "function" &&
+        typeof refresh_token_expiry === "function"
+      ) {
+        adapter.storeHttpOnlyRefreshTokenMarker(refresh_token_expiry);
+      }
       assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie(adapter);
       if (debug) {
         console.log(

@@ -18,7 +18,6 @@ import {
   RefreshTokenExpiryCookieName,
   type UserData,
   accessTokenDataSchema,
-  determineRefreshTokenCookieSameSiteValue,
   refreshTokenDataSchema,
   userDataSchema,
 } from "@schemavaults/auth-common";
@@ -31,7 +30,6 @@ import {
 } from "cookies-next/client";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
 import isClientRuntime from "@/lib/isClientRuntime";
-import maybeStripProtocol from "@/lib/maybe-strip-protocol";
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
@@ -437,6 +435,7 @@ export class ReactAuthClientSdkAdapter
         "Failed to clear HTTP-only refresh token via network request to @schemavaults/auth-server",
       );
     }
+    this.clearHttpOnlyRefreshTokenMarker();
     return;
   }
 
@@ -540,6 +539,24 @@ export class ReactAuthClientSdkAdapter
     deleteCookie(AccessTokenExpiryCookieName(token_id));
   }
 
+  public storeHttpOnlyRefreshTokenMarker(expiry: number): void {
+    const cookie_options = {
+      httpOnly: false,
+      secure: this.ssl_enabled,
+      sameSite: "lax" as const,
+      expires: new Date(expiry),
+    };
+    setCookie(
+      RefreshTokenExpiryCookieName(this.client_app_id),
+      String(expiry),
+      cookie_options,
+    );
+  }
+
+  public clearHttpOnlyRefreshTokenMarker(): void {
+    deleteCookie(RefreshTokenExpiryCookieName(this.client_app_id));
+  }
+
   public doesSupportHttpOnlyRefreshToken(): boolean {
     const client_app_id: AppId = this.client_app_id;
     const isAuthServer: boolean = client_app_id === SCHEMAVAULTS_AUTH_APP_ID;
@@ -562,23 +579,13 @@ export class ReactAuthClientSdkAdapter
    */
   public hasHttpOnlyRefreshToken(): boolean {
     if (this.doesSupportHttpOnlyRefreshToken() satisfies boolean) {
-      const client_app_id: AppId = this.client_app_id;
-      const isAuthServer: boolean = client_app_id === SCHEMAVAULTS_AUTH_APP_ID;
       const expiry_cookie_key: string =
-        RefreshTokenExpiryCookieName(client_app_id);
-      const secure: boolean = this.ssl_enabled;
-      const domain: string | undefined = isAuthServer
-        ? undefined // use same domain for auth server
-        : maybeStripProtocol(this.auth_server_uri);
-      const sameSite: "lax" | "strict" | "none" =
-        determineRefreshTokenCookieSameSiteValue(client_app_id, secure);
+        RefreshTokenExpiryCookieName(this.client_app_id);
       const refreshTokenExpiryStr: string | undefined | null = getCookie(
         expiry_cookie_key,
         {
           httpOnly: false,
-          secure,
-          sameSite,
-          domain,
+          secure: this.ssl_enabled,
         },
       );
       if (typeof refreshTokenExpiryStr !== "string") {

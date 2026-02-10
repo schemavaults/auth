@@ -26,6 +26,18 @@ interface AuthClientAuthTokensActions {
   clearHttpOnlyRefreshToken?: () => Promise<void>;
 
   /**
+   * @name storeHttpOnlyRefreshTokenMarker
+   * @description Stores a marker cookie on the local domain indicating that an HTTP-only refresh token exists with the given expiry.
+   * This is needed for cross-origin scenarios where the auth server's expiry cookie is not readable by the client's JavaScript.
+   */
+  storeHttpOnlyRefreshTokenMarker?: (expiry: number) => void;
+  /**
+   * @name clearHttpOnlyRefreshTokenMarker
+   * @description Clears the local HTTP-only refresh token marker cookie.
+   */
+  clearHttpOnlyRefreshTokenMarker?: () => void;
+
+  /**
    * @name hasHttpOnlyRefreshToken
    * @returns True if an HTTP-only refresh token cookie has been marked as received
    */

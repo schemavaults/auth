@@ -17,8 +17,31 @@ export const successfullyGeneratedTokensRecordSchema = z
     refresh: z
       .union([refreshTokenDataSchema, z.literal("AS_HTTP_ONLY_COOKIE")])
       .optional(),
+    refresh_token_expiry: z.number().optional(),
   })
-  .strict();
+  .strict()
+  .refine((values): boolean => {
+    if (values.refresh === "AS_HTTP_ONLY_COOKIE") {
+      if (
+        typeof values.refresh_token_expiry === "number" &&
+        !isNaN(values.refresh_token_expiry)
+      ) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    return true;
+  }, `A value must be supplied for 'refresh_token_expiry' if refresh token is passed 'AS_HTTP_ONLY_COOKIE'!`)
+  .refine((values): boolean => {
+    if (values.refresh && typeof values.refresh === "object") {
+      if (typeof values.refresh_token_expiry === "number") {
+        return false;
+      }
+    }
+    return true;
+  }, "Passing 'refresh_token_expiry' is redundant when refresh token is passed as an object!");
 
 export type SuccessfullyGeneratedTokensRecord = z.infer<
   typeof successfullyGeneratedTokensRecordSchema
