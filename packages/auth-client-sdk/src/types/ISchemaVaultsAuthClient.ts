@@ -101,10 +101,4 @@ export interface ISchemaVaultsAuthClient {
    * @see isAuthenticated
    */
   checkIfAuthenticatedWithServer: () => Promise<UserData | null>;
-
-  /**
-   * Return true if feature is supported by this auth client / adapter
-   * @param feature_name A feature name, e.g. 'http-only-refresh-token'
-   */
-  supports(feature_name: string): boolean;
 }

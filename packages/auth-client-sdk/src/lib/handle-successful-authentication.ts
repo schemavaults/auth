@@ -347,13 +347,36 @@ export async function handleSuccessfulAuthentication({
       typeof refresh_token === "string" &&
       refresh_token === "AS_HTTP_ONLY_COOKIE"
     ) {
-      if (
-        typeof adapter.storeHttpOnlyRefreshTokenMarker === "function" &&
-        typeof refresh_token_expiry === "function"
-      ) {
-        adapter.storeHttpOnlyRefreshTokenMarker(refresh_token_expiry);
+      const supportsHttpOnlyRefreshTokenCookie: boolean =
+        typeof adapter.doesSupportHttpOnlyRefreshToken === "function" &&
+        adapter.doesSupportHttpOnlyRefreshToken();
+
+      if (!supportsHttpOnlyRefreshTokenCookie) {
+        throw new Error(
+          "Received refresh token cookie 'AS_HTTP_ONLY_COOKIE', but this auth client instance's adapter does not support it!",
+        );
       }
-      assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie(adapter);
+
+      if (typeof adapter.storeHttpOnlyRefreshTokenMarker !== "function") {
+        throw new TypeError(
+          "Expected auth client adapter to have method 'storeHttpOnlyRefreshTokenMarker'!",
+        );
+      }
+
+      if (typeof refresh_token_expiry !== "number") {
+        throw new TypeError(
+          "Expected 'refresh_token_expiry' to be a number if refresh token was passed as HTTP-only cookie!",
+        );
+      }
+
+      adapter.storeHttpOnlyRefreshTokenMarker(
+        refresh_token_expiry satisfies number,
+      ) satisfies void;
+
+      assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie(
+        adapter,
+      ) satisfies void;
+
       if (debug) {
         console.log(
           "[SchemaVaultsAuthClient] Detected HTTP-only cookie refresh token (accompanying-cookie).",

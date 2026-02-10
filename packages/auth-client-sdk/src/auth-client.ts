@@ -36,8 +36,8 @@ import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
 import authenticateWithRedirect from "@/lib/authenticate-with-redirect";
 import checkIfAuthenticatedWithServer from "@/lib/check-if-authenticated-with-server";
 import exchangeAuthTokens from "@/lib/exchange-auth-tokens";
-import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "@/lib/assert-http-only-refresh-token-has-accompanying-expiry-marker";
-import handleSuccessfulAuthentication from "./lib/handle-successful-authentication";
+import handleSuccessfulAuthentication from "@/lib/handle-successful-authentication";
+import handleSuccessfulExchangeAuthTokensResponse from "@/lib/handle-successful-exchange-auth-tokens-response";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
@@ -886,86 +886,13 @@ export class SchemaVaultsAuthClient
 
   private async handleSuccessfulExchangeAuthTokensResponse(
     tokens_response: unknown,
-  ): Promise<(RequestTokensResult & { success: true })["tokens"] & object> {
-    const parsed_tokens_data =
-      await requestTokensResultSchema.safeParseAsync(tokens_response);
-    if (!parsed_tokens_data.success) {
-      if (this.DEBUG) {
-        console.error(
-          "[SchemaVaultsAuthClient::handleSuccessfulExchangeAuthTokensResponse()] " +
-            "Failed to parse successful exchange auth tokens result: ",
-          parsed_tokens_data.error.errors,
-        );
-      }
-      throw new Error(
-        "Failed to parse successful exchange auth tokens result!",
-      );
-    }
-
-    const request_tokens_result: RequestTokensResult = parsed_tokens_data.data;
-
-    if (!request_tokens_result.success) {
-      throw new Error("Request tokens response has success === false");
-    }
-
-    const tokens: SuccessfullyGeneratedTokensRecord | undefined =
-      request_tokens_result.tokens;
-
-    if (!tokens) {
-      throw new Error("Response did not include any tokens");
-    }
-
-    if (!tokens.access) {
-      throw new Error("No access token was included in the tokens response");
-    }
-
-    if (this.DEBUG) {
-      console.log(
-        "[SchemaVaultsAuthClient] Successfully exchanged refresh token for new authentication token(s)",
-      );
-    }
-
-    if (tokens.access) {
-      this.storeMultipleAccessTokens(tokens.access);
-    }
-
-    if (tokens.refresh) {
-      if (
-        typeof tokens.refresh === "object" &&
-        tokens.refresh.type === "refresh"
-      ) {
-        if (this.supports("http-only-refresh-token")) {
-          throw new Error(
-            "Received a RefreshToken object, but this client should use HTTP-only cookies to store refresh token!",
-          );
-        }
-        this.storeRefreshToken(tokens.refresh);
-      } else if (
-        typeof tokens.refresh === "string" &&
-        tokens.refresh === "AS_HTTP_ONLY_COOKIE"
-      ) {
-        if (
-          typeof this.adapter.storeHttpOnlyRefreshTokenMarker === "function" &&
-          typeof tokens.refresh_token_expiry === "number"
-        ) {
-          this.adapter.storeHttpOnlyRefreshTokenMarker(
-            tokens.refresh_token_expiry,
-          );
-        }
-        assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie(
-          this.adapter,
-        );
-        if (this.debug) {
-          console.log(
-            "[SchemaVaultsAuthClient] Detected HTTP-only cookie refresh token from exchange response.",
-          );
-        }
-      } else {
-        throw new TypeError("Invalid refresh token type");
-      }
-    }
-
-    return tokens;
+  ): Promise<SuccessfullyGeneratedTokensRecord> {
+    return await handleSuccessfulExchangeAuthTokensResponse({
+      tokens_response,
+      storeMultipleAccessTokens: this.storeMultipleAccessTokens.bind(this),
+      adapter: this.adapter,
+      debug: this.debug,
+    });
   }
 
   private async exchangeAuthTokens(
