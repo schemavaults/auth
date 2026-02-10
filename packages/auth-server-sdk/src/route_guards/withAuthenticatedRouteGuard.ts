@@ -7,10 +7,12 @@ import {
   getAppEnvironment,
   getHardcodedClientWebAppDomain,
 } from "@schemavaults/app-definitions";
-import type {
-  OrganizationID,
-  PotentiallyValidTokenSource,
-  UserData,
+import {
+  AccessToken,
+  accessTokenDataSchema,
+  type OrganizationID,
+  type PotentiallyValidTokenSource,
+  type UserData,
 } from "@schemavaults/auth-common";
 import type { IRouteGuard } from "./IRouteGuard";
 import { cookies as loadCookies } from "next/headers";
@@ -239,7 +241,8 @@ export function withAuthenticatedApiRouteGuard<
     }
 
     // Load access token cookie for current server
-    (function addAccessTokenFromCookieToSourcesIfFound(): void {
+    // Access token cookie is set with JSON.stringify() of an AccessToken object-- need to parse the .token property
+    await (async function addAccessTokenFromCookieToSourcesIfFound(): Promise<void> {
       const access_token_cookie_name: string =
         AccessTokenCookieName(api_server_id);
       const access_token_cookie = req.cookies.get(access_token_cookie_name);
@@ -250,9 +253,15 @@ export function withAuthenticatedApiRouteGuard<
       ) {
         let jwt_string: string | null = null;
         try {
-          const parsed = JSON.parse(access_token_cookie.value);
-          if (parsed && typeof parsed.token === "string") {
-            jwt_string = parsed.token;
+          const parsed = await accessTokenDataSchema.safeParseAsync(
+            JSON.parse(access_token_cookie.value),
+          );
+          if (!parsed.success) {
+            throw parsed.error;
+          }
+          const parsed_access_token_object: AccessToken = parsed.data;
+          if (Date.now() < parsed_access_token_object.exp) {
+            jwt_string = parsed_access_token_object.token;
           }
         } catch {
           // Raw JWT string fallback
