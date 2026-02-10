@@ -186,10 +186,6 @@ export function FrontendApplicationActions({
 
                 const clipboard: Clipboard = window.navigator.clipboard;
                 clipboard.writeText(app.app_id);
-                toast({
-                  variant: "default",
-                  title: "Copied app ID to clipboard",
-                });
               } catch (e: unknown) {
                 console.error("Failed to copy app ID to clipboard: ", e);
                 let errorMessage: string = "An unknown error has occurred.";
@@ -203,6 +199,12 @@ export function FrontendApplicationActions({
                 });
                 return;
               }
+              toast({
+                variant: "default",
+                title: "Successfully copied app ID to clipboard",
+                description: `You can now paste '${app.app_id}'`,
+              });
+              return;
             }}
             data-testid="copy-app-id-menu-item"
           >
