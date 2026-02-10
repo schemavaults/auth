@@ -16,6 +16,7 @@ import { AppWindowMac, Globe } from "lucide-react";
 export function getAppsTableColumns(
   queryType: ListAppsQueryType,
   preloaded?: PreloadedAppsTableDataWithDomainRefs,
+  isOrgOwner?: boolean,
 ): ColumnDef<SchemaVaultsApp>[] {
   const columns: ColumnDef<SchemaVaultsApp>[] = [
     {
@@ -124,7 +125,7 @@ export function getAppsTableColumns(
       cell: ({ row }): ReactElement => {
         const app: SchemaVaultsApp = row.original;
 
-        return <FrontendApplicationActions app={app} queryType={queryType} />;
+        return <FrontendApplicationActions app={app} queryType={queryType} isOrgOwner={isOrgOwner} />;
       },
     },
   ];

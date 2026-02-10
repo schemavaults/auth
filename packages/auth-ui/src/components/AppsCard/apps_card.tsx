@@ -34,6 +34,7 @@ export interface AppsCardProps {
   preloaded?: PreloadedAppsTableDataWithDomainRefs;
   organization_id?: string;
   uuid: () => string;
+  isOrgOwner?: boolean;
 }
 
 export function AppsCard(props: AppsCardProps): ReactElement {
@@ -67,6 +68,7 @@ export function AppsCard(props: AppsCardProps): ReactElement {
                 queryType={props.queryType}
                 preloaded={props.preloaded}
                 organization_id={props.organization_id}
+                isOrgOwner={props.isOrgOwner}
               />
             </CardContent>
             <CardFooter>

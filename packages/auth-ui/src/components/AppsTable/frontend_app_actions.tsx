@@ -41,6 +41,7 @@ const dropdownMenuActionsClassName: string =
 interface FrontendApplicationActionsProps {
   app: SchemaVaultsApp;
   queryType: ListAppsQueryType;
+  isOrgOwner?: boolean;
 }
 
 class CantCopyWithinInsecureContextError extends Error {}
@@ -48,6 +49,7 @@ class CantCopyWithinInsecureContextError extends Error {}
 export function FrontendApplicationActions({
   app,
   queryType,
+  isOrgOwner,
 }: FrontendApplicationActionsProps): ReactElement {
   const app_id: string = app.app_id;
   const hardcoded: boolean = app.hardcoded && isHardcodedAppId(app_id);
@@ -117,7 +119,7 @@ export function FrontendApplicationActions({
 
   const isDeleteAppDisabled: boolean = hardcoded || !admin;
 
-  const showAddAppDomain: boolean = admin && queryType === "all";
+  const showAddAppDomain: boolean = (admin && queryType === "all") || (!!isOrgOwner && queryType === "org");
   const showConnectApi: boolean = admin && queryType === "all";
 
   return (

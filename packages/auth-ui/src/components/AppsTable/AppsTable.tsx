@@ -21,6 +21,7 @@ export interface AppsDatatableProps {
   queryType: ListAppsQueryType;
   preloaded?: PreloadedAppsTableDataWithDomainRefs | undefined;
   organization_id?: string;
+  isOrgOwner?: boolean;
 }
 
 function AppsTableHeaderButtons(): ReactElement {
@@ -32,6 +33,7 @@ export function AppsTable({
   queryType,
   preloaded,
   organization_id,
+  isOrgOwner,
 }: AppsDatatableProps): ReactElement {
   const apps: SWRResponse<readonly SchemaVaultsApp[], Error> = useAppsList({
     queryType,
@@ -40,8 +42,8 @@ export function AppsTable({
   });
   const { isLoading, data } = apps;
   const columns = useMemo((): ColumnDef<SchemaVaultsApp>[] => {
-    return getAppsTableColumns(queryType, preloaded);
-  }, [queryType, preloaded]);
+    return getAppsTableColumns(queryType, preloaded, isOrgOwner);
+  }, [queryType, preloaded, isOrgOwner]);
 
   if (!data && isLoading) {
     return (
