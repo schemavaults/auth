@@ -623,13 +623,17 @@ export class SchemaVaultsAuthClient
    * @example "For example, maybe send them to their account dashboard: `/account`."
    */
   public get successful_authentication_redirect_uri(): string {
-    const uri = this._successful_authentication_redirect_uri;
+    let uri: string | undefined = this._successful_authentication_redirect_uri;
     if (typeof uri !== "string" && typeof uri !== "undefined") {
       throw new Error("Unexpected data type for redirect uri");
     }
 
     if (!uri) {
       throw new Error("No successful authentication redirect URI set");
+    }
+
+    if (uri.startsWith("/")) {
+      uri = this.adapter.relativeUrlToAbsoluteUrl(uri);
     }
 
     const app_env: SchemaVaultsAppEnvironment = this.environment;
