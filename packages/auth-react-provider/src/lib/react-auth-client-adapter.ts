@@ -3,6 +3,7 @@
 import {
   type AppId,
   appIdSchema,
+  getAuthServerUri,
   getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
@@ -17,6 +18,7 @@ import {
   RefreshTokenExpiryCookieName,
   type UserData,
   accessTokenDataSchema,
+  determineRefreshTokenCookieSameSiteValue,
   refreshTokenDataSchema,
   userDataSchema,
 } from "@schemavaults/auth-common";
@@ -28,7 +30,8 @@ import {
   setCookie,
 } from "cookies-next/client";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
-import isClientRuntime from "./isClientRuntime";
+import isClientRuntime from "@/lib/isClientRuntime";
+import maybeStripProtocol from "@/lib/maybe-strip-protocol";
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
@@ -558,15 +561,24 @@ export class ReactAuthClientSdkAdapter
    * @returns True if there is a non-HTTP-only cookie indicating a valid HTTP-only refresh token is present, false otherwise
    */
   public hasHttpOnlyRefreshToken(): boolean {
-    if (this.doesSupportHttpOnlyRefreshToken()) {
-      const expiry_cookie_key: string = RefreshTokenExpiryCookieName(
-        this.client_app_id,
-      );
+    if (this.doesSupportHttpOnlyRefreshToken() satisfies boolean) {
+      const client_app_id: AppId = this.client_app_id;
+      const isAuthServer: boolean = client_app_id === SCHEMAVAULTS_AUTH_APP_ID;
+      const expiry_cookie_key: string =
+        RefreshTokenExpiryCookieName(client_app_id);
+      const secure: boolean = this.ssl_enabled;
+      const domain: string | undefined = isAuthServer
+        ? undefined // use same domain for auth server
+        : maybeStripProtocol(this.auth_server_uri);
+      const sameSite: "lax" | "strict" | "none" =
+        determineRefreshTokenCookieSameSiteValue(client_app_id, secure);
       const refreshTokenExpiryStr: string | undefined | null = getCookie(
         expiry_cookie_key,
         {
           httpOnly: false,
-          secure: this.ssl_enabled,
+          secure,
+          sameSite,
+          domain,
         },
       );
       if (typeof refreshTokenExpiryStr !== "string") {

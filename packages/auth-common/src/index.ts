@@ -79,3 +79,5 @@ export {
   AccessTokenCookieName,
   AccessTokenExpiryCookieName,
 } from "./AccessTokenCookieNames";
+
+export { determineRefreshTokenCookieSameSiteValue } from "./determineRefreshTokenCookieSameSiteValue";

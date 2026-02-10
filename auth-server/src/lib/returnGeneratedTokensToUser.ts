@@ -1,7 +1,8 @@
 import "server-only";
-import type {
-  RefreshToken,
-  RequestTokensResult,
+import {
+    determineRefreshTokenCookieSameSiteValue,
+  type RefreshToken,
+  type RequestTokensResult,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { setCookie } from "cookies-next/server";
@@ -30,21 +31,6 @@ function isLocalhostDomain(hostname: string): boolean {
   }
 
   return false;
-}
-
-// SameSite=none | send cookie in all contexts
-// SameSite=strict | send cookie in same-site contexts (navigations and other requests)
-// SameSite=lax | send cookie in same-site requests and when navigating
-function determineCookieSameSiteValue(
-  client_app_id: AppId,
-  secure: boolean
-): 'none' | 'lax' | 'strict' {
-  const isAuthServer: boolean = SCHEMAVAULTS_AUTH_APP_ID === client_app_id;
-  if (isAuthServer) {
-    return secure ? "strict": "lax";
-  } else {
-    return "none";
-  }
 }
 
 function determineReturnRefreshTokenStrategy(
@@ -127,7 +113,7 @@ export default async function returnGeneratedTokensToUser({
         );
       }
 
-      const sameSite: "strict" | "none" | "lax" = determineCookieSameSiteValue(
+      const sameSite: "strict" | "none" | "lax" = determineRefreshTokenCookieSameSiteValue(
         client_app_id,
         secure
       );
