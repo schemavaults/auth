@@ -81,3 +81,5 @@ export {
 } from "./AccessTokenCookieNames";
 
 export { determineRefreshTokenCookieSameSiteValue } from "./determineRefreshTokenCookieSameSiteValue";
+
+export { authorizeClientApplicationFormType } from "./authorize-client-application-form-type";
