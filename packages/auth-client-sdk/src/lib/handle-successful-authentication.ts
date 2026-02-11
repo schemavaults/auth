@@ -193,10 +193,15 @@ export async function handleSuccessfulAuthentication({
       audience,
       challenge_time,
     } satisfies z.infer<typeof authorizationCodePOSTbody>);
-    if (!parsed.success) throw parsed.error;
+    if (!parsed.success) {
+      throw parsed.error;
+    }
     request_body = parsed.data;
   } catch (e: unknown) {
-    console.error(e);
+    console.error(
+      "Failed to prepare request body for authorization grant request: ",
+      e,
+    );
     throw new Error(
       "Failed to prepare request body for authorization grant request",
     );
