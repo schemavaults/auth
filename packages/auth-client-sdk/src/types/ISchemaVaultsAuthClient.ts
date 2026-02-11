@@ -96,11 +96,18 @@ export interface ISchemaVaultsAuthClient {
 
   /**
    * @name checkIfAuthenticatedWithServer
-   * @returns A promise resolving with the current user's data (if authenticated), or null if not loggged in
+   * @returns A promise resolving with the current user's data (if authenticated), or null if not logged in
    * @description Sends a request to the auth server to check if the client is currently authenticated
    * @see isAuthenticated
    */
   checkIfAuthenticatedWithServer: () => Promise<UserData | null>;
+
+  /**
+   * @name sendAuthorizeClientApplicationRequest
+   * @description Sends a request to the auth server to authorize a client application request auth tokens on your behalf (still need to be logged in)
+   * @returns A promise that resolves or rejects based on if the request succeeds
+   */
+  sendAuthorizeClientApplicationRequest: (app_id: AppId) => Promise<void>;
 
   /**
    * @param feature_name Name of the feature to check if supported

@@ -1,32 +1,41 @@
-import { useToast } from "@schemavaults/ui";
+"use client";
+
+import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-react-provider";
+import type { useToast } from "@schemavaults/ui";
 
 interface SendAuthorizeFrontendAppRequestOpts {
-  toast: ReturnType<typeof useToast>['toast'];
+  toast: ReturnType<typeof useToast>["toast"];
+  auth: ISchemaVaultsAuthClient;
   app_id: string;
 }
 
-export async function sendAuthorizeFrontendAppRequest({ toast, app_id }: SendAuthorizeFrontendAppRequestOpts) {
-  if (typeof app_id !== 'string') throw new Error("Expected app to authorize's id to be a string");
+export async function sendAuthorizeFrontendAppRequest({
+  auth,
+  app_id,
+  toast,
+}: SendAuthorizeFrontendAppRequestOpts) {
+  if (typeof app_id !== "string") {
+    throw new Error("Expected app to authorize's id to be a string");
+  }
 
   try {
-    const response = await fetch("/api/apps/authorize", {
-      method: "POST",
-      body: JSON.stringify({ app_id }),
-      credentials: "include",
-    })
-    if (!response.ok || response.status !== 200) throw new Error("Received failure response from server");
+    await auth.sendAuthorizeClientApplicationRequest(app_id);
   } catch (e: unknown) {
     toast({
-      variant: 'destructive',
+      variant: "destructive",
       title: "Error sending authorize app request",
-      description: e instanceof Error ? e.message : `Failed to send network request`,
+      description:
+        e instanceof Error ? e.message : `Failed to send network request`,
     });
     return;
   }
 
   toast({
-    variant: 'default',
+    variant: "default",
     title: "Successfully authorized application",
-    description: "You should now be able to log in through it"
+    description: "You should now be able to log in through it",
   });
+  return;
 }
+
+export default sendAuthorizeFrontendAppRequest;

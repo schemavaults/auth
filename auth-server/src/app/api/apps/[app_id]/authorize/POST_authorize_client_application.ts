@@ -1,41 +1,34 @@
 import "server-only";
-
-import {
-  AuthorizedAppsRegistry,
-  type ResourceCreationResponse,
-} from "@/lib/auth-db";
+import type { ResourceCreationResponse } from "@/lib/auth-db/resource-creation-response";
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import type { ServerRuntime } from "next";
-
-export const runtime: ServerRuntime = "edge";
-
-const authorizeAppEndpointRequestBodySchema = z
-  .object({
-    app_id: z.string().uuid(),
-  })
-  .required()
-  .strict();
+import { type AppId, appIdSchema, isHardcodedAppId } from "@schemavaults/app-definitions";
+import AuthorizedAppsRegistry from "@/lib/auth-db/apps/authorized-apps-registry";
 
 /**
  * Authorize a frontend application to receive authentication tokens on your behalf
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST_authorize_client_application(
+  request: NextRequest,
+  ctx: RouteContext<'/api/apps/[app_id]/authorize'>
+): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps) => {
+    async ({ user, dbh, environment }: IProtectedAuthenticatedApiRouteProps) => {
       if (environment === "development") {
-        console.log("[/api/apps/authorize] POST request received");
+        console.log("[/api/apps/[app_id]/authorize] POST request received");
       }
 
-      let app_id: string;
+      let app_id: AppId;
       try {
-        const parsed_body =
-          await authorizeAppEndpointRequestBodySchema.safeParseAsync(
-            await req.json(),
+        const params = await ctx.params;
+        const parsed_app_id =
+          await appIdSchema.safeParseAsync(
+            params.app_id
           );
-        if (!parsed_body.success) throw parsed_body.error;
-        app_id = parsed_body.data.app_id;
+        if (!parsed_app_id.success) {
+          throw parsed_app_id.error;
+        }
+        app_id = parsed_app_id.data;
       } catch (e: unknown) {
         console.error("Invalid 'app_id' to authorize app for: ", e);
         return NextResponse.json(
@@ -45,6 +38,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           } satisfies ResourceCreationResponse,
           {
             status: 400,
+          },
+        );
+      }
+
+      if (isHardcodedAppId(app_id) satisfies boolean) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Cannot authorize a hardcoded app-- already authorized!",
+          } satisfies ResourceCreationResponse,
+          {
+            status: 403,
           },
         );
       }
@@ -82,4 +87,4 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   return await protected_route(request);
 }
 
-export const dynamic = "force-dynamic"; // defaults to auto
+export default POST_authorize_client_application;

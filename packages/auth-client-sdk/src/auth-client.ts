@@ -3,13 +3,11 @@
 
 import {
   PKCE_ProofKeyManager,
-  requestTokensResultSchema,
   type CodeVerifierWithDetails,
   type CodeChallengeWithDetails,
   type UserData,
   type AccessToken,
   type RefreshToken,
-  type RequestTokensResult,
   audienceSchema,
   type SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
@@ -1025,5 +1023,14 @@ export class SchemaVaultsAuthClient
       auth_server_uri: this.auth_server_uri,
       client_app_id: this.app_id,
     });
+  }
+
+  public async sendAuthorizeClientApplicationRequest(
+    app_id: AppId,
+  ): Promise<void> {
+    const sendAuthorizeRequest = await import(
+      "@/lib/send-authorize-client-application-request"
+    ).then((mod) => mod.default);
+    return await sendAuthorizeRequest({ app_id, adapter: this.adapter });
   }
 }
