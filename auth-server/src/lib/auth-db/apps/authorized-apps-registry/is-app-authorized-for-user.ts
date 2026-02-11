@@ -16,7 +16,9 @@ export async function isAppAuthorizedForUser(
 
   try {
     const appAuthorization = await getAppAuthorization(db, uid, app_id);
-    if (!appAuthorization) return false;
+    if (!appAuthorization) {
+      return false;
+    }
     if (debug) {
       console.log(
         `[AuthorizedAppsRegistry] User with ID "${uid}" has authorized application with ID "${app_id}"`,

@@ -26,6 +26,7 @@ import {
 } from "@/lib/AuthServerJwtKeysManager";
 import returnGeneratedTokensToUser from "@/lib/returnGeneratedTokensToUser";
 import getHostname from "@/lib/hostname";
+import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
 
 export async function handleAuthorizationCodeGrant(
   req: NextRequest,
@@ -169,6 +170,19 @@ export async function handleAuthorizationCodeGrant(
       );
     }
   } catch (e: unknown) {
+    if (e instanceof ClientApplicationNotAuthorizedByUser) {
+      console.warn("[handleAuthorizationCodeGrant] App is not authorized by user!");
+      return NextResponse.json(
+        {
+          success: false,
+          error: true,
+          message: e.message,
+        } satisfies RequestTokensResult,
+        {
+          status: 403,
+        },
+      );
+    }
     console.error(
       "[handleAuthorizationCodeGrant] Failed to validate token audience: ",
       e,
