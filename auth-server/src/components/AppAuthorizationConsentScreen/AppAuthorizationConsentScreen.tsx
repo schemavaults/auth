@@ -21,7 +21,7 @@ import { closeWindowRedirect } from "@/components/AuthForm/close-window-redirect
 import { Loader2, ShieldCheck, X } from "lucide-react";
 import type { PendingAuthorizationState } from "@/components/AuthForm/handle-auth-form-submit";
 
-interface AppAuthorizationConsentScreenProps {
+export interface AppAuthorizationConsentScreenProps {
   app_id: string;
   app_name: string;
   app_description: string;

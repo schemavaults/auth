@@ -17,7 +17,8 @@ import redirectWithError from "@/lib/redirect-with-error";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import { isAppAuthorizedForUser } from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
 import { generateAuthorizationCode } from "@/lib/auth-db/users/generate-authorization-code";
-import { AppAuthorizationConsentScreen } from "@/components/AppAuthorizationConsentScreen";
+import AppAuthorizationConsentScreen from "@/components/AppAuthorizationConsentScreen";
+import NativeAppCodeDelivery from "@/components/NativeAppCodeDelivery";
 
 export default async function LoginPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -80,20 +81,14 @@ export default async function LoginPage(props: {
           if (!redirect_uri) {
             redirectWithError(400, "bad_request");
           }
-          // POST the code to the native app's redirect_uri
-          const postResponse = await fetch(redirect_uri, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              code_challenge_method: "S256",
-              challenge_time: challenge_time.toString(),
-              authorization_code,
-            }),
-          });
-          if (postResponse.status !== 200) {
-            redirectWithError(502, "internal_server_error");
-          }
-          return redirect("/close_window");
+          return (
+            <NativeAppCodeDelivery
+              authorization_code={authorization_code}
+              redirect_uri={redirect_uri}
+              code_challenge_method="S256"
+              challenge_time={challenge_time}
+            />
+          );
         }
       }
 

@@ -1,2 +1,2 @@
-export { AppAuthorizationConsentScreen } from "./AppAuthorizationConsentScreen";
-export { default } from "./AppAuthorizationConsentScreen";
+export { AppAuthorizationConsentScreen, AppAuthorizationConsentScreen as default } from "./AppAuthorizationConsentScreen";
+export type { AppAuthorizationConsentScreenProps } from './AppAuthorizationConsentScreen';
