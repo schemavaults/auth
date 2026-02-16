@@ -61,11 +61,21 @@ export class RouteGuardFactory {
     this.is_auth_server = opts.is_auth_server ?? false;
 
     if (opts.jwt_keys_manager) {
+      if (this.debug) {
+        console.log(
+          "[RouteGuardFactory] Using custom 'jwt_keys_manager' from constructor options!",
+        );
+      }
       this.jwt_keys_manager = opts.jwt_keys_manager;
     } else {
       if (this.is_auth_server) {
         throw new TypeError(
           "An argument for 'jwt_keys_manager' is required when 'is_auth_server' is true",
+        );
+      }
+      if (this.debug) {
+        console.log(
+          "[RouteGuardFactory] Creating default 'jwt_keys_manager' for remote resource server (loads keys from auth server)!",
         );
       }
       this.jwt_keys_manager = new RemoteJwtKeyManager({
@@ -133,6 +143,12 @@ export class RouteGuardFactory {
       this.environment,
       this.debug,
     );
+
+    if (user && !Array.isArray(user_organizations)) {
+      throw new TypeError(
+        "Expected 'user_organizations' to be an array if 'user' was truthy!",
+      );
+    }
 
     const init_opts: InitRouteGuardCheckOptions = {
       user,
