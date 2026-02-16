@@ -16,7 +16,7 @@ import {
 import type { IRouteGuard } from "./IRouteGuard";
 import { cookies as loadCookies } from "next/headers";
 import type { ReactElement } from "react";
-import { redirectWithNextAppDirError } from "@/redirect-with-error";
+import { redirectWithError } from "@/redirect-with-error";
 import RouteGuardFactory from "./route-guard-factory";
 import { type NextRequest, NextResponse } from "next/server";
 import getStringByteSize from "@/getStringByteSize";
@@ -26,7 +26,6 @@ import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
 import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
 import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 import redirectToLogin from "@/redirect-to-login";
-import { redirect } from "next/navigation";
 import assertValidRouteGuardType from "./assertValidRouteGuardType";
 import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
 
@@ -128,6 +127,8 @@ export async function withAuthenticatedServerComponentRouteGuard<
     }
   }
 
+  const redirect = await import("next/navigation").then((mod) => mod.redirect);
+
   if (token_sources.length === 0) {
     redirectToLogin(redirect);
   }
@@ -150,7 +151,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
   const user: UserData = route_guard.user;
 
   if (!route_guard.isAccessAllowed()) {
-    redirectWithNextAppDirError(403, "forbidden");
+    redirectWithError(redirect, 403, "forbidden");
   }
 
   if (typeof server_component !== "function") {
@@ -179,10 +180,10 @@ export async function withAuthenticatedServerComponentRouteGuard<
       is_authorized = await custom_is_authorized_check(server_component_props);
     } catch (e: unknown) {
       console.error("Error in 'custom_is_authorized_check' handler: ", e);
-      redirectWithNextAppDirError(500, "internal_server_error");
+      redirectWithError(redirect, 500, "internal_server_error");
     }
     if (!is_authorized) {
-      redirectWithNextAppDirError(403, "forbidden");
+      redirectWithError(redirect, 403, "forbidden");
     }
   }
 

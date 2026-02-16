@@ -1,4 +1,4 @@
-import { redirect, type RedirectType } from "next/navigation";
+import type { RedirectType } from "next/navigation";
 import {
   isValidErrorId,
   type SchemaVaultsAuthErrorId,
@@ -30,14 +30,6 @@ export function redirectWithError(
     console.log("[redirectWithError] Redirecting to URL: ", errorPageUrl);
   }
   redirect(errorPageUrl);
-}
-
-export function redirectWithNextAppDirError(
-  error_code: number = 500,
-  error_id: SchemaVaultsAuthErrorId = "unknown",
-  error_page_url: string = "/error",
-): never {
-  return redirectWithError(redirect, error_code, error_id, error_page_url);
 }
 
 export default redirectWithError;
