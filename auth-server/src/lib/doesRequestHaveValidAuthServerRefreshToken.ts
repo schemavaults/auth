@@ -30,7 +30,7 @@ async function doesCookiesStoreHaveValidRefreshToken(
   const route_guard: IRouteGuard = await route_guard_factory.createGuardFromTokenSources('authenticated', [{
     type: 'refresh',
     token: refresh_token,
-    sourceHint: `From cookie with key '${RefreshTokenCookieName}'`
+    sourceHint: `From cookie with key '${RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)}'`
   }], SCHEMAVAULTS_AUTH_APP_ID);
 
   if (!route_guard.isAccessAllowed() || !route_guard.user) {
