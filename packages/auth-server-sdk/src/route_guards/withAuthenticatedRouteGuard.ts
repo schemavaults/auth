@@ -7,7 +7,7 @@ import {
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
-  AccessToken,
+  type AccessToken,
   accessTokenDataSchema,
   type OrganizationID,
   type PotentiallyValidTokenSource,

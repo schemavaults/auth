@@ -6,33 +6,16 @@ import type { IRouteGuard } from "./IRouteGuard";
 import { z } from "zod";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
 import {
-  decodeJWTs,
   type PotentiallyValidTokenSource,
-  type UserData,
   type DecodeTokenFn,
-  type OrganizationID,
-  organizationIdSchema,
 } from "@schemavaults/auth-common";
-import {
-  type CustomJWTPayload,
-  decodeJWT as decodeSchemavaultsJwt,
-  getKeysetIdFromToken,
-} from "@schemavaults/jwt";
 import {
   type ApiServerId,
   apiServerIdSchema,
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import loadJwtDecodingKeys, {
-  type IDecodeAuthTokenKeys,
-} from "@/JwtKeyManager/loadJwtDecodingKeys";
-import {
-  RemoteJwtKeyManager,
-  type IJwtKeyManager,
-  JwtDecodingKeysetNotFoundError,
-} from "@/JwtKeyManager";
-import isValidUuid from "@/is-valid-uuid";
+import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
 import decodeJWTsWithKeyManager from "@/decode-jwts-with-key-manager";
 
@@ -42,8 +25,6 @@ export interface RouteGuardFactoryInitOptions {
   is_auth_server?: boolean;
   debug?: boolean;
 }
-
-type DecodeTokenFnOutput = Awaited<ReturnType<DecodeTokenFn>>;
 
 const GUARD_TYPES = [
   "authenticated",
