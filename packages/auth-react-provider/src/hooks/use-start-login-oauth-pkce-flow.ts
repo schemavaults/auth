@@ -180,6 +180,7 @@ export function useStartLoginOauthPKCEFlow({
       }
     }
   }, [
+    isAuthServer,
     authContext,
     debug,
     router,
