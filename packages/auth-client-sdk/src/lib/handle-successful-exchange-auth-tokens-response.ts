@@ -1,9 +1,10 @@
+// handle-successful-exchange-auth-tokens-response.ts
+
 import {
-  AccessToken,
-  RefreshToken,
-  RequestTokensResult,
+  type AccessToken,
+  type RequestTokensResult,
   requestTokensResultSchema,
-  SuccessfullyGeneratedTokensRecord,
+  type SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
 import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "@/lib/assert-http-only-refresh-token-has-accompanying-expiry-marker";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
