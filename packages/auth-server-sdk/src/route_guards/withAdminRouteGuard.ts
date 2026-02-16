@@ -8,7 +8,7 @@ import {
   type TProtectedAuthenticatedPageServerComponent,
 } from "./withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
-import { type NextRequest, NextResponse } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 

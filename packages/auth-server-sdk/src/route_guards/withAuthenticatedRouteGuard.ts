@@ -12,11 +12,10 @@ import {
   type UserData,
 } from "@schemavaults/auth-common";
 import type { IRouteGuard } from "./IRouteGuard";
-import { cookies as loadCookies } from "next/headers";
 import type { ReactElement } from "react";
 import { redirectWithError } from "@/redirect-with-error";
 import RouteGuardFactory from "./route-guard-factory";
-import { type NextRequest, NextResponse } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import getStringByteSize from "@/getStringByteSize";
 import MaximumBrowserCookieSize from "@/MaximumBrowserCookieSize";
 import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
@@ -81,6 +80,11 @@ export async function withAuthenticatedServerComponentRouteGuard<
 
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const api_server_id: ApiServerId = getApiServerId();
+  const [loadCookies, redirect] = await Promise.all([
+    import("next/headers").then((mod) => mod.cookies),
+    import("next/navigation").then((mod) => mod.redirect),
+  ]);
+
   const cookies = await loadCookies();
 
   const token_sources: PotentiallyValidTokenSource[] = [];
@@ -124,8 +128,6 @@ export async function withAuthenticatedServerComponentRouteGuard<
       });
     }
   }
-
-  const redirect = await import("next/navigation").then((mod) => mod.redirect);
 
   if (token_sources.length === 0) {
     redirectToLogin(redirect);
@@ -214,7 +216,9 @@ export function withAuthenticatedApiRouteGuard<
   ): Promise<NextResponse> {
     const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
     const api_server_id: ApiServerId = getApiServerId();
-
+    const json = await import("next/server")
+      .then((mod) => mod.NextResponse)
+      .then((mod) => mod.json);
     const token_sources: PotentiallyValidTokenSource[] = [];
 
     // Load refresh token cookie for auth server
@@ -319,7 +323,7 @@ export function withAuthenticatedApiRouteGuard<
       );
 
     if (!route_guard.user) {
-      return NextResponse.json(
+      return json(
         {
           success: false,
           error: true,
@@ -331,7 +335,7 @@ export function withAuthenticatedApiRouteGuard<
     const user: UserData = route_guard.user;
 
     if (!Array.isArray(route_guard.user_organizations)) {
-      return NextResponse.json(
+      return json(
         {
           success: false,
           error: true,
@@ -343,7 +347,7 @@ export function withAuthenticatedApiRouteGuard<
     }
 
     if (!route_guard.isAccessAllowed() || !route_guard.user) {
-      return NextResponse.json(
+      return json(
         {
           success: false,
           error: true,
@@ -375,7 +379,7 @@ export function withAuthenticatedApiRouteGuard<
         is_authorized = await custom_is_authorized_check(api_route_inputs);
       } catch (e: unknown) {
         console.error("Error in 'custom_is_authorized_check' handler: ", e);
-        return NextResponse.json(
+        return json(
           {
             success: false,
             error: true,
@@ -385,7 +389,7 @@ export function withAuthenticatedApiRouteGuard<
         );
       }
       if (!is_authorized) {
-        return NextResponse.json(
+        return json(
           {
             success: false,
             error: true,
