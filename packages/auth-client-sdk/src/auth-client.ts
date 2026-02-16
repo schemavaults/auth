@@ -1033,4 +1033,11 @@ export class SchemaVaultsAuthClient
     ).then((mod) => mod.default);
     return await sendAuthorizeRequest({ app_id, adapter: this.adapter });
   }
+
+  public async checkAppAuthorization(app_id: AppId): Promise<boolean> {
+    const checkAuth = await import(
+      "@/lib/check-app-authorization"
+    ).then((mod) => mod.default);
+    return await checkAuth({ app_id, adapter: this.adapter });
+  }
 }

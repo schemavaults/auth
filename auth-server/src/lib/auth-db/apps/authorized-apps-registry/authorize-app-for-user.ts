@@ -39,6 +39,7 @@ export async function authorizeAppForUser(
         uid,
         authorized_at: now,
       })
+      .onConflict((oc) => oc.columns(["app_id", "uid"]).doNothing())
       .execute();
   } catch (e: unknown) {
     console.error(

@@ -110,6 +110,13 @@ export interface ISchemaVaultsAuthClient {
   sendAuthorizeClientApplicationRequest: (app_id: AppId) => Promise<void>;
 
   /**
+   * @name checkAppAuthorization
+   * @description Checks whether the current user has already authorized a given app
+   * @returns A promise resolving to true if the app is authorized, false otherwise
+   */
+  checkAppAuthorization: (app_id: AppId) => Promise<boolean>;
+
+  /**
    * @param feature_name Name of the feature to check if supported
    * @returns true if support, false otherwise
    */

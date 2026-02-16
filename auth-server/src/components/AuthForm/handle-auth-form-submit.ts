@@ -209,15 +209,25 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     onSuccessfulAuthenticate !== "account-page" &&
     opts.onAppAuthorizationNeeded
   ) {
-    const redirect_uri: string | null | undefined =
-      searchParams.get("redirect_uri");
-    opts.onAppAuthorizationNeeded({
-      authorization_code,
-      code_challenge,
-      code_verifier,
-      redirect_uri,
-    });
-    return;
+    // Check if the user has already authorized this app
+    let alreadyAuthorized = false;
+    try {
+      alreadyAuthorized = await authClient.checkAppAuthorization(opts.app.app_id);
+    } catch {
+      // If the check fails, fall through to showing the consent screen (safe default)
+    }
+
+    if (!alreadyAuthorized) {
+      const redirect_uri: string | null | undefined =
+        searchParams.get("redirect_uri");
+      opts.onAppAuthorizationNeeded({
+        authorization_code,
+        code_challenge,
+        code_verifier,
+        redirect_uri,
+      });
+      return;
+    }
   }
 
   const toast_title: string =
