@@ -67,9 +67,6 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
   if (isNaN(challenge_time)) {
     console.warn("Invalid code challenge time!")
     redirectWithError(400, "bad_request");
-  } else if (challenge_time > Date.now()) {
-    console.warn("Code challenge time is in the future!");
-    redirectWithError(400, "bad_request");
   }
 
   if (typeof opts.redirect_uri !== 'string' || !opts.redirect_uri) {
