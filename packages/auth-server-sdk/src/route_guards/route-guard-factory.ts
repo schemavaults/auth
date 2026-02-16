@@ -19,6 +19,7 @@ import {
   getKeysetIdFromToken,
 } from "@schemavaults/jwt";
 import {
+  type ApiServerId,
   apiServerIdSchema,
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
@@ -126,7 +127,7 @@ export class RouteGuardFactory {
   public async createGuardFromTokenSources(
     type: RouteGuardType,
     token_sources: readonly PotentiallyValidTokenSource[],
-    jwt_audience: string,
+    jwt_audience: ApiServerId,
   ): Promise<IRouteGuard> {
     if (this.debug) {
       console.log(

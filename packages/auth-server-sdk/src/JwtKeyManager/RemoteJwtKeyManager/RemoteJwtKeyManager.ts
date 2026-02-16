@@ -33,6 +33,12 @@ export class RemoteJwtKeyManager implements IJwtKeyManager {
       );
     }
 
+    if (this.debug) {
+      console.log(
+        `[RemoteJwtKeyManager] loadJwks(audience_id='${audienceId}')`,
+      );
+    }
+
     if (audienceId === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
       throw new Error(
         `Auth server doesn't need to load remote JWKS; it already has the keys.`,

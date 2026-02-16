@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server-sdk",
   "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
-  "version": "0.19.4",
+  "version": "0.20.2",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -13,6 +13,9 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "auth-server-sdk": "./dist/cli.cjs"
+  },
   "dependencies": {
     "zod": "3.23.8",
     "@schemavaults/jwt": "workspace:*",
@@ -20,7 +23,9 @@
     "@schemavaults/app-definitions": "workspace:*"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json && bun run copy-codegen-templates",
+    "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json && bun run copy-codegen-templates && bun run prepare-cli",
+    "build-cli-for-nodejs": "esbuild --bundle --platform=node --target=node18 --outfile=dist/cli.cjs src/cli.ts",
+    "prepare-cli": "/bin/bash ./prepare-cli.sh",
     "copy-codegen-templates": "/bin/bash ./copy-codegen-templates.sh",
     "test": "NODE_ENV=test bun test",
     "cleanup:compiled-tests-output": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
@@ -39,7 +44,8 @@
     "@eslint/js": "9.39.1",
     "globals": "16.5.0",
     "@typescript-eslint/eslint-plugin": "8.48.1",
-    "@typescript-eslint/parser": "8.48.1"
+    "@typescript-eslint/parser": "8.48.1",
+    "esbuild": "0.27.3"
   },
   "publishConfig": {
     "access": "public"
@@ -130,6 +136,11 @@
       "types": "./dist/NextjsAppDirectoryPlugin/*",
       "import": "./dist/NextjsAppDirectoryPlugin/*",
       "require": "./dist/NextjsAppDirectoryPlugin/*"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js",
+      "require": "./dist/cli.cjs"
     }
   }
 }

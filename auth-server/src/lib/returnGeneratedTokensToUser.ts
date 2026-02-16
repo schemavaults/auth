@@ -1,7 +1,8 @@
 import "server-only";
-import type {
-  RefreshToken,
-  RequestTokensResult,
+import {
+    determineRefreshTokenCookieSameSiteValue,
+  type RefreshToken,
+  type RequestTokensResult,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { setCookie } from "cookies-next/server";
@@ -32,18 +33,17 @@ function isLocalhostDomain(hostname: string): boolean {
   return false;
 }
 
-// SameSite=none | send cookie in all contexts
-// SameSite=strict | send cookie in same-site contexts (navigations and other requests)
-// SameSite=lax | send cookie in same-site requests and when navigating
-function determineCookieSameSiteValue(
+function determineReturnRefreshTokenStrategy(
   client_app_id: AppId,
   secure: boolean
-): 'none' | 'lax' | 'strict' {
-  const isAuthServer: boolean = SCHEMAVAULTS_AUTH_APP_ID === client_app_id;
-  if (isAuthServer) {
-    return secure ? "strict": "lax";
+): 'AS_HTTP_ONLY_COOKIE' | 'inlined' {
+  // always use http-only cookies for auth-server
+  if (client_app_id === SCHEMAVAULTS_AUTH_APP_ID) {
+    return 'AS_HTTP_ONLY_COOKIE';
+  } else if (secure) {
+    return 'AS_HTTP_ONLY_COOKIE';
   } else {
-    return "lax";
+    return 'inlined';
   }
 }
 
@@ -55,12 +55,12 @@ export default async function returnGeneratedTokensToUser({
   hostname,
   debug = false,
 }: IReturnGeneratedTokensToUserOpts): Promise<NextResponse> {
-  if (!tokenGenerationResult.success || tokenGenerationResult.error) {
+  if (!tokenGenerationResult.success || tokenGenerationResult.error || !tokenGenerationResult.tokens) {
     throw new Error(tokenGenerationResult.message);
   }
 
   if (!tokenGenerationResult.client_app_id) {
-    throw new Error("Client application ID 'client_app_id' is required.");
+    throw new TypeError("Client application ID 'client_app_id' is required.");
   }
 
   if (tokenGenerationResult.userOrgs && !tokenGenerationResult.userData) {
@@ -69,15 +69,22 @@ export default async function returnGeneratedTokensToUser({
     );
   }
 
-  let refresh_token: RefreshToken | undefined = undefined;
-  if (
-    // Extract refresh token from generation, pass as http-only cookie
-    tokenGenerationResult.tokens?.refresh &&
-    typeof tokenGenerationResult.tokens.refresh === "object"
-  ) {
-    refresh_token = tokenGenerationResult.tokens.refresh;
+  const return_refresh_token_strategy: 'AS_HTTP_ONLY_COOKIE' | 'inlined' = determineReturnRefreshTokenStrategy(
+    client_app_id,
+    secure
+  );
+
+  if (tokenGenerationResult.tokens?.refresh && typeof tokenGenerationResult.tokens.refresh !== "object") {
+    throw new TypeError("Expected 'refresh' token to be an object, if one was generated!")
+  }
+
+  const refresh_token: RefreshToken | undefined = (tokenGenerationResult.tokens.refresh &&
+    typeof tokenGenerationResult.tokens.refresh === "object") ? tokenGenerationResult.tokens.refresh : undefined;
+
+  if (refresh_token && return_refresh_token_strategy === 'AS_HTTP_ONLY_COOKIE') {
     // replace actual token with indicator that token is set as http-only cookie
     tokenGenerationResult.tokens.refresh = "AS_HTTP_ONLY_COOKIE";
+    tokenGenerationResult.tokens.refresh_token_expiry = refresh_token.exp;
   }
 
   const success_response = NextResponse.json(
@@ -87,8 +94,9 @@ export default async function returnGeneratedTokensToUser({
     },
   );
 
-  async function setRefreshTokenCookie(): Promise<void> {
-    if (refresh_token) {
+  if (refresh_token && return_refresh_token_strategy === 'AS_HTTP_ONLY_COOKIE') {
+    await (async function setHttpOnlyRefreshTokenCookie(): Promise<void> {
+
       if (debug) {
         console.log(
           `Setting HTTP${secure ? "S" : ""}-only refresh token on domain: `,
@@ -106,7 +114,7 @@ export default async function returnGeneratedTokensToUser({
         );
       }
 
-      const sameSite: "strict" | "none" | "lax" = determineCookieSameSiteValue(
+      const sameSite: "strict" | "none" | "lax" = determineRefreshTokenCookieSameSiteValue(
         client_app_id,
         secure
       );
@@ -124,10 +132,7 @@ export default async function returnGeneratedTokensToUser({
         delete (refreshTokenSetCookieOpts as Partial<typeof refreshTokenSetCookieOpts>).domain;
       }
 
-
-
       await setCookie(RefreshTokenCookieName(client_app_id), refresh_token.token satisfies string, refreshTokenSetCookieOpts);
-
 
       // set a non-http-only cookie with the refresh token expiry time
       // this way client should know if it is authenticated or not.
@@ -145,9 +150,9 @@ export default async function returnGeneratedTokensToUser({
         delete (refreshTokenExpirySetCookieOpts as Partial<typeof refreshTokenExpirySetCookieOpts>).domain;
       }
       await setCookie(RefreshTokenExpiryCookieName(client_app_id), `${refresh_token.exp satisfies number}` satisfies string, refreshTokenExpirySetCookieOpts);
-    }
+    })()
   }
-  await setRefreshTokenCookie();
+
 
   return success_response;
 }

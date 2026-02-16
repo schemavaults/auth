@@ -7,9 +7,10 @@ const oneDay: number = oneHour * 24;
 const oneWeek: number = oneDay * 7;
 
 // How long refresh tokens are valid for (in seconds)
-export const refreshTokenExpiry: number = oneWeek;
+export const refreshTokenExpiry: number = oneWeek * 2;
 
-export const accessTokenExpiry: number = oneMinute * 9; // 9 minutes (in seconds)
+// How long access tokens are valid for (in seconds)
+export const accessTokenExpiry: number = oneHour * 1.5;
 
 /**
  * @param type Access or refresh token -- determines the expiry time

@@ -11,3 +11,5 @@ dist/
 .env.staging
 
 auth-server-sdk.tgz
+
+cli.cjs

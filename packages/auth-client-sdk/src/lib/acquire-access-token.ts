@@ -7,6 +7,7 @@ import {
   type RefreshToken,
 } from "@schemavaults/auth-common";
 import isValidRefreshToken from "@/lib/isValidRefreshToken";
+import { ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
 
 export interface IAcquireAccessTokenFnOptions {
   opts: AcquireAccessTokenOptions;
@@ -34,13 +35,43 @@ export default async function acquireAccessToken({
     );
   }
 
+  // where is this access token for? (e.g. auth server? registry? some other API server?)
+  let audience: ApiServerId;
+  try {
+    const parsed_audience = apiServerIdSchema.safeParse(opts.audience);
+    if (!parsed_audience.success) {
+      console.error(
+        "Failed to parse desired audience for access token load request: ",
+        parsed_audience.error,
+      );
+      if (debug) {
+        console.error("Error resulted from audience value of: ", opts.audience);
+      }
+      throw parsed_audience.error;
+    }
+    audience = parsed_audience.data;
+  } catch (e: unknown) {
+    console.error(
+      "Failed to parse 'audience' to request for new access token to exchange refresh token for: ",
+      e,
+    );
+    throw new Error(
+      "Failed to parse 'audience' to request for new access token to exchange refresh token for!",
+    );
+  }
+
+  console.assert(
+    typeof audience === "string",
+    "Expected 'audience' to be a string if this point was reached!",
+  );
+
   if (!opts.ensure_fresh) {
-    const cached: AccessToken | null = adapter.getAccessToken(opts.token_id);
+    const cached: AccessToken | null = adapter.getAccessToken(audience);
     if (cached) {
       if (cached.exp < Date.now() + 10 * 1000) {
         // Clear the access token from the cache
         try {
-          adapter.clearAccessToken(opts.token_id);
+          adapter.clearAccessToken(audience);
         } catch (e: unknown) {
           console.error("Failed to clear access token from cache:", e);
         }
@@ -89,9 +120,7 @@ export default async function acquireAccessToken({
       );
     }
   } else {
-    throw new Error(
-      "No refresh token available to acquire new access token!",
-    );
+    throw new Error("No refresh token available to acquire new access token!");
   }
 
   if (debug && refresh_token) {
@@ -111,41 +140,11 @@ export default async function acquireAccessToken({
       console.log("Has refresh token: ", hasRefreshToken);
       console.groupEnd();
     }
-    
+
     throw new Error(
       "Expected a refresh token to have been successfully retrieved (or marked as having HTTP-only cookie) if this point was reached!",
     );
   }
-
-  // where is this access token for? (e.g. auth server? registry? some other API server?)
-  let audience: string;
-  try {
-    const parsed_audience = audienceRefSchema.safeParse(opts.audience);
-    if (!parsed_audience.success) {
-      console.error(
-        "Failed to parse desired audience for access token load request: ",
-        parsed_audience.error,
-      );
-      if (debug) {
-        console.error("Error resulted from audience value of: ", opts.audience);
-      }
-      throw parsed_audience.error;
-    }
-    audience = parsed_audience.data;
-  } catch (e: unknown) {
-    console.error(
-      "Failed to parse 'audience' to request for new access token to exchange refresh token for: ",
-      e,
-    );
-    throw new Error(
-      "Failed to parse 'audience' to request for new access token to exchange refresh token for!",
-    );
-  }
-
-  console.assert(
-    typeof audience === "string",
-    "Expected 'audience' to be a string if this point was reached!",
-  );
 
   // refresh token => access token
   let tokens: SuccessfullyGeneratedTokensRecord;
@@ -200,7 +199,7 @@ export default async function acquireAccessToken({
   }
 
   if (!opts.dont_cache) {
-    adapter.storeAccessToken(opts.token_id, access satisfies AccessToken);
+    adapter.storeAccessToken(audience, access satisfies AccessToken);
   }
 
   if (debug) {

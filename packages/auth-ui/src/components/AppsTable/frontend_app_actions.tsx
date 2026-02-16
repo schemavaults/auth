@@ -4,6 +4,7 @@ import type {
   SchemaVaultsApp,
   ListAppsQueryType,
   SchemaVaultsAppDomainRef,
+  AppId,
 } from "@schemavaults/app-definitions";
 import { type ReactElement, useTransition, useMemo, useContext } from "react";
 import { cn, useToast } from "@schemavaults/ui";
@@ -25,7 +26,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
-import { useAdmin, useAppEnvironment } from "@schemavaults/auth-react-provider";
+import {
+  useAdmin,
+  useAppEnvironment,
+  useAuth,
+} from "@schemavaults/auth-react-provider";
 import { sendAuthorizeFrontendAppRequest } from "./send-authorize-app-request";
 import { useAppDomains } from "./useAppDomains";
 import { launchWebApp } from "./launchWebApp";
@@ -41,6 +46,7 @@ const dropdownMenuActionsClassName: string =
 interface FrontendApplicationActionsProps {
   app: SchemaVaultsApp;
   queryType: ListAppsQueryType;
+  isOrgOwner?: boolean;
 }
 
 class CantCopyWithinInsecureContextError extends Error {}
@@ -48,11 +54,13 @@ class CantCopyWithinInsecureContextError extends Error {}
 export function FrontendApplicationActions({
   app,
   queryType,
+  isOrgOwner,
 }: FrontendApplicationActionsProps): ReactElement {
-  const app_id: string = app.app_id;
+  const app_id: AppId = app.app_id;
   const hardcoded: boolean = app.hardcoded && isHardcodedAppId(app_id);
   const { toast } = useToast();
   const [authorizingApp, startAuthorizingApp] = useTransition();
+  const authContext = useAuth();
 
   let preloadedAppDomains: SchemaVaultsAppDomainRef[] | undefined = undefined;
   if (hardcoded) {
@@ -117,7 +125,8 @@ export function FrontendApplicationActions({
 
   const isDeleteAppDisabled: boolean = hardcoded || !admin;
 
-  const showAddAppDomain: boolean = admin && queryType === "all";
+  const showAddAppDomain: boolean =
+    (admin && queryType === "all") || (!!isOrgOwner && queryType === "org");
   const showConnectApi: boolean = admin && queryType === "all";
 
   return (
@@ -186,10 +195,6 @@ export function FrontendApplicationActions({
 
                 const clipboard: Clipboard = window.navigator.clipboard;
                 clipboard.writeText(app.app_id);
-                toast({
-                  variant: "default",
-                  title: "Copied app ID to clipboard",
-                });
               } catch (e: unknown) {
                 console.error("Failed to copy app ID to clipboard: ", e);
                 let errorMessage: string = "An unknown error has occurred.";
@@ -203,6 +208,12 @@ export function FrontendApplicationActions({
                 });
                 return;
               }
+              toast({
+                variant: "default",
+                title: "Successfully copied app ID to clipboard",
+                description: `You can now paste '${app.app_id}'`,
+              });
+              return;
             }}
             data-testid="copy-app-id-menu-item"
           >
@@ -215,9 +226,17 @@ export function FrontendApplicationActions({
               onClick={(): void => {
                 startAuthorizingApp(async (): Promise<void> => {
                   try {
+                    if (
+                      !authContext ||
+                      !authContext.ready ||
+                      !authContext.client.current
+                    ) {
+                      throw new Error("Auth client is not ready!");
+                    }
                     await sendAuthorizeFrontendAppRequest({
                       toast,
                       app_id: app.app_id,
+                      auth: authContext.client.current,
                     });
                   } catch (e: unknown) {
                     toast({

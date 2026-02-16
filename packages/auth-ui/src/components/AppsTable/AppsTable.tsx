@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useMemo, type ReactElement } from "react";
+import { useMemo, type FC, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
 import { Datatable } from "@schemavaults/ui";
 import { getAppsTableColumns } from "./columns";
@@ -9,10 +9,8 @@ import type {
   ListAppsQueryType,
   SchemaVaultsApp,
 } from "@schemavaults/app-definitions";
-import {
-  CreateAppDialogOpenDispatchContext,
-  CreateAppDialogTrigger,
-} from "@/components/CreateAppDialog";
+import { CreateAppDialogTrigger } from "@/components/CreateAppDialog";
+import { AuthorizeClientApplicationDialogTrigger } from "@/components/AuthorizeClientApplicationDialog";
 import { Loader2 } from "lucide-react";
 import type { ColumnDef } from "@schemavaults/ui";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
@@ -21,17 +19,35 @@ export interface AppsDatatableProps {
   queryType: ListAppsQueryType;
   preloaded?: PreloadedAppsTableDataWithDomainRefs | undefined;
   organization_id?: string;
+  isOrgOwner?: boolean;
 }
 
-function AppsTableHeaderButtons(): ReactElement {
-  const onOpenChange = useContext(CreateAppDialogOpenDispatchContext);
-  return <CreateAppDialogTrigger onOpenChange={onOpenChange} />;
+interface AppsTableHeaderButtonsProps {
+  queryType: ListAppsQueryType;
+  isOrgOwner?: boolean;
+}
+
+function AppsTableHeaderButtons({
+  queryType,
+  isOrgOwner,
+}: AppsTableHeaderButtonsProps): ReactElement {
+  return (
+    <>
+      {queryType === "authorized" && ( // From a user's list of authorized apps, allow them to add more authorized apps
+        <AuthorizeClientApplicationDialogTrigger />
+      )}
+      {(queryType === "all" || (queryType === "org" && isOrgOwner)) && (
+        <CreateAppDialogTrigger />
+      )}
+    </>
+  );
 }
 
 export function AppsTable({
   queryType,
   preloaded,
   organization_id,
+  isOrgOwner,
 }: AppsDatatableProps): ReactElement {
   const apps: SWRResponse<readonly SchemaVaultsApp[], Error> = useAppsList({
     queryType,
@@ -40,8 +56,16 @@ export function AppsTable({
   });
   const { isLoading, data } = apps;
   const columns = useMemo((): ColumnDef<SchemaVaultsApp>[] => {
-    return getAppsTableColumns(queryType, preloaded);
-  }, [queryType, preloaded]);
+    return getAppsTableColumns(queryType, preloaded, isOrgOwner);
+  }, [queryType, preloaded, isOrgOwner]);
+
+  const HeaderButtons: FC = useMemo(() => {
+    return function AppsTableHeaderButtonsWithQueryType() {
+      return (
+        <AppsTableHeaderButtons queryType={queryType} isOrgOwner={isOrgOwner} />
+      );
+    };
+  }, [queryType, isOrgOwner]);
 
   if (!data && isLoading) {
     return (
@@ -71,7 +95,7 @@ export function AppsTable({
         "app_description",
         "owner_organization_id",
       ]}
-      HeaderButtons={AppsTableHeaderButtons}
+      HeaderButtons={HeaderButtons}
       datatypeLabel="App"
     />
   );

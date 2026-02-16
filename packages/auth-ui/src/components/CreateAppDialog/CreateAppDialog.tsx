@@ -1,13 +1,14 @@
 "use client";
 
 import { Button } from "@schemavaults/ui";
-import type { ReactElement } from "react";
+import { useContext, type ReactElement } from "react";
 
 import { Dialog, DialogContent } from "@schemavaults/ui";
 import { useSWRConfig } from "swr";
 import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 import { AppWindow } from "lucide-react";
 import CreateAppForm from "./CreateAppForm";
+import CreateAppDialogOpenDispatchContext from "./CreateAppDialogOpenDispatchContext";
 
 interface CreateFrontendAppDialogProps {
   clearFrontendAppsCache: (
@@ -43,13 +44,11 @@ export function CreateAppDialog({
   );
 }
 
-interface CreateFrontendAppDialogTriggerProps {
-  onOpenChange: (val: boolean) => void;
-}
+export function CreateAppDialogTrigger(): ReactElement {
+  const onOpenChange: (open: boolean) => void = useContext(
+    CreateAppDialogOpenDispatchContext,
+  );
 
-export function CreateAppDialogTrigger({
-  onOpenChange,
-}: CreateFrontendAppDialogTriggerProps): ReactElement {
   return (
     <Button
       id="open-create-app-dialog-button"

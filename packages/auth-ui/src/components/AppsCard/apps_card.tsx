@@ -23,6 +23,9 @@ import CreateAppDomainDialog, {
   CreateAppDomainDialogOpenContext,
   CreateAppDomainDialogOpenDispatchContext,
 } from "@/components/CreateAppDomainDialog";
+import AuthorizeClientApplicationDialog, {
+  AuthorizeClientApplicationDialogOpenDispatchContext,
+} from "@/components/AuthorizeClientApplicationDialog";
 
 import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 
@@ -34,6 +37,7 @@ export interface AppsCardProps {
   preloaded?: PreloadedAppsTableDataWithDomainRefs;
   organization_id?: string;
   uuid: () => string;
+  isOrgOwner?: boolean;
 }
 
 export function AppsCard(props: AppsCardProps): ReactElement {
@@ -48,57 +52,74 @@ export function AppsCard(props: AppsCardProps): ReactElement {
   const [isAddAppDomainDialogOpen, setAddAppDomainDialogOpen] = useState<
     AppId | false
   >(false);
+  const [authorizeAppDialogOpen, setAuthorizeAppDialogOpen] =
+    useState<boolean>(false);
 
   return (
     <CreateAppDialogOpenDispatchContext.Provider value={setCreateAppDialogOpen}>
-      <CreateAppDomainDialogOpenDispatchContext.Provider
-        value={setAddAppDomainDialogOpen}
+      <AuthorizeClientApplicationDialogOpenDispatchContext.Provider
+        value={setAuthorizeAppDialogOpen}
       >
-        <CreateAppDomainDialogOpenContext.Provider
-          value={isAddAppDomainDialogOpen}
+        <CreateAppDomainDialogOpenDispatchContext.Provider
+          value={setAddAppDomainDialogOpen}
         >
-          <Card className={cardClassName}>
-            <CardHeader>
-              <CardTitle>{cardTitle}</CardTitle>
-              <CardDescription>{cardDescription}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AppsTable
-                queryType={props.queryType}
-                preloaded={props.preloaded}
-                organization_id={props.organization_id}
-              />
-            </CardContent>
-            <CardFooter>
-              <div className="flex flex-row items-start justify-start gap-2"></div>
-            </CardFooter>
-          </Card>
-          <>
-            {(props.queryType === "all" || props.queryType === "org") && (
-              <CreateAppDialog
-                clearFrontendAppsCache={clearUseAppsListCache}
-                owner_organization_id={
-                  props.queryType === "all"
-                    ? SCHEMAVAULTS_ORGANIZATION_ID
-                    : props.organization_id
-                }
-                open={createAppDialogOpen}
-                onOpenChange={setCreateAppDialogOpen}
-                uuid={props.uuid}
-              />
-            )}
-            <CreateAppDomainDialog
-              open={typeof isAddAppDomainDialogOpen === "string"}
-              onOpenChange={(val: boolean): void => {
-                if (!val) {
-                  setAddAppDomainDialogOpen(false);
-                }
-              }}
-              uuid={props.uuid}
-            />
-          </>
-        </CreateAppDomainDialogOpenContext.Provider>
-      </CreateAppDomainDialogOpenDispatchContext.Provider>
+          <CreateAppDomainDialogOpenContext.Provider
+            value={isAddAppDomainDialogOpen}
+          >
+            <Card className={cardClassName}>
+              <CardHeader>
+                <CardTitle>{cardTitle}</CardTitle>
+                <CardDescription>{cardDescription}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AppsTable
+                  queryType={props.queryType}
+                  preloaded={props.preloaded}
+                  organization_id={props.organization_id}
+                  isOrgOwner={props.isOrgOwner}
+                />
+              </CardContent>
+              <CardFooter>
+                <div className="flex flex-row items-start justify-start gap-2"></div>
+              </CardFooter>
+            </Card>
+            <>
+              {(props.queryType === "all" ||
+                (props.queryType === "org" && props.isOrgOwner)) && (
+                <CreateAppDialog
+                  clearFrontendAppsCache={clearUseAppsListCache}
+                  owner_organization_id={
+                    props.queryType === "all"
+                      ? SCHEMAVAULTS_ORGANIZATION_ID
+                      : props.organization_id
+                  }
+                  open={createAppDialogOpen}
+                  onOpenChange={setCreateAppDialogOpen}
+                  uuid={props.uuid}
+                />
+              )}
+              {props.queryType === "authorized" && (
+                <AuthorizeClientApplicationDialog
+                  open={authorizeAppDialogOpen}
+                  onOpenChange={setAuthorizeAppDialogOpen}
+                />
+              )}
+              {(props.queryType === "all" ||
+                (props.queryType === "org" && props.isOrgOwner)) && (
+                <CreateAppDomainDialog
+                  open={typeof isAddAppDomainDialogOpen === "string"}
+                  onOpenChange={(val: boolean): void => {
+                    if (!val) {
+                      setAddAppDomainDialogOpen(false);
+                    }
+                  }}
+                  uuid={props.uuid}
+                />
+              )}
+            </>
+          </CreateAppDomainDialogOpenContext.Provider>
+        </CreateAppDomainDialogOpenDispatchContext.Provider>
+      </AuthorizeClientApplicationDialogOpenDispatchContext.Provider>
     </CreateAppDialogOpenDispatchContext.Provider>
   );
 }

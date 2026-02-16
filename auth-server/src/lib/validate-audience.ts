@@ -1,14 +1,19 @@
 import {
-  AuthorizedAppsRegistry,
   type ServerlessDatabase,
   SchemaVaultsAppToApiPermissionsRegistry,
 } from "@/lib/auth-db";
+import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import {
+  type ApiServerId,
   apiServerIdSchema,
+  type AppId,
+  appIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
 } from "@schemavaults/app-definitions";
 import { audienceRefSchema } from "@schemavaults/auth-common";
+import isValidUuid from "@/lib/is-valid-uuid";
+import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
 
 export type ValidateAudienceOutput =
   | "auth-server-only"
@@ -99,36 +104,29 @@ async function validateOneAudience(
   return "api-resource-server";
 }
 
-async function validateFrontendAppAuthorizedByUser(
-  uid: string,
-  client_app_id: string,
-  dbh: ServerlessDatabase,
-): Promise<boolean> {
-  // Validate that the user has authorized frontend client app with id client_app_id
-  try {
-    const authorizedAppsRegistry = new AuthorizedAppsRegistry(dbh.db);
-    const isAuthorized: boolean =
-      await authorizedAppsRegistry.isAppAuthorizedForUser(uid, client_app_id);
-    if (!isAuthorized) {
-      return false;
-    }
-    return true;
-  } catch (e: unknown) {
-    console.error(
-      "Failed to check if user has authorized client application: ",
-      e,
-    );
-    return false;
-  }
-}
-
 export async function validateAudience(
   uid: string,
-  client_app_id: string,
+  client_app_id: AppId,
   audience: string | readonly string[],
   dbh: ServerlessDatabase,
   debug: boolean = shouldEnableDebug(),
 ): Promise<boolean> {
+  if (!isValidUuid(uid)) {
+    throw new TypeError("Expected 'uid' to be a valid UUID!");
+  } else if (!(await appIdSchema.safeParseAsync(client_app_id)).success) {
+    throw new TypeError("Expected 'client_app_id' to be a valid client application ID!")
+  }
+
+  if (typeof audience === "undefined" || !audience) {
+    throw new Error("Did not receive an audience to validate!");
+  }
+
+  const audiences: ApiServerId[] = Array.isArray(audience) ? audience : [audience];
+
+  if (!(await apiServerIdSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
+    throw new TypeError("Invalid API server ID(s) in audiences array!")
+  }
+
   if (debug) {
     console.log(
       `[validateAudience] Attempting to validate audiences (from user '${uid}' on client app '${client_app_id}'): `,
@@ -136,33 +134,18 @@ export async function validateAudience(
     );
   }
 
-  if (typeof audience === "undefined" || !audience) {
-    throw new Error("Did not receive an audience to validate!");
-  }
-
-  const audiences: string[] = Array.isArray(audience) ? audience : [audience];
-
-  console.assert(
-    Array.isArray(audiences) &&
-      audiences.every((aud) => typeof aud === "string"),
-    "Expected 'audiences' to be an array of strings if this point was reached!",
-  );
-
-  if (audiences.length > 16) {
-    throw new Error("Cannot request more than 16 access tokens at once");
-  }
-
   if (new Set(audiences).size !== audiences.length) {
     throw new Error("All audiences must be unique in the request");
   }
 
-  const isAuthorized = await validateFrontendAppAuthorizedByUser(
+  const isAuthorized: boolean = await isAppAuthorizedForUser(
+    dbh.db,
     uid,
     client_app_id,
-    dbh,
+    debug
   );
   if (!isAuthorized) {
-    throw new Error("Frontend app is not authorized by user");
+    throw new ClientApplicationNotAuthorizedByUser(`Client application '${client_app_id}' is not authorized by user '${uid}'`)
   }
 
   const validateOneAudiencePromises = audiences.map(

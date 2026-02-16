@@ -2,14 +2,16 @@ import "server-only";
 
 import {
   type ApiServerId,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
-import type {
-  OrganizationID,
-  PotentiallyValidTokenSource,
-  UserData,
+import {
+  AccessToken,
+  accessTokenDataSchema,
+  type OrganizationID,
+  type PotentiallyValidTokenSource,
+  type UserData,
 } from "@schemavaults/auth-common";
 import type { IRouteGuard } from "./IRouteGuard";
 import { cookies as loadCookies } from "next/headers";
@@ -86,9 +88,10 @@ export async function withAuthenticatedServerComponentRouteGuard<
 
   const token_sources: PotentiallyValidTokenSource[] = [];
 
-  if (api_server_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  // Load Refresh Token for Auth Server
+  if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
     const refresh_token_cookie = cookies.get(
-      RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+      RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
     );
     if (typeof refresh_token_cookie?.value === "string") {
       token_sources.push({
@@ -99,6 +102,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     }
   }
 
+  // Load Access Token from designated cookie for current server
   const access_token_cookie_name: string = AccessTokenCookieName(api_server_id);
   const access_token_cookie = cookies.get(access_token_cookie_name);
   if (
@@ -130,7 +134,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
 
   const route_guard_factory = new RouteGuardFactory({
     environment,
-    is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_ID,
     jwt_keys_manager,
   });
   const route_guard: IRouteGuard =
@@ -195,7 +199,7 @@ export function withAuthenticatedApiRouteGuard<
   route_guard_type: "authenticated" | "admin" = "authenticated",
   custom_is_authorized_check:
     | ((
-        route_inputs: IBaseProtectedAuthenticatedServerComponentPageProps &
+        route_inputs: IBaseProtectedAuthenticatedApiRouteInputs &
           TAdditionalCustomRouteInputs,
       ) => Promise<boolean>)
     | undefined = undefined,
@@ -214,9 +218,10 @@ export function withAuthenticatedApiRouteGuard<
 
     const token_sources: PotentiallyValidTokenSource[] = [];
 
-    if (api_server_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+    // Load refresh token cookie for auth server
+    if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
       const refresh_token_cookie = req.cookies.get(
-        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
       );
       if (
         typeof refresh_token_cookie?.value === "string" &&
@@ -232,70 +237,86 @@ export function withAuthenticatedApiRouteGuard<
       }
     }
 
-    const access_token_cookie_name: string =
-      AccessTokenCookieName(api_server_id);
-    const access_token_cookie = req.cookies.get(access_token_cookie_name);
-    if (
-      typeof access_token_cookie?.value === "string" &&
-      access_token_cookie.value.length > 64 &&
-      getStringByteSize(access_token_cookie.value) <= MaximumBrowserCookieSize
-    ) {
-      let jwt_string: string | null = null;
-      try {
-        const parsed = JSON.parse(access_token_cookie.value);
-        if (parsed && typeof parsed.token === "string") {
-          jwt_string = parsed.token;
+    // Load access token cookie for current server
+    // Access token cookie is set with JSON.stringify() of an AccessToken object-- need to parse the .token property
+    await (async function addAccessTokenFromCookieToSourcesIfFound(): Promise<void> {
+      const access_token_cookie_name: string =
+        AccessTokenCookieName(api_server_id);
+      const access_token_cookie = req.cookies.get(access_token_cookie_name);
+      if (
+        typeof access_token_cookie?.value === "string" &&
+        access_token_cookie.value.length > 64 &&
+        getStringByteSize(access_token_cookie.value) <= MaximumBrowserCookieSize
+      ) {
+        let jwt_string: string | null = null;
+        try {
+          const parsed = await accessTokenDataSchema.safeParseAsync(
+            JSON.parse(access_token_cookie.value),
+          );
+          if (!parsed.success) {
+            throw parsed.error;
+          }
+          const parsed_access_token_object: AccessToken = parsed.data;
+          if (Date.now() < parsed_access_token_object.exp) {
+            jwt_string = parsed_access_token_object.token;
+          }
+        } catch {
+          // Raw JWT string fallback
+          jwt_string = access_token_cookie.value;
         }
-      } catch {
-        // Raw JWT string fallback
-        jwt_string = access_token_cookie.value;
+        if (jwt_string) {
+          token_sources.push({
+            sourceHint: `Access Token from cookie '${access_token_cookie_name}'`,
+            type: "access",
+            token: jwt_string,
+          });
+        }
       }
-      if (jwt_string) {
+    })();
+
+    // Load access token header for current server
+    (function addAccessTokenFromAuthorizationHeaderIfFound(): void {
+      if (
+        req.headers.has("Authorization") ||
+        req.headers.has("authorization")
+      ) {
+        const auth_header: string | null =
+          req.headers.get("Authorization") ?? req.headers.get("authorization");
+        if (!auth_header || typeof auth_header !== "string") {
+          throw new Error(
+            "Expected 'Authorization' to be non-empty string if set.",
+          );
+        }
+        if (!auth_header.startsWith("Bearer ")) {
+          throw new Error(
+            "Expected header 'Authorization' to start with 'Bearer '",
+          );
+        }
+        const access_token_from_header: string =
+          typeof auth_header === "string" && auth_header.startsWith("Bearer ")
+            ? auth_header.slice("Bearer ".length)
+            : "";
+        if (!access_token_from_header) {
+          throw new Error(`Header 'Authorization' appears to be empty!`);
+        }
         token_sources.push({
-          sourceHint: `Access Token from cookie '${access_token_cookie_name}'`,
+          sourceHint: "Access Token from Authorization Bearer header",
           type: "access",
-          token: jwt_string,
+          token: access_token_from_header satisfies string,
         });
       }
-    }
-
-    if (req.headers.has("Authorization") || req.headers.has("authorization")) {
-      const auth_header: string | null =
-        req.headers.get("Authorization") ?? req.headers.get("authorization");
-      if (!auth_header || typeof auth_header !== "string") {
-        throw new Error(
-          "Expected 'Authorization' to be non-empty string if set.",
-        );
-      }
-      if (!auth_header.startsWith("Bearer ")) {
-        throw new Error(
-          "Expected header 'Authorization' to start with 'Bearer '",
-        );
-      }
-      const access_token_from_header: string =
-        typeof auth_header === "string" && auth_header.startsWith("Bearer ")
-          ? auth_header.slice("Bearer ".length)
-          : "";
-      if (!access_token_from_header) {
-        throw new Error(`Header 'Authorization' appears to be empty!`);
-      }
-      token_sources.push({
-        sourceHint: "Access Token from Authorization Bearer header",
-        type: "access",
-        token: access_token_from_header satisfies string,
-      });
-    }
+    })();
 
     const route_guard_factory = new RouteGuardFactory({
       environment,
-      is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_ID,
       jwt_keys_manager,
     });
     const route_guard: IRouteGuard =
       await route_guard_factory.createGuardFromTokenSources(
         route_guard_type,
         token_sources,
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+        api_server_id,
       );
 
     if (!route_guard.user) {

@@ -7,7 +7,7 @@ import {
   getSchemavaultsApiServerId,
   getSchemavaultsClientApplicationId,
 } from "@schemavaults/auth-server-sdk";
-import AuthProvider from "./auth/auth-provider";
+import ClientLayout from "./client-layout";
 
 export const metadata: Metadata = {
   title: "SchemaVaults Auth Example Next.js Resource Server",
@@ -16,8 +16,6 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const environment = getAppEnvironment();
-
   return (
     <html
       lang="en"
@@ -37,18 +35,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           "no-scrollbar",
         ].join(" ")}
       >
-        <AuthProvider
-          environment={environment}
+        <ClientLayout
+          environment={getAppEnvironment()}
+          api_server_id={getSchemavaultsApiServerId()}
           app_id={getSchemavaultsClientApplicationId()}
-          default_audiences={[getSchemavaultsApiServerId()]}
-          authed_on_unauthed_redirect_uri="/account"
-          unauthed_on_authed_redirect_uri="/auth/login"
-          successful_logout_redirect_uri="/"
-          successful_authentication_redirect_uri="/account"
-          authorize_uri="/auth/authorize"
         >
           {children}
-        </AuthProvider>
+        </ClientLayout>
       </body>
     </html>
   );

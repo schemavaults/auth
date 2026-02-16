@@ -4,6 +4,7 @@ import {
   SchemaVaultsAppRegistry,
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
+import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import {
   type AppId,
   appIdSchema,
@@ -43,16 +44,50 @@ export async function POST_create_app_domain(
         console.log(`[/api/apps/${app_id}/domains] POST request received`);
       }
 
-      if (!user.admin) {
+      let appRegistry: SchemaVaultsAppRegistry;
+      try {
+        appRegistry = new SchemaVaultsAppRegistry(dbh.db);
+      } catch (e: unknown) {
+        console.error(e);
         return NextResponse.json(
           {
             success: false,
-            message: "You must be an admin to add a domain to an application",
+            message: "Failed to connect to app registry",
           } satisfies ResourceCreationResponse,
           {
-            status: 403,
+            status: 500,
           },
         );
+      }
+
+      // Authorization: allow global admins, or org owners/admins for apps belonging to their org
+      if (!user.admin) {
+        let authorized = false;
+        try {
+          const appData = await appRegistry.getApp(app_id);
+          if (appData && appData.owner_organization_id) {
+            const orgRegistry = new OrganizationsRegistry(dbh.db);
+            const memberships = await orgRegistry.listUserOrganizationMemberships(user.uid, false);
+            const membership = memberships.find(m => m.organization_id === appData.owner_organization_id);
+            if (membership && (membership.role === "owner" || membership.role === "admin")) {
+              authorized = true;
+            }
+          }
+        } catch (e: unknown) {
+          console.error("Failed to check org membership for app domain creation: ", e);
+        }
+
+        if (!authorized) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "You must be an admin or organization owner to add a domain to an application",
+            } satisfies ResourceCreationResponse,
+            {
+              status: 403,
+            },
+          );
+        }
       }
 
       let newResource: SchemaVaultsAppDomainRef;
@@ -78,22 +113,6 @@ export async function POST_create_app_domain(
           } satisfies ResourceCreationResponse,
           {
             status: 400,
-          },
-        );
-      }
-
-      let appRegistry: SchemaVaultsAppRegistry;
-      try {
-        appRegistry = new SchemaVaultsAppRegistry(dbh.db);
-      } catch (e: unknown) {
-        console.error(e);
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Failed to connect to app registry",
-          } satisfies ResourceCreationResponse,
-          {
-            status: 500,
           },
         );
       }

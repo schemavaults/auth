@@ -1,17 +1,15 @@
 import "server-only";
 
-import { withAuthenticatedServerComponentRouteGuard } from "@schemavaults/auth-server-sdk";
+import {
+  getSchemavaultsApiServerId,
+  withAuthenticatedServerComponentRouteGuard,
+} from "@schemavaults/auth-server-sdk";
 import type { ReactElement } from "react";
+import ExampleAccountPageView from "./view";
 
 async function ExampleAccountPageContent(): Promise<ReactElement> {
   return (
-    <main>
-      <h1>Example Account Page</h1>
-      <p>
-        If you're seeing this it means that you were not redirected because you
-        are logged in!
-      </p>
-    </main>
+    <ExampleAccountPageView api_server_id={getSchemavaultsApiServerId()} />
   );
 }
 

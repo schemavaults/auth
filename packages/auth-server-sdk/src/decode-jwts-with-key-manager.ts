@@ -46,7 +46,7 @@ export async function decodeJWTsWithKeyManager(
 ): Promise<IDecodeJWTsWithKeyManagerOutput> {
   if (debug) {
     console.log(
-      `[RouteGuardFactory] Initializing route guard from token sources: `,
+      `[decodeJWTsWithKeyManager] Attempting to decode JWTs from token sources: `,
       token_sources,
     );
   }
@@ -72,7 +72,11 @@ export async function decodeJWTsWithKeyManager(
         jwt_audience,
         decodeJWT: async (opts): Promise<DecodeTokenFnOutput> => {
           if (debug) {
-            console.log(`[RouteGuardFactory] Attempting to decode JWT...`);
+            let debugMessage: string = `[decodeJWTsWithKeyManager] Attempting to decode ${opts.type} JWT for audience: '${opts.jwt_audience}'`;
+            if (opts.sourceHint) {
+              debugMessage += ` (Source: '${opts.sourceHint}')`;
+            }
+            console.log(debugMessage);
           }
 
           let keyset_id: string;

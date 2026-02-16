@@ -56,6 +56,7 @@ COPY --chown=bun:bun packages/auth-server-sdk/package.json packages/auth-server-
 COPY --chown=bun:bun packages/auth-server-sdk/tsconfig.json packages/auth-server-sdk/tsconfig.json
 COPY --chown=bun:bun packages/auth-server-sdk/eslint.config.cjs packages/auth-server-sdk/eslint.config.cjs
 COPY --chown=bun:bun packages/auth-server-sdk/copy-codegen-templates.sh packages/auth-server-sdk/copy-codegen-templates.sh
+COPY --chown=bun:bun packages/auth-server-sdk/prepare-cli.sh packages/auth-server-sdk/prepare-cli.sh
 
 # @schemavaults/auth-ui
 COPY --chown=bun:bun packages/auth-ui/package.json packages/auth-ui/package.json

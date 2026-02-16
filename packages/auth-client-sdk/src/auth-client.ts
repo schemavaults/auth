@@ -3,13 +3,11 @@
 
 import {
   PKCE_ProofKeyManager,
-  requestTokensResultSchema,
   type CodeVerifierWithDetails,
   type CodeChallengeWithDetails,
   type UserData,
   type AccessToken,
   type RefreshToken,
-  type RequestTokensResult,
   audienceSchema,
   type SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
@@ -36,8 +34,8 @@ import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
 import authenticateWithRedirect from "@/lib/authenticate-with-redirect";
 import checkIfAuthenticatedWithServer from "@/lib/check-if-authenticated-with-server";
 import exchangeAuthTokens from "@/lib/exchange-auth-tokens";
-import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "@/lib/assert-http-only-refresh-token-has-accompanying-expiry-marker";
-import handleSuccessfulAuthentication from "./lib/handle-successful-authentication";
+import handleSuccessfulAuthentication from "@/lib/handle-successful-authentication";
+import handleSuccessfulExchangeAuthTokensResponse from "@/lib/handle-successful-exchange-auth-tokens-response";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
@@ -623,13 +621,17 @@ export class SchemaVaultsAuthClient
    * @example "For example, maybe send them to their account dashboard: `/account`."
    */
   public get successful_authentication_redirect_uri(): string {
-    const uri = this._successful_authentication_redirect_uri;
+    let uri: string | undefined = this._successful_authentication_redirect_uri;
     if (typeof uri !== "string" && typeof uri !== "undefined") {
       throw new Error("Unexpected data type for redirect uri");
     }
 
     if (!uri) {
       throw new Error("No successful authentication redirect URI set");
+    }
+
+    if (uri.startsWith("/")) {
+      uri = this.adapter.relativeUrlToAbsoluteUrl(uri);
     }
 
     const app_env: SchemaVaultsAppEnvironment = this.environment;
@@ -886,73 +888,13 @@ export class SchemaVaultsAuthClient
 
   private async handleSuccessfulExchangeAuthTokensResponse(
     tokens_response: unknown,
-  ): Promise<(RequestTokensResult & { success: true })["tokens"] & object> {
-    const parsed_tokens_data =
-      await requestTokensResultSchema.safeParseAsync(tokens_response);
-    if (!parsed_tokens_data.success) {
-      if (this.DEBUG) {
-        console.error(
-          "[SchemaVaultsAuthClient::handleSuccessfulExchangeAuthTokensResponse()] " +
-            "Failed to parse successful exchange auth tokens result: ",
-          parsed_tokens_data.error.errors,
-        );
-      }
-      throw new Error(
-        "Failed to parse successful exchange auth tokens result!",
-      );
-    }
-
-    const request_tokens_result: RequestTokensResult = parsed_tokens_data.data;
-
-    if (!request_tokens_result.success) {
-      throw new Error("Request tokens response has success === false");
-    }
-
-    const tokens: SuccessfullyGeneratedTokensRecord | undefined =
-      request_tokens_result.tokens;
-
-    if (!tokens) {
-      throw new Error("Response did not include any tokens");
-    }
-
-    if (!tokens.access) {
-      throw new Error("No access token was included in the tokens response");
-    }
-
-    if (this.DEBUG) {
-      console.log(
-        "[SchemaVaultsAuthClient] Successfully exchanged refresh token for new authentication token(s)",
-      );
-    }
-
-    if (tokens.access) {
-      this.storeMultipleAccessTokens(tokens.access);
-    }
-
-    if (tokens.refresh) {
-      if (
-        typeof tokens.refresh === "object" &&
-        tokens.refresh.type === "refresh"
-      ) {
-        this.storeRefreshToken(tokens.refresh);
-      } else if (
-        typeof tokens.refresh === "string" &&
-        tokens.refresh === "AS_HTTP_ONLY_COOKIE"
-      ) {
-        assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie(
-          this.adapter,
-        );
-        if (this.debug) {
-          console.log(
-            "[SchemaVaultsAuthClient] Detected HTTP-only cookie refresh token from exchange response.",
-          );
-        }
-      } else {
-        throw new TypeError("Invalid refresh token type");
-      }
-    }
-
-    return tokens;
+  ): Promise<SuccessfullyGeneratedTokensRecord> {
+    return await handleSuccessfulExchangeAuthTokensResponse({
+      tokens_response,
+      storeMultipleAccessTokens: this.storeMultipleAccessTokens.bind(this),
+      adapter: this.adapter,
+      debug: this.debug,
+    });
   }
 
   private async exchangeAuthTokens(
@@ -1081,5 +1023,14 @@ export class SchemaVaultsAuthClient
       auth_server_uri: this.auth_server_uri,
       client_app_id: this.app_id,
     });
+  }
+
+  public async sendAuthorizeClientApplicationRequest(
+    app_id: AppId,
+  ): Promise<void> {
+    const sendAuthorizeRequest = await import(
+      "@/lib/send-authorize-client-application-request"
+    ).then((mod) => mod.default);
+    return await sendAuthorizeRequest({ app_id, adapter: this.adapter });
   }
 }

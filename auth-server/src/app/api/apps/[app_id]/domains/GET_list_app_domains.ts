@@ -12,6 +12,8 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import isUserInOrganization from "@/lib/isUserInOrganization";
+import { type OrganizationID } from "@schemavaults/auth-common";
 
 export type ListAppDomainsResponse =
   | {
@@ -98,16 +100,26 @@ export async function GET_list_app_domains(
       }
 
       if (!app.public && !user.admin) {
-        console.error("Non-public apps are currently reserved for admins!");
-        return NextResponse.json(
-          {
-            success: false,
-            message: "You are not authorized to list domains for this app",
-          } satisfies ListAppDomainsResponse,
-          {
-            status: 403,
-          },
-        );
+        let authorized = false;
+        if (app.owner_organization_id) {
+          authorized = await isUserInOrganization(
+            user,
+            app.owner_organization_id as OrganizationID,
+            dbh.db,
+          );
+        }
+        if (!authorized) {
+          console.error("Non-public apps are currently reserved for admins!");
+          return NextResponse.json(
+            {
+              success: false,
+              message: "You are not authorized to list domains for this app",
+            } satisfies ListAppDomainsResponse,
+            {
+              status: 403,
+            },
+          );
+        }
       }
 
       try {
