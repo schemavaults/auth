@@ -6,6 +6,9 @@ import {
 export function isValidOnSuccessfulAuthenticateAction(
   on_successful_authenticate: unknown,
 ): on_successful_authenticate is OnSuccessfulAuthenticateAction {
+  if (typeof on_successful_authenticate !== 'string') {
+    return false;
+  }
   if (!on_successful_authenticate) {
     return false;
   } else if (

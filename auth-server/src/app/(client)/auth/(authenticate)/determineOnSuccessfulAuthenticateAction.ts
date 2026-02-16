@@ -9,6 +9,7 @@ import {
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 
 export interface IDetermineOnSuccessfulAuthenticateActionInputs {
+  dbh: ServerlessDatabase;
   searchParams: {
     [key: string]: string | string[] | undefined;
   };
@@ -21,6 +22,7 @@ export interface DetermineOnSuccessfulAuthenticateActionResult {
 }
 
 export async function determineOnSuccessfulAuthenticateActionMightThrow({
+  dbh,
   searchParams,
   debug,
 }: IDetermineOnSuccessfulAuthenticateActionInputs): Promise<DetermineOnSuccessfulAuthenticateActionResult> {
@@ -43,7 +45,8 @@ export async function determineOnSuccessfulAuthenticateActionMightThrow({
       searchParams.code_challenge_method ||
       searchParams.challenge_time
     ) {
-      throw new Error("Cannot pass PKCE params when app_id is not set");
+      console.warn("Received PKCE params when app_id is not set");
+      redirectWithError(400, 'bad_request');
     }
   } else {
     if (debug) {
@@ -54,40 +57,39 @@ export async function determineOnSuccessfulAuthenticateActionMightThrow({
     }
   }
 
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-
   let app: SchemaVaultsApp | undefined = undefined;
   if (
     on_successful_authenticate !== "account-page" &&
     typeof app_id === "string"
   ) {
+    let loadAppQuery: SchemaVaultsApp | null = null;
     try {
       const registry = new SchemaVaultsAppRegistry(dbh.db);
-      const loadAppQuery = await registry.getApp(app_id);
-      if (!loadAppQuery) {
-        if (debug) {
-          console.error(
-            "[SchemaVaultsAuthServer] Frontend client application not found with app_id: ",
-            app_id,
-          );
-        }
-        throw new Error(
-          "Frontend client application not found with that 'app_id'",
-        );
-      }
-      app = loadAppQuery;
-      if (debug) {
-        console.log("[SchemaVaultsAuthRouteServerRouter] App found:", app);
-      }
+      loadAppQuery = await registry.getApp(app_id);
     } catch (e: unknown) {
       console.error(
-        `[SchemaVaultsAuthRouteServerRouter] Failed to load app with ID "${app_id}".`,
+        `[SchemaVaultsAuthRouteServerRouter] Failed to load app with ID "${app_id}": `, e
       );
-      if (debug) console.error(e);
-      redirectWithError(404, "app_id_not_found");
+      redirectWithError(500, "internal_server_error") satisfies never;
     }
-    console.assert(!!app);
-    if (!app) throw new Error("Failed to load frontend application definition");
+
+    if (!loadAppQuery) {
+      if (debug) {
+        console.error(
+          "[SchemaVaultsAuthServer] Frontend client application not found with app_id: ",
+          app_id,
+        );
+      }
+      redirectWithError(404, "app_id_not_found") satisfies never;
+    }
+    app = loadAppQuery satisfies (SchemaVaultsApp | null) as SchemaVaultsApp;
+    if (debug) {
+      console.log("[SchemaVaultsAuthRouteServerRouter] App found:", app);
+    }
+
+    if (!app) {
+      throw new Error("Failed to load frontend application definition");
+    }
   } // app now contains the app that the user is trying to authenticate with
 
   if (app) {
@@ -106,6 +108,11 @@ export async function determineOnSuccessfulAuthenticateActionMightThrow({
     redirectWithError(500, "internal_server_error");
   }
 
+  if (typeof app_id === 'string' && !app) {
+    console.error("Expected 'app' to be truthy if an 'app_id' was supplied!")
+    redirectWithError(500, "internal_server_error");
+  }
+
   return {
     action: on_successful_authenticate satisfies OnSuccessfulAuthenticateAction,
     app: app ?? null,
@@ -115,15 +122,8 @@ export async function determineOnSuccessfulAuthenticateActionMightThrow({
 export async function determineOnSuccessfulAuthenticateAction(
   inputs: IDetermineOnSuccessfulAuthenticateActionInputs,
 ): Promise<DetermineOnSuccessfulAuthenticateActionResult> {
-  try {
-    return await determineOnSuccessfulAuthenticateActionMightThrow(inputs);
-  } catch (e: unknown) {
-    console.error(
-      "Error determining action to undertake when authentication is successful: ",
-      e,
-    );
-    redirectWithError(500, "internal_server_error");
-  }
+  // throws should be propagated to allow redirects
+  return await determineOnSuccessfulAuthenticateActionMightThrow(inputs);
 }
 
 export default determineOnSuccessfulAuthenticateAction;

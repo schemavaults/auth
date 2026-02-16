@@ -10,7 +10,7 @@ import { ThemedPageBackground } from "@schemavaults/ui";
 import type { ReactElement } from "react";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 
-export interface AppInfo {
+export interface PartialAppInfo {
   app_id: string;
   app_name: string;
   app_description: string;
@@ -21,7 +21,7 @@ export interface CredentialsFormViewProps {
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
   invite_code_required?: boolean;
   debug?: boolean;
-  app?: AppInfo | null;
+  app?: PartialAppInfo | null;
 }
 
 /**

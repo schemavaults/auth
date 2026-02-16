@@ -51,6 +51,7 @@ export function AppAuthorizationConsentScreen({
 
   function handleDeny(): void {
     router.push("/account");
+    return;
   }
 
   async function handleAuthorize(): Promise<void> {
