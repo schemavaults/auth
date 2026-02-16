@@ -43,15 +43,16 @@ import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { AuthFormData } from "./auth-form-data";
 import type { AuthFormType } from "./auth-form-type";
 import AuthFormSwapLink from "./swap-auth-type-link";
-import type { AppInfo } from "@/app/(client)/auth/(authenticate)/LoginOrRegisterForm";
+import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { AppAuthorizationConsentScreen } from "@/components/AppAuthorizationConsentScreen";
+
 
 interface AuthFormProps<T extends "login" | "register">
   extends AuthFormType<T> {
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
   invite_code_required?: boolean;
   debug?: boolean;
-  app?: AppInfo | null;
+  app?: PartialAppInfo | null;
 }
 
 function AuthFormCardTitle<T extends "login" | "register">({

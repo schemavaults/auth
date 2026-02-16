@@ -16,7 +16,7 @@ import {
 } from "@/lib/authentication_outcome_type";
 import type { useRouter } from "next/navigation";
 import { performPostAuthRedirect } from "./perform-post-auth-redirect";
-import type { AppInfo } from "@/app/(client)/auth/(authenticate)/LoginOrRegisterForm";
+import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { isHardcodedAppId } from "@schemavaults/app-definitions";
 
 export interface PendingAuthorizationState {
@@ -37,7 +37,7 @@ interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
   router: ReturnType<typeof useRouter>;
   env: SchemaVaultsAppEnvironment;
   debug?: boolean;
-  app?: AppInfo | null;
+  app?: PartialAppInfo | null;
   onAppAuthorizationNeeded?: (state: PendingAuthorizationState) => void;
 }
 

@@ -9,12 +9,7 @@ import {
 import { ThemedPageBackground } from "@schemavaults/ui";
 import type { ReactElement } from "react";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
-
-export interface PartialAppInfo {
-  app_id: string;
-  app_name: string;
-  app_description: string;
-}
+import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 
 export interface CredentialsFormViewProps {
   type: AuthenticationOutcomeType;

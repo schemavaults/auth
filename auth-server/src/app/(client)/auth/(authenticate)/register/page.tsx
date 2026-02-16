@@ -16,7 +16,7 @@ import redirectWithError from "@/lib/redirect-with-error";
 import { ServerlessDatabase } from "@/lib/auth-db/serverless-database";
 import validateAppIdSearchParamOrRedirectWithError from "../validateAppIdSearchParamOrRedirectWithError";
 import AlreadyAuthenticatedOnLoginOrRegisterPage from "../AlreadyAuthenticatedOnLoginOrRegisterPage";
-import toPartialAppInfo from "../toPartialAppInfo";
+import toPartialAppInfo from "@/lib/PartialAppInfo";
 
 export default async function RegisterPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
