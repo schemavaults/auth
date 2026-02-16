@@ -1,5 +1,3 @@
-import "server-only";
-
 import {
   type ApiServerId,
   SCHEMAVAULTS_AUTH_APP_ID,

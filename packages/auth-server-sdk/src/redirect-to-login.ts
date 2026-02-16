@@ -1,5 +1,3 @@
-import "server-only";
-
 export function redirectToLogin(
   redirect: (url: string) => never,
   next: string | undefined = undefined,
