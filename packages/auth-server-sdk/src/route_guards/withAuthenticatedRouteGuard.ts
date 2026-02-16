@@ -5,7 +5,6 @@ import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
-  getHardcodedClientWebAppDomain,
 } from "@schemavaults/app-definitions";
 import type {
   OrganizationID,
@@ -27,6 +26,7 @@ import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 import redirectToLogin from "@/redirect-to-login";
 import { redirect } from "next/navigation";
 import assertValidRouteGuardType from "./assertValidRouteGuardType";
+import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
 
 export interface IBaseProtectedAuthenticatedServerComponentPageProps {
   user: UserData;
@@ -58,10 +58,7 @@ export function initDefaultJwtKeyManagerForAuthenticatedRouteGuard(
   debug: boolean = process.env.NODE_ENV === "development",
 ): IJwtKeyManager {
   return new RemoteJwtKeyManager({
-    auth_server_uri: getHardcodedClientWebAppDomain(
-      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-      getAppEnvironment(),
-    ),
+    auth_server_uri: getSchemaVaultsAuthServerUri(),
     debug,
   });
 }
