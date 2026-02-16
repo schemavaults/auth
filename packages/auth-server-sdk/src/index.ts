@@ -22,12 +22,23 @@ export type { SchemaVaultsAuthErrorId } from "./auth-server-error-message-catalo
 import MaximumBrowserCookieSize from "./MaximumBrowserCookieSize";
 export { MaximumBrowserCookieSize };
 
+// API Server IDs
 export { getSchemavaultsApiServerId } from "./get-schemavaults-api-server-id";
 export type { ApiServerId } from "@schemavaults/app-definitions";
+export {
+  apiServerIdSchema,
+  hardcodedApiServerIdSchema,
+} from "@schemavaults/app-definitions";
 
+// Client Application IDs
 export { getSchemavaultsClientApplicationId } from "./get-schemavaults-client-application-id";
 export type { AppId } from "@schemavaults/app-definitions";
+export {
+  appIdSchema,
+  hardcodedAppIdSchema,
+} from "@schemavaults/app-definitions";
 
+// Cookie Names
 export {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
@@ -41,5 +52,34 @@ export type * from "./redirect-with-error";
 export { getAppEnvironment } from "./get-app-environment";
 export type { SchemaVaultsAppEnvironment } from "./get-app-environment";
 
+// Decode helper
 export { decodeJWTsWithKeyManager } from "./decode-jwts-with-key-manager";
 export type { IDecodeJWTsWithKeyManagerOutput } from "./decode-jwts-with-key-manager";
+
+// Re-export user data types
+export { userDataSchema } from "@schemavaults/auth-common";
+export type { UserData } from "@schemavaults/auth-common";
+
+// Re-export organization types
+export {
+  organizationIdSchema,
+  organizationDefinitionSchema,
+  isValidOrganizationID,
+  SCHEMAVAULTS_ORGANIZATION_ID,
+} from "@schemavaults/auth-common";
+export type {
+  OrganizationID,
+  OrganizationDefinition,
+} from "@schemavaults/auth-common";
+
+// Re-export app types
+export type {
+  SchemaVaultsApp,
+  SchemaVaultsAppDomainRef,
+} from "@schemavaults/app-definitions";
+
+// Re-export API types
+export type {
+  SchemaVaultsApiServerDefinition,
+  SchemaVaultsApiServerDomainRef,
+} from "@schemavaults/app-definitions";
