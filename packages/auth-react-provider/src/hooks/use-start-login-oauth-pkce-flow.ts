@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import useEffectIfAuthenticated from "@/hooks/use-effect-if-authenticated";
 import useAuth from "@/hooks/use-auth";
 import { useEffect } from "react";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
@@ -12,7 +11,7 @@ import useDebug from "@/hooks/use-debug";
 import useCheckIfAuthenticatedWithServer from "@/hooks/use-check-if-authenticated-with-server";
 import useIsAuthServer from "@/hooks/use-is-auth-server";
 import useDefaultAccessTokenAudiences from "./use-default-access-token-audiences";
-import { ApiServerId } from "@schemavaults/app-definitions";
+import type { ApiServerId } from "@schemavaults/app-definitions";
 
 export interface IUseStartLoginOauthPKCEFlowOpts {
   onError: (e: unknown) => void;
@@ -32,7 +31,7 @@ export function useStartLoginOauthPKCEFlow({
   const defaultAccessTokenAudiences: readonly ApiServerId[] | undefined =
     useDefaultAccessTokenAudiences();
 
-  useEffect(() => {
+  useEffect((): void | UnsubscribeFn => {
     if (isAuthServer) {
       throw new Error(
         "useStartLoginOauthPKCEFlow should not be run from @schemavaults/auth-server!",
