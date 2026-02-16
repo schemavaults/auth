@@ -5,10 +5,7 @@ import AuthenticationRequiredRouteGuard from "./authenticated";
 import type { IRouteGuard } from "./IRouteGuard";
 import { z } from "zod";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
-import {
-  type PotentiallyValidTokenSource,
-  type DecodeTokenFn,
-} from "@schemavaults/auth-common";
+import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import {
   type ApiServerId,
   apiServerIdSchema,
