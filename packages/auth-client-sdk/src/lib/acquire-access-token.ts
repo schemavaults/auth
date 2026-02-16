@@ -1,13 +1,17 @@
+// acquire-access-token.ts
+
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import {
-  audienceRefSchema,
   type SuccessfullyGeneratedTokensRecord,
   type AccessToken,
   type RefreshToken,
 } from "@schemavaults/auth-common";
 import isValidRefreshToken from "@/lib/isValidRefreshToken";
-import { ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
+import {
+  type ApiServerId,
+  apiServerIdSchema,
+} from "@schemavaults/app-definitions";
 
 export interface IAcquireAccessTokenFnOptions {
   opts: AcquireAccessTokenOptions;
