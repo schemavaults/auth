@@ -5,8 +5,8 @@ import {
   withAuthenticatedApiRouteGuard as _withAuthenticatedApiRouteGuard,
   type TProtectedAuthenticatedPageServerComponent,
   type TProtectedAuthenticatedApiRoute,
-  IBaseProtectedAuthenticatedServerComponentPageProps,
-  IBaseProtectedAdminApiRouteInputs,
+  type IBaseProtectedAuthenticatedServerComponentPageProps,
+  type IBaseProtectedAdminApiRouteInputs,
 } from "@schemavaults/auth-server-sdk/route_guards";
 import { ServerlessDatabase } from "./auth-db";
 import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
