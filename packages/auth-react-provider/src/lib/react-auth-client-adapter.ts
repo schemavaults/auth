@@ -4,7 +4,6 @@ import {
   type AppId,
   appIdSchema,
   getAuthServerUri,
-  getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -78,10 +77,7 @@ export class ReactAuthClientSdkAdapter
     this._uuid_generator = uuid;
     this.auth_server_uri = opts.auth_server_uri
       ? opts.auth_server_uri
-      : getHardcodedClientWebAppDomain(
-          SCHEMAVAULTS_AUTH_APP_ID,
-          this.environment,
-        );
+      : getAuthServerUri();
     if (!appIdSchema.safeParse(opts.client_app_id).success) {
       throw new TypeError(
         "Invalid 'client_app_id' to initialize ReactAuthClientSdkAdapter with!",
@@ -579,8 +575,9 @@ export class ReactAuthClientSdkAdapter
    */
   public hasHttpOnlyRefreshToken(): boolean {
     if (this.doesSupportHttpOnlyRefreshToken() satisfies boolean) {
-      const expiry_cookie_key: string =
-        RefreshTokenExpiryCookieName(this.client_app_id);
+      const expiry_cookie_key: string = RefreshTokenExpiryCookieName(
+        this.client_app_id,
+      );
       const refreshTokenExpiryStr: string | undefined | null = getCookie(
         expiry_cookie_key,
         {
