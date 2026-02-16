@@ -1,3 +1,5 @@
+// route-guard-factory.ts
+
 import AdminRequiredRouteGuard from "./admin";
 import AuthenticationRequiredRouteGuard from "./authenticated";
 import type { IRouteGuard } from "./IRouteGuard";
@@ -19,8 +21,6 @@ import {
 import {
   apiServerIdSchema,
   getAppEnvironment,
-  getHardcodedClientWebAppDomain,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import loadJwtDecodingKeys, {
@@ -32,6 +32,8 @@ import {
   JwtDecodingKeysetNotFoundError,
 } from "@/JwtKeyManager";
 import isValidUuid from "@/is-valid-uuid";
+import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
+import decodeJWTsWithKeyManager from "@/decode-jwts-with-key-manager";
 
 export interface RouteGuardFactoryInitOptions {
   environment: SchemaVaultsAppEnvironment;
@@ -88,10 +90,7 @@ export class RouteGuardFactory {
         );
       }
       this.jwt_keys_manager = new RemoteJwtKeyManager({
-        auth_server_uri: getHardcodedClientWebAppDomain(
-          SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-          environment,
-        ),
+        auth_server_uri: getSchemaVaultsAuthServerUri(),
         debug: this.debug,
       });
     }
@@ -129,9 +128,7 @@ export class RouteGuardFactory {
     token_sources: readonly PotentiallyValidTokenSource[],
     jwt_audience: string,
   ): Promise<IRouteGuard> {
-    const environment: SchemaVaultsAppEnvironment = this.environment;
-    const debug: boolean = this.debug;
-    if (debug) {
+    if (this.debug) {
       console.log(
         `[RouteGuardFactory] Initializing route guard from token sources: `,
         token_sources,
@@ -144,118 +141,19 @@ export class RouteGuardFactory {
       );
     }
 
-    const keys_manager: IJwtKeyManager = this.jwt_keys_manager;
-    if (!keys_manager) {
+    if (!this.jwt_keys_manager) {
       throw new Error(
         "Failed to resolve reference to JWT keys manager to operate this route guard!",
       );
     }
 
-    let user: UserData | null = null;
-    let user_organizations: readonly OrganizationID[] | null = null;
-    try {
-      user = await decodeJWTs(
-        {
-          token_sources,
-          jwt_audience,
-          decodeJWT: async (opts): Promise<DecodeTokenFnOutput> => {
-            if (environment !== "production") {
-              console.log(`[RouteGuardFactory] Attempting to decode JWT...`);
-            }
-
-            let keyset_id: string;
-            try {
-              keyset_id = getKeysetIdFromToken(opts.token satisfies string);
-            } catch (e: unknown) {
-              console.error("Failed to load 'keyset_id' from auth token: ", e);
-              throw new Error("Failed to load 'keyset_id' from auth token!");
-            }
-
-            if (!keyset_id || !isValidUuid(keyset_id)) {
-              throw new TypeError(
-                "Expected 'keyset_id' from token to be a valid UUID!",
-              );
-            }
-
-            let decodingKeys: IDecodeAuthTokenKeys;
-            try {
-              decodingKeys = await loadJwtDecodingKeys({
-                keyset_id,
-                keys_manager,
-                audience_id: jwt_audience,
-                debug,
-              });
-              if (decodingKeys.keyset_id !== keyset_id) {
-                throw new Error(
-                  "Mismatch between the keyset ID of result and what was requested!",
-                );
-              }
-            } catch (e: unknown) {
-              console.warn(
-                `[createGuardFromTokenSources] Failed to load keys associated with token-associated keyset '${keyset_id}': `,
-                e,
-              );
-              if (e instanceof JwtDecodingKeysetNotFoundError) {
-                throw e;
-              }
-              throw new Error(
-                "Failed to load keys associated with token-associated keyset!",
-              );
-            }
-            const { decryption_key, verification_key } = decodingKeys;
-
-            try {
-              return (await decodeSchemavaultsJwt({
-                jwt: opts.token,
-                type: opts.type,
-                audience: opts.jwt_audience,
-                decryption_key,
-                verification_key,
-                keyset_id,
-                env: environment,
-              })) satisfies CustomJWTPayload;
-            } catch (e: unknown) {
-              console.error("Failed to decode JSON web token: ", e);
-              throw new Error("Failed to decode JSON web token!");
-            }
-          },
-        },
-        debug,
-      );
-      if (!("orgs" in user) || !Array.isArray(user.orgs)) {
-        throw new Error("No 'orgs' field in decoded user object!");
-      }
-
-      if (
-        user.orgs.every(
-          (org_id) =>
-            typeof org_id === "string" &&
-            organizationIdSchema.safeParse(org_id).success,
-        )
-      ) {
-        user_organizations = user.orgs;
-      }
-
-      if (!Array.isArray(user_organizations)) {
-        throw new TypeError(
-          "Failed to load user organizations associated with user from token!",
-        );
-      }
-    } catch (e: unknown) {
-      if (e instanceof JwtDecodingKeysetNotFoundError) {
-        console.warn(
-          `[createdGuardFromTokenSources] Failed to load keyset '${e.keyset_id}' associated with provided token: `,
-          e,
-        );
-      } else {
-        console.warn(
-          "No-op error creating route-guard... Failed to decode JWTs, setting user = null",
-          e,
-        );
-      }
-      user = null;
-      user_organizations = null;
-    }
+    const { user, user_organizations } = await decodeJWTsWithKeyManager(
+      this.jwt_keys_manager,
+      token_sources,
+      jwt_audience,
+      this.environment,
+      this.debug,
+    );
 
     const init_opts: InitRouteGuardCheckOptions = {
       user,
@@ -270,7 +168,7 @@ export class RouteGuardFactory {
       );
     }
 
-    return this.createGuardFromOptions(type, init_opts);
+    return this.createGuardFromOptions(type, init_opts) satisfies IRouteGuard;
   }
 
   public async createGuardFromAuthHeader(

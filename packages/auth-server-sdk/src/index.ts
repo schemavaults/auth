@@ -40,3 +40,6 @@ export type * from "./redirect-with-error";
 
 export { getAppEnvironment } from "./get-app-environment";
 export type { SchemaVaultsAppEnvironment } from "./get-app-environment";
+
+export { decodeJWTsWithKeyManager } from "./decode-jwts-with-key-manager";
+export type { IDecodeJWTsWithKeyManagerOutput } from "./decode-jwts-with-key-manager";

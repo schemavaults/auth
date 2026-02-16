@@ -1,3 +1,5 @@
+// base-route-guard.ts
+
 import type { OrganizationID, UserData } from "@schemavaults/auth-common";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
