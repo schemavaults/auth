@@ -3,8 +3,6 @@ import type {
   SchemaVaultsAppEnvironment,
   useAuth,
 } from "@schemavaults/auth-react-provider";
-import { successRedirect } from "./success-redirect";
-import { closeWindowRedirect } from "./close-window-redirect";
 import { useToast } from "@schemavaults/ui";
 import type { AuthFormData } from "./auth-form-data";
 import {
@@ -17,6 +15,16 @@ import {
   onSuccessfulAuthenticateActionSchema,
 } from "@/lib/authentication_outcome_type";
 import type { useRouter } from "next/navigation";
+import { performPostAuthRedirect } from "./perform-post-auth-redirect";
+import type { AppInfo } from "@/app/(client)/auth/(authenticate)/LoginOrRegisterForm";
+import { isHardcodedAppId } from "@schemavaults/app-definitions";
+
+export interface PendingAuthorizationState {
+  authorization_code: string;
+  code_challenge: CodeChallengeWithDetails;
+  code_verifier: CodeVerifierWithDetails;
+  redirect_uri: string | null | undefined;
+}
 
 interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
   values: AuthFormData<T>;
@@ -29,9 +37,9 @@ interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
   router: ReturnType<typeof useRouter>;
   env: SchemaVaultsAppEnvironment;
   debug?: boolean;
+  app?: AppInfo | null;
+  onAppAuthorizationNeeded?: (state: PendingAuthorizationState) => void;
 }
-
-const CLOSE_WINDOW_PAGE_HREF = "/close_window" as const satisfies string;
 
 export async function handleAuthFormSubmit<T extends "login" | "register">(
   opts: HandleAuthFormSubmitOptions<T>,
@@ -194,6 +202,24 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     return;
   }
 
+  // Check if the app requires authorization before redirect
+  if (
+    opts.app &&
+    !isHardcodedAppId(opts.app.app_id) &&
+    onSuccessfulAuthenticate !== "account-page" &&
+    opts.onAppAuthorizationNeeded
+  ) {
+    const redirect_uri: string | null | undefined =
+      searchParams.get("redirect_uri");
+    opts.onAppAuthorizationNeeded({
+      authorization_code,
+      code_challenge,
+      code_verifier,
+      redirect_uri,
+    });
+    return;
+  }
+
   const toast_title: string =
     type === "login" ? "Successfully logged in!" : "Successfully registered!";
 
@@ -242,118 +268,16 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   const redirect_uri: string | null | undefined =
     searchParams.get("redirect_uri");
 
-  switch (onSuccessfulAuthenticate) {
-    case "account-page":
-      if (env !== "production") {
-        console.log("[AuthForm] Redirecting to account page");
-      }
-
-      await authClient.handleSuccessfulAuthentication(
-        authorization_code,
-        code_challenge.challenge_time,
-        code_verifier.code_verifier,
-      );
-
-      router.push("/account");
-      break;
-    case "redirect-with-authorization-code":
-      if (env !== "production") {
-        console.log(
-          "[AuthForm] Redirecting back to client with authorization code...",
-        );
-      }
-      // Go to redirect_uri with the authorization code and the challenge_time
-
-      if (!redirect_uri) {
-        throw new Error("No redirect URI provided for redirect flow");
-      }
-      try {
-        successRedirect({
-          redirect_uri,
-          authorization_code,
-          code_challenge,
-          app_environment: env,
-        });
-      } catch (e: unknown) {
-        console.error(e);
-        toast({
-          variant: "destructive",
-          title: "Failed to redirect back to client",
-          description:
-            "An error occurred while trying to redirect back to the requesting app",
-        });
-      }
-      break;
-    case "send-authorization-code-to-native-app-then-close":
-      if (env !== "production") {
-        console.log("[AuthForm] Sending authorization code to native-app client...");
-      }
-
-      if (!redirect_uri) {
-        throw new Error(
-          "No redirect URI provided for authorization code transfer flow",
-        );
-      }
-
-      try {
-        const post_code_to_client_response_promise = fetch(redirect_uri, {
-          method: "POST",
-          headers: new Headers({
-            "Content-Type": "application/json",
-          }),
-          body: JSON.stringify({
-            code_challenge_method: code_challenge.code_challenge_method,
-            challenge_time: code_challenge.challenge_time.toString(),
-            authorization_code,
-          }),
-        });
-
-        // Prefetch close window page
-        try {
-          if (debug) {
-            console.log(
-              `[handleAuthFormSubmit] Prefetching close window page: ${CLOSE_WINDOW_PAGE_HREF}`,
-            );
-          }
-          router.prefetch(CLOSE_WINDOW_PAGE_HREF);
-        } catch (e: unknown) {
-          console.warn("Failed to prefetch close window page: ", e);
-          /** no-op */
-        }
-
-        const post_code_to_client_response =
-          await post_code_to_client_response_promise;
-        if (post_code_to_client_response.status !== 200) {
-          throw new Error("Non-200 status code on response");
-        }
-
-        if (debug) {
-          console.log(
-            `[handleAuthFormSubmit] Sending to close window page: ${CLOSE_WINDOW_PAGE_HREF}`,
-          );
-        }
-
-        let auth_client: ISchemaVaultsAuthClient | null = null;
-        if (auth.ready) auth_client = auth.client.current;
-        if (!auth_client) {
-          return;
-        } else {
-          closeWindowRedirect(auth_client);
-          return;
-        }
-      } catch (e: unknown) {
-        console.error(
-          "Failed to send authorization code to frontend client",
-          e,
-        );
-        throw new Error("Failed to send authorization code to frontend client");
-      }
-    default:
-      if (debug) {
-        console.error(
-          `Invalid onSuccessfulAuthenticate action: "${onSuccessfulAuthenticate}"`,
-        );
-      }
-      throw new Error("Invalid onSuccessfulAuthenticate action");
-  }
+  await performPostAuthRedirect({
+    onSuccessfulAuthenticate,
+    authorization_code,
+    code_challenge,
+    code_verifier,
+    redirect_uri,
+    auth,
+    router,
+    toast,
+    env,
+    debug,
+  });
 }

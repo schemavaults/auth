@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement, useTransition } from "react";
+import { type ReactElement, useState, useTransition } from "react";
 import {
   emailCredentialsSchema,
   emailRegistrationCredentialsSchema,
@@ -38,16 +38,20 @@ import {
   useAuth,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/auth-react-provider";
-import { handleAuthFormSubmit } from "./handle-auth-form-submit";
+import { handleAuthFormSubmit, type PendingAuthorizationState } from "./handle-auth-form-submit";
+import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { AuthFormData } from "./auth-form-data";
 import type { AuthFormType } from "./auth-form-type";
 import AuthFormSwapLink from "./swap-auth-type-link";
+import type { AppInfo } from "@/app/(client)/auth/(authenticate)/LoginOrRegisterForm";
+import { AppAuthorizationConsentScreen } from "@/components/AppAuthorizationConsentScreen";
 
 interface AuthFormProps<T extends "login" | "register">
   extends AuthFormType<T> {
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
   invite_code_required?: boolean;
   debug?: boolean;
+  app?: AppInfo | null;
 }
 
 function AuthFormCardTitle<T extends "login" | "register">({
@@ -119,6 +123,55 @@ export function AuthForm<T extends "login" | "register">({
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const [pendingAuthorization, setPendingAuthorization] = useState<PendingAuthorizationState | null>(null);
+
+  async function resumeRedirectAfterAuthorization(): Promise<void> {
+    if (!pendingAuthorization) return;
+
+    toast({
+      title: type === "login" ? "Successfully logged in!" : "Successfully registered!",
+      description: "Redirecting you back to the requesting app...",
+    });
+
+    try {
+      await performPostAuthRedirect({
+        onSuccessfulAuthenticate,
+        authorization_code: pendingAuthorization.authorization_code,
+        code_challenge: pendingAuthorization.code_challenge,
+        code_verifier: pendingAuthorization.code_verifier,
+        redirect_uri: pendingAuthorization.redirect_uri,
+        auth,
+        router,
+        toast,
+        env: appEnv,
+        debug,
+      });
+    } catch (e: unknown) {
+      console.error("[AuthForm] Error resuming redirect after authorization:", e);
+      toast({
+        variant: "destructive",
+        title: "Redirect failed",
+        description: "Failed to redirect back to the requesting app.",
+      });
+    }
+  }
+
+  // Show consent screen if pending authorization
+  if (pendingAuthorization && props.app) {
+    return (
+      <AppAuthorizationConsentScreen
+        app_id={props.app.app_id}
+        app_name={props.app.app_name}
+        app_description={props.app.app_description}
+        onSuccessfulAuthenticate={onSuccessfulAuthenticate}
+        mode="authorize-only"
+        onAuthorizationComplete={resumeRedirectAfterAuthorization}
+        pendingAuthState={pendingAuthorization}
+        debug={debug}
+      />
+    );
+  }
+
   async function onAuthFormSubmitValidValues(
     values: AuthFormData<"login" | "register">,
   ): Promise<void> {
@@ -140,7 +193,11 @@ export function AuthForm<T extends "login" | "register">({
         searchParams,
         router,
         env: appEnv,
-        debug
+        debug,
+        app: props.app,
+        onAppAuthorizationNeeded: (state: PendingAuthorizationState): void => {
+          setPendingAuthorization(state);
+        },
       });
       return;
     } catch (e: unknown) {

@@ -15,10 +15,15 @@ export interface IDetermineOnSuccessfulAuthenticateActionInputs {
   debug: boolean;
 }
 
+export interface DetermineOnSuccessfulAuthenticateActionResult {
+  action: OnSuccessfulAuthenticateAction;
+  app: SchemaVaultsApp | null;
+}
+
 export async function determineOnSuccessfulAuthenticateActionMightThrow({
   searchParams,
   debug,
-}: IDetermineOnSuccessfulAuthenticateActionInputs): Promise<OnSuccessfulAuthenticateAction> {
+}: IDetermineOnSuccessfulAuthenticateActionInputs): Promise<DetermineOnSuccessfulAuthenticateActionResult> {
   let on_successful_authenticate: OnSuccessfulAuthenticateAction | undefined =
     undefined;
 
@@ -101,12 +106,15 @@ export async function determineOnSuccessfulAuthenticateActionMightThrow({
     redirectWithError(500, "internal_server_error");
   }
 
-  return on_successful_authenticate satisfies OnSuccessfulAuthenticateAction;
+  return {
+    action: on_successful_authenticate satisfies OnSuccessfulAuthenticateAction,
+    app: app ?? null,
+  };
 }
 
 export async function determineOnSuccessfulAuthenticateAction(
   inputs: IDetermineOnSuccessfulAuthenticateActionInputs,
-): Promise<OnSuccessfulAuthenticateAction> {
+): Promise<DetermineOnSuccessfulAuthenticateActionResult> {
   try {
     return await determineOnSuccessfulAuthenticateActionMightThrow(inputs);
   } catch (e: unknown) {

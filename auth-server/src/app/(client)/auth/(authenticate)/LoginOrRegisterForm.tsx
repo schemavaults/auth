@@ -10,11 +10,18 @@ import { ThemedPageBackground } from "@schemavaults/ui";
 import type { ReactElement } from "react";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 
+export interface AppInfo {
+  app_id: string;
+  app_name: string;
+  app_description: string;
+}
+
 export interface CredentialsFormViewProps {
   type: AuthenticationOutcomeType;
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
   invite_code_required?: boolean;
   debug?: boolean;
+  app?: AppInfo | null;
 }
 
 /**
@@ -50,6 +57,7 @@ export function LoginOrRegisterForm({
         onSuccessfulAuthenticate={onSuccessfulAuthenticate}
         invite_code_required={typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true}
         debug={props.debug}
+        app={props.app}
       />
     </ThemedPageBackground>
   );
