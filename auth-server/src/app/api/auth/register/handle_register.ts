@@ -1,6 +1,6 @@
 import "server-only";
 
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import type {
   AuthenticateResult,
   InviteCode,
@@ -20,9 +20,12 @@ import {
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import shouldCreateAsSuperuser from "./shouldCreateAsSuperuser";
 import lookupInviteCode from "@/lib/auth-db/users/lookup-invite-code";
+import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 
 export interface HandleRegisterOptions {
   body: unknown;
+  req: NextRequest;
 }
 
 // POST body for /api/auth/register
@@ -51,6 +54,7 @@ function wasInviteCodeSupplied(
 
 export async function handleRegister({
   body,
+  req,
 }: HandleRegisterOptions, debug: boolean = false): Promise<NextResponse> {
   if (debug) {
     console.log(
@@ -351,8 +355,7 @@ export async function handleRegister({
     );
   }
 
-  // Handle register
-  return NextResponse.json(
+  const response = NextResponse.json(
     {
       success: true,
       message: "User created successfully",
@@ -362,6 +365,25 @@ export async function handleRegister({
       status: 200,
     },
   );
+
+  // Set auth-server refresh token cookie so the user is authenticated
+  // for subsequent requests (e.g. the OAuth2 consent screen).
+  // Wrapped in try/catch so registration never fails due to cookie-setting errors.
+  try {
+    const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
+    await setAuthServerRefreshTokenCookie({
+      uid: newUser.uid,
+      db: dbh.db,
+      req,
+      res: response,
+      environment: appEnv,
+      debug,
+    });
+  } catch (e: unknown) {
+    console.error("[handleRegister] Failed to set auth-server refresh token cookie (non-fatal):", e);
+  }
+
+  return response;
 }
 
 export default handleRegister;
