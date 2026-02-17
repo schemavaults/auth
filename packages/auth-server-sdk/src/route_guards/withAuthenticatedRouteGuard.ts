@@ -332,12 +332,6 @@ export function withAuthenticatedApiRouteGuard<
       }
     })();
 
-    const route_guard_factory = new RouteGuardFactory({
-      environment,
-      is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_ID,
-      jwt_keys_manager,
-    });
-
     if (token_sources.length === 0) {
       console.warn("No token sources found for API route request.");
       return json(
@@ -350,12 +344,15 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
-    const route_guard: IRouteGuard =
-      await route_guard_factory.createGuardFromTokenSources(
-        route_guard_type,
-        token_sources,
-        api_server_id,
-      );
+    const route_guard: IRouteGuard = await new RouteGuardFactory({
+      environment,
+      is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_ID,
+      jwt_keys_manager,
+    }).createGuardFromTokenSources(
+      route_guard_type,
+      token_sources,
+      api_server_id,
+    );
 
     if (!route_guard.user) {
       return json(
