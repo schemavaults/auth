@@ -26,6 +26,10 @@ import redirectToLogin from "@/redirect-to-login";
 import assertValidRouteGuardType from "./assertValidRouteGuardType";
 import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
 
+type RequestCookies = Awaited<
+  ReturnType<typeof import("next/headers").cookies>
+>;
+
 export interface IBaseProtectedAuthenticatedServerComponentPageProps {
   user: UserData;
   user_organizations: readonly OrganizationID[];
@@ -84,8 +88,18 @@ export async function withAuthenticatedServerComponentRouteGuard<
     import("next/headers").then((mod) => mod.cookies),
     import("next/navigation").then((mod) => mod.redirect),
   ]);
+  if (typeof loadCookies !== "function") {
+    throw new TypeError("Expected 'loadCookies' to be a function");
+  } else if (typeof redirect !== "function") {
+    throw new TypeError("Expected 'redirect' to be a function");
+  }
 
-  const cookies = await loadCookies();
+  const cookies: RequestCookies = await loadCookies();
+  if (!("get" in cookies) || typeof cookies.get !== "function") {
+    throw new TypeError(
+      "Expected 'cookies' to be a RequestCookies object with a 'get' method!",
+    );
+  }
 
   const token_sources: PotentiallyValidTokenSource[] = [];
 
@@ -122,7 +136,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     }
     if (jwt_string) {
       token_sources.push({
-        sourceHint: `Access Token from cookie '${access_token_cookie_name}'`,
+        sourceHint: `Access Token from cookie '${access_token_cookie_name satisfies string}'`,
         type: "access",
         token: jwt_string,
       });
@@ -219,6 +233,10 @@ export function withAuthenticatedApiRouteGuard<
     const json = await import("next/server")
       .then((mod) => mod.NextResponse)
       .then((mod) => mod.json);
+    if (typeof json !== "function") {
+      throw new TypeError("Expected 'json' to be a function!");
+    }
+
     const token_sources: PotentiallyValidTokenSource[] = [];
 
     // Load refresh token cookie for auth server
@@ -237,6 +255,10 @@ export function withAuthenticatedApiRouteGuard<
           type: "refresh",
           token: refresh_token_cookie.value satisfies string,
         });
+      } else {
+        console.warn(
+          "There does not appear to be a refresh token cookie for the auth server!",
+        );
       }
     }
 
@@ -315,6 +337,19 @@ export function withAuthenticatedApiRouteGuard<
       is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_ID,
       jwt_keys_manager,
     });
+
+    if (token_sources.length === 0) {
+      console.warn("No token sources found for API route request.");
+      return json(
+        {
+          success: false,
+          error: true,
+          message: "Authentication failed, no token sources found for request",
+        },
+        { status: 401 },
+      );
+    }
+
     const route_guard: IRouteGuard =
       await route_guard_factory.createGuardFromTokenSources(
         route_guard_type,
