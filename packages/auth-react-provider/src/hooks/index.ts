@@ -33,3 +33,5 @@ export { useAppId } from "./use-app-id";
 export { useIsAuthServer } from "./use-is-auth-server";
 
 export { useDefaultAccessTokenAudiences } from "./use-default-access-token-audiences";
+
+export { useAutoReacquireDefaultAccessTokens } from "./use-auto-reacquire-default-access-tokens";
