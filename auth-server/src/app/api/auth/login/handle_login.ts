@@ -9,14 +9,16 @@ import {
   emailCredentialsSchema,
   PKCE_ProofKeyManager,
 } from "@schemavaults/auth-common";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 
 interface HandleLoginOptions {
   body: unknown;
+  req: NextRequest;
   debug?: boolean;
 }
 
@@ -36,6 +38,7 @@ const loginBodySchema = z
 
 export async function handleLogin({
   body,
+  req,
 }: HandleLoginOptions): Promise<NextResponse> {
   const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
   const debug: boolean = shouldEnableDebug(appEnv);
@@ -161,7 +164,7 @@ export async function handleLogin({
     );
   }
 
-  return NextResponse.json(
+  const response = NextResponse.json(
     {
       success: true,
       message: "Login successful",
@@ -171,6 +174,24 @@ export async function handleLogin({
       status: 200,
     },
   );
+
+  // Set auth-server refresh token cookie so the user is authenticated
+  // for subsequent requests (e.g. the OAuth2 consent screen).
+  // Wrapped in try/catch so login never fails due to cookie-setting errors.
+  try {
+    await setAuthServerRefreshTokenCookie({
+      uid,
+      db: dbh.db,
+      req,
+      res: response,
+      environment: appEnv,
+      debug,
+    });
+  } catch (e: unknown) {
+    console.error("[handleLogin] Failed to set auth-server refresh token cookie (non-fatal):", e);
+  }
+
+  return response;
 }
 
 export default handleLogin

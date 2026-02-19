@@ -31,7 +31,7 @@ export async function POST(
   }
 
   try {
-    return await handleLogin({ body: body_json });
+    return await handleLogin({ body: body_json, req });
   } catch (e: unknown) {
     console.error(
       "Internal server error attempting to handle /api/auth/login request",

@@ -34,7 +34,7 @@ export async function POST(
   const debug: boolean = shouldEnableDebug(environment);
 
   try {
-    return await handleRegister({ body: body_json }, debug);
+    return await handleRegister({ body: body_json, req }, debug);
   } catch (e: unknown) {
     console.error(
       "Internal server error attempting to handle /api/auth/register request",
