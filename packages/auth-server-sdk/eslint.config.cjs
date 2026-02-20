@@ -27,6 +27,7 @@ module.exports = [
         ...globals.browser,
         ...globals.es2021,
         ...globals.node,
+        __SDK_VERSION__: "readonly",
       },
     },
 
