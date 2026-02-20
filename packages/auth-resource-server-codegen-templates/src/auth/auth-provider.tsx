@@ -18,6 +18,7 @@ export interface IAppAuthProviderProps extends PropsWithChildren {
   successful_logout_redirect_uri: string;
   successful_authentication_redirect_uri: string;
   authorize_uri: string;
+  autoreacquire_access_tokens?: boolean;
 }
 
 export default function AppAuthProvider({
@@ -45,6 +46,12 @@ export default function AppAuthProvider({
       router={router}
       path={path}
       default_audiences={props.default_audiences}
+      autoreacquire_access_tokens={
+        typeof props.autoreacquire_access_tokens === "boolean"
+          ? props.autoreacquire_access_tokens
+          : Array.isArray(props.default_audiences) &&
+            props.default_audiences.length > 0
+      }
       debug={debug}
       environment={environment}
       fetch={async (url: string, init: RequestInit | undefined) =>

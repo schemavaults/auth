@@ -141,7 +141,7 @@
     },
     "packages/auth-resource-server-codegen-templates": {
       "name": "@schemavaults/auth-resource-server-codegen-templates",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "devDependencies": {
         "@eslint/js": "9.39.1",
         "@schemavaults/auth-common": "workspace:*",
