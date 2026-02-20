@@ -39,6 +39,12 @@ import AppIdProvider from "@/subproviders/app-id-provider";
 import useAppId from "@/hooks/use-app-id";
 import DefaultAccessTokenAudiencesProvider from "@/subproviders/default-access-token-audiences-provider";
 import useDefaultAccessTokenAudiences from "@/hooks/use-default-access-token-audiences";
+import useAutoReacquireDefaultAccessTokens from "@/hooks/use-auto-reacquire-default-access-tokens";
+
+function AutoReacquireAccessTokens(): null {
+  useAutoReacquireDefaultAccessTokens();
+  return null;
+}
 
 export interface AuthSideEffectsProps extends SchemaVaultsAuthProviderProps {
   children: ReactNode;
@@ -319,6 +325,9 @@ function CoreSchemaVaultsAuthProvider(
             } satisfies SchemaVaultsAuthContextType)
       }
     >
+      {props.autoreacquire_access_tokens &&
+        Array.isArray(default_audiences) &&
+        default_audiences.length > 0 && <AutoReacquireAccessTokens />}
       <AuthProviderSideEffects {...props} ready={ready} debug={debug}>
         {props.children}
       </AuthProviderSideEffects>
