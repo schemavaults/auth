@@ -26,7 +26,7 @@ async function main() {
   }
 
   if (args.includes("--version") || args.includes("-v")) {
-    console.log(PACKAGE_NAME);
+    console.log(`${PACKAGE_NAME}@${__SDK_VERSION__ ?? "unknown"}`);
     return;
   }
 

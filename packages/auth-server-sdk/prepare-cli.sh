@@ -26,7 +26,9 @@ if [ -f "$CLI_FILE" ]; then
     rm "$CLI_FILE"
 fi
 
-bun run build-cli-for-nodejs
+PACKAGE_VERSION=$(node -p "require('./package.json').version")
+echo "[prepare-cli.sh] Detected package version: $PACKAGE_VERSION"
+bunx esbuild --bundle --platform=node --target=node18 --outfile=dist/cli.cjs --define:__SDK_VERSION__="\"$PACKAGE_VERSION\"" src/cli.ts
 
 if [ ! -f "$CLI_FILE" ]; then
     echo "Error: $CLI_FILE not found. The build should run successfully before preparing the CLI." >&2

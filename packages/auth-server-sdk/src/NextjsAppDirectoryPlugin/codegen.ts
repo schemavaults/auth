@@ -3,6 +3,7 @@ import { dirname } from "path";
 import resolveAppDirectory from "./resolve-app-directory";
 import { join } from "path";
 import resolveCodegenTemplatesDirectory from "./resolve-codegen-templates-directory";
+import { hasCodegenMarker, prependCodegenMarker } from "./codegen-marker";
 
 export interface IAuthResourceServerCodegenOptions {
   codegenTemplatesDirectory?: string;
@@ -32,13 +33,32 @@ const pagesToCreate: readonly ITemplateAuthPage[] = [
   },
 ];
 
+function isCodegenManagedFile(filePath: string): boolean {
+  const content = readFileSync(filePath, { encoding: "utf-8" });
+  const firstLine = content.split("\n")[0] ?? "";
+  return hasCodegenMarker(firstLine);
+}
+
 function createClientPages(appDirectory: string, templatesDir: string) {
   for (const page of pagesToCreate) {
     const destPath: string = join(appDirectory, page.app_dir_path, "page.tsx");
+    const relPath = `${page.app_dir_path}/page.tsx`;
+
     if (existsSync(destPath)) {
-      console.log(
-        ` - skipping '${page.app_dir_path}/page.tsx' (already exists)`,
-      );
+      if (isCodegenManagedFile(destPath)) {
+        const templatePath: string = join(templatesDir, page.codegen_template_path);
+        const templateContent: string = readFileSync(templatePath, {
+          encoding: "utf-8",
+        });
+        writeFileSync(destPath, prependCodegenMarker(templateContent), {
+          encoding: "utf-8",
+        });
+        console.log(` - updated '${relPath}'`);
+      } else {
+        console.log(
+          ` - skipping '${relPath}' (user-customized, no codegen marker)`,
+        );
+      }
       continue;
     }
 
@@ -51,8 +71,10 @@ function createClientPages(appDirectory: string, templatesDir: string) {
     const templateContent: string = readFileSync(templatePath, {
       encoding: "utf-8",
     });
-    writeFileSync(destPath, templateContent, { encoding: "utf-8" });
-    console.log(` - created '${page.app_dir_path}/page.tsx'`);
+    writeFileSync(destPath, prependCodegenMarker(templateContent), {
+      encoding: "utf-8",
+    });
+    console.log(` - created '${relPath}'`);
   }
 }
 
@@ -63,8 +85,22 @@ function createClientAuthProvider(appDirectory: string, templatesDir: string) {
     "auth-provider.tsx",
   );
   const destPath: string = join(appDirectory, "auth", "auth-provider.tsx");
+  const relPath = "auth/auth-provider.tsx";
+
   if (existsSync(destPath)) {
-    console.log(` - skipping 'auth/auth-provider.tsx' (already exists)`);
+    if (isCodegenManagedFile(destPath)) {
+      const templateContent: string = readFileSync(srcTemplatePath, {
+        encoding: "utf-8",
+      });
+      writeFileSync(destPath, prependCodegenMarker(templateContent), {
+        encoding: "utf-8",
+      });
+      console.log(` - updated '${relPath}'`);
+    } else {
+      console.log(
+        ` - skipping '${relPath}' (user-customized, no codegen marker)`,
+      );
+    }
     return;
   }
 
@@ -76,8 +112,10 @@ function createClientAuthProvider(appDirectory: string, templatesDir: string) {
   const templateContent: string = readFileSync(srcTemplatePath, {
     encoding: "utf-8",
   });
-  writeFileSync(destPath, templateContent, { encoding: "utf-8" });
-  console.log(` - created 'auth/auth-provider.tsx'`);
+  writeFileSync(destPath, prependCodegenMarker(templateContent), {
+    encoding: "utf-8",
+  });
+  console.log(` - created '${relPath}'`);
 }
 
 export default async function codegen(
