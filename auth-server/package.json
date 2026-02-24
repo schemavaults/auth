@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.20.9",
+  "version": "0.20.10",
   "private": true,
   "repository": {
     "type": "git",
@@ -12,7 +12,7 @@
     "next": "16.1.4",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "@schemavaults/ui": "0.13.13",
+    "@schemavaults/ui": "0.14.2",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-ui": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",

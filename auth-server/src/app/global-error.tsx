@@ -10,13 +10,13 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }): ReactElement {
-  void reset;
   return (
     <html>
       <body>
         <ErrorPage
           message="Something went wrong!"
           error={error}
+          reset={reset}
         />
       </body>
     </html>
