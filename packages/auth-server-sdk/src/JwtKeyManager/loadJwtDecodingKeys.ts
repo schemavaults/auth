@@ -1,5 +1,6 @@
 import isValidUuid from "@/is-valid-uuid";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
+import { isCacheableJwtKeyManager } from "./ICacheableJwtKeyManager";
 import {
   type ApiServerId,
   apiServerIdSchema,
@@ -159,10 +160,28 @@ export async function loadJwtDecodingKeys({
     );
   }
 
-  const jwt_decoding_keys: IDecodeAuthTokenKeys =
-    await loadJwtDecodingKeysFromJwks({ keyset_id, jwks }, debug);
-
-  return jwt_decoding_keys;
+  try {
+    return await loadJwtDecodingKeysFromJwks({ keyset_id, jwks }, debug);
+  } catch (e: unknown) {
+    // On keyset-not-found, invalidate cache and retry once with fresh JWKS
+    if (
+      e instanceof JwtDecodingKeysetNotFoundError &&
+      isCacheableJwtKeyManager(keys_manager)
+    ) {
+      if (debug) {
+        console.log(
+          `[loadJwtDecodingKeys] Keyset '${keyset_id}' not found in cached JWKS — invalidating cache and retrying`,
+        );
+      }
+      keys_manager.invalidateJwksCache(audience_id);
+      const freshJwks = await keys_manager.loadJwks(audience_id);
+      return await loadJwtDecodingKeysFromJwks(
+        { keyset_id, jwks: freshJwks },
+        debug,
+      );
+    }
+    throw e;
+  }
 }
 
 export default loadJwtDecodingKeys;
