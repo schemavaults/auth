@@ -6,7 +6,7 @@
     "url": "git+https://github.com/schemavaults/auth.git"
   },
   "devDependencies": {
-    "turbo": "2.8.9"
+    "turbo": "2.8.10"
   },
   "workspaces": [
     "./auth-server",
