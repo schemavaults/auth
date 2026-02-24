@@ -2,7 +2,7 @@ import type { IJwtKeyManager } from "@/JwtKeyManager/IJwtKeyManager";
 import type { JWKS } from "@schemavaults/jwt";
 import loadRemoteJwks from "./loadRemoteJwks";
 import {
-  ApiServerId,
+  type ApiServerId,
   apiServerIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
 } from "@schemavaults/app-definitions";
