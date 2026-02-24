@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-resource-server-codegen-templates",
   "description": "Templates used for building your own app that logs in via SchemaVaults Auth",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -27,7 +27,7 @@
     "react": "19.0.0",
     "@types/react": "19.0.0",
     "tsc-alias": "1.8.15",
-    "next": "16.1.4",
+    "next": "16.1.6",
     "eslint": "9.39.1",
     "@eslint/js": "9.39.1",
     "globals": "16.5.0",

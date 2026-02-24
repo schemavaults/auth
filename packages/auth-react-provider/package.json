@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-react-provider",
   "description": "React hooks and components to make using the @schemavaults/auth-client-sdk a breeze",
-  "version": "0.9.11",
+  "version": "0.9.12",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -23,7 +23,7 @@
     "swr": "2.3.4"
   },
   "peerDependencies": {
-    "next": "16.1.4",
+    "next": "16.1.6",
     "react": "19.0.0",
     "react-dom": "19.0.0"
   },
