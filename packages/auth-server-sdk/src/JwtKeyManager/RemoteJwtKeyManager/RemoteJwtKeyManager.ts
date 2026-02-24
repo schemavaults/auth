@@ -26,7 +26,7 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
   private readonly auth_server_uri: string;
   private readonly debug: boolean;
   private readonly cache_ttl_ms: number;
-  private readonly jwksCache: Map<string, IJwksCacheEntry> = new Map();
+  private static readonly jwksCache: Map<string, IJwksCacheEntry> = new Map();
 
   public constructor({
     auth_server_uri = getSchemaVaultsAuthServerUri(),
@@ -40,13 +40,18 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
         : DEFAULT_CACHE_TTL_MS;
   }
 
+  private cacheKey(audienceId: string): string {
+    return `${this.auth_server_uri}::${audienceId}`;
+  }
+
   public invalidateJwksCache(audienceId: string): void {
+    const key = this.cacheKey(audienceId);
     if (this.debug) {
       console.log(
-        `[RemoteJwtKeyManager] invalidateJwksCache(audience_id='${audienceId}')`,
+        `[RemoteJwtKeyManager] invalidateJwksCache(audience_id='${audienceId}', cacheKey='${key}')`,
       );
     }
-    this.jwksCache.delete(audienceId);
+    RemoteJwtKeyManager.jwksCache.delete(key);
   }
 
   public async loadJwks(audienceId: ApiServerId): Promise<JWKS> {
@@ -62,12 +67,13 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
       );
     }
 
-    // Check cache
-    const cached = this.jwksCache.get(audienceId);
+    // Check static cache (shared across all instances)
+    const key = this.cacheKey(audienceId);
+    const cached = RemoteJwtKeyManager.jwksCache.get(key);
     if (cached && Date.now() - cached.fetchedAt < this.cache_ttl_ms) {
       if (this.debug) {
         console.log(
-          `[RemoteJwtKeyManager] loadJwks(audience_id='${audienceId}') — cache hit`,
+          `[RemoteJwtKeyManager] loadJwks(audience_id='${audienceId}') — cache hit (cacheKey='${key}')`,
         );
       }
       return cached.jwks;
@@ -75,7 +81,7 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
 
     if (this.debug) {
       console.log(
-        `[RemoteJwtKeyManager] loadJwks(audience_id='${audienceId}') — fetching from remote`,
+        `[RemoteJwtKeyManager] loadJwks(audience_id='${audienceId}') — fetching from remote (cacheKey='${key}')`,
       );
     }
 
@@ -96,7 +102,7 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
       debug: this.debug,
     });
 
-    this.jwksCache.set(audienceId, { jwks, fetchedAt: Date.now() });
+    RemoteJwtKeyManager.jwksCache.set(key, { jwks, fetchedAt: Date.now() });
 
     return jwks;
   }
