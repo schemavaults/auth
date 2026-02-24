@@ -11,3 +11,6 @@ dist-types
 .env.production
 
 auth-client-sdk.tgz
+
+# Auto-generated
+src/generated/
