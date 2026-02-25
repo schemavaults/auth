@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-common",
   "description": "Types and utility functions for authentication and authorization",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -13,7 +13,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "zod": "3.23.8",
+    "zod": "3.25.8",
     "@schemavaults/app-definitions": "workspace:*",
     "crypto-js": "4.2.0"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-client-sdk",
   "description": "TypeScript SDK for interacting with SchemaVaults Auth server or protected resources",
-  "version": "0.9.10",
+  "version": "0.9.11",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -13,7 +13,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "zod": "3.23.8",
+    "zod": "3.25.8",
     "@schemavaults/auth-common": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*"
   },
