@@ -18,6 +18,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import { userDataSchema } from "@schemavaults/auth-common";
 
 const CORS_METHODS = "GET, OPTIONS";
 
@@ -91,17 +92,34 @@ export async function GET(
   }
 
   // Authenticate the request
-  const protected_route = await withAuthenticatedApiRouteGuard(
+  const protected_route: (req: NextRequest) => Promise<NextResponse> = await withAuthenticatedApiRouteGuard(
     async ({
       user,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      // Validate that user object contains only UserData fields.
+      // userDataSchema is .strict(), so this returns an error if JWT-internal fields leaked through.
+      const parseResult = await userDataSchema.safeParseAsync(user);
+
+      if (!parseResult.success) {
+        console.error(
+          `[/api/auth/whoami/${client_app_id}] User object failed validation:`,
+          parseResult.error,
+        );
+        return NextResponse.json(
+          { success: false, error: true, message: "Internal server error" },
+          { status: 500 },
+        );
+      }
+
+      const validatedUser = parseResult.data;
+
       if (debug) {
         console.log(
-          `[/api/auth/whoami/${client_app_id}] Returning user details for '${user.email}' (uid: '${user.uid}')`,
+          `[/api/auth/whoami/${client_app_id}] Returning user details for '${validatedUser.email}' (uid: '${validatedUser.uid}')`,
         );
       }
       return NextResponse.json(
-        { success: true, user },
+        { success: true, user: validatedUser },
         { status: 200 },
       );
     },
