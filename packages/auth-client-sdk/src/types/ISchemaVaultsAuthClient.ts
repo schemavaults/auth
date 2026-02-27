@@ -10,6 +10,7 @@ import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-opt
 import type { AppId } from "@schemavaults/app-definitions";
 
 export interface ISchemaVaultsAuthClient {
+  version: string;
   app_id: AppId;
   auth_server_uri: string;
 

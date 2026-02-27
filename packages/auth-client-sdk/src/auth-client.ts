@@ -31,6 +31,7 @@ import {
 } from "@schemavaults/app-definitions";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
 import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
+import { AUTH_CLIENT_SDK_VERSION } from "@/generated/version";
 import authenticateWithRedirect from "@/lib/authenticate-with-redirect";
 import checkIfAuthenticatedWithServer from "@/lib/check-if-authenticated-with-server";
 import exchangeAuthTokens from "@/lib/exchange-auth-tokens";
@@ -258,6 +259,13 @@ export class SchemaVaultsAuthClient
    */
   private get adapter(): ISchemaVaultsAuthClientAdapter {
     return this._adapter;
+  }
+
+  /**
+   * @description Getter for the package version of this @schemavaults/auth-client-sdk version
+   */
+  public get version(): string {
+    return AUTH_CLIENT_SDK_VERSION;
   }
 
   public get app_id(): AppId {
@@ -1035,9 +1043,9 @@ export class SchemaVaultsAuthClient
   }
 
   public async checkAppAuthorization(app_id: AppId): Promise<boolean> {
-    const checkAuth = await import(
-      "@/lib/check-app-authorization"
-    ).then((mod) => mod.default);
+    const checkAuth = await import("@/lib/check-app-authorization").then(
+      (mod) => mod.default,
+    );
     return await checkAuth({ app_id, adapter: this.adapter });
   }
 }
