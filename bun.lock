@@ -165,7 +165,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.21.0",
+      "version": "0.21.1",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -226,7 +226,7 @@
     },
     "packages/jwt": {
       "name": "@schemavaults/jwt",
-      "version": "0.6.31",
+      "version": "0.6.32",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
