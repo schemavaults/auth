@@ -4,6 +4,7 @@ export { getExpiryTime, getExpiryDurationString } from "./expiry";
 export { JWT_Factory } from "./jwt-factory";
 
 export type { CustomJWTPayload } from "./payload_data";
+export { customJwtPayloadToUserData } from "./custom-jwt-payload-to-user-data";
 
 export {
   JWT_Keys,
