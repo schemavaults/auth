@@ -136,13 +136,14 @@ export class RouteGuardFactory {
       );
     }
 
-    const { user, user_organizations } = await decodeJWTsWithKeyManager(
-      this.jwt_keys_manager,
-      token_sources,
-      jwt_audience,
-      this.environment,
-      this.debug,
-    );
+    const { user, user_organizations, jwt_payload } =
+      await decodeJWTsWithKeyManager(
+        this.jwt_keys_manager,
+        token_sources,
+        jwt_audience,
+        this.environment,
+        this.debug,
+      );
 
     if (user && !Array.isArray(user_organizations)) {
       throw new TypeError(
@@ -154,6 +155,7 @@ export class RouteGuardFactory {
       user,
       environment: getAppEnvironment(),
       user_organizations: user_organizations ?? [],
+      jwt_payload,
     };
 
     if (this.debug) {

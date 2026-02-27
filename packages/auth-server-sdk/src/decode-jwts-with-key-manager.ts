@@ -20,6 +20,7 @@ import {
 import getSchemavaultsApiServerId from "./get-schemavaults-api-server-id";
 import {
   type CustomJWTPayload,
+  customJwtPayloadToUserData,
   decodeJWT as decodeSchemavaultsJwt,
   getKeysetIdFromToken,
 } from "@schemavaults/jwt";
@@ -31,10 +32,12 @@ export type IDecodeJWTsWithKeyManagerOutput =
   | {
       user: UserData;
       user_organizations: readonly OrganizationID[];
+      jwt_payload: CustomJWTPayload;
     }
   | {
       user: null;
       user_organizations: null;
+      jwt_payload: null;
     };
 
 export async function decodeJWTsWithKeyManager(
@@ -63,10 +66,12 @@ export async function decodeJWTsWithKeyManager(
     );
   }
 
-  let user: UserData | null = null;
+  let decoded: CustomJWTPayload | null = null;
   let user_organizations: readonly OrganizationID[] | null = null;
   try {
-    user = await decodeJWTs(
+    // The callback returns CustomJWTPayload but DecodeTokenFn types it as UserData & { orgs }.
+    // Cast is safe because decodeSchemavaultsJwt always returns a full CustomJWTPayload.
+    decoded = (await decodeJWTs(
       {
         token_sources,
         jwt_audience,
@@ -137,19 +142,19 @@ export async function decodeJWTsWithKeyManager(
         },
       },
       debug,
-    );
-    if (!("orgs" in user) || !Array.isArray(user.orgs)) {
+    )) as CustomJWTPayload;
+    if (!("orgs" in decoded) || !Array.isArray(decoded.orgs)) {
       throw new Error("No 'orgs' field in decoded user object!");
     }
 
     if (
-      user.orgs.every(
+      decoded.orgs.every(
         (org_id) =>
           typeof org_id === "string" &&
           organizationIdSchema.safeParse(org_id).success,
       )
     ) {
-      user_organizations = user.orgs;
+      user_organizations = decoded.orgs;
     }
 
     if (!Array.isArray(user_organizations)) {
@@ -158,10 +163,13 @@ export async function decodeJWTsWithKeyManager(
       );
     }
 
+    const user: UserData = customJwtPayloadToUserData(decoded);
+
     return {
-      user: user satisfies UserData,
+      user,
       user_organizations:
         user_organizations satisfies readonly OrganizationID[],
+      jwt_payload: decoded,
     };
   } catch (e: unknown) {
     if (e instanceof JwtDecodingKeysetNotFoundError) {
@@ -180,6 +188,7 @@ export async function decodeJWTsWithKeyManager(
   return {
     user: null,
     user_organizations: null,
+    jwt_payload: null,
   };
 }
 
