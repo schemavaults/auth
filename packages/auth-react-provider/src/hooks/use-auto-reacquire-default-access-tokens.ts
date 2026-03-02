@@ -1,13 +1,22 @@
 "use client";
 
-import { AccessToken, accessTokenExpiry } from "@schemavaults/auth-common";
+import { type AccessToken, accessTokenExpiry } from "@schemavaults/auth-common";
 import { useEffect } from "react";
 import useAuth from "./use-auth";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import useDefaultAccessTokenAudiences from "./use-default-access-token-audiences";
-import { ApiServerId } from "@schemavaults/app-definitions";
+import type {
+  ApiServerId,
+  SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
+import useDebug from "@/hooks/use-debug";
+import useAppEnvironment from "@/hooks/use-app-environment";
 
-const ACCESS_TOKEN_VALID_DURATION: number = accessTokenExpiry;
+function secondsToMs(seconds: number): number {
+  return seconds * 1000;
+}
+
+const ACCESS_TOKEN_VALID_DURATION: number = secondsToMs(accessTokenExpiry);
 const REACQUIRE_INTERVAL: number = ACCESS_TOKEN_VALID_DURATION / 10;
 // when 30% left in duration or less, reqacuire
 const REACQUIRE_THRESHOLD: number = ACCESS_TOKEN_VALID_DURATION * 0.3;
@@ -15,12 +24,19 @@ const REACQUIRE_THRESHOLD: number = ACCESS_TOKEN_VALID_DURATION * 0.3;
 export function useAutoReacquireDefaultAccessTokens(): void {
   const authContext = useAuth();
   const defaultAccessTokenAudiences = useDefaultAccessTokenAudiences();
+  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
+  const debug: boolean = useDebug(environment);
 
   useEffect(() => {
     if (
       typeof defaultAccessTokenAudiences === "undefined" ||
       !Array.isArray(defaultAccessTokenAudiences)
     ) {
+      if (debug) {
+        console.warn(
+          "[useAutoReacquireDefaultAccessTokens] Default access token audiences not set.",
+        );
+      }
       return;
     }
 
@@ -32,17 +48,38 @@ export function useAutoReacquireDefaultAccessTokens(): void {
     async function reacquireAccessTokenIfNearExpiry(
       audience: ApiServerId,
     ): Promise<AccessToken | null> {
+      if (debug) {
+        console.log(
+          `[useAutoReacquireDefaultAccessTokens] reacquireAccessTokenIfNearExpiry(audience="${audience}")`,
+        );
+      }
+
       const existingAccessToken: AccessToken | null =
         auth.getAccessTokenFromCache(audience);
       if (!existingAccessToken) {
+        if (debug) {
+          console.warn(
+            `[useAutoReacquireDefaultAccessTokens] No existing access token for audience "${audience}" found!`,
+          );
+        }
         return null;
       }
       const timeUntilExpiry: number = existingAccessToken.exp - Date.now();
       if (timeUntilExpiry <= 0) {
         // expired
+        if (debug) {
+          console.warn(
+            `[useAutoReacquireDefaultAccessTokens] Existing access token for audience "${audience}" expired!`,
+          );
+        }
         return null;
       }
       if (timeUntilExpiry < REACQUIRE_THRESHOLD) {
+        if (debug) {
+          console.log(
+            `[useAutoReacquireDefaultAccessTokens] Attempting to acquire fresh access token for audience "${audience}"! Existing one is near expiration...`,
+          );
+        }
         return await auth.acquireAccessToken({
           audience,
           ensure_fresh: true,
@@ -64,6 +101,14 @@ export function useAutoReacquireDefaultAccessTokens(): void {
         defaultAccessTokenAudiences.map((audience) =>
           reacquireAccessTokenIfNearExpiry(audience),
         ),
+      );
+      return;
+    } // onTimer()
+
+    if (debug) {
+      console.log(
+        "[useAutoReacquireDefaultAccessTokens] Starting timer with interval (ms): ",
+        REACQUIRE_INTERVAL,
       );
     }
 

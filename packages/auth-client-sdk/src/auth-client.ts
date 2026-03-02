@@ -712,13 +712,13 @@ export class SchemaVaultsAuthClient
   public getAccessTokenFromCache(token_id: string): AccessToken | null {
     if (this.DEBUG) {
       console.log(
-        `[SchemaVaultsAuthClient] Getting access token with ID "${token_id}" via adapter...`,
+        `[SchemaVaultsAuthClient::getAccessTokenFromCache] Getting access token with ID "${token_id}" via adapter...`,
       );
     }
     const token: AccessToken | null = this.adapter.getAccessToken(token_id);
     if (this.DEBUG && !token) {
       console.warn(
-        `[SchemaVaultsAuthClient] Cache lookup failed for access token with ID "${token_id}" via adapter...`,
+        `[SchemaVaultsAuthClient::getAccessTokenFromCache] Cache lookup failed for access token with ID "${token_id}" via adapter...`,
       );
     }
     return token;

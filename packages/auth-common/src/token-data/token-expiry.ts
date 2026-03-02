@@ -6,10 +6,14 @@ const oneHour: number = oneMinute * 60;
 const oneDay: number = oneHour * 24;
 const oneWeek: number = oneDay * 7;
 
-// How long refresh tokens are valid for (in seconds)
+/**
+ * @description How long refresh tokens are valid for (in seconds)
+ */
 export const refreshTokenExpiry: number = oneWeek * 2;
 
-// How long access tokens are valid for (in seconds)
+/**
+ * @description How long access tokens are valid for (in seconds)
+ */
 export const accessTokenExpiry: number = oneHour * 1.5;
 
 /**
