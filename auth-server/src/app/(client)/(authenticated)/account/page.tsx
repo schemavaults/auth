@@ -57,13 +57,16 @@ async function attemptToPreloadUserOrganizations(
   const admin: boolean = userData.admin ?? false;
   const organizationIds = await organizationsRegistry.listUserOrganizationMembershipIds(userData.uid, admin);
 
+  const orgResults = await Promise.allSettled(
+    organizationIds.map((orgId) => organizationsRegistry.lookupOrganization(orgId))
+  );
+
   const organizations: OrganizationDefinition[] = [];
-  for (const orgId of organizationIds) {
-    try {
-      const org = await organizationsRegistry.lookupOrganization(orgId);
-      organizations.push(org);
-    } catch (e: unknown) {
-      console.error(`Failed to lookup organization ${orgId}:`, e);
+  for (const [i, result] of orgResults.entries()) {
+    if (result.status === 'fulfilled') {
+      organizations.push(result.value);
+    } else {
+      console.error(`Failed to lookup organization ${organizationIds[i]}:`, result.reason);
     }
   }
 
@@ -81,22 +84,19 @@ async function AuthServerAccountDashboardPageServerComponent(
     );
   }
 
-  let preloaded_authorized_apps:
-    | PreloadedAppsTableDataWithDomainRefs
-    | undefined = undefined;
-  try {
-    preloaded_authorized_apps = await attemptToPreloadAppsAndDomains(dbh, user);
-  } catch (e: unknown) {
-    console.error("Failed to preload authorized apps:", e);
-    /** no-op error */
-  }
+  const [appsResult, orgsResult] = await Promise.allSettled([
+    attemptToPreloadAppsAndDomains(dbh, user),
+    attemptToPreloadUserOrganizations(dbh, user),
+  ]);
 
-  let preloaded_organizations: readonly OrganizationDefinition[] | undefined = undefined;
-  try {
-    preloaded_organizations = await attemptToPreloadUserOrganizations(dbh, user);
-  } catch (e: unknown) {
-    console.error("Failed to preload user organizations:", e);
-    /** no-op error */
+  const preloaded_authorized_apps = appsResult.status === 'fulfilled' ? appsResult.value : undefined;
+  const preloaded_organizations = orgsResult.status === 'fulfilled' ? orgsResult.value : undefined;
+
+  if (appsResult.status === 'rejected') {
+    console.error("Failed to preload authorized apps:", appsResult.reason);
+  }
+  if (orgsResult.status === 'rejected') {
+    console.error("Failed to preload user organizations:", orgsResult.reason);
   }
 
   return (
