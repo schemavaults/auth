@@ -99,13 +99,15 @@ export async function exchangeAuthTokens({
     typeof refreshToken === "string" &&
     refreshToken === "AS_HTTP_ONLY_COOKIE"
   ) {
-    const doesSupportHttpOnlyRefreshToken: undefined | (() => boolean) =
-      adapter.doesSupportHttpOnlyRefreshToken;
-    if (
-      typeof doesSupportHttpOnlyRefreshToken !== "function" ||
-      !doesSupportHttpOnlyRefreshToken()
-    ) {
-      throw new Error("Adapter does not support HTTP-only refresh tokens!");
+    if (typeof adapter.doesSupportHttpOnlyRefreshToken !== "function") {
+      throw new TypeError(
+        "Adapter does not support HTTP-only refresh tokens! Missing 'doesSupportHttpOnlyRefreshToken' method on adapter interface!",
+      );
+    }
+    if (!adapter.doesSupportHttpOnlyRefreshToken()) {
+      throw new Error(
+        "Adapter does not support HTTP-only refresh tokens! Adapter method 'doesSupportHttpOnlyRefreshToken' returned falsy result!",
+      );
     }
   } else {
     throw new Error(
