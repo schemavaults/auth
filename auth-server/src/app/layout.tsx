@@ -19,7 +19,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           "w-screen min-h-[100dvh]",
           "overflow-x-hidden overflow-y-scroll",
           "flex flex-col justify-start items-stretch",
-          "no-scrollbar"
+          "no-scrollbar",
+          "overscroll-none"
         ].join(" ")
       }
     >
