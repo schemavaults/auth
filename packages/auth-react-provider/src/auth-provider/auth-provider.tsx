@@ -23,7 +23,7 @@ import useAuthClientInitialization, {
 } from "@/hooks/use-auth-client-initialization";
 import { AuthMiddlewareManager } from "./auth-middleware-manager";
 import {
-  ApiServerId,
+  type ApiServerId,
   type AppId,
   getAuthServerUri,
   getHardcodedClientWebAppDomain,
