@@ -167,3 +167,5 @@ export function useAuthClientMiddleware(
     debug,
   });
 }
+
+export default useAuthClientMiddleware;

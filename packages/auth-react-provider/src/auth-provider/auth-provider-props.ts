@@ -6,6 +6,7 @@ import type { AuthMiddlewareRules } from "@schemavaults/auth-common";
 import type { InitializeAuthClientOptions } from "@schemavaults/auth-client-sdk";
 import type { useRouter } from "next/navigation";
 import type { PropsWithChildren } from "react";
+import type { AuthMiddlewareRulesBuilderFn } from "@/types/AuthMiddlewareRulesBuilderFn";
 
 export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
   // Use a hardcoded auth server URI
@@ -17,7 +18,7 @@ export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
   router: ReturnType<typeof useRouter>;
   path: string;
 
-  authMiddlewareRules?: AuthMiddlewareRules;
+  authMiddlewareRules?: AuthMiddlewareRules | AuthMiddlewareRulesBuilderFn;
   authed_on_unauthed_redirect_uri: string;
   unauthed_on_authed_redirect_uri: string;
 

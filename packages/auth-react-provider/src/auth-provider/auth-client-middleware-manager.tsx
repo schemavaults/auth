@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactElement } from "react";
-import { useAuthClientMiddleware } from "@/hooks/use-auth-client-middleware";
+import type { ReactNode } from "react";
+import useAuthClientMiddleware from "@/hooks/use-auth-client-middleware";
 import type { SchemaVaultsAuthProviderProps } from "./auth-provider-props";
 import { defaultAuthMiddlewareRules } from "@schemavaults/auth-common";
 import { useRouter } from "next/navigation";
@@ -11,16 +11,19 @@ import {
 } from "@/hooks/use-app-environment";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "@/hooks/use-debug";
 
-export function AuthMiddlewareManager(
-  props: SchemaVaultsAuthProviderProps,
-): ReactElement {
+export function AuthClientMiddlewareManager(
+  props: Omit<
+    SchemaVaultsAuthProviderProps,
+    "children" | "authMiddlewareRules"
+  > &
+    Required<Pick<SchemaVaultsAuthProviderProps, "authMiddlewareRules">>,
+): ReactNode {
   const router = useRouter();
 
   const {
     // auth_server_uri,
     // successful_authentication_redirect_uri,
     successful_logout_redirect_uri,
-    children,
     // app_id,
     path,
     authMiddlewareRules,
@@ -47,9 +50,15 @@ export function AuthMiddlewareManager(
 
   const authorize_uri: string = props.authorize_uri ?? "/auth/authorize";
 
+  if (!authMiddlewareRules || typeof authMiddlewareRules !== "object") {
+    throw new TypeError(
+      "AuthClientMiddlewareManager did not receive an 'authMiddlewareRules' object!",
+    );
+  }
+
   // Watch for changes in auth state via authClientRef, redirect if necessary
   useAuthClientMiddleware({
-    authMiddlewareRules: authMiddlewareRules ?? defaultAuthMiddlewareRules,
+    authMiddlewareRules,
     path,
     router,
     unauthed_on_authed_redirect_uri,
@@ -59,7 +68,7 @@ export function AuthMiddlewareManager(
     debug,
   });
 
-  return <>{children}</>;
+  return null;
 }
 
-export default AuthMiddlewareManager;
+export default AuthClientMiddlewareManager;

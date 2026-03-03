@@ -4,6 +4,7 @@ import {
   AuthProvider,
   type SchemaVaultsAppEnvironment,
   type AppId,
+  type SchemaVaultsAuthProviderProps,
 } from "@schemavaults/auth-react-provider";
 import { usePathname, useRouter } from "next/navigation";
 import type { PropsWithChildren } from "react";
@@ -19,6 +20,7 @@ export interface IAppAuthProviderProps extends PropsWithChildren {
   successful_authentication_redirect_uri: string;
   authorize_uri: string;
   autoreacquire_access_tokens?: boolean;
+  authMiddlewareRules?: SchemaVaultsAuthProviderProps["authMiddlewareRules"];
 }
 
 export default function AppAuthProvider({
@@ -57,6 +59,7 @@ export default function AppAuthProvider({
       fetch={async (url: string, init: RequestInit | undefined) =>
         await fetch(url, init)
       }
+      authMiddlewareRules={props.authMiddlewareRules}
     >
       {props.children}
     </AuthProvider>

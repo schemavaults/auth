@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { defaultAuthMiddlewareRules } from "@schemavaults/auth-common";
@@ -34,7 +34,7 @@ export function ClientAuthProvider({
       successful_logout_redirect_uri="/"
       successful_authentication_redirect_uri="/account"
       authMiddlewareRules={defaultAuthMiddlewareRules}
-      app_id={SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}
+      app_id={SCHEMAVAULTS_AUTH_APP_ID}
       environment={environment}
       debug={typeof props.debug === 'boolean' ? props.debug : false}
       invite_code_required={typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true}

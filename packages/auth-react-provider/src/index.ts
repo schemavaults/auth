@@ -3,7 +3,10 @@ export {
   default as AuthProvider,
   default as default,
 } from "./auth-provider";
-export type * from "./auth-provider";
+export type {
+  SchemaVaultsAuthProviderProps,
+  AuthMiddlewareRules,
+} from "./auth-provider";
 
 export type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 export type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
