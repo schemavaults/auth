@@ -555,6 +555,9 @@ export class ReactAuthClientSdkAdapter
 
   public doesSupportHttpOnlyRefreshToken(): boolean {
     const client_app_id: AppId = this.client_app_id;
+    if (typeof client_app_id !== "string") {
+      throw new TypeError("Expected 'client_app_id' to be a string!");
+    }
     const isAuthServer: boolean = client_app_id === SCHEMAVAULTS_AUTH_APP_ID;
     if (isAuthServer) {
       return true;
