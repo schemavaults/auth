@@ -242,8 +242,10 @@ export class ReactAuthClientSdkAdapter
       }
       const code_verifier = code_verifiers[challenge_time];
       if (typeof code_verifier !== "string") {
-        throw new Error(
-          "Invalid code verifier, code_verifiers object values should be strings",
+        throw new TypeError(
+          "Invalid code verifier, code_verifiers object values should be strings." +
+            " " +
+            `Received a value of type: '${typeof code_verifier}'`,
         );
       }
 
