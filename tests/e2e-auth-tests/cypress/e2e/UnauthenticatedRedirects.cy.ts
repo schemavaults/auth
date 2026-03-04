@@ -11,7 +11,7 @@ describe("Unauthenticated Redirects", () => {
     });
 
     it("is redirected off the JWKS access keys page", () => {
-      const fakeApiServerId = crypto.randomUUID();
+      const fakeApiServerId = "00000000-0000-0000-0000-000000000001";
       cy.visit(`/apis/${fakeApiServerId}/jwks-access-keys`);
       cy.url().should(
         "not.include",

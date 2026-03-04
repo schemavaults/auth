@@ -1,9 +1,9 @@
 describe("Unauthenticated API Requests", () => {
-  const fakeAppId = crypto.randomUUID();
-  const fakeApiId = crypto.randomUUID();
-  const fakeOrgId = crypto.randomUUID();
-  const fakeUid = crypto.randomUUID();
-  const fakeInvitationId = crypto.randomUUID();
+  const fakeAppId = "00000000-0000-0000-0000-000000000001";
+  const fakeApiId = "00000000-0000-0000-0000-000000000002";
+  const fakeOrgId = "00000000-0000-0000-0000-000000000003";
+  const fakeUid = "00000000-0000-0000-0000-000000000004";
+  const fakeInvitationId = "00000000-0000-0000-0000-000000000005";
 
   describe("Authenticated API routes", () => {
     it("GET /api/auth/whoami/:appId returns 401", () => {
