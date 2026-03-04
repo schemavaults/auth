@@ -92,33 +92,33 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ key: string }> }
 ): Promise<NextResponse> {
-  const { key } = await params;
+  const protected_route = await withAdminApiRouteGuard(async (props) => {
+    const { key } = await params;
 
-  let body: PatchSettingRequestBody;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid JSON body",
-      },
-      { status: 400 }
-    );
-  }
+    let body: PatchSettingRequestBody;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid JSON body",
+        },
+        { status: 400 }
+      );
+    }
 
-  if (typeof body.value === "undefined") {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Missing 'value' field in request body",
-      },
-      { status: 400 }
-    );
-  }
+    if (typeof body.value === "undefined") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Missing 'value' field in request body",
+        },
+        { status: 400 }
+      );
+    }
 
-  const protected_route = await withAdminApiRouteGuard((props) =>
-    PATCH_update_setting(props, key, body)
-  );
+    return PATCH_update_setting(props, key, body);
+  });
   return await protected_route(req);
 }

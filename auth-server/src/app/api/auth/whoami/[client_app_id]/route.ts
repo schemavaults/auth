@@ -72,30 +72,29 @@ export async function GET(
     );
   }
 
-  await using dbh = ServerlessDatabase.createDBH();
-
-  // Validate CORS
-  const corsResult = await validateCorsForClientApp(
-    { client_app_id, request: req },
-    dbh,
-    debug,
-  );
-
-  if (!corsResult.allowed) {
-    if (debug) {
-      console.warn("Request blocked with CORS error: ", corsResult);
-    }
-    return NextResponse.json(
-      { success: false, error: true, message: corsResult.error },
-      { status: 403 },
-    );
-  }
-
-  // Authenticate the request
+  // Authenticate the request first, before CORS validation
   const protected_route: (req: NextRequest) => Promise<NextResponse> = await withAuthenticatedApiRouteGuard(
     async ({
       user,
+      dbh,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      // Validate CORS
+      const corsResult = await validateCorsForClientApp(
+        { client_app_id, request: req },
+        dbh,
+        debug,
+      );
+
+      if (!corsResult.allowed) {
+        if (debug) {
+          console.warn("Request blocked with CORS error: ", corsResult);
+        }
+        return NextResponse.json(
+          { success: false, error: true, message: corsResult.error },
+          { status: 403 },
+        );
+      }
+
       // Validate that user object contains only UserData fields.
       // userDataSchema is .strict(), so this returns an error if JWT-internal fields leaked through.
       const parseResult = await userDataSchema.safeParseAsync(user);
@@ -118,23 +117,24 @@ export async function GET(
           `[/api/auth/whoami/${client_app_id}] Returning user details for '${validatedUser.email}' (uid: '${validatedUser.uid}')`,
         );
       }
-      return NextResponse.json(
+
+      const response = NextResponse.json(
         { success: true, user: validatedUser },
         { status: 200 },
+      );
+
+      // Apply CORS headers to response
+      return await applyCorsHeadersToResponse(
+        response,
+        client_app_id,
+        req,
+        dbh,
+        CORS_METHODS,
       );
     },
   );
 
-  const response: NextResponse = await protected_route(req);
-
-  // Apply CORS headers to response
-  return await applyCorsHeadersToResponse(
-    response,
-    client_app_id,
-    req,
-    dbh,
-    CORS_METHODS,
-  );
+  return await protected_route(req);
 }
 
 export const dynamic = "force-dynamic";

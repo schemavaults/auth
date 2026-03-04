@@ -20,48 +20,6 @@ import { organizationIdSchema } from "@schemavaults/auth-common";
 async function GET_api_list_handler(
   req: NextRequest,
 ): Promise<NextResponse> {
-  const searchParams: URLSearchParams = req.nextUrl.searchParams;
-
-  const parsed_query_type = await listApiServersQueryTypeSchema.safeParseAsync(
-    searchParams.get('list_apis_query_type'),
-  );
-  if (!parsed_query_type.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid list API servers query type",
-      } satisfies ListApiServersQueryResponse,
-      {
-        status: 400,
-      },
-    );
-  }
-  const list_apis_query_type: ListApiServersQueryType = parsed_query_type.data;
-
-  if (list_apis_query_type === 'org' && !searchParams.has('organization_id')) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Missing 'organization_id' search param to accompany query type!",
-      } satisfies ListApiServersQueryResponse,
-      {
-        status: 400,
-      },
-    );
-  }
-  const organization_id: string | null = searchParams.get('organization_id') ?? null;
-  if (list_apis_query_type === 'org' && (!organization_id || !organizationIdSchema.safeParse(organization_id).success)) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid 'organization_id' search param!",
-      } satisfies ListApiServersQueryResponse,
-      {
-        status: 400,
-      },
-    );
-  }
-
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
@@ -71,6 +29,48 @@ async function GET_api_list_handler(
       if (environment === "development") {
         console.log(
           `[/api/apis] GET request received`,
+        );
+      }
+
+      const searchParams: URLSearchParams = req.nextUrl.searchParams;
+
+      const parsed_query_type = await listApiServersQueryTypeSchema.safeParseAsync(
+        searchParams.get('list_apis_query_type'),
+      );
+      if (!parsed_query_type.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid list API servers query type",
+          } satisfies ListApiServersQueryResponse,
+          {
+            status: 400,
+          },
+        );
+      }
+      const list_apis_query_type: ListApiServersQueryType = parsed_query_type.data;
+
+      if (list_apis_query_type === 'org' && !searchParams.has('organization_id')) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Missing 'organization_id' search param to accompany query type!",
+          } satisfies ListApiServersQueryResponse,
+          {
+            status: 400,
+          },
+        );
+      }
+      const organization_id: string | null = searchParams.get('organization_id') ?? null;
+      if (list_apis_query_type === 'org' && (!organization_id || !organizationIdSchema.safeParse(organization_id).success)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid 'organization_id' search param!",
+          } satisfies ListApiServersQueryResponse,
+          {
+            status: 400,
+          },
         );
       }
 

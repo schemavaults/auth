@@ -147,23 +147,25 @@ async function PATCH_member_role_handler(
 }
 
 export async function PATCH(req: NextRequest, context: RouteContext): Promise<NextResponse> {
-  let body: UpdateRoleRequestBody;
-  try {
-    body = await req.json();
-    if (typeof body !== "object" || !body || typeof body.role !== "string") {
-      throw new Error("Invalid request body");
-    }
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid request body. Expected JSON with 'role' field.",
-      },
-      { status: 400 },
-    );
-  }
-
   return (await withAuthenticatedApiRouteGuard(
-    (props) => PATCH_member_role_handler(props, context, body),
+    async (props) => {
+      let body: UpdateRoleRequestBody;
+      try {
+        body = await req.json();
+        if (typeof body !== "object" || !body || typeof body.role !== "string") {
+          throw new Error("Invalid request body");
+        }
+      } catch {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid request body. Expected JSON with 'role' field.",
+          },
+          { status: 400 },
+        );
+      }
+
+      return PATCH_member_role_handler(props, context, body);
+    },
   ))(req);
 }
