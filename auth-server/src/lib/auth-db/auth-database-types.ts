@@ -18,6 +18,7 @@ import type {
 } from "./users";
 import type { JwksAccessKeysForHardcodedTable, JwksAccessKeysTable } from "./jwks-access-keys";
 import type { ServerSettingsTable } from "./server-settings";
+import type { ServerTracesTable } from "./server-traces";
 
 export type AuthDatabase = {
   apps: AppsTable;
@@ -37,4 +38,5 @@ export type AuthDatabase = {
   jwks_access_keys: JwksAccessKeysTable;
   jwks_access_keys_for_hardcoded: JwksAccessKeysForHardcodedTable;
   server_settings: ServerSettingsTable;
+  server_traces: ServerTracesTable;
 };

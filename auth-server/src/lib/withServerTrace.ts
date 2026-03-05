@@ -1,0 +1,39 @@
+import "server-only";
+import { serverTraceSchema, type ServerTrace } from "@/lib/auth-db/server-traces";
+import { ServerlessDatabase } from "@/lib/auth-db";
+
+async function defaultWriteToSink(trace: ServerTrace): Promise<void> {
+  await using dbh = ServerlessDatabase.createDBH();
+  await dbh.db.insertInto("server_traces").values(trace).execute();
+}
+
+export async function withServerTrace<T>(opts: {
+  op_name: string;
+  op_category: string;
+  event_id: string;
+  callback: () => Promise<T>;
+  writeToSink?: (trace: ServerTrace) => Promise<void>;
+}): Promise<T> {
+  const start_time = Date.now();
+  const result: Awaited<T> = await opts.callback();
+  const end_time = Date.now();
+
+  const parsed_trace = await serverTraceSchema.safeParseAsync({
+    event_id: opts.event_id,
+    op_name: opts.op_name,
+    op_category: opts.op_category,
+    start_time,
+    end_time,
+  });
+  if (!parsed_trace.success) {
+    const errMsg: string = "withServerTrace failed to prepare a valid 'trace' object to write to the sync";
+    console.error(`${errMsg}:`, parsed_trace.error);
+    throw new TypeError(`${errMsg}!`);
+  }
+  const trace: ServerTrace = parsed_trace.data;
+
+  const writeToSink = opts.writeToSink ?? defaultWriteToSink;
+  await writeToSink(trace);
+
+  return result;
+}
