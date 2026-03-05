@@ -83,3 +83,11 @@ export type {
   SchemaVaultsApiServerDefinition,
   SchemaVaultsApiServerDomainRef,
 } from "@schemavaults/app-definitions";
+
+// Loading hardcoded apps/apis
+export {
+  getHardcodedApp,
+  getHardcodedApiServer,
+  getHardcodedClientWebAppDomain,
+  getAuthServerUri,
+} from "@schemavaults/app-definitions";
