@@ -317,5 +317,15 @@ describe("Unauthenticated API Requests", () => {
         expect(response.status).to.eq(401);
       });
     });
+
+    it("GET /api/admin/server-traces returns 401", () => {
+      cy.request({
+        method: "GET",
+        url: "/api/admin/server-traces",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
   });
 });
