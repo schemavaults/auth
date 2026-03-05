@@ -4,6 +4,7 @@ import type {
   DashboardSidebarItemsAndGroupsDefinitions,
 } from "@schemavaults/ui";
 import {
+  Activity,
   AppWindow,
   Building2,
   Server,
@@ -84,6 +85,14 @@ export function getAuthenticatedUserDashboardLinks(
           url: "/admin/invite_codes",
           icon: ({ className }: { className: string }): ReactElement => (
             <SwatchBook className={className} />
+          ),
+        },
+        {
+          type: "dashboard-sidebar-item-definition" as const,
+          title: "Server Traces",
+          url: "/admin/traces",
+          icon: ({ className }: { className: string }): ReactElement => (
+            <Activity className={className} />
           ),
         },
         {

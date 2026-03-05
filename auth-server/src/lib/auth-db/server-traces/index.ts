@@ -9,4 +9,4 @@ export {
   serverTraceOpCategories,
   type ServerTrace,
   type ServerTraceOpCategory,
-} from "./server-trace-schema";
+} from "@/lib/server-trace-schema";

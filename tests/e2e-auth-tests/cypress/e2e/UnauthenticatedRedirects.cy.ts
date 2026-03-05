@@ -67,5 +67,10 @@ describe("Unauthenticated Redirects", () => {
       cy.visit("/admin/settings");
       cy.url().should("not.include", "/admin/settings");
     });
+
+    it("is redirected off the admin server traces page", () => {
+      cy.visit("/admin/traces");
+      cy.url().should("not.include", "/admin/traces");
+    });
   });
 });
