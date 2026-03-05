@@ -34,7 +34,7 @@ export default function ApiServerDetailPageView({
         <CardContent className="space-y-1">
           <DetailRow label="API Server ID" value={api_server.api_server_id} />
           {api_server.owner_organization_id && (
-            <DetailRow label="Owner Organization ID" value={api_server.owner_organization_id} href={`/orgs/${api_server.owner_organization_id}`} />
+            <DetailRow label="Owner Organization ID" value={api_server.owner_organization_id} href={`/org/${api_server.owner_organization_id}`} />
           )}
           <DetailRow label="Public" value={api_server.public ? "Yes" : "No"} />
           <DetailRow label="Created At" value={new Date(api_server.created_at).toLocaleDateString()} />

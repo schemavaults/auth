@@ -34,7 +34,7 @@ export default function AppDetailPageView({
         <CardContent className="space-y-1">
           <DetailRow label="App ID" value={app.app_id} />
           {app.owner_organization_id && (
-            <DetailRow label="Owner Organization ID" value={app.owner_organization_id} href={`/orgs/${app.owner_organization_id}`} />
+            <DetailRow label="Owner Organization ID" value={app.owner_organization_id} href={`/org/${app.owner_organization_id}`} />
           )}
           <DetailRow label="Public" value={app.public ? "Yes" : "No"} />
           <DetailRow label="App Type" value={app.web ? "Web" : "Native"} />
