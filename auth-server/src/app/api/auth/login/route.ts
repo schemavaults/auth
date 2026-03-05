@@ -6,6 +6,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
 import handleLogin from "./handle_login";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { withServerTrace } from "@/lib/withServerTrace";
 
 export async function POST(
   req: NextRequest,
@@ -31,7 +32,12 @@ export async function POST(
   }
 
   try {
-    return await handleLogin({ body: body_json, req });
+    return await withServerTrace({
+      op_name: "POST /api/auth/login",
+      op_category: "subroutine",
+      event_id: crypto.randomUUID(),
+      callback: async () => await handleLogin({ body: body_json, req }),
+    });
   } catch (e: unknown) {
     console.error(
       "Internal server error attempting to handle /api/auth/login request",

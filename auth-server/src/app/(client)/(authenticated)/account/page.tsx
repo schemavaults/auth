@@ -19,6 +19,7 @@ import {
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import SchemaVaultsPostgresNeonProxyAdapter from "@schemavaults/dbh";
+import { withServerTrace } from "@/lib/withServerTrace";
 
 async function attemptToPreloadAppsAndDomains(
   dbh: SchemaVaultsPostgresNeonProxyAdapter<AuthDatabase>,
@@ -84,10 +85,15 @@ async function AuthServerAccountDashboardPageServerComponent(
     );
   }
 
-  const [appsResult, orgsResult] = await Promise.allSettled([
-    attemptToPreloadAppsAndDomains(dbh, user),
-    attemptToPreloadUserOrganizations(dbh, user),
-  ]);
+  const [appsResult, orgsResult] = await withServerTrace({
+    op_name: "GET /account (preload data)",
+    op_category: "subroutine",
+    event_id: crypto.randomUUID(),
+    callback: async () => await Promise.allSettled([
+      attemptToPreloadAppsAndDomains(dbh, user),
+      attemptToPreloadUserOrganizations(dbh, user),
+    ]),
+  });
 
   const preloaded_authorized_apps = appsResult.status === 'fulfilled' ? appsResult.value : undefined;
   const preloaded_organizations = orgsResult.status === 'fulfilled' ? orgsResult.value : undefined;

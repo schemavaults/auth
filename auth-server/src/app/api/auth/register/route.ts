@@ -7,6 +7,7 @@ import type { AuthenticateResult } from "@schemavaults/auth-common";
 import handleRegister from "./handle_register";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import { withServerTrace } from "@/lib/withServerTrace";
 
 export async function POST(
   req: NextRequest,
@@ -34,7 +35,12 @@ export async function POST(
   const debug: boolean = shouldEnableDebug(environment);
 
   try {
-    return await handleRegister({ body: body_json, req }, debug);
+    return await withServerTrace({
+      op_name: "POST /api/auth/register",
+      op_category: "subroutine",
+      event_id: crypto.randomUUID(),
+      callback: async () => await handleRegister({ body: body_json, req }, debug),
+    });
   } catch (e: unknown) {
     console.error(
       "Internal server error attempting to handle /api/auth/register request",

@@ -18,22 +18,25 @@ export async function withServerTrace<T>(opts: {
   const result: Awaited<T> = await opts.callback();
   const end_time = Date.now();
 
-  const parsed_trace = await serverTraceSchema.safeParseAsync({
-    event_id: opts.event_id,
-    op_name: opts.op_name,
-    op_category: opts.op_category,
-    start_time,
-    end_time,
-  });
-  if (!parsed_trace.success) {
-    const errMsg: string = "withServerTrace failed to prepare a valid 'trace' object to write to the sync";
-    console.error(`${errMsg}:`, parsed_trace.error);
-    throw new TypeError(`${errMsg}!`);
-  }
-  const trace: ServerTrace = parsed_trace.data;
+  try {
+    const parsed_trace = await serverTraceSchema.safeParseAsync({
+      event_id: opts.event_id,
+      op_name: opts.op_name,
+      op_category: opts.op_category,
+      start_time,
+      end_time,
+    });
+    if (!parsed_trace.success) {
+      console.error("withServerTrace failed to prepare a valid trace object:", parsed_trace.error);
+      return result;
+    }
+    const trace: ServerTrace = parsed_trace.data;
 
-  const writeToSink = opts.writeToSink ?? defaultWriteToSink;
-  await writeToSink(trace);
+    const writeToSink = opts.writeToSink ?? defaultWriteToSink;
+    await writeToSink(trace);
+  } catch (e: unknown) {
+    console.error("withServerTrace failed to write trace to sink:", e);
+  }
 
   return result;
 }
