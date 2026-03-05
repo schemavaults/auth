@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import type { SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
+import { DetailRow } from "@/components/DetailRow";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import Link from "next/link";
 
@@ -15,15 +16,6 @@ export interface ConnectedApp {
 export interface ApiServerDetailPageViewProps {
   api_server: SchemaVaultsApiServerDefinition;
   connected_apps: ConnectedApp[];
-}
-
-function DetailRow({ label, value }: { label: string; value: string }): ReactElement {
-  return (
-    <div className="flex flex-col gap-1 py-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium break-all">{value}</span>
-    </div>
-  );
 }
 
 export default function ApiServerDetailPageView({
@@ -42,7 +34,7 @@ export default function ApiServerDetailPageView({
         <CardContent className="space-y-1">
           <DetailRow label="API Server ID" value={api_server.api_server_id} />
           {api_server.owner_organization_id && (
-            <DetailRow label="Owner Organization ID" value={api_server.owner_organization_id} />
+            <DetailRow label="Owner Organization ID" value={api_server.owner_organization_id} href={`/orgs/${api_server.owner_organization_id}`} />
           )}
           <DetailRow label="Public" value={api_server.public ? "Yes" : "No"} />
           <DetailRow label="Created At" value={new Date(api_server.created_at).toLocaleDateString()} />
