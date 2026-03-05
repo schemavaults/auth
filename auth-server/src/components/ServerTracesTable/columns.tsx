@@ -56,7 +56,7 @@ export function createColumns(): ColumnDef<ServerTraceRow>[] {
       accessorKey: "start_time",
       header: "Start Time",
       cell: ({ row }): ReactElement => {
-        const date = new Date(row.original.start_time);
+        const date = new Date(Number(row.original.start_time));
         return (
           <span className="text-sm">
             {date.toLocaleDateString()} {date.toLocaleTimeString()}
@@ -69,7 +69,7 @@ export function createColumns(): ColumnDef<ServerTraceRow>[] {
       accessorKey: "end_time",
       header: "End Time",
       cell: ({ row }): ReactElement => {
-        const date = new Date(row.original.end_time);
+        const date = new Date(Number(row.original.end_time));
         return (
           <span className="text-sm">
             {date.toLocaleDateString()} {date.toLocaleTimeString()}
@@ -81,7 +81,7 @@ export function createColumns(): ColumnDef<ServerTraceRow>[] {
       id: "duration",
       header: "Duration (ms)",
       cell: ({ row }): ReactElement => {
-        const duration = row.original.end_time - row.original.start_time;
+        const duration = Number(row.original.end_time) - Number(row.original.start_time);
         return (
           <span className="font-mono text-sm">
             {duration}
