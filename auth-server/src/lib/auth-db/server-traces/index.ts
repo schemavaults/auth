@@ -4,4 +4,9 @@ export type {
   NewServerTraceRow,
 } from "./server-traces-table";
 
-export { serverTraceSchema, type ServerTrace } from "./server-trace-schema";
+export {
+  serverTraceSchema,
+  serverTraceOpCategories,
+  type ServerTrace,
+  type ServerTraceOpCategory,
+} from "./server-trace-schema";

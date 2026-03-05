@@ -1,5 +1,5 @@
 import "server-only";
-import { serverTraceSchema, type ServerTrace } from "@/lib/auth-db/server-traces";
+import { serverTraceSchema, type ServerTrace, type ServerTraceOpCategory } from "@/lib/auth-db/server-traces";
 import { ServerlessDatabase } from "@/lib/auth-db";
 
 async function defaultWriteToSink(trace: ServerTrace): Promise<void> {
@@ -9,7 +9,7 @@ async function defaultWriteToSink(trace: ServerTrace): Promise<void> {
 
 export async function withServerTrace<T>(opts: {
   op_name: string;
-  op_category: string;
+  op_category: ServerTraceOpCategory;
   event_id: string;
   callback: () => Promise<T>;
   writeToSink?: (trace: ServerTrace) => Promise<void>;
