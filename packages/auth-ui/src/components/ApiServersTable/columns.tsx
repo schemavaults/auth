@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import Link from "next/link";
 
 import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox } from "@schemavaults/ui";
@@ -36,11 +37,27 @@ export const columns: ColumnDef<SchemaVaultsApiServerDefinition>[] = [
     id: "api_server_id",
     accessorKey: "api_server_id",
     header: "API Server ID",
+    cell: ({ row }): ReactElement => {
+      const api = row.original;
+      return (
+        <Link href={`/apis/${api.api_server_id}`} className="hover:underline text-primary">
+          {api.api_server_id}
+        </Link>
+      );
+    },
   },
   {
     id: "api_server_name",
     accessorKey: "api_server_name",
     header: "API Server Name",
+    cell: ({ row }): ReactElement => {
+      const api = row.original;
+      return (
+        <Link href={`/apis/${api.api_server_id}`} className="hover:underline text-primary">
+          {api.api_server_name}
+        </Link>
+      );
+    },
   },
   {
     id: "api_server_description",

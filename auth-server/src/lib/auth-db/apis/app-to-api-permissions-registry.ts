@@ -216,6 +216,35 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
     }
   }
 
+  /**
+   * @name listConnectedApps
+   * @description List all client apps that have permission to access a given API server
+   * @param api_server_id API server UUID
+   */
+  public async listConnectedApps(
+    api_server_id: string,
+  ): Promise<{ client_app_id: string; app_name: string; created_at: number }[]> {
+    const rows = await this.db
+      .selectFrom("apps_to_apis_permissions")
+      .innerJoin("apps", "apps.app_id", "apps_to_apis_permissions.client_app_id")
+      .where("apps_to_apis_permissions.api_server_id", "=", api_server_id)
+      .select([
+        "apps_to_apis_permissions.client_app_id",
+        "apps.app_name",
+        "apps_to_apis_permissions.created_at",
+      ])
+      .execute();
+
+    return rows.map((row) => ({
+      client_app_id: row.client_app_id,
+      app_name: row.app_name,
+      created_at:
+        typeof row.created_at === "number"
+          ? row.created_at
+          : parseInt(row.created_at as unknown as string),
+    }));
+  }
+
   public constructor(
     protected readonly db: Kysely<AuthDatabase>,
     private readonly debug: boolean = false,
