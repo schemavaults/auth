@@ -16,6 +16,12 @@ describe("Unauthenticated Redirects", () => {
       cy.url().should("not.include", `/apis/${fakeApiServerId}`);
     });
 
+    it("is redirected off the app detail page", () => {
+      const fakeAppId = "00000000-0000-0000-0000-000000000002";
+      cy.visit(`/apps/${fakeAppId}`);
+      cy.url().should("not.include", `/apps/${fakeAppId}`);
+    });
+
     it("is redirected off the JWKS access keys page", () => {
       const fakeApiServerId = "00000000-0000-0000-0000-000000000001";
       cy.visit(`/apis/${fakeApiServerId}/jwks-access-keys`);

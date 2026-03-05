@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 
 import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox } from "@schemavaults/ui";
+import Link from "next/link";
 import type {
   ListAppsQueryType,
   SchemaVaultsApp,
@@ -47,11 +48,27 @@ export function getAppsTableColumns(
       id: "app_id",
       accessorKey: "app_id",
       header: "App ID",
+      cell: ({ row }): ReactElement => {
+        const app = row.original;
+        return (
+          <Link href={`/apps/${app.app_id}`} className="hover:underline text-primary">
+            {app.app_id}
+          </Link>
+        );
+      },
     },
     {
       id: "app_name",
       accessorKey: "app_name",
       header: "App Name",
+      cell: ({ row }): ReactElement => {
+        const app = row.original;
+        return (
+          <Link href={`/apps/${app.app_id}`} className="hover:underline text-primary">
+            {app.app_name}
+          </Link>
+        );
+      },
     },
     {
       id: "app_description",
