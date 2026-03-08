@@ -15,12 +15,14 @@ import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import type { ReactElement } from "react";
 import type { NextRequest, NextResponse } from "next/server";
 
-export async function withAdminServerComponentRouteGuard(server_component: TProtectedAdminPageServerComponent<{
-  dbh: ServerlessDatabase
-}>): Promise<ReactElement> {
+export interface IProtectedAdminServerComponentPageProps extends IBaseProtectedAdminServerComponentPageProps {
+  dbh: ServerlessDatabase;
+}
+
+export async function withAdminServerComponentRouteGuard(server_component: TProtectedAdminPageServerComponent<IProtectedAdminServerComponentPageProps>): Promise<ReactElement> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH()
   const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
-  return await _withAdminServerComponentRouteGuard(
+  return await _withAdminServerComponentRouteGuard<IProtectedAdminServerComponentPageProps>(
     server_component,
     { dbh },
     async (props) => props.user.admin === true,
@@ -29,26 +31,20 @@ export async function withAdminServerComponentRouteGuard(server_component: TProt
   )
 }
 
-export async function withAdminApiRouteGuard(api_server_handler: TProtectedAdminApiRoute<{
-  dbh: ServerlessDatabase
-}>): Promise<(req: NextRequest) => Promise<NextResponse>> {
+export interface IProtectedAdminApiRouteProps extends IBaseProtectedAdminApiRouteInputs {
+  dbh: ServerlessDatabase;
+}
+
+export async function withAdminApiRouteGuard(api_server_handler: TProtectedAdminApiRoute<IProtectedAdminApiRouteProps>): Promise<(req: NextRequest) => Promise<NextResponse>> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH()
   const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
-  return _withAdminApiRouteGuard(
+  return _withAdminApiRouteGuard<IProtectedAdminApiRouteProps>(
     api_server_handler,
     { dbh },
     async (props) => props.user.admin === true,
     jwt_keys_manager,
     (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID
   );
-}
-
-export interface IProtectedAdminServerComponentPageProps extends IBaseProtectedAdminServerComponentPageProps {
-  dbh: ServerlessDatabase;
-}
-
-export interface IProtectedAdminApiRouteProps extends IBaseProtectedAdminApiRouteInputs {
-  dbh: ServerlessDatabase;
 }
 
 export type { IProtectedAdminApiRouteProps as IProtectedAdminApiRouteInputs }
