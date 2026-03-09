@@ -14,6 +14,10 @@ export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateR
 
 export type { UserData } from "@/types/UserData";
 
+// Access / Refresh Token Types
+export type { AccessToken, RefreshToken } from "@schemavaults/auth-common";
+
+// Refresh Token Cookie Names
 export {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
