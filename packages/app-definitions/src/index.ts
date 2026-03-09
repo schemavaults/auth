@@ -35,6 +35,7 @@ export * from "./hardcoded-core-schemavaults-api-servers";
 export type * from "./hardcoded-core-schemavaults-api-servers";
 export * from "./hardcoded-core-schemavaults-api-server-domains";
 export type * from "./hardcoded-core-schemavaults-api-server-domains";
+export { getHardcodedApiServerDomain } from "./get-hardcoded-api-server-domain";
 
 export { PRODUCTION_AUTH_SERVER_URL } from "./production-auth-server-url";
 
