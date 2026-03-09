@@ -52,7 +52,7 @@
     },
     "packages/app-definitions": {
       "name": "@schemavaults/app-definitions",
-      "version": "0.6.18",
+      "version": "0.6.19",
       "dependencies": {
         "zod": "3.25.8",
       },
@@ -70,7 +70,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.9.13",
+      "version": "0.9.14",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
