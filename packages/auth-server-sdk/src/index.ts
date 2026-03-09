@@ -87,7 +87,8 @@ export type {
 // Loading hardcoded apps/apis
 export {
   getHardcodedApp,
-  getHardcodedApiServer,
   getHardcodedClientWebAppDomain,
+  getHardcodedApiServer,
+  getHardcodedApiServerDomain,
   getAuthServerUri,
 } from "@schemavaults/app-definitions";
