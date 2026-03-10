@@ -26,15 +26,15 @@ type RequestCookies = Awaited<
 >;
 
 export type TProtectedAuthenticatedPageServerComponent<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
 > = (props: TProps) => Promise<ReactElement>;
 
 type TAdditionalProps<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
 > = Omit<TProps, keyof IBaseProtectedAuthenticatedServerComponentPageProps>;
 
 export async function withAuthenticatedServerComponentRouteGuard<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
 >(
   server_component: TProtectedAuthenticatedPageServerComponent<TProps>,
   additional_custom_server_component_props:

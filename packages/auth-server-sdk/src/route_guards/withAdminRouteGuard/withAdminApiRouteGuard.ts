@@ -10,11 +10,11 @@ import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 
 type TAdditionalRouteInputs<
-  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs,
+  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs = IBaseProtectedAuthenticatedApiRouteInputs,
 > = Omit<TRouteInputs, keyof IBaseProtectedAuthenticatedApiRouteInputs>;
 
 export function withAdminApiRouteGuard<
-  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs,
+  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs = IBaseProtectedAuthenticatedApiRouteInputs,
 >(
   api_route_handler: TProtectedAuthenticatedApiRoute<TRouteInputs>,
   additional_custom_api_route_inputs:

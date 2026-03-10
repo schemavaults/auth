@@ -25,15 +25,15 @@ import type { IBaseProtectedAuthenticatedApiRouteInputs } from "./IBaseProtected
 import initDefaultJwtKeyManagerForAuthenticatedRouteGuard from "./initDefaultJwtKeyManagerForAuthenticatedRouteGuard";
 
 export type TProtectedAuthenticatedApiRoute<
-  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs,
+  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs = IBaseProtectedAuthenticatedApiRouteInputs,
 > = (route_inputs: TRouteInputs) => Promise<NextResponse>;
 
 type TAdditionalRouteInputs<
-  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs,
+  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs = IBaseProtectedAuthenticatedApiRouteInputs,
 > = Omit<TRouteInputs, keyof IBaseProtectedAuthenticatedApiRouteInputs>;
 
 export function withAuthenticatedApiRouteGuard<
-  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs,
+  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs = IBaseProtectedAuthenticatedApiRouteInputs,
 >(
   api_route_handler: TProtectedAuthenticatedApiRoute<TRouteInputs>,
   additional_custom_api_route_inputs:

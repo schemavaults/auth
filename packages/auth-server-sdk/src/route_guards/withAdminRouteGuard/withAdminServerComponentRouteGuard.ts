@@ -10,11 +10,11 @@ import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 
 type TAdditionalProps<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
 > = Omit<TProps, keyof IBaseProtectedAuthenticatedServerComponentPageProps>;
 
 export async function withAdminServerComponentRouteGuard<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
 >(
   server_component: TProtectedAuthenticatedPageServerComponent<TProps>,
   additional_custom_server_component_props:
