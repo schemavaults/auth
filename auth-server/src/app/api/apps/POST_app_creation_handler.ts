@@ -13,6 +13,7 @@ import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGua
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 
 /**
  * Create a new frontend application
@@ -160,7 +161,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   },
   );
-  return await protected_route(request);
+  const response = await protected_route(request);
+  return applyCorsHeadersForSchemaVaultsWeb(response, request);
 }
 
 export const dynamic = "force-dynamic"; // defaults to auto

@@ -18,6 +18,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 
 async function listAuthorizedAppsForUser(
   appsRegistry: SchemaVaultsAppRegistry,
@@ -307,7 +308,8 @@ export async function GET_app_list_handler(
     },
   );
 
-  return await protected_route(req);
+  const response = await protected_route(req);
+  return applyCorsHeadersForSchemaVaultsWeb(response, req);
 }
 
 export const dynamic = "force-dynamic"; // defaults to auto
