@@ -13,6 +13,7 @@ import {
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
 import { organizationIdSchema } from "@schemavaults/auth-common";
+import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 
 /**
  * List available SchemaVaults API servers
@@ -187,7 +188,8 @@ async function GET_api_list_handler(
     },
   );
 
-  return await protected_route(req);
+  const response = await protected_route(req);
+  return applyCorsHeadersForSchemaVaultsWeb(response, req);
 }
 
 export default GET_api_list_handler;

@@ -12,6 +12,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 
 /**
  * Create a new API server
@@ -131,5 +132,6 @@ export default async function POST_api_creation_handler(request: NextRequest): P
       }
     },
   );
-  return await protected_route(request);
+  const response = await protected_route(request);
+  return applyCorsHeadersForSchemaVaultsWeb(response, request);
 }

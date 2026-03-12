@@ -1,6 +1,7 @@
 import "server-only";
 export { default as POST } from './POST_api_creation_handler'
 export { default as GET } from "./GET_api_list_handler"
+export { OPTIONS } from "./OPTIONS_cors_handler";
 import type { ServerRuntime } from "next";
 
 export const runtime: ServerRuntime = "edge"
