@@ -23,7 +23,7 @@ services:
       retries: 8
 
   postgres-ws-proxy:
-    image: ghcr.io/schemavaults/dbh/postgres-ws-proxy:0.7.5
+    image: ghcr.io/schemavaults/dbh/postgres-ws-proxy:0.8.1
     platform: linux/amd64
     environment:
       APPEND_PORT: "postgres-db:5432"

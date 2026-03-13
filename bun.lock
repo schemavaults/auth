@@ -19,7 +19,7 @@
         "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/auth-server-sdk": "workspace:*",
         "@schemavaults/auth-ui": "workspace:*",
-        "@schemavaults/dbh": "0.7.5",
+        "@schemavaults/dbh": "0.8.1",
         "@schemavaults/jwt": "workspace:*",
         "@schemavaults/theme": "0.25.5",
         "@schemavaults/ui": "0.14.2",
@@ -165,7 +165,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.21.6",
+      "version": "0.21.7",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -620,7 +620,7 @@
 
     "@schemavaults/auth-ui": ["@schemavaults/auth-ui@workspace:packages/auth-ui"],
 
-    "@schemavaults/dbh": ["@schemavaults/dbh@0.7.5", "", { "dependencies": { "@neondatabase/serverless": "1.0.1", "kysely": "0.28.10", "kysely-neon": "1.3.0" } }, "sha512-7pBX+hf83yND7fglA1drQUX7PsWUNMQj0jzfupywJezFcD4KETlrSWbKtq63UCo97UGt6YPLzzJD1HnMOPlWJg=="],
+    "@schemavaults/dbh": ["@schemavaults/dbh@0.8.1", "", { "dependencies": { "@neondatabase/serverless": "1.0.1", "kysely": "0.28.10", "kysely-neon": "1.3.0" }, "bin": { "dbh": "dist-cli/cli.js" } }, "sha512-e6E0w6088Fp8+zKyZC1qi87zO92yWCS6KPfay6ebQJMA8ldNKGWrbw2ztv0gDHU+ADG7wl0OJdbM6ruv5AMJiw=="],
 
     "@schemavaults/e2e-auth-tests": ["@schemavaults/e2e-auth-tests@workspace:tests/e2e-auth-tests"],
 
