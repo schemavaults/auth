@@ -23,7 +23,7 @@ import {
   DialogTitle,
   useForm,
 } from "@schemavaults/ui";
-import { useAppEnvironment } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
   type SchemaVaultsApiServerDefinition,
@@ -69,6 +69,7 @@ export function CreateApiServerForm({
     defaultValues,
   });
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
+  const auth = useAuth();
   const { mutate } = useSWRConfig();
 
   async function onSubmit(
@@ -83,46 +84,14 @@ export function CreateApiServerForm({
     }
 
     try {
-      const response = await fetch("/api/apis", {
-        method: "POST",
-        body: JSON.stringify({
-          ...values,
-          owner_organization_id: owner_organization_id ?? null,
-        }),
-        credentials: "include",
+      const authClient = auth.ready ? auth.client.current : undefined;
+      if (!authClient) {
+        throw new Error("Auth client is not available");
+      }
+      await authClient.createApiServer({
+        ...values,
+        owner_organization_id: owner_organization_id ?? null,
       });
-      if (!response.ok || response.status !== 200) {
-        throw new Error(
-          `API server creation request has bad status: ${response.status}`,
-        );
-      }
-
-      const body: object = await response.json();
-      if (typeof body !== "object") {
-        throw new Error(
-          "Expected JSON object response from API server creation attempt",
-        );
-      }
-
-      if (!Object.hasOwn(body, "success")) {
-        throw new Error("No success field in response");
-      }
-
-      if (
-        !(
-          typeof (body as { success: unknown }).success === "boolean" &&
-          (body as { success: boolean }).success
-        )
-      ) {
-        console.error(body);
-        throw new Error(
-          "API server creation response has success flag set to false",
-        );
-      }
-
-      if (environment === "development") {
-        console.log("Received response: ", body);
-      }
     } catch (e: unknown) {
       toast({
         variant: "destructive",

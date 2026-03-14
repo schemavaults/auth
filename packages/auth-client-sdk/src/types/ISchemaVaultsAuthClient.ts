@@ -213,6 +213,28 @@ export interface ISchemaVaultsAuthClient {
   ) => Promise<void>;
 
   /**
+   * @name listClientApplicationDomains
+   * @description List domains for a client application
+   * @argument app_id The unique ID of the client application to list domains for
+   * @returns A promise resolving to an array of SchemaVaultsAppDomainRef objects
+   */
+  listClientApplicationDomains: (
+    app_id: AppId,
+  ) => Promise<SchemaVaultsAppDomainRef[]>;
+
+  /**
+   * @name connectAppToApiServer
+   * @description Connect a frontend client application to an API server, allowing it to request access tokens for that API
+   * @argument api_server_id The unique ID of the API server
+   * @argument client_app_id The unique ID of the client application
+   * @returns A promise resolving if the connection succeeds
+   */
+  connectAppToApiServer: (
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+  ) => Promise<void>;
+
+  /**
    * @param feature_name Name of the feature to check if supported
    * @returns true if support, false otherwise
    */

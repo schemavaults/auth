@@ -28,7 +28,16 @@ import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
+  type SchemaVaultsApp,
+  type SchemaVaultsApiServerDefinition,
+  type SchemaVaultsApiServerDomainRef,
+  type SchemaVaultsAppDomainRef,
+  type ListAppsQueryResponse,
+  type ListAppsQueryType,
+  type ListApiServersQueryResponse,
+  type ListApiServersQueryType,
 } from "@schemavaults/app-definitions";
+import type { PaginationOptions } from "@schemavaults/auth-common";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
 import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
 import { AUTH_CLIENT_SDK_VERSION } from "@/generated/version";
@@ -1047,5 +1056,100 @@ export class SchemaVaultsAuthClient
       (mod) => mod.default,
     );
     return await checkAuth({ app_id, adapter: this.adapter });
+  }
+
+  public async listClientApplications(
+    query_type: ListAppsQueryType,
+    query_params?: URLSearchParams,
+    pagination?: PaginationOptions,
+  ): Promise<ListAppsQueryResponse> {
+    const fn = await import("@/lib/list-client-applications").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, query_type, query_params, pagination });
+  }
+
+  public async createClientApplication(
+    app_definition: SchemaVaultsApp,
+  ): Promise<void> {
+    const fn = await import("@/lib/create-client-application").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, app_definition });
+  }
+
+  public async createClientApplicationDomain(
+    app_domain_definition: SchemaVaultsAppDomainRef,
+  ): Promise<void> {
+    const fn = await import("@/lib/create-client-application-domain").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, app_domain_definition });
+  }
+
+  public async loadClientApplicationDefinition(
+    app_id: AppId,
+  ): Promise<SchemaVaultsApp> {
+    const fn = await import("@/lib/load-client-application-definition").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, app_id });
+  }
+
+  public async listClientApplicationDomains(
+    app_id: AppId,
+  ): Promise<SchemaVaultsAppDomainRef[]> {
+    const fn = await import("@/lib/list-client-application-domains").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, app_id });
+  }
+
+  public async listApiServers(
+    query_type: ListApiServersQueryType,
+    query_params?: URLSearchParams,
+    pagination?: PaginationOptions,
+  ): Promise<ListApiServersQueryResponse> {
+    const fn = await import("@/lib/list-api-servers").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, query_type, query_params, pagination });
+  }
+
+  public async createApiServer(
+    api_server_definition: SchemaVaultsApiServerDefinition,
+  ): Promise<void> {
+    const fn = await import("@/lib/create-api-server").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, api_server_definition });
+  }
+
+  public async createApiServerDomain(
+    api_server_domain_definition: SchemaVaultsApiServerDomainRef,
+  ): Promise<void> {
+    const fn = await import("@/lib/create-api-server-domain").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, api_server_domain_definition });
+  }
+
+  public async loadApiServerDefinition(
+    api_server_id: ApiServerId,
+  ): Promise<SchemaVaultsApiServerDefinition> {
+    const fn = await import("@/lib/load-api-server-definition").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, api_server_id });
+  }
+
+  public async connectAppToApiServer(
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+  ): Promise<void> {
+    const fn = await import("@/lib/connect-app-to-api-server").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, api_server_id, client_app_id });
   }
 }

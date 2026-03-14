@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useAppDomains } from "./useAppDomains";
 import type { ReactElement } from "react";
 import type { SchemaVaultsAppDomainRef } from "@schemavaults/app-definitions";
+import { useAuth } from "@schemavaults/auth-react-provider";
 
 export interface AppDomainsListProps {
   app_id: string;
@@ -19,11 +20,14 @@ export function AppDomainsList({
     preloaded_domains,
   });
 
+  const auth = useAuth();
+  const authClient = auth.ready ? auth.client.current : undefined;
   const appDomains = useAppDomains({
     app_id,
     initialData: Array.isArray(preloaded_domains)
       ? preloaded_domains
       : undefined,
+    authClient: authClient ?? undefined,
   });
 
   if (!appDomains.data || !Array.isArray(appDomains.data)) {

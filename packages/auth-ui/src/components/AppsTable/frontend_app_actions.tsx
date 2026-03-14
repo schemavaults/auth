@@ -69,9 +69,11 @@ export function FrontendApplicationActions({
     );
   }
 
+  const authClient = authContext.ready ? authContext.client.current : undefined;
   const appDomains = useAppDomains({
     app_id: app.app_id,
     initialData: preloadedAppDomains,
+    authClient: authClient ?? undefined,
   });
 
   const admin: boolean = useAdmin();

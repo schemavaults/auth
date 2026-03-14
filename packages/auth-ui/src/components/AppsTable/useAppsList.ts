@@ -1,18 +1,18 @@
 "use client";
 
-import { useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
 import useSWR, { type SWRResponse, useSWRConfig } from "swr";
 import {
-  type ListAppsQueryResponse,
   type ListAppsQueryType,
   type SchemaVaultsApp,
 } from "@schemavaults/app-definitions";
+import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-react-provider";
 
 export interface UseAppsListOptions {
   queryType: ListAppsQueryType;
   initialData?: readonly SchemaVaultsApp[] | undefined;
   organization_id?: string;
+  authClient: ISchemaVaultsAuthClient;
 }
 
 function getAppsListEndpoint(
@@ -39,43 +39,30 @@ export function useAppsList({
   queryType,
   initialData,
   organization_id,
+  authClient,
 }: UseAppsListOptions): SWRResponse<readonly SchemaVaultsApp[]> {
   const { toast } = useToast();
-  const environment = useAppEnvironment();
   const endpoint = getAppsListEndpoint(queryType, organization_id);
 
   return useSWR(
     endpoint,
     async () => {
       try {
-        const origin = window.location.origin;
-        if (environment !== "development" && environment !== "test") {
-          if (!origin.startsWith("https://"))
-            throw new Error("Origin must be HTTPS in production");
+        const queryParams = new URLSearchParams();
+        if (queryType === "org" && organization_id) {
+          queryParams.set("organization_id", organization_id);
         }
-        if (environment === "development") {
-          console.log(
-            `[useAppsList] Sending request to endpoint "${endpoint}" from origin "${origin}"`,
-          );
-        }
-        const listAppsResponse = await fetch(endpoint, {
-          method: "GET",
-          credentials: "include",
-        });
-        if (!listAppsResponse.ok || listAppsResponse.status !== 200)
-          throw new Error("Network request to list-apps endpoint failed");
-        const listAppsBody: unknown = await listAppsResponse.json();
-        if (typeof listAppsBody !== "object")
-          throw new Error("Failed to list apps; response not an object");
-        const listAppsResponseObject = listAppsBody as ListAppsQueryResponse;
-        if (
-          !Object.hasOwn(listAppsResponseObject, "success") ||
-          !listAppsResponseObject.success
-        ) {
+
+        const response = await authClient.listClientApplications(
+          queryType,
+          queryParams,
+        );
+
+        if (!response.success) {
           throw new Error("List apps response has success = false");
         }
-        const appsList: readonly SchemaVaultsApp[] =
-          listAppsResponseObject.list;
+
+        const appsList: readonly SchemaVaultsApp[] = response.list;
 
         if (process.env.NODE_ENV === "development") {
           console.log("[useAppsList] Received list of apps: ", appsList);

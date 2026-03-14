@@ -123,45 +123,12 @@ export default function CreateAppForm({
       }
 
       try {
-        const response = await fetch("/api/apps", {
-          method: "POST",
-          body: JSON.stringify(
-            validatedAppRequestBody.data satisfies SchemaVaultsApp,
-          ),
-          credentials: "include",
-        });
-        if (!response.ok || response.status !== 200) {
-          throw new Error(
-            `Frontend app creation request has bad status: ${response.status}`,
-          );
+        if (!authClient) {
+          throw new Error("Auth client is not available");
         }
-
-        const body: object = await response.json();
-        if (typeof body !== "object") {
-          throw new Error(
-            "Expected JSON object response from frontend app creation attempt",
-          );
-        }
-
-        if (!Object.hasOwn(body, "success")) {
-          throw new Error("No success field in response");
-        }
-
-        if (
-          !(
-            typeof (body as { success: unknown }).success === "boolean" &&
-            (body as { success: boolean }).success
-          )
-        ) {
-          console.error(body);
-          throw new Error(
-            "Frontend app creation response has success flag set to false",
-          );
-        }
-
-        if (environment === "development") {
-          console.log("Received response: ", body);
-        }
+        await authClient.createClientApplication(
+          validatedAppRequestBody.data satisfies SchemaVaultsApp,
+        );
       } catch (e: unknown) {
         toast({
           variant: "destructive",
