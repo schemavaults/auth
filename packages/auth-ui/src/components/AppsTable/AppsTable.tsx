@@ -56,7 +56,7 @@ export function AppsTable({
     queryType,
     initialData: preloaded ? preloaded.apps : undefined,
     organization_id,
-    authClient: authClient!,
+    authClient,
   });
   const { isLoading, data } = apps;
   const columns = useMemo((): ColumnDef<SchemaVaultsApp>[] => {

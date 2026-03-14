@@ -12,7 +12,7 @@ export interface UseAppsListOptions {
   queryType: ListAppsQueryType;
   initialData?: readonly SchemaVaultsApp[] | undefined;
   organization_id?: string;
-  authClient: ISchemaVaultsAuthClient;
+  authClient: ISchemaVaultsAuthClient | null | undefined;
 }
 
 function getAppsListEndpoint(
@@ -45,7 +45,7 @@ export function useAppsList({
   const endpoint = getAppsListEndpoint(queryType, organization_id);
 
   return useSWR(
-    endpoint,
+    authClient ? endpoint : null,
     async () => {
       try {
         const queryParams = new URLSearchParams();
@@ -53,7 +53,7 @@ export function useAppsList({
           queryParams.set("organization_id", organization_id);
         }
 
-        const response = await authClient.listClientApplications(
+        const response = await authClient!.listClientApplications(
           queryType,
           queryParams,
         );

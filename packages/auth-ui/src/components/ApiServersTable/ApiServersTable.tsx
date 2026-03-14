@@ -70,7 +70,7 @@ export function ApiServersTable({
       queryType,
       initialData: preloaded ? preloaded.api_servers : undefined,
       organization_id,
-      authClient: authClient!,
+      authClient,
     });
   const { isLoading, data } = apis;
 

@@ -10,7 +10,7 @@ export interface UseApiServersListOptions {
   queryType: ListApiServersQueryType;
   initialData?: readonly SchemaVaultsApiServerDefinition[] | undefined;
   organization_id?: string;
-  authClient: ISchemaVaultsAuthClient;
+  authClient: ISchemaVaultsAuthClient | null | undefined;
 }
 
 function getApiServersListEndpoint(
@@ -43,7 +43,7 @@ export function useApiServersList({
   const endpoint = getApiServersListEndpoint(queryType, organization_id);
 
   return useSWR(
-    endpoint,
+    authClient ? endpoint : null,
     async () => {
       try {
         const queryParams = new URLSearchParams();
@@ -51,7 +51,7 @@ export function useApiServersList({
           queryParams.set("organization_id", organization_id);
         }
 
-        const response = await authClient.listApiServers(
+        const response = await authClient!.listApiServers(
           queryType,
           queryParams,
         );
