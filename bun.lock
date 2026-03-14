@@ -70,7 +70,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.9.15",
+      "version": "0.9.16",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
