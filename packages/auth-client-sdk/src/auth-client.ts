@@ -26,6 +26,7 @@ import {
   type AppId,
   appIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_WEB,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
   type SchemaVaultsApp,
@@ -1058,6 +1059,28 @@ export class SchemaVaultsAuthClient
     return await checkAuth({ app_id, adapter: this.adapter });
   }
 
+  /**
+   * App IDs that are allowed to perform write operations (create, update, connect)
+   * on app/API management endpoints.
+   */
+  private static readonly ADMIN_APP_IDS: ReadonlySet<string> = new Set([
+    SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    SCHEMAVAULTS_WEB.app_id,
+  ]);
+
+  /**
+   * Throws an error if the current app is not authorized to perform write operations
+   * on app/API management endpoints.
+   */
+  private assertAppAndApiManagementWriteAccess(method_name: string): void {
+    if (!SchemaVaultsAuthClient.ADMIN_APP_IDS.has(this._app_id)) {
+      throw new Error(
+        `[SchemaVaultsAuthClient] ${method_name}() is restricted to SchemaVaults internal apps. ` +
+        `Current app_id "${this._app_id}" is not authorized to perform this operation.`,
+      );
+    }
+  }
+
   public async listClientApplications(
     query_type: ListAppsQueryType,
     query_params?: URLSearchParams,
@@ -1072,6 +1095,7 @@ export class SchemaVaultsAuthClient
   public async createClientApplication(
     app_definition: SchemaVaultsApp,
   ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("createClientApplication");
     const fn = await import("@/lib/create-client-application").then(
       (m) => m.default,
     );
@@ -1081,6 +1105,7 @@ export class SchemaVaultsAuthClient
   public async createClientApplicationDomain(
     app_domain_definition: SchemaVaultsAppDomainRef,
   ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("createClientApplicationDomain");
     const fn = await import("@/lib/create-client-application-domain").then(
       (m) => m.default,
     );
@@ -1119,6 +1144,7 @@ export class SchemaVaultsAuthClient
   public async createApiServer(
     api_server_definition: SchemaVaultsApiServerDefinition,
   ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("createApiServer");
     const fn = await import("@/lib/create-api-server").then(
       (m) => m.default,
     );
@@ -1128,6 +1154,7 @@ export class SchemaVaultsAuthClient
   public async createApiServerDomain(
     api_server_domain_definition: SchemaVaultsApiServerDomainRef,
   ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("createApiServerDomain");
     const fn = await import("@/lib/create-api-server-domain").then(
       (m) => m.default,
     );
@@ -1147,6 +1174,7 @@ export class SchemaVaultsAuthClient
     api_server_id: ApiServerId,
     client_app_id: AppId,
   ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("connectAppToApiServer");
     const fn = await import("@/lib/connect-app-to-api-server").then(
       (m) => m.default,
     );
