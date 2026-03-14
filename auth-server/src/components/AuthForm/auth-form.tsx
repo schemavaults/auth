@@ -9,7 +9,7 @@ import {
 // Login / Register functions
 
 import { cn, useToast } from "@schemavaults/ui";
-import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { Loader2, LogIn, Mail, UserPlus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -21,7 +21,7 @@ import {
   FormMessage,
 } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { Input } from "@schemavaults/ui";
+import { Input, PasswordInput } from "@schemavaults/ui";
 import {
   Card,
   CardContent,
@@ -268,6 +268,7 @@ export function AuthForm<T extends "login" | "register">({
                     <Input
                       placeholder="name@example.com"
                       autoComplete="email"
+                      icon={Mail}
                       {...field}
                       name={field.name}
                       disabled={field.disabled || submitting}
@@ -287,10 +288,8 @@ export function AuthForm<T extends "login" | "register">({
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="**********"
+                    <PasswordInput
                       {...field}
-                      type="password"
                       autoComplete={
                         type === "login" ? "current-password" : "new-password"
                       }
@@ -314,10 +313,8 @@ export function AuthForm<T extends "login" | "register">({
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="**********"
+                      <PasswordInput
                         {...field}
-                        type="password"
                         autoComplete="new-password"
                         name={field.name}
                         disabled={field.disabled || submitting}
