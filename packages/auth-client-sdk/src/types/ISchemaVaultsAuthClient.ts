@@ -3,11 +3,23 @@ import type {
   RefreshToken,
   UserData,
   CodeChallengeWithDetails,
+  PaginationOptions,
 } from "@schemavaults/auth-common";
 import type { Credentials } from "@/types/credentials";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
-import type { AppId } from "@schemavaults/app-definitions";
+import type {
+  ApiServerId,
+  AppId,
+  ListApiServersQueryResponse,
+  ListApiServersQueryType,
+  ListAppsQueryResponse,
+  ListAppsQueryType,
+  SchemaVaultsApiServerDefinition,
+  SchemaVaultsApiServerDomainRef,
+  SchemaVaultsApp,
+  SchemaVaultsAppDomainRef,
+} from "@schemavaults/app-definitions";
 
 export interface ISchemaVaultsAuthClient {
   version: string;
@@ -116,6 +128,111 @@ export interface ISchemaVaultsAuthClient {
    * @returns A promise resolving to true if the app is authorized, false otherwise
    */
   checkAppAuthorization: (app_id: AppId) => Promise<boolean>;
+
+  /**
+   * @name loadClientApplicationDefinition
+   * @description Load a client application definition
+   * @returns A promise resolving to a SchemaVaultsApp object, if found and accessible
+   */
+  loadClientApplicationDefinition: (app_id: AppId) => Promise<SchemaVaultsApp>;
+
+  /**
+   * @name listClientApplications
+   * @description List client applications in the auth-server database
+   * @argument query_type ListAppsQueryType
+   * @argument query_params URLSearchParams Additional search paramaters for the query. E.g. ?organization_id=x
+   * @argument pagination PaginationOptions
+   * @returns A promise resolving to a list of ListAppsQueryResponse objects, if query was met
+   */
+  listClientApplications: (
+    query_type: ListAppsQueryType,
+    query_params?: URLSearchParams,
+    pagination?: PaginationOptions,
+  ) => Promise<ListAppsQueryResponse>;
+
+  /**
+   * @name createClientApplication
+   * @description Creates a client application reference in the auth-server database
+   * @argument App definition to write to database
+   * @returns A promise resolving if creation succeeds
+   */
+  createClientApplication: (app_definition: SchemaVaultsApp) => Promise<void>;
+
+  /**
+   * @name createClientApplicationDomain
+   * @description Creates a domain for a client application in the auth-server database
+   * @argument App domain definition to write to database
+   * @returns A promise resolving if creation succeeds
+   */
+  createClientApplicationDomain: (
+    app_domain_definition: SchemaVaultsAppDomainRef,
+  ) => Promise<void>;
+
+  /**
+   * @name loadApiServerDefinition
+   * @description Load an API server definition
+   * @argument api_server_id The unique ID of the API server definition to load
+   * @returns A promise resolving to a SchemaVaultsApp object, if found and accessible
+   */
+  loadApiServerDefinition: (
+    api_server_id: ApiServerId,
+  ) => Promise<SchemaVaultsApiServerDefinition>;
+
+  /**
+   * @name listApiServers
+   * @description List API server definitions from the
+   * @argument query_type ListApiServersQueryType
+   * @argument query_params URLSearchParams Additional search paramaters for the query. E.g. ?organization_id=x
+   * @argument pagination PaginationOptions
+   * @returns A promise resolving to a ListApiServersQueryResponse object, if found and accessible
+   */
+  listApiServers: (
+    query_type: ListApiServersQueryType,
+    query_params?: URLSearchParams,
+    pagination?: PaginationOptions,
+  ) => Promise<ListApiServersQueryResponse>;
+
+  /**
+   * @name createApiServer
+   * @description Create an API server reference in the auth-server database
+   * @argument API server definition to write to database
+   * @returns A promise resolving if creation succeeds
+   */
+  createApiServer: (
+    api_server_definition: SchemaVaultsApiServerDefinition,
+  ) => Promise<void>;
+
+  /**
+   * @name createApiServerDomain
+   * @description Create a domain for an API server reference in the auth-server database
+   * @argument API server domain definition to write to database
+   * @returns A promise resolving if creation succeeds
+   */
+  createApiServerDomain: (
+    api_server_domain_definition: SchemaVaultsApiServerDomainRef,
+  ) => Promise<void>;
+
+  /**
+   * @name listClientApplicationDomains
+   * @description List domains for a client application
+   * @argument app_id The unique ID of the client application to list domains for
+   * @returns A promise resolving to an array of SchemaVaultsAppDomainRef objects
+   */
+  listClientApplicationDomains: (
+    app_id: AppId,
+  ) => Promise<SchemaVaultsAppDomainRef[]>;
+
+  /**
+   * @name connectAppToApiServer
+   * @description Connect a frontend client application to an API server, allowing it to request access tokens for that API
+   * @argument api_server_id The unique ID of the API server
+   * @argument client_app_id The unique ID of the client application
+   * @returns A promise resolving if the connection succeeds
+   */
+  connectAppToApiServer: (
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+  ) => Promise<void>;
 
   /**
    * @param feature_name Name of the feature to check if supported

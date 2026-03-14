@@ -1,19 +1,16 @@
-import {
-  useAppEnvironment,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
 import useSWR, { useSWRConfig } from "swr";
 import {
-  type ListApiServersQueryResponse,
   type ListApiServersQueryType,
   type SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
+import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-react-provider";
 
 export interface UseApiServersListOptions {
   queryType: ListApiServersQueryType;
   initialData?: readonly SchemaVaultsApiServerDefinition[] | undefined;
   organization_id?: string;
+  authClient: ISchemaVaultsAuthClient | null | undefined;
 }
 
 function getApiServersListEndpoint(
@@ -40,46 +37,33 @@ export function useApiServersList({
   queryType,
   initialData,
   organization_id,
+  authClient,
 }: UseApiServersListOptions) {
   const { toast } = useToast();
-  const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const endpoint = getApiServersListEndpoint(queryType, organization_id);
 
   return useSWR(
-    endpoint,
+    authClient ? endpoint : null,
     async () => {
       try {
-        const origin = window.location.origin;
-        if (environment !== "development" && environment !== "test") {
-          if (!origin.startsWith("https://"))
-            throw new Error("Origin must use HTTPS in production");
+        const queryParams = new URLSearchParams();
+        if (queryType === "org" && organization_id) {
+          queryParams.set("organization_id", organization_id);
         }
-        if (environment === "development") {
-          console.log(
-            `[useApiServersList] Sending request to endpoint "${endpoint}" from origin "${origin}"`,
-          );
-        }
-        const listApiServersResponse: Response = await fetch(endpoint, {
-          method: "GET",
-          credentials: "include",
-        });
-        if (!listApiServersResponse.ok || listApiServersResponse.status !== 200)
-          throw new Error("Network request to list-apps endpoint failed");
-        const listAppsBody: unknown = await listApiServersResponse.json();
-        if (typeof listAppsBody !== "object")
-          throw new Error("Failed to list API servers; response not an object");
-        const listAppsResponseObject =
-          listAppsBody as ListApiServersQueryResponse;
-        if (
-          !Object.hasOwn(listAppsResponseObject, "success") ||
-          !listAppsResponseObject.success
-        ) {
+
+        const response = await authClient!.listApiServers(
+          queryType,
+          queryParams,
+        );
+
+        if (!response.success) {
           throw new Error("List API servers response has success = false");
         }
-        const apiServersList: readonly SchemaVaultsApiServerDefinition[] =
-          listAppsResponseObject.list;
 
-        if (environment === "development") {
+        const apiServersList: readonly SchemaVaultsApiServerDefinition[] =
+          response.list;
+
+        if (process.env.NODE_ENV === "development") {
           console.log(
             "[useApiServersList] Received list of API servers: ",
             apiServersList,

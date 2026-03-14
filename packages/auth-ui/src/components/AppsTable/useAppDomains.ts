@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
   isHardcodedAppId,
+  HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
   type SchemaVaultsAppDomainRef,
-  schemaVaultsAppDomainRefSchema,
 } from "@schemavaults/app-definitions";
 import type { SWRResponse } from "swr";
 import useSWR from "swr";
+import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-react-provider";
 
 export function getUseAppDomainsListEndpoint(app_id: string) {
   return `/api/apps/${app_id}/domains` as const;
@@ -17,12 +17,14 @@ export function getUseAppDomainsListEndpoint(app_id: string) {
 export interface UseAppDomainsInput {
   app_id: string;
   initialData?: readonly SchemaVaultsAppDomainRef[];
+  authClient?: ISchemaVaultsAuthClient;
 }
 
 export function useAppDomains(
   input: UseAppDomainsInput,
 ): SWRResponse<SchemaVaultsAppDomainRef[], Error> {
-  const app_id: string = typeof input === "string" ? input : input.app_id;
+  const app_id: string = input.app_id;
+  const authClient = input.authClient;
 
   return useSWR(
     getUseAppDomainsListEndpoint(app_id),
@@ -35,6 +37,11 @@ export function useAppDomains(
         return hardcoded;
       }
 
+      if (authClient) {
+        return await authClient.listClientApplicationDomains(app_id);
+      }
+
+      // Fallback to direct fetch if no authClient provided
       const response = await fetch(getUseAppDomainsListEndpoint(app_id), {
         method: "GET",
         credentials: "include",
@@ -44,16 +51,10 @@ export function useAppDomains(
       const body = await response.json();
       if (typeof body !== "object") throw new Error("Invalid response body");
       if (!body.success) throw new Error(body.message);
-      const parsed = schemaVaultsAppDomainRefSchema.array().parse(body.list);
-      return parsed;
+      return body.list;
     },
     {
-      fallbackData:
-        typeof input === "string"
-          ? undefined
-          : input.initialData
-            ? [...input.initialData]
-            : undefined,
+      fallbackData: input.initialData ? [...input.initialData] : undefined,
     },
   );
 }

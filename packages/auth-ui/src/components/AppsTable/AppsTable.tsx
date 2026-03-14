@@ -12,6 +12,7 @@ import type {
 import { CreateAppDialogTrigger } from "@/components/CreateAppDialog";
 import { AuthorizeClientApplicationDialogTrigger } from "@/components/AuthorizeClientApplicationDialog";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@schemavaults/auth-react-provider";
 import type { ColumnDef } from "@schemavaults/ui";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
 
@@ -49,10 +50,13 @@ export function AppsTable({
   organization_id,
   isOrgOwner,
 }: AppsDatatableProps): ReactElement {
+  const auth = useAuth();
+  const authClient = auth.ready ? auth.client.current : undefined;
   const apps: SWRResponse<readonly SchemaVaultsApp[], Error> = useAppsList({
     queryType,
     initialData: preloaded ? preloaded.apps : undefined,
     organization_id,
+    authClient,
   });
   const { isLoading, data } = apps;
   const columns = useMemo((): ColumnDef<SchemaVaultsApp>[] => {

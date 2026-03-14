@@ -10,6 +10,7 @@ import type {
 } from "@schemavaults/app-definitions";
 import { Loader2 } from "lucide-react";
 import { useApiServersList } from "./useApiServersList";
+import { useAuth } from "@schemavaults/auth-react-provider";
 import {
   CreateApiServerDialogOpenDispatchContext,
   CreateApiServerDialogTrigger,
@@ -62,11 +63,14 @@ export function ApiServersTable({
   preloaded,
   showConnectAppToApi,
 }: ApiServersDatatableProps): ReactElement {
+  const auth = useAuth();
+  const authClient = auth.ready ? auth.client.current : undefined;
   const apis: SWRResponse<readonly SchemaVaultsApiServerDefinition[], Error> =
     useApiServersList({
       queryType,
       initialData: preloaded ? preloaded.api_servers : undefined,
       organization_id,
+      authClient,
     });
   const { isLoading, data } = apis;
 

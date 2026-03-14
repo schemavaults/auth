@@ -23,7 +23,7 @@ import {
   DialogTitle,
   useForm,
 } from "@schemavaults/ui";
-import { useAppEnvironment } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import {
   type AppToApiPermission,
   appToApiPermissionSchema,
@@ -57,6 +57,7 @@ export function ConnectAppToApiDialog({
     defaultValues,
   });
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
+  const auth = useAuth();
 
   useEffect(() => {
     if (open && preselectedApiServerId) {
@@ -78,45 +79,14 @@ export function ConnectAppToApiDialog({
     }
 
     try {
-      const response = await fetch(
-        `/api/apis/${values.api_server_id}/connect_app/${values.client_app_id}` as const,
-        {
-          method: "POST",
-          credentials: "include",
-        },
+      const authClient = auth.ready ? auth.client.current : undefined;
+      if (!authClient) {
+        throw new Error("Auth client is not available");
+      }
+      await authClient.connectAppToApiServer(
+        values.api_server_id,
+        values.client_app_id,
       );
-      if (!response.ok || response.status !== 200) {
-        throw new Error(
-          `App-to-Api connection creation request has bad status: ${response.status}`,
-        );
-      }
-
-      const body: object = await response.json();
-      if (typeof body !== "object") {
-        throw new Error(
-          "Expected JSON object response from app-to-api permission creation attempt",
-        );
-      }
-
-      if (!Object.hasOwn(body, "success")) {
-        throw new Error("No success field in response");
-      }
-
-      if (
-        !(
-          typeof (body as { success: unknown }).success === "boolean" &&
-          (body as { success: boolean }).success
-        )
-      ) {
-        console.error(body);
-        throw new Error(
-          "App-to-API Permission creation response has success flag set to false",
-        );
-      }
-
-      if (environment === "development") {
-        console.log("Received response: ", body);
-      }
     } catch (e: unknown) {
       toast({
         variant: "destructive",

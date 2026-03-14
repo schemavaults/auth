@@ -32,7 +32,7 @@ import {
   Label,
   useForm,
 } from "@schemavaults/ui";
-import { useAppEnvironment } from "@schemavaults/auth-react-provider";
+import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
   AppId,
@@ -76,6 +76,7 @@ export function CreateAppDomainDialog({
     resolver: zodResolver(schemaVaultsAppDomainRefSchema),
     defaultValues,
   });
+  const auth = useAuth();
   const { mutate } = useSWRConfig();
   const [submitting, startSubmitting] = useTransition();
 
@@ -100,47 +101,15 @@ export function CreateAppDomainDialog({
 
     startSubmitting(async () => {
       try {
-        const response = await fetch(`/api/apps/${values.app_id}/domains`, {
-          method: "POST",
-          body: JSON.stringify({
-            ...values,
-            created_at: Date.now(),
-            app_id: values.app_id,
-          }),
-          credentials: "include",
+        const authClient = auth.ready ? auth.client.current : undefined;
+        if (!authClient) {
+          throw new Error("Auth client is not available");
+        }
+        await authClient.createClientApplicationDomain({
+          ...values,
+          created_at: Date.now(),
+          app_id: values.app_id,
         });
-        if (!response.ok || response.status !== 200) {
-          throw new Error(
-            `Frontend app domain creation request has bad status: ${response.status}`,
-          );
-        }
-
-        const body: object = await response.json();
-        if (typeof body !== "object") {
-          throw new Error(
-            "Expected JSON object response from app domain creation attempt",
-          );
-        }
-
-        if (!Object.hasOwn(body, "success")) {
-          throw new Error("No success field in response");
-        }
-
-        if (
-          !(
-            typeof (body as { success: unknown }).success === "boolean" &&
-            (body as { success: boolean }).success
-          )
-        ) {
-          console.error(body);
-          throw new Error(
-            "Frontend app domain creation response has success flag set to false",
-          );
-        }
-
-        if (environment === "development") {
-          console.log("Received response: ", body);
-        }
       } catch (e: unknown) {
         toast({
           variant: "destructive",
