@@ -83,3 +83,11 @@ export {
 export { determineRefreshTokenCookieSameSiteValue } from "./determineRefreshTokenCookieSameSiteValue";
 
 export { authorizeClientApplicationFormType } from "./authorize-client-application-form-type";
+
+export {
+  paginationOptionsSchema,
+  DEFAULT_PAGINATION_PAGE_INDEX,
+  DEFAULT_PAGINATION_PAGE_SIZE,
+  isValidPaginationOptions,
+} from "./pagination";
+export type { PaginationOptions } from "./pagination";
