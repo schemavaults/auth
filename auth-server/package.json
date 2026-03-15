@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.20.35",
+  "version": "0.20.36",
   "private": true,
   "repository": {
     "type": "git",
@@ -23,7 +23,7 @@
     "@schemavaults/theme": "0.25.5",
     "zod": "3.25.8",
     "swr": "2.3.4",
-    "@schemavaults/dbh": "0.8.1",
+    "@schemavaults/dbh": "0.8.7",
     "server-only": "0.0.1",
     "lucide-react": "0.508.0",
     "@hookform/resolvers": "3.9.0",
@@ -48,8 +48,9 @@
   },
   "scripts": {
     "dev": "NEXT_TELEMETRY_DISABLED=1 next dev --port 6767",
-    "dev:migrate": "/bin/bash ./migrate-db.sh .env.development",
-    "build:migrations": "bun run ./build-db-migrations.ts",
+    "dev:migrate": "bun run build:migrations && npx @schemavaults/dbh migrate ./dist/migrations --environment development --env-file ./.env.development",
+    "prod:migrate": "bun run build:migrations && npx @schemavaults/dbh migrate ./dist/migrations --environment production --env-file ./.env.production",
+    "build:migrations": "bunx @schemavaults/dbh build-db-migrations ./src/lib/auth-db/migrations --outdir ./dist/migrations --sql-module ./src/lib/auth-db/sql.ts --sql-outdir ./dist",
     "build": "NEXT_TELEMETRY_DISABLED=1 next build",
     "build:standalone": "NEXT_STANDALONE_DOCKER_BUILD=true NEXT_TELEMETRY_DISABLED=1 next build",
     "start": "NEXT_TELEMETRY_DISABLED=1 next start",

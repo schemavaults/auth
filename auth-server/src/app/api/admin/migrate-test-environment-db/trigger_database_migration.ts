@@ -29,12 +29,24 @@ async function trigger_db_migration(
   return await migrateToLatest(db, MIGRATIONS_PATH);
 }
 
+/**
+ * @environment test - This will only work when getAppEnvironment() === 'test'
+ * @returns JSON based on whether a database migration was triggered
+ */
 export default async function trigger_database_migration(req: NextRequest): Promise<NextResponse> {
   void req;
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const debug: boolean = shouldEnableDebug(environment);
 
-  if (environment === 'test') {
+  // only allow use of this in test environment
+  if (environment !== 'test') {
+    return NextResponse.json({
+      error: "Route only available in test environment",
+      success: false
+    }, {
+      status: 404
+    })
+  } else {
     await using dbh = ServerlessDatabase.createDBH();
 
     if (!process.env.MIGRATIONS_PATH || typeof process.env.MIGRATIONS_PATH !== 'string') {
@@ -124,12 +136,5 @@ export default async function trigger_database_migration(req: NextRequest): Prom
         status: 200,
       },
     );
-  } else {
-    return NextResponse.json({
-      error: "Route not available in this environment",
-      success: false
-    }, {
-      status: 404
-    })
   }
 }
