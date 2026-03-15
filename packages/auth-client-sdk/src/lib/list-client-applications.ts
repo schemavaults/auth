@@ -7,6 +7,7 @@ import type { PaginationOptions } from "@schemavaults/auth-common";
 
 export interface IListClientApplicationsOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
+  auth_server_uri: string;
   query_type: ListAppsQueryType;
   query_params?: URLSearchParams;
   pagination?: PaginationOptions;
@@ -14,6 +15,7 @@ export interface IListClientApplicationsOpts {
 
 export async function listClientApplications({
   adapter,
+  auth_server_uri,
   query_type,
   query_params,
   pagination,
@@ -37,7 +39,7 @@ export async function listClientApplications({
   }
 
   const response = await adapter.fetch(
-    `/api/apps?${searchParams.toString()}`,
+    `${auth_server_uri}/api/apps?${searchParams.toString()}`,
     {
       method: "GET",
       credentials: "include",

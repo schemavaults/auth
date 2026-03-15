@@ -10,11 +10,13 @@ import {
 
 export interface IListClientApplicationDomainsOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
+  auth_server_uri: string;
   app_id: AppId;
 }
 
 export async function listClientApplicationDomains({
   adapter,
+  auth_server_uri,
   app_id,
 }: IListClientApplicationDomainsOpts): Promise<SchemaVaultsAppDomainRef[]> {
   if (!(await appIdSchema.safeParseAsync(app_id)).success) {
@@ -27,7 +29,7 @@ export async function listClientApplicationDomains({
     );
   }
 
-  const response = await adapter.fetch(`/api/apps/${app_id}/domains`, {
+  const response = await adapter.fetch(`${auth_server_uri}/api/apps/${app_id}/domains`, {
     method: "GET",
     credentials: "include",
   });

@@ -3,14 +3,16 @@ import type { SchemaVaultsApp } from "@schemavaults/app-definitions";
 
 export interface ICreateClientApplicationOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
+  auth_server_uri: string;
   app_definition: SchemaVaultsApp;
 }
 
 export async function createClientApplication({
   adapter,
+  auth_server_uri,
   app_definition,
 }: ICreateClientApplicationOpts): Promise<void> {
-  const response = await adapter.fetch("/api/apps", {
+  const response = await adapter.fetch(`${auth_server_uri}/api/apps`, {
     method: "POST",
     body: JSON.stringify(app_definition),
     credentials: "include",

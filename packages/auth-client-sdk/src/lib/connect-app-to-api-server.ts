@@ -3,17 +3,19 @@ import type { ApiServerId, AppId } from "@schemavaults/app-definitions";
 
 export interface IConnectAppToApiServerOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
+  auth_server_uri: string;
   api_server_id: ApiServerId;
   client_app_id: AppId;
 }
 
 export async function connectAppToApiServer({
   adapter,
+  auth_server_uri,
   api_server_id,
   client_app_id,
 }: IConnectAppToApiServerOpts): Promise<void> {
   const response = await adapter.fetch(
-    `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
+    `${auth_server_uri}/api/apis/${api_server_id}/connect_app/${client_app_id}`,
     {
       method: "POST",
       credentials: "include",

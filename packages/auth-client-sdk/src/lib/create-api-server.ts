@@ -3,14 +3,16 @@ import type { SchemaVaultsApiServerDefinition } from "@schemavaults/app-definiti
 
 export interface ICreateApiServerOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
+  auth_server_uri: string;
   api_server_definition: SchemaVaultsApiServerDefinition;
 }
 
 export async function createApiServer({
   adapter,
+  auth_server_uri,
   api_server_definition,
 }: ICreateApiServerOpts): Promise<void> {
-  const response = await adapter.fetch("/api/apis", {
+  const response = await adapter.fetch(`${auth_server_uri}/api/apis`, {
     method: "POST",
     body: JSON.stringify(api_server_definition),
     credentials: "include",

@@ -9,11 +9,13 @@ import {
 
 export interface ILoadApiServerDefinitionOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
+  auth_server_uri: string;
   api_server_id: ApiServerId;
 }
 
 export async function loadApiServerDefinition({
   adapter,
+  auth_server_uri,
   api_server_id,
 }: ILoadApiServerDefinitionOpts): Promise<SchemaVaultsApiServerDefinition> {
   if (!(await apiServerIdSchema.safeParseAsync(api_server_id)).success) {
@@ -25,7 +27,7 @@ export async function loadApiServerDefinition({
     if (hardcoded) return hardcoded;
   }
 
-  const response = await adapter.fetch(`/api/apis/${api_server_id}`, {
+  const response = await adapter.fetch(`${auth_server_uri}/api/apis/${api_server_id}`, {
     method: "GET",
     credentials: "include",
   });

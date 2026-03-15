@@ -3,15 +3,17 @@ import type { SchemaVaultsAppDomainRef } from "@schemavaults/app-definitions";
 
 export interface ICreateClientApplicationDomainOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
+  auth_server_uri: string;
   app_domain_definition: SchemaVaultsAppDomainRef;
 }
 
 export async function createClientApplicationDomain({
   adapter,
+  auth_server_uri,
   app_domain_definition,
 }: ICreateClientApplicationDomainOpts): Promise<void> {
   const response = await adapter.fetch(
-    `/api/apps/${app_domain_definition.app_id}/domains`,
+    `${auth_server_uri}/api/apps/${app_domain_definition.app_id}/domains`,
     {
       method: "POST",
       body: JSON.stringify(app_domain_definition),
