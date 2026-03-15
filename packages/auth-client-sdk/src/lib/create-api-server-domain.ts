@@ -1,5 +1,6 @@
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
+import { schemaVaultsApiServerDomainRefSchema } from "@schemavaults/app-definitions";
 
 export interface ICreateApiServerDomainOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
@@ -12,6 +13,8 @@ export async function createApiServerDomain({
   auth_server_uri,
   api_server_domain_definition,
 }: ICreateApiServerDomainOpts): Promise<void> {
+  await schemaVaultsApiServerDomainRefSchema.parseAsync(api_server_domain_definition);
+
   const response = await adapter.fetch(
     `${auth_server_uri}/api/apis/${api_server_domain_definition.api_server_id}/domains`,
     {
