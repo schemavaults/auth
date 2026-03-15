@@ -236,6 +236,29 @@ export class SchemaVaultsApiServerRegistry {
     return all_api_servers;
   }
 
+  public async addApiServerDomain(
+    api_server_id: string,
+    new_domain: SchemaVaultsApiServerDomainRef,
+  ): Promise<void> {
+    const parsed =
+      await schemaVaultsApiServerDomainRefSchema.safeParseAsync(new_domain);
+    if (!parsed.success) {
+      throw new Error("Received invalid API server domain to associate with API server");
+    }
+    const domain = parsed.data;
+
+    if (api_server_id !== domain.api_server_id) {
+      throw new Error("API server ID mismatch");
+    }
+
+    try {
+      await this.db.insertInto("api_server_domains").values(domain).execute();
+    } catch (e: unknown) {
+      console.error("Failed to add new API server domain; db insert failed: ", e);
+      throw new Error("Failed to add new API server domain; db insert failed");
+    }
+  }
+
   public async listOrganizationApiServers(
     org_id: OrganizationID,
     user: UserData,
