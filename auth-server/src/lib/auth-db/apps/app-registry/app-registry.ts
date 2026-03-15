@@ -15,6 +15,7 @@ import {
 import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import { ConflictError } from "@/lib/error/ConflictError";
 import { z } from "zod";
 
 /**
@@ -150,9 +151,15 @@ export class SchemaVaultsAppRegistry {
     }
     const app: SchemaVaultsApp = parsed_app.data;
 
-    const insertAppQuery = this.db.insertInto("apps").values(app);
+    const result = await this.db
+      .insertInto("apps")
+      .values(app)
+      .onConflict((oc) => oc.column("app_id").doNothing())
+      .executeTakeFirst();
 
-    await insertAppQuery.execute();
+    if (result.numInsertedOrUpdatedRows === BigInt(0)) {
+      throw new ConflictError("An app with this ID already exists");
+    }
   }
 
   private parseAppDefinitionDatabaseRow(row: unknown): SchemaVaultsApp {
@@ -369,8 +376,17 @@ export class SchemaVaultsAppRegistry {
     }
 
     try {
-      await this.db.insertInto("app_domains").values(app_domain).execute();
+      const result = await this.db
+        .insertInto("app_domains")
+        .values(app_domain)
+        .onConflict((oc) => oc.column("app_domain_ref_id").doNothing())
+        .executeTakeFirst();
+
+      if (result.numInsertedOrUpdatedRows === BigInt(0)) {
+        throw new ConflictError("This app domain already exists");
+      }
     } catch (e: unknown) {
+      if (e instanceof ConflictError) throw e;
       console.error("Failed to add new app domain; db insert failed: ", e);
       throw new Error("Failed to add new app domain; db insert failed");
     }

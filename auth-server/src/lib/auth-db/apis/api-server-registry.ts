@@ -13,6 +13,7 @@ import {
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import { ConflictError } from "@/lib/error/ConflictError";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 
 /**
@@ -157,7 +158,15 @@ export class SchemaVaultsApiServerRegistry {
     }
     const app: SchemaVaultsApiServerDefinition = parsed_app.data;
 
-    await this.db.insertInto("api_servers").values(app).execute();
+    const result = await this.db
+      .insertInto("api_servers")
+      .values(app)
+      .onConflict((oc) => oc.column("api_server_id").doNothing())
+      .executeTakeFirst();
+
+    if (result.numInsertedOrUpdatedRows === BigInt(0)) {
+      throw new ConflictError("An API server with this ID already exists");
+    }
   }
 
   private async parseApiServerDefinitionsFromDbRows(rows: unknown[]): Promise<readonly SchemaVaultsApiServerDefinition[]> {
@@ -252,8 +261,17 @@ export class SchemaVaultsApiServerRegistry {
     }
 
     try {
-      await this.db.insertInto("api_server_domains").values(domain).execute();
+      const result = await this.db
+        .insertInto("api_server_domains")
+        .values(domain)
+        .onConflict((oc) => oc.column("api_server_domain_ref_id").doNothing())
+        .executeTakeFirst();
+
+      if (result.numInsertedOrUpdatedRows === BigInt(0)) {
+        throw new ConflictError("This API server domain already exists");
+      }
     } catch (e: unknown) {
+      if (e instanceof ConflictError) throw e;
       console.error("Failed to add new API server domain; db insert failed: ", e);
       throw new Error("Failed to add new API server domain; db insert failed");
     }

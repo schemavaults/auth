@@ -13,6 +13,7 @@ import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGua
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import { ConflictError } from "@/lib/error/ConflictError";
 import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 
 /**
@@ -148,6 +149,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         resource_id: newResource.app_id,
       } satisfies ResourceCreationResponse);
     } catch (e: unknown) {
+      if (e instanceof ConflictError) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: e.message,
+          } satisfies ResourceCreationResponse,
+          { status: 409 },
+        );
+      }
       console.error("Failed to create SchemaVaults frontend app: ", e);
       return NextResponse.json(
         {

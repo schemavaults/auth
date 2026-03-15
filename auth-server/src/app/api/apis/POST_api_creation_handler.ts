@@ -12,6 +12,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { ConflictError } from "@/lib/error/ConflictError";
 import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 
 /**
@@ -119,6 +120,15 @@ export default async function POST_api_creation_handler(request: NextRequest): P
           resource_id: newResource.api_server_id,
         } satisfies ResourceCreationResponse);
       } catch (e: unknown) {
+        if (e instanceof ConflictError) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: e.message,
+            } satisfies ResourceCreationResponse,
+            { status: 409 },
+          );
+        }
         console.error("Failed to create SchemaVaults API server: ", e);
         return NextResponse.json(
           {
