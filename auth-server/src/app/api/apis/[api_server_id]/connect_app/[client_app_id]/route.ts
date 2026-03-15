@@ -19,6 +19,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import { ConflictError } from "@/lib/error/ConflictError";
 import type { ServerRuntime } from "next";
 
 export const runtime: ServerRuntime = "edge"
@@ -195,6 +196,15 @@ export async function POST(
           resource_id: newPermission.api_server_id,
         } satisfies ResourceCreationResponse);
       } catch (e: unknown) {
+        if (e instanceof ConflictError) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: e.message,
+            } satisfies ResourceCreationResponse,
+            { status: 409 },
+          );
+        }
         console.error("Failed to connect app to API server: ", e);
         return NextResponse.json(
           {

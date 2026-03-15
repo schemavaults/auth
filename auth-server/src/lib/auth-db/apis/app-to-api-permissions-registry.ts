@@ -15,6 +15,7 @@ import {
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
+import { ConflictError } from "@/lib/error/ConflictError";
 
 /**
  * @name SchemaVaultsAppToApiPermissionsRegistry
@@ -206,11 +207,17 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
     }
 
     try {
-      await this.db
+      const result = await this.db
         .insertInto("apps_to_apis_permissions")
         .values(parsed.data)
-        .execute();
+        .onConflict((oc) => oc.columns(["client_app_id", "api_server_id"]).doNothing())
+        .executeTakeFirst();
+
+      if (result.numInsertedOrUpdatedRows === BigInt(0)) {
+        throw new ConflictError("This app is already connected to this API server");
+      }
     } catch (e: unknown) {
+      if (e instanceof ConflictError) throw e;
       console.error(e);
       throw new Error("Failed to grant client app access to API server");
     }

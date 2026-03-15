@@ -4,6 +4,7 @@ import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemava
 import {
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
+import { ConflictError } from "@/lib/error/ConflictError";
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import {
@@ -127,6 +128,15 @@ export async function POST_create_api_server_domain(
           resource_id: newResource.api_server_id,
         } satisfies ResourceCreationResponse);
       } catch (e: unknown) {
+        if (e instanceof ConflictError) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: e.message,
+            } satisfies ResourceCreationResponse,
+            { status: 409 },
+          );
+        }
         console.error("Failed to add domain to API server: ", e);
         return NextResponse.json(
           {

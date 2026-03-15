@@ -5,6 +5,7 @@ import {
   SchemaVaultsAppRegistry,
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
+import { ConflictError } from "@/lib/error/ConflictError";
 import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import {
   type AppId,
@@ -127,6 +128,15 @@ export async function POST_create_app_domain(
           resource_id: newResource.app_id,
         } satisfies ResourceCreationResponse);
       } catch (e: unknown) {
+        if (e instanceof ConflictError) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: e.message,
+            } satisfies ResourceCreationResponse,
+            { status: 409 },
+          );
+        }
         console.error("Failed to add domain to app: ", e);
         return NextResponse.json(
           {
