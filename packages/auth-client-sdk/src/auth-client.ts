@@ -1161,6 +1161,15 @@ export class SchemaVaultsAuthClient
     return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_domain_definition });
   }
 
+  public async listApiServerDomains(
+    api_server_id: ApiServerId,
+  ): Promise<SchemaVaultsApiServerDomainRef[]> {
+    const fn = await import("@/lib/list-api-server-domains").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id });
+  }
+
   public async loadApiServerDefinition(
     api_server_id: ApiServerId,
   ): Promise<SchemaVaultsApiServerDefinition> {
