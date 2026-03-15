@@ -1,9 +1,9 @@
 import "server-only";
-import { GET_app_handler as GET } from "./GET_app_handler";
-import { OPTIONS } from "./OPTIONS_cors_handler";
+import POST from './POST_create_api_server_domain';
+import { OPTIONS } from './OPTIONS_cors_handler';
 import type { ServerRuntime } from "next";
 
-export { GET, OPTIONS };
+export { POST, OPTIONS };
 
 export const dynamic = "force-dynamic";
 export const runtime: ServerRuntime = "edge";

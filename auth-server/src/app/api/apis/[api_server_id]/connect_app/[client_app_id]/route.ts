@@ -1,5 +1,6 @@
 import "server-only";
 
+import { applyCorsHeadersForSchemaVaultsWeb, handleCorsPreflightForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 import {
   SchemaVaultsAppToApiPermissionsRegistry,
   type ResourceCreationResponse,
@@ -208,7 +209,14 @@ export async function POST(
     },
   );
 
-  return await protected_route(req);
+  const response = await protected_route(req);
+  return applyCorsHeadersForSchemaVaultsWeb(response, req);
+}
+
+const CORS_METHODS = "POST, OPTIONS";
+
+export function OPTIONS(req: NextRequest): NextResponse {
+  return handleCorsPreflightForSchemaVaultsWeb(req, CORS_METHODS);
 }
 
 export const dynamic = "force-dynamic"; // defaults to auto

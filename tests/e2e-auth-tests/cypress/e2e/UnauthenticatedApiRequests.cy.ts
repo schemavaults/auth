@@ -76,6 +76,16 @@ describe("Unauthenticated API Requests", () => {
       });
     });
 
+    it("POST /api/apis/:apiId/domains returns 401", () => {
+      cy.request({
+        method: "POST",
+        url: `/api/apis/${fakeApiId}/domains`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
     it("POST /api/apis/:apiId/connect_app/:appId returns 401", () => {
       cy.request({
         method: "POST",
