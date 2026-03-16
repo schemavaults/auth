@@ -19,11 +19,13 @@ import {
   AppWindow,
   ClipboardCopy,
   EarthLock,
+  Eye,
   MoreHorizontal,
   PlayCircle,
   PlugZap,
   Trash,
 } from "lucide-react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -155,6 +157,14 @@ export function FrontendApplicationActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem
+            className={cn(dropdownMenuActionsClassName)}
+            asChild
+          >
+            <Link href={`/apps/${app.app_id}`}>
+              <Eye className="h-4 w-4" /> View app details
+            </Link>
+          </DropdownMenuItem>
           {!launchAppDisabled && (
             <DropdownMenuItem
               className={cn(dropdownMenuActionsClassName)}
