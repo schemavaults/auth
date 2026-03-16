@@ -1,0 +1,19 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "generate-version": {
+      "outputs": ["src/generated/version.ts"],
+      "inputs": ["package.json", "generate-version.sh"]
+    },
+    "build": {
+      "dependsOn": ["generate-version", "^build"]
+    },
+    "lint": {
+      "dependsOn": ["generate-version"]
+    },
+    "typecheck": {
+      "dependsOn": ["generate-version"]
+    }
+  }
+}
