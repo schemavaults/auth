@@ -7,6 +7,7 @@ import { cn, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import {
   ClipboardCopy,
+  Eye,
   Key,
   MoreHorizontal,
   PlugZap,
@@ -63,6 +64,11 @@ export function ApiServerRowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem asChild className={menuItemClassname}>
+            <Link href={`/apis/${api_server_id}`}>
+              <Eye className={menuItemIconClassname} /> View API details
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={async (e) => {
               e.preventDefault();
