@@ -5,7 +5,7 @@
     "generate-version": {
       "outputs": ["src/generated/**"],
       "inputs": ["package.json", "generate-version.sh"],
-      "dependsOn": null
+      "dependsOn": []
     },
     "build": {
       "dependsOn": ["generate-version", "^build"]
