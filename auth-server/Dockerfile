@@ -35,6 +35,7 @@ COPY --chown=bun:bun packages/auth-client-sdk/package.json packages/auth-client-
 COPY --chown=bun:bun packages/auth-client-sdk/tsconfig.json packages/auth-client-sdk/tsconfig.json
 COPY --chown=bun:bun packages/auth-client-sdk/eslint.config.cjs packages/auth-client-sdk/eslint.config.cjs
 COPY --chown=bun:bun packages/auth-client-sdk/generate-version.sh packages/auth-client-sdk/generate-version.sh
+COPY --chown=bun:bun packages/auth-client-sdk/turbo.json packages/auth-client-sdk/turbo.json
 
 # @schemavaults/auth-common
 COPY --chown=bun:bun packages/auth-common/package.json packages/auth-common/package.json
