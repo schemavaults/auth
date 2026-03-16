@@ -2,6 +2,7 @@ import type {
   ApiServerDomainsTable,
   ApiServersTable,
   AppsToApisPermissionsTable,
+  AppsToHardcodedApisPermissionsTable,
 } from "./apis";
 import type { AppDomainsTable, AppsTable, AuthorizedAppsTable } from "./apps";
 import type { JwtKeysTable } from "./jwt_keys";
@@ -27,6 +28,7 @@ export type AuthDatabase = {
   api_server_domains: ApiServerDomainsTable;
   authorized_apps: AuthorizedAppsTable;
   apps_to_apis_permissions: AppsToApisPermissionsTable;
+  apps_to_hardcoded_apis_permissions: AppsToHardcodedApisPermissionsTable;
   users: UsersTable;
   passwords: PasswordsTable;
   authorization_codes: AuthorizationCodesTable;

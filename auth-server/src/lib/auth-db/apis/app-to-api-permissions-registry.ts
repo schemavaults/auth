@@ -13,9 +13,12 @@ import {
   SCHEMAVAULTS_REGISTRY_SERVER,
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
+  isHardcodedApiServerId,
+  HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS_MAP,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { ConflictError } from "@/lib/error/ConflictError";
+import { appToHardcodedApiPermissionSchema } from "./apps-to-hardcoded-apis-permissions-table";
 
 /**
  * @name SchemaVaultsAppToApiPermissionsRegistry
@@ -96,6 +99,34 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
         client_app_id,
         api_server_id,
       ) satisfies AppToApiPermission;
+    }
+
+    // For hardcoded API servers, check the hardcoded permissions table
+    if (isHardcodedApiServerId(api_server_id)) {
+      const hardcodedRows = await this.db
+        .selectFrom("apps_to_hardcoded_apis_permissions")
+        .where("api_server_id", "=", api_server_id)
+        .where("client_app_id", "=", client_app_id)
+        .selectAll()
+        .limit(1)
+        .execute();
+
+      if (hardcodedRows.length === 0) {
+        return null;
+      }
+
+      const row = hardcodedRows[0]!;
+      const createdAt: number =
+        typeof row.created_at === "number"
+          ? row.created_at
+          : parseInt(row.created_at as unknown as string);
+
+      return {
+        client_app_id: row.client_app_id,
+        api_server_id: row.api_server_id,
+        created_at: createdAt,
+        created_by: row.created_by ?? null,
+      } satisfies AppToApiPermission;
     }
 
     if (!isValidUuid(api_server_id)) {
@@ -195,15 +226,41 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
     api_server_id: string,
     created_by: string | null | undefined = undefined
   ): Promise<void> {
-    const parsed = await appToApiPermissionSchema.safeParseAsync({
+    const permissionData = {
       client_app_id,
       api_server_id,
       created_at: Date.now(),
-      created_by: created_by ?? null
-    });
+      created_by: created_by ?? null,
+    };
+
+    if (isHardcodedApiServerId(api_server_id)) {
+      const parsed = await appToHardcodedApiPermissionSchema.safeParseAsync(permissionData);
+      if (!parsed.success) {
+        throw new Error("Invalid hardcoded app-to-API permission data");
+      }
+
+      try {
+        const result = await this.db
+          .insertInto("apps_to_hardcoded_apis_permissions")
+          .values(parsed.data)
+          .onConflict((oc) => oc.columns(["client_app_id", "api_server_id"]).doNothing())
+          .executeTakeFirst();
+
+        if (result.numInsertedOrUpdatedRows === BigInt(0)) {
+          throw new ConflictError("This app is already connected to this API server");
+        }
+      } catch (e: unknown) {
+        if (e instanceof ConflictError) throw e;
+        console.error(e);
+        throw new Error("Failed to grant client app access to hardcoded API server");
+      }
+      return;
+    }
+
+    const parsed = await appToApiPermissionSchema.safeParseAsync(permissionData);
 
     if (!parsed.success) {
-      throw new Error
+      throw new Error("Invalid app-to-API permission data");
     }
 
     try {
@@ -231,6 +288,30 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
   public async listConnectedApps(
     api_server_id: string,
   ): Promise<{ client_app_id: string; app_name: string; created_at: number }[]> {
+    const parseCreatedAt = (created_at: number | string): number =>
+      typeof created_at === "number"
+        ? created_at
+        : parseInt(created_at as unknown as string);
+
+    if (isHardcodedApiServerId(api_server_id)) {
+      const hardcodedRows = await this.db
+        .selectFrom("apps_to_hardcoded_apis_permissions")
+        .innerJoin("apps", "apps.app_id", "apps_to_hardcoded_apis_permissions.client_app_id")
+        .where("apps_to_hardcoded_apis_permissions.api_server_id", "=", api_server_id)
+        .select([
+          "apps_to_hardcoded_apis_permissions.client_app_id",
+          "apps.app_name",
+          "apps_to_hardcoded_apis_permissions.created_at",
+        ])
+        .execute();
+
+      return hardcodedRows.map((row) => ({
+        client_app_id: row.client_app_id,
+        app_name: row.app_name,
+        created_at: parseCreatedAt(row.created_at),
+      }));
+    }
+
     const rows = await this.db
       .selectFrom("apps_to_apis_permissions")
       .innerJoin("apps", "apps.app_id", "apps_to_apis_permissions.client_app_id")
@@ -245,10 +326,7 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
     return rows.map((row) => ({
       client_app_id: row.client_app_id,
       app_name: row.app_name,
-      created_at:
-        typeof row.created_at === "number"
-          ? row.created_at
-          : parseInt(row.created_at as unknown as string),
+      created_at: parseCreatedAt(row.created_at),
     }));
   }
 
@@ -260,25 +338,45 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
   public async listConnectedApiServers(
     client_app_id: string,
   ): Promise<{ api_server_id: string; api_server_name: string; created_at: number }[]> {
-    const rows = await this.db
-      .selectFrom("apps_to_apis_permissions")
-      .innerJoin("api_servers", "api_servers.api_server_id", "apps_to_apis_permissions.api_server_id")
-      .where("apps_to_apis_permissions.client_app_id", "=", client_app_id)
-      .select([
-        "apps_to_apis_permissions.api_server_id",
-        "api_servers.api_server_name",
-        "apps_to_apis_permissions.created_at",
-      ])
-      .execute();
+    const parseCreatedAt = (created_at: number | string): number =>
+      typeof created_at === "number"
+        ? created_at
+        : parseInt(created_at as unknown as string);
 
-    return rows.map((row) => ({
+    const [dynamicRows, hardcodedRows] = await Promise.all([
+      this.db
+        .selectFrom("apps_to_apis_permissions")
+        .innerJoin("api_servers", "api_servers.api_server_id", "apps_to_apis_permissions.api_server_id")
+        .where("apps_to_apis_permissions.client_app_id", "=", client_app_id)
+        .select([
+          "apps_to_apis_permissions.api_server_id",
+          "api_servers.api_server_name",
+          "apps_to_apis_permissions.created_at",
+        ])
+        .execute(),
+      this.db
+        .selectFrom("apps_to_hardcoded_apis_permissions")
+        .where("apps_to_hardcoded_apis_permissions.client_app_id", "=", client_app_id)
+        .selectAll()
+        .execute(),
+    ]);
+
+    const dynamicResults = dynamicRows.map((row) => ({
       api_server_id: row.api_server_id,
       api_server_name: row.api_server_name,
-      created_at:
-        typeof row.created_at === "number"
-          ? row.created_at
-          : parseInt(row.created_at as unknown as string),
+      created_at: parseCreatedAt(row.created_at),
     }));
+
+    const hardcodedResults = hardcodedRows.map((row) => {
+      const definition = HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS_MAP.get(row.api_server_id);
+      return {
+        api_server_id: row.api_server_id,
+        api_server_name: definition?.api_server_name ?? row.api_server_id,
+        created_at: parseCreatedAt(row.created_at),
+      };
+    });
+
+    return [...dynamicResults, ...hardcodedResults];
   }
 
   public constructor(

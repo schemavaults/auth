@@ -13,6 +13,7 @@ import {
   appIdSchema,
   type AppToApiPermission,
   appToApiPermissionSchema,
+  isHardcodedApiServerId,
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import {
@@ -21,6 +22,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { ConflictError } from "@/lib/error/ConflictError";
 import type { ServerRuntime } from "next";
+import { appToHardcodedApiPermissionSchema } from "@/lib/auth-db/apis/apps-to-hardcoded-apis-permissions-table";
 
 export const runtime: ServerRuntime = "edge"
 
@@ -127,8 +129,20 @@ export async function POST(
 
         const appOrgId = app.owner_organization_id;
         const apiOrgId = apiServer.owner_organization_id;
+        const isHardcoded = isHardcodedApiServerId(api_server_id);
+        const isPublicHardcoded = isHardcoded && apiServer.public === true;
 
-        if (!appOrgId || !apiOrgId) {
+        if (!appOrgId) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "App must belong to a non-admin organization if you are not an admin.",
+            } satisfies ResourceCreationResponse,
+            { status: 403 }
+          );
+        }
+
+        if (!isPublicHardcoded && !apiOrgId) {
           return NextResponse.json(
             {
               success: false,
@@ -139,16 +153,32 @@ export async function POST(
         }
 
         const userOwnsApp: boolean = userMemberships.some(m => m.organization_id === appOrgId && m.role === 'owner');
-        const userOwnsApi: boolean = userMemberships.some(m => m.organization_id === apiOrgId && m.role === 'owner');
 
-        if (!userOwnsApp || !userOwnsApi) {
+        if (!userOwnsApp) {
           return NextResponse.json(
             {
               success: false,
-              message: "You must have 'owner' role of the organization(s) that own the app & api server to connect them!",
+              message: "You must have 'owner' role of the organization that owns the app to connect it!",
             } satisfies ResourceCreationResponse,
             { status: 403 }
           );
+        }
+
+        // For non-public hardcoded APIs, require admin (already blocked above since !user.admin)
+        // For public hardcoded APIs, only app ownership is needed (checked above)
+        // For dynamic APIs, also require API server org ownership
+        if (!isPublicHardcoded) {
+          const userOwnsApi: boolean = userMemberships.some(m => m.organization_id === apiOrgId && m.role === 'owner');
+
+          if (!userOwnsApi) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: "You must have 'owner' role of the organization(s) that own the app & api server to connect them!",
+              } satisfies ResourceCreationResponse,
+              { status: 403 }
+            );
+          }
         }
       }
 
@@ -159,11 +189,14 @@ export async function POST(
 
       let newPermission: AppToApiPermission;
       try {
-        const parsed = await appToApiPermissionSchema.safeParseAsync({
+        const schema = isHardcodedApiServerId(api_server_id)
+          ? appToHardcodedApiPermissionSchema
+          : appToApiPermissionSchema;
+        const parsed = await schema.safeParseAsync({
           api_server_id,
           client_app_id,
           created_at: Date.now(),
-        } satisfies AppToApiPermission);
+        });
         if (!parsed.success) throw parsed.error;
         newPermission = parsed.data;
       } catch (e: unknown) {

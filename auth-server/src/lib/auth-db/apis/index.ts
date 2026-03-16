@@ -6,6 +6,7 @@ export type * from './app-to-api-permissions-registry';
 export type * from './apis-table';
 export type * from './api-domains-table';
 export type * from './apps-to-apis-permissions-table';
+export type * from './apps-to-hardcoded-apis-permissions-table';
 
 export { preloadApiServersTable } from './preload-api-servers-table';
 export type { QueryApiServersInputOptions } from './preload-api-servers-table';
