@@ -27,6 +27,7 @@ export interface ApiServersDatatableProps {
   organization_id?: string;
   preloaded?: PreloadedApiServersTableData | undefined;
   showConnectAppToApi?: boolean;
+  isOrgOwner?: boolean;
 }
 
 function ApiServersTableHeaderButtons({
@@ -62,6 +63,7 @@ export function ApiServersTable({
   organization_id,
   preloaded,
   showConnectAppToApi,
+  isOrgOwner,
 }: ApiServersDatatableProps): ReactElement {
   const auth = useAuth();
   const authClient = auth.ready ? auth.client.current : undefined;
@@ -97,8 +99,8 @@ export function ApiServersTable({
   }, [apis.data]);
 
   const contextValue = useMemo(
-    () => ({ showConnectAppToApi: showConnectAppToApi ?? false }),
-    [showConnectAppToApi],
+    () => ({ showConnectAppToApi: showConnectAppToApi ?? false, isOrgOwner: isOrgOwner ?? false }),
+    [showConnectAppToApi, isOrgOwner],
   );
 
   if (!data && isLoading) {

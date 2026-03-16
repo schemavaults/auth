@@ -176,9 +176,29 @@ describe("Unauthenticated API Requests", () => {
       });
     });
 
+    it("DELETE /api/apps/:appId returns 401", () => {
+      cy.request({
+        method: "DELETE",
+        url: `/api/apps/${fakeAppId}`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
     it("GET /api/apis/:apiId returns 401", () => {
       cy.request({
         method: "GET",
+        url: `/api/apis/${fakeApiId}`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("DELETE /api/apis/:apiId returns 401", () => {
+      cy.request({
+        method: "DELETE",
         url: `/api/apis/${fakeApiId}`,
         failOnStatusCode: false,
       }).then((response) => {

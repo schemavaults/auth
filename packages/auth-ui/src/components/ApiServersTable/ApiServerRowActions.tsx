@@ -2,9 +2,10 @@
 
 import type { ReactElement } from "react";
 import { useState, useContext } from "react";
+import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import { cn, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { ClipboardCopy, Key, MoreHorizontal, PlugZap } from "lucide-react";
+import { ClipboardCopy, Key, MoreHorizontal, PlugZap, Trash } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,7 @@ import {
 } from "@schemavaults/app-definitions";
 import Link from "next/link";
 import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
+import { DeleteApiServerDialog } from "@/components/DeleteApiServerDialog";
 import { ApiServersTableConfigContext } from "./ApiServersTableConfigContext";
 
 const menuItemClassname: string = cn(
@@ -37,7 +39,10 @@ export function ApiServerRowActions({
   const api_server_id: ApiServerId = api.api_server_id;
   const { toast } = useToast();
   const [connectDialogOpen, setConnectDialogOpen] = useState<boolean>(false);
-  const { showConnectAppToApi } = useContext(ApiServersTableConfigContext);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const { showConnectAppToApi, isOrgOwner } = useContext(ApiServersTableConfigContext);
+  const hardcoded = api.hardcoded && isHardcodedApiServerId(api_server_id);
+  const isDeleteDisabled = hardcoded || (!showConnectAppToApi && !isOrgOwner);
 
   return (
     <>
@@ -108,6 +113,20 @@ export function ApiServerRowActions({
               </DropdownMenuItem>
             </>
           )}
+          {!isDeleteDisabled && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  setDeleteDialogOpen(true);
+                }}
+                className={menuItemClassname}
+              >
+                <Trash className={menuItemIconClassname} /> Delete API Server
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       {showConnectAppToApi && (
@@ -115,6 +134,14 @@ export function ApiServerRowActions({
           open={connectDialogOpen}
           onOpenChange={setConnectDialogOpen}
           preselectedApiServerId={api_server_id}
+        />
+      )}
+      {!isDeleteDisabled && (
+        <DeleteApiServerDialog
+          api_server_id={api_server_id}
+          api_server_name={api.api_server_name}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
         />
       )}
     </>

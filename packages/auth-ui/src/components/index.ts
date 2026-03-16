@@ -89,3 +89,9 @@ export type { SentInvitationsCardProps } from "./SentInvitationsCard";
 
 export { OrganizationSettingsCard } from "./OrganizationSettingsCard";
 export type { OrganizationSettingsCardProps } from "./OrganizationSettingsCard";
+
+export { DeleteAppDialog } from "./DeleteAppDialog";
+export type { DeleteAppDialogProps } from "./DeleteAppDialog";
+
+export { DeleteApiServerDialog } from "./DeleteApiServerDialog";
+export type { DeleteApiServerDialogProps } from "./DeleteApiServerDialog";

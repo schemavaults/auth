@@ -245,6 +245,11 @@ export class SchemaVaultsApiServerRegistry {
     return all_api_servers;
   }
 
+  public async deleteApiServer(api_server_id: ApiServerId) {
+    const fn = await import("./delete-api-server").then(m => m.default);
+    return await fn(this.db, api_server_id);
+  }
+
   public async addApiServerDomain(
     api_server_id: string,
     new_domain: SchemaVaultsApiServerDomainRef,

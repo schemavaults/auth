@@ -6,7 +6,7 @@ import type {
   SchemaVaultsAppDomainRef,
   AppId,
 } from "@schemavaults/app-definitions";
-import { type ReactElement, useTransition, useMemo, useContext } from "react";
+import { type ReactElement, useState, useTransition, useMemo, useContext } from "react";
 import { cn, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import {
@@ -39,6 +39,7 @@ import {
   HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
 } from "@schemavaults/app-definitions";
 import { CreateAppDomainDialogOpenDispatchContext } from "@/components/CreateAppDomainDialog";
+import { DeleteAppDialog } from "@/components/DeleteAppDialog";
 
 const dropdownMenuActionsClassName: string =
   "hover:cursor-pointer flex flex-row gap-2 items-center justify-start pointer-events-auto" as const;
@@ -125,7 +126,9 @@ export function FrontendApplicationActions({
     appDomains.data.length === 0 ||
     launchableAppDomains.length === 0;
 
-  const isDeleteAppDisabled: boolean = hardcoded || !admin;
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+
+  const isDeleteAppDisabled: boolean = hardcoded || (!admin && !isOrgOwner);
 
   const showAddAppDomain: boolean =
     (admin && queryType === "all") || (!!isOrgOwner && queryType === "org");
@@ -288,10 +291,7 @@ export function FrontendApplicationActions({
               <DropdownMenuItem
                 className={cn(dropdownMenuActionsClassName)}
                 onClick={(): void => {
-                  toast({
-                    variant: "default",
-                    title: "Not implemented",
-                  });
+                  setDeleteDialogOpen(true);
                 }}
                 disabled={isDeleteAppDisabled}
               >
@@ -301,6 +301,14 @@ export function FrontendApplicationActions({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {!isDeleteAppDisabled && (
+        <DeleteAppDialog
+          app_id={app_id}
+          app_name={app.app_name}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+        />
+      )}
     </>
   );
 }

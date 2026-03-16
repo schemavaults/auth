@@ -126,6 +126,7 @@ export default function OrgPageView({
         preloaded={preloaded_api_servers}
         uuid={uuidSync}
         showConnectAppToApi={isOrgOwner}
+        isOrgOwner={isOrgOwner}
       />
 
       {isOrgOwner && (

@@ -33,6 +33,7 @@ export interface ApiServersCardProps {
   preloaded?: PreloadedApiServersTableData;
   uuid: () => string;
   showConnectAppToApi?: boolean;
+  isOrgOwner?: boolean;
 }
 
 export function ApiServersCard(props: ApiServersCardProps): ReactElement {
@@ -65,6 +66,7 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
               organization_id={props.organization_id}
               preloaded={props.preloaded}
               showConnectAppToApi={props.showConnectAppToApi}
+              isOrgOwner={props.isOrgOwner}
             />
           </CardContent>
           <CardFooter>

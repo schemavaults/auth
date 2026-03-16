@@ -1,3 +1,4 @@
+import "server-only";
 import {
   type SchemaVaultsApp,
   listAppsQueryTypeSchema,
@@ -357,6 +358,11 @@ export class SchemaVaultsAppRegistry {
         this.hardcodedApps,
       );
     }
+  }
+
+  public async deleteApp(app_id: string) {
+    const fn = await import("./delete-app").then(m => m.default);
+    return await fn(this.db, app_id);
   }
 
   public async addAppDomain(
