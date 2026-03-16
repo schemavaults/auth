@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
+import type { SchemaVaultsApiServerDefinition, SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
@@ -16,11 +16,13 @@ export interface ConnectedApp {
 export interface ApiServerDetailPageViewProps {
   api_server: SchemaVaultsApiServerDefinition;
   connected_apps: ConnectedApp[];
+  connected_domains: SchemaVaultsApiServerDomainRef[];
 }
 
 export default function ApiServerDetailPageView({
   api_server,
   connected_apps,
+  connected_domains,
 }: ApiServerDetailPageViewProps): ReactElement {
   return (
     <PageContainer>
@@ -46,6 +48,39 @@ export default function ApiServerDetailPageView({
               JWKS Access Keys
             </Link>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Connected Domains</CardTitle>
+          <CardDescription>
+            Registered domains for this API server.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {connected_domains.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No domains are currently registered for this API server.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {connected_domains.map((domain) => (
+                <div
+                  key={domain.api_server_domain_ref_id}
+                  className="flex items-center justify-between rounded-md border p-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{domain.domain}</p>
+                    <p className="text-xs text-muted-foreground">{domain.environment}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(domain.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

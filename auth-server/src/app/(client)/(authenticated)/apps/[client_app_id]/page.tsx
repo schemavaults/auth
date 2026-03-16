@@ -6,7 +6,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import AppDetailPageView from "./app-detail-page-view";
-import { type AppId, appIdSchema, type SchemaVaultsApp } from "@schemavaults/app-definitions";
+import { type AppId, appIdSchema, type SchemaVaultsApp, type SchemaVaultsAppDomainRef } from "@schemavaults/app-definitions";
 import { isHardcodedAppId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
@@ -66,11 +66,13 @@ export default async function AppDetailPage(
 
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
       const connected_api_servers = await permissions_registry.listConnectedApiServers(client_app_id);
+      const connected_domains: SchemaVaultsAppDomainRef[] = await app_registry.getAppDomains(client_app_id);
 
       return (
         <AppDetailPageView
           app={app}
           connected_api_servers={connected_api_servers}
+          connected_domains={connected_domains}
         />
       );
     }

@@ -6,10 +6,10 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import ApiServerDetailPageView from "./api-server-detail-page-view";
-import { type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
+import { type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefinition, type SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
-import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
+import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 
 interface PageParams {
@@ -60,11 +60,14 @@ export default async function ApiServerDetailPage(
 
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
       const connected_apps = await permissions_registry.listConnectedApps(api_server_id);
+      const api_server_registry = new SchemaVaultsApiServerRegistry(dbh.db);
+      const connected_domains: SchemaVaultsApiServerDomainRef[] = await api_server_registry.getApiServerDomains(api_server_id);
 
       return (
         <ApiServerDetailPageView
           api_server={api_server}
           connected_apps={connected_apps}
+          connected_domains={connected_domains}
         />
       );
     }
