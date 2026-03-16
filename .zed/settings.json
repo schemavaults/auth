@@ -23,6 +23,14 @@
         },
       },
     },
+    "tailwindcss-language-server": {
+      "settings": {
+        "classFunctions": ["cn"],
+        "experimental": {
+          "classRegex": ["[cls|className]\\s\\:\\=\\s\"([^\"]*)"],
+        },
+      },
+    },
   },
   "languages": {
     "TypeScript": {
