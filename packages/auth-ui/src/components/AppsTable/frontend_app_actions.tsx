@@ -6,7 +6,13 @@ import type {
   SchemaVaultsAppDomainRef,
   AppId,
 } from "@schemavaults/app-definitions";
-import { type ReactElement, useState, useTransition, useMemo, useContext } from "react";
+import {
+  type ReactElement,
+  useState,
+  useTransition,
+  useMemo,
+  useContext,
+} from "react";
 import { cn, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import {
@@ -289,7 +295,7 @@ export function FrontendApplicationActions({
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className={cn(dropdownMenuActionsClassName)}
+                className={cn(dropdownMenuActionsClassName, "text-destructive")}
                 onClick={(): void => {
                   setDeleteDialogOpen(true);
                 }}

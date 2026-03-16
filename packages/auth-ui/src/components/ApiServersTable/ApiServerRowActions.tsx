@@ -5,7 +5,13 @@ import { useState, useContext } from "react";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import { cn, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { ClipboardCopy, Key, MoreHorizontal, PlugZap, Trash } from "lucide-react";
+import {
+  ClipboardCopy,
+  Key,
+  MoreHorizontal,
+  PlugZap,
+  Trash,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +46,9 @@ export function ApiServerRowActions({
   const { toast } = useToast();
   const [connectDialogOpen, setConnectDialogOpen] = useState<boolean>(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const { showConnectAppToApi, isOrgOwner } = useContext(ApiServersTableConfigContext);
+  const { showConnectAppToApi, isOrgOwner } = useContext(
+    ApiServersTableConfigContext,
+  );
   const hardcoded = api.hardcoded && isHardcodedApiServerId(api_server_id);
   const isDeleteDisabled = hardcoded || (!showConnectAppToApi && !isOrgOwner);
 
@@ -121,7 +129,7 @@ export function ApiServerRowActions({
                   e.preventDefault();
                   setDeleteDialogOpen(true);
                 }}
-                className={menuItemClassname}
+                className={cn(menuItemClassname, "text-destructive")}
               >
                 <Trash className={menuItemIconClassname} /> Delete API Server
               </DropdownMenuItem>
