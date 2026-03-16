@@ -233,6 +233,22 @@ export interface ISchemaVaultsAuthClient {
   ) => Promise<SchemaVaultsApiServerDomainRef[]>;
 
   /**
+   * @name deleteClientApplication
+   * @description Delete a client application from the auth-server database
+   * @argument app_id The unique ID of the client application to delete
+   * @returns A promise resolving if deletion succeeds
+   */
+  deleteClientApplication: (app_id: AppId) => Promise<void>;
+
+  /**
+   * @name deleteApiServer
+   * @description Delete an API server from the auth-server database
+   * @argument api_server_id The unique ID of the API server to delete
+   * @returns A promise resolving if deletion succeeds
+   */
+  deleteApiServer: (api_server_id: ApiServerId) => Promise<void>;
+
+  /**
    * @name connectAppToApiServer
    * @description Connect a frontend client application to an API server, allowing it to request access tokens for that API
    * @argument api_server_id The unique ID of the API server

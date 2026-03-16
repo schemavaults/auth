@@ -16,6 +16,7 @@ import { type ReactElement, useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { clearUseAppsListCache } from "../AppsTable/useAppsList";
+import { useAuth } from "@schemavaults/auth-react-provider";
 
 export interface DeleteAppDialogProps {
   app_id: string;
@@ -34,6 +35,7 @@ export function DeleteAppDialog({
   const [deleting, startDeleting] = useTransition();
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
+  const auth = useAuth();
 
   const isConfirmed = confirmationInput === app_name;
 
@@ -54,16 +56,11 @@ export function DeleteAppDialog({
 
     startDeleting(async () => {
       try {
-        const response = await fetch(`/api/apps/${app_id}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-
-        const body = await response.json();
-
-        if (!response.ok || !body.success) {
-          throw new Error(body.message || "Failed to delete app");
+        const authClient = auth.ready ? auth.client.current : undefined;
+        if (!authClient) {
+          throw new Error("Auth client is not available");
         }
+        await authClient.deleteClientApplication(app_id);
 
         toast({
           title: "App deleted",

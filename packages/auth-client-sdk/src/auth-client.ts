@@ -1179,6 +1179,22 @@ export class SchemaVaultsAuthClient
     return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id });
   }
 
+  public async deleteClientApplication(app_id: AppId): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("deleteClientApplication");
+    const fn = await import("@/lib/delete-client-application").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, app_id });
+  }
+
+  public async deleteApiServer(api_server_id: ApiServerId): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("deleteApiServer");
+    const fn = await import("@/lib/delete-api-server").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id });
+  }
+
   public async connectAppToApiServer(
     api_server_id: ApiServerId,
     client_app_id: AppId,

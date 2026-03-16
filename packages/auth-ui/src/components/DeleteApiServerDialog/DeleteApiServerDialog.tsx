@@ -16,6 +16,7 @@ import { type ReactElement, useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { clearUseApiServersCache } from "../ApiServersTable/useApiServersList";
+import { useAuth } from "@schemavaults/auth-react-provider";
 
 export interface DeleteApiServerDialogProps {
   api_server_id: string;
@@ -34,6 +35,7 @@ export function DeleteApiServerDialog({
   const [deleting, startDeleting] = useTransition();
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
+  const auth = useAuth();
 
   const isConfirmed = confirmationInput === api_server_name;
 
@@ -54,16 +56,11 @@ export function DeleteApiServerDialog({
 
     startDeleting(async () => {
       try {
-        const response = await fetch(`/api/apis/${api_server_id}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-
-        const body = await response.json();
-
-        if (!response.ok || !body.success) {
-          throw new Error(body.message || "Failed to delete API server");
+        const authClient = auth.ready ? auth.client.current : undefined;
+        if (!authClient) {
+          throw new Error("Auth client is not available");
         }
+        await authClient.deleteApiServer(api_server_id);
 
         toast({
           title: "API server deleted",
