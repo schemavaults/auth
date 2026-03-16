@@ -3,8 +3,9 @@
   "extends": ["//"],
   "tasks": {
     "generate-version": {
-      "outputs": ["src/generated/version.ts"],
-      "inputs": ["package.json", "generate-version.sh"]
+      "outputs": ["src/generated/**"],
+      "inputs": ["package.json", "generate-version.sh"],
+      "dependsOn": null
     },
     "build": {
       "dependsOn": ["generate-version", "^build"]
