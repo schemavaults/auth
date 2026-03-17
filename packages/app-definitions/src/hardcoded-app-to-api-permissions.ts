@@ -66,3 +66,22 @@ export function getHardcodedApiServerIdsForHardcodedApp(
 
   return HARDCODED_APP_TO_API_PERMISSIONS[client_app_id] ?? [];
 }
+
+/** Get all hardcoded app IDs that have permission to access a specific hardcoded API server */
+export function getHardcodedAppIdsForHardcodedApiServer(
+  api_server_id: HardcodedApiServerId,
+): HardcodedAppId[] {
+  if (!isHardcodedApiServerId(api_server_id)) {
+    throw new TypeError(
+      "getHardcodedAppIdsForHardcodedApiServer received non-hardcoded API server ID!",
+    );
+  }
+
+  const result: HardcodedAppId[] = [];
+  for (const [appId, apiServerIds] of Object.entries(HARDCODED_APP_TO_API_PERMISSIONS)) {
+    if (apiServerIds.includes(api_server_id)) {
+      result.push(appId as HardcodedAppId);
+    }
+  }
+  return result;
+}

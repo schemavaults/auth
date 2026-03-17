@@ -12,8 +12,10 @@ import {
   isHardcodedApiServerId,
   isHardcodedAppId,
   HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS_MAP,
+  HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP,
   hasHardcodedAppToApiPermission,
   getHardcodedApiServerIdsForHardcodedApp,
+  getHardcodedAppIdsForHardcodedApiServer,
   AppId,
   ApiServerId,
   HardcodedApiServerId,
@@ -292,7 +294,19 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
         : parseInt(created_at as unknown as string);
 
     if (isHardcodedApiServerId(api_server_id)) {
-      const hardcodedRows = await this.db
+      // Get hardcoded apps that implicitly have permission
+      const hardcodedAppIds = getHardcodedAppIdsForHardcodedApiServer(api_server_id);
+      const hardcodedApps = hardcodedAppIds.map((appId) => {
+        const definition = HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP.get(appId);
+        return {
+          client_app_id: appId,
+          app_name: definition?.app_name ?? appId,
+          created_at: Date.now(),
+        };
+      });
+
+      // Also get dynamically-added apps from the DB
+      const dynamicRows = await this.db
         .selectFrom("apps_to_hardcoded_apis_permissions")
         .innerJoin("apps", "apps.app_id", "apps_to_hardcoded_apis_permissions.client_app_id")
         .where("apps_to_hardcoded_apis_permissions.api_server_id", "=", api_server_id)
@@ -303,11 +317,17 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
         ])
         .execute();
 
-      return hardcodedRows.map((row) => ({
+      const dynamicApps = dynamicRows.map((row) => ({
         client_app_id: row.client_app_id,
         app_name: row.app_name,
         created_at: parseCreatedAt(row.created_at),
       }));
+
+      // Deduplicate (in case a hardcoded app was also added dynamically)
+      const seen = new Set<string>(hardcodedApps.map((a) => a.client_app_id));
+      const uniqueDynamic = dynamicApps.filter((a) => !seen.has(a.client_app_id));
+
+      return [...hardcodedApps, ...uniqueDynamic];
     }
 
     const rows = await this.db

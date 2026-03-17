@@ -54,4 +54,5 @@ export { SCHEMAVAULTS_AUTH_APP_ID } from "./SCHEMAVAULTS_AUTH_APP_ID";
 export {
   hasHardcodedAppToApiPermission,
   getHardcodedApiServerIdsForHardcodedApp,
+  getHardcodedAppIdsForHardcodedApiServer,
 } from "./hardcoded-app-to-api-permissions";
