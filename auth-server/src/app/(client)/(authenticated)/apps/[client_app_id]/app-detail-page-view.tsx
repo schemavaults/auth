@@ -1,10 +1,13 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import type { SchemaVaultsApp, SchemaVaultsAppDomainRef } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
+import { DeleteAppDialog } from "@schemavaults/auth-ui";
+import { Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export interface ConnectedApiServer {
@@ -17,13 +20,20 @@ export interface AppDetailPageViewProps {
   app: SchemaVaultsApp;
   connected_api_servers: ConnectedApiServer[];
   connected_domains: SchemaVaultsAppDomainRef[];
+  hardcoded: boolean;
+  isOrgOwner: boolean;
 }
 
 export default function AppDetailPageView({
   app,
   connected_api_servers,
   connected_domains,
+  hardcoded,
+  isOrgOwner,
 }: AppDetailPageViewProps): ReactElement {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const router = useRouter();
+
   return (
     <PageContainer>
       <Card>
@@ -110,6 +120,46 @@ export default function AppDetailPageView({
           )}
         </CardContent>
       </Card>
+
+      {!hardcoded && isOrgOwner && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Danger Zone</CardTitle>
+              <CardDescription>
+                Irreversible and destructive actions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border border-destructive rounded-lg p-4">
+                <div className="flex flex-row items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium">Delete this application</p>
+                    <p className="text-sm text-muted-foreground">
+                      Once deleted, this application and all its data will be permanently removed.
+                    </p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <DeleteAppDialog
+            app_id={app.app_id}
+            app_name={app.app_name}
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onDeleted={() => router.push("/apps")}
+          />
+        </>
+      )}
     </PageContainer>
   );
 }

@@ -13,6 +13,7 @@ import {
   SCHEMAVAULTS_ORGANIZATION_ID,
   hardcodedOrgs,
   MAXIMUM_USER_ORGANIZATIONS,
+  UserData,
 } from "@schemavaults/auth-common";
 import type { OrganizationRow } from "./organizations-table";
 import isValidUuid from "@/lib/is-valid-uuid";
@@ -51,6 +52,23 @@ export class OrganizationsRegistry
 
     this.debug = typeof debug === "boolean" ? debug : defaultDebugState;
     this.db = db;
+  }
+
+  public async isUserOwnerOfOrgOrAdmin(u: UserData, org_id: OrganizationID): Promise<boolean> {
+    if (!organizationIdSchema.safeParse(org_id).success) {
+      throw new TypeError("Bad organization ID to check membership for!")
+    }
+    if (u.admin) {
+      return true;
+    }
+    const user_roles = await this.listUserOrganizationMemberships(u.uid, u.admin);
+    if (user_roles.filter(o => o.organization_id === org_id).some(user_role_definition => {
+      const hasAdminRole: boolean = user_role_definition.role === 'owner' || user_role_definition.role === 'admin';
+      return hasAdminRole;
+    })) {
+      return true;
+    }
+    return false;
   }
 
   public async lookupOrganization(

@@ -23,6 +23,7 @@ export interface DeleteAppDialogProps {
   app_name: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDeleted?: () => void;
 }
 
 export function DeleteAppDialog({
@@ -30,6 +31,7 @@ export function DeleteAppDialog({
   app_name,
   open,
   onOpenChange,
+  onDeleted,
 }: DeleteAppDialogProps): ReactElement {
   const [confirmationInput, setConfirmationInput] = useState("");
   const [deleting, startDeleting] = useTransition();
@@ -70,6 +72,7 @@ export function DeleteAppDialog({
         setConfirmationInput("");
         onOpenChange(false);
         clearUseAppsListCache(mutate);
+        onDeleted?.();
       } catch (error: unknown) {
         toast({
           variant: "destructive",

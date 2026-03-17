@@ -11,6 +11,7 @@ import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { OrganizationsRegistry } from "@/lib/auth-db";
 
 interface PageParams {
   params: Promise<{ api_server_id: string }>;
@@ -63,11 +64,16 @@ export default async function ApiServerDetailPage(
       const api_server_registry = new SchemaVaultsApiServerRegistry(dbh.db);
       const connected_domains: SchemaVaultsApiServerDomainRef[] = await api_server_registry.getApiServerDomains(api_server_id);
 
+      const orgRegistry = new OrganizationsRegistry(dbh.db)
+      const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)
+
       return (
         <ApiServerDetailPageView
           api_server={api_server}
           connected_apps={connected_apps}
           connected_domains={connected_domains}
+          hardcoded={hardcoded}
+          isOrgOwner={isOrgOwner}
         />
       );
     }

@@ -23,6 +23,7 @@ export interface DeleteApiServerDialogProps {
   api_server_name: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDeleted?: () => void;
 }
 
 export function DeleteApiServerDialog({
@@ -30,6 +31,7 @@ export function DeleteApiServerDialog({
   api_server_name,
   open,
   onOpenChange,
+  onDeleted,
 }: DeleteApiServerDialogProps): ReactElement {
   const [confirmationInput, setConfirmationInput] = useState("");
   const [deleting, startDeleting] = useTransition();
@@ -70,6 +72,7 @@ export function DeleteApiServerDialog({
         setConfirmationInput("");
         onOpenChange(false);
         clearUseApiServersCache(mutate);
+        onDeleted?.();
       } catch (error: unknown) {
         toast({
           variant: "destructive",

@@ -12,6 +12,7 @@ import redirectWithError from "@/lib/redirect-with-error";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import OrganizationsRegistry from "@/lib/auth-db/organizations";
 
 interface PageParams {
   params: Promise<{ client_app_id: string }>;
@@ -68,11 +69,16 @@ export default async function AppDetailPage(
       const connected_api_servers = await permissions_registry.listConnectedApiServers(client_app_id);
       const connected_domains: SchemaVaultsAppDomainRef[] = await app_registry.getAppDomains(client_app_id);
 
+      const orgRegistry = new OrganizationsRegistry(dbh.db)
+      const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)
+
       return (
         <AppDetailPageView
           app={app}
           connected_api_servers={connected_api_servers}
           connected_domains={connected_domains}
+          hardcoded={hardcoded}
+          isOrgOwner={isOrgOwner}
         />
       );
     }
