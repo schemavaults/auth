@@ -21,7 +21,7 @@
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
     "@schemavaults/auth-react-provider": "workspace:*",
-    "@schemavaults/ui": "0.14.4",
+    "@schemavaults/ui": "0.14.5",
     "typescript": "5.9.3",
     "bun-types": "1.3.6",
     "react": "19.0.0",
