@@ -50,3 +50,8 @@ export { getAppEnvironment } from "./get-app-environment";
 export { getAuthServerUri } from "./get-auth-server-uri";
 
 export { SCHEMAVAULTS_AUTH_APP_ID } from "./SCHEMAVAULTS_AUTH_APP_ID";
+
+export {
+  hasHardcodedAppToApiPermission,
+  getHardcodedApiServerIdsForHardcodedApp,
+} from "./hardcoded-app-to-api-permissions";

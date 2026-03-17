@@ -7,14 +7,16 @@ import {
   appToApiPermissionSchema,
   appIdSchema,
   apiServerIdSchema,
-  SCHEMAVAULTS_MAIL_APP_DEFINITION,
-  SCHEMAVAULTS_WEB,
-  SCHEMAVAULTS_CLI,
-  SCHEMAVAULTS_REGISTRY_SERVER,
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
   isHardcodedApiServerId,
+  isHardcodedAppId,
   HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS_MAP,
+  hasHardcodedAppToApiPermission,
+  getHardcodedApiServerIdsForHardcodedApp,
+  AppId,
+  ApiServerId,
+  HardcodedApiServerId,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { ConflictError } from "@/lib/error/ConflictError";
@@ -32,8 +34,8 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
     getAppEnvironment();
 
   private createHardcodedAppToApiAuthorization(
-    client_app_id: string,
-    api_server_id: string,
+    client_app_id: AppId,
+    api_server_id: ApiServerId,
   ): AppToApiPermission {
     const hardcodedPermission = {
       client_app_id,
@@ -50,8 +52,8 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
   }
 
   private async lookupPermission(
-    client_app_id: string,
-    api_server_id: string,
+    client_app_id: AppId,
+    api_server_id: ApiServerId,
   ): Promise<AppToApiPermission | null> {
     if (this.debug) {
       console.log(
@@ -76,30 +78,24 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
       throw new Error("Invalid API server ID received!");
     }
 
-    // Allow web + cli access to https://api.schemavaults.com registry server
-    if (
-      (client_app_id === SCHEMAVAULTS_WEB.app_id ||
-        client_app_id === SCHEMAVAULTS_CLI.app_id) &&
-      api_server_id === SCHEMAVAULTS_REGISTRY_SERVER.api_server_id
-    ) {
-      return this.createHardcodedAppToApiAuthorization(
-        client_app_id,
-        api_server_id,
-      ) satisfies AppToApiPermission;
+    if (isHardcodedAppId(client_app_id) && isHardcodedApiServerId(api_server_id)) {
+      if (hasHardcodedAppToApiPermission(client_app_id, api_server_id)) {
+        return this.createHardcodedAppToApiAuthorization(
+          client_app_id,
+          api_server_id,
+        ) satisfies AppToApiPermission;
+      } else {
+        // no hardcoded permission between this app and registry
+        return null;
+      }
+    } else if (isHardcodedAppId(client_app_id)) {
+      // hardcoded apps
+      console.warn("Hardcoded apps may only have hardcoded APIs");
+      return null;
     }
 
-    // Allow web + cli + mail access to https://mail.schemavaults.com management server backend
-    if (
-      (client_app_id === SCHEMAVAULTS_WEB.app_id ||
-        client_app_id === SCHEMAVAULTS_CLI.app_id ||
-        client_app_id === SCHEMAVAULTS_MAIL_APP_DEFINITION.app_id) &&
-      api_server_id === SCHEMAVAULTS_MAIL_APP_DEFINITION.app_id
-    ) {
-      return this.createHardcodedAppToApiAuthorization(
-        client_app_id,
-        api_server_id,
-      ) satisfies AppToApiPermission;
-    }
+    // dynamically defined app if this point was reached, but potentially still hardcoded api server
+
 
     // For hardcoded API servers, check the hardcoded permissions table
     if (isHardcodedApiServerId(api_server_id)) {
@@ -133,8 +129,10 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
       console.error(
         "Expected API server ID to be a valid UUID if this point was reached! Is handling missing for a hardcoded endpoint?",
       );
-      throw new Error("Expected API server ID to be a UUID!");
+      throw new TypeError("Expected API server ID to be a UUID!");
     }
+
+    // dynamically defined app-to-api permissions if this point reached
 
     const rows = await this.db
       .selectFrom("apps_to_apis_permissions")
@@ -338,6 +336,18 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
   public async listConnectedApiServers(
     client_app_id: string,
   ): Promise<{ api_server_id: string; api_server_name: string; created_at: number }[]> {
+    if (isHardcodedAppId(client_app_id)) {
+      const apiServerIds: HardcodedApiServerId[] = getHardcodedApiServerIdsForHardcodedApp(client_app_id);
+      return apiServerIds.map((id) => {
+        const definition = HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS_MAP.get(id);
+        return {
+          api_server_id: id,
+          api_server_name: definition?.api_server_name ?? id,
+          created_at: Date.now(),
+        };
+      });
+    }
+
     const parseCreatedAt = (created_at: number | string): number =>
       typeof created_at === "number"
         ? created_at
