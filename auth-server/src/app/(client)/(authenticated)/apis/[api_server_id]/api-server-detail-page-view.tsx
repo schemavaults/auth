@@ -137,9 +137,10 @@ export default function ApiServerDetailPageView({
           ) : (
             <div className="space-y-3">
               {connected_apps.map((app) => (
-                <div
+                <Link
                   key={app.client_app_id}
-                  className="flex items-center justify-between rounded-md border p-3"
+                  href={`/apps/${app.client_app_id}`}
+                  className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50 transition-colors"
                 >
                   <div>
                     <p className="text-sm font-medium">{app.app_name}</p>
@@ -148,7 +149,7 @@ export default function ApiServerDetailPageView({
                   <p className="text-xs text-muted-foreground">
                     {new Date(app.created_at).toLocaleDateString()}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           )}
