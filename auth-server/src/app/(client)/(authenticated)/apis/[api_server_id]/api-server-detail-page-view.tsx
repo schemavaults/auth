@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
-import type { SchemaVaultsApiServerDefinition, SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
+import type { SchemaVaultsApiServerDefinition, SchemaVaultsApiServerDomainRef, SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { DeleteApiServerDialog } from "@schemavaults/auth-ui";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,24 @@ export interface ApiServerDetailPageViewProps {
   connected_domains: SchemaVaultsApiServerDomainRef[];
   hardcoded: boolean;
   isOrgOwner: boolean;
+  current_environment: SchemaVaultsAppEnvironment;
+}
+
+function DomainRow({ domain, dateKey }: { domain: { domain: string; environment: string; created_at: number; [key: string]: unknown }; dateKey: string }) {
+  return (
+    <div
+      key={dateKey}
+      className="flex items-center justify-between rounded-md border p-3"
+    >
+      <div>
+        <p className="text-sm font-medium">{domain.domain}</p>
+        <p className="text-xs text-muted-foreground">{domain.environment}</p>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {new Date(domain.created_at).toLocaleDateString()}
+      </p>
+    </div>
+  );
 }
 
 export default function ApiServerDetailPageView({
@@ -30,9 +48,14 @@ export default function ApiServerDetailPageView({
   connected_domains,
   hardcoded,
   isOrgOwner,
+  current_environment,
 }: ApiServerDetailPageViewProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const router = useRouter();
+
+  const activeDomains = connected_domains.filter((d) => d.environment === current_environment);
+  const inactiveDomains = connected_domains.filter((d) => d.environment !== current_environment);
+  const uniqueInactiveEnvs = [...new Set(inactiveDomains.map((d) => d.environment))];
 
   return (
     <PageContainer>
@@ -69,27 +92,32 @@ export default function ApiServerDetailPageView({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {connected_domains.length === 0 ? (
+          {activeDomains.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No domains are currently registered for this API server.
+              No domains are registered for the current environment ({current_environment}).
             </p>
           ) : (
             <div className="space-y-3">
-              {connected_domains.map((domain) => (
-                <div
-                  key={domain.api_server_domain_ref_id}
-                  className="flex items-center justify-between rounded-md border p-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{domain.domain}</p>
-                    <p className="text-xs text-muted-foreground">{domain.environment}</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(domain.created_at).toLocaleDateString()}
-                  </p>
-                </div>
+              {activeDomains.map((domain) => (
+                <DomainRow key={domain.api_server_domain_ref_id} domain={domain} dateKey={domain.api_server_domain_ref_id} />
               ))}
             </div>
+          )}
+          {inactiveDomains.length > 0 && (
+            <Accordion type="single" collapsible className="mt-4">
+              <AccordionItem value="inactive-domains">
+                <AccordionTrigger>
+                  {inactiveDomains.length} domain{inactiveDomains.length !== 1 ? "s" : ""} in other environments ({uniqueInactiveEnvs.join(", ")})
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3">
+                    {inactiveDomains.map((domain) => (
+                      <DomainRow key={domain.api_server_domain_ref_id} domain={domain} dateKey={domain.api_server_domain_ref_id} />
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           )}
         </CardContent>
       </Card>

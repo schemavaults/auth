@@ -6,7 +6,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import AppDetailPageView from "./app-detail-page-view";
-import { type AppId, appIdSchema, type SchemaVaultsApp, type SchemaVaultsAppDomainRef } from "@schemavaults/app-definitions";
+import { type AppId, appIdSchema, type SchemaVaultsApp, type SchemaVaultsAppDomainRef, getAppEnvironment } from "@schemavaults/app-definitions";
 import { isHardcodedAppId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
@@ -72,6 +72,8 @@ export default async function AppDetailPage(
       const orgRegistry = new OrganizationsRegistry(dbh.db)
       const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)
 
+      const current_environment = getAppEnvironment();
+
       return (
         <AppDetailPageView
           app={app}
@@ -79,6 +81,7 @@ export default async function AppDetailPage(
           connected_domains={connected_domains}
           hardcoded={hardcoded}
           isOrgOwner={isOrgOwner}
+          current_environment={current_environment}
         />
       );
     }

@@ -6,7 +6,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import ApiServerDetailPageView from "./api-server-detail-page-view";
-import { type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefinition, type SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
+import { type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefinition, type SchemaVaultsApiServerDomainRef, getAppEnvironment } from "@schemavaults/app-definitions";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
@@ -67,6 +67,8 @@ export default async function ApiServerDetailPage(
       const orgRegistry = new OrganizationsRegistry(dbh.db)
       const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)
 
+      const current_environment = getAppEnvironment();
+
       return (
         <ApiServerDetailPageView
           api_server={api_server}
@@ -74,6 +76,7 @@ export default async function ApiServerDetailPage(
           connected_domains={connected_domains}
           hardcoded={hardcoded}
           isOrgOwner={isOrgOwner}
+          current_environment={current_environment}
         />
       );
     }
