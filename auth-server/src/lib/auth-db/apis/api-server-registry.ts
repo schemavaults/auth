@@ -122,8 +122,14 @@ export class SchemaVaultsApiServerRegistry {
         schemaVaultsApiServerDomainRefSchema.safeParseAsync(row),
       ),
     );
-    return parsed_domains.map((parsed) => {
+    return parsed_domains.map((parsed, index) => {
       if (!parsed.success) {
+        console.error(
+          `Failed to parse API server domain from database (row ${index}):`,
+          JSON.stringify(parsed.error.format(), null, 2),
+          "\nRaw row:",
+          JSON.stringify(rows[index], null, 2),
+        );
         throw new Error("Failed to parse API server domains from database");
       }
       return parsed.data;
