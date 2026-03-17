@@ -6,7 +6,7 @@ import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { DeleteAppDialog } from "@schemavaults/auth-ui";
-import { Trash2 } from "lucide-react";
+import { ExternalLink, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -25,7 +25,12 @@ export interface AppDetailPageViewProps {
   current_environment: SchemaVaultsAppEnvironment;
 }
 
-function DomainRow({ domain, dateKey }: { domain: { domain: string; environment: string; created_at: number; [key: string]: unknown }; dateKey: string }) {
+function DomainRow({ domain, dateKey, current_environment }: { domain: { domain: string; environment: string; created_at: number; [key: string]: unknown }; dateKey: string; current_environment: SchemaVaultsAppEnvironment }) {
+  const environmentMismatch = domain.environment !== current_environment;
+  const requiresHttps = domain.environment === "staging" || domain.environment === "production";
+  const hasHttps = domain.domain.startsWith("https://");
+  const disabled = environmentMismatch || (requiresHttps && !hasHttps);
+
   return (
     <div
       key={dateKey}
@@ -35,9 +40,29 @@ function DomainRow({ domain, dateKey }: { domain: { domain: string; environment:
         <p className="text-sm font-medium">{domain.domain}</p>
         <p className="text-xs text-muted-foreground">{domain.environment}</p>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {new Date(domain.created_at).toLocaleDateString()}
-      </p>
+      <div className="flex items-center gap-3">
+        <p className="text-xs text-muted-foreground">
+          {new Date(domain.created_at).toLocaleDateString()}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          asChild={!disabled}
+        >
+          {disabled ? (
+            <span>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Launch
+            </span>
+          ) : (
+            <a href={domain.domain} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Launch
+            </a>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -92,7 +117,7 @@ export default function AppDetailPageView({
           ) : (
             <div className="space-y-3">
               {activeDomains.map((domain) => (
-                <DomainRow key={domain.app_domain_ref_id} domain={domain} dateKey={domain.app_domain_ref_id} />
+                <DomainRow key={domain.app_domain_ref_id} domain={domain} dateKey={domain.app_domain_ref_id} current_environment={current_environment} />
               ))}
             </div>
           )}
@@ -105,7 +130,7 @@ export default function AppDetailPageView({
                 <AccordionContent>
                   <div className="space-y-3">
                     {inactiveDomains.map((domain) => (
-                      <DomainRow key={domain.app_domain_ref_id} domain={domain} dateKey={domain.app_domain_ref_id} />
+                      <DomainRow key={domain.app_domain_ref_id} domain={domain} dateKey={domain.app_domain_ref_id} current_environment={current_environment} />
                     ))}
                   </div>
                 </AccordionContent>
