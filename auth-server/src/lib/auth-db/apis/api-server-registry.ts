@@ -118,9 +118,21 @@ export class SchemaVaultsApiServerRegistry {
       .selectAll();
     const rows = await queryApiServers.execute();
     const parsed_domains = await Promise.all(
-      rows.map((row) =>
-        schemaVaultsApiServerDomainRefSchema.safeParseAsync(row),
-      ),
+      rows.map((row) => {
+        const createdAt: number =
+          typeof row.created_at === "string"
+            ? parseInt(row.created_at)
+            : row.created_at;
+        if (isNaN(createdAt)) {
+          throw new Error(
+            "Failed to parse created_at for API server domain from database",
+          );
+        }
+        return schemaVaultsApiServerDomainRefSchema.safeParseAsync({
+          ...row,
+          created_at: createdAt,
+        });
+      }),
     );
     return parsed_domains.map((parsed, index) => {
       if (!parsed.success) {
