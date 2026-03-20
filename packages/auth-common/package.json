@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-common",
   "description": "Types and utility functions for authentication and authorization",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -66,6 +66,11 @@
       "types": "./dist/AccessTokenCookieNames.d.ts",
       "import": "./dist/AccessTokenCookieNames.js",
       "require": "./dist/AccessTokenCookieNames.js"
+    },
+    "./auth-error-message-catalog": {
+      "types": "./dist/auth-error-message-catalog.d.ts",
+      "import": "./dist/auth-error-message-catalog.js",
+      "require": "./dist/auth-error-message-catalog.js"
     }
   }
 }

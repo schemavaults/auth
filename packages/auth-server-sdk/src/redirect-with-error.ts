@@ -2,7 +2,7 @@ import type { RedirectType } from "next/navigation";
 import {
   isValidErrorId,
   type SchemaVaultsAuthErrorId,
-} from "@/auth-server-error-message-catalog";
+} from "@schemavaults/auth-common";
 import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
@@ -12,7 +12,7 @@ export function redirectWithError(
   redirect: (url: string, redirect_type?: RedirectType) => never,
   error_code: number = 500,
   error_id: SchemaVaultsAuthErrorId = "unknown",
-  error_page_url: string = "/error",
+  error_page_url: string = "/auth/error",
 ): never {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (!isValidErrorId(error_id)) {

@@ -1,9 +1,11 @@
+// {auth_server}/error/page.tsx
+import "server-only";
+
 import {
   ERROR_MESSAGE_CATALOG,
   isValidErrorId,
-} from "@schemavaults/auth-server-sdk/auth-server-error-message-catalog";
+} from "@schemavaults/auth-common/auth-error-message-catalog";
 import type { ReactElement } from "react";
-import "server-only";
 import ErrorPageView from "./error_page_view";
 
 export default async function ErrorPageComponent(input: {

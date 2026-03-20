@@ -1,7 +1,7 @@
 import "server-only";
 import { redirectWithError as _redirectWithError } from "@schemavaults/auth-server-sdk";
 import { redirect } from "next/navigation";
-import { SchemaVaultsAuthErrorId } from "@schemavaults/auth-server-sdk/auth-server-error-message-catalog";
+import type { SchemaVaultsAuthErrorId } from "@schemavaults/auth-common";
 
 const errorPage: string = "/error"
 

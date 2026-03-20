@@ -1,3 +1,6 @@
+export { ERROR_MESSAGE_CATALOG, isValidErrorId } from "./auth-error-message-catalog";
+export type { SchemaVaultsAuthErrorId } from "./auth-error-message-catalog";
+
 export { userDataSchema, type UserData } from "./user_data";
 
 export * from "./credentials";

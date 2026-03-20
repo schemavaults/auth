@@ -31,6 +31,10 @@ const pagesToCreate: readonly ITemplateAuthPage[] = [
     app_dir_path: "/auth/authorize",
     codegen_template_path: "auth/authorize/page.tsx",
   },
+  {
+    app_dir_path: "/auth/error",
+    codegen_template_path: "auth/error/page.tsx",
+  },
 ];
 
 function isCodegenManagedFile(filePath: string): boolean {
