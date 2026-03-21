@@ -1,10 +1,13 @@
 "use client";
-import { ErrorPage } from "@schemavaults/ui";
-import { ERROR_MESSAGE_CATALOG, isValidErrorId } from "@schemavaults/auth-common";
+import { ErrorPage, LoadingPage } from "@schemavaults/ui";
+import {
+  ERROR_MESSAGE_CATALOG,
+  isValidErrorId,
+} from "@schemavaults/auth-common";
 import { useSearchParams } from "next/navigation";
-import type { ReactElement } from "react";
+import { Suspense, type ReactElement } from "react";
 
-export default function AuthErrorPage(): ReactElement {
+function AuthErrorPageWithSearchParams(): ReactElement {
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
   const errorIdParam = searchParams.get("error_id");
@@ -23,4 +26,16 @@ export default function AuthErrorPage(): ReactElement {
     : "An unknown error occurred";
 
   return <ErrorPage error={error} message={message} />;
+}
+
+export default function AuthErrorPage(): ReactElement {
+  return (
+    <Suspense
+      fallback={
+        <LoadingPage message="There was an error! Loading error details from URL..." />
+      }
+    >
+      <AuthErrorPageWithSearchParams />
+    </Suspense>
+  );
 }
