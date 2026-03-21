@@ -26,15 +26,18 @@ type RequestCookies = Awaited<
 >;
 
 export type TProtectedAuthenticatedPageServerComponent<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps =
+    IBaseProtectedAuthenticatedServerComponentPageProps,
 > = (props: TProps) => Promise<ReactElement>;
 
 type TAdditionalProps<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps =
+    IBaseProtectedAuthenticatedServerComponentPageProps,
 > = Omit<TProps, keyof IBaseProtectedAuthenticatedServerComponentPageProps>;
 
 export async function withAuthenticatedServerComponentRouteGuard<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps =
+    IBaseProtectedAuthenticatedServerComponentPageProps,
 >(
   server_component: TProtectedAuthenticatedPageServerComponent<TProps>,
   additional_custom_server_component_props:
@@ -50,7 +53,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
   assertValidRouteGuardType(route_guard_type);
 
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-  const api_server_id: ApiServerId = getApiServerId();
+
   const [loadCookies, redirect] = await Promise.all([
     import("next/headers").then((mod) => mod.cookies),
     import("next/navigation").then((mod) => mod.redirect),
@@ -59,6 +62,17 @@ export async function withAuthenticatedServerComponentRouteGuard<
     throw new TypeError("Expected 'loadCookies' to be a function");
   } else if (typeof redirect !== "function") {
     throw new TypeError("Expected 'redirect' to be a function");
+  }
+
+  let api_server_id: ApiServerId;
+  try {
+    api_server_id = getApiServerId();
+  } catch (e: unknown) {
+    console.error(
+      "[withAuthenticatedServerComponentRouteGuard] getApiServerId() failed: ",
+      e,
+    );
+    redirectWithError(redirect, 500, "server_misconfiguration");
   }
 
   const cookies: RequestCookies = await loadCookies();

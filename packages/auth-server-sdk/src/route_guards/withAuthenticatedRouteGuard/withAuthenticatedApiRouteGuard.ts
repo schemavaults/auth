@@ -25,15 +25,31 @@ import type { IBaseProtectedAuthenticatedApiRouteInputs } from "./IBaseProtected
 import initDefaultJwtKeyManagerForAuthenticatedRouteGuard from "./initDefaultJwtKeyManagerForAuthenticatedRouteGuard";
 
 export type TProtectedAuthenticatedApiRoute<
-  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs = IBaseProtectedAuthenticatedApiRouteInputs,
+  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs =
+    IBaseProtectedAuthenticatedApiRouteInputs,
 > = (route_inputs: TRouteInputs) => Promise<NextResponse>;
 
 type TAdditionalRouteInputs<
-  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs = IBaseProtectedAuthenticatedApiRouteInputs,
+  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs =
+    IBaseProtectedAuthenticatedApiRouteInputs,
 > = Omit<TRouteInputs, keyof IBaseProtectedAuthenticatedApiRouteInputs>;
 
+type CreateJsonResponseFn = (typeof NextResponse)["json"];
+
+async function loadCreateJsonResponseFn(): Promise<CreateJsonResponseFn> {
+  const jsonPromise: Promise<CreateJsonResponseFn> = import("next/server")
+    .then((mod) => mod.NextResponse)
+    .then((mod) => mod.json);
+  const json_response_fn = await jsonPromise;
+  if (typeof json_response_fn !== "function") {
+    throw new TypeError("Expected 'json' to be a function!");
+  }
+  return json_response_fn;
+}
+
 export function withAuthenticatedApiRouteGuard<
-  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs = IBaseProtectedAuthenticatedApiRouteInputs,
+  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs =
+    IBaseProtectedAuthenticatedApiRouteInputs,
 >(
   api_route_handler: TProtectedAuthenticatedApiRoute<TRouteInputs>,
   additional_custom_api_route_inputs:
@@ -54,12 +70,26 @@ export function withAuthenticatedApiRouteGuard<
     req: NextRequest,
   ): Promise<NextResponse> {
     const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-    const api_server_id: ApiServerId = getApiServerId();
-    const json = await import("next/server")
-      .then((mod) => mod.NextResponse)
-      .then((mod) => mod.json);
-    if (typeof json !== "function") {
-      throw new TypeError("Expected 'json' to be a function!");
+
+    let api_server_id: ApiServerId;
+    try {
+      api_server_id = getApiServerId();
+    } catch (e: unknown) {
+      console.error(
+        "[withAuthenticatedApiRouteGuard] getApiServerId() failed: ",
+        e,
+      );
+      const json: CreateJsonResponseFn = await loadCreateJsonResponseFn();
+      return json(
+        {
+          success: false,
+          error: true,
+          message: "Internal Server Error",
+        },
+        {
+          status: 500,
+        },
+      );
     }
 
     const token_sources: PotentiallyValidTokenSource[] = [];
@@ -156,6 +186,8 @@ export function withAuthenticatedApiRouteGuard<
         });
       }
     })();
+
+    const json: CreateJsonResponseFn = await loadCreateJsonResponseFn();
 
     if (token_sources.length === 0) {
       console.warn("No token sources found for API route request.");
