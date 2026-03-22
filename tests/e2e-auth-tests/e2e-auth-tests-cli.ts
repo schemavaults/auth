@@ -76,9 +76,13 @@ function launchDockerComposeTests(
     },
     stdio: ["ignore", "inherit", "inherit"],
   });
+  if (result.error) {
+    console.error("Tests failed with error: ", result.error);
+    process.exit(1);
+  }
   if (typeof result.status !== "number" || result.status !== 0) {
     console.error("Tests failed with result status: ", result.status);
-    process.exit(1);
+    process.exit(typeof result.status === "number" ? result.status : 1);
   }
   console.log(
     `Test suite '${test_suite_name}' appears to have run successfully!`,
