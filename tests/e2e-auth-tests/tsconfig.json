@@ -14,6 +14,6 @@
     },
     "baseUrl": ".",
   },
-  "include": ["cypress/**/*.ts", "cypress.config.ts"],
+  "include": ["cypress/**/*.ts", "cypress.config.ts", "e2e-auth-tests-cli.ts"],
   "exclude": ["node_modules"],
 }

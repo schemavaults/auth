@@ -90,8 +90,8 @@
     "tags": ["dev", "auth-server"],
   },
   {
-    "label": "Run E2E Auth Tests (with Docker Compose & Cypress)",
-    "command": "cd tests/e2e-auth-tests && /bin/bash ./e2e.sh",
+    "label": "Run Core E2E Auth Tests (with Docker Compose & Cypress)",
+    "command": "cd tests/e2e-auth-tests && bun run cli e2e core",
     //"args": [],
     // Env overrides for the command, will be appended to the terminal's environment from the settings.
     // "env": { "foo": "bar" },

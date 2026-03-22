@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/e2e-auth-tests",
-  "version": "0.1.31",
+  "version": "0.2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/schemavaults/auth.git",
@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "cypress": "15.9.0",
+    "commander": "14.0.3",
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
@@ -21,6 +22,7 @@
     "open": "bun run cy:open",
     "cy:open": "cypress open",
     "e2e": "cypress run",
+    "cli": "bun run ./e2e-auth-tests-cli.ts",
     "cy:install": "cypress install",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   }

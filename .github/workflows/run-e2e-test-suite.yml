@@ -1,0 +1,43 @@
+name: Run E2E Test Suite
+
+on:
+  workflow_call:
+    inputs:
+      test-suite-name:
+        required: true
+        type: string
+      BUN_VERSION:
+        description: "What version of Bun should we use?"
+        required: true
+        type: string
+
+jobs:
+  Run-Core-E2E-Tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.BUN_VERSION }}
+      - name: Run Tests with Docker Compose
+        run: |
+          bun run cli e2e ${{ inputs.test-suite-name }}
+        working-directory: tests/e2e-auth-tests
+      - name: Check if screenshots directory exists
+        id: check_screenshots_existence
+        run: |
+          if [ -d "tests/e2e-auth-tests/cypress/screenshots/" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        if: always()
+      - name: Upload screenshots of failing tests
+        uses: actions/upload-artifact@v6
+        with:
+          name: failed-${{ inputs.test-suite-name }}-test-screenshots-${{ github.sha }}
+          path: tests/e2e-auth-tests/cypress/screenshots/
+          retention-days: 1.5
+        if: always() && steps.check_screenshots_existence.outputs.exists == 'true'

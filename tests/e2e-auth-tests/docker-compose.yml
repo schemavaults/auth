@@ -18,6 +18,14 @@ services:
       - schemavaults-auth
     profiles:
       - e2e
+    command:
+      [
+        "bun",
+        "run",
+        "e2e",
+        "--spec",
+        "./cypress/e2e/${TEST_SUITE_NAME:?error}/**.cy.ts",
+      ]
 
   schemavaults-auth:
     build:

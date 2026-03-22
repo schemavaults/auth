@@ -1,6 +1,5 @@
 # Dockerfile for @schemavaults/e2e-auth-tests
 
-
 ARG BUN_VERSION
 FROM oven/bun:${BUN_VERSION} AS bunbase
 
@@ -71,6 +70,8 @@ FROM deps AS test-runner
 WORKDIR /schemavaults/auth/tests/e2e-auth-tests
 COPY tests/e2e-auth-tests/cypress.config.ts cypress.config.ts
 COPY tests/e2e-auth-tests/tsconfig.json tsconfig.json
-COPY tests/e2e-auth-tests/cypress/ cypress/
+COPY tests/e2e-auth-tests/cypress/e2e/ cypress/e2e/
+COPY tests/e2e-auth-tests/cypress/fixtures/ cypress/fixtures/
+COPY tests/e2e-auth-tests/cypress/support/ cypress/support/
 
 CMD [ "bun", "run", "e2e" ]

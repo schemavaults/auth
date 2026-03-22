@@ -58,9 +58,6 @@ bun run test --filter @schemavaults/jwt              # Run tests in jwt package
 bun run test --filter @schemavaults/auth-common      # Run tests in auth-common package
 bun run test --filter @schemavaults/auth-client-sdk  # Run tests in auth-client-sdk package
 bun run test --filter @schemavaults/auth-server-sdk  # Run tests in auth-server-sdk package
-
-# E2E tests (Cypress)
-bun run e2e        # Run Cypress / Docker Compose testing pipeline
 ```
 
 ## Architecture
