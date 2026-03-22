@@ -5,7 +5,8 @@ import { spawnSync } from "node:child_process";
 import { readdirSync, existsSync } from "node:fs";
 import { join, normalize } from "node:path";
 
-if (!existsSync(join(process.cwd(), "docker-compose.yml"))) {
+const dockerComposeFilePath = join(process.cwd(), "docker-compose.yml");
+if (!existsSync(dockerComposeFilePath)) {
   throw new Error(
     "Expected docker-compose.yml to be in the current directory!",
   );
@@ -60,7 +61,7 @@ function launchDockerComposeTests(
     "docker",
     "compose",
     "-f",
-    "tests/e2e-auth-tests/docker-compose.yml",
+    dockerComposeFilePath,
     "--profile",
     docker_compose_profile,
     "up",
