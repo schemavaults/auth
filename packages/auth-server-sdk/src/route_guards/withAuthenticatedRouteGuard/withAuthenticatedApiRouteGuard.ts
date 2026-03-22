@@ -74,6 +74,11 @@ export function withAuthenticatedApiRouteGuard<
     let api_server_id: ApiServerId;
     try {
       api_server_id = getApiServerId();
+      if (typeof api_server_id !== "string") {
+        throw new TypeError(
+          "Expected result of 'getApiServerId' to be a string!",
+        );
+      }
     } catch (e: unknown) {
       console.error(
         "[withAuthenticatedApiRouteGuard] getApiServerId() failed: ",
