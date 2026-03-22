@@ -1,29 +1,6 @@
 /// <reference types="cypress" />
 
-import createAndLoginAsRegularUser from "./actions/create_and_login_as_regular_user";
-import createAndLoginAsSuperuser from "./actions/create_and_login_as_superuser";
-import createApp from "./actions/create_app";
-import createInviteCode from "./actions/create_invite_code";
-import createApiServer from "./actions/create_api_server";
-import createOrganization from "./actions/create_organization";
-import deleteOrganization from "./actions/delete_organization";
-import generate_random_code from "./actions/generate_random_code";
-import generateJwksAccessKey from "./actions/generate_jwks_access_key";
-import hasErrorToast from "./actions/has_error_toast";
-import is_admin from "./actions/is_admin";
-import as_admin from "./actions/as_admin";
-import is_authenticated from "./actions/is_authenticated";
-import login from "./actions/login";
-import logout from "./actions/logout";
-import register from "./actions/register";
-import open_dialog_with_button from "./actions/open_dialog_with_button";
-import log_active_toasts from "./actions/log_active_toasts";
-import is_invite_code_required from "./actions/is_invite_code_required";
-import generate_random_test_user_credentials from "./actions/generate_random_test_user_credentials";
-import wait_for_page_hydration from "./actions/wait_for_page_hydration";
-import connectAppToApi from "./actions/connect_app_to_api";
-import promoteMemberToOwner from "./actions/promote_member_to_owner";
-import inviteAndAcceptOrgMembership from "./actions/invite_and_accept_org_membership";
+import { registerAllActionCommands } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 
 // ***********************************************
 // This example commands.ts shows you how to
@@ -62,58 +39,4 @@ import inviteAndAcceptOrgMembership from "./actions/invite_and_accept_org_member
 //   }
 // }
 
-Cypress.Commands.add("login", login);
-
-Cypress.Commands.add("register", register);
-
-Cypress.Commands.add(
-  "create_and_login_as_superuser",
-  createAndLoginAsSuperuser,
-);
-
-Cypress.Commands.add("has_error_toast", hasErrorToast);
-
-Cypress.Commands.add("log_active_toasts", log_active_toasts);
-
-Cypress.Commands.add("logout", logout);
-
-Cypress.Commands.add("is_authenticated", is_authenticated);
-
-Cypress.Commands.add("is_admin", is_admin);
-Cypress.Commands.add("as_admin", as_admin);
-
-Cypress.Commands.add("create_invite_code", createInviteCode);
-
-Cypress.Commands.add("generate_random_code", generate_random_code);
-
-Cypress.Commands.add(
-  "generate_random_test_user_credentials",
-  generate_random_test_user_credentials,
-);
-
-Cypress.Commands.add(
-  "create_and_login_as_regular_user",
-  createAndLoginAsRegularUser,
-);
-
-Cypress.Commands.add("create_organization", createOrganization);
-
-Cypress.Commands.add("delete_organization", deleteOrganization);
-
-Cypress.Commands.add("create_api_server", createApiServer);
-
-Cypress.Commands.add("create_app", createApp);
-
-Cypress.Commands.add("open_dialog_with_button", open_dialog_with_button);
-
-Cypress.Commands.add("generate_jwks_access_key", generateJwksAccessKey);
-
-Cypress.Commands.add("is_invite_code_required", is_invite_code_required);
-
-Cypress.Commands.add("wait_for_page_hydration", wait_for_page_hydration);
-
-Cypress.Commands.add("connect_app_to_api", connectAppToApi);
-
-Cypress.Commands.add("promote_member_to_owner", promoteMemberToOwner);
-
-Cypress.Commands.add("invite_and_accept_org_membership", inviteAndAcceptOrgMembership);
+registerAllActionCommands(Cypress.Commands);

@@ -1,27 +1,26 @@
 {
-  "name": "@schemavaults/e2e-auth-tests",
-  "version": "0.1.31",
+  "name": "@schemavaults/cypress-e2e-auth-tests-helper-commands",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/schemavaults/auth.git",
-    "directory": "tests/e2e-auth-tests"
+    "directory": "tests/cypress-e2e-auth-tests-helper-commands"
   },
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "dependencies": {
     "cypress": "15.9.0",
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
-    "@schemavaults/auth-common": "workspace:*",
-    "@schemavaults/cypress-e2e-auth-tests-helper-commands": "workspace:*"
+    "@schemavaults/auth-common": "workspace:*"
   },
   "devDependencies": {
     "typescript": "5.9.3",
     "@types/node": "24.4.0"
   },
   "scripts": {
-    "open": "bun run cy:open",
-    "cy:open": "cypress open",
-    "e2e": "cypress run",
-    "cy:install": "cypress install",
+    "build": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   }
 }

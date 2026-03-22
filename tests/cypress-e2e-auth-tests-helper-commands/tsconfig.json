@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "strict": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "target": "ES2015",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "downlevelIteration": true,
+    "declaration": true,
+    "sourceMap": true,
+    "types": ["cypress", "node"],
+    "paths": {
+      "@/actions/*": ["./src/actions/*"],
+    },
+    "baseUrl": ".",
+    "outDir": "dist",
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"],
+}

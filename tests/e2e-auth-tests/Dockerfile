@@ -40,6 +40,10 @@ COPY packages/jwt/package.json packages/jwt/package.json
 COPY packages/jwt/src packages/jwt/src
 COPY packages/jwt/tsconfig.json packages/jwt/tsconfig.json
 
+COPY tests/cypress-e2e-auth-tests-helper-commands/package.json tests/cypress-e2e-auth-tests-helper-commands/package.json
+COPY tests/cypress-e2e-auth-tests-helper-commands/src tests/cypress-e2e-auth-tests-helper-commands/src
+COPY tests/cypress-e2e-auth-tests-helper-commands/tsconfig.json tests/cypress-e2e-auth-tests-helper-commands/tsconfig.json
+
 COPY tests/e2e-auth-tests/package.json tests/e2e-auth-tests/package.json
 
 # Install all workspace dependencies
@@ -53,6 +57,9 @@ WORKDIR /schemavaults/auth/packages/auth-common
 RUN bun run build
 
 WORKDIR /schemavaults/auth/packages/jwt
+RUN bun run build
+
+WORKDIR /schemavaults/auth/tests/cypress-e2e-auth-tests-helper-commands
 RUN bun run build
 
 # Install Cypress
