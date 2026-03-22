@@ -4,6 +4,7 @@ on:
   workflow_call:
     inputs:
       test-suite-name:
+        description: "What is the name of the test suite we are running?"
         required: true
         type: string
       BUN_VERSION:
