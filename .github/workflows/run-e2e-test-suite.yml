@@ -12,7 +12,7 @@ on:
         type: string
 
 jobs:
-  Run-Core-E2E-Tests:
+  Run-E2E-Test-Suite:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code

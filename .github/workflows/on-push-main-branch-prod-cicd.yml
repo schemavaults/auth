@@ -48,6 +48,8 @@ jobs:
       - Run-Unit-Tests
       - Run-ESLint
     uses: ./.github/workflows/run-e2e-tests.yml
+    with:
+      BUN_VERSION: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Deploy-Vercel-Production:
     runs-on: ubuntu-latest
