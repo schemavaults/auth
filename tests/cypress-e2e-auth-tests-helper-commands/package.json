@@ -10,7 +10,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "dependencies": {
-    "cypress": "15.9.0",
+    "cypress": "15.12.0",
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-common": "workspace:*"
