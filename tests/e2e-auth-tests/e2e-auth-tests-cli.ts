@@ -66,6 +66,9 @@ function launchDockerComposeTests(
     "up",
     ...args, // additional args for 'docker compose up'
   ];
+  console.log(
+    `[e2e-auth-tests-cli] Running E2E tests with Docker Compose command: '${dockerComposeCommand.join(" ")}'`,
+  );
   spawnSync(dockerComposeCommand.join(" "), {
     cwd: monorepo_root_directory,
     env: {
