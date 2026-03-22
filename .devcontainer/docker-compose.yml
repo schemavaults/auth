@@ -35,7 +35,7 @@ services:
 
   postgres-ws-proxy:
     container_name: postgres-ws-proxy
-    image: ghcr.io/schemavaults/dbh/postgres-ws-proxy:0.8.1
+    image: ghcr.io/schemavaults/dbh/postgres-ws-proxy:0.8.7
     environment:
       APPEND_PORT: "postgres-db:5432"
       ALLOW_ADDR_REGEX: ".*"
