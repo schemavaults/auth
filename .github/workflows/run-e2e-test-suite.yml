@@ -1,4 +1,4 @@
-name: "Run E2E '${{ github.event.inputs.test-suite-name }}' Test Suite"
+name: "Run E2E Test Suite"
 
 on:
   workflow_call:
