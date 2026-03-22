@@ -69,13 +69,21 @@ function launchDockerComposeTests(
   console.log(
     `[e2e-auth-tests-cli] Running E2E test suite '${test_suite_name}' with Docker Compose command '${dockerComposeCommand.join(" ")}' from directory '${monorepo_root_directory}'`,
   );
-  spawnSync(dockerComposeCommand.join(" "), {
+  const result = spawnSync(dockerComposeCommand.join(" "), {
     cwd: monorepo_root_directory,
     env: {
       TEST_SUITE_NAME: test_suite_name,
     },
     stdio: ["ignore", "inherit", "inherit"],
   });
+  if (typeof result.status !== "number" || result.status !== 0) {
+    console.error("Tests failed with result status: ", result.status);
+    process.exit(1);
+  }
+  console.log(
+    `Test suite '${test_suite_name}' appears to have run successfully!`,
+  );
+  process.exit(0);
 }
 
 const e2eAuthTestsCli = new Command("e2e-auth-tests-cli");
