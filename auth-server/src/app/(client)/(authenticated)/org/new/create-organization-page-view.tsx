@@ -3,6 +3,13 @@
 import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { CreateOrganizationForm } from "@schemavaults/auth-ui";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@schemavaults/ui";
 import PageContainer from "@/components/PageContainer";
 
 export default function CreateOrganizationPageView(): ReactElement {
@@ -10,17 +17,21 @@ export default function CreateOrganizationPageView(): ReactElement {
 
   return (
     <PageContainer>
-      <div className="w-full max-w-lg">
-        <h1 className="text-2xl font-bold mb-2">Create a new organization</h1>
-        <p className="text-muted-foreground mb-6">
-          Create a new organization to group users and resources together.
-        </p>
-        <CreateOrganizationForm
-          onSuccess={(organization_id: string): void => {
-            router.push(`/org/${organization_id}`);
-          }}
-        />
-      </div>
+      <Card className="w-full max-w-lg">
+        <CardHeader>
+          <CardTitle>Create a new organization</CardTitle>
+          <CardDescription>
+            Create a new organization to group users and resources together.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CreateOrganizationForm
+            onSuccess={(organization_id: string): void => {
+              router.push(`/org/${organization_id}`);
+            }}
+          />
+        </CardContent>
+      </Card>
     </PageContainer>
   );
 }
