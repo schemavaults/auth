@@ -70,14 +70,18 @@ function launchDockerComposeTests(
   console.log(
     `[e2e-auth-tests-cli] Running E2E test suite '${test_suite_name}' with Docker Compose command '${dockerComposeCommand.join(" ")}' from directory '${monorepo_root_directory}'`,
   );
-  const result = spawnSync(dockerComposeCommand[0], dockerComposeCommand.slice(1), {
-    cwd: monorepo_root_directory,
-    env: {
-      ...process.env,
-      TEST_SUITE_NAME: test_suite_name,
+  const result = spawnSync(
+    dockerComposeCommand[0],
+    dockerComposeCommand.slice(1),
+    {
+      cwd: monorepo_root_directory,
+      env: {
+        ...process.env,
+        TEST_SUITE_NAME: test_suite_name,
+      },
+      stdio: ["ignore", "inherit", "inherit"],
     },
-    stdio: ["ignore", "inherit", "inherit"],
-  });
+  );
   if (result.error) {
     console.error("Tests failed with error: ", result.error);
     process.exit(1);
@@ -101,6 +105,7 @@ e2eAuthTestsCli
   .option(
     "--verbose",
     "Whether we should show stdout from the running application server. By default only the test runner's stdout is shown.",
+    false,
   )
   .action(async (test_suite_name: string, options): Promise<void> => {
     const test_suites: readonly string[] = listTestSuites();
@@ -124,8 +129,11 @@ e2eAuthTestsCli
     // verbose flag
     const verbose: boolean =
       typeof options.verbose === "boolean" && options.verbose ? true : false;
-    if (verbose) {
+    if (!verbose) {
+      // attach to only the test runner if not verbose
       args.push("--attach", "schemavaults-e2e-auth-tests");
+    } else {
+      console.log("--verbose flag is active! Attaching to all containers...");
     }
 
     launchDockerComposeTests(
