@@ -9,6 +9,7 @@ Commands:
 
 Options:
   --templates-dir <path>   Custom codegen templates directory
+  --debug                  Enable debug logging
   --help, -h               Show this help message
   --version, -v            Show package name
 `;
@@ -48,9 +49,12 @@ async function main() {
     process.exit(1);
   }
 
-  await NextjsAppDirectoryPlugin.codegen(
-    templatesDir ? { codegenTemplatesDirectory: templatesDir } : undefined,
-  );
+  const debug = args.includes("--debug");
+
+  await NextjsAppDirectoryPlugin.codegen({
+    ...(templatesDir ? { codegenTemplatesDirectory: templatesDir } : {}),
+    debug,
+  });
 }
 
 main().catch((err) => {

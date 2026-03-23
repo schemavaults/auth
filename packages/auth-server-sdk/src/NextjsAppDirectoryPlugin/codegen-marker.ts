@@ -12,6 +12,11 @@ export function hasCodegenMarker(firstLine: string): boolean {
   return CODEGEN_MARKER_REGEX.test(firstLine);
 }
 
+export function extractVersion(firstLine: string): string | null {
+  if (!firstLine.startsWith(CODEGEN_MARKER_PREFIX)) return null;
+  return firstLine.slice(CODEGEN_MARKER_PREFIX.length) || null;
+}
+
 export function prependCodegenMarker(content: string): string {
   return `${getCodegenMarkerComment()}\n${content}`;
 }

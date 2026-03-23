@@ -3,10 +3,11 @@ import { dirname } from "path";
 import resolveAppDirectory from "./resolve-app-directory";
 import { join } from "path";
 import resolveCodegenTemplatesDirectory from "./resolve-codegen-templates-directory";
-import { hasCodegenMarker, prependCodegenMarker } from "./codegen-marker";
+import { extractVersion, getCodegenMarkerComment, hasCodegenMarker, prependCodegenMarker } from "./codegen-marker";
 
 export interface IAuthResourceServerCodegenOptions {
   codegenTemplatesDirectory?: string;
+  debug?: boolean;
 }
 
 interface ITemplateAuthPage {
@@ -43,6 +44,21 @@ function isCodegenManagedFile(filePath: string): boolean {
   return hasCodegenMarker(firstLine);
 }
 
+function getExistingVersion(filePath: string): string | null {
+  const content = readFileSync(filePath, { encoding: "utf-8" });
+  const firstLine = content.split("\n")[0] ?? "";
+  return extractVersion(firstLine);
+}
+
+function formatVersionTransition(oldVersion: string | null): string {
+  const newMarker = getCodegenMarkerComment();
+  const newVersion = extractVersion(newMarker);
+  if (oldVersion && newVersion && oldVersion !== newVersion) {
+    return ` (${oldVersion} => ${newVersion})`;
+  }
+  return "";
+}
+
 function createClientPages(appDirectory: string, templatesDir: string) {
   for (const page of pagesToCreate) {
     const destPath: string = join(appDirectory, page.app_dir_path, "page.tsx");
@@ -50,6 +66,7 @@ function createClientPages(appDirectory: string, templatesDir: string) {
 
     if (existsSync(destPath)) {
       if (isCodegenManagedFile(destPath)) {
+        const oldVersion = getExistingVersion(destPath);
         const templatePath: string = join(templatesDir, page.codegen_template_path);
         const templateContent: string = readFileSync(templatePath, {
           encoding: "utf-8",
@@ -57,7 +74,7 @@ function createClientPages(appDirectory: string, templatesDir: string) {
         writeFileSync(destPath, prependCodegenMarker(templateContent), {
           encoding: "utf-8",
         });
-        console.log(` - updated '${relPath}'`);
+        console.log(` - updated '${relPath}'${formatVersionTransition(oldVersion)}`);
       } else {
         console.log(
           ` - skipping '${relPath}' (user-customized, no codegen marker)`,
@@ -89,17 +106,18 @@ function createClientAuthProvider(appDirectory: string, templatesDir: string) {
     "auth-provider.tsx",
   );
   const destPath: string = join(appDirectory, "auth", "auth-provider.tsx");
-  const relPath = "auth/auth-provider.tsx";
+  const relPath = "/auth/auth-provider.tsx";
 
   if (existsSync(destPath)) {
     if (isCodegenManagedFile(destPath)) {
+      const oldVersion = getExistingVersion(destPath);
       const templateContent: string = readFileSync(srcTemplatePath, {
         encoding: "utf-8",
       });
       writeFileSync(destPath, prependCodegenMarker(templateContent), {
         encoding: "utf-8",
       });
-      console.log(` - updated '${relPath}'`);
+      console.log(` - updated '${relPath}'${formatVersionTransition(oldVersion)}`);
     } else {
       console.log(
         ` - skipping '${relPath}' (user-customized, no codegen marker)`,
@@ -129,7 +147,9 @@ export default async function codegen(
     `[@schemavaults/auth-server-sdk/NextjsAppDirectoryPlugin] Running codegen:`,
   );
 
-  const appDirectory: string = resolveAppDirectory();
+  const debug = opts?.debug ?? false;
+
+  const appDirectory: string = resolveAppDirectory(debug);
   console.log(` - resolved /app directory at '${appDirectory}'`);
   const authDirectory: string = join(appDirectory, "auth");
   if (!existsSync(authDirectory)) {
@@ -142,7 +162,7 @@ export default async function codegen(
   const templatesDir: string =
     typeof opts?.codegenTemplatesDirectory === "string"
       ? opts.codegenTemplatesDirectory
-      : resolveCodegenTemplatesDirectory();
+      : resolveCodegenTemplatesDirectory(debug);
   console.log(` - resolved codegen templates directory at '${templatesDir}'`);
 
   createClientPages(appDirectory, templatesDir);
