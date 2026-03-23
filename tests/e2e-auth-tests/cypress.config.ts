@@ -98,8 +98,10 @@ export default defineConfig({
               );
 
               const challenge_time = Date.now();
-              const codeVerifier = PKCE_ProofKeyManager.createCodeVerifier(challenge_time);
-              const codeChallenge = await PKCE_ProofKeyManager.createCodeChallenge(codeVerifier);
+              const codeVerifier =
+                PKCE_ProofKeyManager.createCodeVerifier(challenge_time);
+              const codeChallenge =
+                await PKCE_ProofKeyManager.createCodeChallenge(codeVerifier);
 
               const response = await fetch(endpoint, {
                 method: "POST",
@@ -116,14 +118,20 @@ export default defineConfig({
               });
 
               if (response.status === 200) {
-                console.log("[preRegisterSuperuser] Superuser registered successfully.");
+                console.log(
+                  "[preRegisterSuperuser] Superuser registered successfully.",
+                );
                 config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
               } else if (response.status === 409) {
                 console.log("[preRegisterSuperuser] Superuser already exists.");
                 config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
               } else {
                 const body = await response.json().catch(() => null);
-                console.error("[preRegisterSuperuser] Failed:", response.status, body);
+                console.error(
+                  "[preRegisterSuperuser] Failed:",
+                  response.status,
+                  body,
+                );
                 throw new Error(
                   `Failed to pre-register superuser! Status: ${response.status}`,
                 );
