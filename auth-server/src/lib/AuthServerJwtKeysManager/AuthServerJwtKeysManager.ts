@@ -24,11 +24,9 @@ export class AuthServerJwtKeysManager
     refreshTokenExpiry;
   private static readonly keyset_valid_duration: number =
     refreshTokenExpiry * 3;
-  private readonly db: Kysely<AuthDatabase>;
 
   public constructor(dbh: Kysely<AuthDatabase>) {
     super(new AuthServerJwtKeysStore(dbh));
-    this.db = dbh;
   }
 
   private static isValidApiServerId(val: unknown): val is ApiServerId {
@@ -177,6 +175,10 @@ export class AuthServerJwtKeysManager
     }
 
     await this.createAndSaveNewJwtKeySet(audience_id);
+  }
+
+  public isConfigured(): boolean {
+    return true;
   }
 }
 

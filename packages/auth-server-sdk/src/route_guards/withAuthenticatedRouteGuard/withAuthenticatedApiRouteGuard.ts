@@ -97,6 +97,23 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
+    if (!jwt_keys_manager.isConfigured()) {
+      console.error(
+        "[withAuthenticatedApiRouteGuard] JWT Keys Manager does not appear to be properly configured!",
+      );
+      const json: CreateJsonResponseFn = await loadCreateJsonResponseFn();
+      return json(
+        {
+          success: false,
+          error: true,
+          message: "Internal Server Error",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
     const token_sources: PotentiallyValidTokenSource[] = [];
 
     // Load refresh token cookie for auth server

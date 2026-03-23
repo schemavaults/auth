@@ -18,6 +18,8 @@ export abstract class DatabaseConnectedJwtKeyManager implements IJwtKeyManager {
     }
     return jwks;
   }
+
+  public abstract isConfigured(): boolean;
 }
 
 export default DatabaseConnectedJwtKeyManager;

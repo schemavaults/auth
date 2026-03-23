@@ -80,6 +80,13 @@ export async function withAuthenticatedServerComponentRouteGuard<
     redirectWithError(redirect, 500, "server_misconfiguration");
   }
 
+  if (!jwt_keys_manager.isConfigured()) {
+    console.error(
+      "[withAuthenticatedServerComponentRouteGuard] JWT Keys Manager does not appear to be properly configured!",
+    );
+    redirectWithError(redirect, 500, "server_misconfiguration");
+  }
+
   const cookies: RequestCookies = await loadCookies();
   if (!("get" in cookies) || typeof cookies.get !== "function") {
     throw new TypeError(

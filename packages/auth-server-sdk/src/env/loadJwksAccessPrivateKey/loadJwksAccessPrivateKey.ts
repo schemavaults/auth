@@ -1,3 +1,5 @@
+// loadJwksAccessPrivateKey.ts
+
 import {
   importPKCS8,
   isValidBase64UrlEncoding,
@@ -5,7 +7,8 @@ import {
   sign_verify_alg,
 } from "@schemavaults/jwt";
 
-const key = "SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY" as const;
+export const JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME =
+  "SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY" as const;
 
 export default async function loadJwksAccessPrivateKey(
   env: object = process.env,
@@ -16,15 +19,16 @@ export default async function loadJwksAccessPrivateKey(
 
   if (
     typeof env === "object" &&
-    key in env &&
-    typeof env[key] === "string" &&
-    env[key].length > 0
+    JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME in env &&
+    typeof env[JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME] === "string" &&
+    env[JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME].length > 0
   ) {
-    const environmentVariable: string = env[key];
+    const environmentVariable: string =
+      env[JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME];
 
     if (debug) {
       console.log(
-        `[loadJwksAccessPrivateKey] Found env var with key '${key}'!`,
+        `[loadJwksAccessPrivateKey] Found env var with key '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}'!`,
       );
     }
 
@@ -34,11 +38,11 @@ export default async function loadJwksAccessPrivateKey(
         pem = PEMFormat.parsePem(environmentVariable, "PRIVATE");
       } catch (e: unknown) {
         console.error(
-          `Failed to import environment variable '${key}' from PEM-encoded environment variable: `,
+          `Failed to import environment variable '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}' from PEM-encoded environment variable: `,
           e,
         );
         throw new TypeError(
-          `Failed to import environment variable '${key}' from PEM-encoded environment variable!`,
+          `Failed to import environment variable '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}' from PEM-encoded environment variable!`,
         );
       }
     } else if (isValidBase64UrlEncoding(environmentVariable)) {
@@ -50,17 +54,19 @@ export default async function loadJwksAccessPrivateKey(
           e,
         );
         throw new TypeError(
-          `Failed to import environment variable '${key}' from base64url-encoded environment variable!`,
+          `Failed to import environment variable '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}' from base64url-encoded environment variable!`,
         );
       }
     } else {
       throw new TypeError(
-        `Failed to determine what format the key in environment variable '${key}' is in!`,
+        `Failed to determine what format the key in environment variable '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}' is in!`,
       );
     }
 
     return await importPKCS8(pem.value, sign_verify_alg);
   } else {
-    throw new TypeError(`Environment variable '${key}' missing!`);
+    throw new TypeError(
+      `Environment variable '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}' missing!`,
+    );
   }
 }

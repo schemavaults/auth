@@ -7,7 +7,9 @@ import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
 } from "@schemavaults/app-definitions";
 import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
-import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey";
+import loadJwksAccessPrivateKey, {
+  JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME,
+} from "@/env/loadJwksAccessPrivateKey";
 
 const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -105,6 +107,16 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
     RemoteJwtKeyManager.jwksCache.set(key, { jwks, fetchedAt: Date.now() });
 
     return jwks;
+  }
+
+  public isConfigured(): boolean {
+    if (
+      typeof process.env[JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME] === "string" &&
+      process.env[JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME].length > 0
+    ) {
+      return true;
+    }
+    return false;
   }
 }
 
