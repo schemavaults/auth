@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/cypress-e2e-auth-tests-helper-commands",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/schemavaults/auth.git",
@@ -23,5 +23,19 @@
   "scripts": {
     "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*",
+      "import": "./dist/*"
+    },
+    "./actions/*": {
+      "types": "./dist/actions/*.d.ts",
+      "import": "./dist/actions/*.js"
+    }
   }
 }

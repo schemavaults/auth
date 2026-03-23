@@ -1,4 +1,4 @@
-import type { InviteAndAcceptOrgMembershipResult } from "@/actions/invite_and_accept_org_membership";
+import type { InviteAndAcceptOrgMembershipResult } from "@schemavaults/cypress-e2e-auth-tests-helper-commands/actions/invite_and_accept_org_membership";
 
 function expectNumber(val: unknown): val is number {
   expect(

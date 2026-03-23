@@ -10,7 +10,9 @@
     "sourceMap": true,
     "types": ["cypress", "node"],
     "paths": {
-      "@/actions/*": ["./cypress/support/actions/*"],
+      "@/actions/*": [
+        "@schemavaults/cypress-e2e-auth-tests-helper-commands/actions/*",
+      ],
     },
     "baseUrl": ".",
   },
