@@ -70,9 +70,10 @@ function launchDockerComposeTests(
   console.log(
     `[e2e-auth-tests-cli] Running E2E test suite '${test_suite_name}' with Docker Compose command '${dockerComposeCommand.join(" ")}' from directory '${monorepo_root_directory}'`,
   );
-  const result = spawnSync(dockerComposeCommand.join(" "), {
+  const result = spawnSync(dockerComposeCommand[0], dockerComposeCommand.slice(1), {
     cwd: monorepo_root_directory,
     env: {
+      ...process.env,
       TEST_SUITE_NAME: test_suite_name,
     },
     stdio: ["ignore", "inherit", "inherit"],
