@@ -1,5 +1,6 @@
 import { defineConfig } from "cypress";
 import { createJwksAccessProofToken, importPKCS8 } from "@schemavaults/jwt";
+import { PKCE_ProofKeyManager } from "@schemavaults/auth-common";
 
 const devAuthServer: string = "http://localhost:6767";
 
@@ -84,6 +85,52 @@ export default defineConfig({
               result,
             );
           })();
+
+          // Pre-register the superuser for non-superuser test suites
+          // so that create_and_login_as_superuser() can skip the slow
+          // register-then-409-then-login dance and go straight to login.
+          const testSuiteName = config.env["TEST_SUITE_NAME"];
+          if (testSuiteName !== "superuser") {
+            await (async function preRegisterSuperuser(): Promise<void> {
+              const endpoint = `${config.baseUrl}/api/auth/register`;
+              console.log(
+                `[preRegisterSuperuser] Pre-registering superuser for test suite '${testSuiteName}'...`,
+              );
+
+              const challenge_time = Date.now();
+              const codeVerifier = PKCE_ProofKeyManager.createCodeVerifier(challenge_time);
+              const codeChallenge = await PKCE_ProofKeyManager.createCodeChallenge(codeVerifier);
+
+              const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  credentials: {
+                    email: config.env["PRIVATE_SUPERUSER_EMAIL"],
+                    password: config.env["PRIVATE_SUPERUSER_PASSWORD"],
+                  },
+                  invite_code: config.env["PRIVATE_SUPERUSER_INVITE_CODE"],
+                  code_challenge: codeChallenge.code_challenge,
+                  challenge_time,
+                }),
+              });
+
+              if (response.status === 200) {
+                console.log("[preRegisterSuperuser] Superuser registered successfully.");
+                config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
+              } else if (response.status === 409) {
+                console.log("[preRegisterSuperuser] Superuser already exists.");
+                config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
+              } else {
+                const body = await response.json().catch(() => null);
+                console.error("[preRegisterSuperuser] Failed:", response.status, body);
+                throw new Error(
+                  `Failed to pre-register superuser! Status: ${response.status}`,
+                );
+              }
+            })();
+          }
+
           return;
         } else {
           // dont trigger migration in non-test environment
@@ -98,5 +145,7 @@ export default defineConfig({
     PRIVATE_SUPERUSER_PASSWORD: "Password123!",
     SCHEMAVAULTS_APP_ENVIRONMENT:
       process.env.SCHEMAVAULTS_APP_ENVIRONMENT ?? "development",
+    TEST_SUITE_NAME: process.env.TEST_SUITE_NAME ?? "",
+    PRIVATE_SUPERUSER_PRECREATED: false,
   },
 });

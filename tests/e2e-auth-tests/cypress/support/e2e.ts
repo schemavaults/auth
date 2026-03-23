@@ -16,10 +16,5 @@
 // Import commands.js using ES2015 syntax:
 import "./commands";
 
-import type { Chainable as CustomCypressChainable } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
-
-declare global {
-  namespace Cypress {
-    interface Chainable extends CustomCypressChainable {}
-  }
-}
+// contains a declare global that overwrites the Chainable interface on the Cypress module
+import "@schemavaults/cypress-e2e-auth-tests-helper-commands/Chainable";

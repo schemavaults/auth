@@ -14,6 +14,7 @@ services:
     environment:
       CYPRESS_BASE_URL: http://schemavaults-auth:80
       SCHEMAVAULTS_APP_ENVIRONMENT: test
+      TEST_SUITE_NAME: ${TEST_SUITE_NAME:?error}
     links:
       - schemavaults-auth
     profiles:

@@ -40,9 +40,11 @@ export default function createAndLoginAsSuperuser(): Cypress.Chainable<boolean> 
       "PRIVATE_SUPERUSER_EMAIL and PRIVATE_SUPERUSER_PASSWORD environment variables are not set",
     );
   }
-  if (SuperuserCreatedCache.created) {
+  if (Cypress.env("PRIVATE_SUPERUSER_PRECREATED") || SuperuserCreatedCache.created) {
     cy.log(
-      "Superuser appears to be marked as already created-- attempting to login right away...",
+      Cypress.env("PRIVATE_SUPERUSER_PRECREATED")
+        ? "Superuser was pre-registered before test suite-- attempting to login right away..."
+        : "Superuser appears to be marked as already created-- attempting to login right away...",
     );
     return cy
       .login(credentials.email, credentials.password)
