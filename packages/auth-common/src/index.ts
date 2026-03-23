@@ -47,6 +47,7 @@ export type { InviteCode, InviteCodeDefinition } from "./invite-code";
 export {
   organizationIdSchema,
   isValidOrganizationID,
+  RESERVED_ORGANIZATION_IDS,
   organizationDefinitionSchema,
   hardcodedOrgs,
   SCHEMAVAULTS_ORGANIZATION_ID,

@@ -4,6 +4,13 @@ import {
   MINIMUM_ORGANIZATION_ID_LENGTH,
 } from "./organization_constants";
 
+export const RESERVED_ORGANIZATION_IDS = [
+  "new",
+  "create",
+  "delete",
+  "update",
+] as const satisfies readonly string[];
+
 export const organizationIdSchema = z
   .string()
   .min(
@@ -23,7 +30,12 @@ export const organizationIdSchema = z
       return false;
     }
     return true;
-  }, "Organization ID may not end with a hyphen or dash.");
+  }, "Organization ID may not end with a hyphen or dash.")
+  .refine(
+    (orgId: string): boolean =>
+      !RESERVED_ORGANIZATION_IDS.includes(orgId as (typeof RESERVED_ORGANIZATION_IDS)[number]),
+    "This organization ID is reserved and cannot be used.",
+  );
 
 export type OrganizationID = z.infer<typeof organizationIdSchema>;
 

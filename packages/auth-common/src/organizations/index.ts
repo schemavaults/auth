@@ -1,4 +1,4 @@
-export { organizationIdSchema, isValidOrganizationID } from "./organization_id";
+export { organizationIdSchema, isValidOrganizationID, RESERVED_ORGANIZATION_IDS } from "./organization_id";
 export type { OrganizationID } from "./organization_id";
 
 export { organizationDefinitionSchema } from "./organization_definition";
