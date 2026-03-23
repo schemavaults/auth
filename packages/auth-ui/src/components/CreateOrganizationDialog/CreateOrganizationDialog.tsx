@@ -1,11 +1,17 @@
 "use client";
 
-import { Button } from "@schemavaults/ui";
+import {
+  Button,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@schemavaults/ui";
 import type { ReactElement } from "react";
 
 import { Dialog, DialogContent } from "@schemavaults/ui";
 import { Building2 } from "lucide-react";
-import CreateOrganizationForm from "./CreateOrganizationForm";
+import CreateOrganizationForm from "@/components/CreateOrganizationForm";
 
 export interface CreateOrganizationDialogProps {
   open: boolean;
@@ -22,7 +28,16 @@ export function CreateOrganizationDialog({
         id="create-organization-dialog-content"
         className="sm:max-w-[425px]"
       >
-        <CreateOrganizationForm onSuccess={(): void => onOpenChange(false)} />
+        <DialogHeader>
+          <DialogTitle>Create a new organization</DialogTitle>
+          <DialogDescription>
+            Create a new organization to group users and resources together.
+          </DialogDescription>
+        </DialogHeader>
+        <CreateOrganizationForm
+          onSuccess={(): void => onOpenChange(false)}
+          FooterWrapper={DialogFooter}
+        />
       </DialogContent>
     </Dialog>
   );

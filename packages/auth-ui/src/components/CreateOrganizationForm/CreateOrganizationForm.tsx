@@ -12,15 +12,16 @@ import {
   Input,
   useToast,
 } from "@schemavaults/ui";
-import { useCallback, useMemo, useTransition, type ReactElement } from "react";
-
 import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  useForm,
-} from "@schemavaults/ui";
+  type FC,
+  type PropsWithChildren,
+  useCallback,
+  useMemo,
+  useTransition,
+  type ReactElement,
+} from "react";
+
+import { useForm } from "@schemavaults/ui";
 import { useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
@@ -32,11 +33,25 @@ import { Building2 } from "lucide-react";
 
 export interface CreateOrganizationFormProps {
   onSuccess: () => void;
+  FooterWrapper?: FC<PropsWithChildren>;
 }
 
 export function CreateOrganizationForm({
   onSuccess,
+  ...props
 }: CreateOrganizationFormProps): ReactElement {
+  const FooterWrapper: FC<PropsWithChildren> = useMemo(() => {
+    if (typeof props.FooterWrapper === "function") {
+      return props.FooterWrapper;
+    } else {
+      return function DefaultBlankFooterWrapper({
+        children,
+      }: PropsWithChildren): ReactElement {
+        return <>{children}</>;
+      };
+    }
+  }, [props.FooterWrapper]);
+
   const { toast } = useToast();
 
   const defaultValues: Partial<OrganizationDefinition> = useMemo(() => {
@@ -169,12 +184,6 @@ export function CreateOrganizationForm({
         })}
         className="flex flex-col justify-start gap-4"
       >
-        <DialogHeader>
-          <DialogTitle>Create a new organization</DialogTitle>
-          <DialogDescription>
-            Create a new organization to group users and resources together.
-          </DialogDescription>
-        </DialogHeader>
         <FormField
           control={form.control}
           name="organization_id"
@@ -218,7 +227,7 @@ export function CreateOrganizationForm({
             </FormItem>
           )}
         />
-        <DialogFooter>
+        <FooterWrapper>
           <Button
             id="submit-create-organization-form-button"
             type="submit"
@@ -227,7 +236,7 @@ export function CreateOrganizationForm({
             <Building2 className="h-4 w-4 mr-2" />
             Create organization
           </Button>
-        </DialogFooter>
+        </FooterWrapper>
       </form>
     </Form>
   );
