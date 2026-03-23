@@ -49,6 +49,9 @@ export type { OrganizationsCardProps } from "./OrganizationsCard";
 export { CreateOrganizationDialog } from "./CreateOrganizationDialog";
 export type * from "./CreateOrganizationDialog";
 
+export { CreateOrganizationForm } from "./CreateOrganizationForm";
+export type { CreateOrganizationFormProps } from "./CreateOrganizationForm";
+
 export { OrganizationMembersTable } from "./OrganizationMembersTable";
 export type {
   OrganizationMembersDatatableProps,

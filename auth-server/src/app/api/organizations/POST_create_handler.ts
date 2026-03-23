@@ -14,9 +14,9 @@ import {
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import {
-  type IProtectedAdminApiRouteProps,
-  withAdminApiRouteGuard,
-} from "@/lib/withAdminRouteGuard";
+  type IProtectedAuthenticatedApiRouteProps,
+  withAuthenticatedApiRouteGuard,
+} from "@/lib/withAuthenticatedRouteGuard";
 
 class ExceededMembershipLimitError extends Error {}
 
@@ -25,21 +25,9 @@ async function POST_create_organization_handler({
   user,
   dbh,
   environment,
-}: IProtectedAdminApiRouteProps): Promise<NextResponse> {
+}: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> {
   if (environment === "development") {
     console.log("POST => /api/organizations");
-  }
-
-  if (!user.admin) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "You must be an admin to create a new organization",
-      } satisfies ResourceCreationResponse,
-      {
-        status: 403,
-      },
-    );
   }
 
   // Parse new organization definitions from request body
@@ -127,7 +115,7 @@ async function POST_create_organization_handler({
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  return await (await withAdminApiRouteGuard(POST_create_organization_handler))(req)
+  return await (await withAuthenticatedApiRouteGuard(POST_create_organization_handler))(req)
 }
 
 export const dynamic = "force-dynamic";

@@ -13,7 +13,10 @@ import {
   cn,
 } from "@schemavaults/ui";
 import type { UserData } from "@schemavaults/auth-react-provider";
-import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import {
+  type OrganizationDefinition,
+  MAXIMUM_USER_ORGANIZATIONS,
+} from "@schemavaults/auth-common";
 import SignOutButton from "@/components/SignOutButton";
 import ViewFullUserProfileButton from "./view_full_user_profile";
 import ViewAdminDashboardButton from "./view_admin_page_link";
@@ -22,7 +25,7 @@ import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { Building2 } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 
 export interface AccountDetailsCardProps {
   cardClassName?: string;
@@ -90,6 +93,18 @@ export function AccountDetailsCard(
                 <p className="text-sm text-muted-foreground">
                   No organizations
                 </p>
+              )}
+              {(!props.organizations || props.organizations.length < MAXIMUM_USER_ORGANIZATIONS) && (
+                <Link href="/org/new">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-row flex-nowrap gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Organization
+                  </Button>
+                </Link>
               )}
             </div>
           )}

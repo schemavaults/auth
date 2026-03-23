@@ -35,7 +35,7 @@ export function CreateOrganizationDialog({
           </DialogDescription>
         </DialogHeader>
         <CreateOrganizationForm
-          onSuccess={(): void => onOpenChange(false)}
+          onSuccess={(): void => { onOpenChange(false); }}
           FooterWrapper={DialogFooter}
         />
       </DialogContent>

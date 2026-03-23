@@ -32,7 +32,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Building2 } from "lucide-react";
 
 export interface CreateOrganizationFormProps {
-  onSuccess: () => void;
+  onSuccess: (organization_id: string) => void;
   FooterWrapper?: FC<PropsWithChildren>;
 }
 
@@ -161,8 +161,9 @@ export function CreateOrganizationForm({
         title: "Created new organization successfully",
       });
       clearOrganizationsCache();
+      const submittedOrgId = values.organization_id;
       form.reset();
-      onSuccess();
+      onSuccess(submittedOrgId);
       return;
     });
     return;
