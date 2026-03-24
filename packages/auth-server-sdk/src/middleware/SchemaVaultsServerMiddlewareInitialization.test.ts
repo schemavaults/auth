@@ -11,6 +11,10 @@ class MockJwtKeyManager extends DatabaseConnectedJwtKeyManager {
   public constructor() {
     super(new MockJwtKeySetsStore());
   }
+
+  public isConfigured(): boolean {
+    return true;
+  }
 }
 
 describe("SchemaVaultsServerMiddleware Initialization", () => {
@@ -72,5 +76,11 @@ describe("SchemaVaultsServerMiddleware Initialization", () => {
       errorThrown = true;
     }
     expect(errorThrown).toBeFalse();
+  });
+
+  test("has an 'isConfigured()' method that returns a boolean", () => {
+    const instance = new MockJwtKeyManager();
+    expect(instance.isConfigured).toBeFunction();
+    expect(instance.isConfigured()).toBeBoolean();
   });
 });
