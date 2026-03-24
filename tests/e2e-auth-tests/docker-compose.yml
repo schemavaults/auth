@@ -17,6 +17,7 @@ services:
       TEST_SUITE_NAME: ${TEST_SUITE_NAME:?error}
     links:
       - schemavaults-auth
+      - example-nextjs-resource-server
     profiles:
       - e2e
       - e2e_with_resource_server
