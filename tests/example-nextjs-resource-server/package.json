@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/example-nextjs-resource-server",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -29,8 +29,8 @@
     "autoprefixer": "10.4.21"
   },
   "scripts": {
-    "codegen": "auth-server-sdk codegen",
-    "dev": "bun run codegen && PORT=3007 next dev",
-    "build": "bun run codegen && next build"
+    "auth-codegen": "bun run ../../packages/auth-server-sdk/dist/cli.cjs codegen --templates-dir ../../packages/auth-server-sdk/dist/codegen-templates",
+    "dev": "bun run auth-codegen && PORT=3007 next dev",
+    "build": "bun run auth-codegen && next build"
   }
 }
