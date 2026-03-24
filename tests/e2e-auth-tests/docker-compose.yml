@@ -15,9 +15,6 @@ services:
       CYPRESS_BASE_URL: http://schemavaults-auth:80
       SCHEMAVAULTS_APP_ENVIRONMENT: test
       TEST_SUITE_NAME: ${TEST_SUITE_NAME:?error}
-    links:
-      - schemavaults-auth
-      - example-nextjs-resource-server
     profiles:
       - e2e
       - e2e_with_resource_server
@@ -39,8 +36,6 @@ services:
         NODEJS_VERSION: 24-alpine
       target: production
     depends_on:
-      - schemavaults-auth
-    links:
       - schemavaults-auth
     environment:
       SCHEMAVAULTS_APP_ENVIRONMENT: test
@@ -80,9 +75,6 @@ services:
       - 80
     ports:
       - 80:80
-    links:
-      - postgres-db
-      - postgres-ws-proxy
 
   postgres-db:
     build:
@@ -118,5 +110,4 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
-    links:
-      - postgres-db
+
