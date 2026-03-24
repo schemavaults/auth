@@ -114,8 +114,11 @@ e2eAuthTestsCli
       process.exit(404);
     }
 
-    const defaultDockerComposeProfile = "e2e" as const;
-    const dockerComposeProfile: string = defaultDockerComposeProfile;
+    const dockerComposeProfile: string = test_suite_name.includes(
+      "resource_server",
+    )
+      ? ("e2e_with_resource_server" as const)
+      : ("e2e" as const);
 
     // args for the `docker compose up` command that launches the e2e test
     const args: string[] = [

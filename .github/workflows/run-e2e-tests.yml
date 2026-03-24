@@ -19,3 +19,8 @@ jobs:
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: superuser
+  Run-Example-Resource-Server-E2E-Tests:
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: example_resource_server

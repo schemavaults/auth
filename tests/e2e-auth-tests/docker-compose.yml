@@ -19,6 +19,7 @@ services:
       - schemavaults-auth
     profiles:
       - e2e
+      - e2e_with_resource_server
     command:
       [
         "bun",
@@ -27,6 +28,29 @@ services:
         "--spec",
         "./cypress/e2e/${TEST_SUITE_NAME:?error}/**.cy.ts",
       ]
+
+  example-nextjs-resource-server:
+    build:
+      context: ../..
+      dockerfile: tests/example-nextjs-resource-server/Dockerfile
+      args:
+        BUN_VERSION: 1.3.6
+        NODEJS_VERSION: 24-alpine
+      target: production
+    depends_on:
+      - schemavaults-auth
+    links:
+      - schemavaults-auth
+    environment:
+      SCHEMAVAULTS_APP_ENVIRONMENT: test
+      NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT: test
+      NODE_ENV: test
+    expose:
+      - 3007
+    ports:
+      - 3007:3007
+    profiles:
+      - e2e_with_resource_server
 
   schemavaults-auth:
     build:
