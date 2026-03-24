@@ -34,3 +34,9 @@ export {
   getHardcodedApiServer,
   getHardcodedApiServerDomain,
 } from "@schemavaults/app-definitions";
+
+// Auth-Common Error Catalog
+export {
+  isValidErrorId,
+  ERROR_MESSAGE_CATALOG,
+} from "@schemavaults/auth-common";

@@ -19,3 +19,9 @@ export type * from "@/types/hook-status";
 export type { UserData } from "@/types/UserData";
 
 export type * from "@/types/client-application";
+
+// Auth-Common Error Catalog
+export {
+  isValidErrorId,
+  ERROR_MESSAGE_CATALOG,
+} from "@schemavaults/auth-client-sdk";

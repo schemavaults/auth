@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-resource-server-codegen-templates",
   "description": "Templates used for building your own app that logs in via SchemaVaults Auth",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -20,6 +20,7 @@
   "devDependencies": {
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
+    "@schemavaults/auth-client-sdk": "workspace:*",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/ui": "0.14.5",
     "typescript": "5.9.3",

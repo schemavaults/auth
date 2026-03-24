@@ -3,7 +3,7 @@ import { ErrorPage, LoadingPage } from "@schemavaults/ui";
 import {
   ERROR_MESSAGE_CATALOG,
   isValidErrorId,
-} from "@schemavaults/auth-common";
+} from "@schemavaults/auth-react-provider";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type ReactElement } from "react";
 

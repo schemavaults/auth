@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/jwt",
   "description": "Utility functions for authentication and authorization for use from the auth server or a resource server",
-  "version": "0.6.36",
+  "version": "0.6.37",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
