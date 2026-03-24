@@ -29,7 +29,7 @@
     "autoprefixer": "10.4.21"
   },
   "scripts": {
-    "codegen": "bunx @schemavaults/auth-server-sdk codegen",
+    "codegen": "auth-server-sdk codegen",
     "dev": "bun run codegen && PORT=3007 next dev",
     "build": "bun run codegen && next build"
   }
