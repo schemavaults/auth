@@ -126,10 +126,10 @@ FROM nodejsbase AS production
 
 WORKDIR /schemavaults/auth
 
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/example-nextjs-resource-server/package.json tests/example-nextjs-resource-server/package.json
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/example-nextjs-resource-server/.next/standalone/ tests/example-nextjs-resource-server/.next/standalone/
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/example-nextjs-resource-server/.next/static/ tests/example-nextjs-resource-server/.next/standalone/tests/example-nextjs-resource-server/.next/static/
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/example-nextjs-resource-server/public/ tests/example-nextjs-resource-server/.next/standalone/tests/example-nextjs-resource-server/public/
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/tests/example-nextjs-resource-server/package.json tests/example-nextjs-resource-server/package.json
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/tests/example-nextjs-resource-server/.next/standalone/ tests/example-nextjs-resource-server/.next/standalone/
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/tests/example-nextjs-resource-server/.next/static/ tests/example-nextjs-resource-server/.next/standalone/tests/example-nextjs-resource-server/.next/static/
+COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/tests/example-nextjs-resource-server/public/ tests/example-nextjs-resource-server/.next/standalone/tests/example-nextjs-resource-server/public/
 
 WORKDIR /schemavaults/auth/tests/example-nextjs-resource-server
 
