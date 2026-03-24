@@ -1205,4 +1205,14 @@ export class SchemaVaultsAuthClient
     );
     return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id, client_app_id });
   }
+
+  public async checkAppToApiPermission(
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+  ): Promise<boolean> {
+    const fn = await import("@/lib/check-app-to-api-permission").then(
+      (m) => m.default,
+    );
+    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id, client_app_id });
+  }
 }

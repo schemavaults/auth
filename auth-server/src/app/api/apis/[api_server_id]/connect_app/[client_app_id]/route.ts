@@ -1,5 +1,6 @@
 import "server-only";
 
+import { GET_app_to_api_permission_handler } from "./GET_app_to_api_permission_handler";
 import { applyCorsHeadersForSchemaVaultsWeb, handleCorsPreflightForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 import {
   SchemaVaultsAppToApiPermissionsRegistry,
@@ -256,7 +257,9 @@ export async function POST(
   return applyCorsHeadersForSchemaVaultsWeb(response, req);
 }
 
-const CORS_METHODS = "POST, OPTIONS";
+export { GET_app_to_api_permission_handler as GET };
+
+const CORS_METHODS = "GET, POST, OPTIONS";
 
 export function OPTIONS(req: NextRequest): NextResponse {
   return handleCorsPreflightForSchemaVaultsWeb(req, CORS_METHODS);

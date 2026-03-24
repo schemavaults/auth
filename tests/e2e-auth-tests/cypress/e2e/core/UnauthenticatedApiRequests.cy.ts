@@ -106,6 +106,16 @@ describe("Unauthenticated API Requests", () => {
       });
     });
 
+    it("GET /api/apis/:apiId/connect_app/:appId returns 401", () => {
+      cy.request({
+        method: "GET",
+        url: `/api/apis/${fakeApiId}/connect_app/${fakeAppId}`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
     it("GET /api/apps returns 401", () => {
       cy.request({
         method: "GET",
