@@ -8,6 +8,7 @@ import {
   type OrganizationMembershipRoleType,
 } from "@/lib/auth-db/organizations/organization-membership-role-types";
 import PATCH_member_role_handler from "./PATCH_member_role_handler";
+import GET_member_role_handler from "./GET_member_role_handler";
 
 interface RouteContext {
   params: Promise<{ organization_id: string; uid: string }>;
@@ -15,6 +16,15 @@ interface RouteContext {
 
 interface UpdateRoleRequestBody {
   role: OrganizationMembershipRoleType;
+}
+
+export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
+  return (await withAuthenticatedApiRouteGuard(
+    async (props: IProtectedAuthenticatedApiRouteProps) => {
+      const { organization_id, uid } = await context.params;
+      return await GET_member_role_handler(props, organization_id, uid);
+    },
+  ))(req);
 }
 
 export async function PATCH(req: NextRequest, context: RouteContext): Promise<NextResponse> {

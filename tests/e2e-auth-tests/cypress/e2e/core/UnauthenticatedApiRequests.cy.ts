@@ -266,6 +266,16 @@ describe("Unauthenticated API Requests", () => {
       });
     });
 
+    it("GET /api/organizations/:orgId/members/:uid/role returns 401", () => {
+      cy.request({
+        method: "GET",
+        url: `/api/organizations/${fakeOrgId}/members/${fakeUid}/role`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
     it("GET /api/organizations/:orgId/invitations returns 401", () => {
       cy.request({
         method: "GET",
