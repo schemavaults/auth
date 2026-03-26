@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useState, useTransition, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  useTransition,
+  type ReactElement,
+} from "react";
 import {
   Button,
   Dialog,
@@ -37,7 +43,14 @@ export function EditServerSettingDialog({
     setting?.description ?? ""
   );
 
-  // Reset state when setting changes
+  // Sync form state when the dialog opens with a setting
+  useEffect(() => {
+    if (open && setting) {
+      setValue(setting.value);
+      setDescription(setting.description ?? "");
+    }
+  }, [open, setting]);
+
   const handleOpenChange = useCallback(
     (newOpen: boolean) => {
       if (newOpen && setting) {
