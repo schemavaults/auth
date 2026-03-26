@@ -25,3 +25,5 @@ export {
   isValidErrorId,
   ERROR_MESSAGE_CATALOG,
 } from "@schemavaults/auth-client-sdk";
+
+export type { ApiServerId } from "@schemavaults/app-definitions";
