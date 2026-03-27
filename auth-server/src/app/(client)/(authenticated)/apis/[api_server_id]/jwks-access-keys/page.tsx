@@ -46,6 +46,7 @@ export default async function JwksAccessKeysPage(
 
       const hardcoded: boolean = isHardcodedApiServerId(api_server_id)
       if (hardcoded && !user.admin) {
+        console.warn("[JwksAccessKeysPage] Blocking access - hardcoded API servers can only be viewed by admins")
         redirectWithError(403, 'forbidden');
       }
 
@@ -63,6 +64,7 @@ export default async function JwksAccessKeysPage(
       }
 
       if (!user.admin && !user_organizations.includes(owner_organization_id)) {
+        console.warn("[JwksAccessKeysPage] Blocking access - user does not appear to be in the owner organization!")
         redirectWithError(403, 'forbidden');
       }
 
