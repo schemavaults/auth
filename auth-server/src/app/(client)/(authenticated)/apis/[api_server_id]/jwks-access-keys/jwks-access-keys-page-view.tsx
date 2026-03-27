@@ -6,11 +6,12 @@ import useSWR, { SWRResponse } from "swr";
 import type { ReactElement } from "react";
 import { type ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
 import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn, useToast } from "@schemavaults/ui";
-import { CheckCircle, ClipboardCopy } from "lucide-react";
+import { CheckCircle, ClipboardCopy, ExternalLink } from "lucide-react";
 import JwksAccessKeysUsageInstructions from "./jwks-access-keys-usage-instructions";
 import type { SuccessKeyMetadataResponse, KeyMetadataResponse } from "./KeyMetadataResponse";
 import ApiJwksAccessKeysStatusCard from "./jwks-access-keys-status-card";
 import { PEMFormat } from "@schemavaults/jwt";
+import Link from "next/link";
 
 export interface JwksAccessKeysPageViewProps {
   api_server_id: ApiServerId
@@ -271,6 +272,12 @@ function JwksAccessKeysPageView({ api_server_id, preloaded_latest_jwks_access_ke
         </CardHeader>
         <CardContent>
           <p>Manage JWKS access keys for API server: <code>{api_server_id}</code></p>
+          <Link href={`/apis/${api_server_id}`}>
+            <Button className="flex flex-row flex-nowrap gap-2 items-center justify-start">
+              <ExternalLink className="h-4 w-4" />
+              View API Server Details
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
