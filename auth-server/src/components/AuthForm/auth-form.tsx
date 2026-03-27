@@ -72,8 +72,8 @@ function AuthFormCardDescription<T extends "login" | "register">({
   return (
     <CardDescription>
       {type === "login"
-        ? "Enter your credentials to access your account or sign in with a sign-in provider below."
-        : "Create a new account by entering credentials below or using a sign-in provider."}
+        ? "Enter your credentials to access your account."
+        : "Create a new account by entering credentials below."}
     </CardDescription>
   );
 }
