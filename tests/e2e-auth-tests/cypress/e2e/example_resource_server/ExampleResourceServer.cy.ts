@@ -2,11 +2,13 @@ describe("ExampleResourceServer", () => {
   const exampleAppUrl: string =
     Cypress.env("EXAMPLE_NEXTJS_RESOURCE_SERVER_URL") ||
     "http://example-nextjs-resource-server:3007";
-  const authServerUrl: string = Cypress.config("baseUrl")!;
+  // Normalize origin to strip default port 80 — cy.origin() requires
+  // the argument to match the browser's normalised origin exactly.
+  const exampleAppOrigin: string = new URL(exampleAppUrl).origin;
 
   it("can visit the example resource server", () => {
     cy.visit(exampleAppUrl);
-    cy.origin(exampleAppUrl, () => {
+    cy.origin(exampleAppOrigin, () => {
       cy.url().should("include", "example-nextjs-resource-server");
       cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
     });
@@ -31,7 +33,7 @@ describe("ExampleResourceServer", () => {
           // Step 3: Visit example app and click "Register"
           // This is cross-origin (example app vs auth server base URL)
           cy.visit(exampleAppUrl);
-          cy.origin(exampleAppUrl, () => {
+          cy.origin(exampleAppOrigin, () => {
             cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
             cy.contains("button", "Register").click();
           });
@@ -81,7 +83,7 @@ describe("ExampleResourceServer", () => {
 
             // Step 8: Verify the protected /account page renders successfully
             // We're back on the example app origin after the redirect chain.
-            cy.origin(exampleAppUrl, () => {
+            cy.origin(exampleAppOrigin, () => {
               cy.url({ timeout: 30000 }).should("include", "/account");
               cy.contains("Example Account Page", {
                 timeout: 15000,
