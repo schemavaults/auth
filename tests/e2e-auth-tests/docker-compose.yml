@@ -15,7 +15,7 @@ services:
       CYPRESS_BASE_URL: http://schemavaults-auth:80
       SCHEMAVAULTS_APP_ENVIRONMENT: test
       TEST_SUITE_NAME: ${TEST_SUITE_NAME:?error}
-      EXAMPLE_NEXTJS_RESOURCE_SERVER_URL: http://example-nextjs-resource-server:80
+      EXAMPLE_NEXTJS_RESOURCE_SERVER_URL: http://example-nextjs-resource-server
       EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY: ${EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY:-null}
     profiles:
       - e2e
