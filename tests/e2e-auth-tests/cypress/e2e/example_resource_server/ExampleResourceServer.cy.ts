@@ -8,10 +8,8 @@ describe("ExampleResourceServer", () => {
 
   it("can visit the example resource server", () => {
     cy.visit(exampleAppUrl);
-    cy.origin(exampleAppOrigin, () => {
-      cy.url().should("include", "example-nextjs-resource-server");
-      cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
-    });
+    cy.url().should("include", "example-nextjs-resource-server");
+    cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
   });
 
   it("can register a new user through the full OAuth2 PKCE flow and access the protected /account route", () => {
@@ -31,12 +29,11 @@ describe("ExampleResourceServer", () => {
           cy.logout();
 
           // Step 3: Visit example app and click "Register"
-          // This is cross-origin (example app vs auth server base URL)
+          // cy.visit() handles the cross-origin transition, so commands
+          // run directly against the example app after navigating.
           cy.visit(exampleAppUrl);
-          cy.origin(exampleAppOrigin, () => {
-            cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
-            cy.contains("button", "Register").click();
-          });
+          cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+          cy.contains("button", "Register").click();
 
           // Step 4: Example app's /auth/register generates PKCE params and
           // redirects to auth server's /auth/register with code_challenge,
