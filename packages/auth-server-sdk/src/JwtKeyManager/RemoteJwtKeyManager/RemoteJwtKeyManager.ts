@@ -56,6 +56,19 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
     RemoteJwtKeyManager.jwksCache.delete(key);
   }
 
+  protected async loadJwksAccessPrivateKey(): Promise<CryptoKey> {
+    let jwks_access_private_key: CryptoKey;
+    try {
+      jwks_access_private_key = await loadJwksAccessPrivateKey(process.env);
+    } catch (e: unknown) {
+      console.error(e);
+      throw new TypeError(
+        "Failed to load JWKS access private key from environment variables!",
+      );
+    }
+    return jwks_access_private_key;
+  }
+
   public async loadJwks(audienceId: ApiServerId): Promise<JWKS> {
     if (!apiServerIdSchema.safeParse(audienceId).success) {
       throw new Error(
@@ -81,19 +94,11 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
       return cached.jwks;
     }
 
+    const jwks_access_private_key = await this.loadJwksAccessPrivateKey();
+
     if (this.debug) {
       console.log(
         `[RemoteJwtKeyManager] loadJwks(audience_id='${audienceId}') — fetching from remote (cacheKey='${key}')`,
-      );
-    }
-
-    let jwks_access_private_key: CryptoKey;
-    try {
-      jwks_access_private_key = await loadJwksAccessPrivateKey(process.env);
-    } catch (e: unknown) {
-      console.error(e);
-      throw new TypeError(
-        "Failed to load JWKS access private key from environment variables!",
       );
     }
 

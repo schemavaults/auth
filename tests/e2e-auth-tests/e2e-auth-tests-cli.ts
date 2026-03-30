@@ -1,5 +1,6 @@
 // e2e-auth-tests-cli.ts
 
+import { generateJwtSigningKeyPair, PEMFormat } from "@schemavaults/jwt";
 import { Command } from "commander";
 import { spawnSync } from "node:child_process";
 import { readdirSync, existsSync } from "node:fs";
@@ -52,11 +53,11 @@ function listTestSuites(): readonly string[] {
   return test_suites;
 }
 
-function launchDockerComposeTests(
+async function launchDockerComposeTests(
   test_suite_name: string,
   docker_compose_profile: string,
   ...args: readonly string[]
-): void {
+): Promise<void> {
   const dockerComposeCommand: string[] = [
     "docker",
     "compose",
@@ -70,15 +71,33 @@ function launchDockerComposeTests(
   console.log(
     `[e2e-auth-tests-cli] Running E2E test suite '${test_suite_name}' with Docker Compose command '${dockerComposeCommand.join(" ")}' from directory '${monorepo_root_directory}'`,
   );
+
+  const environmentVariables: Record<string, string> = {
+    ...process.env,
+    TEST_SUITE_NAME: test_suite_name,
+  };
+
+  if (test_suite_name === "example_resource_server") {
+    // we need to set up jwks access keys for the example resource server
+    const [privateKey, publicKey] = await generateJwtSigningKeyPair();
+    environmentVariables[
+      "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY"
+    ] = publicKey;
+    const base64UrlPrivateKey: string = PEMFormat.parsePem(
+      privateKey,
+      "PRIVATE",
+    ).toBase64Url();
+    environmentVariables[
+      "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PRIVATE_KEY"
+    ] = base64UrlPrivateKey;
+  }
+
   const result = spawnSync(
     dockerComposeCommand[0],
     dockerComposeCommand.slice(1),
     {
       cwd: monorepo_root_directory,
-      env: {
-        ...process.env,
-        TEST_SUITE_NAME: test_suite_name,
-      },
+      env: environmentVariables,
       stdio: ["ignore", "inherit", "inherit"],
     },
   );
@@ -139,11 +158,11 @@ e2eAuthTestsCli
       console.log("--verbose flag is active! Attaching to all containers...");
     }
 
-    launchDockerComposeTests(
+    await launchDockerComposeTests(
       test_suite_name,
       dockerComposeProfile,
       ...args,
-    ) satisfies void;
+    );
     return;
   });
 

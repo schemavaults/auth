@@ -1,6 +1,8 @@
 import { defineConfig } from "cypress";
 import { createJwksAccessProofToken, importPKCS8 } from "@schemavaults/jwt";
-import { PKCE_ProofKeyManager } from "@schemavaults/auth-common";
+import triggerTestEnvironmentDbMigration from "./cypress/support/triggerTestEnvironmentDbMigration";
+import preRegisterSuperuser from "./cypress/support/pre-register-superuser";
+import seedAppAndApiForExampleResourceServer from "./cypress/support/seed-app-and-api-for-example-resource-server";
 
 const devAuthServer: string = "http://localhost:6767";
 
@@ -35,109 +37,50 @@ export default defineConfig({
             "Failed to parse SCHEMAVAULTS_APP_ENVIRONMENT from Cypress config!",
           );
         }
+        const auth_server_url: string = config.baseUrl!;
+        if (!auth_server_url || typeof auth_server_url !== "string") {
+          throw new TypeError(
+            "Failed to load auth server URL from Cypress config!",
+          );
+        }
 
         if (environment === "test") {
-          await (async function triggerTestEnvironmentDbMigration(): Promise<void> {
-            const endpoint: string = `${config.baseUrl}/api/admin/migrate-test-environment-db`;
-            console.log(
-              "[triggerTestEnvironmentDbMigration] Sending POST request to: ",
-              endpoint,
-            );
-            let result: object;
-            try {
-              const response = await fetch(endpoint, {
-                method: "POST",
-              });
-              if (response.status !== 200) {
-                try {
-                  const body = await response.json();
-                  console.error(body);
-                } catch (e: unknown) {
-                  void e;
-                }
-                throw new Error(
-                  "Received bad response status " +
-                    response.status +
-                    " " +
-                    response.statusText,
-                );
-              }
-
-              const response_body = await response.json();
-              if (typeof response_body !== "object" || !response_body) {
-                throw new TypeError(
-                  "Expected response body to be a JSON object!",
-                );
-              }
-              result = response_body;
-            } catch (e: unknown) {
-              console.error(
-                "Failed to trigger test environment DB migration: ",
-                e,
-              );
-              throw new Error(
-                "Failed to trigger test environment DB migration!",
-              );
-            }
-
-            console.log(
-              `[triggerTestEnvironmentDbMigration] DB migration appears to have been a success: `,
-              result,
-            );
-          })();
+          await triggerTestEnvironmentDbMigration(auth_server_url);
 
           // Pre-register the superuser for non-superuser test suites
           // so that create_and_login_as_superuser() can skip the slow
           // register-then-409-then-login dance and go straight to login.
           const testSuiteName = config.env["TEST_SUITE_NAME"];
           if (testSuiteName !== "superuser") {
-            await (async function preRegisterSuperuser(): Promise<void> {
-              const endpoint = `${config.baseUrl}/api/auth/register`;
-              console.log(
-                `[preRegisterSuperuser] Pre-registering superuser for test suite '${testSuiteName}'...`,
-              );
-
-              const challenge_time = Date.now();
-              const codeVerifier =
-                PKCE_ProofKeyManager.createCodeVerifier(challenge_time);
-              const codeChallenge =
-                await PKCE_ProofKeyManager.createCodeChallenge(codeVerifier);
-
-              const response = await fetch(endpoint, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  credentials: {
-                    email: config.env["PRIVATE_SUPERUSER_EMAIL"],
-                    password: config.env["PRIVATE_SUPERUSER_PASSWORD"],
-                  },
-                  invite_code: config.env["PRIVATE_SUPERUSER_INVITE_CODE"],
-                  code_challenge: codeChallenge.code_challenge,
-                  challenge_time,
-                }),
-              });
-
-              if (response.status === 200) {
-                console.log(
-                  "[preRegisterSuperuser] Superuser registered successfully.",
-                );
-                config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
-              } else if (response.status === 409) {
-                console.log("[preRegisterSuperuser] Superuser already exists.");
-                config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
-              } else {
-                const body = await response.json().catch(() => null);
-                console.error(
-                  "[preRegisterSuperuser] Failed:",
-                  response.status,
-                  body,
-                );
-                throw new Error(
-                  `Failed to pre-register superuser! Status: ${response.status}`,
-                );
-              }
-            })();
+            await preRegisterSuperuser(auth_server_url, testSuiteName, {
+              email: config.env["PRIVATE_SUPERUSER_EMAIL"],
+              password: config.env["PRIVATE_SUPERUSER_PASSWORD"],
+              confirm: config.env["PRIVATE_SUPERUSER_PASSWORD"],
+              invite_code: config.env["PRIVATE_SUPERUSER_INVITE_CODE"],
+            });
+            config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
           }
+
+          if (testSuiteName === "example_resource_server") {
+            if (
+              !config.env[
+                "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY"
+              ]
+            ) {
+              throw new Error(
+                "Missing environment variable EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY, which is required for this test suite!",
+              );
+            }
+
+            await seedAppAndApiForExampleResourceServer(
+              auth_server_url,
+              "00000000-0000-0000-0000-000000000000",
+              config.env["EXAMPLE_NEXTJS_RESOURCE_SERVER_URL"],
+              config.env[
+                "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY"
+              ],
+            );
+          } // end of setup for test suite 'example_resource_server'
 
           return;
         } else {
@@ -155,5 +98,9 @@ export default defineConfig({
       process.env.SCHEMAVAULTS_APP_ENVIRONMENT ?? "development",
     TEST_SUITE_NAME: process.env.TEST_SUITE_NAME ?? "",
     PRIVATE_SUPERUSER_PRECREATED: false,
+    EXAMPLE_NEXTJS_RESOURCE_SERVER_URL:
+      process.env.EXAMPLE_NEXTJS_RESOURCE_SERVER_URL ?? "http://localhost:3007",
+    EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY:
+      process.env.EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY ?? "",
   },
 });

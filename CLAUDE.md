@@ -124,7 +124,7 @@ bun run dev:migrate
 ```
 
 ##### Database Migration for E2E tests
-POST => `{api_server_base_url}/api/admin/migrate-test-environment-db`
+POST => `{api_server_base_url}/api/test/seed/migrate-test-environment-db`
 
 The E2E Cypress tests will automatically run migrations before the test suite by using this endpoint.
 
