@@ -6,8 +6,10 @@ describe("ExampleResourceServer", () => {
 
   it("can visit the example resource server", () => {
     cy.visit(exampleAppUrl);
-    cy.url().should("include", "example-nextjs-resource-server");
-    cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+    cy.origin(exampleAppUrl, () => {
+      cy.url().should("include", "example-nextjs-resource-server");
+      cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+    });
   });
 
   it("can register a new user through the full OAuth2 PKCE flow and access the protected /account route", () => {
@@ -27,13 +29,17 @@ describe("ExampleResourceServer", () => {
           cy.logout();
 
           // Step 3: Visit example app and click "Register"
+          // This is cross-origin (example app vs auth server base URL)
           cy.visit(exampleAppUrl);
-          cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
-          cy.contains("button", "Register").click();
+          cy.origin(exampleAppUrl, () => {
+            cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+            cy.contains("button", "Register").click();
+          });
 
           // Step 4: Example app's /auth/register generates PKCE params and
           // redirects to auth server's /auth/register with code_challenge,
-          // redirect_uri, and app_id query parameters
+          // redirect_uri, and app_id query parameters.
+          // After the redirect we're back on the auth server origin.
           cy.url({ timeout: 20000 }).should("include", "/auth/register");
           cy.url().should("include", "code_challenge");
           cy.wait_for_page_hydration();
@@ -74,13 +80,16 @@ describe("ExampleResourceServer", () => {
             // then redirects to /account.
 
             // Step 8: Verify the protected /account page renders successfully
-            cy.url({ timeout: 30000 }).should("include", "/account");
-            cy.contains("Example Account Page", { timeout: 15000 }).should(
-              "be.visible",
-            );
-            cy.contains(
-              "If you're seeing this it means that you were not redirected because you are logged in!",
-            ).should("be.visible");
+            // We're back on the example app origin after the redirect chain.
+            cy.origin(exampleAppUrl, () => {
+              cy.url({ timeout: 30000 }).should("include", "/account");
+              cy.contains("Example Account Page", {
+                timeout: 15000,
+              }).should("be.visible");
+              cy.contains(
+                "If you're seeing this it means that you were not redirected because you are logged in!",
+              ).should("be.visible");
+            });
           });
         });
       });
