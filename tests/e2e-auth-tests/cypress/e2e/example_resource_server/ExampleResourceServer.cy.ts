@@ -7,9 +7,11 @@ describe("ExampleResourceServer", () => {
   const exampleAppOrigin: string = new URL(exampleAppUrl).origin;
 
   it("can visit the example resource server", () => {
-    cy.visit(exampleAppUrl);
-    cy.url().should("include", "example-nextjs-resource-server");
-    cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+    cy.origin(exampleAppOrigin, () => {
+      cy.visit("/");
+      cy.url().should("include", "example-nextjs-resource-server");
+      cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+    });
   });
 
   it("can register a new user through the full OAuth2 PKCE flow and access the protected /account route", () => {
@@ -28,17 +30,20 @@ describe("ExampleResourceServer", () => {
           // Step 2: Logout from admin session
           cy.logout();
 
-          // Step 3: Visit example app and click "Register"
-          // cy.visit() handles the cross-origin transition, so commands
-          // run directly against the example app after navigating.
-          cy.visit(exampleAppUrl);
-          cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
-          cy.contains("button", "Register").click();
+          // Step 3: Visit example app and click "Register".
+          // Wrap in cy.origin() since example app is cross-origin
+          // from the auth server base URL. cy.visit() inside
+          // cy.origin() is relative to the given origin.
+          cy.origin(exampleAppOrigin, () => {
+            cy.visit("/");
+            cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+            cy.contains("button", "Register").click();
+          });
 
           // Step 4: Example app's /auth/register generates PKCE params and
           // redirects to auth server's /auth/register with code_challenge,
           // redirect_uri, and app_id query parameters.
-          // After the redirect we're back on the auth server origin.
+          // After the redirect we're back on the auth server (base URL) origin.
           cy.url({ timeout: 20000 }).should("include", "/auth/register");
           cy.url().should("include", "code_challenge");
           cy.wait_for_page_hydration();
@@ -78,8 +83,8 @@ describe("ExampleResourceServer", () => {
             // exchanges the auth code + stored code_verifier for tokens,
             // then redirects to /account.
 
-            // Step 8: Verify the protected /account page renders successfully
-            // We're back on the example app origin after the redirect chain.
+            // Step 8: Verify the protected /account page renders successfully.
+            // We're crossing back to the example app origin from the auth server.
             cy.origin(exampleAppOrigin, () => {
               cy.url({ timeout: 30000 }).should("include", "/account");
               cy.contains("Example Account Page", {
