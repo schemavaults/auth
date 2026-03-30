@@ -19,6 +19,8 @@ import type {
   InviteAndAcceptOrgMembershipParams,
   InviteAndAcceptOrgMembershipResult,
 } from "@/actions/invite_and_accept_org_membership";
+import type { RegisterViaResourceServerPkceFlowParams } from "@/actions/register_via_resource_server_pkce_flow";
+import type { LoginViaResourceServerPkceFlowParams } from "@/actions/login_via_resource_server_pkce_flow";
 
 declare global {
   namespace Cypress {
@@ -80,6 +82,12 @@ declare global {
       invite_and_accept_org_membership(
         params: InviteAndAcceptOrgMembershipParams,
       ): Chainable<InviteAndAcceptOrgMembershipResult>;
+      register_via_resource_server_pkce_flow(
+        params: RegisterViaResourceServerPkceFlowParams,
+      ): Chainable<boolean>;
+      login_via_resource_server_pkce_flow(
+        params: LoginViaResourceServerPkceFlowParams,
+      ): Chainable<boolean>;
     }
   }
 }

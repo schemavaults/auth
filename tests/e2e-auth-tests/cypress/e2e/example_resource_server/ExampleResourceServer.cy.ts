@@ -15,7 +15,6 @@ describe("ExampleResourceServer", () => {
   });
 
   it("can register a new user through the full OAuth2 PKCE flow and access the protected /account route", () => {
-    // Step 1: Login as admin and create an invite code for the new user
     cy.create_and_login_as_superuser().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to login as superuser");
@@ -27,72 +26,101 @@ describe("ExampleResourceServer", () => {
             throw new Error("Failed to create invite code");
           }
 
-          // Step 2: Logout from admin session
           cy.logout();
 
-          // Step 3: Visit example app and click "Register".
-          // Wrap in cy.origin() since example app is cross-origin
-          // from the auth server base URL. cy.visit() inside
-          // cy.origin() is relative to the given origin.
-          cy.origin(exampleAppOrigin, () => {
-            cy.visit("/");
-            cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
-            cy.contains("button", "Register").click();
-          });
-
-          // Step 4: Example app's /auth/register generates PKCE params and
-          // redirects to auth server's /auth/register with code_challenge,
-          // redirect_uri, and app_id query parameters.
-          // After the redirect we're back on the auth server (base URL) origin.
-          cy.url({ timeout: 20000 }).should("include", "/auth/register");
-          cy.url().should("include", "code_challenge");
-          cy.wait_for_page_hydration();
-
-          // Step 5: Fill the registration form on the auth server
           cy.generate_random_code(12).then((suffix: string) => {
             const email = `pkce-reg-test-${suffix}@example.com`;
             const password = "TestPassword123!";
 
-            cy.get("input[name='email']")
-              .should("be.visible")
-              .type(email, { force: true });
-            cy.get("input[name='password']")
-              .should("be.visible")
-              .type(password, { force: true });
-            cy.get("input[name='confirm']")
-              .should("be.visible")
-              .type(password, { force: true });
-            cy.get("input[name='invite_code']")
-              .should("not.be.disabled")
-              .type(inviteCode, { force: true });
+            cy.register_via_resource_server_pkce_flow({
+              resource_server_origin: exampleAppOrigin,
+              email,
+              password,
+              invite_code: inviteCode,
+            });
+          });
+        });
+      });
+    });
+  });
 
-            cy.get("button[type='submit']")
-              .should("not.be.disabled")
-              .click();
+  it("can logout and then login via OAuth2 PKCE flow", () => {
+    cy.create_and_login_as_superuser().then((success: boolean) => {
+      if (!success) {
+        throw new Error("Failed to login as superuser");
+      }
 
-            // Step 6: Consent screen appears because the example app is not a
-            // hardcoded app — AppAuthorizationConsentScreen renders in
-            // authorize-only mode. Click "Authorize & Continue" to approve.
-            cy.contains("Authorize & Continue", { timeout: 15000 })
-              .should("be.visible")
-              .click();
+      cy.generate_random_code(24).then((inviteCode: string) => {
+        cy.create_invite_code(inviteCode, 1).then((created: boolean) => {
+          if (!created) {
+            throw new Error("Failed to create invite code");
+          }
 
-            // Step 7: Auth server redirects back to example app's
-            // /auth/authorize?authorization_code=...&challenge_time=...
-            // The example app's useTradeAuthorizationCodeForTokensEffect
-            // exchanges the auth code + stored code_verifier for tokens,
-            // then redirects to /account.
+          cy.logout();
 
-            // Step 8: Verify the protected /account page renders successfully.
-            // We're crossing back to the example app origin from the auth server.
-            cy.origin(exampleAppOrigin, () => {
-              cy.url({ timeout: 30000 }).should("include", "/account");
-              cy.contains("Example Account Page", {
-                timeout: 15000,
-              }).should("be.visible");
-              cy.contains(
-                "If you're seeing this it means that you were not redirected because you are logged in!",
-              ).should("be.visible");
+          cy.generate_random_code(12).then((suffix: string) => {
+            const email = `pkce-login-test-${suffix}@example.com`;
+            const password = "TestPassword123!";
+
+            // Register the user first via the PKCE flow
+            cy.register_via_resource_server_pkce_flow({
+              resource_server_origin: exampleAppOrigin,
+              email,
+              password,
+              invite_code: inviteCode,
+            }).then(() => {
+              // Logout from the auth server
+              cy.logout();
+
+              // Login via the PKCE flow with the same credentials
+              cy.login_via_resource_server_pkce_flow({
+                resource_server_origin: exampleAppOrigin,
+                email,
+                password,
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
+  it("redirects an already-authenticated user to /account from /auth/login when already logged in", () => {
+    cy.create_and_login_as_superuser().then((success: boolean) => {
+      if (!success) {
+        throw new Error("Failed to login as superuser");
+      }
+
+      cy.generate_random_code(24).then((inviteCode: string) => {
+        cy.create_invite_code(inviteCode, 1).then((created: boolean) => {
+          if (!created) {
+            throw new Error("Failed to create invite code");
+          }
+
+          cy.logout();
+
+          cy.generate_random_code(12).then((suffix: string) => {
+            const email = `pkce-redirect-test-${suffix}@example.com`;
+            const password = "TestPassword123!";
+
+            // Register and authenticate via PKCE flow
+            cy.register_via_resource_server_pkce_flow({
+              resource_server_origin: exampleAppOrigin,
+              email,
+              password,
+              invite_code: inviteCode,
+            }).then(() => {
+              // User is now authenticated on the example resource server.
+              // Visiting /auth/login should redirect to /account since
+              // the auth middleware redirects authenticated users away
+              // from unauthenticated-only routes.
+              cy.origin(exampleAppOrigin, () => {
+                cy.visit("/auth/login");
+                cy.url({ timeout: 15000 }).should("include", "/account");
+                cy.contains("Example Account Page", {
+                  timeout: 15000,
+                }).should("be.visible");
+              });
             });
           });
         });
