@@ -10,10 +10,13 @@ export default function login_via_resource_server_pkce_flow(
   const { resource_server_origin, email, password } = params;
   const origin: string = new URL(resource_server_origin).origin;
 
-  // Clear all cookies so the resource server doesn't still consider the
-  // user authenticated from a previous session (e.g. after registering
-  // via PKCE and then logging out of the auth server only).
+  // Clear all stored auth state so the resource server doesn't still
+  // consider the user authenticated from a previous session. In
+  // development/test the resource server stores refresh tokens in
+  // localStorage (not HTTP-only cookies), so cookies alone aren't enough.
   cy.clearAllCookies();
+  cy.clearAllLocalStorage();
+  cy.clearAllSessionStorage();
 
   // Step 1: Visit the resource server home page and click "Login"
   cy.origin(origin, () => {
