@@ -14,6 +14,7 @@ import type {
 import type {
   AuthorizationCodesTable,
   PasswordsTable,
+  PasswordResetTokensTable,
   UsersTable,
   InviteCodesTable,
 } from "./users";
@@ -31,6 +32,7 @@ export type AuthDatabase = {
   apps_to_hardcoded_apis_permissions: AppsToHardcodedApisPermissionsTable;
   users: UsersTable;
   passwords: PasswordsTable;
+  password_reset_tokens: PasswordResetTokensTable;
   authorization_codes: AuthorizationCodesTable;
   invite_codes: InviteCodesTable;
   organizations: OrganizationsTable;

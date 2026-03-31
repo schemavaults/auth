@@ -21,6 +21,10 @@ import { createInviteCode as createInviteCodeFn } from "./create-invite-code";
 import { listAllInviteCodes as listAllInviteCodesFn } from "./list-all-invite-codes";
 import { promoteToAdmin as promoteToAdminFn } from "./promote-to-admin";
 import { createUser as createUserFn } from "./create-user";
+import { createPasswordResetToken as createPasswordResetTokenFn } from "./create-password-reset-token";
+import { validatePasswordResetToken as validatePasswordResetTokenFn, type ValidPasswordResetToken } from "./validate-password-reset-token";
+import { consumePasswordResetToken as consumePasswordResetTokenFn } from "./consume-password-reset-token";
+import { updateUserPassword as updateUserPasswordFn } from "./update-user-password";
 
 // Re-export types and schema from parse-user-document
 export { type UserDocument, userDocumentSchema } from "./parse-user-document";
@@ -117,5 +121,21 @@ export class UserRegistry {
    */
   public async createUser(opts: ICreateUserOptions): Promise<UserDocument> {
     return createUserFn(this.db, opts, this.debug);
+  }
+
+  public async createPasswordResetToken(uid: string): Promise<string> {
+    return createPasswordResetTokenFn(this.db, uid, this.debug);
+  }
+
+  public async validatePasswordResetToken(rawToken: string): Promise<ValidPasswordResetToken | null> {
+    return validatePasswordResetTokenFn(this.db, rawToken, this.debug);
+  }
+
+  public async consumePasswordResetToken(tokenId: string): Promise<void> {
+    return consumePasswordResetTokenFn(this.db, tokenId, this.debug);
+  }
+
+  public async updatePassword(uid: string, newPassword: string): Promise<void> {
+    return updateUserPasswordFn(this.db, uid, newPassword, this.debug);
   }
 }

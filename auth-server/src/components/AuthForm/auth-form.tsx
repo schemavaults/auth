@@ -32,6 +32,7 @@ import {
 } from "@schemavaults/ui";
 import { Wordmark, useForm } from "@schemavaults/ui";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   useAppEnvironment,
@@ -305,6 +306,19 @@ export function AuthForm<T extends "login" | "register">({
                 </FormItem>
               )}
             />
+            {type === "login" ? (
+              <div className="text-right">
+                <Link
+                  href={
+                    "/auth/reset-password" +
+                    (searchParams.size > 0 ? `?${searchParams.toString()}` : "")
+                  }
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            ) : null}
             {type === "register" ? (
               <FormField
                 control={form.control}
