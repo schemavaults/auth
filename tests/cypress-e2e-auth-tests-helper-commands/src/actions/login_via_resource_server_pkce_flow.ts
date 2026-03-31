@@ -10,16 +10,15 @@ export default function login_via_resource_server_pkce_flow(
   const { resource_server_origin, email, password } = params;
   const origin: string = new URL(resource_server_origin).origin;
 
-  // Clear all stored auth state so the resource server doesn't still
-  // consider the user authenticated from a previous session. In
-  // development/test the resource server stores refresh tokens in
-  // localStorage (not HTTP-only cookies), so cookies alone aren't enough.
+  // Step 1: Clear stored auth state from the resource server's origin,
+  // then visit its home page and click "Login". In development/test the
+  // resource server stores refresh tokens in localStorage (not HTTP-only
+  // cookies), so we must clear localStorage from within the resource
+  // server's origin context for it to take effect.
   cy.clearAllCookies();
-  cy.clearAllLocalStorage();
-  cy.clearAllSessionStorage();
-
-  // Step 1: Visit the resource server home page and click "Login"
   cy.origin(origin, () => {
+    localStorage.clear();
+    sessionStorage.clear();
     cy.visit("/");
     cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
     cy.contains("button", "Login").click();
