@@ -22,6 +22,8 @@ import wait_for_page_hydration from "@/actions/wait_for_page_hydration";
 import connectAppToApi from "@/actions/connect_app_to_api";
 import promoteMemberToOwner from "@/actions/promote_member_to_owner";
 import inviteAndAcceptOrgMembership from "@/actions/invite_and_accept_org_membership";
+import register_via_resource_server_pkce_flow from "@/actions/register_via_resource_server_pkce_flow";
+import login_via_resource_server_pkce_flow from "@/actions/login_via_resource_server_pkce_flow";
 
 export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("login", login);
@@ -75,6 +77,16 @@ export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add(
     "invite_and_accept_org_membership",
     inviteAndAcceptOrgMembership,
+  );
+
+  commands.add(
+    "register_via_resource_server_pkce_flow",
+    register_via_resource_server_pkce_flow,
+  );
+
+  commands.add(
+    "login_via_resource_server_pkce_flow",
+    login_via_resource_server_pkce_flow,
   );
 }
 
