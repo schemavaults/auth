@@ -1,15 +1,26 @@
 import "server-only";
-import { getAppEnvironment, getHardcodedApiServerDomain, SCHEMAVAULTS_MAIL_SERVER, type SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
+import { getAppEnvironment, getHardcodedApiServerDomain, SCHEMAVAULTS_AUTH_APP_ID, SCHEMAVAULTS_MAIL_SERVER, type SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
 import { sendEmailRequestBodySchema, type SendEmailRequestBody } from "@schemavaults/send-email-api-options"
+import spoofSuperuserAccessToken from "./spoofSuperuserAccessToken";
+import type { Kysely } from "@schemavaults/dbh";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 function getDefaultMailServerUrl(): string {
   const hardcodedApiServerDomain: SchemaVaultsApiServerDomainRef = getHardcodedApiServerDomain(SCHEMAVAULTS_MAIL_SERVER.api_server_id, getAppEnvironment());
   return hardcodedApiServerDomain.domain;
 }
 
+/**
+ * @description Send a raw email plaintext/html message (or use a template ID from @schemavaults/mail-server).
+ * This will spoof a superuser access token to convince the mail-server that we're allowed to send emails.
+ *
+ * @param email_options Object defining the email to be sent. E.g. to, from, message/template ID
+ * @params db We need access to the database to load jwt keys to spoof an access token for the mail-server audience.
+ * @returns A promise resolving if the message is sent successfully
+ */
 export async function sendEmailViaMailServer(
   email_options: SendEmailRequestBody,
-  mail_server_access_token: string
+  db: Kysely<AuthDatabase>
 ): Promise<void> {
   const mail_server_url: string = getDefaultMailServerUrl()
 
@@ -20,6 +31,12 @@ export async function sendEmailViaMailServer(
   }
 
   const headers = new Headers();
+
+  const mail_server_access_token = await spoofSuperuserAccessToken({
+    client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
+    audience_id: SCHEMAVAULTS_MAIL_SERVER.api_server_id,
+    db
+  })
 
   headers.set("Content-Type", 'application/json');
   headers.set(`Authorization`, `Bearer ${mail_server_access_token}`)
