@@ -39,12 +39,13 @@ export default function login_via_resource_server_pkce_flow(
 
   cy.get("button[type='submit']").should("not.be.disabled").click();
 
-  // Step 4: Handle consent screen if it appears (may be skipped if already consented)
-  cy.url({ timeout: 15000 }).then((url) => {
-    if (!url.includes("/account") && !url.includes("/auth/authorize")) {
-      cy.contains("Authorize & Continue", { timeout: 15000 })
-        .should("be.visible")
-        .click();
+  // Step 4: After login, the auth server either shows the consent screen
+  // (first-time app authorization) or redirects directly to the resource
+  // server (already consented — the common case after prior registration).
+  // We handle both by first checking if we're still on the auth server.
+  cy.get("body", { timeout: 15000 }).then(($body) => {
+    if ($body.text().includes("Authorize & Continue")) {
+      cy.contains("Authorize & Continue").should("be.visible").click();
     }
   });
 
