@@ -4,13 +4,14 @@ import { useContext, type ReactNode } from "react";
 import type { SchemaVaultsAuthProviderProps } from "./auth-provider-props";
 import useAutoReacquireDefaultAccessTokens from "@/hooks/use-auto-reacquire-default-access-tokens";
 import AuthClientMiddlewareManager from "./auth-client-middleware-manager";
-import { AuthMiddlewareRules } from "@schemavaults/auth-common";
+import type { AuthMiddlewareRules } from "@schemavaults/auth-common";
 import SchemaVaultsAuthContext from "@/contexts/auth-client-context";
-import { AuthMiddlewareRulesBuilderFn } from "@/types/AuthMiddlewareRulesBuilderFn";
 import resolveClientAuthMiddlewareRules from "@/lib/resolveClientAuthMiddlewareRules";
 
-export interface AuthSideEffectsProps
-  extends Omit<SchemaVaultsAuthProviderProps, "children"> {
+export interface AuthSideEffectsProps extends Omit<
+  SchemaVaultsAuthProviderProps,
+  "children"
+> {
   debug: boolean;
 }
 

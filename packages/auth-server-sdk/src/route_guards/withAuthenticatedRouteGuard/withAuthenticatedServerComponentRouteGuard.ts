@@ -5,6 +5,7 @@ import {
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
+  OrganizationID,
   type PotentiallyValidTokenSource,
   type UserData,
 } from "@schemavaults/auth-common";
@@ -35,21 +36,32 @@ type TAdditionalProps<
     IBaseProtectedAuthenticatedServerComponentPageProps,
 > = Omit<TProps, keyof IBaseProtectedAuthenticatedServerComponentPageProps>;
 
+export interface IWithAuthenticatedServerComponentRouteGuardAdditionalOptions<
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps =
+    IBaseProtectedAuthenticatedServerComponentPageProps,
+> {
+  route_guard_type?: "authenticated" | "admin";
+  jwt_keys_manager?: IJwtKeyManager;
+  api_server_id?: ApiServerId;
+  custom_is_authorized_check?: (props: TProps) => Promise<boolean>;
+  loadUserOrganizations?: () => Promise<readonly OrganizationID[]>;
+}
+
 export async function withAuthenticatedServerComponentRouteGuard<
   TProps extends IBaseProtectedAuthenticatedServerComponentPageProps =
     IBaseProtectedAuthenticatedServerComponentPageProps,
 >(
+  // The server component to render
   server_component: TProtectedAuthenticatedPageServerComponent<TProps>,
+
+  // Your additional props (e.g. database handle that you want every server component to have access to)
   additional_custom_server_component_props:
     | TAdditionalProps<TProps>
     | undefined = undefined,
-  route_guard_type: "authenticated" | "admin" = "authenticated",
-  custom_is_authorized_check:
-    | ((props: TProps) => Promise<boolean>)
-    | undefined = undefined,
-  jwt_keys_manager: IJwtKeyManager = initDefaultJwtKeyManagerForAuthenticatedRouteGuard(),
-  getApiServerId: () => ApiServerId = getSchemavaultsApiServerId,
+  opts?: IWithAuthenticatedServerComponentRouteGuardAdditionalOptions,
 ): Promise<ReactElement> {
+  const route_guard_type: "authenticated" | "admin" =
+    opts?.route_guard_type ?? "authenticated";
   assertValidRouteGuardType(route_guard_type);
 
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
@@ -64,9 +76,9 @@ export async function withAuthenticatedServerComponentRouteGuard<
     throw new TypeError("Expected 'redirect' to be a function");
   }
 
-  let api_server_id: ApiServerId;
+  const api_server_id: ApiServerId | undefined =
+    opts?.api_server_id ?? getSchemavaultsApiServerId();
   try {
-    api_server_id = getApiServerId();
     if (typeof api_server_id !== "string") {
       throw new TypeError(
         "Expected result of 'getApiServerId' to be a string!",
@@ -80,6 +92,9 @@ export async function withAuthenticatedServerComponentRouteGuard<
     redirectWithError(redirect, 500, "server_misconfiguration");
   }
 
+  const jwt_keys_manager =
+    opts?.jwt_keys_manager ??
+    initDefaultJwtKeyManagerForAuthenticatedRouteGuard();
   if (!jwt_keys_manager.isConfigured()) {
     console.error(
       "[withAuthenticatedServerComponentRouteGuard] JWT Keys Manager does not appear to be properly configured!",
@@ -140,6 +155,12 @@ export async function withAuthenticatedServerComponentRouteGuard<
     redirectToLogin(redirect);
   }
 
+  const loadUserOrganizations: () => Promise<readonly OrganizationID[]> =
+    opts?.loadUserOrganizations ??
+    (async () => {
+      throw new Error("Unimplemented; missing loadUserOrganizations");
+    });
+
   const route_guard_factory = new RouteGuardFactory({
     environment,
     is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_ID,
@@ -150,6 +171,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
       route_guard_type,
       token_sources,
       api_server_id,
+      loadUserOrganizations,
     );
 
   if (!route_guard.user) {
@@ -184,9 +206,10 @@ export async function withAuthenticatedServerComponentRouteGuard<
         } as unknown as TProps)
       : (base_server_component_props as unknown as TProps);
 
-  if (typeof custom_is_authorized_check === "function") {
+  if (typeof opts?.custom_is_authorized_check === "function") {
     let is_authorized: boolean = false;
     try {
+      const custom_is_authorized_check = opts.custom_is_authorized_check;
       is_authorized = await custom_is_authorized_check(
         final_server_component_props,
       );

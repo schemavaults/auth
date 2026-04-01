@@ -25,6 +25,7 @@
     "build:packages": "bun run build --filter=\"./packages/*\"",
     "test": "turbo test",
     "lint": "turbo lint",
+    "lint:packages": "bun run lint --filter=\"./packages/*\"",
     "start": "turbo start",
     "start:server": "bun run start --filter @schemavaults/auth-server",
     "e2e:core": "cd tests/e2e-auth-tests && bun run cli e2e core",

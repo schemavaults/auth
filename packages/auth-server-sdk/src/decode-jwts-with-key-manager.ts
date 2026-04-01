@@ -4,8 +4,7 @@ import {
   type OrganizationID,
   type UserData,
   type PotentiallyValidTokenSource,
-  type DecodeTokenFn,
-  organizationIdSchema,
+  userDataSchema,
 } from "@schemavaults/auth-common";
 import {
   type IDecodeAuthTokenKeys,
@@ -20,29 +19,26 @@ import {
 import getSchemavaultsApiServerId from "./get-schemavaults-api-server-id";
 import {
   type CustomJWTPayload,
-  customJwtPayloadToUserData,
+  // customJwtPayloadToUserData,
   decodeJWT as decodeSchemavaultsJwt,
   getKeysetIdFromToken,
 } from "@schemavaults/jwt";
 import isValidUuid from "@/is-valid-uuid";
 
-type DecodeTokenFnOutput = Awaited<ReturnType<DecodeTokenFn>>;
-
 export type IDecodeJWTsWithKeyManagerOutput =
   | {
       user: UserData;
       user_organizations: readonly OrganizationID[];
-      jwt_payload: CustomJWTPayload;
     }
   | {
       user: null;
       user_organizations: null;
-      jwt_payload: null;
     };
 
 export async function decodeJWTsWithKeyManager(
   keys_manager: IJwtKeyManager,
   token_sources: readonly PotentiallyValidTokenSource[],
+  userOrganizationsPromise: Promise<readonly OrganizationID[]>,
   jwt_audience: string = getSchemavaultsApiServerId(),
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
   debug: boolean = false,
@@ -66,16 +62,13 @@ export async function decodeJWTsWithKeyManager(
     );
   }
 
-  let decoded: CustomJWTPayload | null = null;
-  let user_organizations: readonly OrganizationID[] | null = null;
+  let decoded_user: UserData | null = null;
   try {
-    // The callback returns CustomJWTPayload but DecodeTokenFn types it as UserData & { orgs }.
-    // Cast is safe because decodeSchemavaultsJwt always returns a full CustomJWTPayload.
-    decoded = (await decodeJWTs(
+    const user: UserData = await decodeJWTs(
       {
         token_sources,
         jwt_audience,
-        decodeJWT: async (opts): Promise<DecodeTokenFnOutput> => {
+        decodeJWT: async (opts): Promise<UserData> => {
           if (debug) {
             let debugMessage: string = `[decodeJWTsWithKeyManager] Attempting to decode ${opts.type} JWT for audience: '${opts.jwt_audience}'`;
             if (opts.sourceHint) {
@@ -126,7 +119,7 @@ export async function decodeJWTsWithKeyManager(
           const { decryption_key, verification_key } = decodingKeys;
 
           try {
-            return (await decodeSchemavaultsJwt({
+            const user: UserData = await decodeSchemavaultsJwt({
               jwt: opts.token,
               type: opts.type,
               audience: opts.jwt_audience,
@@ -134,7 +127,8 @@ export async function decodeJWTsWithKeyManager(
               verification_key,
               keyset_id,
               env: environment,
-            })) satisfies CustomJWTPayload;
+            });
+            return user;
           } catch (e: unknown) {
             console.error("Failed to decode JSON web token: ", e);
             throw new Error("Failed to decode JSON web token!");
@@ -142,35 +136,9 @@ export async function decodeJWTsWithKeyManager(
         },
       },
       debug,
-    )) as CustomJWTPayload;
-    if (!("orgs" in decoded) || !Array.isArray(decoded.orgs)) {
-      throw new Error("No 'orgs' field in decoded user object!");
-    }
+    );
 
-    if (
-      decoded.orgs.every(
-        (org_id) =>
-          typeof org_id === "string" &&
-          organizationIdSchema.safeParse(org_id).success,
-      )
-    ) {
-      user_organizations = decoded.orgs;
-    }
-
-    if (!Array.isArray(user_organizations)) {
-      throw new TypeError(
-        "Failed to load user organizations associated with user from token!",
-      );
-    }
-
-    const user: UserData = customJwtPayloadToUserData(decoded);
-
-    return {
-      user,
-      user_organizations:
-        user_organizations satisfies readonly OrganizationID[],
-      jwt_payload: decoded,
-    };
+    decoded_user = user;
   } catch (e: unknown) {
     if (e instanceof JwtDecodingKeysetNotFoundError) {
       console.warn(
@@ -185,10 +153,31 @@ export async function decodeJWTsWithKeyManager(
     }
   }
 
+  if (decoded_user) {
+    const parsed_user = await userDataSchema.safeParseAsync(decoded_user);
+    if (!parsed_user.success) {
+      console.warn(
+        "Received invalid user data from JWT decode operation: ",
+        parsed_user.error,
+      );
+
+      return {
+        user: null,
+        user_organizations: null,
+      };
+    }
+    const user_organizations: readonly OrganizationID[] =
+      await userOrganizationsPromise;
+
+    return {
+      user: parsed_user.data,
+      user_organizations,
+    };
+  }
+
   return {
     user: null,
     user_organizations: null,
-    jwt_payload: null,
   };
 }
 

@@ -47,6 +47,17 @@ async function loadCreateJsonResponseFn(): Promise<CreateJsonResponseFn> {
   return json_response_fn;
 }
 
+export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
+  TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs =
+    IBaseProtectedAuthenticatedApiRouteInputs,
+> {
+  route_guard_type?: "authenticated" | "admin";
+  jwt_keys_manager?: IJwtKeyManager;
+  api_server_id?: ApiServerId;
+  custom_is_authorized_check?: (props: TRouteInputs) => Promise<boolean>;
+  loadUserOrganizations?: () => Promise<readonly OrganizationID[]>;
+}
+
 export function withAuthenticatedApiRouteGuard<
   TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs =
     IBaseProtectedAuthenticatedApiRouteInputs,
@@ -55,13 +66,10 @@ export function withAuthenticatedApiRouteGuard<
   additional_custom_api_route_inputs:
     | TAdditionalRouteInputs<TRouteInputs>
     | undefined = undefined,
-  route_guard_type: "authenticated" | "admin" = "authenticated",
-  custom_is_authorized_check:
-    | ((route_inputs: TRouteInputs) => Promise<boolean>)
-    | undefined = undefined,
-  jwt_keys_manager: IJwtKeyManager = initDefaultJwtKeyManagerForAuthenticatedRouteGuard(),
-  getApiServerId: () => ApiServerId = getSchemavaultsApiServerId,
+  opts?: IWithAuthenticatedApiRouteGuardAdditionalOptions,
 ): (req: NextRequest) => Promise<NextResponse> {
+  const route_guard_type: "authenticated" | "admin" =
+    opts?.route_guard_type ?? "authenticated";
   assertValidRouteGuardType(route_guard_type);
 
   const AuthenticatedApiRoute: TProtectedAuthenticatedApiRoute<TRouteInputs> =
@@ -71,9 +79,9 @@ export function withAuthenticatedApiRouteGuard<
   ): Promise<NextResponse> {
     const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
 
-    let api_server_id: ApiServerId;
+    const api_server_id: ApiServerId =
+      opts?.api_server_id ?? getSchemavaultsApiServerId();
     try {
-      api_server_id = getApiServerId();
       if (typeof api_server_id !== "string") {
         throw new TypeError(
           "Expected result of 'getApiServerId' to be a string!",
@@ -97,6 +105,9 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
+    const jwt_keys_manager =
+      opts?.jwt_keys_manager ??
+      initDefaultJwtKeyManagerForAuthenticatedRouteGuard();
     if (!jwt_keys_manager.isConfigured()) {
       console.error(
         "[withAuthenticatedApiRouteGuard] JWT Keys Manager does not appear to be properly configured!",
@@ -223,6 +234,12 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
+    const loadUserOrganizations: () => Promise<readonly OrganizationID[]> =
+      opts?.loadUserOrganizations ??
+      (async () => {
+        throw new Error("Unimplemented; missing loadUserOrganizations");
+      });
+
     const route_guard: IRouteGuard = await new RouteGuardFactory({
       environment,
       is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_ID,
@@ -231,6 +248,7 @@ export function withAuthenticatedApiRouteGuard<
       route_guard_type,
       token_sources,
       api_server_id,
+      loadUserOrganizations,
     );
 
     if (!route_guard.user) {
@@ -287,6 +305,9 @@ export function withAuthenticatedApiRouteGuard<
           } as unknown as TRouteInputs)
         : (base_api_route_inputs as unknown as TRouteInputs);
 
+    const custom_is_authorized_check:
+      | ((route_inputs: TRouteInputs) => Promise<boolean>)
+      | undefined = opts?.custom_is_authorized_check;
     if (typeof custom_is_authorized_check === "function") {
       let is_authorized: boolean = false;
       try {

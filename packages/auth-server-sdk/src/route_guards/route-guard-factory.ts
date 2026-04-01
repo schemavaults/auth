@@ -5,7 +5,10 @@ import AuthenticationRequiredRouteGuard from "./authenticated";
 import type { IRouteGuard } from "./IRouteGuard";
 import { z } from "zod";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
-import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
+import type {
+  PotentiallyValidTokenSource,
+  OrganizationID,
+} from "@schemavaults/auth-common";
 import {
   type ApiServerId,
   apiServerIdSchema,
@@ -116,6 +119,7 @@ export class RouteGuardFactory {
     type: RouteGuardType,
     token_sources: readonly PotentiallyValidTokenSource[],
     jwt_audience: ApiServerId,
+    loadUserOrganizations: () => Promise<readonly OrganizationID[]>,
   ): Promise<IRouteGuard> {
     if (this.debug) {
       console.log(
@@ -136,14 +140,14 @@ export class RouteGuardFactory {
       );
     }
 
-    const { user, user_organizations, jwt_payload } =
-      await decodeJWTsWithKeyManager(
-        this.jwt_keys_manager,
-        token_sources,
-        jwt_audience,
-        this.environment,
-        this.debug,
-      );
+    const { user, user_organizations } = await decodeJWTsWithKeyManager(
+      this.jwt_keys_manager,
+      token_sources,
+      loadUserOrganizations(),
+      jwt_audience,
+      this.environment,
+      this.debug,
+    );
 
     if (user && !Array.isArray(user_organizations)) {
       throw new TypeError(
@@ -155,7 +159,6 @@ export class RouteGuardFactory {
       user,
       environment: getAppEnvironment(),
       user_organizations: user_organizations ?? [],
-      jwt_payload,
     };
 
     if (this.debug) {
@@ -172,6 +175,7 @@ export class RouteGuardFactory {
     type: RouteGuardType,
     authHeader: string | null,
     jwt_audience: string,
+    loadUserOrganizations: () => Promise<readonly OrganizationID[]>,
   ): Promise<IRouteGuard> {
     if (!authHeader || typeof authHeader !== "string") {
       throw new Error("No auth header found");
@@ -192,6 +196,7 @@ export class RouteGuardFactory {
         },
       ],
       jwt_audience,
+      loadUserOrganizations,
     );
   }
 }

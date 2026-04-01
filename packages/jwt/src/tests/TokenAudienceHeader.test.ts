@@ -22,7 +22,6 @@ describe("Token 'aud' Header Claim", () => {
       client_app_id,
       jwt_keys,
       env: "test",
-      orgs: ["org1", "org2"],
     });
 
     expect(getAudienceFromToken(jwt.token)).toBe(audience_id);

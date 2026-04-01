@@ -2,21 +2,18 @@ import { type JWTPayload, type CryptoKey, SignJWT } from "jose";
 import JWT_Keys from "./jwt_keys";
 import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
-import type { AuthTokenTypes, OrganizationID } from "@schemavaults/auth-common";
+import type { AuthTokenTypes } from "@schemavaults/auth-common";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import signAndVerifyAlg from "./sign_verify_alg";
 import isValidUuid from "@/utils/isValidUuid";
 
-interface BaseSignJSONWebTokenInputOptions<
-  TokenType extends AuthTokenTypes,
-> {
+interface BaseSignJSONWebTokenInputOptions<TokenType extends AuthTokenTypes> {
   iat: number;
   uid: string;
   email: string;
   audience: string;
   type: TokenType;
   env: SchemaVaultsAppEnvironment;
-  orgs: readonly OrganizationID[]
 }
 
 interface SignJSONWebTokenInputWithAllKeysOptions<
@@ -32,9 +29,9 @@ interface SignJSONWebTokenInputWithSigningCryptoKeyOptions<
   keyset_id: string;
 }
 
-export type SignJSONWebTokenInputOptions<
-  TokenType extends AuthTokenTypes,
-> = SignJSONWebTokenInputWithAllKeysOptions<TokenType> | SignJSONWebTokenInputWithSigningCryptoKeyOptions<TokenType>
+export type SignJSONWebTokenInputOptions<TokenType extends AuthTokenTypes> =
+  | SignJSONWebTokenInputWithAllKeysOptions<TokenType>
+  | SignJSONWebTokenInputWithSigningCryptoKeyOptions<TokenType>;
 
 export async function signJWT<TokenType extends AuthTokenTypes>(
   opts: SignJSONWebTokenInputOptions<TokenType>,
@@ -42,7 +39,6 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
   const type: TokenType = opts.type;
   const uid: string = opts.uid;
   const sub: string = uid;
-  const orgs: readonly string[] = opts.orgs;
 
   if (typeof uid !== "string" || typeof sub !== "string" || uid !== sub) {
     throw new Error("uid and sub must be defined and equal strings");
@@ -50,15 +46,15 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
 
   const env = opts.env;
 
-
   let private_signing_key: CryptoKey;
   let keyset_id: string;
   try {
     if ("jwt_keys" in opts && opts.jwt_keys instanceof JWT_Keys) {
       const jwt_keys: JWT_Keys = opts.jwt_keys;
-      const private_key_promise: Promise<CryptoKey> | null = jwt_keys.signing_key;
+      const private_key_promise: Promise<CryptoKey> | null =
+        jwt_keys.signing_key;
       if (!private_key_promise) {
-        throw new Error("Failed to load private signing key from key store!")
+        throw new Error("Failed to load private signing key from key store!");
       }
       private_signing_key = await private_key_promise;
       keyset_id = jwt_keys.keyset_id;
@@ -69,8 +65,13 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
       throw new Error("Neither JWT keys nor signing key provided!");
     }
   } catch (e: unknown) {
-    console.error("Failed to load private signing key from key store or input options: ", e);
-    throw new Error("Failed to load private signing key from key store or input options!");
+    console.error(
+      "Failed to load private signing key from key store or input options: ",
+      e,
+    );
+    throw new Error(
+      "Failed to load private signing key from key store or input options!",
+    );
   }
 
   if (!isValidUuid(keyset_id)) {
@@ -82,7 +83,6 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
     uid,
     type,
     env,
-    orgs
   };
 
   try {
@@ -90,7 +90,7 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
       .setProtectedHeader({
         alg: signAndVerifyAlg,
         keyset_id,
-        kid: `${keyset_id}-verification` // the key needed for verification
+        kid: `${keyset_id}-verification`, // the key needed for verification
       })
       .setAudience(opts.audience)
       .setIssuedAt(opts.iat)

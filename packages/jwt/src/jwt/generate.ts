@@ -11,8 +11,6 @@ import {
   type AuthToken,
   type AuthTokenTypes,
   type RefreshToken,
-  type OrganizationID,
-  organizationIdSchema,
 } from "@schemavaults/auth-common";
 import { signJWT } from "./sign";
 import {
@@ -29,16 +27,17 @@ interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
   client_app_id: string;
   audience: string;
   env: SchemaVaultsAppEnvironment;
-  orgs: readonly OrganizationID[];
 }
 
-interface GenerateJWTWithAllKeysOptions<T extends AuthTokenTypes>
-  extends BaseGenerateJWTOptions<T> {
+interface GenerateJWTWithAllKeysOptions<
+  T extends AuthTokenTypes,
+> extends BaseGenerateJWTOptions<T> {
   jwt_keys: I_JWT_Keys;
 }
 
-interface GenerateJWTWithOnlyRequiredKeysOptions<T extends AuthTokenTypes>
-  extends BaseGenerateJWTOptions<T> {
+interface GenerateJWTWithOnlyRequiredKeysOptions<
+  T extends AuthTokenTypes,
+> extends BaseGenerateJWTOptions<T> {
   encryption_key: CryptoKey;
   signing_key: CryptoKey;
   keyset_id: string;
@@ -48,14 +47,12 @@ export type GenerateJWTOptions<T extends AuthTokenTypes> =
   | GenerateJWTWithAllKeysOptions<T>
   | GenerateJWTWithOnlyRequiredKeysOptions<T>;
 
-const organizationIdsSchema = organizationIdSchema.array().readonly();
-
 /**
  *
- * @param userData
+ * @param opts
  * @param type Access or refresh token
  * @param iat Current unix timestamp
- * @returns A JWT (string)
+ * @returns A JWT (AccessToken or RefreshToken object). The .token property contains the actual token as a string.
  */
 export async function generateJWT<T extends AuthTokenTypes>(
   { type, user, iat, client_app_id, audience, ...opts }: GenerateJWTOptions<T>,
@@ -130,41 +127,6 @@ export async function generateJWT<T extends AuthTokenTypes>(
 
   const env: SchemaVaultsAppEnvironment = opts.env;
 
-  if (!Array.isArray(opts.orgs) || typeof opts.orgs.length !== "number") {
-    throw new TypeError("Invalid organization IDs 'orgs' field; not an array!");
-  }
-
-  const parsed_organization_ids = await organizationIdsSchema.safeParseAsync(
-    opts.orgs,
-  );
-  if (!parsed_organization_ids.success) {
-    if (opts.orgs.length === 0) {
-      console.warn("No organization IDs provided");
-    } else {
-      console.log(
-        `[generateJWT] Error parsing list of '${opts.orgs.length}' organization IDs`,
-      );
-      if (env === "development") {
-        console.warn(
-          "[generateJWT] Organization IDs causing the error:",
-          opts.orgs,
-        );
-      }
-    }
-    console.error(
-      "[generateJWT] Received invalid list of organization IDs that user is a member of! Data parse error: ",
-      parsed_organization_ids.error,
-    );
-    throw new Error(
-      "Received invalid list of organization IDs that user is a member of!",
-    );
-  }
-  const orgs: readonly OrganizationID[] = parsed_organization_ids.data;
-
-  if (new Set<OrganizationID>(orgs).size !== orgs.length) {
-    throw new Error("Expected organization IDs in 'orgs' list to be unique.");
-  }
-
   if (
     type === "refresh" &&
     audience !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
@@ -209,7 +171,6 @@ export async function generateJWT<T extends AuthTokenTypes>(
       email,
       type,
       env,
-      orgs,
     });
   } catch (e: unknown) {
     console.error(
@@ -259,7 +220,6 @@ export async function generateJWT<T extends AuthTokenTypes>(
       created_at: user.created_at,
       env,
       sig,
-      orgs: orgs,
     };
 
     const jwt = await new EncryptJWT(additionalClaims)
@@ -291,6 +251,12 @@ export async function generateJWT<T extends AuthTokenTypes>(
       token: jwt,
       aud,
     };
+
+    if (typeof tokenData.token !== "string") {
+      throw new TypeError(
+        "Expected '.token' property of generated token object to be a string!",
+      );
+    }
 
     return tokenData as T extends "access" ? AccessToken : RefreshToken;
   } catch (error: unknown) {

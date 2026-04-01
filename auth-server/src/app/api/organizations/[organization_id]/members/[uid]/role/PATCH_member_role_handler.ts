@@ -1,5 +1,5 @@
 import "server-only";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import type {
    IProtectedAuthenticatedApiRouteProps,
 } from "@/lib/withAuthenticatedRouteGuard";
