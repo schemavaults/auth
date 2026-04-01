@@ -16,6 +16,9 @@ const resetPasswordRequestBodySchema = z
   .object({
     email: z.string().email(),
   })
+  .required({
+    email: true
+  })
   .strict();
 
 interface HandleResetPasswordRequestOptions {
