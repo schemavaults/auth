@@ -5,6 +5,7 @@ import spoofSuperuserAccessToken from "./spoofSuperuserAccessToken";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import type { AccessToken } from "@schemavaults/auth-common";
 
 function getDefaultMailServerUrl(): string {
   const hardcodedApiServerDomain: SchemaVaultsApiServerDomainRef = getHardcodedApiServerDomain(SCHEMAVAULTS_MAIL_SERVER.api_server_id, getAppEnvironment());
@@ -36,14 +37,14 @@ export async function sendEmailViaMailServer(
 
   const headers = new Headers();
 
-  const mail_server_access_token = await spoofSuperuserAccessToken({
+  const mail_server_access_token: AccessToken = await spoofSuperuserAccessToken({
     client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
     audience_id: SCHEMAVAULTS_MAIL_SERVER.api_server_id,
     db
   })
 
   headers.set("Content-Type", 'application/json');
-  headers.set(`Authorization`, `Bearer ${mail_server_access_token}`)
+  headers.set(`Authorization`, `Bearer ${mail_server_access_token.token satisfies string}`)
 
   const endpoint: string = `${mail_server_url}/api/send`;
 
