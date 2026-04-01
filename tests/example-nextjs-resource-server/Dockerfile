@@ -117,6 +117,10 @@ FROM source AS build
 
 WORKDIR /schemavaults/auth
 
+RUN bun run build --filter @schemavaults/auth-client-sdk
+RUN bun run build --filter @schemavaults/auth-react-provider
+RUN bun run build --filter @schemavaults/auth-server-sdk
+
 # Build server
 ENV NEXT_STANDALONE_DOCKER_BUILD true
 ENV NEXT_TELEMETRY_DISABLED 1
