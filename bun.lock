@@ -21,6 +21,7 @@
         "@schemavaults/auth-ui": "workspace:*",
         "@schemavaults/dbh": "0.8.7",
         "@schemavaults/jwt": "workspace:*",
+        "@schemavaults/send-email-api-options": "0.0.4",
         "@schemavaults/theme": "0.25.5",
         "@schemavaults/ui": "0.14.5",
         "cookies-next": "6.1.1",
@@ -651,6 +652,8 @@
     "@schemavaults/example-nextjs-resource-server": ["@schemavaults/example-nextjs-resource-server@workspace:tests/example-nextjs-resource-server"],
 
     "@schemavaults/jwt": ["@schemavaults/jwt@workspace:packages/jwt"],
+
+    "@schemavaults/send-email-api-options": ["@schemavaults/send-email-api-options@0.0.4", "", { "dependencies": { "zod": "3.25.8" } }, "sha512-1YaoK2ajVsrXIbCQZyfd2zgS5TEt3/Fy+diQblkie25MpzzMFz7QwIaCfwVMUpHE0VhyvuBuJx/7pzHN3Jxpow=="],
 
     "@schemavaults/theme": ["@schemavaults/theme@0.25.5", "", { "dependencies": { "resolve": "1.22.11", "tailwindcss-animate": "1.0.7" }, "peerDependencies": { "react": "19.0.0", "react-dom": "19.0.0" } }, "sha512-B341Y0Sz7ZNZ6PcMnVVIwslGmAbcDGGmieN2N0Onaz2gNLQgdxQ3qMXT3My6fjuOJ5ANue+JJMrMSfzfC+aRfA=="],
 

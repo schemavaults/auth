@@ -17,6 +17,10 @@ export { listAllInviteCodes } from "./list-all-invite-codes";
 export { isValidInviteCodeDefinition, areValidInviteCodeDefinitions } from "./validate-invite-code-definition";
 export { promoteToAdmin } from "./promote-to-admin";
 export { createUser } from "./create-user";
+export { createPasswordResetToken } from "./create-password-reset-token";
+export { validatePasswordResetToken } from "./validate-password-reset-token";
+export { consumePasswordResetToken } from "./consume-password-reset-token";
+export { updateUserPassword } from "./update-user-password";
 
 // Existing exports
 export { loadUserData } from "./load-user-by-uid";
@@ -30,3 +34,5 @@ export type * from "./passwords-table";
 export type * from "./authorization-codes-table";
 export type * from "./invite-codes-table";
 export type * from "./ICreateUserOptions";
+export type * from "./password-reset-tokens-table";
+export type { ValidPasswordResetToken } from "./validate-password-reset-token";
