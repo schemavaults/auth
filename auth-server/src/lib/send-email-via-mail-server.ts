@@ -4,6 +4,7 @@ import { sendEmailRequestBodySchema, type SendEmailRequestBody } from "@schemava
 import spoofSuperuserAccessToken from "./spoofSuperuserAccessToken";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import shouldEnableDebug from "@/lib/should-enable-debug";
 
 function getDefaultMailServerUrl(): string {
   const hardcodedApiServerDomain: SchemaVaultsApiServerDomainRef = getHardcodedApiServerDomain(SCHEMAVAULTS_MAIL_SERVER.api_server_id, getAppEnvironment());
@@ -22,6 +23,9 @@ export async function sendEmailViaMailServer(
   email_options: SendEmailRequestBody,
   db: Kysely<AuthDatabase>
 ): Promise<void> {
+  const environment = getAppEnvironment();
+  const debug: boolean = shouldEnableDebug(environment);
+
   const mail_server_url: string = getDefaultMailServerUrl()
 
   const parsed_email_options = await sendEmailRequestBodySchema.safeParseAsync(email_options)
@@ -41,8 +45,14 @@ export async function sendEmailViaMailServer(
   headers.set("Content-Type", 'application/json');
   headers.set(`Authorization`, `Bearer ${mail_server_access_token}`)
 
+  const endpoint: string = `${mail_server_url}/api/send`;
+
+  if (debug) {
+    console.log(`[sendEmailViaMailServer] Sending email via "${endpoint}" with options: ${JSON.stringify(email_options)}`)
+  }
+
   const response = await fetch(
-    `${mail_server_url}/api/send`,
+    endpoint,
     {
       method: "POST",
       headers,
