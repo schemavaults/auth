@@ -53,7 +53,8 @@ export async function withAuthenticatedApiRouteGuard(
     {
       route_guard_type: 'authenticated',
       jwt_keys_manager,
-      api_server_id: SCHEMAVAULTS_AUTH_APP_ID
+      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled
     }
   );
 }

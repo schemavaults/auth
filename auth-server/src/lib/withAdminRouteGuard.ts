@@ -28,7 +28,8 @@ export async function withAdminServerComponentRouteGuard(
     server_component,
     { dbh },
     {
-      custom_is_authorized_check: async (props) => props.user.admin === true,
+      route_guard_type: "admin",
+      custom_is_authorized_check: async (props): Promise<boolean> => props.user.admin === true,
       jwt_keys_manager,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID
     }

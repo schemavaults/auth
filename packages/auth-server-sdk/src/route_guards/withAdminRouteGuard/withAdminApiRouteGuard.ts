@@ -6,7 +6,6 @@ import {
   type IBaseProtectedAuthenticatedApiRouteInputs,
 } from "@/route_guards/withAuthenticatedRouteGuard";
 import type { NextRequest, NextResponse } from "next/server";
-import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 import { IWithAuthenticatedApiRouteGuardAdditionalOptions } from "../withAuthenticatedRouteGuard/withAuthenticatedApiRouteGuard";
 
@@ -28,7 +27,7 @@ export function withAdminApiRouteGuard<
   return withAuthenticatedApiRouteGuard<TRouteInputs>(
     api_route_handler,
     additional_custom_api_route_inputs,
-    opts,
+    { ...opts, route_guard_type: "admin" },
   );
 }
 

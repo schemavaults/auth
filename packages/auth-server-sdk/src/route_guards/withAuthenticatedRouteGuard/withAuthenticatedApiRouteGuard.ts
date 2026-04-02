@@ -107,7 +107,7 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
-    const jwt_keys_manager =
+    const jwt_keys_manager: IJwtKeyManager =
       opts?.jwt_keys_manager ??
       initDefaultJwtKeyManagerForAuthenticatedRouteGuard();
     if (!jwt_keys_manager.isConfigured()) {
