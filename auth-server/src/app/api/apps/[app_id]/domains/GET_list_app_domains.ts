@@ -101,13 +101,13 @@ export async function GET_list_app_domains(
       }
 
       if (!app.public && !user.admin) {
-        let authorized = false;
+        let authorized: boolean = false;
         if (app.owner_organization_id) {
-          authorized = await isUserInOrganization(
+          authorized = (await isUserInOrganization(
             user,
             app.owner_organization_id as OrganizationID,
             dbh.db,
-          );
+          )) !== false;
         }
         if (!authorized) {
           console.error("Non-public apps are currently reserved for admins!");

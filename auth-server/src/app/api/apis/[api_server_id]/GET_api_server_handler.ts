@@ -103,13 +103,13 @@ export async function GET_api_server_handler(
       }
 
       if (!apiServer.public && !user.admin) {
-        let authorized = false;
+        let authorized: boolean = false;
         if (apiServer.owner_organization_id) {
-          authorized = await isUserInOrganization(
+          authorized = (await isUserInOrganization(
             user,
             apiServer.owner_organization_id as OrganizationID,
             dbh.db,
-          );
+          )) !== false;
         }
         if (!authorized) {
           return NextResponse.json(

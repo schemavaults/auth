@@ -32,9 +32,9 @@ export default async function isUserInApiOwnerOrganization(
   }
 
   const owner_organization_id: OrganizationID = apiServer.owner_organization_id;
-  return await isUserInOrganization(
+  return (await isUserInOrganization(
     user,
     owner_organization_id,
     db
-  );
+  )) !== false;
 }

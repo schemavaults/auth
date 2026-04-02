@@ -96,13 +96,13 @@ export async function GET_app_handler(
       }
 
       if (!app.public && !user.admin) {
-        let authorized = false;
+        let authorized: boolean = false;
         if (app.owner_organization_id) {
-          authorized = await isUserInOrganization(
+          authorized = (await isUserInOrganization(
             user,
             app.owner_organization_id as OrganizationID,
             dbh.db,
-          );
+          )) !== false;
         }
         if (!authorized) {
           return NextResponse.json(

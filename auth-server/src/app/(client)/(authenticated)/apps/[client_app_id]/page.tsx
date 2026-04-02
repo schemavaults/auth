@@ -13,6 +13,7 @@ import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import OrganizationsRegistry from "@/lib/auth-db/organizations";
+import isUserInOrganization from "@/lib/isUserInOrganization";
 
 interface PageParams {
   params: Promise<{ client_app_id: string }>;
@@ -25,7 +26,6 @@ export default async function AppDetailPage(
     async function AppDetailPageServerComponent({
       dbh,
       user,
-      user_organizations
     }: IProtectedAuthenticatedServerComponentPageProps): Promise<ReactElement> {
       let client_app_id: AppId;
       try {
@@ -61,7 +61,7 @@ export default async function AppDetailPage(
         redirectWithError(403, 'forbidden');
       }
 
-      if (!user.admin && !user_organizations.includes(owner_organization_id)) {
+      if (!user.admin && (await isUserInOrganization(user, owner_organization_id, dbh.db)) === false) {
         redirectWithError(403, 'forbidden');
       }
 

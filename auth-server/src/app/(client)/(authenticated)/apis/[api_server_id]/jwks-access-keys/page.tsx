@@ -11,6 +11,7 @@ import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
+import isUserInOrganization from "@/lib/isUserInOrganization";
 import { JwksAccessKeysRegistry, type JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
 
 interface PageParams {
@@ -24,7 +25,6 @@ export default async function JwksAccessKeysPage(
     async function JwksAccessKeysPageServerComponent({
       dbh,
       user,
-      user_organizations
     }: IProtectedAuthenticatedServerComponentPageProps): Promise<ReactElement> {
       let api_server_id: ApiServerId;
       try {
@@ -63,7 +63,7 @@ export default async function JwksAccessKeysPage(
         redirectWithError(403, 'forbidden');
       }
 
-      if (!user.admin && !user_organizations.includes(owner_organization_id)) {
+      if (!user.admin && (await isUserInOrganization(user, owner_organization_id, dbh.db)) === false) {
         console.warn("[JwksAccessKeysPage] Blocking access - user does not appear to be in the owner organization!")
         redirectWithError(403, 'forbidden');
       }

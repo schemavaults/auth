@@ -7,7 +7,6 @@ import {
 import {
   type AccessToken,
   accessTokenDataSchema,
-  type OrganizationID,
   type PotentiallyValidTokenSource,
   type UserData,
 } from "@schemavaults/auth-common";
@@ -19,10 +18,8 @@ import MaximumBrowserCookieSize from "@/MaximumBrowserCookieSize";
 import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
 import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
 import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
-import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType";
-import loadUserOrganizationsFromAuthServer from "@/loadUserOrganizationsFromAuthServer";
 import type { IBaseProtectedAuthenticatedApiRouteInputs } from "./IBaseProtectedAuthenticatedApiRouteInputs";
 import initDefaultJwtKeyManagerForAuthenticatedRouteGuard from "./initDefaultJwtKeyManagerForAuthenticatedRouteGuard";
 
@@ -57,7 +54,6 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
   jwt_keys_manager?: IJwtKeyManager;
   api_server_id?: ApiServerId;
   custom_is_authorized_check?: (props: TRouteInputs) => Promise<boolean>;
-  loadUserOrganizations?: (user: UserData) => Promise<readonly OrganizationID[]>;
 }
 
 export function withAuthenticatedApiRouteGuard<
@@ -236,23 +232,6 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
-    const loadUserOrganizations: (user: UserData) => Promise<readonly OrganizationID[]> =
-      opts?.loadUserOrganizations ??
-      ((_user: UserData) => {
-        const access_token_source = token_sources.find(
-          (ts) => ts.type === "access",
-        );
-        if (!access_token_source) {
-          throw new Error(
-            "No access token available to load user organizations from auth server",
-          );
-        }
-        return loadUserOrganizationsFromAuthServer(
-          getSchemaVaultsAuthServerUri(),
-          access_token_source.token,
-        );
-      });
-
     const route_guard: IRouteGuard = await new RouteGuardFactory({
       environment,
       is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_ID,
@@ -261,7 +240,6 @@ export function withAuthenticatedApiRouteGuard<
       route_guard_type,
       token_sources,
       api_server_id,
-      loadUserOrganizations,
     );
 
     if (!route_guard.user) {
@@ -276,18 +254,6 @@ export function withAuthenticatedApiRouteGuard<
     }
     const user: UserData = route_guard.user;
 
-    if (!Array.isArray(route_guard.user_organizations)) {
-      return json(
-        {
-          success: false,
-          error: true,
-          message:
-            "Authentication failed, failed to load associated user organizations",
-        },
-        { status: 401 },
-      );
-    }
-
     if (!route_guard.isAccessAllowed() || !route_guard.user) {
       return json(
         {
@@ -299,14 +265,10 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
-    const user_organizations: readonly OrganizationID[] =
-      route_guard.user_organizations;
-
     const base_api_route_inputs: IBaseProtectedAuthenticatedApiRouteInputs = {
       req,
       user,
       environment,
-      user_organizations,
     };
 
     const final_route_inputs: TRouteInputs =

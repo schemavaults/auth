@@ -1,6 +1,6 @@
 // base-route-guard.ts
 
-import type { OrganizationID, UserData } from "@schemavaults/auth-common";
+import type { UserData } from "@schemavaults/auth-common";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type { IRouteGuard } from "./IRouteGuard";
@@ -8,16 +8,13 @@ export type { IRouteGuard } from "./IRouteGuard";
 
 export abstract class BaseRouteGuard implements IRouteGuard {
   protected readonly _user: UserData | null;
-  protected readonly _orgs: readonly OrganizationID[];
   private readonly environment: SchemaVaultsAppEnvironment;
 
   public constructor({
     user,
-    user_organizations,
     environment,
   }: InitRouteGuardCheckOptions) {
     this._user = user;
-    this._orgs = user_organizations ?? [];
     this.environment = environment;
   }
 
@@ -41,9 +38,5 @@ export abstract class BaseRouteGuard implements IRouteGuard {
 
   public get user(): UserData | null {
     return this._user;
-  }
-
-  public get user_organizations(): readonly OrganizationID[] {
-    return this._orgs;
   }
 }
