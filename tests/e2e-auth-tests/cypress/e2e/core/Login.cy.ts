@@ -65,7 +65,7 @@ describe("Login", () => {
 
           cy.login(credentials.email, credentials.password).then(
             (login_success: boolean) => {
-              expect(login_success).to.be.true;
+              expect(login_success, "Re-login with same credentials should succeed").to.be.true;
               cy.url().should("include", "/account");
             },
           );

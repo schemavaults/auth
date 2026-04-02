@@ -57,7 +57,7 @@ describe("Connect App to API Server", () => {
                   api_server_id: apiResult.api_server_id!,
                   // Don't pass organization_id to use admin page
                 }).then((result) => {
-                  expect(result.success).to.be.true;
+                  expect(result.success, "connect_app_to_api should succeed").to.be.true;
                   expect(result.status_code).to.equal(200);
 
                   // Cleanup
@@ -111,7 +111,7 @@ describe("Connect App to API Server", () => {
                   api_server_id: apiResult.api_server_id!,
                   organization_id,
                 }).then((result) => {
-                  expect(result.success).to.be.true;
+                  expect(result.success, "connect_app_to_api should succeed").to.be.true;
                   expect(result.status_code).to.equal(200);
 
                   // Cleanup
@@ -351,7 +351,7 @@ describe("Connect App to API Server", () => {
                                       api_server_id,
                                       organization_id,
                                     }).then((result) => {
-                                      expect(result.success).to.be.true;
+                                      expect(result.success, "connect_app_to_api should succeed").to.be.true;
                                       const status_code: number =
                                         result.status_code;
                                       expect(

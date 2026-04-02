@@ -107,7 +107,7 @@ export default function createApp(
             const app_id = responseBody?.resource_id ?? null;
 
             if (success) {
-              cy.wrap(statusCode).should("eq", 200);
+              cy.wrap(statusCode).should("eq", 200, "Create app API request should return 200");
               cy.log("App creation request appears to have been a success!");
             }
 

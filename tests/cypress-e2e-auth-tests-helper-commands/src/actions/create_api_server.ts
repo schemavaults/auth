@@ -109,7 +109,7 @@ export default function createApiServer(
               const api_server_id = responseBody?.resource_id ?? null;
 
               if (success) {
-                cy.wrap(statusCode).should("eq", 200);
+                cy.wrap(statusCode).should("eq", 200, "Create API server request should return 200");
                 cy.log(
                   "API server creation request appears to have been a success!",
                 );

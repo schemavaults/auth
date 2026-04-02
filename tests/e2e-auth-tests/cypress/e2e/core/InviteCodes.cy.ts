@@ -6,7 +6,7 @@ describe("Invite Codes", () => {
 
   it("can create a new invite code as a superuser", () => {
     cy.as_admin(() => {
-      cy.is_admin().should("be.true");
+      cy.is_admin().should("be.true", "Superuser should have admin privileges");
 
       const INVITE_CODE_LENGTH: number = 24;
       cy.generate_random_code(INVITE_CODE_LENGTH).then(

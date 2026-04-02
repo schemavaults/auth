@@ -99,7 +99,7 @@ export default function createInviteCode(
               .wait("@createInviteCodeRequest", { timeout: 20000 })
               .then((interception) => {
                 interception.response?.statusCode &&
-                  cy.wrap(interception.response?.statusCode).should("eq", 200);
+                  cy.wrap(interception.response?.statusCode).should("eq", 200, "Create invite code API request should return 200");
                 cy.log(
                   "Invite code creation request appears to have been a success!",
                 );
