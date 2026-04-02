@@ -35,7 +35,12 @@ export async function withAuthenticatedServerComponentRouteGuard(
       jwt_keys_manager,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
       loadUserOrganizations: async (user: UserData): Promise<readonly OrganizationID[]> => {
-        return await listUserOrganizations(dbh.db, user.uid, user.admin ?? false);
+        try {
+          return await listUserOrganizations(dbh.db, user.uid, user.admin ?? false);
+        } catch (e: unknown) {
+          console.error(`[withAuthenticatedServerComponentRouteGuard] loadUserOrganizations failed for uid='${user.uid}' admin=${user.admin}:`, e);
+          throw e;
+        }
       }
     })
 }
@@ -60,7 +65,12 @@ export async function withAuthenticatedApiRouteGuard(
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
       custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
       loadUserOrganizations: async (user: UserData): Promise<readonly OrganizationID[]> => {
-        return await listUserOrganizations(dbh.db, user.uid, user.admin ?? false);
+        try {
+          return await listUserOrganizations(dbh.db, user.uid, user.admin ?? false);
+        } catch (e: unknown) {
+          console.error(`[withAuthenticatedApiRouteGuard] loadUserOrganizations failed for uid='${user.uid}' admin=${user.admin}:`, e);
+          throw e;
+        }
       }
     }
   );
