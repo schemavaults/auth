@@ -31,14 +31,14 @@ jobs:
 
       - name: Download core Docker images
         if: ${{ inputs.skip-docker-build }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: e2e-docker-images-core
           path: /tmp/docker-images
 
       - name: Download resource server Docker image
         if: ${{ inputs.skip-docker-build && inputs.load-resource-server-image }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: e2e-docker-images-resource-server
           path: /tmp/docker-images
