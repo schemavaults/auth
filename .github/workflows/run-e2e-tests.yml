@@ -9,11 +9,16 @@ on:
         type: string
 
 jobs:
-  Run-Core-E2E-Tests:
+  Run-Authentication-Flows-E2E-Tests:
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
-      test-suite-name: core
+      test-suite-name: authentication_flows
+  Run-Resource-Management-E2E-Tests:
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: resource_management
   Run-Superuser-E2E-Tests:
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
@@ -24,3 +29,8 @@ jobs:
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: example_resource_server
+  Run-Miscellaneous-E2E-Tests:
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: misc
