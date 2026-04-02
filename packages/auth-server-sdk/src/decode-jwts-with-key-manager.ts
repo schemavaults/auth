@@ -166,8 +166,19 @@ export async function decodeJWTsWithKeyManager(
     }
     const user: UserData = parsed_user.data;
 
-    const user_organizations: readonly OrganizationID[] =
-      await loadUserOrganizations(user);
+    let user_organizations: readonly OrganizationID[];
+    try {
+      user_organizations = await loadUserOrganizations(user);
+    } catch (e: unknown) {
+      console.error(
+        `[decodeJWTsWithKeyManager] Failed to load user organizations for uid='${user.uid}':`,
+        e,
+      );
+      return {
+        user: null,
+        user_organizations: null,
+      };
+    }
 
     return {
       user,

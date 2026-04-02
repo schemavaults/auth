@@ -29,35 +29,43 @@ async function doesCookiesStoreHaveValidRefreshToken(
     return false;
   }
 
-  await using dbh = ServerlessDatabase.createDBH();
+  try {
+    await using dbh = ServerlessDatabase.createDBH();
 
-  async function loadUserOrganizations(user: UserData): Promise<readonly OrganizationID[]> {
-    return await listUserOrganizationsFromDatabase(
-      dbh.db,
-      user['uid'],
-      user['admin'],
-      debug
-    )
-  }
+    const loadUserOrganizations = async (user: UserData): Promise<readonly OrganizationID[]> => {
+      return await listUserOrganizationsFromDatabase(
+        dbh.db,
+        user['uid'],
+        user['admin'],
+        debug
+      )
+    };
 
-  const route_guard_factory: RouteGuardFactory = new RouteGuardFactory(dbh.db);
-  const route_guard: IRouteGuard = await route_guard_factory.createGuardFromTokenSources(
-    'authenticated',
-    [{
-      type: 'refresh',
-      token: refresh_token,
-      sourceHint: `From cookie with key '${RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)}'`
-    }],
-    SCHEMAVAULTS_AUTH_APP_ID,
-    loadUserOrganizations
-  );
+    const route_guard_factory: RouteGuardFactory = new RouteGuardFactory(dbh.db);
+    const route_guard: IRouteGuard = await route_guard_factory.createGuardFromTokenSources(
+      'authenticated',
+      [{
+        type: 'refresh',
+        token: refresh_token,
+        sourceHint: `From cookie with key '${RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)}'`
+      }],
+      SCHEMAVAULTS_AUTH_APP_ID,
+      loadUserOrganizations
+    );
 
-  if (!route_guard.isAccessAllowed() || !route_guard.user) {
+    if (!route_guard.isAccessAllowed() || !route_guard.user) {
+      return false;
+    }
+
+    const user: UserData = route_guard.user;
+    return user;
+  } catch (e: unknown) {
+    console.error(
+      "[doesCookiesStoreHaveValidRefreshToken] Failed to check if user is already authenticated, treating as not authenticated:",
+      e
+    );
     return false;
   }
-
-  const user: UserData = route_guard.user;
-  return user;
 }
 
 export async function doesRequestHaveValidAuthServerRefreshToken(req: NextRequest): Promise<UserData | false> {
