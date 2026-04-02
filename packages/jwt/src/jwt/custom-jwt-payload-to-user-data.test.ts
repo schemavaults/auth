@@ -16,7 +16,7 @@ describe("customJwtPayloadToUserData", () => {
     aud: "https://auth.schemavaults.com",
     app: "https://auth.schemavaults.com",
     sig: "a".repeat(64),
-    iss: "https://auth.schemavaults.com",
+    iss: "schemavaults-auth",
     env: "test",
   };
 
