@@ -9,28 +9,98 @@ on:
         type: string
 
 jobs:
+  Build-Core-Docker-Images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Build core Docker images
+        run: |
+          TEST_SUITE_NAME=build docker compose -f tests/e2e-auth-tests/docker-compose.yml build \
+            schemavaults-e2e-auth-tests \
+            schemavaults-auth \
+            postgres-db
+
+      - name: Save core Docker images
+        run: |
+          docker save \
+            schemavaults/e2e-auth-tests:local \
+            schemavaults/auth-server:local \
+            schemavaults/postgres-db:local \
+            | gzip > /tmp/e2e-core-images.tar.gz
+
+      - name: Upload core images artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-docker-images-core
+          path: /tmp/e2e-core-images.tar.gz
+          retention-days: 1
+
+  Build-Resource-Server-Docker-Image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Build resource server Docker image
+        run: |
+          TEST_SUITE_NAME=build docker compose -f tests/e2e-auth-tests/docker-compose.yml \
+            --profile e2e_with_resource_server \
+            build example-nextjs-resource-server
+
+      - name: Save resource server Docker image
+        run: |
+          docker save \
+            schemavaults/example-nextjs-resource-server:local \
+            | gzip > /tmp/e2e-resource-server-image.tar.gz
+
+      - name: Upload resource server image artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-docker-images-resource-server
+          path: /tmp/e2e-resource-server-image.tar.gz
+          retention-days: 1
+
   Run-Authentication-Flows-E2E-Tests:
+    needs: Build-Core-Docker-Images
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: authentication_flows
+      skip-docker-build: true
+
   Run-Resource-Management-E2E-Tests:
+    needs: Build-Core-Docker-Images
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: resource_management
+      skip-docker-build: true
+
   Run-Superuser-E2E-Tests:
+    needs: Build-Core-Docker-Images
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: superuser
+      skip-docker-build: true
+
   Run-Example-Resource-Server-E2E-Tests:
+    needs:
+      - Build-Core-Docker-Images
+      - Build-Resource-Server-Docker-Image
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: example_resource_server
+      skip-docker-build: true
+      load-resource-server-image: true
+
   Run-Miscellaneous-E2E-Tests:
+    needs: Build-Core-Docker-Images
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: misc
+      skip-docker-build: true

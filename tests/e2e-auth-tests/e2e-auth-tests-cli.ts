@@ -126,6 +126,11 @@ e2eAuthTestsCli
     "Whether we should show stdout from the running application server. By default only the test runner's stdout is shown.",
     false,
   )
+  .option(
+    "--skip-build",
+    "Skip building Docker images (use pre-built images already loaded into Docker)",
+    false,
+  )
   .action(async (test_suite_name: string, options): Promise<void> => {
     const test_suites: readonly string[] = listTestSuites();
     if (!test_suites.includes(test_suite_name)) {
@@ -144,9 +149,15 @@ e2eAuthTestsCli
       "--abort-on-container-exit",
       "--exit-code-from",
       "schemavaults-e2e-auth-tests",
-      "--build",
       "--force-recreate",
     ];
+
+    // skip build flag - when true, use pre-built images already loaded into Docker
+    const skipBuild: boolean =
+      typeof options.skipBuild === "boolean" && options.skipBuild ? true : false;
+    if (!skipBuild) {
+      args.push("--build");
+    }
 
     // verbose flag
     const verbose: boolean =
