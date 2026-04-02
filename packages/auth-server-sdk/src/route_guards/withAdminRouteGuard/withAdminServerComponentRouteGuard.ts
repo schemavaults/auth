@@ -1,38 +1,34 @@
-import { type ApiServerId } from "@schemavaults/app-definitions";
 import {
-  initDefaultJwtKeyManagerForAuthenticatedRouteGuard,
   withAuthenticatedServerComponentRouteGuard,
   type IBaseProtectedAuthenticatedServerComponentPageProps,
   type TProtectedAuthenticatedPageServerComponent,
 } from "@/route_guards/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
-import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
-import type { IJwtKeyManager } from "@/JwtKeyManager";
+import type { IWithAuthenticatedServerComponentRouteGuardAdditionalOptions } from "@/route_guards/withAuthenticatedRouteGuard/withAuthenticatedServerComponentRouteGuard";
 
 type TAdditionalProps<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps =
+    IBaseProtectedAuthenticatedServerComponentPageProps,
 > = Omit<TProps, keyof IBaseProtectedAuthenticatedServerComponentPageProps>;
 
 export async function withAdminServerComponentRouteGuard<
-  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps = IBaseProtectedAuthenticatedServerComponentPageProps,
+  TProps extends IBaseProtectedAuthenticatedServerComponentPageProps =
+    IBaseProtectedAuthenticatedServerComponentPageProps,
 >(
   server_component: TProtectedAuthenticatedPageServerComponent<TProps>,
   additional_custom_server_component_props:
     | TAdditionalProps<TProps>
     | undefined = undefined,
-  custom_is_authorized_check:
-    | ((props: TProps) => Promise<boolean>)
-    | undefined = async (props) => props.user.admin === true,
-  jwt_keys_manager: IJwtKeyManager = initDefaultJwtKeyManagerForAuthenticatedRouteGuard(),
-  getApiServerId: () => ApiServerId = getSchemavaultsApiServerId,
+  opts?: IWithAuthenticatedServerComponentRouteGuardAdditionalOptions,
 ): Promise<ReactElement> {
   return await withAuthenticatedServerComponentRouteGuard<TProps>(
     server_component,
     additional_custom_server_component_props,
-    "admin",
-    custom_is_authorized_check,
-    jwt_keys_manager,
-    getApiServerId,
+    {
+      ...opts,
+      route_guard_type: "admin",
+      custom_is_authorized_check: async (t) => (t.user.admin ? true : false),
+    },
   );
 }
 

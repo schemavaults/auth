@@ -27,11 +27,18 @@ async function doesCookiesStoreHaveValidRefreshToken(
 
   await using dbh = ServerlessDatabase.createDBH();
   const route_guard_factory: RouteGuardFactory = new RouteGuardFactory(dbh.db);
-  const route_guard: IRouteGuard = await route_guard_factory.createGuardFromTokenSources('authenticated', [{
-    type: 'refresh',
-    token: refresh_token,
-    sourceHint: `From cookie with key '${RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)}'`
-  }], SCHEMAVAULTS_AUTH_APP_ID);
+  const route_guard: IRouteGuard = await route_guard_factory.createGuardFromTokenSources(
+    'authenticated',
+    [{
+      type: 'refresh',
+      token: refresh_token,
+      sourceHint: `From cookie with key '${RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)}'`
+    }],
+    SCHEMAVAULTS_AUTH_APP_ID,
+    async () => {
+      throw new Error("Unimplemented")
+    }
+  );
 
   if (!route_guard.isAccessAllowed() || !route_guard.user) {
     return false;

@@ -29,10 +29,11 @@ export async function withAuthenticatedServerComponentRouteGuard(
     {
       dbh
     },
-    'authenticated',
-    undefined,
-    jwt_keys_manager,
-    (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID)
+    {
+      route_guard_type: 'authenticated',
+      jwt_keys_manager,
+      api_server_id: SCHEMAVAULTS_AUTH_APP_ID
+    })
 }
 
 export interface IAuthenticatedApiRouteGuardInputs extends IBaseProtectedAuthenticatedApiRouteInputs {
@@ -49,9 +50,10 @@ export async function withAuthenticatedApiRouteGuard(
   return _withAuthenticatedApiRouteGuard<IAuthenticatedApiRouteGuardInputs>(
     api_route_handler,
     { dbh },
-    'authenticated',
-    undefined,
-    jwt_keys_manager,
-    (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID
+    {
+      route_guard_type: 'authenticated',
+      jwt_keys_manager,
+      api_server_id: SCHEMAVAULTS_AUTH_APP_ID
+    }
   );
 }

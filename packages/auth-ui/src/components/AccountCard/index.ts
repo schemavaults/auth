@@ -4,3 +4,6 @@ export {
   AccountDetailsCard as AccountCard,
 } from "./account_card";
 export type * from "./account_card";
+
+export { useMyOrganizations, clearMyOrganizationsCache } from "./useMyOrganizations";
+export type { MyOrganizationMembership, UseMyOrganizationsOptions } from "./useMyOrganizations";

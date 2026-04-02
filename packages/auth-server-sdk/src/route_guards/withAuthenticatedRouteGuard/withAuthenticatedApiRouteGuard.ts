@@ -19,8 +19,10 @@ import MaximumBrowserCookieSize from "@/MaximumBrowserCookieSize";
 import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
 import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
 import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
+import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType";
+import loadUserOrganizationsFromAuthServer from "@/loadUserOrganizationsFromAuthServer";
 import type { IBaseProtectedAuthenticatedApiRouteInputs } from "./IBaseProtectedAuthenticatedApiRouteInputs";
 import initDefaultJwtKeyManagerForAuthenticatedRouteGuard from "./initDefaultJwtKeyManagerForAuthenticatedRouteGuard";
 
@@ -236,8 +238,19 @@ export function withAuthenticatedApiRouteGuard<
 
     const loadUserOrganizations: () => Promise<readonly OrganizationID[]> =
       opts?.loadUserOrganizations ??
-      (async () => {
-        throw new Error("Unimplemented; missing loadUserOrganizations");
+      (() => {
+        const access_token_source = token_sources.find(
+          (ts) => ts.type === "access",
+        );
+        if (!access_token_source) {
+          throw new Error(
+            "No access token available to load user organizations from auth server",
+          );
+        }
+        return loadUserOrganizationsFromAuthServer(
+          getSchemaVaultsAuthServerUri(),
+          access_token_source.token,
+        );
       });
 
     const route_guard: IRouteGuard = await new RouteGuardFactory({
