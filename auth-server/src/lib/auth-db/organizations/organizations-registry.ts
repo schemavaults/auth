@@ -174,6 +174,14 @@ export class OrganizationsRegistry
     return memberships.map((membership) => membership.organization_id);
   }
 
+  public async listUserOrganizations(
+    uid: string,
+    admin: boolean = false
+  ): Promise<readonly OrganizationID[]> {
+    const memberships = await this.listUserOrganizationMemberships(uid, admin);
+    return [...new Set(memberships.map((membership) => membership.organization_id))];
+  }
+
   public async listOrganizationMembers(
     org_id: OrganizationID,
   ): Promise<readonly OrganizationMemberWithUserData[]> {

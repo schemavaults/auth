@@ -8,6 +8,7 @@ import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_option
 import type {
   PotentiallyValidTokenSource,
   OrganizationID,
+  UserData,
 } from "@schemavaults/auth-common";
 import {
   type ApiServerId,
@@ -119,7 +120,9 @@ export class RouteGuardFactory {
     type: RouteGuardType,
     token_sources: readonly PotentiallyValidTokenSource[],
     jwt_audience: ApiServerId,
-    loadUserOrganizations: () => Promise<readonly OrganizationID[]>,
+    loadUserOrganizations: (
+      user: UserData,
+    ) => Promise<readonly OrganizationID[]>,
   ): Promise<IRouteGuard> {
     if (this.debug) {
       console.log(
@@ -143,7 +146,7 @@ export class RouteGuardFactory {
     const { user, user_organizations } = await decodeJWTsWithKeyManager(
       this.jwt_keys_manager,
       token_sources,
-      loadUserOrganizations(),
+      loadUserOrganizations,
       jwt_audience,
       this.environment,
       this.debug,
@@ -175,7 +178,9 @@ export class RouteGuardFactory {
     type: RouteGuardType,
     authHeader: string | null,
     jwt_audience: string,
-    loadUserOrganizations: () => Promise<readonly OrganizationID[]>,
+    loadUserOrganizations: (
+      user: UserData,
+    ) => Promise<readonly OrganizationID[]>,
   ): Promise<IRouteGuard> {
     if (!authHeader || typeof authHeader !== "string") {
       throw new Error("No auth header found");

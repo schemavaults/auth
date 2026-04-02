@@ -18,8 +18,6 @@ import {
 } from "@schemavaults/app-definitions";
 import getSchemavaultsApiServerId from "./get-schemavaults-api-server-id";
 import {
-  type CustomJWTPayload,
-  // customJwtPayloadToUserData,
   decodeJWT as decodeSchemavaultsJwt,
   getKeysetIdFromToken,
 } from "@schemavaults/jwt";
@@ -38,7 +36,7 @@ export type IDecodeJWTsWithKeyManagerOutput =
 export async function decodeJWTsWithKeyManager(
   keys_manager: IJwtKeyManager,
   token_sources: readonly PotentiallyValidTokenSource[],
-  userOrganizationsPromise: Promise<readonly OrganizationID[]>,
+  loadUserOrganizations: (user: UserData) => Promise<readonly OrganizationID[]>,
   jwt_audience: string = getSchemavaultsApiServerId(),
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
   debug: boolean = false,
@@ -166,11 +164,13 @@ export async function decodeJWTsWithKeyManager(
         user_organizations: null,
       };
     }
+    const user: UserData = parsed_user.data;
+
     const user_organizations: readonly OrganizationID[] =
-      await userOrganizationsPromise;
+      await loadUserOrganizations(user);
 
     return {
-      user: parsed_user.data,
+      user,
       user_organizations,
     };
   }

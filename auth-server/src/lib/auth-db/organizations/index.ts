@@ -30,3 +30,4 @@ export { countUserRealMemberships } from './count-user-real-memberships';
 export { hasUserExceededMaximumOrgMemberships } from './has-user-exceeded-maximum-org-memberships';
 export { listAllOrganizations } from './list-all-organizations';
 export { listUserOrganizationMemberships } from './list-user-organization-memberships';
+export { listUserOrganizations } from './list-user-organizations';

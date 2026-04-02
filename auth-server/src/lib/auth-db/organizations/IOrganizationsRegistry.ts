@@ -26,6 +26,11 @@ export interface IOrganizationsRegistry {
     admin?: boolean
   ) => Promise<readonly OrganizationID[]>;
 
+  listUserOrganizations: (
+    uid: string,
+    admin?: boolean
+  ) => Promise<readonly OrganizationID[]>;
+
   listOrganizationMembers: (
     org_id: OrganizationID,
   ) => Promise<readonly OrganizationMemberWithUserData[]>;
