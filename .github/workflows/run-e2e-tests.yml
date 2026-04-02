@@ -9,7 +9,7 @@ on:
         type: string
 
 jobs:
-  Build-Docker-Images:
+  Build-Core-Docker-Images:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -37,6 +37,12 @@ jobs:
           path: /tmp/e2e-core-images.tar.gz
           retention-days: 1
 
+  Build-Resource-Server-Docker-Image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
       - name: Build resource server Docker image
         run: |
           TEST_SUITE_NAME=build docker compose -f tests/e2e-auth-tests/docker-compose.yml \
@@ -57,7 +63,7 @@ jobs:
           retention-days: 1
 
   Run-Authentication-Flows-E2E-Tests:
-    needs: Build-Docker-Images
+    needs: Build-Core-Docker-Images
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
@@ -65,7 +71,7 @@ jobs:
       skip-docker-build: true
 
   Run-Resource-Management-E2E-Tests:
-    needs: Build-Docker-Images
+    needs: Build-Core-Docker-Images
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
@@ -73,7 +79,7 @@ jobs:
       skip-docker-build: true
 
   Run-Superuser-E2E-Tests:
-    needs: Build-Docker-Images
+    needs: Build-Core-Docker-Images
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
@@ -81,7 +87,9 @@ jobs:
       skip-docker-build: true
 
   Run-Example-Resource-Server-E2E-Tests:
-    needs: Build-Docker-Images
+    needs:
+      - Build-Core-Docker-Images
+      - Build-Resource-Server-Docker-Image
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
@@ -90,7 +98,7 @@ jobs:
       load-resource-server-image: true
 
   Run-Miscellaneous-E2E-Tests:
-    needs: Build-Docker-Images
+    needs: Build-Core-Docker-Images
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
