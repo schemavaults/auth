@@ -8,9 +8,11 @@ import {
   type IBaseProtectedAdminApiRouteInputs,
 } from "@schemavaults/auth-server-sdk/route_guards";
 import ServerlessDatabase from "./auth-db/serverless-database";
+import { listUserOrganizations } from "./auth-db";
 import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import type { ApiServerId } from "@schemavaults/app-definitions";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
+import type { OrganizationID, UserData } from "@schemavaults/auth-common";
 
 import type { ReactElement } from "react";
 import type { NextRequest, NextResponse } from "next/server";
@@ -31,7 +33,10 @@ export async function withAdminServerComponentRouteGuard(
       route_guard_type: "admin",
       custom_is_authorized_check: async (props): Promise<boolean> => props.user.admin === true,
       jwt_keys_manager,
-      api_server_id: SCHEMAVAULTS_AUTH_APP_ID
+      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      loadUserOrganizations: async (user: UserData): Promise<readonly OrganizationID[]> => {
+        return await listUserOrganizations(dbh.db, user.uid, user.admin ?? false);
+      }
     }
   )
 }
@@ -51,7 +56,10 @@ export async function withAdminApiRouteGuard(
     {
       custom_is_authorized_check: async (props) => props.user.admin === true,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
-      jwt_keys_manager
+      jwt_keys_manager,
+      loadUserOrganizations: async (user: UserData): Promise<readonly OrganizationID[]> => {
+        return await listUserOrganizations(dbh.db, user.uid, user.admin ?? false);
+      }
     }
   );
 }

@@ -57,7 +57,7 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
   jwt_keys_manager?: IJwtKeyManager;
   api_server_id?: ApiServerId;
   custom_is_authorized_check?: (props: TRouteInputs) => Promise<boolean>;
-  loadUserOrganizations?: () => Promise<readonly OrganizationID[]>;
+  loadUserOrganizations?: (user: UserData) => Promise<readonly OrganizationID[]>;
 }
 
 export function withAuthenticatedApiRouteGuard<
@@ -236,9 +236,9 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
-    const loadUserOrganizations: () => Promise<readonly OrganizationID[]> =
+    const loadUserOrganizations: (user: UserData) => Promise<readonly OrganizationID[]> =
       opts?.loadUserOrganizations ??
-      (() => {
+      ((_user: UserData) => {
         const access_token_source = token_sources.find(
           (ts) => ts.type === "access",
         );

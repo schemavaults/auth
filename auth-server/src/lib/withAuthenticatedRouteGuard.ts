@@ -8,10 +8,11 @@ import {
   type IBaseProtectedAuthenticatedServerComponentPageProps,
   type IBaseProtectedAuthenticatedApiRouteInputs,
 } from "@schemavaults/auth-server-sdk/route_guards";
-import { ServerlessDatabase } from "./auth-db";
+import { ServerlessDatabase, listUserOrganizations } from "./auth-db";
 import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import type { ApiServerId } from "@schemavaults/app-definitions";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
+import type { OrganizationID, UserData } from "@schemavaults/auth-common";
 
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -32,7 +33,10 @@ export async function withAuthenticatedServerComponentRouteGuard(
     {
       route_guard_type: 'authenticated',
       jwt_keys_manager,
-      api_server_id: SCHEMAVAULTS_AUTH_APP_ID
+      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      loadUserOrganizations: async (user: UserData): Promise<readonly OrganizationID[]> => {
+        return await listUserOrganizations(dbh.db, user.uid, user.admin ?? false);
+      }
     })
 }
 
@@ -54,7 +58,10 @@ export async function withAuthenticatedApiRouteGuard(
       route_guard_type: 'authenticated',
       jwt_keys_manager,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
-      custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled
+      custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
+      loadUserOrganizations: async (user: UserData): Promise<readonly OrganizationID[]> => {
+        return await listUserOrganizations(dbh.db, user.uid, user.admin ?? false);
+      }
     }
   );
 }

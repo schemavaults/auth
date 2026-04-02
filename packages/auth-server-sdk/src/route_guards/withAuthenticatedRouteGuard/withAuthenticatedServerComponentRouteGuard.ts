@@ -46,7 +46,7 @@ export interface IWithAuthenticatedServerComponentRouteGuardAdditionalOptions<
   jwt_keys_manager?: IJwtKeyManager;
   api_server_id?: ApiServerId;
   custom_is_authorized_check?: (props: TProps) => Promise<boolean>;
-  loadUserOrganizations?: () => Promise<readonly OrganizationID[]>;
+  loadUserOrganizations?: (user: UserData) => Promise<readonly OrganizationID[]>;
 }
 
 export async function withAuthenticatedServerComponentRouteGuard<
@@ -157,9 +157,9 @@ export async function withAuthenticatedServerComponentRouteGuard<
     redirectToLogin(redirect);
   }
 
-  const loadUserOrganizations: () => Promise<readonly OrganizationID[]> =
+  const loadUserOrganizations: (user: UserData) => Promise<readonly OrganizationID[]> =
     opts?.loadUserOrganizations ??
-    (() => {
+    ((_user: UserData) => {
       const access_token_source = token_sources.find(
         (ts) => ts.type === "access",
       );
