@@ -7,8 +7,6 @@ import { z } from "zod";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
 import type {
   PotentiallyValidTokenSource,
-  OrganizationID,
-  UserData,
 } from "@schemavaults/auth-common";
 import {
   type ApiServerId,
@@ -120,9 +118,6 @@ export class RouteGuardFactory {
     type: RouteGuardType,
     token_sources: readonly PotentiallyValidTokenSource[],
     jwt_audience: ApiServerId,
-    loadUserOrganizations: (
-      user: UserData,
-    ) => Promise<readonly OrganizationID[]>,
   ): Promise<IRouteGuard> {
     if (this.debug) {
       console.log(
@@ -143,25 +138,17 @@ export class RouteGuardFactory {
       );
     }
 
-    const { user, user_organizations } = await decodeJWTsWithKeyManager(
+    const { user } = await decodeJWTsWithKeyManager(
       this.jwt_keys_manager,
       token_sources,
-      loadUserOrganizations,
       jwt_audience,
       this.environment,
       this.debug,
     );
 
-    if (user && !Array.isArray(user_organizations)) {
-      throw new TypeError(
-        "Expected 'user_organizations' to be an array if 'user' was truthy!",
-      );
-    }
-
     const init_opts: InitRouteGuardCheckOptions = {
       user,
       environment: getAppEnvironment(),
-      user_organizations: user_organizations ?? [],
     };
 
     if (this.debug) {
@@ -178,9 +165,6 @@ export class RouteGuardFactory {
     type: RouteGuardType,
     authHeader: string | null,
     jwt_audience: string,
-    loadUserOrganizations: (
-      user: UserData,
-    ) => Promise<readonly OrganizationID[]>,
   ): Promise<IRouteGuard> {
     if (!authHeader || typeof authHeader !== "string") {
       throw new Error("No auth header found");
@@ -201,7 +185,6 @@ export class RouteGuardFactory {
         },
       ],
       jwt_audience,
-      loadUserOrganizations,
     );
   }
 }

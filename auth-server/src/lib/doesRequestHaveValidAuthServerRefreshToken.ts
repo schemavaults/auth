@@ -1,13 +1,12 @@
 import "server-only";
-import type { OrganizationID, UserData } from "@schemavaults/auth-common";
+import type { UserData } from "@schemavaults/auth-common";
 import type { NextRequest } from "next/server";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
-import { listUserOrganizations as listUserOrganizationsFromDatabase, ServerlessDatabase } from "./auth-db";
+import { ServerlessDatabase } from "./auth-db";
 import { RefreshTokenExpiryCookieName, RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
 import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { cookies } from "next/headers";
-import shouldEnableDebug from "@/lib/should-enable-debug";
 
 type RequestCookies = NextRequest['cookies'];
 type NextjsCookiesGetterResult = Awaited<ReturnType<typeof cookies>>;
@@ -15,9 +14,6 @@ type NextjsCookiesGetterResult = Awaited<ReturnType<typeof cookies>>;
 async function doesCookiesStoreHaveValidRefreshToken(
   cookies: RequestCookies | NextjsCookiesGetterResult
 ): Promise<UserData | false> {
-  const environment = getAppEnvironment();
-  const debug: boolean = shouldEnableDebug(environment);
-
   if (!cookies.has(RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_ID))) {
     return false;
   } else if (!cookies.has(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID))) {
@@ -32,15 +28,6 @@ async function doesCookiesStoreHaveValidRefreshToken(
   try {
     await using dbh = ServerlessDatabase.createDBH();
 
-    const loadUserOrganizations = async (user: UserData): Promise<readonly OrganizationID[]> => {
-      return await listUserOrganizationsFromDatabase(
-        dbh.db,
-        user['uid'],
-        user['admin'],
-        debug
-      )
-    };
-
     const route_guard_factory: RouteGuardFactory = new RouteGuardFactory(dbh.db);
     const route_guard: IRouteGuard = await route_guard_factory.createGuardFromTokenSources(
       'authenticated',
@@ -50,7 +37,6 @@ async function doesCookiesStoreHaveValidRefreshToken(
         sourceHint: `From cookie with key '${RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)}'`
       }],
       SCHEMAVAULTS_AUTH_APP_ID,
-      loadUserOrganizations
     );
 
     if (!route_guard.isAccessAllowed() || !route_guard.user) {

@@ -1,7 +1,6 @@
 import { getAppEnvironment } from "@/get-app-environment";
 import {
   decodeJWTs,
-  type OrganizationID,
   type UserData,
   type PotentiallyValidTokenSource,
   userDataSchema,
@@ -27,17 +26,14 @@ import isValidUuid from "@/is-valid-uuid";
 export type IDecodeJWTsWithKeyManagerOutput =
   | {
       user: UserData;
-      user_organizations: readonly OrganizationID[];
     }
   | {
       user: null;
-      user_organizations: null;
     };
 
 export async function decodeJWTsWithKeyManager(
   keys_manager: IJwtKeyManager,
   token_sources: readonly PotentiallyValidTokenSource[],
-  loadUserOrganizations: (user: UserData) => Promise<readonly OrganizationID[]>,
   jwt_audience: string = getSchemavaultsApiServerId(),
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
   debug: boolean = false,
@@ -162,34 +158,17 @@ export async function decodeJWTsWithKeyManager(
 
       return {
         user: null,
-        user_organizations: null,
       };
     }
     const user: UserData = parsed_user.data;
 
-    let user_organizations: readonly OrganizationID[];
-    try {
-      user_organizations = await loadUserOrganizations(user);
-    } catch (e: unknown) {
-      console.error(
-        `[decodeJWTsWithKeyManager] Failed to load user organizations for uid='${user.uid}':`,
-        e,
-      );
-      return {
-        user: null,
-        user_organizations: null,
-      };
-    }
-
     return {
       user,
-      user_organizations,
     };
   }
 
   return {
     user: null,
-    user_organizations: null,
   };
 }
 

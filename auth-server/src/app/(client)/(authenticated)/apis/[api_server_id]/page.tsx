@@ -12,6 +12,7 @@ import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import { OrganizationsRegistry } from "@/lib/auth-db";
+import isUserInOrganization from "@/lib/isUserInOrganization";
 
 interface PageParams {
   params: Promise<{ api_server_id: string }>;
@@ -24,7 +25,6 @@ export default async function ApiServerDetailPage(
     async function ApiServerDetailPageServerComponent({
       dbh,
       user,
-      user_organizations
     }: IProtectedAuthenticatedServerComponentPageProps): Promise<ReactElement> {
       let api_server_id: ApiServerId;
       try {
@@ -55,7 +55,7 @@ export default async function ApiServerDetailPage(
         redirectWithError(403, 'forbidden');
       }
 
-      if (!user.admin && !user_organizations.includes(owner_organization_id)) {
+      if (!user.admin && (await isUserInOrganization(user, owner_organization_id, dbh.db)) === false) {
         redirectWithError(403, 'forbidden');
       }
 
