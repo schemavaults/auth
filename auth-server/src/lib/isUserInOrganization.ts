@@ -13,10 +13,10 @@ import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID
  * @returns false if the user is not a member, or the role name string if they are
  */
 export async function isUserInOrganization(
+  db: Kysely<AuthDatabase>,
   user: UserData,
   organization_id: OrganizationID,
-  db: Kysely<AuthDatabase>,
-): Promise<false | string> {
+): Promise<OrganizationMembershipRoleType | false> {
   if (!organizationIdSchema.safeParse(organization_id).success) {
     throw new TypeError("Invalid organization ID to check if user is a member of!")
   }

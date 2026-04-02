@@ -1,6 +1,6 @@
 import { organizationIdSchema } from "@schemavaults/auth-common";
 import { z } from "zod";
-import { organizationMembershipRoleTypeSchema } from "./organization-membership-role-types";
+import { organizationMembershipRoleTypeSchema } from "@schemavaults/auth-common/organizations";
 
 export const organizationMembershipRoleDefinitionSchema = z
   .object({

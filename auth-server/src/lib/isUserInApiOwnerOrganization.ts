@@ -32,9 +32,10 @@ export default async function isUserInApiOwnerOrganization(
   }
 
   const owner_organization_id: OrganizationID = apiServer.owner_organization_id;
-  return (await isUserInOrganization(
+  const role = await isUserInOrganization(
+    db,
     user,
-    owner_organization_id,
-    db
-  )) !== false;
+    owner_organization_id
+  );
+  return role === 'admin' || role === 'owner' || role === 'member';
 }

@@ -105,12 +105,15 @@ export async function GET_api_server_handler(
       if (!apiServer.public && !user.admin) {
         let authorized: boolean = false;
         if (apiServer.owner_organization_id) {
-          authorized = (await isUserInOrganization(
+          const role = await isUserInOrganization(
+            dbh.db,
             user,
             apiServer.owner_organization_id as OrganizationID,
-            dbh.db,
-          )) !== false;
+          );
+          const canViewApiServer: boolean = role === 'admin' || role === 'owner' || role === 'member';
+          authorized = canViewApiServer;
         }
+
         if (!authorized) {
           return NextResponse.json(
             {

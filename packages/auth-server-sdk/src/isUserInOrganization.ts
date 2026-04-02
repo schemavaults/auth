@@ -3,8 +3,12 @@ import {
   type ApiServerId,
   apiServerIdSchema,
 } from "@schemavaults/app-definitions";
-import type { OrganizationID } from "@schemavaults/auth-common";
-import { organizationIdSchema } from "@schemavaults/auth-common";
+import {
+  isValidOrganizationMembershipRoleType,
+  organizationIdSchema,
+  type OrganizationID,
+  type OrganizationMembershipRoleType,
+} from "@schemavaults/auth-common/organizations";
 
 /**
  * Check if a user is a member of an organization by querying the auth server.
@@ -26,7 +30,7 @@ export async function isUserInOrganization(
   jwks_access_private_key: CryptoKey,
   uid: string,
   organization_id: OrganizationID,
-): Promise<false | string> {
+): Promise<OrganizationMembershipRoleType | false> {
   if (!apiServerIdSchema.safeParse(api_server_id).success) {
     throw new TypeError("Invalid API server ID!");
   }
@@ -74,7 +78,10 @@ export async function isUserInOrganization(
   }
 
   const data = body.data as { role: string | null };
-  if (typeof data.role === "string") {
+  if (
+    typeof data.role === "string" &&
+    isValidOrganizationMembershipRoleType(data.role)
+  ) {
     return data.role;
   }
 

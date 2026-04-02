@@ -2,7 +2,7 @@ import type {
   OrganizationDefinition,
   OrganizationID,
 } from "@schemavaults/auth-common";
-import type { OrganizationMembershipRoleType } from "./organization-membership-role-types";
+import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common";
 import type { OrganizationMemberWithUserData } from "./organization-member-with-user-data";
 import type { OrganizationMembershipRoleDefinition } from "./organization-membership-role-definition";
 import type { DeleteOrganizationResult } from "./organizations-registry";

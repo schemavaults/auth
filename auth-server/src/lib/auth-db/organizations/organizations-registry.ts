@@ -20,7 +20,7 @@ import isValidUuid from "@/lib/is-valid-uuid";
 import {
   isValidOrganizationMembershipRoleType,
   type OrganizationMembershipRoleType,
-} from "./organization-membership-role-types";
+} from "@schemavaults/auth-common";
 import type { OrganizationMemberWithUserData } from "./organization-member-with-user-data";
 import type { OrganizationMembershipRoleDefinition } from "./organization-membership-role-definition";
 import createOrganization from "./create-organization";

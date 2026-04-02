@@ -68,13 +68,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       let owner_organization_id: OrganizationID | null | undefined = newResource.owner_organization_id;
 
     // If owner_organization_id is specified, verify user has access
-    if (owner_organization_id) {
-      const hasAccess = await isUserInOrganization(
+      if (owner_organization_id) {
+        const role = await isUserInOrganization(
+        dbh.db,
         user,
         owner_organization_id satisfies OrganizationID,
-        dbh.db
       );
-      if (!hasAccess && !user.admin) {
+        const hasAccess: boolean = user.admin || role === 'admin' || role === 'owner';
+      if (!hasAccess) {
         return NextResponse.json(
           {
             success: false,

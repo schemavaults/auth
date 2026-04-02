@@ -7,7 +7,7 @@ import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import {
   isValidOrganizationMembershipRoleType,
   type OrganizationMembershipRoleType,
-} from "@/lib/auth-db/organizations/organization-membership-role-types";
+} from "@schemavaults/auth-common";
 import { type OrganizationID, organizationIdSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/lib/is-valid-uuid";
 

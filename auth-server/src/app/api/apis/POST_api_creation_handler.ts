@@ -55,9 +55,9 @@ export default async function POST_api_creation_handler(request: NextRequest): P
       // If owner_organization_id is specified, verify user has access
       if (owner_organization_id) {
         const hasAccess = await isUserInOrganization(
+          dbh.db,
           user,
-          owner_organization_id satisfies OrganizationID,
-          dbh.db
+          owner_organization_id satisfies OrganizationID
         );
         if (!hasAccess && !user.admin) {
           return NextResponse.json(

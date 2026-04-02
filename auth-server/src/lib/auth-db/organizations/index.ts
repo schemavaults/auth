@@ -8,7 +8,13 @@ export type { IOrganizationsRegistry } from "./IOrganizationsRegistry";
 
 export { MAXIMUM_USER_ORGANIZATIONS } from "@schemavaults/auth-common";
 
-export * from "./organization-membership-role-types";
+export {
+  organizationMembershipRoleTypeSchema,
+  organizationMembershipRoleTypes,
+  isValidOrganizationMembershipRoleType
+} from "@schemavaults/auth-common";
+export type { OrganizationMembershipRoleType } from "@schemavaults/auth-common";
+
 export type * from "./organization-membership-role-definition";
 export type * from "./organization-member-with-user-data";
 

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { organizationIdSchema, type OrganizationID } from "@schemavaults/auth-common";
-import { isValidOrganizationMembershipRoleType, type OrganizationMembershipRoleType } from "./organization-membership-role-types";
+import { isValidOrganizationMembershipRoleType, type OrganizationMembershipRoleType } from "@schemavaults/auth-common";
 import isValidUuid from "@/lib/is-valid-uuid";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
