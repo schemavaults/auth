@@ -10,6 +10,10 @@ import {
   type PotentiallyValidTokenSource,
   type UserData,
 } from "@schemavaults/auth-common";
+import type { OrganizationID } from "@schemavaults/auth-common/organizations";
+import isUserInOrganization from "@/isUserInOrganization";
+import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
+import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey/loadJwksAccessPrivateKey";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
 import RouteGuardFactory from "@/route_guards/route-guard-factory";
 import type { NextRequest, NextResponse } from "next/server";
@@ -54,6 +58,7 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
   jwt_keys_manager?: IJwtKeyManager;
   api_server_id?: ApiServerId;
   custom_is_authorized_check?: (props: TRouteInputs) => Promise<boolean>;
+  required_organization?: OrganizationID;
 }
 
 export function withAuthenticatedApiRouteGuard<
@@ -263,6 +268,44 @@ export function withAuthenticatedApiRouteGuard<
         },
         { status: 403 },
       );
+    }
+
+    if (opts?.required_organization) {
+      try {
+        const auth_server_url = getSchemaVaultsAuthServerUri();
+        const jwks_access_private_key = await loadJwksAccessPrivateKey();
+        const org_role = await isUserInOrganization(
+          auth_server_url,
+          api_server_id,
+          jwks_access_private_key,
+          user.uid,
+          opts.required_organization,
+        );
+        if (org_role === false) {
+          return json(
+            {
+              success: false,
+              error: true,
+              message:
+                "User is not a member of the required organization",
+            },
+            { status: 403 },
+          );
+        }
+      } catch (e: unknown) {
+        console.error(
+          "[withAuthenticatedApiRouteGuard] Organization membership check failed: ",
+          e,
+        );
+        return json(
+          {
+            success: false,
+            error: true,
+            message: "Error while checking organization membership",
+          },
+          { status: 500 },
+        );
+      }
     }
 
     const base_api_route_inputs: IBaseProtectedAuthenticatedApiRouteInputs = {

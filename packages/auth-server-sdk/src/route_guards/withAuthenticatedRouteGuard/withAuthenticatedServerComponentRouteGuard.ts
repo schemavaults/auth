@@ -8,6 +8,10 @@ import {
   type PotentiallyValidTokenSource,
   type UserData,
 } from "@schemavaults/auth-common";
+import type { OrganizationID } from "@schemavaults/auth-common/organizations";
+import isUserInOrganization from "@/isUserInOrganization";
+import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
+import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey/loadJwksAccessPrivateKey";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
 import type { ReactElement } from "react";
 import { redirectWithError } from "@/redirect-with-error";
@@ -43,6 +47,7 @@ export interface IWithAuthenticatedServerComponentRouteGuardAdditionalOptions<
   jwt_keys_manager?: IJwtKeyManager;
   api_server_id?: ApiServerId;
   custom_is_authorized_check?: (props: TProps) => Promise<boolean>;
+  required_organization?: OrganizationID;
 }
 
 export async function withAuthenticatedServerComponentRouteGuard<
@@ -195,6 +200,29 @@ export async function withAuthenticatedServerComponentRouteGuard<
           ...additional_custom_server_component_props,
         } as unknown as TProps)
       : (base_server_component_props as unknown as TProps);
+
+  if (opts?.required_organization) {
+    try {
+      const auth_server_url = getSchemaVaultsAuthServerUri();
+      const jwks_access_private_key = await loadJwksAccessPrivateKey();
+      const org_role = await isUserInOrganization(
+        auth_server_url,
+        api_server_id,
+        jwks_access_private_key,
+        user.uid,
+        opts.required_organization,
+      );
+      if (org_role === false) {
+        redirectWithError(redirect, 403, "forbidden");
+      }
+    } catch (e: unknown) {
+      console.error(
+        "[withAuthenticatedServerComponentRouteGuard] Organization membership check failed: ",
+        e,
+      );
+      redirectWithError(redirect, 500, "internal_server_error");
+    }
+  }
 
   if (typeof opts?.custom_is_authorized_check === "function") {
     let is_authorized: boolean = false;
