@@ -9,5 +9,8 @@ export default async function loadUserOrganizationsFromAuthServer(
     auth_server_url,
     access_token,
   );
-  return memberships.map((m) => m.organization_id);
+  const organization_ids = new Set<OrganizationID>(
+    memberships.map((m) => m.organization_id),
+  );
+  return [...organization_ids.values()];
 }
