@@ -24,7 +24,7 @@ jobs:
           bun-version: ${{ inputs.BUN_VERSION }}
       - name: Run Tests with Docker Compose
         run: |
-          bun run cli e2e ${{ inputs.test-suite-name }}
+          bun run cli e2e ${{ inputs.test-suite-name }}${{ runner.debug == '1' && ' --verbose' || '' }}
         working-directory: tests/e2e-auth-tests
       - name: Check if screenshots directory exists
         id: check_screenshots_existence
