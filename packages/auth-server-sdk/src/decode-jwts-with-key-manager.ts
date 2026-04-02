@@ -20,6 +20,7 @@ import getSchemavaultsApiServerId from "./get-schemavaults-api-server-id";
 import {
   decodeJWT as decodeSchemavaultsJwt,
   getKeysetIdFromToken,
+  customJwtPayloadToUserData,
 } from "@schemavaults/jwt";
 import isValidUuid from "@/is-valid-uuid";
 
@@ -117,7 +118,7 @@ export async function decodeJWTsWithKeyManager(
           const { decryption_key, verification_key } = decodingKeys;
 
           try {
-            const user: UserData = await decodeSchemavaultsJwt({
+            const jwtPayload = await decodeSchemavaultsJwt({
               jwt: opts.token,
               type: opts.type,
               audience: opts.jwt_audience,
@@ -126,7 +127,7 @@ export async function decodeJWTsWithKeyManager(
               keyset_id,
               env: environment,
             });
-            return user;
+            return customJwtPayloadToUserData(jwtPayload);
           } catch (e: unknown) {
             console.error("Failed to decode JSON web token: ", e);
             throw new Error("Failed to decode JSON web token!");
