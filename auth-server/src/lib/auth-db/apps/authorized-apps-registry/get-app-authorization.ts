@@ -1,5 +1,5 @@
 import "server-only";
-import { appIdSchema, HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP, isHardcodedAppId } from "@schemavaults/app-definitions";
+import { appIdSchema, isHardcodedAppId, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import { type AuthorizedAppDeclaration, authorizedAppDeclarationSchema } from "./authorized-app-declaration-schema";
 import isValidUuid from "@/lib/is-valid-uuid";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
@@ -10,15 +10,38 @@ export async function getAppAuthorization(
   uid: string,
   app_id: string
 ): Promise<AuthorizedAppDeclaration | null> {
-  if (isHardcodedAppId(app_id) && HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP.has(app_id)) {
-    const hardcoded_app = HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP.get(app_id);
-    if (!hardcoded_app)
-      throw new Error("Matching hardcoded app for 'app_id' has falsy value");
+  // The auth app is always authorized
+  if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
     return {
       uid,
       user_app_authorization_id: crypto.randomUUID(),
       app_id,
       authorized_at: Date.now() - 1,
+    } satisfies AuthorizedAppDeclaration;
+  }
+
+  // Other hardcoded apps require explicit authorization in the authorized_hardcoded_apps table
+  if (isHardcodedAppId(app_id)) {
+    let rows: unknown[];
+    try {
+      rows = await db
+        .selectFrom("authorized_hardcoded_apps")
+        .where("uid", "=", uid)
+        .where("app_id", "=", app_id)
+        .limit(1)
+        .selectAll()
+        .execute();
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error("Failed to query authorized hardcoded apps by uid");
+    }
+    if (rows.length === 0) return null;
+    const row = rows[0] as { user_hardcoded_app_authorization_id: string; app_id: string; uid: string; authorized_at: string };
+    return {
+      user_app_authorization_id: row.user_hardcoded_app_authorization_id,
+      app_id: row.app_id,
+      uid: row.uid,
+      authorized_at: Number.parseInt(row.authorized_at),
     } satisfies AuthorizedAppDeclaration;
   }
 

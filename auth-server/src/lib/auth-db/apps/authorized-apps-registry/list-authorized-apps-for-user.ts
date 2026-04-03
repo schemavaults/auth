@@ -3,7 +3,7 @@ import isValidUuid from "@/lib/is-valid-uuid";
 import { AuthorizedAppDeclaration, authorizedAppDeclarationSchema } from "./authorized-app-declaration-schema";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { HARDCODED_CORE_SCHEMAVAULTS_APPS, type SchemaVaultsApp } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 
 export async function listAuthorizedAppsForUser(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
@@ -72,24 +72,37 @@ export async function listAuthorizedAppsForUser(
     if (!parsed.success) throw parsed.error;
     const authorized_apps: readonly AuthorizedAppDeclaration[] = parsed.data;
 
-    // Also, include the hardcoded apps
-    const fake_authorizations_for_hardcoded: readonly AuthorizedAppDeclaration[] =
-      HARDCODED_CORE_SCHEMAVAULTS_APPS.map(
-        function createFakeAuthorizationForCoreSchemaVaultsApp(
-          hardcoded_app: SchemaVaultsApp,
-        ): AuthorizedAppDeclaration {
-          return {
-            app_id: hardcoded_app.app_id,
-            authorized_at: Date.now(),
-            uid,
-            user_app_authorization_id: crypto.randomUUID(),
-          };
-        },
-      );
+    // Query authorized hardcoded apps from the separate table
+    let authorized_hardcoded_apps: AuthorizedAppDeclaration[] = [];
+    try {
+      const hardcodedRows = await db
+        .selectFrom("authorized_hardcoded_apps")
+        .where("uid", "=", uid)
+        .limit(50)
+        .selectAll()
+        .execute();
+      authorized_hardcoded_apps = hardcodedRows.map((row) => ({
+        app_id: row.app_id,
+        authorized_at: Number.parseInt(String(row.authorized_at)),
+        uid: row.uid,
+        user_app_authorization_id: row.user_hardcoded_app_authorization_id,
+      }));
+    } catch (e: unknown) {
+      console.error("Failed to query authorized hardcoded apps: ", e);
+    }
+
+    // The auth app is always authorized (fake authorization)
+    const auth_app_fake_authorization: AuthorizedAppDeclaration = {
+      app_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      authorized_at: Date.now(),
+      uid,
+      user_app_authorization_id: crypto.randomUUID(),
+    };
 
     return [
       ...authorized_apps,
-      ...fake_authorizations_for_hardcoded,
+      ...authorized_hardcoded_apps,
+      auth_app_fake_authorization,
     ] as const satisfies AuthorizedAppDeclaration[];
   } catch (e: unknown) {
     console.error(e);

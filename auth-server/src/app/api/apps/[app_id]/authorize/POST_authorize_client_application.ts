@@ -2,7 +2,7 @@ import "server-only";
 import type { ResourceCreationResponse } from "@/lib/auth-db/resource-creation-response";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import { type AppId, appIdSchema, isHardcodedAppId } from "@schemavaults/app-definitions";
+import { type AppId, appIdSchema, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import AuthorizedAppsRegistry from "@/lib/auth-db/apps/authorized-apps-registry";
 
 /**
@@ -42,11 +42,11 @@ export async function POST_authorize_client_application(
         );
       }
 
-      if (isHardcodedAppId(app_id) satisfies boolean) {
+      if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
         return NextResponse.json(
           {
             success: false,
-            message: "Cannot authorize a hardcoded app-- already authorized!",
+            message: "The auth app is always authorized and cannot be explicitly authorized",
           } satisfies ResourceCreationResponse,
           {
             status: 403,

@@ -17,7 +17,7 @@ import {
 import type { useRouter } from "next/navigation";
 import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
-import { isHardcodedAppId } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 
 export interface PendingAuthorizationState {
   authorization_code: string;
@@ -205,7 +205,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   // Check if the app requires authorization before redirect
   if (
     opts.app &&
-    !isHardcodedAppId(opts.app.app_id) &&
+    opts.app.app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id &&
     onSuccessfulAuthenticate !== "account-page" &&
     opts.onAppAuthorizationNeeded
   ) {

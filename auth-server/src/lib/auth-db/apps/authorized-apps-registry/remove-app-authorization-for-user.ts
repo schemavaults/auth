@@ -1,6 +1,6 @@
 import "server-only";
 import isValidUuid from "@/lib/is-valid-uuid";
-import { appIdSchema, isHardcodedAppId, type AppId } from "@schemavaults/app-definitions";
+import { appIdSchema, isHardcodedAppId, SCHEMAVAULTS_AUTH_APP_DEFINITION, type AppId } from "@schemavaults/app-definitions";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
@@ -10,9 +10,9 @@ export async function removeAppAuthorizationForUser(
   app_id: AppId,
   debug: boolean = false
 ): Promise<void> {
-  if (isHardcodedAppId(app_id)) {
+  if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
     throw new Error(
-      `Hardcoded app "${app_id}" is fixed as authorized by default`,
+      `The auth app "${app_id}" is always authorized and cannot be de-authorized`,
     );
   }
 
@@ -30,16 +30,22 @@ export async function removeAppAuthorizationForUser(
     throw new TypeError("Received invalid app ID");
   }
 
-  const deleteQuery = db.deleteFrom('authorized_apps')
-    .where('uid', '=', uid)
-    .where('app_id', '=', app_id);
-
   if (debug) {
     console.log(`[removeAppAuthorizationForUser] Attempting to delete app '${app_id}' authorization for user '${uid}'!`)
   }
 
   try {
-    await deleteQuery.executeTakeFirstOrThrow();
+    if (isHardcodedAppId(app_id)) {
+      await db.deleteFrom('authorized_hardcoded_apps')
+        .where('uid', '=', uid)
+        .where('app_id', '=', app_id)
+        .executeTakeFirstOrThrow();
+    } else {
+      await db.deleteFrom('authorized_apps')
+        .where('uid', '=', uid)
+        .where('app_id', '=', app_id)
+        .executeTakeFirstOrThrow();
+    }
   } catch (e: unknown) {
     console.error("[removeAppAuthorizationForUser] Failed to delete app authorization: ", e);
     throw new Error("Failed to delete app authorization!");

@@ -1,7 +1,7 @@
 import "server-only";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import { type AppId, appIdSchema, isHardcodedAppId } from "@schemavaults/app-definitions";
+import { type AppId, appIdSchema, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import AuthorizedAppsRegistry from "@/lib/auth-db/apps/authorized-apps-registry";
 
 /**
@@ -41,7 +41,7 @@ export async function GET_check_app_authorization(
         );
       }
 
-      if (isHardcodedAppId(app_id) satisfies boolean) {
+      if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
         return NextResponse.json({
           success: true,
           authorized: true,
