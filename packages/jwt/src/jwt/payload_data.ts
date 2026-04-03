@@ -4,7 +4,7 @@ import {
   appIdSchema,
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
-import { audienceRefSchema, organizationIdSchema } from "@schemavaults/auth-common";
+import { audienceRefSchema } from "@schemavaults/auth-common";
 
 // Data to hold in the JWT
 export const jwtPayloadSchema = z
@@ -27,7 +27,6 @@ export const jwtPayloadSchema = z
     sig: z.string().min(32).max(4096),
     iss: z.literal(REFRESH_TOKEN_AUDIENCE),
     env: schemaVaultsAppEnvironmentSchema,
-    orgs: organizationIdSchema.array().readonly(),
   })
   .required({
     uid: true,
@@ -42,7 +41,6 @@ export const jwtPayloadSchema = z
     sig: true,
     iss: true,
     env: true,
-    orgs: true,
   })
   .strict()
   .refine((jwt_payload) => {

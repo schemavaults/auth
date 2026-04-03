@@ -11,8 +11,9 @@ import { isHardcodedAppId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
-import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import OrganizationsRegistry from "@/lib/auth-db/organizations";
+import isUserInOrganization from "@/lib/isUserInOrganization";
 
 interface PageParams {
   params: Promise<{ client_app_id: string }>;
@@ -25,7 +26,6 @@ export default async function AppDetailPage(
     async function AppDetailPageServerComponent({
       dbh,
       user,
-      user_organizations
     }: IProtectedAuthenticatedServerComponentPageProps): Promise<ReactElement> {
       let client_app_id: AppId;
       try {
@@ -61,7 +61,14 @@ export default async function AppDetailPage(
         redirectWithError(403, 'forbidden');
       }
 
-      if (!user.admin && !user_organizations.includes(owner_organization_id)) {
+      const role: OrganizationMembershipRoleType | false = await isUserInOrganization(dbh.db, user, owner_organization_id);
+      let canView: boolean = false;
+      if (user.admin) {
+        canView = true;
+      } else if (role === 'admin' || role === 'owner' || role === 'member') {
+        canView = true;
+      }
+      if (!canView) {
         redirectWithError(403, 'forbidden');
       }
 

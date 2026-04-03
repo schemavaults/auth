@@ -44,7 +44,7 @@ export class JWT_Factory {
   private readonly environment: SchemaVaultsAppEnvironment;
   private readonly user_organizations: readonly OrganizationID[];
 
-  constructor(opts: IJWT_Factory_Init_Options) {
+  public constructor(opts: IJWT_Factory_Init_Options) {
     // Save user data
     this.user = opts.user;
 
@@ -142,8 +142,6 @@ export class JWT_Factory {
       }
     }
 
-    const orgs: readonly OrganizationID[] = this.user_organizations;
-
     const generateTokenOptions: GenerateJWTOptions<typeof type> = {
       user: this.user,
       type,
@@ -152,7 +150,6 @@ export class JWT_Factory {
       client_app_id: this.client_app_id,
       jwt_keys: this.jwt_keys satisfies I_JWT_Keys,
       env: this.environment satisfies SchemaVaultsAppEnvironment,
-      orgs: orgs,
     };
 
     const jwt: AuthToken = await generateJWT(generateTokenOptions);

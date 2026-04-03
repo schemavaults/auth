@@ -118,7 +118,7 @@ export function useAutoReacquireDefaultAccessTokens(): void {
       clearInterval(reacquire_timer);
       return;
     };
-  }, [authContext]);
+  }, [defaultAccessTokenAudiences, authContext, debug]);
 }
 
 export default useAutoReacquireDefaultAccessTokens;

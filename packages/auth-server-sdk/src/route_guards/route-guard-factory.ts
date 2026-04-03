@@ -5,7 +5,9 @@ import AuthenticationRequiredRouteGuard from "./authenticated";
 import type { IRouteGuard } from "./IRouteGuard";
 import { z } from "zod";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
-import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
+import type {
+  PotentiallyValidTokenSource,
+} from "@schemavaults/auth-common";
 import {
   type ApiServerId,
   apiServerIdSchema,
@@ -136,26 +138,17 @@ export class RouteGuardFactory {
       );
     }
 
-    const { user, user_organizations, jwt_payload } =
-      await decodeJWTsWithKeyManager(
-        this.jwt_keys_manager,
-        token_sources,
-        jwt_audience,
-        this.environment,
-        this.debug,
-      );
-
-    if (user && !Array.isArray(user_organizations)) {
-      throw new TypeError(
-        "Expected 'user_organizations' to be an array if 'user' was truthy!",
-      );
-    }
+    const { user } = await decodeJWTsWithKeyManager(
+      this.jwt_keys_manager,
+      token_sources,
+      jwt_audience,
+      this.environment,
+      this.debug,
+    );
 
     const init_opts: InitRouteGuardCheckOptions = {
       user,
       environment: getAppEnvironment(),
-      user_organizations: user_organizations ?? [],
-      jwt_payload,
     };
 
     if (this.debug) {

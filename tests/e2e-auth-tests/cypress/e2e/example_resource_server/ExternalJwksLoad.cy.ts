@@ -53,7 +53,7 @@ describe("External JWKS Load", () => {
 
                     // Verify JWKS structure
                     for (const key of response.body.keys) {
-                      expect(typeof key === "object").to.be.true;
+                      expect(typeof key === "object", "Each JWKS key should be an object").to.be.true;
                       expect(key).to.have.property("kty");
                       expect(key).to.have.property("kid");
                       expect(key).to.have.property("alg");

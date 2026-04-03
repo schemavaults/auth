@@ -1,5 +1,4 @@
-import type { OrganizationID } from "@schemavaults/auth-common";
-import type { OrganizationMembershipRoleType } from "./organization-membership-role-types";
+import type { OrganizationID, OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
 
 export type OrganizationMemberWithUserData = {
   membership_declaration_id: string;

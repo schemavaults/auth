@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const organizationMembershipRoleTypes = [
   "owner",
-  "admin",  // For virtual admin memberships in the schemavaults org
+  "admin", // For virtual admin memberships in the schemavaults org
   "member",
 ] as const satisfies readonly string[];
 
@@ -25,5 +25,6 @@ export const organizationMembershipRoleTypeSchema = z.string().refine(
 export function isValidOrganizationMembershipRoleType(
   role: string,
 ): role is OrganizationMembershipRoleType {
+  if (typeof role !== "string") return false;
   return organizationMembershipRoleTypeSchema.safeParse(role).success;
 }

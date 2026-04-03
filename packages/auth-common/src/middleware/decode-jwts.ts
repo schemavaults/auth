@@ -1,6 +1,7 @@
 import type { PotentiallyValidTokenSource } from "./token-source";
 import type { AuthTokenTypes } from "@/token-data";
 import type { DecodeTokenFn } from "./decode-token-type";
+import type { UserData } from "@/user_data";
 
 export interface IDecodeSeveralJwtsInputOptions {
   token_sources: readonly PotentiallyValidTokenSource[];
@@ -8,12 +9,10 @@ export interface IDecodeSeveralJwtsInputOptions {
   jwt_audience: string;
 }
 
-type DecodeTokenOutput = Awaited<ReturnType<DecodeTokenFn>>;
-
 export async function decodeJWTs(
   { token_sources, decodeJWT, jwt_audience }: IDecodeSeveralJwtsInputOptions,
   debug: boolean = false,
-): Promise<DecodeTokenOutput> {
+): Promise<UserData> {
   const n_token_sources: number = token_sources.length;
   if (!Array.isArray(token_sources) || n_token_sources === 0) {
     throw new Error("Did not receive a list of tokens to decode");
@@ -27,34 +26,33 @@ export async function decodeJWTs(
     throw new Error("JWT audience is not a string!");
   }
 
-  const decodeTokenPromises: Promise<DecodeTokenOutput>[] = token_sources.map(
-    function (token: PotentiallyValidTokenSource): Promise<DecodeTokenOutput> {
-      const type: AuthTokenTypes = token.type;
+  const decodeTokenPromises: Promise<UserData>[] = token_sources.map(function (
+    token: PotentiallyValidTokenSource,
+  ): Promise<UserData> {
+    const type: AuthTokenTypes = token.type;
 
-      const decode_promise: Promise<DecodeTokenOutput> = decodeJWT({
-        type,
-        token: token.token,
-        jwt_audience,
-      });
-      return decode_promise;
-    },
-  );
+    const decode_promise: Promise<UserData> = decodeJWT({
+      type,
+      token: token.token,
+      jwt_audience,
+    });
+    return decode_promise;
+  });
 
-  const decodeResults: PromiseSettledResult<DecodeTokenOutput>[] =
+  const decodeResults: PromiseSettledResult<UserData>[] =
     await Promise.allSettled(decodeTokenPromises);
 
   const fulfilledDecodePromises = decodeResults.filter(
     function isFulfilledPromise(
-      result: PromiseSettledResult<DecodeTokenOutput>,
-    ): result is PromiseFulfilledResult<DecodeTokenOutput> {
+      result: PromiseSettledResult<UserData>,
+    ): result is PromiseFulfilledResult<UserData> {
       return result.status === "fulfilled";
     },
   );
 
-  const successfulDecodeResults: readonly DecodeTokenOutput[] =
+  const successfulDecodeResults: readonly UserData[] =
     fulfilledDecodePromises.map(
-      (fulfilled_decode_result): DecodeTokenOutput =>
-        fulfilled_decode_result.value,
+      (fulfilled_decode_result): UserData => fulfilled_decode_result.value,
     );
 
   const n_successful_decode_results: number = successfulDecodeResults.length;
@@ -102,7 +100,7 @@ export async function decodeJWTs(
     n_successful_decode_results >= 1,
     "Expected there to be at least one JWT to have been decoded successfully if this point was reached!",
   );
-  const firstSuccessfulResult: DecodeTokenOutput = successfulDecodeResults[0];
+  const firstSuccessfulResult: UserData = successfulDecodeResults[0];
 
   return firstSuccessfulResult;
 }

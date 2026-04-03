@@ -4,7 +4,7 @@ import type { OrganizationMembershipRoleDefinition } from "./organization-member
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { hardcodedOrgs, type OrganizationDefinition, type OrganizationID, organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
-import type { OrganizationMembershipRoleType } from "./organization-membership-role-types";
+import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
 
 const hardcodedOrganizations = new Map<OrganizationID, OrganizationDefinition>(
   hardcodedOrgs.map(hardcodedOrg => [hardcodedOrg.organization_id, hardcodedOrg])

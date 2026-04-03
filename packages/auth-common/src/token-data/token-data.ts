@@ -1,4 +1,3 @@
-import { organizationIdSchema } from "@/organizations";
 import { z } from "zod";
 
 const validTokenTypes = z.union([z.literal("refresh"), z.literal("access")]);
@@ -12,7 +11,6 @@ export const tokenDataSchema = z
     exp: z.number(),
     token: z.string(),
     aud: z.string(),
-    orgs: organizationIdSchema.array().optional(),
   })
   .required({
     type: true,

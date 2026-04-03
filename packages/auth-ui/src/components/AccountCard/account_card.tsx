@@ -21,6 +21,10 @@ import SignOutButton from "@/components/SignOutButton";
 import ViewFullUserProfileButton from "./view_full_user_profile";
 import ViewAdminDashboardButton from "./view_admin_page_link";
 import {
+  useMyOrganizations,
+  type MyOrganizationMembership,
+} from "./useMyOrganizations";
+import {
   getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
@@ -54,6 +58,19 @@ export function AccountDetailsCard(
   const showLinkToAuthServerAccountPage: boolean =
     !props.isAuthServerAccountPage;
 
+  // Convert preloaded OrganizationDefinitions to MyOrganizationMembership format for SWR initialData
+  const preloadedMemberships: MyOrganizationMembership[] | undefined =
+    props.organizations?.map((org) => ({
+      organization_id: org.organization_id,
+      organization_name: org.name,
+      role: "",
+      created_at: org.created_at,
+    }));
+
+  const { data: memberships } = useMyOrganizations({
+    initialData: props.isAuthServerAccountPage ? preloadedMemberships : undefined,
+  });
+
   return (
     <Card className={cardClassName}>
       <CardHeader>
@@ -71,12 +88,12 @@ export function AccountDetailsCard(
           {props.isAuthServerAccountPage && (
             <div className="flex flex-row items-center justify-start gap-2 flex-wrap">
               <h3 className="text-lg font-bold">Organizations:</h3>
-              {props.organizations && props.organizations.length > 0 ? (
+              {memberships && memberships.length > 0 ? (
                 <>
-                  {props.organizations.map((org) => (
+                  {memberships.map((membership) => (
                     <Link
-                      key={org.organization_id}
-                      href={`/org/${org.organization_id}`}
+                      key={membership.organization_id}
+                      href={`/org/${membership.organization_id}`}
                     >
                       <Button
                         variant="outline"
@@ -84,7 +101,12 @@ export function AccountDetailsCard(
                         className="flex flex-row flex-nowrap gap-2"
                       >
                         <Building2 className="h-4 w-4" />
-                        {org.name}
+                        {membership.organization_name}
+                        {membership.role && (
+                          <span className="text-xs text-muted-foreground">
+                            ({membership.role})
+                          </span>
+                        )}
                       </Button>
                     </Link>
                   ))}
@@ -94,7 +116,7 @@ export function AccountDetailsCard(
                   No organizations
                 </p>
               )}
-              {(!props.organizations || props.organizations.length < MAXIMUM_USER_ORGANIZATIONS) && (
+              {(!memberships || memberships.length < MAXIMUM_USER_ORGANIZATIONS) && (
                 <Link href="/org/new">
                   <Button
                     variant="outline"

@@ -31,7 +31,6 @@ async function isGenerateAndDecodeTokenForMailServerSuccess(
     client_app_id,
     jwt_keys,
     env,
-    orgs: [],
   };
 
   const jwt = await generateJWT(generateOptions);

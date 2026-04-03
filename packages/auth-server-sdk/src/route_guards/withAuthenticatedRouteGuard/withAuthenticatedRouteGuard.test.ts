@@ -7,13 +7,11 @@ import { redirect } from "next/navigation";
 import type { IBaseProtectedAuthenticatedServerComponentPageProps } from "./IBaseProtectedAuthenticatedServerComponentPageProps";
 import type { IBaseProtectedAuthenticatedApiRouteInputs } from "./IBaseProtectedAuthenticatedApiRouteInputs";
 
-interface CustomApiRouteInputs
-  extends IBaseProtectedAuthenticatedApiRouteInputs {
+interface CustomApiRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs {
   custom_prop: string;
 }
 
-interface CustomServerComponentProps
-  extends IBaseProtectedAuthenticatedServerComponentPageProps {
+interface CustomServerComponentProps extends IBaseProtectedAuthenticatedServerComponentPageProps {
   custom_prop: string;
 }
 
@@ -22,7 +20,10 @@ describe("withAuthenticatedRouteGuard", () => {
     test("can initialize API route guard", async () => {
       const route_guard: (req: NextRequest) => Promise<NextResponse> =
         withAuthenticatedApiRouteGuard(
-          async (inputs): Promise<NextResponse> => {
+          async (
+            inputs: IBaseProtectedAuthenticatedApiRouteInputs,
+          ): Promise<NextResponse> => {
+            void inputs;
             return NextResponse.json(
               {
                 success: true,

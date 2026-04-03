@@ -114,7 +114,7 @@ export default function login(
                     // Wait for page to be interactive
                     cy.get("body", { timeout: 10000 }).should("be.visible");
                     cy.log("Account page loaded successfully");
-                    cy.is_authenticated().should("equal", true);
+                    cy.is_authenticated().should("equal", true, "User should be authenticated after login, token exchange, and account page load");
                     return cy.wrap(true, { log: false });
                   } else {
                     cy.log(

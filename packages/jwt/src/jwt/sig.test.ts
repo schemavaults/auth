@@ -31,7 +31,6 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
       uid,
       type,
       env,
-      orgs: [],
     });
     expect(sig).toBeString();
     expect(sig.length).toBeGreaterThan(0);
@@ -50,7 +49,6 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
       uid,
       type,
       env,
-      orgs: [],
     });
 
     const result: boolean = await verifyJWTSignature({
@@ -86,7 +84,6 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
       uid,
       type,
       env,
-      orgs: [],
     });
     expect(sig).toBeString();
     expect(sig.length).toBeGreaterThan(0);

@@ -1,4 +1,8 @@
-export { organizationIdSchema, isValidOrganizationID, RESERVED_ORGANIZATION_IDS } from "./organization_id";
+export {
+  organizationIdSchema,
+  isValidOrganizationID,
+  RESERVED_ORGANIZATION_IDS,
+} from "./organization_id";
 export type { OrganizationID } from "./organization_id";
 
 export { organizationDefinitionSchema } from "./organization_definition";
@@ -35,3 +39,10 @@ export type {
   UserPendingInvitation,
   OrganizationInvitationWithUserData,
 } from "./organization_invitation";
+
+export {
+  organizationMembershipRoleTypes,
+  organizationMembershipRoleTypeSchema,
+  isValidOrganizationMembershipRoleType,
+} from "./organization-membership-role-type";
+export type { OrganizationMembershipRoleType } from "./organization-membership-role-type";

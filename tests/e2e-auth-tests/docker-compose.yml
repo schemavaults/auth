@@ -1,5 +1,6 @@
 services:
   schemavaults-e2e-auth-tests:
+    image: schemavaults/e2e-auth-tests:local
     build:
       context: ../..
       dockerfile: tests/e2e-auth-tests/Dockerfile
@@ -30,6 +31,7 @@ services:
       ]
 
   example-nextjs-resource-server:
+    image: schemavaults/example-nextjs-resource-server:local
     build:
       context: ../..
       dockerfile: tests/example-nextjs-resource-server/Dockerfile
@@ -54,6 +56,7 @@ services:
       - e2e_with_resource_server
 
   schemavaults-auth:
+    image: schemavaults/auth-server:local
     build:
       context: ../..
       dockerfile: auth-server/Dockerfile
@@ -82,6 +85,7 @@ services:
       - 80:80
 
   postgres-db:
+    image: schemavaults/postgres-db:local
     build:
       context: ../..
       dockerfile: auth-postgres-db/Dockerfile

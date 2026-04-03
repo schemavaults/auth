@@ -30,7 +30,6 @@ async function isGenerateAndDecodeTokenForStorageRegionSuccess(
     client_app_id: SCHEMAVAULTS_CLI.app_id,
     jwt_keys,
     env,
-    orgs: [],
   };
 
   const jwt = await generateJWT(generateOptions);

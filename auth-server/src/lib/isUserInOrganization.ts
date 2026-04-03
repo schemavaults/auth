@@ -7,16 +7,16 @@ import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID
 
 /**
  * Check if a user is a member of an organization
- * @param uid - The user's unique identifier
+ * @param user - The user data
  * @param organization_id - The organization ID to check membership for
  * @param db - The database connection
- * @returns true if the user is a member of the organization
+ * @returns false if the user is not a member, or the role name string if they are
  */
 export async function isUserInOrganization(
+  db: Kysely<AuthDatabase>,
   user: UserData,
   organization_id: OrganizationID,
-  db: Kysely<AuthDatabase>,
-): Promise<boolean> {
+): Promise<OrganizationMembershipRoleType | false> {
   if (!organizationIdSchema.safeParse(organization_id).success) {
     throw new TypeError("Invalid organization ID to check if user is a member of!")
   }
@@ -28,11 +28,15 @@ export async function isUserInOrganization(
   }
 
   const organizationsRegistry = new OrganizationsRegistry(db);
-  const userMembershipIds = await organizationsRegistry.listUserOrganizationMembershipIds(
+  const userMemberships: readonly OrganizationMembershipRoleDefinition[] = await organizationsRegistry.listUserOrganizationMemberships(
     uid,
     admin ?? false
   );
-  return userMembershipIds.includes(organization_id);
+  const membership = userMemberships.find(m => m.organization_id === organization_id);
+  if (!membership) {
+    return false;
+  }
+  return membership.role;
 }
 
 export default isUserInOrganization;

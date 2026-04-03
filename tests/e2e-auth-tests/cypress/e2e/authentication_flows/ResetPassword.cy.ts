@@ -62,7 +62,7 @@ describe("Reset Password", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       // Step 1: Create a user to reset password for
       cy.create_and_login_as_regular_user(credentials).then((success) => {
-        expect(success).to.be.true;
+        expect(success, "create_and_login_as_regular_user should succeed").to.be.true;
         cy.logout();
 
         // Step 2: Get a password reset token via the test-only endpoint
@@ -72,7 +72,7 @@ describe("Reset Password", () => {
           failOnStatusCode: false,
         }).then((response) => {
           expect(response.status).to.equal(200);
-          expect(response.body.success).to.be.true;
+          expect(response.body.success, "Password reset token endpoint should return success").to.be.true;
           expect(response.body.token).to.be.a("string");
 
           const token: string = response.body.token;
@@ -106,7 +106,7 @@ describe("Reset Password", () => {
 
           // Step 5: Login with the new password
           cy.login(credentials.email, newPassword).then((loginSuccess) => {
-            expect(loginSuccess).to.be.true;
+            expect(loginSuccess, "Login with new password should succeed after reset").to.be.true;
             cy.url().should("include", "/account");
           });
         });
@@ -144,7 +144,7 @@ describe("Reset Password", () => {
 
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((success) => {
-        expect(success).to.be.true;
+        expect(success, "create_and_login_as_regular_user should succeed").to.be.true;
         cy.logout();
 
         // Get a reset token
@@ -207,7 +207,7 @@ describe("Reset Password", () => {
 
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((success) => {
-        expect(success).to.be.true;
+        expect(success, "create_and_login_as_regular_user should succeed").to.be.true;
         cy.logout();
 
         // Get token and reset password

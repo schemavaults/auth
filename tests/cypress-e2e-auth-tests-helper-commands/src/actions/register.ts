@@ -9,7 +9,7 @@ export default function register(
   password: string,
   invite_code?: string,
 ): Cypress.Chainable<number> {
-  cy.is_authenticated().should("be.false");
+  cy.is_authenticated().should("be.false", "User should not be authenticated before registration");
 
   cy.intercept({
     method: "POST",

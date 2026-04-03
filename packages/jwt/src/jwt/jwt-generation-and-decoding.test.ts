@@ -2,11 +2,7 @@ import { describe, it, expect } from "bun:test";
 
 import { type GenerateJWTOptions, generateJWT } from "./generate";
 import { decodeJWT } from "./decode";
-import {
-  isValidOrganizationID,
-  type OrganizationID,
-  type UserData,
-} from "@schemavaults/auth-common";
+import { type UserData } from "@schemavaults/auth-common";
 import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
@@ -35,7 +31,6 @@ describe("JWT Generation & Decoding", () => {
       client_app_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
       jwt_keys,
       env,
-      orgs: [],
     };
 
     const jwt = await generateJWT(generateOptions);
@@ -48,7 +43,6 @@ describe("JWT Generation & Decoding", () => {
 
     expect(decoded.aud).toBe(audience);
     expect(decoded.sub).toBe(user.uid);
-    expect(decoded.orgs).toBeArrayOfSize(0);
   });
 
   it("should generate and decode an access token JWT for auth server", async () => {
@@ -70,7 +64,6 @@ describe("JWT Generation & Decoding", () => {
       client_app_id,
       jwt_keys,
       env,
-      orgs: [],
     };
 
     const jwt = await generateJWT(generateOptions);
@@ -85,46 +78,6 @@ describe("JWT Generation & Decoding", () => {
     expect(decoded.sub).toBe(user.uid);
     expect(decoded.aud).toBe(audience);
     expect(decoded.app).toBe(client_app_id);
-  });
-
-  it("organization IDs are preserved after generating and decoding an access token JWT", async () => {
-    const user = new MockUser();
-    const now = Date.now();
-
-    const client_app_id = crypto.randomUUID();
-    const audience = crypto.randomUUID();
-
-    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: audience,
-    });
-
-    const organization_id: OrganizationID = "my-organization";
-
-    expect(isValidOrganizationID(organization_id)).toBeTrue();
-
-    const generateOptions: GenerateJWTOptions<"access"> = {
-      type: "access",
-      user,
-      audience,
-      iat: now,
-      client_app_id,
-      jwt_keys,
-      env,
-      orgs: [organization_id],
-    };
-
-    const jwt = await generateJWT(generateOptions);
-    const decoded = await decodeJWT({
-      jwt: jwt.token,
-      type: "access",
-      audience,
-      jwt_keys,
-      env,
-    });
-
-    expect(Array.isArray(decoded.orgs)).toBeTrue();
-    expect(decoded.orgs.length).toBe(1);
-    expect(decoded.orgs[0]).toBe(organization_id);
   });
 
   it("should throw an error attempting to generate refresh token for non-auth server audience", async () => {
@@ -148,7 +101,6 @@ describe("JWT Generation & Decoding", () => {
       client_app_id: random_app_id,
       jwt_keys: jwt_keys_for_auth_app, // intentionally mismatched keyset <=> audience to create error
       env,
-      orgs: [],
     };
 
     let errorThrown: boolean = false;
@@ -183,7 +135,6 @@ describe("JWT Generation & Decoding", () => {
       client_app_id: random_app_id,
       jwt_keys: jwt_keys_for_mismatched_audience,
       env,
-      orgs: [],
     };
 
     let errorThrown: boolean = false;
@@ -220,7 +171,6 @@ describe("JWT Generation & Decoding", () => {
       client_app_id: random_app_id,
       jwt_keys: jwt_keys_for_auth_server,
       env,
-      orgs: [],
     };
 
     let errorThrown: boolean = false;

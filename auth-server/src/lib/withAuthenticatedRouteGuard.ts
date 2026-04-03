@@ -10,7 +10,6 @@ import {
 } from "@schemavaults/auth-server-sdk/route_guards";
 import { ServerlessDatabase } from "./auth-db";
 import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
-import type { ApiServerId } from "@schemavaults/app-definitions";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 
 import { type NextRequest, NextResponse } from "next/server";
@@ -29,10 +28,11 @@ export async function withAuthenticatedServerComponentRouteGuard(
     {
       dbh
     },
-    'authenticated',
-    undefined,
-    jwt_keys_manager,
-    (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID)
+    {
+      route_guard_type: 'authenticated',
+      jwt_keys_manager,
+      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+    })
 }
 
 export interface IAuthenticatedApiRouteGuardInputs extends IBaseProtectedAuthenticatedApiRouteInputs {
@@ -49,9 +49,11 @@ export async function withAuthenticatedApiRouteGuard(
   return _withAuthenticatedApiRouteGuard<IAuthenticatedApiRouteGuardInputs>(
     api_route_handler,
     { dbh },
-    'authenticated',
-    undefined,
-    jwt_keys_manager,
-    (): ApiServerId => SCHEMAVAULTS_AUTH_APP_ID
+    {
+      route_guard_type: 'authenticated',
+      jwt_keys_manager,
+      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
+    }
   );
 }

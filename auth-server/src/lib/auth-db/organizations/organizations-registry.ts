@@ -20,7 +20,7 @@ import isValidUuid from "@/lib/is-valid-uuid";
 import {
   isValidOrganizationMembershipRoleType,
   type OrganizationMembershipRoleType,
-} from "./organization-membership-role-types";
+} from "@schemavaults/auth-common";
 import type { OrganizationMemberWithUserData } from "./organization-member-with-user-data";
 import type { OrganizationMembershipRoleDefinition } from "./organization-membership-role-definition";
 import createOrganization from "./create-organization";
@@ -172,6 +172,14 @@ export class OrganizationsRegistry
   ): Promise<readonly OrganizationID[]> {
     const memberships = await this.listUserOrganizationMemberships(uid, admin);
     return memberships.map((membership) => membership.organization_id);
+  }
+
+  public async listUserOrganizations(
+    uid: string,
+    admin: boolean = false
+  ): Promise<readonly OrganizationID[]> {
+    const memberships = await this.listUserOrganizationMemberships(uid, admin);
+    return [...new Set(memberships.map((membership) => membership.organization_id))];
   }
 
   public async listOrganizationMembers(

@@ -10,11 +10,7 @@ import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
 import { type CustomJWTPayload, jwtPayloadSchema } from "./payload_data";
-import type {
-  AuthTokenTypes,
-  OrganizationID,
-  UserData,
-} from "@schemavaults/auth-common";
+import type { AuthTokenTypes, UserData } from "@schemavaults/auth-common";
 import {
   apiServerIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
@@ -33,13 +29,15 @@ interface BaseDecodeJWTOptions<T extends AuthTokenTypes> {
   env: SchemaVaultsAppEnvironment;
 }
 
-interface DecodeJWTWithAllKeysOptions<T extends AuthTokenTypes>
-  extends BaseDecodeJWTOptions<T> {
+interface DecodeJWTWithAllKeysOptions<
+  T extends AuthTokenTypes,
+> extends BaseDecodeJWTOptions<T> {
   jwt_keys: I_JWT_Keys;
 }
 
-interface DecodeJWTWithOnlyRequiredKeysOptions<T extends AuthTokenTypes>
-  extends BaseDecodeJWTOptions<T> {
+interface DecodeJWTWithOnlyRequiredKeysOptions<
+  T extends AuthTokenTypes,
+> extends BaseDecodeJWTOptions<T> {
   decryption_key: CryptoKey;
   verification_key: CryptoKey;
   keyset_id: string;
@@ -227,17 +225,11 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       exp: number;
       aud: string | string[];
       iss: string;
-      orgs: OrganizationID[];
     }
   > = { ...decoded.payload };
   delete withoutJWTspecific.iat;
   delete withoutJWTspecific.exp;
 
-  if (!Array.isArray(withoutJWTspecific.orgs)) {
-    throw new Error(
-      "Expected JWT to have an 'orgs' property, representing organizations that user is a member of!",
-    );
-  }
   const parsedPayload =
     await jwtPayloadSchema.safeParseAsync(withoutJWTspecific);
   if (!parsedPayload.success) {

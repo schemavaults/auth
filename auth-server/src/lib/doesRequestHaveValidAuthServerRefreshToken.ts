@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { ServerlessDatabase } from "./auth-db";
 import { RefreshTokenExpiryCookieName, RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { cookies } from "next/headers";
 
@@ -25,20 +25,33 @@ async function doesCookiesStoreHaveValidRefreshToken(
     return false;
   }
 
-  await using dbh = ServerlessDatabase.createDBH();
-  const route_guard_factory: RouteGuardFactory = new RouteGuardFactory(dbh.db);
-  const route_guard: IRouteGuard = await route_guard_factory.createGuardFromTokenSources('authenticated', [{
-    type: 'refresh',
-    token: refresh_token,
-    sourceHint: `From cookie with key '${RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)}'`
-  }], SCHEMAVAULTS_AUTH_APP_ID);
+  try {
+    await using dbh = ServerlessDatabase.createDBH();
 
-  if (!route_guard.isAccessAllowed() || !route_guard.user) {
+    const route_guard_factory: RouteGuardFactory = new RouteGuardFactory(dbh.db);
+    const route_guard: IRouteGuard = await route_guard_factory.createGuardFromTokenSources(
+      'authenticated',
+      [{
+        type: 'refresh',
+        token: refresh_token,
+        sourceHint: `From cookie with key '${RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)}'`
+      }],
+      SCHEMAVAULTS_AUTH_APP_ID,
+    );
+
+    if (!route_guard.isAccessAllowed() || !route_guard.user) {
+      return false;
+    }
+
+    const user: UserData = route_guard.user;
+    return user;
+  } catch (e: unknown) {
+    console.error(
+      "[doesCookiesStoreHaveValidRefreshToken] Failed to check if user is already authenticated, treating as not authenticated:",
+      e
+    );
     return false;
   }
-
-  const user: UserData = route_guard.user;
-  return user;
 }
 
 export async function doesRequestHaveValidAuthServerRefreshToken(req: NextRequest): Promise<UserData | false> {

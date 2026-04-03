@@ -1,4 +1,7 @@
-export { ERROR_MESSAGE_CATALOG, isValidErrorId } from "./auth-error-message-catalog";
+export {
+  ERROR_MESSAGE_CATALOG,
+  isValidErrorId,
+} from "./auth-error-message-catalog";
 export type { SchemaVaultsAuthErrorId } from "./auth-error-message-catalog";
 
 export { userDataSchema, type UserData } from "./user_data";
@@ -59,6 +62,9 @@ export {
   organizationInvitationStatusTypes,
   organizationInvitationStatusSchema,
   organizationInvitationSchema,
+  organizationMembershipRoleTypes,
+  organizationMembershipRoleTypeSchema,
+  isValidOrganizationMembershipRoleType,
 } from "./organizations";
 export type {
   OrganizationID,
@@ -70,6 +76,7 @@ export type {
   OrganizationInvitation,
   UserPendingInvitation,
   OrganizationInvitationWithUserData,
+  OrganizationMembershipRoleType,
 } from "./organizations";
 
 export { MaximumBrowserCookieSize } from "./MaximumBrowserCookieSize";

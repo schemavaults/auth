@@ -10,8 +10,9 @@ import { type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefiniti
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
-import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { type OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import { OrganizationsRegistry } from "@/lib/auth-db";
+import isUserInOrganization from "@/lib/isUserInOrganization";
 
 interface PageParams {
   params: Promise<{ api_server_id: string }>;
@@ -24,7 +25,6 @@ export default async function ApiServerDetailPage(
     async function ApiServerDetailPageServerComponent({
       dbh,
       user,
-      user_organizations
     }: IProtectedAuthenticatedServerComponentPageProps): Promise<ReactElement> {
       let api_server_id: ApiServerId;
       try {
@@ -55,7 +55,15 @@ export default async function ApiServerDetailPage(
         redirectWithError(403, 'forbidden');
       }
 
-      if (!user.admin && !user_organizations.includes(owner_organization_id)) {
+
+      const role: OrganizationMembershipRoleType | false = await isUserInOrganization(dbh.db, user, owner_organization_id);
+      let canView: boolean = false;
+      if (user.admin) {
+        canView = true;
+      } else if (role === 'admin' || role === 'owner' || role === 'member') {
+        canView = true;
+      }
+      if (!canView) {
         redirectWithError(403, 'forbidden');
       }
 

@@ -28,7 +28,7 @@ function onSuperuserAlreadyExistsError(credentials: {
 }
 
 export default function createAndLoginAsSuperuser(): Cypress.Chainable<boolean> {
-  cy.is_authenticated().should("be.false");
+  cy.is_authenticated().should("be.false", "User should not be authenticated before superuser login");
 
   const credentials = {
     email: Cypress.env("PRIVATE_SUPERUSER_EMAIL"),

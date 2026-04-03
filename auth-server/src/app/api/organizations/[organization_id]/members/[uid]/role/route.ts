@@ -4,9 +4,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import {
-  type OrganizationMembershipRoleType,
-} from "@/lib/auth-db/organizations/organization-membership-role-types";
+import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common";
 import PATCH_member_role_handler from "./PATCH_member_role_handler";
 import GET_member_role_handler from "./GET_member_role_handler";
 

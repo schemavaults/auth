@@ -56,6 +56,9 @@ export type { SchemaVaultsAppEnvironment } from "./get-app-environment";
 export { decodeJWTsWithKeyManager } from "./decode-jwts-with-key-manager";
 export type { IDecodeJWTsWithKeyManagerOutput } from "./decode-jwts-with-key-manager";
 
+// Check user organization membership from auth server (for resource servers)
+export { isUserInOrganization } from "./isUserInOrganization";
+
 // Re-export user data types
 export { userDataSchema } from "@schemavaults/auth-common";
 export type { UserData } from "@schemavaults/auth-common";

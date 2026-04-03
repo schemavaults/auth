@@ -11,6 +11,16 @@ on:
         description: "What version of Bun should we use?"
         required: true
         type: string
+      skip-docker-build:
+        description: "Skip Docker image builds and use pre-built images from artifacts"
+        required: false
+        type: boolean
+        default: false
+      load-resource-server-image:
+        description: "Whether to also load the resource server Docker image"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   Run-E2E-Test-Suite:
@@ -18,14 +28,41 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
+
+      - name: Download core Docker images
+        if: ${{ inputs.skip-docker-build }}
+        uses: actions/download-artifact@v8
+        with:
+          name: e2e-docker-images-core
+          path: /tmp/docker-images
+
+      - name: Download resource server Docker image
+        if: ${{ inputs.skip-docker-build && inputs.load-resource-server-image }}
+        uses: actions/download-artifact@v8
+        with:
+          name: e2e-docker-images-resource-server
+          path: /tmp/docker-images
+
+      - name: Load Docker images
+        if: ${{ inputs.skip-docker-build }}
+        run: |
+          for f in /tmp/docker-images/*.tar.gz; do
+            echo "Loading $f..."
+            docker load < "$f"
+          done
+          echo "Loaded images:"
+          docker images
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.BUN_VERSION }}
+
       - name: Run Tests with Docker Compose
         run: |
-          bun run cli e2e ${{ inputs.test-suite-name }}
+          bun run cli e2e ${{ inputs.test-suite-name }}${{ runner.debug == '1' && ' --verbose' || '' }}${{ inputs.skip-docker-build && ' --skip-build' || '' }}
         working-directory: tests/e2e-auth-tests
+
       - name: Check if screenshots directory exists
         id: check_screenshots_existence
         run: |
@@ -35,6 +72,7 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
         if: always()
+
       - name: Upload screenshots of failing tests
         uses: actions/upload-artifact@v6
         with:

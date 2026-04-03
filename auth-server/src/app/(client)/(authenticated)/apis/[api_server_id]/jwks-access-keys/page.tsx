@@ -9,8 +9,9 @@ import JwksAccessKeysPageView from "./jwks-access-keys-page-view";
 import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER, type SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
-import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
+import isUserInOrganization from "@/lib/isUserInOrganization";
 import { JwksAccessKeysRegistry, type JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
 
 interface PageParams {
@@ -24,7 +25,6 @@ export default async function JwksAccessKeysPage(
     async function JwksAccessKeysPageServerComponent({
       dbh,
       user,
-      user_organizations
     }: IProtectedAuthenticatedServerComponentPageProps): Promise<ReactElement> {
       let api_server_id: ApiServerId;
       try {
@@ -63,7 +63,14 @@ export default async function JwksAccessKeysPage(
         redirectWithError(403, 'forbidden');
       }
 
-      if (!user.admin && !user_organizations.includes(owner_organization_id)) {
+      const role: OrganizationMembershipRoleType | false = await isUserInOrganization(dbh.db, user, owner_organization_id);
+      let canView: boolean = false;
+      if (user.admin) {
+        canView = true;
+      } else if (role === 'admin' || role === 'owner') {
+        canView = true;
+      }
+      if (!canView) {
         console.warn("[JwksAccessKeysPage] Blocking access - user does not appear to be in the owner organization!")
         redirectWithError(403, 'forbidden');
       }

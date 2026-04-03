@@ -8,7 +8,13 @@ export type { IOrganizationsRegistry } from "./IOrganizationsRegistry";
 
 export { MAXIMUM_USER_ORGANIZATIONS } from "@schemavaults/auth-common";
 
-export * from "./organization-membership-role-types";
+export {
+  organizationMembershipRoleTypeSchema,
+  organizationMembershipRoleTypes,
+  isValidOrganizationMembershipRoleType
+} from "@schemavaults/auth-common";
+export type { OrganizationMembershipRoleType } from "@schemavaults/auth-common";
+
 export type * from "./organization-membership-role-definition";
 export type * from "./organization-member-with-user-data";
 
@@ -30,3 +36,4 @@ export { countUserRealMemberships } from './count-user-real-memberships';
 export { hasUserExceededMaximumOrgMemberships } from './has-user-exceeded-maximum-org-memberships';
 export { listAllOrganizations } from './list-all-organizations';
 export { listUserOrganizationMemberships } from './list-user-organization-memberships';
+export { listUserOrganizations } from './list-user-organizations';
