@@ -35,7 +35,7 @@ function LaunchButton(
     variant="outline"
     size="sm"
     disabled={disabled}
-    className="flex flex-row flex-nowrap gap-2"
+    className="flex flex-row flex-nowrap gap-2 items-center justify-start"
   >
     <ExternalLink className="h-4 w-4" />
     Launch
