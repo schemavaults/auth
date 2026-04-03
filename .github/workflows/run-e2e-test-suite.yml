@@ -58,6 +58,9 @@ jobs:
         with:
           bun-version: ${{ inputs.BUN_VERSION }}
 
+      - name: Install Dependencies
+        run: bun install
+
       - name: Run Tests with Docker Compose
         run: |
           bun run cli e2e ${{ inputs.test-suite-name }}${{ runner.debug == '1' && ' --verbose' || '' }}${{ inputs.skip-docker-build && ' --skip-build' || '' }}
