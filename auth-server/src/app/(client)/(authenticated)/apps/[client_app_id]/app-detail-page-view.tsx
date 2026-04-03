@@ -25,6 +25,31 @@ export interface AppDetailPageViewProps {
   current_environment: SchemaVaultsAppEnvironment;
 }
 
+function LaunchButton(
+  { domain, disabled }: {
+    domain: { domain: string; environment: string; created_at: number;[key: string]: unknown },
+    disabled: boolean
+  }
+): ReactElement {
+  const button = (<Button
+    variant="outline"
+    size="sm"
+    disabled={disabled}
+    className="flex flex-row flex-nowrap gap-2"
+  >
+    <ExternalLink className="h-4 w-4" />
+    Launch
+  </Button>)
+
+  if (disabled) { return button; }
+
+  return (
+    <a href={domain.domain} target="_blank" rel="noopener noreferrer">
+      { button }
+    </a>
+  )
+}
+
 function DomainRow({ domain, dateKey, current_environment }: { domain: { domain: string; environment: string; created_at: number; [key: string]: unknown }; dateKey: string; current_environment: SchemaVaultsAppEnvironment }) {
   const environmentMismatch = domain.environment !== current_environment;
   const requiresHttps = domain.environment === "staging" || domain.environment === "production";
@@ -44,24 +69,7 @@ function DomainRow({ domain, dateKey, current_environment }: { domain: { domain:
         <p className="text-xs text-muted-foreground">
           {new Date(domain.created_at).toLocaleDateString()}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          asChild={!disabled}
-        >
-          {disabled ? (
-            <span>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Launch
-            </span>
-          ) : (
-            <a href={domain.domain} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Launch
-            </a>
-          )}
-        </Button>
+        <LaunchButton domain={domain} disabled={disabled} />
       </div>
     </div>
   );
