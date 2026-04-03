@@ -23,7 +23,7 @@ export interface OrganizationMembersCardProps {
   cardDescription?: string;
   cardClassName?: string;
   preloaded?: readonly OrganizationMemberTableData[];
-  inviteMember: (
+  inviteMember?: (
     inviteMemberFormSubmissionData: InviteMemberSubmitData,
   ) => Promise<void>;
 }
@@ -39,6 +39,8 @@ export function OrganizationMembersCard(
   const [inviteMemberDialogOpen, setInviteMemberDialogOpen] =
     useState<boolean>(false);
 
+  const canInvite = !!props.inviteMember;
+
   return (
     <InviteMemberDialogDispatchContext.Provider
       value={setInviteMemberDialogOpen}
@@ -52,18 +54,21 @@ export function OrganizationMembersCard(
           <OrganizationMembersTable
             organization_id={props.organization_id}
             preloaded_members={props.preloaded}
+            showInviteButton={canInvite}
           />
         </CardContent>
         {/*<CardFooter>
         <div className="flex flex-row items-start justify-start gap-2"></div>
       </CardFooter>*/}
       </Card>
-      <InviteMemberDialog
-        open={inviteMemberDialogOpen}
-        onOpenChange={setInviteMemberDialogOpen}
-        organization_id={props.organization_id}
-        onSubmit={props.inviteMember}
-      />
+      {canInvite && (
+        <InviteMemberDialog
+          open={inviteMemberDialogOpen}
+          onOpenChange={setInviteMemberDialogOpen}
+          organization_id={props.organization_id}
+          onSubmit={props.inviteMember!}
+        />
+      )}
     </InviteMemberDialogDispatchContext.Provider>
   );
 }

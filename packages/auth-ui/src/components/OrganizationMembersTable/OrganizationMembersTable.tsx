@@ -12,11 +12,13 @@ import useSWR from "swr";
 export interface OrganizationMembersDatatableProps {
   organization_id: OrganizationID;
   preloaded_members?: readonly OrganizationMemberTableData[];
+  showInviteButton?: boolean;
 }
 
 export function OrganizationMembersTable({
   organization_id,
   preloaded_members,
+  showInviteButton = true,
 }: OrganizationMembersDatatableProps): ReactElement {
   const listOrganizationMembersEndpoint = `/api/organizations/${organization_id}/members`;
 
@@ -91,7 +93,7 @@ export function OrganizationMembersTable({
         email_verified: false,
         membership_created_at: true,
       }}
-      HeaderButtons={InviteMemberDialogTriggerButton}
+      HeaderButtons={showInviteButton ? InviteMemberDialogTriggerButton : undefined}
       datatypeLabel="Member"
       searchColumn={["email"]}
     />

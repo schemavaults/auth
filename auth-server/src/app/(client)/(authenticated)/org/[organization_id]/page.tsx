@@ -14,8 +14,9 @@ import type { ServerRuntime } from "next";
 import {
   type OrganizationDefinition,
   type OrganizationID,
+  type OrganizationMembershipRoleType,
   organizationIdSchema,
-} from "@schemavaults/auth-common";
+} from "@schemavaults/auth-common/organizations";
 import { redirect } from "next/navigation";
 import type { OrganizationMemberTableData } from "@schemavaults/auth-ui";
 import {
@@ -66,15 +67,20 @@ async function PreloadedOrgPage(
   // Check access: user must be admin OR member of the organization
   // Also determine if user is an owner of this organization
   let isOrgOwner = false;
+  let userRole: OrganizationMembershipRoleType | undefined = undefined;
   if (user.admin) {
     isOrgOwner = true;
+    const userMemberships = await registry.listUserOrganizationMemberships(user.uid, false);
+    const userMembership = userMemberships.find(m => m.organization_id === organization_id);
+    userRole = userMembership?.role ?? "admin";
   } else {
     const userMemberships = await registry.listUserOrganizationMemberships(user.uid, false);
     const userMembership = userMemberships.find(m => m.organization_id === organization_id);
     if (!userMembership) {
       redirectWithError(403, 'forbidden')
     }
-    isOrgOwner = userMembership?.role === "owner" || userMembership?.role === 'admin';
+    userRole = userMembership.role;
+    isOrgOwner = userMembership.role === "owner" || userMembership.role === 'admin';
   }
 
   let organization: OrganizationDefinition;
@@ -118,6 +124,7 @@ async function PreloadedOrgPage(
       preloaded_apps={preloaded_apps}
       preloaded_api_servers={preloaded_api_servers}
       isOrgOwner={isOrgOwner}
+      userRole={userRole}
     />
   );
 }

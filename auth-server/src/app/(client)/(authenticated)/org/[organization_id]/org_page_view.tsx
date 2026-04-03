@@ -15,7 +15,7 @@ import {
 import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import PageContainer from "@/components/PageContainer";
-import type { InviteMemberSubmitData, OrganizationDefinition } from "@schemavaults/auth-common";
+import type { InviteMemberSubmitData, OrganizationDefinition, OrganizationMembershipRoleType } from "@schemavaults/auth-common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, useToast } from "@schemavaults/ui";
 import uuidSync from "@/lib/uuid/uuidSync";
 
@@ -25,17 +25,21 @@ export interface OrgPageViewProps {
   preloaded_apps: PreloadedAppsTableDataWithDomainRefs;
   preloaded_api_servers: PreloadedApiServersTableData;
   isOrgOwner: boolean;
+  userRole?: OrganizationMembershipRoleType;
 }
 
-function OrgTitleCard({ organization }: Pick<OrgPageViewProps, 'organization'>): ReactElement {
+function OrgTitleCard({ organization, userRole }: Pick<OrgPageViewProps, 'organization' | 'userRole'>): ReactElement {
   return (
     <Card>
       <CardHeader>
         <CardTitle>{ organization.name }</CardTitle>
       </CardHeader>
       <CardContent>
-        <CardDescription>
-          Organization ID: <span className="font-bold">{organization.organization_id}</span>
+        <CardDescription className="flex flex-col gap-1">
+          <span>Organization ID: <span className="font-bold">{organization.organization_id}</span></span>
+          {userRole && (
+            <span>Your Role: <span className="font-bold capitalize">{userRole}</span></span>
+          )}
         </CardDescription>
       </CardContent>
     </Card>
@@ -48,6 +52,7 @@ export default function OrgPageView({
   preloaded_apps,
   preloaded_api_servers,
   isOrgOwner,
+  userRole,
 }: OrgPageViewProps): ReactElement {
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
@@ -55,13 +60,13 @@ export default function OrgPageView({
 
   return (
     <PageContainer>
-      <OrgTitleCard organization={organization} />
+      <OrgTitleCard organization={organization} userRole={userRole} />
 
       <OrganizationMembersCard
         organization_id={organization.organization_id}
         cardClassName={"w-full"}
         preloaded={preloaded_members}
-        inviteMember={async (data: InviteMemberSubmitData) => {
+        inviteMember={isOrgOwner ? async (data: InviteMemberSubmitData) => {
           try {
             const response = await fetch(
               `/api/organizations/${organization.organization_id}/invitations`,
@@ -98,13 +103,15 @@ export default function OrgPageView({
                 error instanceof Error ? error.message : "An unknown error occurred",
             });
           }
-        }}
+        } : undefined}
       />
 
-      <SentInvitationsCard
-        organization_id={organization.organization_id}
-        cardClassName="w-full"
-      />
+      {isOrgOwner && (
+        <SentInvitationsCard
+          organization_id={organization.organization_id}
+          cardClassName="w-full"
+        />
+      )}
 
       <AppsCard
         queryType="org"
