@@ -23,6 +23,7 @@
     "build": "turbo build",
     "build:server": "bun run build --filter @schemavaults/auth-server",
     "build:packages": "bun run build --filter=\"./packages/*\"",
+    "build:cli": "turbo build:cli",
     "test": "turbo test",
     "lint": "turbo lint",
     "lint:packages": "bun run lint --filter=\"./packages/*\"",

@@ -62,8 +62,36 @@ jobs:
           path: /tmp/e2e-resource-server-image.tar.gz
           retention-days: 1
 
+  Build-E2E-Auth-Tests-CLI:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          bun install
+
+      - name: Build CLI
+        run: |
+          bun run build:cli --filter @schemavaults/e2e-auth-tests
+
+      - name: Upload built CLI artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-auth-tests-cli.js
+          path: tests/e2e-auth-tests/dist/e2e-auth-tests-cli.js
+          retention-days: 1
+
   Run-Authentication-Flows-E2E-Tests:
-    needs: Build-Core-Docker-Images
+    needs:
+      - Build-Core-Docker-Images
+      - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
@@ -71,7 +99,9 @@ jobs:
       skip-docker-build: true
 
   Run-Resource-Management-E2E-Tests:
-    needs: Build-Core-Docker-Images
+    needs:
+      - Build-Core-Docker-Images
+      - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
@@ -79,7 +109,9 @@ jobs:
       skip-docker-build: true
 
   Run-Superuser-E2E-Tests:
-    needs: Build-Core-Docker-Images
+    needs:
+      - Build-Core-Docker-Images
+      - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
@@ -90,6 +122,7 @@ jobs:
     needs:
       - Build-Core-Docker-Images
       - Build-Resource-Server-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
@@ -98,7 +131,9 @@ jobs:
       load-resource-server-image: true
 
   Run-Miscellaneous-E2E-Tests:
-    needs: Build-Core-Docker-Images
+    needs:
+      - Build-Core-Docker-Images
+      - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}

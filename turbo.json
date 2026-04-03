@@ -6,6 +6,11 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
       "persistent": false
     },
+    "build:cli": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "persistent": false
+    },
     "test": {
       "dependsOn": ["^build"],
       "outputs": [],

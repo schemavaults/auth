@@ -58,12 +58,11 @@ jobs:
         with:
           bun-version: ${{ inputs.BUN_VERSION }}
 
-      - name: Install Dependencies
-        run: bun install
-
-      - name: Build E2E CLI
-        run: bun run build:cli
-        working-directory: tests/e2e-auth-tests
+      - name: Download e2e-auth-tests-cli.js
+        uses: actions/download-artifact@v8
+        with:
+          name: e2e-auth-tests-cli.js
+          path: tests/e2e-auth-tests/dist/e2e-auth-tests-cli.js
 
       - name: Run Tests with Docker Compose
         run: |
