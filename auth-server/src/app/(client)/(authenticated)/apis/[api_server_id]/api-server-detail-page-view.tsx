@@ -6,7 +6,7 @@ import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { DeleteApiServerDialog } from "@schemavaults/auth-ui";
-import { Trash2 } from "lucide-react";
+import { Trash2, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -73,14 +73,16 @@ export default function ApiServerDetailPageView({
           )}
           <DetailRow label="Public" value={api_server.public ? "Yes" : "No"} />
           <DetailRow label="Created At" value={new Date(api_server.created_at).toLocaleDateString()} />
-          <div className="pt-4">
-            <Link
-              href={`/apis/${api_server.api_server_id}/jwks-access-keys`}
-              className="text-sm text-primary underline hover:no-underline"
-            >
-              JWKS Access Keys
-            </Link>
-          </div>
+          {isOrgOwner && (
+            <div className="pt-4">
+              <Link href={`/apis/${api_server.api_server_id}/jwks-access-keys`}>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <KeyRound className="h-4 w-4" />
+                  Manage Server Secrets
+                </Button>
+              </Link>
+            </div>
+          )}
         </CardContent>
       </Card>
 
