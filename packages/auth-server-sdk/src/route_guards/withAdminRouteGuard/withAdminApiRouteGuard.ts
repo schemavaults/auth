@@ -1,18 +1,22 @@
-import type { ApiServerId } from "@schemavaults/app-definitions";
 import {
-  initDefaultJwtKeyManagerForAuthenticatedRouteGuard,
   type TProtectedAuthenticatedApiRoute,
   withAuthenticatedApiRouteGuard,
   type IBaseProtectedAuthenticatedApiRouteInputs,
 } from "@/route_guards/withAuthenticatedRouteGuard";
 import type { NextRequest, NextResponse } from "next/server";
-import type { IJwtKeyManager } from "@/JwtKeyManager";
-import { IWithAuthenticatedApiRouteGuardAdditionalOptions } from "../withAuthenticatedRouteGuard/withAuthenticatedApiRouteGuard";
+import type { IWithAuthenticatedApiRouteGuardAdditionalOptions } from "../withAuthenticatedRouteGuard/withAuthenticatedApiRouteGuard";
 
 type TAdditionalRouteInputs<
   TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs =
     IBaseProtectedAuthenticatedApiRouteInputs,
 > = Omit<TRouteInputs, keyof IBaseProtectedAuthenticatedApiRouteInputs>;
+
+export interface IWithAdminApiRouteGuardAdditionalOptions extends Omit<
+  IWithAuthenticatedApiRouteGuardAdditionalOptions,
+  "route_guard_type"
+> {
+  route_guard_type?: "admin";
+}
 
 export function withAdminApiRouteGuard<
   TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs =
@@ -22,7 +26,7 @@ export function withAdminApiRouteGuard<
   additional_custom_api_route_inputs:
     | TAdditionalRouteInputs<TRouteInputs>
     | undefined = undefined,
-  opts?: IWithAuthenticatedApiRouteGuardAdditionalOptions,
+  opts?: IWithAdminApiRouteGuardAdditionalOptions,
 ): (req: NextRequest) => Promise<NextResponse> {
   return withAuthenticatedApiRouteGuard<TRouteInputs>(
     api_route_handler,

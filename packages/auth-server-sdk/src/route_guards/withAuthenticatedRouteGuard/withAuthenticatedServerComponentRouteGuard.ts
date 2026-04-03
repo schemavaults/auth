@@ -179,6 +179,10 @@ export async function withAuthenticatedServerComponentRouteGuard<
     redirectWithError(redirect, 403, "forbidden");
   }
 
+  if (!user.admin && route_guard_type === "admin") {
+    redirectWithError(redirect, 403, "forbidden");
+  }
+
   if (typeof server_component !== "function") {
     throw new TypeError(
       "Expected 'server_component' passed to withAuthenticatedServerComponentRouteGuard to be a function",

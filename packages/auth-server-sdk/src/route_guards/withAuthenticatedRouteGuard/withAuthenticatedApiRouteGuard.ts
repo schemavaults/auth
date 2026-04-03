@@ -270,6 +270,17 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
+    if (!user.admin && route_guard_type === "admin") {
+      return json(
+        {
+          success: false,
+          error: true,
+          message: "You must be an admin to use this resource",
+        },
+        { status: 403 },
+      );
+    }
+
     if (opts?.required_organization) {
       try {
         const auth_server_url = getSchemaVaultsAuthServerUri();
@@ -286,8 +297,7 @@ export function withAuthenticatedApiRouteGuard<
             {
               success: false,
               error: true,
-              message:
-                "User is not a member of the required organization",
+              message: "User is not a member of the required organization",
             },
             { status: 403 },
           );
