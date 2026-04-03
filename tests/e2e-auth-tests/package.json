@@ -22,7 +22,8 @@
     "open": "bun run cy:open",
     "cy:open": "cypress open",
     "e2e": "cypress run",
-    "cli": "bun run ./e2e-auth-tests-cli.ts",
+    "build:cli": "bun build ./e2e-auth-tests-cli.ts --outfile ./dist/e2e-auth-tests-cli.js --target node",
+    "cli": "bun run ./dist/e2e-auth-tests-cli.js",
     "cy:install": "cypress install",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   }

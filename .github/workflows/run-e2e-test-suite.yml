@@ -61,6 +61,10 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
+      - name: Build E2E CLI
+        run: bun run build:cli
+        working-directory: tests/e2e-auth-tests
+
       - name: Run Tests with Docker Compose
         run: |
           bun run cli e2e ${{ inputs.test-suite-name }}${{ runner.debug == '1' && ' --verbose' || '' }}${{ inputs.skip-docker-build && ' --skip-build' || '' }}
