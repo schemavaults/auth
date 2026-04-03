@@ -62,7 +62,18 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: e2e-auth-tests-cli.js
-          path: tests/e2e-auth-tests/dist/e2e-auth-tests-cli.js
+          path: tests/e2e-auth-tests/dist
+
+      - name: Verify e2e-auth-tests-cli.js was downloaded
+        run: |
+          CLI_PATH="tests/e2e-auth-tests/dist/e2e-auth-tests-cli.js"
+          if [ ! -f "$CLI_PATH" ]; then
+            echo "::error::Expected $CLI_PATH to exist and be a file"
+            echo "Listing contents of tests/e2e-auth-tests/dist/:"
+            ls -laR tests/e2e-auth-tests/dist/ || echo "dist/ directory does not exist"
+            exit 1
+          fi
+          echo "✓ $CLI_PATH exists and is a file"
 
       - name: Run Tests with Docker Compose
         run: |
