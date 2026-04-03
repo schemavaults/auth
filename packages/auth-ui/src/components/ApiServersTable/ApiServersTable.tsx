@@ -33,9 +33,11 @@ export interface ApiServersDatatableProps {
 function ApiServersTableHeaderButtons({
   queryType,
   showConnectAppToApi,
+  isOrgOwner,
 }: {
   queryType: ListApiServersQueryType;
   showConnectAppToApi?: boolean;
+  isOrgOwner?: boolean;
 }) {
   const onOpenChangeCreateApi = useContext(
     CreateApiServerDialogOpenDispatchContext,
@@ -46,7 +48,7 @@ function ApiServersTableHeaderButtons({
 
   return (
     <>
-      {(queryType === "all" || queryType === "org") && (
+      {(queryType === "all" || (queryType === "org" && isOrgOwner)) && (
         <CreateApiServerDialogTrigger onOpenChange={onOpenChangeCreateApi} />
       )}
       {(queryType === "all" || showConnectAppToApi) && (
@@ -78,9 +80,9 @@ export function ApiServersTable({
 
   const HeaderButtons: FC = useMemo(() => {
     return function ApiServersTableHeaderButtonsWithQueryType() {
-      return <ApiServersTableHeaderButtons queryType={queryType} showConnectAppToApi={showConnectAppToApi} />;
+      return <ApiServersTableHeaderButtons queryType={queryType} showConnectAppToApi={showConnectAppToApi} isOrgOwner={isOrgOwner} />;
     };
-  }, [queryType, showConnectAppToApi]);
+  }, [queryType, showConnectAppToApi, isOrgOwner]);
 
   // Assert that 'owner_organization_id' field is present from server
   useMemo(() => {

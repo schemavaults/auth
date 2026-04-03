@@ -52,18 +52,29 @@ export default async function POST_api_creation_handler(request: NextRequest): P
 
       let owner_organization_id: OrganizationID | null | undefined = newResource.owner_organization_id;
 
-      // If owner_organization_id is specified, verify user has access
+      // If owner_organization_id is specified, verify user has owner/admin role
       if (owner_organization_id) {
-        const hasAccess = await isUserInOrganization(
+        const role = await isUserInOrganization(
           dbh.db,
           user,
           owner_organization_id satisfies OrganizationID
         );
-        if (!hasAccess && !user.admin) {
+        if (!role && !user.admin) {
           return NextResponse.json(
             {
               success: false,
               message: "You must be a member of the organization to create API servers for it",
+            } satisfies ResourceCreationResponse,
+            {
+              status: 403,
+            },
+          );
+        }
+        if (role && role !== "owner" && role !== "admin" && !user.admin) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "You must be an owner or admin of the organization to create API servers for it",
             } satisfies ResourceCreationResponse,
             {
               status: 403,
