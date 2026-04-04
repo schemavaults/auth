@@ -69,11 +69,15 @@ export {
   organizationDefinitionSchema,
   isValidOrganizationID,
   SCHEMAVAULTS_ORGANIZATION_ID,
-} from "@schemavaults/auth-common";
+  isValidOrganizationMembershipRoleType,
+  organizationMembershipRoleTypes,
+  organizationMembershipRoleTypeSchema,
+} from "@schemavaults/auth-common/organizations";
 export type {
   OrganizationID,
   OrganizationDefinition,
-} from "@schemavaults/auth-common";
+  OrganizationMembershipRoleType,
+} from "@schemavaults/auth-common/organizations";
 
 // Re-export app types
 export type {
