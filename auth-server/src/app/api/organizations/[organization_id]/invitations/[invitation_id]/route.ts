@@ -21,7 +21,7 @@ import {
 import { z } from "zod";
 import type { ServerRuntime } from "next";
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
 class ExceededMembershipLimitError extends Error {}

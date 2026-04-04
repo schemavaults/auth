@@ -18,7 +18,7 @@ import {
 import type { ServerRuntime } from "next";
 import { z } from "zod";
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface RouteContext {

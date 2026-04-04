@@ -75,4 +75,4 @@ export default async function RegisterPage(props: {
   );
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";

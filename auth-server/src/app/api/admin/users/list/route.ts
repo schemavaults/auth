@@ -8,7 +8,7 @@ import {
 import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
 export const dynamic = "force-dynamic"; // defaults to auto
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 
 
 async function GET_list_users_handler({ user, dbh }: IProtectedAdminApiRouteProps): Promise<NextResponse> {

@@ -8,4 +8,4 @@ export type { ListAppDomainsResponse } from './GET_list_app_domains';
 
 export const dynamic = "force-dynamic";
 
-export const runtime: ServerRuntime = "edge"
+export const runtime: ServerRuntime = "nodejs"

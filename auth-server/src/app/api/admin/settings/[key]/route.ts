@@ -10,7 +10,7 @@ import {
   type ServerSettingKey,
 } from "@/lib/auth-db/server-settings";
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface PatchSettingRequestBody {

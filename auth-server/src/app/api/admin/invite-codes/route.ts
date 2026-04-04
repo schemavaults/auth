@@ -5,7 +5,7 @@ import type { ServerRuntime } from "next";
 import { type NextRequest, NextResponse } from "next/server";
 import GET_list_invite_codes from "./GET_list_invite_codes";
 
-export const runtime: ServerRuntime = "edge"
+export const runtime: ServerRuntime = "nodejs"
 export const dynamic = "force-dynamic"; // defaults to auto
 
 export async function POST(req: NextRequest): Promise<NextResponse> {

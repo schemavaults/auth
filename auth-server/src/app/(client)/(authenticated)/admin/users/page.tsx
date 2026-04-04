@@ -47,5 +47,5 @@ async function UsersServerComponent(): Promise<ReactElement> {
 
 export default UsersServerComponent;
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -33,5 +33,5 @@ export default async function AdminTracesServerComponent(): Promise<ReactElement
   return await withAdminServerComponentRouteGuard(PreloadedAdminTracesPage);
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";

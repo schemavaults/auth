@@ -37,5 +37,5 @@ export default async function InviteCodesServerComponent(): Promise<ReactElement
   return await withAdminServerComponentRouteGuard(PreloadedInviteCodesPage);
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";

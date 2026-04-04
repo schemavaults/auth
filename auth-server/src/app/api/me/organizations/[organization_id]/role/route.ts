@@ -8,7 +8,7 @@ import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations";
 import { organizationIdSchema, type OrganizationID } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ organization_id: string }> };

@@ -38,4 +38,4 @@ export const dynamicParams: boolean = false;
 
 export const revalidate: boolean = false;
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";

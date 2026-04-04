@@ -7,4 +7,4 @@ import type { ServerRuntime } from "next";
 export { GET, DELETE, OPTIONS };
 
 export const dynamic = "force-dynamic";
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";

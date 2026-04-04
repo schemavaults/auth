@@ -13,4 +13,4 @@ export default async function ResetPasswordPage(props: {
   return <ResetPasswordForm token={token} />;
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";

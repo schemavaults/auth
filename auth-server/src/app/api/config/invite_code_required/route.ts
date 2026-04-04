@@ -29,5 +29,5 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }, { status: 200 })
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";

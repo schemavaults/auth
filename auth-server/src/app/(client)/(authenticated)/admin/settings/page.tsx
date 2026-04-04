@@ -30,5 +30,5 @@ export default async function AdminSettingsServerComponent(): Promise<ReactEleme
   return await withAdminServerComponentRouteGuard(PreloadedAdminSettingsPage);
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -40,4 +40,4 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   );
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
