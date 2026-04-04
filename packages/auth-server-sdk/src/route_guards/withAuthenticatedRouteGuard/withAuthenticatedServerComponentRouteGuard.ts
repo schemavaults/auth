@@ -2,14 +2,20 @@ import {
   type ApiServerId,
   SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
+  apiServerIdSchema,
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
+  organizationIdSchema,
+  userDataSchema,
   type PotentiallyValidTokenSource,
   type UserData,
 } from "@schemavaults/auth-common";
-import type { OrganizationID } from "@schemavaults/auth-common/organizations";
-import isUserInOrganization from "@/isUserInOrganization";
+import type {
+  OrganizationID,
+  OrganizationMembershipRoleType,
+} from "@schemavaults/auth-common/organizations";
+import isUserInOrganizationFromAuthServer from "@/isUserInOrganization";
 import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
 import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey/loadJwksAccessPrivateKey";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
@@ -48,6 +54,10 @@ export interface IWithAuthenticatedServerComponentRouteGuardAdditionalOptions<
   api_server_id?: ApiServerId;
   custom_is_authorized_check?: (props: TProps) => Promise<boolean>;
   required_organization?: OrganizationID;
+  custom_is_user_in_organization?: (
+    user: UserData,
+    org_id: OrganizationID,
+  ) => Promise<OrganizationMembershipRoleType | false>;
 }
 
 export async function withAuthenticatedServerComponentRouteGuard<
@@ -79,21 +89,27 @@ export async function withAuthenticatedServerComponentRouteGuard<
     throw new TypeError("Expected 'redirect' to be a function");
   }
 
-  const api_server_id: ApiServerId | undefined =
-    opts?.api_server_id ?? getSchemavaultsApiServerId();
+  let extracted_api_server_id: ApiServerId;
   try {
-    if (typeof api_server_id !== "string") {
-      throw new TypeError(
-        "Expected result of 'getApiServerId' to be a string!",
+    const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
+      opts?.api_server_id ?? getSchemavaultsApiServerId(),
+    );
+    if (!parsed_api_server_id.success) {
+      console.error(
+        "[withAuthenticatedServerComponentRouteGuard] getApiServerId() failed with bad ID: ",
+        parsed_api_server_id.error,
       );
+      throw parsed_api_server_id.error;
     }
+    extracted_api_server_id = parsed_api_server_id.data;
   } catch (e: unknown) {
     console.error(
-      "[withAuthenticatedServerComponentRouteGuard] getApiServerId() failed: ",
+      "[withAuthenticatedServerComponentRouteGuard] Failed to load API server ID: ",
       e,
     );
     redirectWithError(redirect, 500, "server_misconfiguration");
   }
+  const api_server_id: ApiServerId = extracted_api_server_id;
 
   const jwt_keys_manager: IJwtKeyManager =
     opts?.jwt_keys_manager ??
@@ -175,6 +191,10 @@ export async function withAuthenticatedServerComponentRouteGuard<
   }
   const user: UserData = route_guard.user;
 
+  if (user.disabled) {
+    return redirectWithError(redirect, 403, "account_disabled");
+  }
+
   if (!route_guard.isAccessAllowed()) {
     redirectWithError(redirect, 403, "forbidden");
   }
@@ -190,10 +210,55 @@ export async function withAuthenticatedServerComponentRouteGuard<
   }
   const ProtectedAuthenticatedPageServerComponent = server_component;
 
+  async function isUserInOrganization(
+    user: UserData,
+    org_id: OrganizationID,
+  ): Promise<OrganizationMembershipRoleType | false> {
+    if (!(await userDataSchema.safeParseAsync(user)).success) {
+      throw new TypeError(
+        "Invalid user data object to lookup organization role for!",
+      );
+    } else if (!(await organizationIdSchema.safeParseAsync(org_id)).success) {
+      throw new TypeError("Invalid organization ID to check user's role for!");
+    }
+
+    const custom_is_user_in_organization = opts?.custom_is_user_in_organization;
+
+    if (
+      api_server_id === SCHEMAVAULTS_AUTH_APP_ID &&
+      typeof custom_is_user_in_organization !== "function"
+    ) {
+      throw new TypeError(
+        "A 'custom_is_user_in_organization' method must be passed to route guard when used for @schemavaults/auth-server!",
+      );
+    }
+
+    if (typeof custom_is_user_in_organization === "function") {
+      const org_role: OrganizationMembershipRoleType | false =
+        await custom_is_user_in_organization(user, org_id);
+      return org_role;
+    }
+
+    const auth_server_url = getSchemaVaultsAuthServerUri();
+    const jwks_access_private_key = await loadJwksAccessPrivateKey();
+
+    // this is not the auth-server! we need to ask the auth-server if user is in org
+    const org_role: OrganizationMembershipRoleType | false =
+      await isUserInOrganizationFromAuthServer(
+        auth_server_url,
+        api_server_id,
+        jwks_access_private_key,
+        user.uid,
+        org_id,
+      );
+    return org_role;
+  }
+
   const base_server_component_props: IBaseProtectedAuthenticatedServerComponentPageProps =
     {
       user,
       environment,
+      isUserInOrganization,
     };
 
   const final_server_component_props: TProps =
@@ -207,13 +272,8 @@ export async function withAuthenticatedServerComponentRouteGuard<
 
   if (opts?.required_organization) {
     try {
-      const auth_server_url = getSchemaVaultsAuthServerUri();
-      const jwks_access_private_key = await loadJwksAccessPrivateKey();
       const org_role = await isUserInOrganization(
-        auth_server_url,
-        api_server_id,
-        jwks_access_private_key,
-        user.uid,
+        user,
         opts.required_organization,
       );
       if (org_role === false) {

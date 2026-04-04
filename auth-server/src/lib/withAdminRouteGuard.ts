@@ -1,4 +1,6 @@
 import "server-only";
+import type { ReactElement } from "react";
+import type { NextRequest, NextResponse } from "next/server";
 import {
   withAdminServerComponentRouteGuard as _withAdminServerComponentRouteGuard,
   withAdminApiRouteGuard as _withAdminApiRouteGuard,
@@ -10,9 +12,7 @@ import {
 import ServerlessDatabase from "./auth-db/serverless-database";
 import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
-
-import type { ReactElement } from "react";
-import type { NextRequest, NextResponse } from "next/server";
+import isUserInOrganization from "./isUserInOrganization";
 
 export interface IProtectedAdminServerComponentPageProps extends IBaseProtectedAdminServerComponentPageProps {
   dbh: ServerlessDatabase;
@@ -31,6 +31,7 @@ export async function withAdminServerComponentRouteGuard(
       custom_is_authorized_check: async (props): Promise<boolean> => props.user.admin === true,
       jwt_keys_manager,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
     }
   )
 }
@@ -51,6 +52,7 @@ export async function withAdminApiRouteGuard(
       custom_is_authorized_check: async (props) => props.user.admin === true,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
       jwt_keys_manager,
+      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
     }
   );
 }

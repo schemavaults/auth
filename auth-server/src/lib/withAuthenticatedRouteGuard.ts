@@ -11,7 +11,7 @@ import {
 import { ServerlessDatabase } from "./auth-db";
 import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
-
+import isUserInOrganization from "./isUserInOrganization";
 import { type NextRequest, NextResponse } from "next/server";
 
 export interface IProtectedAuthenticatedServerComponentPageProps extends IBaseProtectedAuthenticatedServerComponentPageProps {
@@ -32,6 +32,7 @@ export async function withAuthenticatedServerComponentRouteGuard(
       route_guard_type: 'authenticated',
       jwt_keys_manager,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
     })
 }
 
@@ -54,6 +55,7 @@ export async function withAuthenticatedApiRouteGuard(
       jwt_keys_manager,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
       custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
+      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
     }
   );
 }

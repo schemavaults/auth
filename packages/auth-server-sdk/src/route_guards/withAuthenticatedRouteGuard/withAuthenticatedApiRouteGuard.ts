@@ -7,11 +7,16 @@ import {
 import {
   type AccessToken,
   accessTokenDataSchema,
+  organizationIdSchema,
   type PotentiallyValidTokenSource,
   type UserData,
+  userDataSchema,
 } from "@schemavaults/auth-common";
-import type { OrganizationID } from "@schemavaults/auth-common/organizations";
-import isUserInOrganization from "@/isUserInOrganization";
+import type {
+  OrganizationID,
+  OrganizationMembershipRoleType,
+} from "@schemavaults/auth-common/organizations";
+import isUserInOrganizationFromAuthServer from "@/isUserInOrganization";
 import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
 import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey/loadJwksAccessPrivateKey";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
@@ -59,6 +64,10 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
   api_server_id?: ApiServerId;
   custom_is_authorized_check?: (props: TRouteInputs) => Promise<boolean>;
   required_organization?: OrganizationID;
+  custom_is_user_in_organization?: (
+    user: UserData,
+    org_id: OrganizationID,
+  ) => Promise<OrganizationMembershipRoleType | false>;
 }
 
 export function withAuthenticatedApiRouteGuard<
@@ -259,6 +268,17 @@ export function withAuthenticatedApiRouteGuard<
     }
     const user: UserData = route_guard.user;
 
+    if (user.disabled) {
+      return json(
+        {
+          success: false,
+          error: true,
+          message: "Your account is disabled!",
+        },
+        { status: 403 },
+      );
+    }
+
     if (!route_guard.isAccessAllowed() || !route_guard.user) {
       return json(
         {
@@ -281,17 +301,57 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
-    if (opts?.required_organization) {
-      try {
-        const auth_server_url = getSchemaVaultsAuthServerUri();
-        const jwks_access_private_key = await loadJwksAccessPrivateKey();
-        const org_role = await isUserInOrganization(
+    async function isUserInOrganization(
+      user: UserData,
+      org_id: OrganizationID,
+    ): Promise<OrganizationMembershipRoleType | false> {
+      if (!(await userDataSchema.safeParseAsync(user)).success) {
+        throw new TypeError(
+          "Invalid user data object to lookup organization role for!",
+        );
+      } else if (!(await organizationIdSchema.safeParseAsync(org_id)).success) {
+        throw new TypeError(
+          "Invalid organization ID to check user's role for!",
+        );
+      }
+
+      const custom_is_user_in_organization =
+        opts?.custom_is_user_in_organization;
+
+      if (
+        api_server_id === SCHEMAVAULTS_AUTH_APP_ID &&
+        typeof custom_is_user_in_organization !== "function"
+      ) {
+        throw new TypeError(
+          "A 'custom_is_user_in_organization' method must be passed to route guard when used for @schemavaults/auth-server!",
+        );
+      }
+
+      if (typeof custom_is_user_in_organization === "function") {
+        const org_role: OrganizationMembershipRoleType | false =
+          await custom_is_user_in_organization(user, org_id);
+        return org_role;
+      }
+
+      const auth_server_url = getSchemaVaultsAuthServerUri();
+      const jwks_access_private_key = await loadJwksAccessPrivateKey();
+
+      // this is not the auth-server! we need to ask the auth-server if user is in org
+      const org_role: OrganizationMembershipRoleType | false =
+        await isUserInOrganizationFromAuthServer(
           auth_server_url,
           api_server_id,
           jwks_access_private_key,
           user.uid,
-          opts.required_organization,
+          org_id,
         );
+      return org_role;
+    }
+
+    if (opts?.required_organization) {
+      try {
+        const org_role: OrganizationMembershipRoleType | false =
+          await isUserInOrganization(user, opts.required_organization);
         if (org_role === false) {
           return json(
             {
@@ -322,6 +382,7 @@ export function withAuthenticatedApiRouteGuard<
       req,
       user,
       environment,
+      isUserInOrganization,
     };
 
     const final_route_inputs: TRouteInputs =
