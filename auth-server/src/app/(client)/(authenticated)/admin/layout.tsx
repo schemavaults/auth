@@ -4,6 +4,7 @@ import redirectWithError from "@/lib/redirect-with-error";
 import type { ReactElement, ReactNode } from "react";
 import { type IProtectedAdminServerComponentPageProps, withAdminServerComponentRouteGuard } from "@/lib/withAdminRouteGuard";
 import { connection } from "next/server";
+import type { ServerRuntime } from "next";
 
 export default async function AdminPathsRouteGuardServerComponent({
   children,
@@ -21,3 +22,5 @@ export default async function AdminPathsRouteGuardServerComponent({
   )
   return protected_layout;
 }
+
+export const runtime: ServerRuntime = "nodejs";

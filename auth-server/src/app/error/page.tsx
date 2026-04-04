@@ -7,11 +7,14 @@ import {
 } from "@schemavaults/auth-common/auth-error-message-catalog";
 import type { ReactElement } from "react";
 import ErrorPageView from "./error_page_view";
+import { connection } from "next/server";
+import { ServerRuntime } from "next";
 
 export default async function ErrorPageComponent(input: {
   params?: Promise<unknown>;
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }): Promise<ReactElement> {
+  await connection();
   let error: number = 500;
   let message: string = "An unknown error occurred" as const;
 
@@ -68,3 +71,5 @@ export default async function ErrorPageComponent(input: {
 
   return <ErrorPageView error={error} message={message} />;
 }
+
+export const runtime: ServerRuntime = 'nodejs';
