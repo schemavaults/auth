@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 async function GET_list_settings({
   user,
   dbh,
+  redis,
 }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
   if (!user.admin) {
     return NextResponse.json(
@@ -25,7 +26,7 @@ async function GET_list_settings({
 
   let settings: ServerSettingRecord[];
   try {
-    const registry = new ServerSettingsRegistry(dbh.db);
+    const registry = new ServerSettingsRegistry(dbh.db, undefined, redis?.client);
     settings = await registry.listAllSettings();
   } catch (e: unknown) {
     console.error("Failed to list server settings:", e);

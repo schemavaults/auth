@@ -14,10 +14,18 @@ import {
   getAllSettingKeys,
   SERVER_SETTING_DEFINITIONS,
 } from "./server-setting-keys";
+import type Redis from "ioredis";
 
 interface CacheEntry<T> {
   value: T;
   expiresAt: number;
+}
+
+interface RedisCachePayload {
+  /** Serialized setting value (same format as DB's setting_value column) */
+  v: string;
+  /** Value type (same as DB's value_type column) */
+  t: string;
 }
 
 /**
@@ -30,9 +38,18 @@ export class ServerSettingsRegistry {
 
   constructor(
     private readonly db: Kysely<AuthDatabase>,
-    cacheTtlMs: number = 60_000 // 1 minute default
+    cacheTtlMs: number = 60_000, // 1 minute default
+    private readonly redis?: Redis
   ) {
     this.cacheTtlMs = cacheTtlMs;
+  }
+
+  private redisKey(key: string): string {
+    return `server_setting:${key}`;
+  }
+
+  private get redisTtlSeconds(): number {
+    return Math.ceil(this.cacheTtlMs / 1000);
   }
 
   private async readLatestSettingRow<K extends ServerSettingKey>(
@@ -69,25 +86,64 @@ export class ServerSettingsRegistry {
 
   /**
    * Get a setting value with type safety and caching.
-   * Returns the default value if the setting is not found in the database.
+   * Checks in-memory cache, then Redis, then database.
+   * Returns the default value if the setting is not found.
    */
   public async getSetting<K extends ServerSettingKey>(
     key: K
   ): Promise<ServerSettingValueTypes[K]> {
-    // Check cache first
+    // Check in-memory cache first (fast path for repeated reads within same request)
     const cached = this.cache.get(key);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.value as ServerSettingValueTypes[K];
     }
 
-    // Query database
-    const value: ServerSettingValueTypes[K] | undefined = await this.readLatestSettingValue(key);
-    if (typeof value === 'undefined' || (typeof value === 'object' && !value)) {
-      // Setting not in database, return the default
-      return getDefaultValue(key)
+    // Check Redis cache
+    if (this.redis) {
+      try {
+        const redisValue = await this.redis.get(this.redisKey(key));
+        if (redisValue !== null) {
+          const payload: RedisCachePayload = JSON.parse(redisValue);
+          const parsed = this.parseStoredValue(key, payload.v);
+          this.setCacheEntry(key, parsed);
+          return parsed;
+        }
+      } catch (e: unknown) {
+        console.error(
+          `[ServerSettingsRegistry] Redis cache read failed for "${key}", falling back to database:`,
+          e
+        );
+      }
     }
-    // Parse the stored value
+
+    // Query database
+    const row = await this.readLatestSettingRow(key);
+    if (!row) {
+      // Setting not in database, return the default
+      return getDefaultValue(key);
+    }
+
+    const value = this.parseStoredValue(key, row.setting_value);
     this.setCacheEntry(key, value);
+
+    // Populate Redis cache for subsequent requests
+    if (this.redis) {
+      try {
+        const payload: RedisCachePayload = { v: row.setting_value, t: row.value_type };
+        await this.redis.set(
+          this.redisKey(key),
+          JSON.stringify(payload),
+          "EX",
+          this.redisTtlSeconds
+        );
+      } catch (e: unknown) {
+        console.error(
+          `[ServerSettingsRegistry] Failed to populate Redis cache for "${key}":`,
+          e
+        );
+      }
+    }
+
     return value satisfies ServerSettingValueTypes[K];
   }
 
@@ -138,8 +194,26 @@ export class ServerSettingsRegistry {
         )
         .execute();
 
-      // Update cache
+      // Update in-memory cache
       this.setCacheEntry(key, value);
+
+      // Push to Redis cache
+      if (this.redis) {
+        try {
+          const payload: RedisCachePayload = { v: storedValue, t: valueType };
+          await this.redis.set(
+            this.redisKey(key),
+            JSON.stringify(payload),
+            "EX",
+            this.redisTtlSeconds
+          );
+        } catch (redisError: unknown) {
+          console.error(
+            `[ServerSettingsRegistry] Failed to update Redis cache for "${key}":`,
+            redisError
+          );
+        }
+      }
     } catch (e: unknown) {
       console.error(
         `[ServerSettingsRegistry] Failed to set setting "${key}":`,
@@ -159,8 +233,20 @@ export class ServerSettingsRegistry {
         .where("setting_key", "=", key)
         .execute();
 
-      // Remove from cache
+      // Remove from in-memory cache
       this.cache.delete(key);
+
+      // Remove from Redis cache
+      if (this.redis) {
+        try {
+          await this.redis.del(this.redisKey(key));
+        } catch (redisError: unknown) {
+          console.error(
+            `[ServerSettingsRegistry] Failed to delete Redis cache for "${key}":`,
+            redisError
+          );
+        }
+      }
     } catch (e: unknown) {
       console.error(
         `[ServerSettingsRegistry] Failed to delete setting "${key}":`,

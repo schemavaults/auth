@@ -19,7 +19,7 @@ interface PatchSettingRequestBody {
 }
 
 async function PATCH_update_setting(
-  { user, dbh }: IProtectedAdminApiRouteProps,
+  { user, dbh, redis }: IProtectedAdminApiRouteProps,
   key: string,
   body: PatchSettingRequestBody
 ): Promise<NextResponse> {
@@ -58,7 +58,7 @@ async function PATCH_update_setting(
   }
 
   try {
-    const registry = new ServerSettingsRegistry(dbh.db);
+    const registry = new ServerSettingsRegistry(dbh.db, undefined, redis?.client);
     await registry.setSetting(
       typedKey,
       parseResult.data,

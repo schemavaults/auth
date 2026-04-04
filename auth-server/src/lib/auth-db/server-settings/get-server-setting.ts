@@ -7,6 +7,7 @@ import type {
 } from "./server-setting-keys";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type Redis from "ioredis";
 
 /**
  * Simple async getter for a server setting value.
@@ -15,9 +16,10 @@ import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
  */
 export async function getServerSetting<K extends ServerSettingKey>(
   key: K,
-  db: Kysely<AuthDatabase>
+  db: Kysely<AuthDatabase>,
+  redis?: Redis
 ): Promise<ServerSettingValueTypes[K]> {
-  return new ServerSettingsRegistry(db).getSetting(key);
+  return new ServerSettingsRegistry(db, undefined, redis).getSetting(key);
 }
 
 /**
