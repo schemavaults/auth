@@ -7,6 +7,7 @@ import {
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { ReactElement } from "react";
+import { connection } from "next/server";
 
 async function AdminApisPageServerComponent({ user }: IProtectedAdminServerComponentPageProps): Promise<ReactElement> {
   if (!user.admin) {
@@ -16,5 +17,6 @@ async function AdminApisPageServerComponent({ user }: IProtectedAdminServerCompo
 }
 
 export default async function AdminAPIsPage(): Promise<ReactElement> {
+  await connection();
   return await withAdminServerComponentRouteGuard(AdminApisPageServerComponent);
 }

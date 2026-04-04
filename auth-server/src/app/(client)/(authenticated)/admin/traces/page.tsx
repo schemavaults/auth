@@ -8,6 +8,7 @@ import {
 } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
 import type { ServerTraceRow } from "@/lib/auth-db/server-traces";
+import { connection } from "next/server";
 
 async function PreloadedAdminTracesPage({
   user,
@@ -30,8 +31,8 @@ async function PreloadedAdminTracesPage({
 }
 
 export default async function AdminTracesServerComponent(): Promise<ReactElement> {
+  await connection();
   return await withAdminServerComponentRouteGuard(PreloadedAdminTracesPage);
 }
 
 export const runtime: ServerRuntime = "nodejs";
-export const dynamic = "force-dynamic";

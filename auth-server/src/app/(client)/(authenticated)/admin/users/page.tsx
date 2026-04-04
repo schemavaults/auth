@@ -9,6 +9,7 @@ import {
 import { UserRegistry, type UserDocument } from "@/lib/auth-db";
 import type { ServerRuntime } from "next";
 import type { UserData } from "@schemavaults/auth-common";
+import { connection } from "next/server";
 
 function userDocumentToUserData(doc: UserDocument): UserData {
   return {
@@ -41,11 +42,9 @@ async function PreloadedUsersPage({
   return <AdminUsersPageView preloaded={users} />;
 }
 
-async function UsersServerComponent(): Promise<ReactElement> {
+export default async function UsersAdminPageServerComponent(): Promise<ReactElement> {
+  await connection();
   return await withAdminServerComponentRouteGuard(PreloadedUsersPage);
 }
 
-export default UsersServerComponent;
-
 export const runtime: ServerRuntime = "nodejs";
-export const dynamic = "force-dynamic";

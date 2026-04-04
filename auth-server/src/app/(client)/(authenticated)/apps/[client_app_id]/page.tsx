@@ -14,6 +14,8 @@ import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import OrganizationsRegistry from "@/lib/auth-db/organizations";
 import isUserInOrganization from "@/lib/isUserInOrganization";
+import type { ServerRuntime } from "next/types";
+import { connection } from "next/server";
 
 interface PageParams {
   params: Promise<{ client_app_id: string }>;
@@ -22,6 +24,7 @@ interface PageParams {
 export default async function AppDetailPage(
   pageParams: PageParams
 ): Promise<ReactElement> {
+  await connection();
   return await withAuthenticatedServerComponentRouteGuard(
     async function AppDetailPageServerComponent({
       dbh,
@@ -94,3 +97,5 @@ export default async function AppDetailPage(
     }
   );
 }
+
+export const runtime: ServerRuntime = "nodejs";

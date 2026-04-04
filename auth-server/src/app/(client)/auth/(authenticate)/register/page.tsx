@@ -17,10 +17,13 @@ import { ServerlessDatabase } from "@/lib/auth-db/serverless-database";
 import validateAppIdSearchParamOrRedirectWithError from "../validateAppIdSearchParamOrRedirectWithError";
 import AlreadyAuthenticatedOnLoginOrRegisterPage from "../AlreadyAuthenticatedOnLoginOrRegisterPage";
 import toPartialAppInfo from "@/lib/PartialAppInfo";
+import { connection } from "next/server";
 
 export default async function RegisterPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }): Promise<ReactElement> {
+  await connection();
+
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   const debug: boolean = shouldEnableDebug(environment);
 
