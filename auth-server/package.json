@@ -30,7 +30,7 @@
     "@hookform/resolvers": "3.9.0",
     "cookies-next": "6.1.1",
     "uuid": "13.0.0",
-    "ioredis": "^5.6.1"
+    "ioredis": "5.10.1"
   },
   "devDependencies": {
     "typescript": "5.9.3",
