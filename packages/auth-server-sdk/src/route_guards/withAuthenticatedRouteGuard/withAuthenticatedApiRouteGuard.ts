@@ -349,19 +349,9 @@ export function withAuthenticatedApiRouteGuard<
     }
 
     if (opts?.required_organization) {
+      let org_role: OrganizationMembershipRoleType | false = false;
       try {
-        const org_role: OrganizationMembershipRoleType | false =
-          await isUserInOrganization(user, opts.required_organization);
-        if (org_role === false) {
-          return json(
-            {
-              success: false,
-              error: true,
-              message: "User is not a member of the required organization",
-            },
-            { status: 403 },
-          );
-        }
+        org_role = await isUserInOrganization(user, opts.required_organization);
       } catch (e: unknown) {
         console.error(
           "[withAuthenticatedApiRouteGuard] Organization membership check failed: ",
@@ -374,6 +364,17 @@ export function withAuthenticatedApiRouteGuard<
             message: "Error while checking organization membership",
           },
           { status: 500 },
+        );
+      }
+
+      if (org_role === false || !org_role) {
+        return json(
+          {
+            success: false,
+            error: true,
+            message: "User is not a member of the required organization",
+          },
+          { status: 403 },
         );
       }
     }

@@ -10,6 +10,7 @@ const ERROR_IDS = [
   "internal_server_error",
   "load_server_config_failure",
   "server_misconfiguration",
+  "account_not_in_organization",
 ] as const satisfies readonly string[];
 
 export type SchemaVaultsAuthErrorId = (typeof ERROR_IDS)[number];
@@ -32,6 +33,8 @@ export const ERROR_MESSAGE_CATALOG: Record<SchemaVaultsAuthErrorId, string> = {
     "There was a problem loading server configuration settings.",
   server_misconfiguration:
     "The server does not appear to be configured properly. If you are the site admin, please see the logs for more details.",
+  account_not_in_organization:
+    "Your account is not a member of the organization required for the attempted action.",
 };
 
 export function isValidErrorId(id: string): id is SchemaVaultsAuthErrorId {

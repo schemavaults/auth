@@ -271,20 +271,20 @@ export async function withAuthenticatedServerComponentRouteGuard<
       : (base_server_component_props as unknown as TProps);
 
   if (opts?.required_organization) {
+    let org_role: OrganizationMembershipRoleType | false = false;
     try {
-      const org_role = await isUserInOrganization(
-        user,
-        opts.required_organization,
-      );
-      if (org_role === false) {
-        redirectWithError(redirect, 403, "forbidden");
-      }
+      org_role = await isUserInOrganization(user, opts.required_organization);
     } catch (e: unknown) {
       console.error(
         "[withAuthenticatedServerComponentRouteGuard] Organization membership check failed: ",
         e,
       );
       redirectWithError(redirect, 500, "internal_server_error");
+    }
+
+    if (org_role === false || !org_role) {
+      console.warn(`[withAuthenticatedServerComponentRouteGuard]`);
+      redirectWithError(redirect, 403, "account_not_in_organization");
     }
   }
 
