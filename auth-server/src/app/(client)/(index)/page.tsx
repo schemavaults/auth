@@ -7,4 +7,4 @@ export default function HomePage(): ReactElement {
   return <HomePageView />;
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";

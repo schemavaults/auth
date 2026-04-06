@@ -67,6 +67,7 @@ services:
       target: production
     depends_on:
       - postgres-db
+      - schemavaults-auth-redis
     environment:
       SCHEMAVAULTS_APP_ENVIRONMENT: test
       NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT: test
@@ -75,6 +76,7 @@ services:
       POSTGRES_PASSWORD: schemavaults-auth-server-dev
       POSTGRES_DATABASE: schemavaults-auth-server-dev
       POSTGRES_HOST: postgres-db
+      REDIS_URL: redis://schemavaults-auth-redis:6379
       PRIVATE_GLOBAL_PASSWORD_SALT: examplePasswordSalt12
       PRIVATE_PASSWORD_HASH_ROUNDS: 5
       PRIVATE_SUPERUSER_INVITE_CODE: superuser
@@ -83,6 +85,17 @@ services:
       - 80
     ports:
       - 80:80
+
+  schemavaults-auth-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 6s
+      timeout: 4s
+      retries: 8
 
   postgres-db:
     image: schemavaults/postgres-db:local

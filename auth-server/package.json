@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.22.15",
+  "version": "0.22.17",
   "private": true,
   "repository": {
     "type": "git",
@@ -29,7 +29,8 @@
     "lucide-react": "0.508.0",
     "@hookform/resolvers": "3.9.0",
     "cookies-next": "6.1.1",
-    "uuid": "13.0.0"
+    "uuid": "13.0.0",
+    "ioredis": "5.10.1"
   },
   "devDependencies": {
     "typescript": "5.9.3",

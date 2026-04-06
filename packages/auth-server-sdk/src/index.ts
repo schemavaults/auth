@@ -99,3 +99,5 @@ export {
   getHardcodedApiServerDomain,
   getAuthServerUri,
 } from "@schemavaults/app-definitions";
+
+export { loadJwksAccessPrivateKey } from "@/env/loadJwksAccessPrivateKey";

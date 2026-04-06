@@ -16,7 +16,7 @@ import { Loader2, LogIn, UserPlus, User } from "lucide-react";
 import Link from "next/link";
 import type { ReactElement } from "react";
 
-export function HomePageView(): ReactElement {
+export default function HomePageView(): ReactElement {
   const auth = useAuth();
   const currentUser = useCurrentUser();
 
@@ -91,5 +91,3 @@ export function HomePageView(): ReactElement {
     </ThemedPageBackground>
   );
 }
-
-export default HomePageView;

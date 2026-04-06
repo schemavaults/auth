@@ -8,4 +8,4 @@ export { GET, POST, OPTIONS };
 export type { ListApiServerDomainsResponse } from './GET_list_api_server_domains';
 
 export const dynamic = "force-dynamic";
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";

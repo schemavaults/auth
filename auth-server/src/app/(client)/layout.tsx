@@ -11,6 +11,7 @@ import ClientOnlyGlobalProviders from "./client-global-providers";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import { ServerlessDatabase } from "@/lib/auth-db/serverless-database";
+import { connection } from "next/server";
 
 async function requireInviteCode(): Promise<boolean> {
   "use cache";
@@ -21,6 +22,7 @@ async function requireInviteCode(): Promise<boolean> {
 export default async function ClientFacingServerPageLayout({
   children,
 }: PropsWithChildren): Promise<ReactElement> {
+  await connection();
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
   if (!schemaVaultsAppEnvironmentSchema.safeParse(environment)) {
     throw new Error(

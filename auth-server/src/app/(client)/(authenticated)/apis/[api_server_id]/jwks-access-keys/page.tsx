@@ -13,6 +13,8 @@ import { OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type Orga
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { JwksAccessKeysRegistry, type JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
+import { connection } from "next/server";
+import type { ServerRuntime } from "next/types";
 
 interface PageParams {
   params: Promise<{ api_server_id: string }>;
@@ -21,6 +23,7 @@ interface PageParams {
 export default async function JwksAccessKeysPage(
   pageParams: PageParams
 ): Promise<ReactElement> {
+  await connection();
   return await withAuthenticatedServerComponentRouteGuard(
     async function JwksAccessKeysPageServerComponent({
       dbh,
@@ -97,3 +100,5 @@ export default async function JwksAccessKeysPage(
     }
   );
 }
+
+export const runtime: ServerRuntime = "nodejs";

@@ -29,6 +29,7 @@ import {
   preloadApiServersTable,
 } from "@/lib/auth-db/apis";
 import redirectWithError from "@/lib/redirect-with-error";
+import { connection } from "next/server";
 
 interface PageParams {
   params: Promise<{ organization_id: string }>;
@@ -132,10 +133,10 @@ async function PreloadedOrgPage(
 export default async function ViewOrganizationPage(
   pageParams: PageParams,
 ): Promise<ReactElement> {
+  await connection();
   return await withAuthenticatedServerComponentRouteGuard((props) =>
     PreloadedOrgPage(props, pageParams),
   );
 }
 
-export const runtime: ServerRuntime = "edge";
-export const dynamic = "force-dynamic";
+export const runtime: ServerRuntime = "nodejs";

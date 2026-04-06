@@ -13,6 +13,8 @@ import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsReg
 import { type OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import { OrganizationsRegistry } from "@/lib/auth-db";
 import isUserInOrganization from "@/lib/isUserInOrganization";
+import { connection } from "next/server";
+import type { ServerRuntime } from "next/types";
 
 interface PageParams {
   params: Promise<{ api_server_id: string }>;
@@ -21,6 +23,8 @@ interface PageParams {
 export default async function ApiServerDetailPage(
   pageParams: PageParams
 ): Promise<ReactElement> {
+  await connection();
+
   return await withAuthenticatedServerComponentRouteGuard(
     async function ApiServerDetailPageServerComponent({
       dbh,
@@ -90,3 +94,5 @@ export default async function ApiServerDetailPage(
     }
   );
 }
+
+export const runtime: ServerRuntime = "nodejs";

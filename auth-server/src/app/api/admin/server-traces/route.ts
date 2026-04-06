@@ -6,7 +6,7 @@ import type { ServerTraceRow } from "@/lib/auth-db/server-traces";
 import type { ResourceCreationResponse } from "@/lib/auth-db";
 
 export const dynamic = "force-dynamic";
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 
 async function GET_list_server_traces_handler({ user, dbh }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
   if (!user.admin) {

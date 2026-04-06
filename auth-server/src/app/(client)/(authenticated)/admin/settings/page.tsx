@@ -9,6 +9,7 @@ import {
 import type { ServerRuntime } from "next";
 import { ServerSettingsRegistry } from "@/lib/auth-db/server-settings";
 import type { ServerSettingRecord } from "@/lib/auth-db/server-settings";
+import { connection } from "next/server";
 
 async function PreloadedAdminSettingsPage({
   user,
@@ -27,8 +28,8 @@ async function PreloadedAdminSettingsPage({
 }
 
 export default async function AdminSettingsServerComponent(): Promise<ReactElement> {
+  await connection();
   return await withAdminServerComponentRouteGuard(PreloadedAdminSettingsPage);
 }
 
-export const runtime: ServerRuntime = "edge";
-export const dynamic = "force-dynamic";
+export const runtime: ServerRuntime = "nodejs";

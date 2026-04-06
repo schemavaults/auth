@@ -25,7 +25,7 @@ import { ConflictError } from "@/lib/error/ConflictError";
 import type { ServerRuntime } from "next";
 import { appToHardcodedApiPermissionSchema } from "@/lib/auth-db/apis/apps-to-hardcoded-apis-permissions-table";
 
-export const runtime: ServerRuntime = "edge"
+export const runtime: ServerRuntime = "nodejs"
 
 /**
  * Connect a frontend app client to an API server

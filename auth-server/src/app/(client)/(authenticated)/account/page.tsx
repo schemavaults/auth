@@ -20,6 +20,8 @@ import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import SchemaVaultsPostgresNeonProxyAdapter from "@schemavaults/dbh";
 import { withServerTrace } from "@/lib/withServerTrace";
+import { connection } from "next/server";
+import type { ServerRuntime } from "next";
 
 async function attemptToPreloadAppsAndDomains(
   dbh: SchemaVaultsPostgresNeonProxyAdapter<AuthDatabase>,
@@ -114,5 +116,8 @@ async function AuthServerAccountDashboardPageServerComponent(
 }
 
 export default async function AuthServerAccountDashboardPage(): Promise<ReactElement> {
+  await connection();
   return await withAuthenticatedServerComponentRouteGuard(AuthServerAccountDashboardPageServerComponent);
 }
+
+export const runtime: ServerRuntime = "nodejs";

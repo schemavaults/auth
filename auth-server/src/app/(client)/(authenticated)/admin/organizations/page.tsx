@@ -9,6 +9,7 @@ import {
 import { OrganizationsRegistry } from "@/lib/auth-db";
 import type { ServerRuntime } from "next";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import { connection } from "next/server";
 
 async function PreloadedOrganizationsPage({
   user,
@@ -29,10 +30,10 @@ async function PreloadedOrganizationsPage({
 }
 
 async function OrganizationsServerComponent(): Promise<ReactElement> {
+  await connection();
   return await withAdminServerComponentRouteGuard(PreloadedOrganizationsPage);
 }
 
 export default OrganizationsServerComponent;
 
-export const runtime: ServerRuntime = "edge";
-export const dynamic = "force-dynamic";
+export const runtime: ServerRuntime = "nodejs";

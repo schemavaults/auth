@@ -7,6 +7,7 @@ services:
         BUN_VERSION: 1.3.6
     depends_on:
       - postgres-db
+      - schemavaults-auth-redis
     volumes:
       - .:/workspace:cached
     command: sleep infinity
@@ -33,6 +34,19 @@ services:
       timeout: 4s
       retries: 8
 
+  schemavaults-auth-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 6s
+      timeout: 4s
+      retries: 8
+
   postgres-ws-proxy:
     container_name: postgres-ws-proxy
     image: ghcr.io/schemavaults/dbh/postgres-ws-proxy:0.8.7
@@ -51,3 +65,4 @@ services:
 
 volumes:
   postgres-data:
+  redis-data:

@@ -9,6 +9,7 @@ import {
 import { UserRegistry } from "@/lib/auth-db/users/user-registry";
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
+import { connection } from "next/server";
 
 async function PreloadedInviteCodesPage({
   user,
@@ -34,8 +35,8 @@ async function PreloadedInviteCodesPage({
 }
 
 export default async function InviteCodesServerComponent(): Promise<ReactElement> {
+  await connection();
   return await withAdminServerComponentRouteGuard(PreloadedInviteCodesPage);
 }
 
-export const runtime: ServerRuntime = "edge";
-export const dynamic = "force-dynamic";
+export const runtime: ServerRuntime = "nodejs";

@@ -10,7 +10,7 @@ import { z } from "zod";
 import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
 
-export const runtime: ServerRuntime = "edge"
+export const runtime: ServerRuntime = "nodejs"
 export const dynamic = "force-dynamic"; // defaults to auto
 
 async function POST_admin_promotion_handler(

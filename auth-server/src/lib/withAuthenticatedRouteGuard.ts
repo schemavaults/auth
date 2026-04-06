@@ -9,6 +9,7 @@ import {
   type IBaseProtectedAuthenticatedApiRouteInputs,
 } from "@schemavaults/auth-server-sdk/route_guards";
 import { ServerlessDatabase } from "./auth-db";
+import { RedisCache } from "./redis";
 import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import isUserInOrganization from "./isUserInOrganization";
@@ -16,17 +17,20 @@ import { type NextRequest, NextResponse } from "next/server";
 
 export interface IProtectedAuthenticatedServerComponentPageProps extends IBaseProtectedAuthenticatedServerComponentPageProps {
   dbh: ServerlessDatabase;
+  redis: RedisCache;
 }
 
 export async function withAuthenticatedServerComponentRouteGuard(
   server_component: TProtectedAuthenticatedPageServerComponent<IProtectedAuthenticatedServerComponentPageProps>
 ) {
   await using dbh = ServerlessDatabase.createDBH();
+  await using redis = RedisCache.createConnection();
   const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
   return _withAuthenticatedServerComponentRouteGuard<IProtectedAuthenticatedServerComponentPageProps>(
     server_component,
     {
-      dbh
+      dbh,
+      redis
     },
     {
       route_guard_type: 'authenticated',
@@ -38,6 +42,7 @@ export async function withAuthenticatedServerComponentRouteGuard(
 
 export interface IAuthenticatedApiRouteGuardInputs extends IBaseProtectedAuthenticatedApiRouteInputs {
   dbh: ServerlessDatabase
+  redis: RedisCache
 }
 
 export type { IAuthenticatedApiRouteGuardInputs as IProtectedAuthenticatedApiRouteProps };
@@ -46,10 +51,11 @@ export async function withAuthenticatedApiRouteGuard(
   api_route_handler: TProtectedAuthenticatedApiRoute<IAuthenticatedApiRouteGuardInputs>
 ): Promise<(req: NextRequest) => Promise<NextResponse>> {
   await using dbh = ServerlessDatabase.createDBH();
+  await using redis = RedisCache.createConnection();
   const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
   return _withAuthenticatedApiRouteGuard<IAuthenticatedApiRouteGuardInputs>(
     api_route_handler,
-    { dbh },
+    { dbh, redis },
     {
       route_guard_type: 'authenticated',
       jwt_keys_manager,

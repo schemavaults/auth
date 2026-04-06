@@ -9,7 +9,7 @@ import type { InviteCodeDefinition, UserData } from "@schemavaults/auth-common";
 import { type IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
 
-export const runtime: ServerRuntime = "edge"
+export const runtime: ServerRuntime = "nodejs"
 
 export async function GET_list_invite_codes({ user }: IProtectedAdminApiRouteProps): Promise<NextResponse> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();

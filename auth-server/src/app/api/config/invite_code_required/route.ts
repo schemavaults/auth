@@ -2,16 +2,18 @@ import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import ServerlessDatabase from "@/lib/auth-db/serverless-database";
+import { RedisCache } from "@/lib/redis";
 import type { ServerRuntime } from "next/types";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   void req;
 
   await using dbh = ServerlessDatabase.createDBH();
+  await using redis = RedisCache.createConnection();
 
   let inviteCodeRequired: boolean;
   try {
-    inviteCodeRequired = await inviteCodesRequired(dbh.db);
+    inviteCodeRequired = await inviteCodesRequired(dbh.db, redis.client);
   } catch (e: unknown) {
     console.error("Failed to load server setting on whether invite codes are required: ", e);
     return NextResponse.json({
@@ -29,5 +31,5 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }, { status: 200 })
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";

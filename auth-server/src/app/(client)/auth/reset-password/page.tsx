@@ -1,10 +1,14 @@
+import "server-only";
 import type { ReactElement } from "react";
 import type { ServerRuntime } from "next/types";
 import ResetPasswordForm from "./ResetPasswordForm";
+import { connection } from "next/server";
 
 export default async function ResetPasswordPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }): Promise<ReactElement> {
+  await connection();
+
   const searchParams = await props.searchParams;
 
   const token: string | null =
@@ -13,4 +17,4 @@ export default async function ResetPasswordPage(props: {
   return <ResetPasswordForm token={token} />;
 }
 
-export const runtime: ServerRuntime = "edge";
+export const runtime: ServerRuntime = "nodejs";
