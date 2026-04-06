@@ -127,4 +127,78 @@ describe("ExampleResourceServer", () => {
       });
     });
   });
+
+  it("treats a user with expired access tokens but valid refresh tokens as still logged in on /auth/login", () => {
+    cy.create_and_login_as_superuser().then((success: boolean) => {
+      if (!success) {
+        throw new Error("Failed to login as superuser");
+      }
+
+      cy.generate_random_code(24).then((inviteCode: string) => {
+        cy.create_invite_code(inviteCode, 1).then((created: boolean) => {
+          if (!created) {
+            throw new Error("Failed to create invite code");
+          }
+
+          cy.logout();
+
+          cy.generate_random_code(12).then((suffix: string) => {
+            const email = `pkce-expired-access-test-${suffix}@example.com`;
+            const password = "TestPassword123!";
+
+            // Register and authenticate via PKCE flow
+            cy.register_via_resource_server_pkce_flow({
+              resource_server_origin: exampleAppOrigin,
+              email,
+              password,
+              invite_code: inviteCode,
+            }).then(() => {
+              // User is now authenticated on the example resource server.
+              // Clear all access token cookies to simulate expired access tokens,
+              // while keeping the refresh token in localStorage intact.
+              cy.origin(exampleAppOrigin, () => {
+                cy.getCookies().then((cookies) => {
+                  for (const cookie of cookies) {
+                    if (cookie.name.startsWith("access_token")) {
+                      cy.clearCookie(cookie.name);
+                    }
+                  }
+                });
+
+                // Verify refresh token still exists in localStorage
+                cy.window().then((win) => {
+                  const keys = Object.keys(win.localStorage);
+                  const hasRefreshToken = keys.some((k) =>
+                    k.startsWith("refresh_token_"),
+                  );
+                  expect(hasRefreshToken).to.be.true;
+                });
+
+                // Intercept the refresh token exchange to verify new access
+                // tokens are acquired from the auth server
+                cy.intercept("POST", "**/api/auth/token/refresh_token/**").as(
+                  "refreshTokenExchange",
+                );
+
+                cy.visit("/auth/login");
+
+                // Should be redirected to /account since the middleware still
+                // considers the user logged in (valid refresh token exists)
+                cy.url({ timeout: 15000 }).should("include", "/account");
+                cy.contains("Example Account Page", {
+                  timeout: 15000,
+                }).should("be.visible");
+
+                // Verify that a refresh token exchange occurred, proving new
+                // access tokens were generated to replace the expired ones
+                cy.wait("@refreshTokenExchange").then((interception) => {
+                  expect(interception.response?.statusCode).to.eq(200);
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
 });
