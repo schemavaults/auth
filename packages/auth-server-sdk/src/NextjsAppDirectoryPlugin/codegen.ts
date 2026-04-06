@@ -67,14 +67,19 @@ function createClientPages(appDirectory: string, templatesDir: string) {
     if (existsSync(destPath)) {
       if (isCodegenManagedFile(destPath)) {
         const oldVersion = getExistingVersion(destPath);
-        const templatePath: string = join(templatesDir, page.codegen_template_path);
-        const templateContent: string = readFileSync(templatePath, {
-          encoding: "utf-8",
-        });
-        writeFileSync(destPath, prependCodegenMarker(templateContent), {
-          encoding: "utf-8",
-        });
-        console.log(` - updated '${relPath}'${formatVersionTransition(oldVersion)}`);
+        const newVersion = extractVersion(getCodegenMarkerComment());
+        if (oldVersion && newVersion && oldVersion === newVersion) {
+          console.log(` - skipped '${relPath}' (no version change)`);
+        } else {
+          const templatePath: string = join(templatesDir, page.codegen_template_path);
+          const templateContent: string = readFileSync(templatePath, {
+            encoding: "utf-8",
+          });
+          writeFileSync(destPath, prependCodegenMarker(templateContent), {
+            encoding: "utf-8",
+          });
+          console.log(` - updated '${relPath}'${formatVersionTransition(oldVersion)}`);
+        }
       } else {
         console.log(
           ` - skipping '${relPath}' (user-customized, no codegen marker)`,
@@ -111,13 +116,18 @@ function createClientAuthProvider(appDirectory: string, templatesDir: string) {
   if (existsSync(destPath)) {
     if (isCodegenManagedFile(destPath)) {
       const oldVersion = getExistingVersion(destPath);
-      const templateContent: string = readFileSync(srcTemplatePath, {
-        encoding: "utf-8",
-      });
-      writeFileSync(destPath, prependCodegenMarker(templateContent), {
-        encoding: "utf-8",
-      });
-      console.log(` - updated '${relPath}'${formatVersionTransition(oldVersion)}`);
+      const newVersion = extractVersion(getCodegenMarkerComment());
+      if (oldVersion && newVersion && oldVersion === newVersion) {
+        console.log(` - skipped '${relPath}' (no version change)`);
+      } else {
+        const templateContent: string = readFileSync(srcTemplatePath, {
+          encoding: "utf-8",
+        });
+        writeFileSync(destPath, prependCodegenMarker(templateContent), {
+          encoding: "utf-8",
+        });
+        console.log(` - updated '${relPath}'${formatVersionTransition(oldVersion)}`);
+      }
     } else {
       console.log(
         ` - skipping '${relPath}' (user-customized, no codegen marker)`,
