@@ -9,32 +9,73 @@ on:
         type: string
 
 jobs:
-  Build-Core-Docker-Images:
+  Build-Auth-Server-Docker-Image:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Build core Docker images
+      - name: Build auth server Docker image
         run: |
           TEST_SUITE_NAME=build docker compose -f tests/e2e-auth-tests/docker-compose.yml build \
-            schemavaults-e2e-auth-tests \
-            schemavaults-auth \
-            postgres-db
+            schemavaults-auth
 
-      - name: Save core Docker images
+      - name: Save auth server Docker image
         run: |
-          docker save \
-            schemavaults/e2e-auth-tests:local \
-            schemavaults/auth-server:local \
-            schemavaults/postgres-db:local \
-            | gzip > /tmp/e2e-core-images.tar.gz
+          docker save schemavaults/auth-server:local \
+            | gzip > /tmp/e2e-auth-server-image.tar.gz
 
-      - name: Upload core images artifact
+      - name: Upload auth server image artifact
         uses: actions/upload-artifact@v6
         with:
-          name: e2e-docker-images-core
-          path: /tmp/e2e-core-images.tar.gz
+          name: docker-image-auth-server
+          path: /tmp/e2e-auth-server-image.tar.gz
+          retention-days: 1
+
+  Build-Postgres-DB-Docker-Image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Build postgres DB Docker image
+        run: |
+          TEST_SUITE_NAME=build docker compose -f tests/e2e-auth-tests/docker-compose.yml build \
+            postgres-db
+
+      - name: Save postgres DB Docker image
+        run: |
+          docker save schemavaults/postgres-db:local \
+            | gzip > /tmp/e2e-postgres-db-image.tar.gz
+
+      - name: Upload postgres DB image artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-docker-image-postgres-db
+          path: /tmp/e2e-postgres-db-image.tar.gz
+          retention-days: 1
+
+  Build-E2E-Auth-Tests-Docker-Image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Build E2E auth tests Docker image
+        run: |
+          TEST_SUITE_NAME=build docker compose -f tests/e2e-auth-tests/docker-compose.yml build \
+            schemavaults-e2e-auth-tests
+
+      - name: Save E2E auth tests Docker image
+        run: |
+          docker save schemavaults/e2e-auth-tests:local \
+            | gzip > /tmp/e2e-auth-tests-image.tar.gz
+
+      - name: Upload E2E auth tests image artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-docker-image-e2e-auth-tests
+          path: /tmp/e2e-auth-tests-image.tar.gz
           retention-days: 1
 
   Build-Resource-Server-Docker-Image:
@@ -90,7 +131,9 @@ jobs:
 
   Run-Authentication-Flows-E2E-Tests:
     needs:
-      - Build-Core-Docker-Images
+      - Build-Auth-Server-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
       - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
@@ -100,7 +143,9 @@ jobs:
 
   Run-Organizations-E2E-Tests:
     needs:
-      - Build-Core-Docker-Images
+      - Build-Auth-Server-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
       - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
@@ -110,7 +155,9 @@ jobs:
 
   Run-Resource-Management-E2E-Tests:
     needs:
-      - Build-Core-Docker-Images
+      - Build-Auth-Server-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
       - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
@@ -120,7 +167,9 @@ jobs:
 
   Run-Superuser-E2E-Tests:
     needs:
-      - Build-Core-Docker-Images
+      - Build-Auth-Server-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
       - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
@@ -130,9 +179,11 @@ jobs:
 
   Run-Example-Resource-Server-E2E-Tests:
     needs:
-      - Build-Core-Docker-Images
-      - Build-Resource-Server-Docker-Image
+      - Build-Auth-Server-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
       - Build-E2E-Auth-Tests-CLI
+      - Build-Resource-Server-Docker-Image
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
@@ -142,7 +193,9 @@ jobs:
 
   Run-Miscellaneous-E2E-Tests:
     needs:
-      - Build-Core-Docker-Images
+      - Build-Auth-Server-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
       - Build-E2E-Auth-Tests-CLI
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
