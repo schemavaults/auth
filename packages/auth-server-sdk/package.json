@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server-sdk",
   "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
-  "version": "0.22.10",
+  "version": "0.22.11",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -103,14 +103,19 @@
       "require": "./dist/MaximumBrowserCookieSize.js"
     },
     "./get-schemavaults-api-server-id": {
-      "types": "./dist/get-schemavaults-api-server-id.d.ts",
-      "import": "./dist/get-schemavaults-api-server-id.js",
-      "require": "./dist/get-schemavaults-api-server-id.js"
+      "types": "./dist/env/get-schemavaults-api-server-id.d.ts",
+      "import": "./dist/env/get-schemavaults-api-server-id.js",
+      "require": "./dist/env/get-schemavaults-api-server-id.js"
     },
     "./get-schemavaults-auth-server-uri": {
-      "types": "./dist/get-schemavaults-auth-server-uri.d.ts",
-      "import": "./dist/get-schemavaults-auth-server-uri.js",
-      "require": "./dist/get-schemavaults-auth-server-uri.js"
+      "types": "./dist/env/get-schemavaults-auth-server-uri.d.ts",
+      "import": "./dist/env/get-schemavaults-auth-server-uri.js",
+      "require": "./dist/env/get-schemavaults-auth-server-uri.js"
+    },
+    "./get-app-environment": {
+      "types": "./dist/env/get-app-environment.d.ts",
+      "import": "./dist/env/get-app-environment.js",
+      "require": "./dist/env/get-app-environment.js"
     },
     "./RefreshTokenCookieNames": {
       "types": "./dist/RefreshTokenCookieNames.d.ts",

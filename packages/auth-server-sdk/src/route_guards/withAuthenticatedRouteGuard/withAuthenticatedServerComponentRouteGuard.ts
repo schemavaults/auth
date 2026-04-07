@@ -16,7 +16,7 @@ import type {
   OrganizationMembershipRoleType,
 } from "@schemavaults/auth-common/organizations";
 import isUserInOrganizationFromAuthServer from "@/isUserInOrganization";
-import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
 import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey/loadJwksAccessPrivateKey";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
 import type { ReactElement } from "react";
@@ -24,7 +24,7 @@ import { redirectWithError } from "@/redirect-with-error";
 import RouteGuardFactory from "@/route_guards/route-guard-factory";
 import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
 import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
-import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
+import getSchemavaultsApiServerId from "@/env/get-schemavaults-api-server-id";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 import redirectToLogin from "@/redirect-to-login";
 import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType";
@@ -92,16 +92,17 @@ export async function withAuthenticatedServerComponentRouteGuard<
   let extracted_api_server_id: ApiServerId;
   try {
     const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
-      opts?.api_server_id ?? getSchemavaultsApiServerId(),
+      opts?.api_server_id,
     );
     if (!parsed_api_server_id.success) {
       console.error(
-        "[withAuthenticatedServerComponentRouteGuard] getApiServerId() failed with bad ID: ",
+        "[withAuthenticatedServerComponentRouteGuard] Did not receive a : ",
         parsed_api_server_id.error,
       );
       throw parsed_api_server_id.error;
     }
     extracted_api_server_id = parsed_api_server_id.data;
+    getSchemavaultsApiServerId();
   } catch (e: unknown) {
     console.error(
       "[withAuthenticatedServerComponentRouteGuard] Failed to load API server ID: ",
