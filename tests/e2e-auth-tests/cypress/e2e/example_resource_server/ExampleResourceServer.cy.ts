@@ -154,14 +154,12 @@ describe("ExampleResourceServer", () => {
               invite_code: inviteCode,
             }).then(() => {
               // Clear resource server auth state ONLY — keep the auth-server session intact.
+              // Only clear localStorage/sessionStorage (where the resource server stores
+              // refresh tokens). Do NOT clear cookies — cy.clearCookie() removes cookies
+              // across all domains, which would wipe the auth-server's refresh token cookie.
               cy.origin(exampleAppOrigin, () => {
                 localStorage.clear();
                 sessionStorage.clear();
-                cy.getCookies().then((cookies) => {
-                  for (const cookie of cookies) {
-                    cy.clearCookie(cookie.name);
-                  }
-                });
               });
 
               // Start a new PKCE flow from the resource server
