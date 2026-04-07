@@ -146,46 +146,52 @@ describe("ExampleResourceServer", () => {
             const email = `pkce-session-persist-test-${suffix}@example.com`;
             const password = "TestPassword123!";
 
-            // Register User A via PKCE flow (establishes auth-server + resource server sessions)
+            // Step 1: Register User A via PKCE flow (creates account + authorizes the app)
             cy.register_via_resource_server_pkce_flow({
               resource_server_origin: exampleAppOrigin,
               email,
               password,
               invite_code: inviteCode,
             }).then(() => {
-              // Clear resource server auth state ONLY — keep the auth-server session intact.
-              // Only clear localStorage/sessionStorage (where the resource server stores
-              // refresh tokens). Do NOT clear cookies — cy.clearCookie() removes cookies
-              // across all domains, which would wipe the auth-server's refresh token cookie.
-              cy.origin(exampleAppOrigin, () => {
-                localStorage.clear();
-                sessionStorage.clear();
-              });
+              // Step 2: Logout from everything (auth-server session + resource server)
+              cy.logout();
 
-              // Start a new PKCE flow from the resource server
-              cy.origin(exampleAppOrigin, () => {
-                cy.visit("/");
-                cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
-                cy.contains("button", "Login").click();
-              });
-
-              // The auth-server should detect the existing session and auto-complete
-              // the PKCE flow without showing a login form. Handle possible consent screen.
-              cy.get("body", { timeout: 15000 }).then(($body) => {
-                if ($body.text().includes("Authorize & Continue")) {
-                  cy.contains("Authorize & Continue").should("be.visible").click();
+              // Step 3: Re-login directly on the auth-server (primary origin).
+              // This establishes the refresh token cookie reliably on the
+              // primary origin — Cypress does not preserve cookies set during
+              // cy.origin() transitions.
+              cy.login(email, password).then((loginSuccess: boolean) => {
+                if (!loginSuccess) {
+                  throw new Error("Failed to login directly to auth-server");
                 }
-              });
 
-              // Verify redirect to resource server /account page as the same user
-              cy.origin(exampleAppOrigin, () => {
-                cy.url({ timeout: 30000 }).should("include", "/account");
-                cy.contains("Example Account Page", { timeout: 15000 }).should(
-                  "be.visible",
-                );
-                cy.contains(
-                  "If you're seeing this it means that you were not redirected because you are logged in!",
-                ).should("be.visible");
+                // Step 4: Start a new PKCE flow from the resource server.
+                // The Login click redirects to the auth-server, which should
+                // detect the existing session and auto-complete the flow.
+                cy.origin(exampleAppOrigin, () => {
+                  cy.visit("/");
+                  cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+                  cy.contains("button", "Login").click();
+                });
+
+                // Step 5: Handle possible consent screen (should be skipped
+                // since app was authorized during registration in step 1).
+                cy.get("body", { timeout: 15000 }).then(($body) => {
+                  if ($body.text().includes("Authorize & Continue")) {
+                    cy.contains("Authorize & Continue").should("be.visible").click();
+                  }
+                });
+
+                // Step 6: Verify redirect to resource server /account page
+                cy.origin(exampleAppOrigin, () => {
+                  cy.url({ timeout: 30000 }).should("include", "/account");
+                  cy.contains("Example Account Page", { timeout: 15000 }).should(
+                    "be.visible",
+                  );
+                  cy.contains(
+                    "If you're seeing this it means that you were not redirected because you are logged in!",
+                  ).should("be.visible");
+                });
               });
             });
           });
