@@ -13,6 +13,7 @@ export interface UseAppsListOptions {
   initialData?: readonly SchemaVaultsApp[] | undefined;
   organization_id?: string;
   authClient: ISchemaVaultsAuthClient | null | undefined;
+  debug?: boolean;
 }
 
 function getAppsListEndpoint(
@@ -40,9 +41,11 @@ export function useAppsList({
   initialData,
   organization_id,
   authClient,
+  ...opts
 }: UseAppsListOptions): SWRResponse<readonly SchemaVaultsApp[]> {
   const { toast } = useToast();
   const endpoint = getAppsListEndpoint(queryType, organization_id);
+  const debug: boolean = typeof opts.debug === "boolean" ? opts.debug : false;
 
   return useSWR(
     authClient ? endpoint : null,
@@ -64,7 +67,7 @@ export function useAppsList({
 
         const appsList: readonly SchemaVaultsApp[] = response.list;
 
-        if (process.env.NODE_ENV === "development") {
+        if (debug) {
           console.log("[useAppsList] Received list of apps: ", appsList);
         }
 

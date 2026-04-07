@@ -11,6 +11,7 @@ export interface UseApiServersListOptions {
   initialData?: readonly SchemaVaultsApiServerDefinition[] | undefined;
   organization_id?: string;
   authClient: ISchemaVaultsAuthClient | null | undefined;
+  debug?: boolean;
 }
 
 function getApiServersListEndpoint(
@@ -38,9 +39,11 @@ export function useApiServersList({
   initialData,
   organization_id,
   authClient,
+  ...opts
 }: UseApiServersListOptions) {
   const { toast } = useToast();
   const endpoint = getApiServersListEndpoint(queryType, organization_id);
+  const debug: boolean = typeof opts.debug === "boolean" ? opts.debug : false;
 
   return useSWR(
     authClient ? endpoint : null,
@@ -63,7 +66,7 @@ export function useApiServersList({
         const apiServersList: readonly SchemaVaultsApiServerDefinition[] =
           response.list;
 
-        if (process.env.NODE_ENV === "development") {
+        if (debug) {
           console.log(
             "[useApiServersList] Received list of API servers: ",
             apiServersList,
