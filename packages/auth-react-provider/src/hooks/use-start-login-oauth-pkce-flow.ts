@@ -40,19 +40,15 @@ export function useStartLoginOauthPKCEFlow({
 
     let cancelLoginEffect: boolean = false;
 
-    async function hasValidRefreshTokenSaved(
-      auth: ISchemaVaultsAuthClient,
-    ): Promise<boolean> {
-      if (!auth.isAuthenticated) {
-        return false;
-      }
-      return await checkIfAuthenticatedWithServer(auth);
-    }
-
     async function startLoginPkceFlow(
       auth: ISchemaVaultsAuthClient,
     ): Promise<void> {
       if (cancelLoginEffect) {
+        if (debug) {
+          console.warn(
+            "Cancelling startLoginPkceFlow due to effect unsubscribe!",
+          );
+        }
         return;
       }
       await auth.login();
@@ -79,9 +75,16 @@ export function useStartLoginOauthPKCEFlow({
       if (cancelLoginEffect) {
         return;
       }
-      let isValidRefreshTokenSaved: boolean = false;
+      const clientAuthenticationBelief: boolean = auth.isAuthenticated
+        ? true
+        : false;
+      let serverAuthenticationBelief: boolean = false;
       try {
-        isValidRefreshTokenSaved = await hasValidRefreshTokenSaved(auth);
+        serverAuthenticationBelief = ((await checkIfAuthenticatedWithServer(
+          auth,
+        )) satisfies boolean)
+          ? true
+          : false;
       } catch (e: unknown) {
         // no-op
         console.error(
@@ -90,7 +93,10 @@ export function useStartLoginOauthPKCEFlow({
         );
       }
 
-      if (isValidRefreshTokenSaved) {
+      const shouldLogin: boolean =
+        !clientAuthenticationBelief && !serverAuthenticationBelief;
+
+      if (!shouldLogin) {
         if (cancelLoginEffect) {
           return;
         }

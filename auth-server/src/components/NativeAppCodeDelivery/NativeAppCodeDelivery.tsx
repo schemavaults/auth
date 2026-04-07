@@ -21,7 +21,7 @@ export function NativeAppCodeDelivery({
   useEffect(() => {
     let cancelled = false;
 
-    async function deliverCode() {
+    async function deliverCode(): Promise<void> {
       try {
         const response = await fetch(redirect_uri, {
           method: "POST",
