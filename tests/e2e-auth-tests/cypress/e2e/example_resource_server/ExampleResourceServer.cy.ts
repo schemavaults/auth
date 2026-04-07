@@ -174,15 +174,10 @@ describe("ExampleResourceServer", () => {
                   cy.contains("button", "Login").click();
                 });
 
-                // Step 5: Handle possible consent screen (should be skipped
-                // since app was authorized during registration in step 1).
-                cy.get("body", { timeout: 15000 }).then(($body) => {
-                  if ($body.text().includes("Authorize & Continue")) {
-                    cy.contains("Authorize & Continue").should("be.visible").click();
-                  }
-                });
-
-                // Step 6: Verify redirect to resource server /account page
+                // Step 5: Verify redirect to resource server /account page.
+                // The consent screen is skipped because the app was already
+                // authorized during registration in step 1, so the auth-server
+                // auto-completes the flow and redirects straight back.
                 cy.origin(exampleAppOrigin, () => {
                   cy.url({ timeout: 30000 }).should("include", "/account");
                   cy.contains("Example Account Page", { timeout: 15000 }).should(
