@@ -138,7 +138,13 @@ export async function withAuthenticatedServerComponentRouteGuard<
     try {
       extracted_api_server_id =
         await parseApiServerIdFromEnvironmentVariables();
-    } catch (e: unknown) {}
+    } catch (e: unknown) {
+      console.error(
+        "[withAuthenticatedServerComponentRouteGuard] Failed to parse 'api_server_id' from environment variables: ",
+        e,
+      );
+      redirectWithError(redirect, 500, "server_misconfiguration");
+    }
   }
 
   console.assert(
