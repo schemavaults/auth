@@ -9,7 +9,7 @@ import {
 } from "@schemavaults/app-definitions";
 
 export function redirectWithError(
-  redirect: (url: string, redirect_type?: RedirectType) => never,
+  redirect: (url: string, redirect_type?: keyof typeof RedirectType) => never,
   error_code: number = 500,
   error_id: SchemaVaultsAuthErrorId = "unknown",
   error_page_url: string = "/auth/error",
