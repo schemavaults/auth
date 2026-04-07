@@ -20,6 +20,7 @@ import { successRedirect } from "@/components/AuthForm/success-redirect";
 import { closeWindowRedirect } from "@/components/AuthForm/close-window-redirect";
 import { Loader2, ShieldCheck, X } from "lucide-react";
 import type { PendingAuthorizationState } from "@/components/AuthForm/handle-auth-form-submit";
+import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 
 export interface AppAuthorizationConsentScreenProps {
   app_id: string;
@@ -105,6 +106,11 @@ export function AppAuthorizationConsentScreen({
       const challenge_time = parseInt(challenge_time_str);
       if (isNaN(challenge_time)) {
         throw new Error("Invalid challenge_time parameter");
+      }
+
+      if (isPkceChallengeExpired(challenge_time)) {
+        window.location.href = "/error?error=400&error_id=pkce_challenge_expired";
+        return;
       }
 
       // Generate authorization code via session endpoint

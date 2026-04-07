@@ -13,6 +13,7 @@ import type { UserData } from "@schemavaults/auth-common";
 import { doesSsrContextHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import redirectWithError from "@/lib/redirect-with-error";
+import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import validateAppIdSearchParamOrRedirectWithError from "../validateAppIdSearchParamOrRedirectWithError";
 import AlreadyAuthenticatedOnLoginOrRegisterPage from "../AlreadyAuthenticatedOnLoginOrRegisterPage";
@@ -38,6 +39,16 @@ export default async function LoginPage(props: {
       searchParams,
       debug,
     });
+
+  if (on_successful_authenticate !== 'account-page') {
+    const challenge_time_str = searchParams.challenge_time;
+    if (typeof challenge_time_str === 'string') {
+      const challenge_time = parseInt(challenge_time_str);
+      if (!isNaN(challenge_time) && isPkceChallengeExpired(challenge_time)) {
+        redirectWithError(400, "pkce_challenge_expired");
+      }
+    }
+  }
 
   if (on_successful_authenticate !== 'account-page' && !app) {
     console.error("Failed to load app definition despite 'on_successful_authenticate' of: ", on_successful_authenticate);

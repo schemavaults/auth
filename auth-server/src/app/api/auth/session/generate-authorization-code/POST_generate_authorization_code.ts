@@ -7,6 +7,7 @@ import {
 import { generateAuthorizationCode } from "@/lib/auth-db/users/generate-authorization-code";
 import { z } from "zod";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
+import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 
 const requestBodySchema = z
   .object({
@@ -50,6 +51,13 @@ export async function POST_generate_authorization_code(
       } catch {
         return NextResponse.json(
           { success: false, message: "Failed to parse request body" },
+          { status: 400 },
+        );
+      }
+
+      if (isPkceChallengeExpired(body.challenge_time)) {
+        return NextResponse.json(
+          { success: false, message: "PKCE challenge has expired", error_id: "pkce_challenge_expired" },
           { status: 400 },
         );
       }

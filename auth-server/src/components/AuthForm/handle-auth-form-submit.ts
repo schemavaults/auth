@@ -10,6 +10,7 @@ import {
   type CodeVerifierWithDetails,
   PKCE_ProofKeyManager,
 } from "@schemavaults/auth-common";
+import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import {
   type OnSuccessfulAuthenticateAction,
   onSuccessfulAuthenticateActionSchema,
@@ -152,6 +153,10 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       const challenge_time: number = parseInt(challenge_time_str);
       if (isNaN(challenge_time)) {
         throw new Error("Invalid challenge time provided for redirect flow");
+      }
+      if (isPkceChallengeExpired(challenge_time)) {
+        window.location.href = "/error?error=400&error_id=pkce_challenge_expired";
+        return;
       }
       if (searchParams.get("code_challenge_method") !== "S256") {
         throw new Error(
