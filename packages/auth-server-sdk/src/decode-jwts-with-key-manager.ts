@@ -15,7 +15,7 @@ import {
   apiServerIdSchema,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import getSchemavaultsApiServerId from "./get-schemavaults-api-server-id";
+import getSchemavaultsApiServerId from "@/env/get-schemavaults-api-server-id";
 import {
   decodeJWT as decodeSchemavaultsJwt,
   getKeysetIdFromToken,
