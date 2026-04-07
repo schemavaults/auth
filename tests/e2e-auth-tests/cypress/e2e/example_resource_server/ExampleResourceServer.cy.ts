@@ -128,6 +128,74 @@ describe("ExampleResourceServer", () => {
     });
   });
 
+  it("auto-completes PKCE flow with existing auth-server session when resource server is logged out", () => {
+    cy.create_and_login_as_superuser().then((success: boolean) => {
+      if (!success) {
+        throw new Error("Failed to login as superuser");
+      }
+
+      cy.generate_random_code(24).then((inviteCode: string) => {
+        cy.create_invite_code(inviteCode, 1).then((created: boolean) => {
+          if (!created) {
+            throw new Error("Failed to create invite code");
+          }
+
+          cy.logout();
+
+          cy.generate_random_code(12).then((suffix: string) => {
+            const email = `pkce-session-persist-test-${suffix}@example.com`;
+            const password = "TestPassword123!";
+
+            // Register User A via PKCE flow (establishes auth-server + resource server sessions)
+            cy.register_via_resource_server_pkce_flow({
+              resource_server_origin: exampleAppOrigin,
+              email,
+              password,
+              invite_code: inviteCode,
+            }).then(() => {
+              // Clear resource server auth state ONLY — keep the auth-server session intact.
+              cy.origin(exampleAppOrigin, () => {
+                localStorage.clear();
+                sessionStorage.clear();
+                cy.getCookies().then((cookies) => {
+                  for (const cookie of cookies) {
+                    cy.clearCookie(cookie.name);
+                  }
+                });
+              });
+
+              // Start a new PKCE flow from the resource server
+              cy.origin(exampleAppOrigin, () => {
+                cy.visit("/");
+                cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+                cy.contains("button", "Login").click();
+              });
+
+              // The auth-server should detect the existing session and auto-complete
+              // the PKCE flow without showing a login form. Handle possible consent screen.
+              cy.get("body", { timeout: 15000 }).then(($body) => {
+                if ($body.text().includes("Authorize & Continue")) {
+                  cy.contains("Authorize & Continue").should("be.visible").click();
+                }
+              });
+
+              // Verify redirect to resource server /account page as the same user
+              cy.origin(exampleAppOrigin, () => {
+                cy.url({ timeout: 30000 }).should("include", "/account");
+                cy.contains("Example Account Page", { timeout: 15000 }).should(
+                  "be.visible",
+                );
+                cy.contains(
+                  "If you're seeing this it means that you were not redirected because you are logged in!",
+                ).should("be.visible");
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
   it("treats a user with expired access tokens but valid refresh tokens as still logged in on /auth/login", () => {
     cy.create_and_login_as_superuser().then((success: boolean) => {
       if (!success) {
