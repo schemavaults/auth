@@ -12,6 +12,7 @@ import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import type { UserData } from "@schemavaults/auth-common";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
+import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 
 export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   on_successful_authenticate: OnSuccessfulAuthenticateAction;
@@ -67,6 +68,11 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
   if (isNaN(challenge_time)) {
     console.warn("Invalid code challenge time!")
     redirectWithError(400, "bad_request");
+  }
+
+  if (isPkceChallengeExpired(challenge_time)) {
+    console.warn("PKCE challenge has expired!");
+    redirectWithError(400, "pkce_challenge_expired");
   }
 
   if (typeof opts.redirect_uri !== 'string' || !opts.redirect_uri) {
