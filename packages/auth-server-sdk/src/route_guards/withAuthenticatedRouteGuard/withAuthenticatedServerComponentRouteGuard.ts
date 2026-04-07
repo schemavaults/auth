@@ -89,26 +89,64 @@ export async function withAuthenticatedServerComponentRouteGuard<
     throw new TypeError("Expected 'redirect' to be a function");
   }
 
-  let extracted_api_server_id: ApiServerId;
-  try {
+  let extracted_api_server_id: ApiServerId | undefined = undefined;
+  async function parseApiServerIdFromAdditionalsOptsObject(): Promise<ApiServerId> {
     const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
       opts?.api_server_id,
     );
     if (!parsed_api_server_id.success) {
       console.error(
-        "[withAuthenticatedServerComponentRouteGuard] Did not receive a : ",
+        "[withAuthenticatedServerComponentRouteGuard] Did not receive a valid API server ID from withAuthenticatedServerComponentRouteGuard additional options object: ",
         parsed_api_server_id.error,
       );
       throw parsed_api_server_id.error;
     }
-    extracted_api_server_id = parsed_api_server_id.data;
-    getSchemavaultsApiServerId();
+    return parsed_api_server_id.data;
+  }
+
+  try {
+    if (
+      typeof opts?.api_server_id === "string" &&
+      opts.api_server_id.length > 0
+    ) {
+      await parseApiServerIdFromAdditionalsOptsObject();
+    }
   } catch (e: unknown) {
     console.error(
-      "[withAuthenticatedServerComponentRouteGuard] Failed to load API server ID: ",
+      "[withAuthenticatedServerComponentRouteGuard] Received bad 'api_server_id' in options object: ",
       e,
     );
     redirectWithError(redirect, 500, "server_misconfiguration");
+  }
+
+  async function parseApiServerIdFromEnvironmentVariables(): Promise<ApiServerId> {
+    const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
+      getSchemavaultsApiServerId(),
+    );
+    if (!parsed_api_server_id.success) {
+      console.error(
+        "[withAuthenticatedServerComponentRouteGuard] Did not receive a valid API server ID from withAuthenticatedServerComponentRouteGuard additional options object: ",
+        parsed_api_server_id.error,
+      );
+      throw parsed_api_server_id.error;
+    }
+    return parsed_api_server_id.data;
+  }
+
+  // only parse from environment variables if we are not manually supplying an api server id
+  if (typeof extracted_api_server_id === "undefined") {
+    try {
+      extracted_api_server_id =
+        await parseApiServerIdFromEnvironmentVariables();
+    } catch (e: unknown) {}
+  }
+
+  console.assert(
+    typeof extracted_api_server_id === "string",
+    "[withAuthenticatedServerComponentRouteGuard] Expected 'extracted_api_server_id' to be a string if this point was reached!",
+  );
+  if (typeof extracted_api_server_id !== "string") {
+    redirectWithError(redirect, 500, "internal_server_error");
   }
   const api_server_id: ApiServerId = extracted_api_server_id;
 
