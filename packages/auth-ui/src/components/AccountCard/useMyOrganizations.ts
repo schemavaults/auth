@@ -11,6 +11,7 @@ export interface MyOrganizationMembership {
 }
 
 export interface UseMyOrganizationsOptions {
+  enabled?: boolean;
   initialData?: readonly MyOrganizationMembership[] | undefined;
 }
 
@@ -29,12 +30,13 @@ export function clearMyOrganizationsCache(
 }
 
 export function useMyOrganizations({
+  enabled = true,
   initialData,
 }: UseMyOrganizationsOptions): SWRResponse<readonly MyOrganizationMembership[]> {
   const { toast } = useToast();
 
   return useSWR(
-    MY_ORGANIZATIONS_ENDPOINT,
+    enabled ? MY_ORGANIZATIONS_ENDPOINT : null,
     async (): Promise<readonly MyOrganizationMembership[]> => {
       try {
         const response = await fetch(MY_ORGANIZATIONS_ENDPOINT, {

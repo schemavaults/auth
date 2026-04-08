@@ -68,6 +68,7 @@ export function AccountDetailsCard(
     }));
 
   const { data: memberships } = useMyOrganizations({
+    enabled: !!props.isAuthServerAccountPage,
     initialData: props.isAuthServerAccountPage ? preloadedMemberships : undefined,
   });
 
