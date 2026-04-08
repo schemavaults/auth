@@ -7,6 +7,7 @@ import {
 import {
   type AccessToken,
   accessTokenDataSchema,
+  isValidOrganizationID,
   organizationIdSchema,
   type PotentiallyValidTokenSource,
   type UserData,
@@ -349,9 +350,24 @@ export function withAuthenticatedApiRouteGuard<
     }
 
     if (opts?.required_organization) {
+      const required_organization: OrganizationID = opts?.required_organization;
+      if (!isValidOrganizationID(required_organization)) {
+        console.error(
+          "[withAuthenticatedApiRouteGuard] Invalid organization ID passed as 'required_organization'!",
+        );
+        return json(
+          {
+            success: false,
+            error: true,
+            message: "Server does not appear to be properly configured!",
+          },
+          { status: 500 },
+        );
+      }
+
       let org_role: OrganizationMembershipRoleType | false = false;
       try {
-        org_role = await isUserInOrganization(user, opts.required_organization);
+        org_role = await isUserInOrganization(user, required_organization);
       } catch (e: unknown) {
         console.error(
           "[withAuthenticatedApiRouteGuard] Organization membership check failed: ",
@@ -368,6 +384,9 @@ export function withAuthenticatedApiRouteGuard<
       }
 
       if (org_role === false || !org_role) {
+        console.warn(
+          `[withAuthenticatedApiRouteGuard] User '${user.uid}' does not appear to be in required organization '${required_organization}'!`,
+        );
         return json(
           {
             success: false,

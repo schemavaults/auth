@@ -6,6 +6,7 @@ import {
   getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
+  isValidOrganizationID,
   organizationIdSchema,
   userDataSchema,
   type PotentiallyValidTokenSource,
@@ -316,9 +317,16 @@ export async function withAuthenticatedServerComponentRouteGuard<
       : (base_server_component_props as unknown as TProps);
 
   if (opts?.required_organization) {
+    const required_organization: OrganizationID = opts?.required_organization;
+    if (!isValidOrganizationID(required_organization)) {
+      console.error(
+        "[withAuthenticatedServerComponentRouteGuard] Invalid organization ID passed as 'required_organization'!",
+      );
+      redirectWithError(redirect, 500, "server_misconfiguration");
+    }
     let org_role: OrganizationMembershipRoleType | false = false;
     try {
-      org_role = await isUserInOrganization(user, opts.required_organization);
+      org_role = await isUserInOrganization(user, required_organization);
     } catch (e: unknown) {
       console.error(
         "[withAuthenticatedServerComponentRouteGuard] Organization membership check failed: ",
@@ -328,7 +336,9 @@ export async function withAuthenticatedServerComponentRouteGuard<
     }
 
     if (org_role === false || !org_role) {
-      console.warn(`[withAuthenticatedServerComponentRouteGuard]`);
+      console.warn(
+        `[withAuthenticatedServerComponentRouteGuard] User '${user.uid}' does not appear to be in required organization '${required_organization}'!`,
+      );
       redirectWithError(redirect, 403, "account_not_in_organization");
     }
   }
