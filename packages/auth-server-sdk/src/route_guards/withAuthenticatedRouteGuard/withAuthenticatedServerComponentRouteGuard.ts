@@ -109,7 +109,8 @@ export async function withAuthenticatedServerComponentRouteGuard<
       typeof opts?.api_server_id === "string" &&
       opts.api_server_id.length > 0
     ) {
-      await parseApiServerIdFromAdditionalsOptsObject();
+      extracted_api_server_id =
+        await parseApiServerIdFromAdditionalsOptsObject();
     }
   } catch (e: unknown) {
     console.error(
@@ -147,12 +148,11 @@ export async function withAuthenticatedServerComponentRouteGuard<
     }
   }
 
-  console.assert(
-    typeof extracted_api_server_id === "string",
-    "[withAuthenticatedServerComponentRouteGuard] Expected 'extracted_api_server_id' to be a string if this point was reached!",
-  );
   if (typeof extracted_api_server_id !== "string") {
-    redirectWithError(redirect, 500, "internal_server_error");
+    console.error(
+      "[withAuthenticatedServerComponentRouteGuard] Failed to parse 'api_server_id' from either options or environment variables!",
+    );
+    redirectWithError(redirect, 500, "server_misconfiguration");
   }
   const api_server_id: ApiServerId = extracted_api_server_id;
 
