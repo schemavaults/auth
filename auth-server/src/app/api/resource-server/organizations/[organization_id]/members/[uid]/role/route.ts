@@ -1,11 +1,13 @@
 import "server-only";
 import { type NextRequest, NextResponse } from "next/server";
 import { ServerlessDatabase } from "@/lib/auth-db";
-import { organizationIdSchema, type OrganizationID } from "@schemavaults/auth-common";
+import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
 import verifyJwksAccessAssertion from "@/app/api/jwks/[audience]/verifyJwksAccessAssertion";
-import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import isValidUuid from "@/lib/is-valid-uuid";
+import SchemaVaultsApiServerRegistry from "@/lib/auth-db/apis";
+import getUserByUID from "@/lib/auth-db/users/get-user-by-uid";
+import isUserInOrganization from "@/lib/isUserInOrganization";
 
 export async function GET(
   request: NextRequest,
@@ -76,17 +78,45 @@ export async function GET(
     );
   }
 
+  // Verify the API server owns the requested organization
   try {
-    const organizationsRegistry = new OrganizationsRegistry(dbh.db);
-    const memberships = await organizationsRegistry.listUserOrganizationMemberships(uid, false);
-    const membership = memberships.find(m => m.organization_id === organization_id);
+    const apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
+    const apiServer = await apiServerRegistry.getApiServer(api_server_id);
+    if (!apiServer || apiServer.owner_organization_id !== organization_id) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden - API server does not own this organization" },
+        { status: 403 },
+      );
+    }
+  } catch (e: unknown) {
+    console.error(
+      `[resource-server/organizations] Failed to verify API server ownership for api_server_id="${api_server_id}" org="${organization_id}":`,
+      e,
+    );
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+
+  try {
+    const userDoc = await getUserByUID(dbh.db, uid);
+    if (!userDoc) {
+      return NextResponse.json({
+        success: true,
+        data: { organization_id, uid, role: null },
+      });
+    }
+
+    const userData: UserData = { ...userDoc, sub: userDoc.uid };
+    const role = await isUserInOrganization(dbh.db, userData, organization_id);
 
     return NextResponse.json({
       success: true,
       data: {
         organization_id,
         uid,
-        role: membership ? membership.role : null,
+        role: role || null,
       },
     });
   } catch (e: unknown) {
