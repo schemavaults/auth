@@ -162,6 +162,20 @@ export async function sendAuthenticateRequest(
         authentication_type === "register"
       ) {
         throw new Error("Conflict; user already exists!");
+      } else if (response.status === 403) {
+        let errorMessage = "Action not allowed while signed in as another user. Please log out first.";
+        try {
+          const body: unknown = await response.json();
+          if (
+            typeof body === "object" &&
+            body !== null &&
+            "message" in body &&
+            typeof (body as Record<string, unknown>).message === "string"
+          ) {
+            errorMessage = (body as Record<string, unknown>).message as string;
+          }
+        } catch { /* use default message */ }
+        throw new Error(errorMessage);
       }
       throw new Error(
         `Failed to authenticate (response status ${response.status})`,
@@ -191,6 +205,9 @@ export async function sendAuthenticateRequest(
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("Invalid credentials")) {
       throw new Error("Invalid credentials");
+    }
+    if (e instanceof Error && e.message.includes("already signed in")) {
+      throw e;
     }
     console.error("Failed to parse authentication response: ", e);
     throw new Error("Failed to parse authentication response");

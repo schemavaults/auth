@@ -29,11 +29,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Download core Docker images
+      - name: Download auth server Docker image
         if: ${{ inputs.skip-docker-build }}
         uses: actions/download-artifact@v8
         with:
-          name: e2e-docker-images-core
+          name: docker-image-auth-server
+          path: /tmp/docker-images
+
+      - name: Download postgres DB Docker image
+        if: ${{ inputs.skip-docker-build }}
+        uses: actions/download-artifact@v8
+        with:
+          name: e2e-docker-image-postgres-db
+          path: /tmp/docker-images
+
+      - name: Download E2E auth tests Docker image
+        if: ${{ inputs.skip-docker-build }}
+        uses: actions/download-artifact@v8
+        with:
+          name: e2e-docker-image-e2e-auth-tests
           path: /tmp/docker-images
 
       - name: Download resource server Docker image

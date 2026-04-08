@@ -1,4 +1,4 @@
-import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
 import type { IJwtKeyManager } from "@/JwtKeyManager/IJwtKeyManager";
 import RemoteJwtKeyManager from "@/JwtKeyManager/RemoteJwtKeyManager";
 

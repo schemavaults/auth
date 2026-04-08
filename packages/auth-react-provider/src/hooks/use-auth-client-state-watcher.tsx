@@ -1,7 +1,7 @@
 "use client";
 
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
-import { type RefObject, useEffect } from "react";
+import { type RefObject, useEffect, useEffectEvent } from "react";
 import { useAuth } from "./use-auth";
 import {
   useAppEnvironment,
@@ -32,17 +32,7 @@ export function useAuthClientStateWatcher({
     opts.debug,
   );
 
-  // Attach an auth-state change listener to the auth client
-  useEffect((): void | UnsubscribeFn => {
-    if (!auth.ready) {
-      if (debug) {
-        console.log(
-          "[useAuthClientStateWatcher] Auth client not ready, skipping...",
-        );
-      }
-      return;
-    }
-
+  const handleAuthSDKStateChangeEvent = useEffectEvent(
     async function handleAuthSDKStateChangeEvent(): Promise<void> {
       if (debug) {
         console.log("[useAuthClientStateWatcher] Auth SDK state changed.");
@@ -89,7 +79,19 @@ export function useAuthClientStateWatcher({
           e,
         );
       }
-    } // end of handleAuthSDKStateChangeEvent
+    },
+  ); // end of handleAuthSDKStateChangeEvent)
+
+  // Attach an auth-state change listener to the auth client
+  useEffect((): void | UnsubscribeFn => {
+    if (!auth.ready) {
+      if (debug) {
+        console.log(
+          "[useAuthClientStateWatcher] Auth client not ready, skipping...",
+        );
+      }
+      return;
+    }
 
     const authClientRef: RefObject<ISchemaVaultsAuthClient | null> =
       auth.client;
@@ -139,5 +141,5 @@ export function useAuthClientStateWatcher({
       };
       return unsubscribe;
     }
-  }, [auth, debug, onAuthStateChanged]);
+  }, [auth, debug]);
 }

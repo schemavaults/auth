@@ -16,7 +16,7 @@ import type {
   OrganizationMembershipRoleType,
 } from "@schemavaults/auth-common/organizations";
 import isUserInOrganizationFromAuthServer from "@/isUserInOrganization";
-import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
 import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey/loadJwksAccessPrivateKey";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
 import type { ReactElement } from "react";
@@ -24,7 +24,7 @@ import { redirectWithError } from "@/redirect-with-error";
 import RouteGuardFactory from "@/route_guards/route-guard-factory";
 import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
 import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
-import getSchemavaultsApiServerId from "@/get-schemavaults-api-server-id";
+import getSchemavaultsApiServerId from "@/env/get-schemavaults-api-server-id";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 import redirectToLogin from "@/redirect-to-login";
 import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType";
@@ -89,23 +89,68 @@ export async function withAuthenticatedServerComponentRouteGuard<
     throw new TypeError("Expected 'redirect' to be a function");
   }
 
-  let extracted_api_server_id: ApiServerId;
-  try {
+  let extracted_api_server_id: ApiServerId | undefined = undefined;
+  async function parseApiServerIdFromAdditionalsOptsObject(): Promise<ApiServerId> {
     const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
-      opts?.api_server_id ?? getSchemavaultsApiServerId(),
+      opts?.api_server_id,
     );
     if (!parsed_api_server_id.success) {
       console.error(
-        "[withAuthenticatedServerComponentRouteGuard] getApiServerId() failed with bad ID: ",
+        "[withAuthenticatedServerComponentRouteGuard] Did not receive a valid API server ID from withAuthenticatedServerComponentRouteGuard additional options object: ",
         parsed_api_server_id.error,
       );
       throw parsed_api_server_id.error;
     }
-    extracted_api_server_id = parsed_api_server_id.data;
+    return parsed_api_server_id.data;
+  }
+
+  try {
+    if (
+      typeof opts?.api_server_id === "string" &&
+      opts.api_server_id.length > 0
+    ) {
+      extracted_api_server_id =
+        await parseApiServerIdFromAdditionalsOptsObject();
+    }
   } catch (e: unknown) {
     console.error(
-      "[withAuthenticatedServerComponentRouteGuard] Failed to load API server ID: ",
+      "[withAuthenticatedServerComponentRouteGuard] Received bad 'api_server_id' in options object: ",
       e,
+    );
+    redirectWithError(redirect, 500, "server_misconfiguration");
+  }
+
+  async function parseApiServerIdFromEnvironmentVariables(): Promise<ApiServerId> {
+    const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
+      getSchemavaultsApiServerId(),
+    );
+    if (!parsed_api_server_id.success) {
+      console.error(
+        "[withAuthenticatedServerComponentRouteGuard] Did not receive a valid API server ID from withAuthenticatedServerComponentRouteGuard additional options object: ",
+        parsed_api_server_id.error,
+      );
+      throw parsed_api_server_id.error;
+    }
+    return parsed_api_server_id.data;
+  }
+
+  // only parse from environment variables if we are not manually supplying an api server id
+  if (typeof extracted_api_server_id === "undefined") {
+    try {
+      extracted_api_server_id =
+        await parseApiServerIdFromEnvironmentVariables();
+    } catch (e: unknown) {
+      console.error(
+        "[withAuthenticatedServerComponentRouteGuard] Failed to parse 'api_server_id' from environment variables: ",
+        e,
+      );
+      redirectWithError(redirect, 500, "server_misconfiguration");
+    }
+  }
+
+  if (typeof extracted_api_server_id !== "string") {
+    console.error(
+      "[withAuthenticatedServerComponentRouteGuard] Failed to parse 'api_server_id' from either options or environment variables!",
     );
     redirectWithError(redirect, 500, "server_misconfiguration");
   }

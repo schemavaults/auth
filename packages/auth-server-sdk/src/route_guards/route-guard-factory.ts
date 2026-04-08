@@ -5,9 +5,7 @@ import AuthenticationRequiredRouteGuard from "./authenticated";
 import type { IRouteGuard } from "./IRouteGuard";
 import { z } from "zod";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
-import type {
-  PotentiallyValidTokenSource,
-} from "@schemavaults/auth-common";
+import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import {
   type ApiServerId,
   apiServerIdSchema,
@@ -15,7 +13,7 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
-import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
 import decodeJWTsWithKeyManager from "@/decode-jwts-with-key-manager";
 
 export interface RouteGuardFactoryInitOptions {

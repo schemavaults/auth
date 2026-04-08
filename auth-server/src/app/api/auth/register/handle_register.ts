@@ -22,6 +22,7 @@ import shouldCreateAsSuperuser from "./shouldCreateAsSuperuser";
 import lookupInviteCode from "@/lib/auth-db/users/lookup-invite-code";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
+import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 
 export interface HandleRegisterOptions {
   body: unknown;
@@ -73,6 +74,24 @@ export async function handleRegister({
   const registrationData = parse_register_body.data;
   if (debug) {
     console.log("[handleRegister] Parsed register body: ", registrationData);
+  }
+
+  // Prevent registration when already signed in — a new account always creates a new uid,
+  // so it can never match the existing session and would cause a PKCE session mismatch.
+  const existingSession = await doesRequestHaveValidAuthServerRefreshToken(req);
+  if (existingSession) {
+    console.warn(
+      `[handleRegister] Blocked registration attempt: user '${existingSession.uid}' is already signed in`,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        message: "You are already signed in. Please log out before registering a new account.",
+      } satisfies AuthenticateResult,
+      {
+        status: 403,
+      },
+    );
   }
 
   // Get values from registration data

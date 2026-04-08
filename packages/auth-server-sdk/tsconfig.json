@@ -18,6 +18,16 @@
       "@/middlewares/*": ["./src/middleware/middlewares/*"],
       "@/middleware_chain": ["./src/middleware/middleware_chain"],
       "@/middleware_types": ["./src/middleware/middleware_types"],
+      "@/get-schemavaults-api-server-id": [
+        "./src/env/get-schemavaults-api-server-id",
+      ],
+      "@/get-schemavaults-auth-server-uri": [
+        "./src/env/get-schemavaults-auth-server-uri",
+      ],
+      "@/get-schemavaults-client-application-id": [
+        "./src/env/get-schemavaults-client-application-id",
+      ],
+      "@/get-app-environment": ["./src/env/get-app-environment"],
     },
     "baseUrl": ".",
     "rootDir": "./src",

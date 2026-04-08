@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/install-deps-and-build-in-fresh-environment.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

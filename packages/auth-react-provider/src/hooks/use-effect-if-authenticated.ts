@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 import useAuth from "./use-auth";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import useDebug from "./use-debug";
@@ -17,6 +17,9 @@ export function useEffectIfAuthenticated(
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const debug: boolean = useDebug(environment);
 
+  const runEffect: (auth: ISchemaVaultsAuthClient) => UnsubscribeFn =
+    useEffectEvent(effect);
+
   useEffect(() => {
     if (!authContext.ready || !authContext.client.current) {
       return;
@@ -32,16 +35,13 @@ export function useEffectIfAuthenticated(
       if (debug) {
         console.log(`[useEffectIfAuthenticated] Running 'effect' fn...`);
       }
-      if (typeof effect !== "function") {
-        throw new TypeError("Expected 'effect' to be a function!");
-      }
-      const unsubscribe: UnsubscribeFn = effect(auth);
+      const unsubscribe: UnsubscribeFn = runEffect(auth);
       if (typeof unsubscribe !== "function") {
         throw new TypeError("Expected 'unsubscribe' to be a function!");
       }
       return unsubscribe;
     }
-  }, [authContext, effect, debug]);
+  }, [authContext, debug]);
 }
 
 export default useEffectIfAuthenticated;

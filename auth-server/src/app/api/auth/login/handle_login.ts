@@ -9,12 +9,14 @@ import {
   emailCredentialsSchema,
   PKCE_ProofKeyManager,
 } from "@schemavaults/auth-common";
+import type { UserData } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
+import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 
 interface HandleLoginOptions {
   body: unknown;
@@ -135,6 +137,24 @@ export async function handleLogin({
       } satisfies AuthenticateResult,
       {
         status: 401,
+      },
+    );
+  }
+
+  // Prevent signing in as a different user when an auth-server session already exists.
+  // This guards against PKCE flow session mismatches (e.g. SSR check missed the existing session).
+  const existingSession: UserData | false = await doesRequestHaveValidAuthServerRefreshToken(req);
+  if (existingSession && existingSession.uid !== uid) {
+    console.warn(
+      `[handleLogin] Blocked login attempt: existing session uid '${existingSession.uid}' does not match target uid '${uid}'`,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        message: "You are already signed in as a different user. Please log out first.",
+      } satisfies AuthenticateResult,
+      {
+        status: 403,
       },
     );
   }

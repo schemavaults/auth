@@ -6,7 +6,7 @@ import {
   apiServerIdSchema,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
 } from "@schemavaults/app-definitions";
-import getSchemaVaultsAuthServerUri from "@/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
 import loadJwksAccessPrivateKey, {
   JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME,
 } from "@/env/loadJwksAccessPrivateKey";

@@ -1,7 +1,7 @@
 "use client";
 
 import { type AccessToken, accessTokenExpiry } from "@schemavaults/auth-common";
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 import useAuth from "./use-auth";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import useDefaultAccessTokenAudiences from "./use-default-access-token-audiences";
@@ -27,27 +27,11 @@ export function useAutoReacquireDefaultAccessTokens(): void {
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const debug: boolean = useDebug(environment);
 
-  useEffect(() => {
-    if (
-      typeof defaultAccessTokenAudiences === "undefined" ||
-      !Array.isArray(defaultAccessTokenAudiences)
-    ) {
-      if (debug) {
-        console.warn(
-          "[useAutoReacquireDefaultAccessTokens] Default access token audiences not set.",
-        );
-      }
-      return;
-    }
-
-    if (!authContext.ready || !authContext.client.current) {
-      return;
-    }
-    const auth: ISchemaVaultsAuthClient = authContext.client.current;
-
-    async function reacquireAccessTokenIfNearExpiry(
+  const reacquireAccessTokenIfNearExpiry = useEffectEvent(
+    async (
+      auth: ISchemaVaultsAuthClient,
       audience: ApiServerId,
-    ): Promise<AccessToken | null> {
+    ): Promise<AccessToken | null> => {
       if (debug) {
         console.log(
           `[useAutoReacquireDefaultAccessTokens] reacquireAccessTokenIfNearExpiry(audience="${audience}")`,
@@ -88,9 +72,17 @@ export function useAutoReacquireDefaultAccessTokens(): void {
       } else {
         return null;
       }
-    }
+    },
+  );
 
-    async function onTimer(): Promise<void> {
+  const onTimer: () => Promise<void> = useEffectEvent(
+    async () => {
+      if (!authContext.ready) {
+        return;
+      } else if (!authContext.client.current) {
+        return;
+      }
+      const auth: ISchemaVaultsAuthClient = authContext.client.current;
       if (!auth.isAuthenticated) {
         return;
       }
@@ -99,11 +91,34 @@ export function useAutoReacquireDefaultAccessTokens(): void {
       }
       await Promise.all(
         defaultAccessTokenAudiences.map((audience) =>
-          reacquireAccessTokenIfNearExpiry(audience),
+          reacquireAccessTokenIfNearExpiry(auth, audience),
         ),
       );
       return;
-    } // onTimer()
+    }, // onTimer()
+  );
+
+  useEffect(() => {
+    if (
+      typeof defaultAccessTokenAudiences === "undefined" ||
+      !Array.isArray(defaultAccessTokenAudiences)
+    ) {
+      if (debug) {
+        console.warn(
+          "[useAutoReacquireDefaultAccessTokens] Default access token audiences not set.",
+        );
+      }
+      return;
+    }
+
+    if (!authContext.ready || !authContext.client.current) {
+      if (debug) {
+        console.warn(
+          "[useAutoReacquireDefaultAccessTokens] Not attempting to auto-reacquire access tokens near expiry-- auth client is not ready or is falsy",
+        );
+      }
+      return;
+    }
 
     if (debug) {
       console.log(

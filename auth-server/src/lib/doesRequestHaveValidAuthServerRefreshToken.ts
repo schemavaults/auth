@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { ServerlessDatabase } from "./auth-db";
 import { RefreshTokenExpiryCookieName, RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
-import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { cookies } from "next/headers";
 

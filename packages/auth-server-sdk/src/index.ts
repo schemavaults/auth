@@ -23,7 +23,7 @@ import MaximumBrowserCookieSize from "./MaximumBrowserCookieSize";
 export { MaximumBrowserCookieSize };
 
 // API Server IDs
-export { getSchemavaultsApiServerId } from "./get-schemavaults-api-server-id";
+export { getSchemavaultsApiServerId } from "./env/get-schemavaults-api-server-id";
 export type { ApiServerId } from "@schemavaults/app-definitions";
 export {
   apiServerIdSchema,
@@ -31,7 +31,7 @@ export {
 } from "@schemavaults/app-definitions";
 
 // Client Application IDs
-export { getSchemavaultsClientApplicationId } from "./get-schemavaults-client-application-id";
+export { getSchemavaultsClientApplicationId } from "./env/get-schemavaults-client-application-id";
 export type { AppId } from "@schemavaults/app-definitions";
 export {
   appIdSchema,
@@ -49,8 +49,8 @@ export { default as getStringByteSize } from "./getStringByteSize";
 export { redirectToLogin } from "./redirect-to-login";
 export type * from "./redirect-with-error";
 
-export { getAppEnvironment } from "./get-app-environment";
-export type { SchemaVaultsAppEnvironment } from "./get-app-environment";
+export { getAppEnvironment } from "./env/get-app-environment";
+export type { SchemaVaultsAppEnvironment } from "./env/get-app-environment";
 
 // Decode helper
 export { decodeJWTsWithKeyManager } from "./decode-jwts-with-key-manager";

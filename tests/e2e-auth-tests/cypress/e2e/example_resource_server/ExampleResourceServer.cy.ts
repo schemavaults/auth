@@ -128,6 +128,73 @@ describe("ExampleResourceServer", () => {
     });
   });
 
+  it("auto-completes PKCE flow with existing auth-server session when resource server is logged out", () => {
+    cy.create_and_login_as_superuser().then((success: boolean) => {
+      if (!success) {
+        throw new Error("Failed to login as superuser");
+      }
+
+      cy.generate_random_code(24).then((inviteCode: string) => {
+        cy.create_invite_code(inviteCode, 1).then((created: boolean) => {
+          if (!created) {
+            throw new Error("Failed to create invite code");
+          }
+
+          cy.logout();
+
+          cy.generate_random_code(12).then((suffix: string) => {
+            const email = `pkce-session-persist-test-${suffix}@example.com`;
+            const password = "TestPassword123!";
+
+            // Step 1: Register User A via PKCE flow (creates account + authorizes the app)
+            cy.register_via_resource_server_pkce_flow({
+              resource_server_origin: exampleAppOrigin,
+              email,
+              password,
+              invite_code: inviteCode,
+            }).then(() => {
+              // Step 2: Logout from everything (auth-server session + resource server)
+              cy.logout();
+
+              // Step 3: Re-login directly on the auth-server (primary origin).
+              // This establishes the refresh token cookie reliably on the
+              // primary origin — Cypress does not preserve cookies set during
+              // cy.origin() transitions.
+              cy.login(email, password).then((loginSuccess: boolean) => {
+                if (!loginSuccess) {
+                  throw new Error("Failed to login directly to auth-server");
+                }
+
+                // Step 4: Start a new PKCE flow from the resource server.
+                // The Login click redirects to the auth-server, which should
+                // detect the existing session and auto-complete the flow.
+                cy.origin(exampleAppOrigin, () => {
+                  cy.visit("/");
+                  cy.contains("h1", "@schemavaults/example-nextjs-resource-server");
+                  cy.contains("button", "Login").click();
+                });
+
+                // Step 5: Verify redirect to resource server /account page.
+                // The consent screen is skipped because the app was already
+                // authorized during registration in step 1, so the auth-server
+                // auto-completes the flow and redirects straight back.
+                cy.origin(exampleAppOrigin, () => {
+                  cy.url({ timeout: 30000 }).should("include", "/account");
+                  cy.contains("Example Account Page", { timeout: 15000 }).should(
+                    "be.visible",
+                  );
+                  cy.contains(
+                    "If you're seeing this it means that you were not redirected because you are logged in!",
+                  ).should("be.visible");
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
   it("treats a user with expired access tokens but valid refresh tokens as still logged in on /auth/login", () => {
     cy.create_and_login_as_superuser().then((success: boolean) => {
       if (!success) {

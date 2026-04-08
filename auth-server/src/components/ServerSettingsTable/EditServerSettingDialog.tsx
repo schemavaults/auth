@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type SubmitEvent,
   useCallback,
   useEffect,
   useState,
@@ -63,7 +64,7 @@ export function EditServerSettingDialog({
   );
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: SubmitEvent): Promise<void> => {
       e.preventDefault();
       if (!setting) return;
 
