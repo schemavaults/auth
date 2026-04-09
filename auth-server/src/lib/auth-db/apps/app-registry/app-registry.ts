@@ -302,7 +302,14 @@ export class SchemaVaultsAppRegistry {
     try {
       result = await this.db
         .selectFrom("apps")
-        .where("owner_organization_id", "=", org_id)
+        .where((eb) =>
+          org_id === SCHEMAVAULTS_ORGANIZATION_ID
+            ? eb.or([
+                eb("owner_organization_id", "=", org_id),
+                eb("owner_organization_id", "is", null),
+              ])
+            : eb("owner_organization_id", "=", org_id)
+        )
         .limit(MAX_PAGE_SIZE)
         .selectAll()
         .execute();
