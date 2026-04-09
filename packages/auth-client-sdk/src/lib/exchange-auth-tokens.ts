@@ -159,6 +159,9 @@ export async function exchangeAuthTokens({
           `${response.status} error response from exchange token attempt, client is not logged in! Server: ${serverMessage}`,
         );
         await logout();
+        throw new Error(
+          `Session expired (HTTP ${response.status}): ${serverMessage}`,
+        );
       }
       throw new Error(
         `Token exchange failed (HTTP ${response.status}): ${serverMessage}`,
