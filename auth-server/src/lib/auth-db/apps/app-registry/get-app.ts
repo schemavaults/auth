@@ -2,6 +2,7 @@ import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { type AppId, appIdSchema, getHardcodedApp, isHardcodedAppId, type SchemaVaultsApp, schemaVaultsAppDefinitionSchema } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 
 export async function getApp(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
@@ -94,10 +95,15 @@ export async function getApp(
     throw new Error("Failed to parse created_at from database");
   }
 
+  const owner_organization_id: string = (
+    "owner_organization_id" in first_row && typeof first_row['owner_organization_id'] === 'string'
+  ) ? (first_row as { owner_organization_id: string }).owner_organization_id : SCHEMAVAULTS_ORGANIZATION_ID;
+
   const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
     ...first_row,
     created_at: createdAt,
     hardcoded: false,
+    owner_organization_id,
   });
   if (!parsed_app.success) {
     console.error(parsed_app.error.errors);
