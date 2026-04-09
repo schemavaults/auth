@@ -324,7 +324,14 @@ export class SchemaVaultsApiServerRegistry {
       try {
         rows = await this.db
           .selectFrom("api_servers")
-          .where("owner_organization_id", '=', organization_id)
+          .where((eb) =>
+            organization_id === SCHEMAVAULTS_ORGANIZATION_ID
+              ? eb.or([
+                  eb("owner_organization_id", "=", organization_id),
+                  eb("owner_organization_id", "is", null),
+                ])
+              : eb("owner_organization_id", "=", organization_id)
+          )
           .limit(100)
           .selectAll()
           .execute();
