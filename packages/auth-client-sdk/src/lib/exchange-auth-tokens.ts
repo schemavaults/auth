@@ -160,6 +160,10 @@ export async function exchangeAuthTokens({
         );
         await logout();
         const sessionExpiredMsg = `Session expired (HTTP ${response.status}): ${serverMessage}`;
+        // Guard: downstream error handlers (acquire-access-token.ts, etc.) detect session
+        // expiry by checking if the error message includes "expired". If the message format
+        // is ever refactored and that keyword is accidentally removed, the entire expired-session
+        // detection chain breaks silently. This check ensures the contract is always upheld.
         if (!sessionExpiredMsg.toLowerCase().includes("expired")) {
           throw new Error("Session expired");
         }
