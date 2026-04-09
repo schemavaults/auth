@@ -79,10 +79,15 @@ export class SchemaVaultsApiServerRegistry {
       throw new Error("Failed to parse created_at from database");
     }
 
+    const owner_organization_id: OrganizationID = (
+      "owner_organization_id" in first_row && typeof first_row['owner_organization_id'] === 'string'
+    ) ? first_row['owner_organization_id'] : SCHEMAVAULTS_ORGANIZATION_ID;
+
     const parsed_api_server =
       await schemaVaultsApiServerDefinitionSchema.safeParseAsync({
         ...first_row,
         created_at: createdAt,
+        owner_organization_id,
       });
     if (!parsed_api_server.success) {
       console.error(parsed_api_server.error.errors);
