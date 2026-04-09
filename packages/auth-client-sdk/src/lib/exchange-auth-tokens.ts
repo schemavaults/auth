@@ -159,9 +159,11 @@ export async function exchangeAuthTokens({
           `${response.status} error response from exchange token attempt, client is not logged in! Server: ${serverMessage}`,
         );
         await logout();
-        throw new Error(
-          `Session expired (HTTP ${response.status}): ${serverMessage}`,
-        );
+        const sessionExpiredMsg = `Session expired (HTTP ${response.status}): ${serverMessage}`;
+        if (!sessionExpiredMsg.toLowerCase().includes("expired")) {
+          throw new Error("Session expired");
+        }
+        throw new Error(sessionExpiredMsg);
       }
       throw new Error(
         `Token exchange failed (HTTP ${response.status}): ${serverMessage}`,
