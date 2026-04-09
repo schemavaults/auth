@@ -20,10 +20,10 @@ export class AuthServerJwtKeysManager
   extends DatabaseConnectedJwtKeyManager
   implements IJwtKeyManager
 {
-  private static readonly refresh_token_valid_duration: number =
-    refreshTokenExpiry;
-  private static readonly keyset_valid_duration: number =
-    refreshTokenExpiry * 3;
+  private static readonly refresh_token_valid_duration_ms: number =
+    refreshTokenExpiry * 1000;
+  private static readonly keyset_valid_duration_ms: number =
+    refreshTokenExpiry * 3 * 1000;
 
   public constructor(dbh: Kysely<AuthDatabase>) {
     super(new AuthServerJwtKeysStore(dbh));
@@ -49,7 +49,7 @@ export class AuthServerJwtKeysManager
 
     const newKeySet: I_JWT_Keys = await generateNewJwtKeySet({
       keyset_expiry:
-        Date.now() + AuthServerJwtKeysManager.keyset_valid_duration,
+        Date.now() + AuthServerJwtKeysManager.keyset_valid_duration_ms,
       audience_id,
     });
 
@@ -88,7 +88,7 @@ export class AuthServerJwtKeysManager
   ): boolean {
     // if a refresh token was issued right now, what time would it expire?
     const new_refresh_token_expiry =
-      Date.now() + this.refresh_token_valid_duration + 2000;
+      Date.now() + this.refresh_token_valid_duration_ms + 2000;
 
     const willKeysetExpireBeforeNewRefreshToken: boolean =
       keyset.keyset_expiry < new_refresh_token_expiry;
