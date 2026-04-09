@@ -89,11 +89,19 @@ export function useAutoReacquireDefaultAccessTokens(): void {
       if (typeof defaultAccessTokenAudiences === "undefined") {
         return;
       }
-      await Promise.all(
+      const results = await Promise.allSettled(
         defaultAccessTokenAudiences.map((audience) =>
           reacquireAccessTokenIfNearExpiry(auth, audience),
         ),
       );
+      for (const result of results) {
+        if (result.status === "rejected") {
+          console.warn(
+            "[useAutoReacquireDefaultAccessTokens] Failed to reacquire access token:",
+            result.reason,
+          );
+        }
+      }
       return;
     }, // onTimer()
   );

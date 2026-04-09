@@ -129,44 +129,61 @@ export async function exchangeAuthTokens({
     if (debug) {
       console.log(`POST => ${exchange_refresh_token_endpoint}`);
     }
-    const response = await adapter.fetch(exchange_refresh_token_endpoint, {
-      body: JSON.stringify(request_body),
-      method: "POST",
-      headers: exchangeAuthTokensReqHeaders,
-      credentials: "include",
-    });
+    const response: Response = await adapter.fetch(
+      exchange_refresh_token_endpoint,
+      {
+        body: JSON.stringify(request_body),
+        method: "POST",
+        headers: exchangeAuthTokensReqHeaders,
+        credentials: "include",
+      },
+    );
     if (!response || typeof response !== "object" || response.status !== 200) {
+      let serverMessage = "unknown error";
+      try {
+        const errorBody: unknown = await response.json();
+        if (
+          errorBody &&
+          typeof errorBody === "object" &&
+          "message" in errorBody &&
+          typeof (errorBody as { message: unknown }).message === "string"
+        ) {
+          serverMessage = (errorBody as { message: string }).message;
+        }
+      } catch {
+        // Response body may not be valid JSON
+      }
+
       if (response.status === 403 || response.status === 401) {
         console.error(
-          "401/403 error response from exchange token attempt, client is not logged in!",
+          `${response.status} error response from exchange token attempt, client is not logged in! Server: ${serverMessage}`,
         );
         await logout();
       }
       throw new Error(
-        "HTTP request failed to exchange refresh token for access token(s) object",
+        `Token exchange failed (HTTP ${response.status}): ${serverMessage}`,
       );
     }
 
-    const parsed_failed_tokens_result =
-      await requestTokensResultSchema.safeParseAsync(await response.json());
-    if (!parsed_failed_tokens_result.success) {
+    const parsed_tokens_result = await requestTokensResultSchema.safeParseAsync(
+      await response.json(),
+    );
+    if (!parsed_tokens_result.success) {
       console.error(
         "Failed to parse tokens response from server: ",
-        parsed_failed_tokens_result.error,
+        parsed_tokens_result.error,
       );
       throw new Error("Failed to parse tokens response from server!");
     }
 
-    tokens_response_data = parsed_failed_tokens_result.data;
+    tokens_response_data = parsed_tokens_result.data;
   } catch (e: unknown) {
     if (debug) {
       console.error("[exchangeAuthTokens] FETCH FAILED: ", e);
-      throw new Error("Failed to ");
     }
 
     if (e instanceof Error) {
-      const errMsg: string = e.message;
-      const eMsg: string = errMsg.toLowerCase();
+      const eMsg: string = e.message.toLowerCase();
       if (
         eMsg.includes("expired") ||
         eMsg.includes("jwtexpired") ||
@@ -177,10 +194,9 @@ export async function exchangeAuthTokens({
       }
     }
 
-    if (debug) {
-      console.error("Failed to exchange refresh token for access token: ", e);
-    }
-    throw new Error("Failed to exchange refresh token for access token");
+    throw e instanceof Error
+      ? e
+      : new Error("Failed to exchange refresh token for access token");
   }
 
   try {
