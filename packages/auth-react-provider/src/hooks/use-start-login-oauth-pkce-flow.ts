@@ -114,7 +114,23 @@ export function useStartLoginOauthPKCEFlow({
               "[startLoginPkceFlow] They have refresh token-- but we need to make sure they have access tokens ready in order to potentially access server-side rendered account page!",
             );
           }
-          await acquireDefaultAccessTokens(auth);
+          try {
+            await acquireDefaultAccessTokens(auth);
+          } catch (e: unknown) {
+            if (!auth.isAuthenticated) {
+              // Session was invalidated (e.g. keyset expired) - start fresh login
+              if (debug) {
+                console.log(
+                  "[startLoginPkceFlow] Session expired during access token acquisition, redirecting to login...",
+                );
+              }
+              if (!cancelLoginEffect) {
+                await startLoginPkceFlow(auth);
+              }
+              return;
+            }
+            throw e;
+          }
         }
 
         if (debug) {
