@@ -104,6 +104,10 @@ jobs:
       - name: Build all auth packages
         run: bun run build:packages
 
+      # Update lockfile so published versions reference the current version of upstream packages
+      - name: Update lockfile
+        run: bun update
+
       - name: Upload @schemavaults/app-definitions tarball
         id: upload-app-definitions
         uses: ./.github/actions/prepare-package-tarball-if-version-changed
