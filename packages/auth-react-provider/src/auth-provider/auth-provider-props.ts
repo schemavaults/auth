@@ -7,6 +7,7 @@ import type { InitializeAuthClientOptions } from "@schemavaults/auth-client-sdk"
 import type { useRouter } from "next/navigation";
 import type { PropsWithChildren } from "react";
 import type { AuthMiddlewareRulesBuilderFn } from "@/types/AuthMiddlewareRulesBuilderFn";
+import type { OnLogoutCallback } from "@/contexts/on-logout-context";
 
 export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
   // Use a hardcoded auth server URI
@@ -25,6 +26,8 @@ export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
   successful_authentication_redirect_uri?: string;
   successful_logout_redirect_uri?: string;
   authorize_uri?: string;
+
+  onLogout?: OnLogoutCallback;
 
   debug?: boolean;
 

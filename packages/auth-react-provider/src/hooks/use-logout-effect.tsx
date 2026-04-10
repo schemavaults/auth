@@ -9,6 +9,8 @@ import {
   useAppEnvironment,
 } from "./use-app-environment";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "./use-debug";
+import { useOnLogout } from "./use-on-logout";
+import type { OnLogoutCallback } from "@/contexts/on-logout-context";
 
 type OnLogoutSuccessHandler = (successful_logout_redirect_uri: string) => void;
 type OnLogoutFailureHandler = (e: unknown) => void;
@@ -26,6 +28,7 @@ export function useLogoutEffect(opts?: UseLogoutEffectOptions): void {
     opts?.onLogoutSuccess;
   const customOnLogoutFailure: OnLogoutFailureHandler | undefined =
     opts?.onLogoutFailure;
+  const onLogout: OnLogoutCallback | null = useOnLogout();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
   const debug: boolean = useDebugWithSpecifiedBooleanOrLookupDefault(
@@ -113,7 +116,17 @@ export function useLogoutEffect(opts?: UseLogoutEffectOptions): void {
 
     auth
       .logout()
-      .then(() => {
+      .then(async () => {
+        if (cancelDueToUnmount) return;
+        if (typeof onLogout === "function") {
+          try {
+            await onLogout();
+          } catch (e: unknown) {
+            if (debug) {
+              console.error("[useLogoutEffect] onLogout callback threw:", e);
+            }
+          }
+        }
         if (cancelDueToUnmount) return;
         onLogoutSuccessCallback(successful_logout_redirect_uri);
         return;
@@ -128,6 +141,7 @@ export function useLogoutEffect(opts?: UseLogoutEffectOptions): void {
   }, [
     authContext,
     debug,
+    onLogout,
     onLogoutSuccessCallback,
     onLogoutFailureCallback,
     router,

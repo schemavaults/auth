@@ -11,6 +11,7 @@ import SchemaVaultsAppEnvironmentContextProvider from "@/subproviders/app-enviro
 import AppIdProvider from "@/subproviders/app-id-provider";
 import DefaultAccessTokenAudiencesProvider from "@/subproviders/default-access-token-audiences-provider";
 import CoreSchemaVaultsAuthClientProvider from "./core-schemavaults-auth-client-provider";
+import OnLogoutProvider from "@/subproviders/on-logout-provider";
 
 /**
  * @name SchemaVaultsAuthProvider
@@ -26,7 +27,9 @@ export function SchemaVaultsAuthProvider(
         <DefaultAccessTokenAudiencesProvider
           default_audiences={props.default_audiences}
         >
-          <CoreSchemaVaultsAuthClientProvider {...props} />
+          <OnLogoutProvider onLogout={props.onLogout}>
+            <CoreSchemaVaultsAuthClientProvider {...props} />
+          </OnLogoutProvider>
         </DefaultAccessTokenAudiencesProvider>
       </AppIdProvider>
     </SchemaVaultsAppEnvironmentContextProvider>
