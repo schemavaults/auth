@@ -16,6 +16,7 @@ import type {
   AuthorizationCodesTable,
   PasswordsTable,
   PasswordResetTokensTable,
+  EmailVerificationTokensTable,
   UsersTable,
   InviteCodesTable,
 } from "./users";
@@ -35,6 +36,7 @@ export type AuthDatabase = {
   users: UsersTable;
   passwords: PasswordsTable;
   password_reset_tokens: PasswordResetTokensTable;
+  email_verification_tokens: EmailVerificationTokensTable;
   authorization_codes: AuthorizationCodesTable;
   invite_codes: InviteCodesTable;
   organizations: OrganizationsTable;
