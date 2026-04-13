@@ -1,4 +1,5 @@
 import "server-only";
+import { timingSafeEqual } from "node:crypto";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { hashPassword } from "@/lib/hash_password";
@@ -21,7 +22,13 @@ export async function comparePassword(
       getPasswordHash(db, uid, debug),
       hashPassword(password),
     ]);
-    const isSubmittedSameAsTruth: boolean = hashes[0] === hashes[1];
+    // Timing-safe comparison of the two SHA-256 hex digests so that
+    // response-time differences cannot be used to recover the saved hash.
+    const truthBuf: Buffer = Buffer.from(hashes[0], "hex");
+    const submittedBuf: Buffer = Buffer.from(hashes[1], "hex");
+    const isSubmittedSameAsTruth: boolean =
+      truthBuf.length === submittedBuf.length &&
+      timingSafeEqual(truthBuf, submittedBuf);
     if (debug) {
       console.log(
         `[comparePassword] Password ${isSubmittedSameAsTruth ? "is" : "is not"} the same`,

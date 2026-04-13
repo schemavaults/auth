@@ -191,6 +191,21 @@ export class PKCE_ProofKeyManager {
       return false;
     }
 
+    // This method performs a timing-safe comparison using node:crypto, which
+    // is only available server-side. The class as a whole is bundled for
+    // browsers (to create verifiers/challenges on the client), but this
+    // particular method must never run there. If it somehow is invoked from
+    // an insecure browser context, fail loudly with a clear message rather
+    // than attempting a broken import.
+    if (
+      typeof window !== "undefined" &&
+      window.isSecureContext === false
+    ) {
+      throw new Error(
+        "PKCE_ProofKeyManager.doesVerifierMatchChallenge must be called from a server or a secure context; refusing to run in an insecure browser context.",
+      );
+    }
+
     try {
       // Put the input code verifier through the same process
       // that (should have) created the initial code_challenge
@@ -202,14 +217,18 @@ export class PKCE_ProofKeyManager {
       const generated_challenge: CodeChallengeWithDetails =
         await pkce_flow.getCodeChallenge();
 
-      const saved_challenge: Partial<CodeChallengeWithDetails> = {
-        code_challenge: saved_code_challenge,
-        code_challenge_method,
-      };
-
-      return (
-        generated_challenge.code_challenge === saved_challenge.code_challenge
+      // Dynamic import so browser bundlers don't try to resolve node:crypto
+      // at module load time for code paths that never execute in the browser.
+      const { timingSafeEqual } = await import("node:crypto");
+      const generatedBuf: Buffer = Buffer.from(
+        generated_challenge.code_challenge,
+        "base64",
       );
+      const savedBuf: Buffer = Buffer.from(saved_code_challenge, "base64");
+      if (generatedBuf.length !== savedBuf.length) {
+        return false;
+      }
+      return timingSafeEqual(generatedBuf, savedBuf);
     } catch (e: unknown) {
       console.error(e);
       return false;
