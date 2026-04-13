@@ -1,4 +1,5 @@
 import "server-only";
+import { timingSafeEqual } from "node:crypto";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { PKCE_ProofKeyManager } from "@schemavaults/auth-common";
@@ -111,6 +112,7 @@ export async function validateAuthorizationCode(
       input_code_verifier: unverified_user_code_verifier,
       saved_code_challenge: code_challenge_from_database,
       challenge_time,
+      timingSafeEqual,
     });
   } catch (e: unknown) {
     console.error(

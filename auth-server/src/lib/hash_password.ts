@@ -1,6 +1,7 @@
 // Web Crypto API
 // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest
 
+import { timingSafeEqual } from "node:crypto";
 import maybeStripQuotes from "@/lib/maybeStripQuotes";
 
 // Required environment variables for this module
@@ -82,5 +83,12 @@ export async function comparePassword(
   // (Password + Salt) => SHA-256 => Hash
 
   // Does calculated hash match saved hash?
-  return hashHex === savedHash;
+  // Use a timing-safe comparison so attackers cannot progressively
+  // recover the saved hash via byte-by-byte response-time differences.
+  const hashBuf: Buffer = Buffer.from(hashHex, "hex");
+  const savedBuf: Buffer = Buffer.from(savedHash, "hex");
+  if (hashBuf.length !== savedBuf.length) {
+    return false;
+  }
+  return timingSafeEqual(hashBuf, savedBuf);
 }

@@ -1,4 +1,5 @@
 import { expect, describe, it } from "bun:test";
+import { timingSafeEqual } from "node:crypto";
 
 import { PKCE_ProofKeyManager } from "./pkce";
 import type { CodeVerifierWithDetails } from "./code_verifier";
@@ -114,7 +115,8 @@ describe("PKCE_ProofKeyManager", () => {
       const verifierMatchesChallenge: boolean = await PKCE_ProofKeyManager.doesVerifierMatchChallenge({
         input_code_verifier: code_verifier.code_verifier,
         saved_code_challenge: code_challenge.code_challenge,
-        challenge_time: code_verifier.challenge_time
+        challenge_time: code_verifier.challenge_time,
+        timingSafeEqual,
       })
       expect(verifierMatchesChallenge).toBe(true);
     }

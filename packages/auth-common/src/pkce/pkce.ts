@@ -16,10 +16,24 @@ import {
 } from "./code_verifier";
 import { sha256_digest } from "@/sha256_digest";
 
+/**
+ * Signature compatible with node:crypto's `timingSafeEqual`. Callers of
+ * `doesVerifierMatchChallenge` inject this so that this package doesn't need
+ * to import `node:crypto` itself — which would break browser bundlers
+ * (Cypress webpack, etc.) that also consume this class for client-side
+ * verifier/challenge generation.
+ */
+export type TimingSafeEqualFn = (a: Uint8Array, b: Uint8Array) => boolean;
+
 interface CheckWhetherVerifierMatchesChallengeInputOptions {
   input_code_verifier: string;
   saved_code_challenge: string;
   challenge_time: number;
+  /**
+   * Timing-safe byte comparator. Server-side callers should pass
+   * `timingSafeEqual` from `node:crypto`.
+   */
+  timingSafeEqual: TimingSafeEqualFn;
 }
 
 // Handles the creation of a PKCE code verifier and challenge
@@ -175,10 +189,21 @@ export class PKCE_ProofKeyManager {
   public static async doesVerifierMatchChallenge(
     opts: CheckWhetherVerifierMatchesChallengeInputOptions,
   ): Promise<boolean> {
-    const { input_code_verifier, saved_code_challenge, challenge_time } = opts;
+    const {
+      input_code_verifier,
+      saved_code_challenge,
+      challenge_time,
+      timingSafeEqual,
+    } = opts;
 
     if (typeof input_code_verifier !== "string" || !input_code_verifier) {
       throw new Error("Input code verifier is not a string");
+    }
+
+    if (typeof timingSafeEqual !== "function") {
+      throw new Error(
+        "PKCE_ProofKeyManager.doesVerifierMatchChallenge requires a `timingSafeEqual` function (e.g. the one from node:crypto) to perform a constant-time comparison.",
+      );
     }
 
     const parsed_input_verifier =
@@ -202,14 +227,20 @@ export class PKCE_ProofKeyManager {
       const generated_challenge: CodeChallengeWithDetails =
         await pkce_flow.getCodeChallenge();
 
-      const saved_challenge: Partial<CodeChallengeWithDetails> = {
-        code_challenge: saved_code_challenge,
-        code_challenge_method,
-      };
-
-      return (
-        generated_challenge.code_challenge === saved_challenge.code_challenge
+      // Timing-safe byte comparison using the caller-provided function.
+      // The caller is responsible for supplying a constant-time comparator;
+      // accepting it as an argument keeps this module free of any runtime
+      // dependency on node:crypto, so it can be bundled for browsers (for
+      // createCodeVerifier/createCodeChallenge) without bundler errors.
+      const generatedBuf: Buffer = Buffer.from(
+        generated_challenge.code_challenge,
+        "base64",
       );
+      const savedBuf: Buffer = Buffer.from(saved_code_challenge, "base64");
+      if (generatedBuf.length !== savedBuf.length) {
+        return false;
+      }
+      return timingSafeEqual(generatedBuf, savedBuf);
     } catch (e: unknown) {
       console.error(e);
       return false;
