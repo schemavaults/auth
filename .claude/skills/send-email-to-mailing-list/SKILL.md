@@ -1,6 +1,6 @@
 ---
 name: send-email-to-mailing-list
-description: Send an email to a mailing list via the SchemaVaults mail-server `/api/send` route, using the `sendEmailToMailingList()` helper from `@schemavaults/send-email`. Use when any server-side TypeScript/JavaScript code needs to send a notification to a mailing list audience — **or when Claude Code itself wants to send a one-shot notification at the end of a task** (by writing a short script to `/tmp/` and running it with `bun`).
+description: Send an email to a mailing list via the SchemaVaults mail-server `/api/send` route, using either the `sendEmailToMailingList()` helper or the `schemavaults-send-email send-to-mailing-list` CLI from `@schemavaults/send-email`. Use when any server-side TypeScript/JavaScript code needs to send a notification to a mailing list audience — **or when Claude Code itself wants to send a one-shot notification at the end of a task** (preferred — invoke the CLI via `bunx schemavaults-send-email send-to-mailing-list …`; fallback — write a short script to `/tmp/` and run it with `bun`).
 ---
 
 # Send Email to Mailing List
@@ -116,58 +116,103 @@ await sendEmailToMailingList({
 });
 ```
 
+## Usage -- CLI (preferred for one-off / ad-hoc sends)
+
+`@schemavaults/send-email` ships a `schemavaults-send-email` binary that wraps the same helper. For any one-off send -- a manual notification, a quick smoke test, a `bash` cron entry, or Claude Code firing off a single end-of-workflow email -- the CLI is the simplest path. No `/tmp/` script, no `bun run`.
+
+```bash
+# Raw text/html (both required)
+bunx schemavaults-send-email send-to-mailing-list \
+  --subject "[ops] nightly backup finished" \
+  --text  "Backup completed at $(date -u +%FT%TZ). 0 errors." \
+  --html  "<p>Backup completed at $(date -u +%FT%TZ). <strong>0 errors.</strong></p>"
+
+# Template-based
+bunx schemavaults-send-email send-to-mailing-list \
+  --subject "Welcome aboard, Alice" \
+  --template-id welcome-email \
+  --template-props '{"name":"Alice"}'
+
+# Override the mailing list per-call
+bunx schemavaults-send-email send-to-mailing-list \
+  --mailing-list-id 00000000-0000-0000-0000-000000000000 \
+  --subject "..." --text "..." --html "..."
+
+# Long bodies: read from files instead of inline strings
+bunx schemavaults-send-email send-to-mailing-list \
+  --subject "weekly digest" \
+  --text-file /tmp/digest.txt \
+  --html-file /tmp/digest.html
+
+# Or supply the entire request body as a JSON file (validated server-side)
+bunx schemavaults-send-email send-to-mailing-list --body-file /tmp/payload.json
+```
+
+(Substitute `npx` for `bunx` if `bun` is unavailable.) The CLI reads `SCHEMAVAULTS_MAIL_API_KEY` and `SCHEMAVAULTS_MAILING_LIST_ID` from the environment exactly like the helper, exits non-zero with a one-line error on failure, and exits `0` on a successful 200 from the mail-server.
+
+Run `bunx schemavaults-send-email send-to-mailing-list --help` for the full flag reference.
+
 ## Usage -- Claude Code post-workflow notification
 
-Claude itself can use this skill to send a one-shot notification to a mailing list at the end of a workflow in any repo that depends on `@schemavaults/send-email` (this repo already does). Because the helper lives in `node_modules/`, Claude can drop a standalone TypeScript file into `/tmp/` and run it with Bun -- no new dependencies, no build step, no changes to the repo under review.
+Claude itself can use this skill to send a one-shot notification to a mailing list at the end of a workflow in any repo that depends on `@schemavaults/send-email` (this repo already does).
 
-### Pattern
+### Preferred: invoke the CLI directly
 
-1. **Write the script to `/tmp/send-notification-after-workflow.ts`** (fresh on every run -- `/tmp/` is scratch space, overwrite freely):
+For most end-of-workflow notifications (a few sentences plus a short bullet list) the CLI is the right tool -- one shell command, no scratch file:
 
-   ```ts
-   // /tmp/send-notification-after-workflow.ts
-   import { sendEmailToMailingList } from "@schemavaults/send-email";
+```bash
+bunx schemavaults-send-email send-to-mailing-list \
+  --subject "[claude-code] workflow finished: <short description>" \
+  --text "$(printf 'Claude just finished a workflow.\n\nSummary:\n- <bullet 1>\n- <bullet 2>\n- <bullet 3>\n')" \
+  --html "$(printf '<p>Claude just finished a workflow.</p><p><strong>Summary:</strong></p><ul><li>&lt;bullet 1&gt;</li><li>&lt;bullet 2&gt;</li><li>&lt;bullet 3&gt;</li></ul>')"
+```
 
-   async function main(): Promise<void> {
-     await sendEmailToMailingList({
-       body: {
-         subject: "[claude-code] workflow finished: <short description>",
-         message: {
-           text:
-             "Claude just finished a workflow.\n\n" +
-             "Summary:\n" +
-             "- <bullet 1>\n" +
-             "- <bullet 2>\n" +
-             "- <bullet 3>\n",
-           html:
-             "<p>Claude just finished a workflow.</p>" +
-             "<p><strong>Summary:</strong></p>" +
-             "<ul>" +
-             "<li>&lt;bullet 1&gt;</li>" +
-             "<li>&lt;bullet 2&gt;</li>" +
-             "<li>&lt;bullet 3&gt;</li>" +
-             "</ul>",
-         },
-       },
-     });
-     console.log("[notify] sent");
-   }
+Replace the `<short description>` and bullet placeholders with a concrete summary. Keep the subject under ~70 characters and the body scannable (3-5 bullets is usually enough). A non-zero exit means the helper threw -- surface the error in your summary to the user rather than retrying silently.
 
-   main().catch((err) => {
-     console.error("[notify] failed:", err);
-     process.exit(1);
-   });
-   ```
+### Fallback: write a `/tmp/` script
 
-2. **Fill in real content.** Replace `<short description>` and the bullet placeholders with a concrete summary of what the workflow actually did. Keep the subject under ~70 characters and the body scannable (3-5 bullets is usually enough).
+Reach for the script form only when the body is large enough or templated enough that string-quoting in shell is awkward (e.g. multi-paragraph HTML, dynamic data assembly, conditional content):
 
-3. **Run it from the repo root** so Bun resolves `@schemavaults/send-email` through the repo's `node_modules/`:
+```ts
+// /tmp/send-notification-after-workflow.ts
+import { sendEmailToMailingList } from "@schemavaults/send-email";
 
-   ```bash
-   bun run /tmp/send-notification-after-workflow.ts
-   ```
+async function main(): Promise<void> {
+  await sendEmailToMailingList({
+    body: {
+      subject: "[claude-code] workflow finished: <short description>",
+      message: {
+        text:
+          "Claude just finished a workflow.\n\n" +
+          "Summary:\n" +
+          "- <bullet 1>\n" +
+          "- <bullet 2>\n" +
+          "- <bullet 3>\n",
+        html:
+          "<p>Claude just finished a workflow.</p>" +
+          "<p><strong>Summary:</strong></p>" +
+          "<ul>" +
+          "<li>&lt;bullet 1&gt;</li>" +
+          "<li>&lt;bullet 2&gt;</li>" +
+          "<li>&lt;bullet 3&gt;</li>" +
+          "</ul>",
+      },
+    },
+  });
+  console.log("[notify] sent");
+}
 
-4. **Check the exit code.** `0` means the email was accepted by the mail-server. Non-zero means the helper threw -- surface the error in your summary to the user rather than retrying silently.
+main().catch((err) => {
+  console.error("[notify] failed:", err);
+  process.exit(1);
+});
+```
+
+Run from the repo root so Bun resolves `@schemavaults/send-email` through the repo's `node_modules/`:
+
+```bash
+bun run /tmp/send-notification-after-workflow.ts
+```
 
 ### When to trigger this
 
@@ -175,7 +220,7 @@ Send **exactly one** notification at the **end** of a workflow, after all commit
 
 ### Cautions
 
-- The env vars `SCHEMAVAULTS_MAIL_API_KEY` and `SCHEMAVAULTS_MAILING_LIST_ID` must be set in Claude's process. If they're missing, the helper throws a clear error -- report it to the user instead of retrying blindly.
+- The env vars `SCHEMAVAULTS_MAIL_API_KEY` and `SCHEMAVAULTS_MAILING_LIST_ID` must be set in Claude's process. If they're missing, the helper (and CLI) throws a clear error -- report it to the user instead of retrying blindly.
 - **One notification per workflow, not per step.** If a workflow had no meaningful outcome (e.g. "user asked a question, Claude answered"), skip the notification entirely. The inbox should not become chatty.
 - **Do not send the notification before the work is finished.** Push first, notify second.
 - **Ask before sending** if the user hasn't explicitly opted in to post-workflow notifications. Sending email is a side effect visible to other humans; don't do it silently on tasks where the user hasn't asked for it.

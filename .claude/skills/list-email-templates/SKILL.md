@@ -1,6 +1,6 @@
 ---
 name: list-email-templates
-description: Discover available email templates from the SchemaVaults mail-server `GET /api/templates` endpoint. Use before sending a template-based email to find the correct `template_id` and understand the expected `template_props` shape.
+description: Discover available email templates from the SchemaVaults mail-server `GET /api/templates` endpoint, via either the `listEmailTemplates()` helper or the `schemavaults-send-email list-templates` CLI from `@schemavaults/send-email`. Use before sending a template-based email to find the correct `template_id` and understand the expected `template_props` shape. For one-off shell discovery, prefer the CLI (`bunx schemavaults-send-email list-templates`).
 ---
 
 # List Email Templates
@@ -37,7 +37,22 @@ await listEmailTemplates({
 });
 ```
 
-## Usage -- from the shell
+## Usage -- from the shell via the CLI (preferred for one-off discovery)
+
+`@schemavaults/send-email` ships a `schemavaults-send-email` binary that wraps the same helpers. From any repo that has the package installed, run:
+
+```bash
+bunx schemavaults-send-email list-templates              # JSON output (default)
+bunx schemavaults-send-email list-templates --format table  # tab-separated id<TAB>description
+```
+
+(Use `npx schemavaults-send-email …` if you don't have `bun` available.) The CLI reads `SCHEMAVAULTS_MAIL_API_KEY` from the environment, exactly like the helper. Pipe `--format json` output through `jq` for filtering, e.g.:
+
+```bash
+bunx schemavaults-send-email list-templates | jq '.[].id'
+```
+
+## Usage -- raw HTTP
 
 ```bash
 curl -sS \
@@ -47,7 +62,7 @@ curl -sS \
 
 ## Usage -- Claude Code querying templates directly
 
-Claude can query the template catalog from any repo that depends on `@schemavaults/send-email` by writing a short script to `/tmp/` and running it with Bun:
+For one-off discovery from a Claude Code session, prefer the CLI above -- a single shell command, no script file needed. Fall back to a `/tmp/` Bun script only when you need to do something more elaborate than print the catalog (e.g. fetch + filter + cross-reference with another data source):
 
 ```ts
 // /tmp/list-email-templates.ts
