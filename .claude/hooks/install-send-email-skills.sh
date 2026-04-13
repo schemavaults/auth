@@ -16,8 +16,16 @@ if [ ! -d "node_modules" ]; then
   exit 1
 fi
 
-bunx skills add schemavaults/send-email \
-    --skill send-email-to-mailing-list \
-    --skill list-email-templates \
-    --yes \
-    --agent claude-code
+if [ ! -f ".claude/skills/send-email-to-mailing-list/SKILL.md" ]; then
+    bunx skills add schemavaults/send-email \
+        --skill send-email-to-mailing-list \
+        --yes \
+        --agent claude-code
+fi
+
+if [ ! -f ".claude/skills/list-email-templates/SKILL.md" ]; then
+    bunx skills add schemavaults/send-email \
+        --skill list-email-templates \
+        --yes \
+        --agent claude-code
+fi
