@@ -25,6 +25,10 @@ import { createPasswordResetToken as createPasswordResetTokenFn } from "./create
 import { validatePasswordResetToken as validatePasswordResetTokenFn, type ValidPasswordResetToken } from "./validate-password-reset-token";
 import { consumePasswordResetToken as consumePasswordResetTokenFn } from "./consume-password-reset-token";
 import { updateUserPassword as updateUserPasswordFn } from "./update-user-password";
+import { createEmailVerificationToken as createEmailVerificationTokenFn } from "./create-email-verification-token";
+import { validateEmailVerificationToken as validateEmailVerificationTokenFn, type ValidEmailVerificationToken } from "./validate-email-verification-token";
+import { consumeEmailVerificationToken as consumeEmailVerificationTokenFn } from "./consume-email-verification-token";
+import { markEmailVerified as markEmailVerifiedFn } from "./mark-email-verified";
 
 // Re-export types and schema from parse-user-document
 export { type UserDocument, userDocumentSchema } from "./parse-user-document";
@@ -137,5 +141,21 @@ export class UserRegistry {
 
   public async updatePassword(uid: string, newPassword: string): Promise<void> {
     return updateUserPasswordFn(this.db, uid, newPassword, this.debug);
+  }
+
+  public async createEmailVerificationToken(uid: string): Promise<string> {
+    return createEmailVerificationTokenFn(this.db, uid, this.debug);
+  }
+
+  public async validateEmailVerificationToken(rawToken: string): Promise<ValidEmailVerificationToken | null> {
+    return validateEmailVerificationTokenFn(this.db, rawToken, this.debug);
+  }
+
+  public async consumeEmailVerificationToken(tokenId: string): Promise<void> {
+    return consumeEmailVerificationTokenFn(this.db, tokenId, this.debug);
+  }
+
+  public async markEmailVerified(uid: string): Promise<void> {
+    return markEmailVerifiedFn(this.db, uid, this.debug);
   }
 }

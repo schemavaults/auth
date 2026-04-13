@@ -23,6 +23,7 @@ import lookupInviteCode from "@/lib/auth-db/users/lookup-invite-code";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
+import sendVerificationEmail from "@/lib/send-verification-email";
 
 export interface HandleRegisterOptions {
   body: unknown;
@@ -351,6 +352,22 @@ export async function handleRegister({
 
   if (typeof newUser.uid !== 'string') {
     throw new TypeError("Expected to receive the 'uid' from newly created user document")
+  }
+
+  // Fire off a verification email so the user can confirm their email address.
+  // Wrapped in try/catch so registration never fails due to email-send errors.
+  try {
+    const rawToken: string = await userRegistry.createEmailVerificationToken(newUser.uid);
+    await sendVerificationEmail({
+      email,
+      rawToken,
+      db: dbh.db,
+    });
+    if (debug) {
+      console.log(`[handleRegister] Verification email sent to: ${email}`);
+    }
+  } catch (e: unknown) {
+    console.error("[handleRegister] Failed to send verification email (non-fatal):", e);
   }
 
   let authorization_code: string;
