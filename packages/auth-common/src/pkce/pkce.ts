@@ -219,7 +219,14 @@ export class PKCE_ProofKeyManager {
 
       // Dynamic import so browser bundlers don't try to resolve node:crypto
       // at module load time for code paths that never execute in the browser.
-      const { timingSafeEqual } = await import("node:crypto");
+      // The webpackIgnore magic comment is required for bundlers like the one
+      // Cypress uses, which otherwise throw "Reading from 'node:crypto' is not
+      // handled by plugins (Unhandled scheme)" when statically analyzing the
+      // dynamic import string.
+      const { timingSafeEqual } = await import(
+        /* webpackIgnore: true */
+        "node:crypto"
+      );
       const generatedBuf: Buffer = Buffer.from(
         generated_challenge.code_challenge,
         "base64",
