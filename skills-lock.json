@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "list-email-templates": {
+      "source": "schemavaults/send-email",
+      "sourceType": "github",
+      "computedHash": "a4bcfe60a25dd7f738dc81f8ed154a28c2ad4449b26bdfb2277d7f2662a4491b"
+    },
+    "send-email-to-mailing-list": {
+      "source": "schemavaults/send-email",
+      "sourceType": "github",
+      "computedHash": "7f22de77f17eed9a530b04b52e86f289e1bd326d92527eb3cacb0d5193f0db48"
+    }
+  }
+}
