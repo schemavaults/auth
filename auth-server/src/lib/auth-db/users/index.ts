@@ -21,6 +21,10 @@ export { createPasswordResetToken } from "./create-password-reset-token";
 export { validatePasswordResetToken } from "./validate-password-reset-token";
 export { consumePasswordResetToken } from "./consume-password-reset-token";
 export { updateUserPassword } from "./update-user-password";
+export { createEmailVerificationToken } from "./create-email-verification-token";
+export { validateEmailVerificationToken } from "./validate-email-verification-token";
+export { consumeEmailVerificationToken } from "./consume-email-verification-token";
+export { markEmailVerified } from "./mark-email-verified";
 
 // Existing exports
 export { loadUserData } from "./load-user-by-uid";
@@ -36,3 +40,5 @@ export type * from "./invite-codes-table";
 export type * from "./ICreateUserOptions";
 export type * from "./password-reset-tokens-table";
 export type { ValidPasswordResetToken } from "./validate-password-reset-token";
+export type * from "./email-verification-tokens-table";
+export type { ValidEmailVerificationToken } from "./validate-email-verification-token";
