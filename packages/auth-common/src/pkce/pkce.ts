@@ -16,10 +16,24 @@ import {
 } from "./code_verifier";
 import { sha256_digest } from "@/sha256_digest";
 
+/**
+ * Signature compatible with node:crypto's `timingSafeEqual`. Callers of
+ * `doesVerifierMatchChallenge` inject this so that this package doesn't need
+ * to import `node:crypto` itself — which would break browser bundlers
+ * (Cypress webpack, etc.) that also consume this class for client-side
+ * verifier/challenge generation.
+ */
+export type TimingSafeEqualFn = (a: Uint8Array, b: Uint8Array) => boolean;
+
 interface CheckWhetherVerifierMatchesChallengeInputOptions {
   input_code_verifier: string;
   saved_code_challenge: string;
   challenge_time: number;
+  /**
+   * Timing-safe byte comparator. Server-side callers should pass
+   * `timingSafeEqual` from `node:crypto`.
+   */
+  timingSafeEqual: TimingSafeEqualFn;
 }
 
 // Handles the creation of a PKCE code verifier and challenge
@@ -175,10 +189,21 @@ export class PKCE_ProofKeyManager {
   public static async doesVerifierMatchChallenge(
     opts: CheckWhetherVerifierMatchesChallengeInputOptions,
   ): Promise<boolean> {
-    const { input_code_verifier, saved_code_challenge, challenge_time } = opts;
+    const {
+      input_code_verifier,
+      saved_code_challenge,
+      challenge_time,
+      timingSafeEqual,
+    } = opts;
 
     if (typeof input_code_verifier !== "string" || !input_code_verifier) {
       throw new Error("Input code verifier is not a string");
+    }
+
+    if (typeof timingSafeEqual !== "function") {
+      throw new Error(
+        "PKCE_ProofKeyManager.doesVerifierMatchChallenge requires a `timingSafeEqual` function (e.g. the one from node:crypto) to perform a constant-time comparison.",
+      );
     }
 
     const parsed_input_verifier =
@@ -189,21 +214,6 @@ export class PKCE_ProofKeyManager {
         parsed_input_verifier.error,
       );
       return false;
-    }
-
-    // This method performs a timing-safe comparison using node:crypto, which
-    // is only available server-side. The class as a whole is bundled for
-    // browsers (to create verifiers/challenges on the client), but this
-    // particular method must never run there. If it somehow is invoked from
-    // an insecure browser context, fail loudly with a clear message rather
-    // than attempting a broken import.
-    if (
-      typeof window !== "undefined" &&
-      window.isSecureContext === false
-    ) {
-      throw new Error(
-        "PKCE_ProofKeyManager.doesVerifierMatchChallenge must be called from a server or a secure context; refusing to run in an insecure browser context.",
-      );
     }
 
     try {
@@ -217,16 +227,11 @@ export class PKCE_ProofKeyManager {
       const generated_challenge: CodeChallengeWithDetails =
         await pkce_flow.getCodeChallenge();
 
-      // Dynamic import so browser bundlers don't try to resolve node:crypto
-      // at module load time for code paths that never execute in the browser.
-      // The webpackIgnore magic comment is required for bundlers like the one
-      // Cypress uses, which otherwise throw "Reading from 'node:crypto' is not
-      // handled by plugins (Unhandled scheme)" when statically analyzing the
-      // dynamic import string.
-      const { timingSafeEqual } = await import(
-        /* webpackIgnore: true */
-        "node:crypto"
-      );
+      // Timing-safe byte comparison using the caller-provided function.
+      // The caller is responsible for supplying a constant-time comparator;
+      // accepting it as an argument keeps this module free of any runtime
+      // dependency on node:crypto, so it can be bundled for browsers (for
+      // createCodeVerifier/createCodeChallenge) without bundler errors.
       const generatedBuf: Buffer = Buffer.from(
         generated_challenge.code_challenge,
         "base64",
