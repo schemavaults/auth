@@ -13,11 +13,16 @@ import {
   type ListAppsQueryResponse,
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
-import { organizationIdSchema, type UserData } from "@schemavaults/auth-common";
+import {
+  organizationIdSchema,
+  type OrganizationID,
+  type UserData,
+} from "@schemavaults/auth-common";
 import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import { isUserInOrganization } from "@/lib/isUserInOrganization";
 import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 
 async function listAuthorizedAppsForUser(
@@ -253,6 +258,25 @@ export async function GET_app_list_handler(
               throw new Error(
                 "Expected there to be a valid 'organization_id' set if this point was reached!",
               );
+            }
+            if (!user.admin) {
+              const role = await isUserInOrganization(
+                dbh.db,
+                user,
+                organization_id as OrganizationID,
+              );
+              if (role !== "admin" && role !== "owner" && role !== "member") {
+                return NextResponse.json(
+                  {
+                    success: false,
+                    message:
+                      "You must be a member of the organization to list its apps",
+                  } satisfies ListAppsQueryResponse,
+                  {
+                    status: 403,
+                  },
+                );
+              }
             }
             try {
               return NextResponse.json(

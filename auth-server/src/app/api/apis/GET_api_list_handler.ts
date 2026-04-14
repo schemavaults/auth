@@ -12,7 +12,11 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import { organizationIdSchema } from "@schemavaults/auth-common";
+import { isUserInOrganization } from "@/lib/isUserInOrganization";
+import {
+  organizationIdSchema,
+  type OrganizationID,
+} from "@schemavaults/auth-common";
 import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
 
 /**
@@ -133,6 +137,25 @@ async function GET_api_list_handler(
           case "org":
             if (!organization_id) {
               throw new Error("Expected there to be a valid 'organization_id' set if this point was reached!")
+            }
+            if (!user.admin) {
+              const role = await isUserInOrganization(
+                dbh.db,
+                user,
+                organization_id as OrganizationID,
+              );
+              if (role !== "admin" && role !== "owner" && role !== "member") {
+                return NextResponse.json(
+                  {
+                    success: false,
+                    message:
+                      "You must be a member of the organization to list its API servers",
+                  } satisfies ListApiServersQueryResponse,
+                  {
+                    status: 403,
+                  },
+                );
+              }
             }
             try {
               return NextResponse.json(
