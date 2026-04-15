@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import loadSuperuserInviteCode from "@/lib/SuperuserInviteCode";
 
 export default function shouldCreateAsSuperuser(invite_code: string): boolean {
@@ -26,5 +27,12 @@ export default function shouldCreateAsSuperuser(invite_code: string): boolean {
     return false;
   }
 
-  return superuserInviteCode === invite_code;
+  // Constant-time comparison to prevent timing attacks that could recover the
+  // superuser invite code byte-by-byte via response-time differences.
+  const expectedBuf: Buffer = Buffer.from(superuserInviteCode, "utf8");
+  const suppliedBuf: Buffer = Buffer.from(invite_code, "utf8");
+  if (expectedBuf.length !== suppliedBuf.length) {
+    return false;
+  }
+  return timingSafeEqual(expectedBuf, suppliedBuf);
 }
