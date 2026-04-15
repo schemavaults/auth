@@ -55,6 +55,29 @@ async function loadPasswordRecord(
   return parsed_password_record.data;
 }
 
+/**
+ * Retrieve the full password row (digest + hash version + metadata) for a user.
+ * Prefer this over {@link getPasswordHash} when the caller needs to know the
+ * hash version (e.g. login's compatibility verifier).
+ */
+export async function getPasswordRecord(
+  db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
+  uid: string,
+  debug: boolean = false,
+): Promise<PasswordRecord> {
+  try {
+    const password_record = await loadPasswordRecord(db, uid, debug);
+    if (!password_record) {
+      console.error("No password record found for that uid");
+      throw new Error("Failed to find a password record for that user ID");
+    }
+    return password_record;
+  } catch (e: unknown) {
+    console.error("Failed to retrieve password record: ", e);
+    throw new Error("Failed to retrieve password record");
+  }
+}
+
 export async function getPasswordHash(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   uid: string,
