@@ -20,7 +20,7 @@ import {
 } from "./compare-password";
 import { upgradePasswordHash as upgradePasswordHashFn } from "./upgrade-password-hash";
 import { generateAuthorizationCode as generateAuthorizationCodeFn } from "./generate-authorization-code";
-import { validateAuthorizationCode as validateAuthorizationCodeFn } from "./validate-authorization-code";
+import { validateAndConsumeAuthorizationCode as validateAndConsumeAuthorizationCodeFn } from "./validate-and-consume-authorization-code";
 import { createInviteCode as createInviteCodeFn } from "./create-invite-code";
 import { listAllInviteCodes as listAllInviteCodesFn } from "./list-all-invite-codes";
 import { promoteToAdmin as promoteToAdminFn } from "./promote-to-admin";
@@ -109,12 +109,18 @@ export class UserRegistry {
     );
   }
 
-  public async validateAuthorizationCode(
+  /**
+   * Atomically validates an OAuth2 PKCE authorization code and marks it
+   * consumed. The code is single-use: subsequent calls with the same
+   * `authorization_code` return `null`. Expired codes and codes with a
+   * mismatched `code_verifier` also return `null` without throwing.
+   */
+  public async validateAndConsumeAuthorizationCode(
     authorization_code: string,
     code_verifier: string,
     challenge_time: number,
   ): Promise<{ uid: string } | null> {
-    return validateAuthorizationCodeFn(
+    return validateAndConsumeAuthorizationCodeFn(
       this.db,
       authorization_code,
       code_verifier,
