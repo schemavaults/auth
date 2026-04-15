@@ -14,7 +14,11 @@ import { getUserByEmail as getUserByEmailFn } from "./get-user-by-email";
 import { getUserByUID as getUserByUIDFn } from "./get-user-by-uid";
 import { listAllUsers as listAllUsersFn } from "./list-all-users";
 import { getPasswordHash as getPasswordHashFn } from "./get-password-hash";
-import { comparePassword as comparePasswordFn } from "./compare-password";
+import {
+  comparePassword as comparePasswordFn,
+  type ComparePasswordResult,
+} from "./compare-password";
+import { upgradePasswordHash as upgradePasswordHashFn } from "./upgrade-password-hash";
 import { generateAuthorizationCode as generateAuthorizationCodeFn } from "./generate-authorization-code";
 import { validateAuthorizationCode as validateAuthorizationCodeFn } from "./validate-authorization-code";
 import { createInviteCode as createInviteCodeFn } from "./create-invite-code";
@@ -72,8 +76,21 @@ export class UserRegistry {
     return getPasswordHashFn(this.db, uid, this.debug);
   }
 
-  public async comparePassword(uid: string, password: string): Promise<boolean> {
+  public async comparePassword(uid: string, password: string): Promise<ComparePasswordResult> {
     return comparePasswordFn(this.db, uid, password, this.debug);
+  }
+
+  /**
+   * Re-hash a plaintext password under the latest scheme and overwrite the
+   * stored row. Only call this after the plaintext has been successfully
+   * verified (e.g. right after a successful {@link comparePassword} that
+   * reported `needsUpgrade: true`).
+   */
+  public async upgradePasswordHashIfNeeded(
+    uid: string,
+    plaintextPassword: string,
+  ): Promise<void> {
+    return upgradePasswordHashFn(this.db, uid, plaintextPassword, this.debug);
   }
 
   public async generateAuthorizationCode(

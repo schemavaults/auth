@@ -1,7 +1,7 @@
 import "server-only";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { hashPassword } from "@/lib/hash_password";
+import { hashPasswordV2, LATEST_PASSWORD_HASH_VERSION } from "@/lib/hash_password";
 
 export async function updateUserPassword(
   db: Kysely<AuthDatabase>,
@@ -13,7 +13,7 @@ export async function updateUserPassword(
     console.log(`[updateUserPassword] Updating password for uid: ${uid}`);
   }
 
-  const hashedPassword: string = await hashPassword(newPlaintextPassword);
+  const hashedPassword: string = await hashPasswordV2(uid, newPlaintextPassword);
 
   await db.transaction().execute(async (trx) => {
     await trx
@@ -26,6 +26,7 @@ export async function updateUserPassword(
       .values({
         uid,
         password: hashedPassword,
+        password_hash_version: LATEST_PASSWORD_HASH_VERSION,
         created_at: Date.now(),
       })
       .executeTakeFirstOrThrow();
