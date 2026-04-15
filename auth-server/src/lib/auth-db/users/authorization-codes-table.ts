@@ -9,6 +9,8 @@ export const authorizationCodeRecordSchema = z
     code_challenge_method: z.literal("S256"),
     challenge_time: z.number().nonnegative(),
     created_at: z.number().nonnegative(),
+    expires_at: z.number().positive(),
+    used_at: z.number().positive().nullable().optional(),
   })
   .required({
     authorization_code: true,
@@ -17,6 +19,7 @@ export const authorizationCodeRecordSchema = z
     code_challenge_method: true,
     challenge_time: true,
     created_at: true,
+    expires_at: true,
   })
   .strict();
 
