@@ -11,7 +11,7 @@ export { parseUserDocument } from "./parse-user-document";
 export { getPasswordHash } from "./get-password-hash";
 export { comparePassword } from "./compare-password";
 export { generateAuthorizationCode } from "./generate-authorization-code";
-export { validateAuthorizationCode } from "./validate-authorization-code";
+export { validateAndConsumeAuthorizationCode } from "./validate-and-consume-authorization-code";
 export { createInviteCode } from "./create-invite-code";
 export { listAllInviteCodes } from "./list-all-invite-codes";
 export { isValidInviteCodeDefinition, areValidInviteCodeDefinitions } from "./validate-invite-code-definition";

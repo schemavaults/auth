@@ -1,7 +1,10 @@
 import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { PKCE_ProofKeyManager } from "@schemavaults/auth-common";
+import {
+  MAX_AUTHORIZATION_CODE_AGE,
+  PKCE_ProofKeyManager,
+} from "@schemavaults/auth-common";
 import { type AuthorizationCodeRecord } from "./authorization-codes-table";
 
 export async function generateAuthorizationCode(
@@ -49,12 +52,15 @@ export async function generateAuthorizationCode(
 
   // Store the authorization code in the database, with the code_challenge
   try {
+    const now: number = Date.now();
     const authorization_code_row: AuthorizationCodeRecord = {
       authorization_code,
       uid,
       code_challenge,
       code_challenge_method,
-      created_at: Date.now(),
+      created_at: now,
+      expires_at: now + MAX_AUTHORIZATION_CODE_AGE,
+      used_at: null,
       challenge_time,
     };
 
