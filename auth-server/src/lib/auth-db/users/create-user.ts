@@ -6,7 +6,7 @@ import {
   type InviteCodeDefinition,
   passwordSchema,
 } from "@schemavaults/auth-common";
-import { hashPassword } from "@/lib/hash_password";
+import { hashPasswordV2, LATEST_PASSWORD_HASH_VERSION } from "@/lib/hash_password";
 import isValidUuid from "@/lib/is-valid-uuid";
 import loadSuperuserInviteCode, { superuserInviteCodeEnvVarKey } from "@/lib/SuperuserInviteCode";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
@@ -107,7 +107,7 @@ export async function createUser(
 
   let hashed_password: string;
   try {
-    hashed_password = await hashPassword(password);
+    hashed_password = await hashPasswordV2(uid, password);
   } catch (e: unknown) {
     console.error("[createUser] Failed to hash password: ", e);
     throw new Error("Failed to hash password");
@@ -190,6 +190,7 @@ export async function createUser(
           .values({
             uid,
             password: hashed_password,
+            password_hash_version: LATEST_PASSWORD_HASH_VERSION,
             created_at: user.created_at,
           })
           .executeTakeFirstOrThrow();

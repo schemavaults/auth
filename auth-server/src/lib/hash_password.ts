@@ -15,17 +15,38 @@ declare global {
   }
 }
 
-export async function hashPassword(password: string): Promise<string> {
+/**
+ * Version identifiers for stored password hashes.
+ * v1: global-salt only (legacy) -- iterate_sha256(salt + password + salt)
+ * v2: per-user uid salt         -- iterate_sha256(salt + uid + password + uid + salt)
+ *
+ * Stored alongside each password row as `password_hash_version` so the verify
+ * path can dispatch on the correct scheme.
+ */
+export const LATEST_PASSWORD_HASH_VERSION = 2 as const;
+export type PasswordHashVersion = 1 | 2;
+
+function loadSalt(): string {
   if (!process.env.PRIVATE_GLOBAL_PASSWORD_SALT) {
     throw new Error(
       "Missing PRIVATE_GLOBAL_PASSWORD_SALT environment variable",
     );
-  } else if (!process.env.PRIVATE_PASSWORD_HASH_ROUNDS) {
+  }
+  const salt: string | undefined = maybeStripQuotes(
+    process.env.PRIVATE_GLOBAL_PASSWORD_SALT,
+  );
+  if (!salt) {
+    throw new Error("Failed to load password salt!");
+  }
+  return salt;
+}
+
+function loadHashRounds(): number {
+  if (!process.env.PRIVATE_PASSWORD_HASH_ROUNDS) {
     throw new Error(
       "Missing PRIVATE_PASSWORD_HASH_ROUNDS environment variable",
     );
   }
-
   let hashRounds: number;
   try {
     hashRounds = parseInt(
@@ -40,30 +61,26 @@ export async function hashPassword(password: string): Promise<string> {
       "Error while parsing PRIVATE_PASSWORD_HASH_ROUNDS environment variable",
     );
   }
+  return hashRounds;
+}
 
-  const salt: string | undefined = maybeStripQuotes(
-    process.env.PRIVATE_GLOBAL_PASSWORD_SALT,
-  );
-  if (!salt) {
-    throw new Error("Failed to load password salt!");
-  }
+/**
+ * Internal: iterate SHA-256 over a prepared pre-hash input string and return
+ * the resulting digest as a lowercase hex string.
+ */
+async function iterateSha256Hex(secret: string): Promise<string> {
+  const hashRounds: number = loadHashRounds();
 
-  // String to encode
-  const secret: string = `${salt}${password}${salt}`;
-
-  // Text encoder
   const encoder = new TextEncoder();
   const data: BufferSource = encoder.encode(secret);
   const firstHash: ArrayBuffer = await crypto.subtle.digest("SHA-256", data);
 
-  // Hash Iterations
   let nextHash: ArrayBuffer = firstHash;
   for (let i: number = 0; i < hashRounds; i++) {
     nextHash = await crypto.subtle.digest("SHA-256", nextHash);
   }
   const finalPasswordHash: ArrayBuffer = nextHash;
 
-  // Convert to hex string
   const hashArray: Uint8Array = new Uint8Array(finalPasswordHash);
   const hashHex: string = Array.prototype.map
     .call(hashArray, (x: number) => ("00" + x.toString(16)).slice(-2))
@@ -72,23 +89,65 @@ export async function hashPassword(password: string): Promise<string> {
   return hashHex;
 }
 
-export async function comparePassword(
-  // Password to compare against the saved hash,
-  inputPassword: string,
-  // Saved password hash
-  savedHash: string,
-): Promise<boolean> {
-  // Salt + Hash the password
-  const hashHex: string = await hashPassword(inputPassword);
-  // (Password + Salt) => SHA-256 => Hash
+/**
+ * Legacy (v1) password hash.
+ * Kept so that users whose passwords were stored under the global-salt-only
+ * scheme can still be verified at login time. Do not use this for new writes;
+ * use {@link hashPasswordV2} instead.
+ */
+export async function hashPasswordV1(password: string): Promise<string> {
+  const salt: string = loadSalt();
+  const secret: string = `${salt}${password}${salt}`;
+  return iterateSha256Hex(secret);
+}
 
-  // Does calculated hash match saved hash?
-  // Use a timing-safe comparison so attackers cannot progressively
-  // recover the saved hash via byte-by-byte response-time differences.
-  const hashBuf: Buffer = Buffer.from(hashHex, "hex");
+/**
+ * Current (v2) password hash: per-user salt derived from the user's uid,
+ * wrapped by the global salt (pepper) on the outside. Identical plaintext
+ * passwords for different users produce different digests.
+ */
+export async function hashPasswordV2(
+  uid: string,
+  password: string,
+): Promise<string> {
+  if (typeof uid !== "string" || uid.length === 0) {
+    throw new TypeError("hashPasswordV2: 'uid' must be a non-empty string");
+  }
+  const salt: string = loadSalt();
+  const secret: string = `${salt}${uid}${password}${uid}${salt}`;
+  return iterateSha256Hex(secret);
+}
+
+/**
+ * Compatibility shim that verifies a plaintext password against a stored
+ * hash under the given version. Uses a timing-safe comparison.
+ */
+export async function verifyPassword(opts: {
+  uid: string;
+  password: string;
+  savedHash: string;
+  version: number;
+}): Promise<boolean> {
+  const { uid, password, savedHash, version } = opts;
+
+  let computedHex: string;
+  switch (version) {
+    case 1:
+      computedHex = await hashPasswordV1(password);
+      break;
+    case 2:
+      computedHex = await hashPasswordV2(uid, password);
+      break;
+    default:
+      throw new Error(
+        `verifyPassword: unsupported password_hash_version '${version}'`,
+      );
+  }
+
+  const computedBuf: Buffer = Buffer.from(computedHex, "hex");
   const savedBuf: Buffer = Buffer.from(savedHash, "hex");
-  if (hashBuf.length !== savedBuf.length) {
+  if (computedBuf.length !== savedBuf.length) {
     return false;
   }
-  return timingSafeEqual(hashBuf, savedBuf);
+  return timingSafeEqual(computedBuf, savedBuf);
 }

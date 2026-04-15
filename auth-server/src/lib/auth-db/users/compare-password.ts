@@ -1,16 +1,29 @@
 import "server-only";
-import { timingSafeEqual } from "node:crypto";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { hashPassword } from "@/lib/hash_password";
-import { getPasswordHash } from "./get-password-hash";
+import {
+  LATEST_PASSWORD_HASH_VERSION,
+  verifyPassword,
+} from "@/lib/hash_password";
+import { getPasswordRecord } from "./get-password-hash";
+
+export interface ComparePasswordResult {
+  /** Whether the supplied plaintext password matches the stored hash. */
+  matches: boolean;
+  /**
+   * Whether the stored hash was produced by an older scheme and should be
+   * re-hashed under the current scheme. Only meaningful when `matches` is
+   * `true` -- callers should ignore this when the password did not match.
+   */
+  needsUpgrade: boolean;
+}
 
 export async function comparePassword(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   uid: string,
   password: string,
-  debug: boolean = false
-): Promise<boolean> {
+  debug: boolean = false,
+): Promise<ComparePasswordResult> {
   if (debug) {
     console.log(
       `[comparePassword] Attempting to compare input password against password saved in database`,
@@ -18,23 +31,27 @@ export async function comparePassword(
   }
 
   try {
-    const hashes: [string, string] = await Promise.all([
-      getPasswordHash(db, uid, debug),
-      hashPassword(password),
-    ]);
-    // Timing-safe comparison of the two SHA-256 hex digests so that
-    // response-time differences cannot be used to recover the saved hash.
-    const truthBuf: Buffer = Buffer.from(hashes[0], "hex");
-    const submittedBuf: Buffer = Buffer.from(hashes[1], "hex");
-    const isSubmittedSameAsTruth: boolean =
-      truthBuf.length === submittedBuf.length &&
-      timingSafeEqual(truthBuf, submittedBuf);
+    const record = await getPasswordRecord(db, uid, debug);
+    const matches: boolean = await verifyPassword({
+      uid,
+      password,
+      savedHash: record.password,
+      version: record.password_hash_version,
+    });
+    const needsUpgrade: boolean =
+      matches && record.password_hash_version < LATEST_PASSWORD_HASH_VERSION;
+
     if (debug) {
       console.log(
-        `[comparePassword] Password ${isSubmittedSameAsTruth ? "is" : "is not"} the same`,
+        `[comparePassword] Password ${matches ? "is" : "is not"} the same` +
+          (matches
+            ? ` (stored version: ${record.password_hash_version}${
+                needsUpgrade ? ", will be upgraded" : ""
+              })`
+            : ""),
       );
     }
-    return isSubmittedSameAsTruth;
+    return { matches, needsUpgrade };
   } catch (e: unknown) {
     console.error(
       "[comparePassword] There was an error comparing passwords: ",

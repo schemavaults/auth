@@ -106,15 +106,18 @@ export async function handleLogin({
 
   const uid: string = user.uid;
 
-  let compare_password_result: boolean = false;
+  let compare_password_matches: boolean = false;
+  let compare_password_needs_upgrade: boolean = false;
   try {
     if (debug) {
       console.log(`Comparing password for user with uid: ${uid}`);
     }
-    compare_password_result = await userRegistry.comparePassword(
+    const compare_password_result = await userRegistry.comparePassword(
       uid,
       email_credentials.password,
     );
+    compare_password_matches = compare_password_result.matches;
+    compare_password_needs_upgrade = compare_password_result.needsUpgrade;
   } catch (e: unknown) {
     console.error("Failed to compare password: ", e);
     return NextResponse.json(
@@ -128,7 +131,7 @@ export async function handleLogin({
     );
   }
 
-  if (!compare_password_result) {
+  if (!compare_password_matches) {
     console.error("[handleLogin] Incorrect password");
     return NextResponse.json(
       {
@@ -139,6 +142,24 @@ export async function handleLogin({
         status: 401,
       },
     );
+  }
+
+  // Lazy-upgrade legacy (v1) password hashes to the current (v2) per-user-salt
+  // scheme now that we have verified the plaintext. Non-fatal: a failed
+  // upgrade must not block the user's login. The next successful login will
+  // retry the upgrade.
+  if (compare_password_needs_upgrade) {
+    try {
+      await userRegistry.upgradePasswordHashIfNeeded(
+        uid,
+        email_credentials.password,
+      );
+    } catch (e: unknown) {
+      console.error(
+        "[handleLogin] Lazy password-hash upgrade failed (non-fatal):",
+        e,
+      );
+    }
   }
 
   // Prevent signing in as a different user when an auth-server session already exists.
