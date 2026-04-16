@@ -7,6 +7,7 @@ import {
   Activity,
   AppWindow,
   Building2,
+  HelpCircle,
   Server,
   Settings,
   ShieldUser,
@@ -28,10 +29,19 @@ export function getAuthenticatedUserDashboardLinks(
     ),
   };
 
+  const helpPageLink: DashboardSidebarItemDefinition = {
+    type: "dashboard-sidebar-item-definition" as const,
+    title: "Help",
+    url: "/help",
+    icon: ({ className }: { className: string }): ReactElement => (
+      <HelpCircle className={className} />
+    ),
+  };
+
   const dashboardLinks: (
     | DashboardSidebarItemDefinition
     | DashboardSidebarItemGroupDefinition
-  )[] = [accountPageLink];
+  )[] = [accountPageLink, helpPageLink];
 
   if (admin) {
     const adminLinkGroup: DashboardSidebarItemGroupDefinition = {
