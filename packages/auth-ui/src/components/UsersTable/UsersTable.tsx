@@ -1,18 +1,27 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
-import { Datatable } from "@schemavaults/ui";
-import { columns } from "./columns";
+import { Datatable, type ColumnDef } from "@schemavaults/ui";
+import { buildColumns } from "./columns";
 import { Loader2 } from "lucide-react";
 import type { UserData } from "@schemavaults/auth-common";
 
 export interface UsersDatatableProps {
   users: SWRResponse<readonly UserData[], Error>;
+  getUserHref?: (user: UserData) => string;
 }
 
-export function UsersTable({ users }: UsersDatatableProps): ReactElement {
+export function UsersTable({
+  users,
+  getUserHref,
+}: UsersDatatableProps): ReactElement {
   const { isLoading, data } = users;
+
+  const columns: ColumnDef<UserData>[] = useMemo(
+    () => buildColumns({ getUserHref }),
+    [getUserHref],
+  );
 
   if (!data && isLoading) {
     return (

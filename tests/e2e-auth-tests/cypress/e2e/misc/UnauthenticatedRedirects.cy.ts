@@ -43,6 +43,12 @@ describe("Unauthenticated Redirects", () => {
       cy.url().should("not.include", "/admin/users");
     });
 
+    it("is redirected off the admin user detail page", () => {
+      const fakeUid = "00000000-0000-0000-0000-000000000001";
+      cy.visit(`/admin/users/${fakeUid}`);
+      cy.url().should("not.include", `/admin/users/${fakeUid}`);
+    });
+
     it("is redirected off the admin apps page", () => {
       cy.visit("/admin/apps");
       cy.url().should("not.include", "/admin/apps");
