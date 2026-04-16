@@ -18,6 +18,10 @@ export default function login(
     }
   });
 
+  // Clear Redis rate-limit counters so repeated login calls across tests
+  // don't hit 429 responses.
+  cy.reset_rate_limit();
+
   cy.intercept({
     method: "POST",
     url: "**/api/auth/login",
@@ -131,8 +135,21 @@ export default function login(
             }
           });
       } else {
+        const statusCode = login_interception.response?.statusCode;
+        if (statusCode === 429) {
+          const retryAfter =
+            login_interception.response?.headers?.["retry-after"];
+          throw new Error(
+            `Login request was rate-limited (HTTP 429 Too Many Requests). ` +
+              `The auth-server's POST /api/auth/login rate limit was exceeded ` +
+              `(5 attempts/15min per IP+email, or 10 failed attempts trigger a 30min lockout). ` +
+              `Retry-After: ${retryAfter ?? "unknown"}s. ` +
+              `Call cy.reset_rate_limit() before this command, or ensure the ` +
+              `auth-server is running in test environment with the reset-rate-limit endpoint available.`,
+          );
+        }
         cy.log(
-          `Login request failed with status ${login_interception.response?.statusCode} ${login_interception.response?.statusMessage}`,
+          `Login request failed with status ${statusCode} ${login_interception.response?.statusMessage}`,
         );
         return cy.wrap<boolean>(false, { log: false });
       }
