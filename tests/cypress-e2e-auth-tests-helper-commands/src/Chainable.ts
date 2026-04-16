@@ -31,6 +31,7 @@ declare global {
         password: string,
         invite_code?: string,
       ): Chainable<number>;
+      reset_rate_limit(): Chainable<boolean>;
       create_and_login_as_superuser(): Chainable<boolean>;
       create_and_login_as_regular_user(credentials: {
         email: string;

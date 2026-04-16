@@ -11,6 +11,10 @@ export default function register(
 ): Cypress.Chainable<number> {
   cy.is_authenticated().should("be.false", "User should not be authenticated before registration");
 
+  // Clear Redis rate-limit counters so repeated register calls across tests
+  // don't hit 429 responses.
+  cy.reset_rate_limit();
+
   cy.intercept({
     method: "POST",
     url: "**/api/auth/register",
@@ -132,6 +136,17 @@ export default function register(
           );
         }
         const statusCode: number = register_interception.response?.statusCode;
+        if (statusCode === 429) {
+          const retryAfter =
+            register_interception.response?.headers?.["retry-after"];
+          throw new Error(
+            `Register request was rate-limited (HTTP 429 Too Many Requests). ` +
+              `The auth-server's POST /api/auth/register rate limit was exceeded ` +
+              `(3 attempts/hour per IP). Retry-After: ${retryAfter ?? "unknown"}s. ` +
+              `Call cy.reset_rate_limit() before this command, or ensure the ` +
+              `auth-server is running in test environment with the reset-rate-limit endpoint available.`,
+          );
+        }
         cy.log(
           `Register request failed with status ${statusCode} ${register_interception.response?.statusMessage}`,
         );
