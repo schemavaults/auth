@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.22.35",
+  "version": "0.22.36",
   "private": true,
   "repository": {
     "type": "git",
@@ -9,10 +9,10 @@
   },
   "description": "Server for authenticating users and generating tokens",
   "dependencies": {
-    "next": "16.2.2",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "@schemavaults/ui": "0.14.7",
+    "next": "16.2.4",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "@schemavaults/ui": "0.16.2",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-ui": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
@@ -26,7 +26,7 @@
     "swr": "2.3.4",
     "@schemavaults/dbh": "0.8.7",
     "server-only": "0.0.1",
-    "lucide-react": "0.508.0",
+    "lucide-react": "0.575.0",
     "@hookform/resolvers": "3.9.0",
     "cookies-next": "6.1.1",
     "uuid": "13.0.0",
@@ -46,7 +46,7 @@
     "globals": "16.5.0",
     "@typescript-eslint/eslint-plugin": "8.48.1",
     "@typescript-eslint/parser": "8.48.1",
-    "eslint-config-next": "16.2.2"
+    "eslint-config-next": "16.2.4"
   },
   "scripts": {
     "dev": "NEXT_TELEMETRY_DISABLED=1 next dev --port 6767",
