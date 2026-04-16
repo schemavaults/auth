@@ -202,3 +202,15 @@ jobs:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: misc
       skip-docker-build: true
+
+  Run-Admin-Functionality-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: admin
+      skip-docker-build: true
