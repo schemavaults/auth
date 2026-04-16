@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useMemo, useDeferredValue, type ReactElement } from "react";
+import {
+  useState,
+  useMemo,
+  useDeferredValue,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import {
   ThemedPageBackground,
   Card,
@@ -21,6 +27,7 @@ interface FaqItem {
   id: string;
   question: string;
   answer: string;
+  answerComponent?: ReactNode;
 }
 
 interface HelpPageViewProps {
@@ -68,6 +75,27 @@ export default function HelpPageView({
         question: "How do I connect my application to SchemaVaults?",
         answer:
           "SchemaVaults uses the OAuth2 Authorization Code flow with PKCE for secure application integration. Register your application in the admin dashboard to receive a client app ID, then configure your application to use the SchemaVaults authorization endpoints with the @schemavaults/auth-client-sdk.",
+      },
+      {
+        id: "open-source",
+        question: "Is this open source?",
+        answer:
+          "Yes, SchemaVaults Auth is open source. The source code is available on GitHub at https://github.com/schemavaults/auth.",
+        answerComponent: (
+          <span>
+            Yes, SchemaVaults Auth is open source. The source code is available
+            on{" "}
+            <a
+              href="https://github.com/schemavaults/auth"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline underline-offset-4 hover:opacity-80"
+            >
+              GitHub
+            </a>
+            .
+          </span>
+        ),
       },
     ],
     [invite_code_required],
@@ -123,7 +151,9 @@ export default function HelpPageView({
               {filteredFaqs.map((faq) => (
                 <AccordionItem key={faq.id} value={faq.id}>
                   <AccordionTrigger>{faq.question}</AccordionTrigger>
-                  <AccordionContent>{faq.answer}</AccordionContent>
+                  <AccordionContent>
+                    {faq.answerComponent ?? faq.answer}
+                  </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
