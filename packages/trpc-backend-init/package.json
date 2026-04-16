@@ -1,0 +1,39 @@
+{
+  "name": "@schemavaults/trpc-backend-init",
+  "description": "tRPC Server-side Router Factory",
+  "version": "0.8.2",
+  "private": false,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schemavaults/trpc-backend-init.git"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "bun-types": "1.3.11",
+    "tsc-alias": "1.8.16"
+  },
+  "peerDependencies": {
+    "@trpc/server": "11.16.0",
+    "@schemavaults/auth-server-sdk": "workspace:*",
+    "@schemavaults/app-definitions": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc --project ./tsconfig.json && tsc-alias --project ./tsconfig.json",
+    "postbuild": "bun run cleanup",
+    "cleanup:compiled_tests_in_dist_directory": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
+    "cleanup": "bun run cleanup:compiled_tests_in_dist_directory",
+    "test": "SCHEMAVAULTS_APP_ENVIRONMENT=test NODE_ENV=test bun test"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "bun@1.3.11"
+}

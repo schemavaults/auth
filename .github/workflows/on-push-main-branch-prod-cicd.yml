@@ -88,6 +88,7 @@ jobs:
       auth_server_sdk_tarball_name: ${{ steps.upload-auth-server-sdk.outputs.tarball_name }}
       jwt_tarball_name: ${{ steps.upload-jwt.outputs.tarball_name }}
       app_definitions_tarball_name: ${{ steps.upload-app-definitions.outputs.tarball_name }}
+      trpc_backend_init_tarball_name: ${{ steps.upload-trpc-backend-init.outputs.tarball_name }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -174,6 +175,16 @@ jobs:
         with:
           package_path: "packages/auth-ui"
           package_name: "@schemavaults/auth-ui"
+          bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
+          node_version: "${{ env.NODE_VERSION }}"
+          needs_build: false
+
+      - name: Upload @schemavaults/trpc-backend-init tarball
+        id: upload-trpc-backend-init
+        uses: ./.github/actions/prepare-package-tarball-if-version-changed
+        with:
+          package_path: "packages/trpc-backend-init"
+          package_name: "@schemavaults/trpc-backend-init"
           bun_version: "${{ needs.SetupCiCdConfig.outputs.bun_version }}"
           node_version: "${{ env.NODE_VERSION }}"
           needs_build: false
@@ -300,6 +311,24 @@ jobs:
     with:
       tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.auth_ui_tarball_name }}
       package_path: "packages/auth-ui"
+      bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+      node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
+    secrets: inherit
+
+  Publish-Trpc-Backend-Init:
+    needs:
+      - SetupCiCdConfig
+      - Build-Auth-Packages-And-Upload-Tarballs-If-Changed
+      - Run-E2E-Tests
+    if: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.trpc_backend_init_tarball_name != '' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/publish-package-tarball-to-all-registries.yml
+    with:
+      tarball_name: ${{ needs.Build-Auth-Packages-And-Upload-Tarballs-If-Changed.outputs.trpc_backend_init_tarball_name }}
+      package_path: "packages/trpc-backend-init"
       bun_version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
       node_version: ${{ needs.SetupCiCdConfig.outputs.node_version }}
     secrets: inherit
