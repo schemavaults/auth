@@ -9,10 +9,11 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
+  CardFooter,
   Button,
   Wordmark,
 } from "@schemavaults/ui";
-import { Loader2, LogIn, UserPlus, User } from "lucide-react";
+import { HelpCircle, Loader2, LogIn, UserPlus, User } from "lucide-react";
 import Link from "next/link";
 import type { ReactElement } from "react";
 
@@ -87,6 +88,15 @@ export default function HomePageView(): ReactElement {
             </>
           )}
         </CardContent>
+        <CardFooter className="justify-center">
+          <Link
+            href="/help"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Help & FAQ
+          </Link>
+        </CardFooter>
       </Card>
     </ThemedPageBackground>
   );
