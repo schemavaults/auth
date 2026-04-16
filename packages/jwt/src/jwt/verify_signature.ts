@@ -16,6 +16,7 @@ interface BaseVerifyJWTSignatureInputOptions<
   sub: string;
   uid: string;
   env: SchemaVaultsAppEnvironment;
+  jti?: string;
 }
 
 interface VerifyJWTSignatureInputWithAllKeysOptions<
@@ -118,6 +119,10 @@ export async function verifyJWTSignature<
 
     if (verify_result.payload.env !== opts.env) {
       throw new Error("App environment mismatch!");
+    }
+
+    if (opts.jti && verify_result.payload.jti !== opts.jti) {
+      throw new Error("JTI mismatch between outer token and signature!");
     }
   } catch (e: unknown) {
     console.error("Failed to verify jwt signature: ", e);
