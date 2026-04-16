@@ -29,6 +29,14 @@ import {
   validateCorsForClientApp,
   applyCorsHeadersToResponse,
 } from "@/lib/cors/cors-for-client-app";
+import { RedisCache } from "@/lib/redis";
+import {
+  extractClientIp,
+  checkRateLimit,
+  REFRESH_TOKEN_RATE_LIMIT,
+  rateLimitResponse,
+  ipRequiredResponse,
+} from "@/lib/rate-limit";
 
 const grant_type = "refresh_token" as const;
 
@@ -138,6 +146,19 @@ export async function POST(
       } satisfies RequestTokensResult,
       { status: 400 }
     );
+  }
+
+  const ip = extractClientIp(req);
+  if (!ip) {
+    return ipRequiredResponse();
+  }
+
+  {
+    await using redis = RedisCache.createConnection();
+    const rateLimitResult = await checkRateLimit(redis.client, REFRESH_TOKEN_RATE_LIMIT, { ip });
+    if (!rateLimitResult.allowed) {
+      return rateLimitResponse(rateLimitResult);
+    }
   }
 
   const schema = refreshTokenPOSTbody;
