@@ -1,12 +1,13 @@
 {
   "name": "@schemavaults/trpc-backend-init",
   "description": "tRPC Server-side Router Factory",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "private": false,
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "https://github.com/schemavaults/trpc-backend-init.git"
+    "url": "https://github.com/schemavaults/auth.git",
+    "directory": "packages/trpc-backend-init"
   },
   "dependencies": {},
   "devDependencies": {
