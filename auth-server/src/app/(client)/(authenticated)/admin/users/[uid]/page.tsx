@@ -6,7 +6,7 @@ import {
   type IProtectedAdminServerComponentPageProps,
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
-import { UserRegistry, type UserDocument } from "@/lib/auth-db";
+import { UserRegistry, loadUserData } from "@/lib/auth-db";
 import redirectWithError from "@/lib/redirect-with-error";
 import type { ServerRuntime } from "next";
 import { z } from "zod";
@@ -18,19 +18,6 @@ interface PageParams {
 }
 
 const uidSchema = z.string().uuid();
-
-function userDocumentToUserData(doc: UserDocument): UserData {
-  return {
-    uid: doc.uid,
-    sub: doc.uid,
-    email: doc.email,
-    email_verified: doc.email_verified,
-    admin: doc.admin,
-    disabled: doc.disabled,
-    created_at: doc.created_at,
-    invite_code: doc.invite_code,
-  };
-}
 
 async function PreloadedAdminUserDetailPage(
   { user, dbh }: IProtectedAdminServerComponentPageProps,
@@ -50,12 +37,16 @@ async function PreloadedAdminUserDetailPage(
   const uid: string = parsed_uid.data;
 
   const registry = new UserRegistry(dbh.db);
-  const userDoc: UserDocument | null = await registry.getUserByUID(uid);
-  if (!userDoc) {
-    redirectWithError(404, "bad_request");
+  let targetUser: UserData;
+  try {
+    targetUser = await loadUserData(uid, registry);
+  } catch (e: unknown) {
+    console.error(
+      `[AdminUserDetailPage] Failed to load user '${uid}': `,
+      e,
+    );
+    redirectWithError(400, "bad_request");
   }
-
-  const targetUser: UserData = userDocumentToUserData(userDoc);
 
   return <AdminUserDetailPageView user={targetUser} />;
 }
