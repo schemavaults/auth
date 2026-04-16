@@ -19,6 +19,7 @@ export interface UsersCardProps {
   cardDescription?: string;
   cardClassName?: string;
   preloaded?: readonly UserData[];
+  getUserHref?: (user: UserData) => string;
 }
 
 export function UsersCard(props: UsersCardProps): ReactElement {
@@ -27,6 +28,7 @@ export function UsersCard(props: UsersCardProps): ReactElement {
     props.cardDescription ?? "View and manage registered users.";
 
   const cardClassName: string = cn("w-full", props.cardClassName);
+  const getUserHref = props.getUserHref;
 
   const listAllUsersEndpoint = "/api/admin/users/list";
 
@@ -102,7 +104,7 @@ export function UsersCard(props: UsersCardProps): ReactElement {
         <CardDescription>{cardDescription}</CardDescription>
       </CardHeader>
       <CardContent>
-        <UsersTable users={users} />
+        <UsersTable users={users} getUserHref={getUserHref} />
       </CardContent>
       <CardFooter>
         <div className="flex flex-row items-start justify-start gap-2"></div>
