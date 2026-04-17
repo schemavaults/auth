@@ -37,8 +37,13 @@ interface HelpPageViewProps {
 export default function HelpPageView({
   invite_code_required,
 }: HelpPageViewProps): ReactElement {
-  const faqItems: FaqItem[] = useMemo(
-    () => [
+  const faqItems: FaqItem[] = useMemo(() => {
+    const createAccountAnswer =
+      "Navigate to the registration page and fill in your email address and password. Your password must be at least 10 characters long and include uppercase letters, lowercase letters, numbers, and special characters.";
+    const inviteCodeRequirementAnswer =
+      "An invite code is currently required to register. You will need to obtain a valid invite code from an administrator before you can create an account.";
+
+    return [
       {
         id: "what-is-schemavaults",
         question: "What is SchemaVaults Auth?",
@@ -48,8 +53,15 @@ export default function HelpPageView({
       {
         id: "create-account",
         question: "How do I create an account?",
-        answer:
-          "Navigate to the registration page and fill in your email address and password. Your password must be at least 10 characters long and include uppercase letters, lowercase letters, numbers, and special characters.",
+        answer: invite_code_required
+          ? `${createAccountAnswer} ${inviteCodeRequirementAnswer}`
+          : createAccountAnswer,
+        answerComponent: (
+          <div className="flex flex-col gap-2">
+            <p>{createAccountAnswer}</p>
+            {invite_code_required ? <p>{inviteCodeRequirementAnswer}</p> : null}
+          </div>
+        ),
       },
       {
         id: "invite-code",
@@ -97,9 +109,8 @@ export default function HelpPageView({
           </span>
         ),
       },
-    ],
-    [invite_code_required],
-  );
+    ];
+  }, [invite_code_required]);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
   const deferredQuery = useDeferredValue(searchQuery);
