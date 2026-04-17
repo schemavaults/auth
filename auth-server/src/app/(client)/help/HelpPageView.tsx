@@ -14,6 +14,7 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
+  CardFooter,
   Accordion,
   AccordionItem,
   AccordionTrigger,
@@ -22,6 +23,7 @@ import {
   cn,
 } from "@schemavaults/ui";
 import { HelpCircle, Search } from "lucide-react";
+import AuthActionButtons from "@/components/AuthActionButtons";
 
 interface FaqItem {
   id: string;
@@ -174,6 +176,9 @@ export default function HelpPageView({
             </p>
           )}
         </CardContent>
+        <CardFooter className="justify-center">
+          <AuthActionButtons />
+        </CardFooter>
       </Card>
     </ThemedPageBackground>
   );

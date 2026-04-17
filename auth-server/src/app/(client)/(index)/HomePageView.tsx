@@ -10,12 +10,12 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-  Button,
   Wordmark,
 } from "@schemavaults/ui";
-import { HelpCircle, Loader2, LogIn, UserPlus, User } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import Link from "next/link";
 import type { ReactElement } from "react";
+import AuthActionButtons from "@/components/AuthActionButtons";
 
 export default function HomePageView(): ReactElement {
   const auth = useAuth();
@@ -51,42 +51,8 @@ export default function HomePageView(): ReactElement {
                 : "Sign in or create an account to continue."}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-row justify-center flex-wrap items-center gap-4">
-          {isLoading ? (
-            <Loader2 className="h-6 w-6 animate-spin text-gray-500" role="status" />
-          ) : isAuthenticated ? (
-            <Button
-              asChild
-              className="bg-green-500 hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
-            >
-              <Link href="/account">
-                <User className="h-4 w-4 mr-2" />
-                Go to Account
-              </Link>
-            </Button>
-          ) : (
-            <>
-              <Button
-                asChild
-                className="bg-green-500 hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
-              >
-                <Link href="/auth/login">
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Sign In
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
-              >
-                <Link href="/auth/register">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Register
-                </Link>
-              </Button>
-            </>
-          )}
+        <CardContent>
+          <AuthActionButtons />
         </CardContent>
         <CardFooter className="justify-center">
           <Link
