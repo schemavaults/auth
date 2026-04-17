@@ -6,16 +6,19 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { generateAuthorizationCode } from "@/lib/auth-db/users/generate-authorization-code";
 import { z } from "zod";
+import { appIdSchema } from "@schemavaults/app-definitions";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 
 const requestBodySchema = z
   .object({
+    client_app_id: appIdSchema,
     code_challenge: codeChallengeSchema,
     code_challenge_method: z.literal("S256"),
     challenge_time: z.number().nonnegative(),
   })
   .required({
+    client_app_id: true,
     code_challenge: true,
     code_challenge_method: true,
     challenge_time: true
@@ -66,6 +69,7 @@ export async function POST_generate_authorization_code(
         const authorization_code = await generateAuthorizationCode(
           dbh.db,
           user.uid,
+          body.client_app_id,
           body.code_challenge,
           body.code_challenge_method,
           body.challenge_time,

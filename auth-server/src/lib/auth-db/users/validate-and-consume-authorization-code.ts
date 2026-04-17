@@ -2,6 +2,7 @@ import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type { AppId } from "@schemavaults/app-definitions";
 import { PKCE_ProofKeyManager } from "@schemavaults/auth-common";
 import { authorizationCodeRecordSchema } from "./authorization-codes-table";
 
@@ -11,24 +12,30 @@ import { authorizationCodeRecordSchema } from "./authorization-codes-table";
  *
  * Behavior:
  *  - The code must exist, have `used_at IS NULL`, and not yet be expired.
+ *  - The code's stored `client_app_id` must equal the supplied
+ *    `client_app_id`. This binds a code to the client application it
+ *    was issued for (defense-in-depth: a code issued for App A cannot
+ *    be redeemed at App B's token endpoint).
  *  - The supplied `code_verifier` is compared (timing-safe) against the
  *    stored SHA-256 `code_challenge`.
  *  - On success, the row's `used_at` is set via a conditional UPDATE
  *    guarded by `used_at IS NULL AND expires_at > now`. If that UPDATE
  *    matches zero rows (a concurrent request won the race), the request
  *    is rejected.
- *  - On invalid verifier the code is NOT consumed, so a legitimate
- *    client may retry with the correct verifier. This is safe because the
- *    authorization code itself is already a long random secret; brute
- *    forcing a valid code_verifier for a known code is not realistic.
+ *  - On invalid verifier or mismatched `client_app_id` the code is NOT
+ *    consumed, so a legitimate client may retry with the correct
+ *    values. This is safe because the authorization code itself is
+ *    already a long random secret.
  *
  * Returns `{ uid }` on successful validation & consumption, `null` for
  * every invalid-input case (not found, expired, already consumed, bad
- * verifier, lost race). Throws only on infrastructure / parse errors.
+ * verifier, client_app_id mismatch, lost race). Throws only on
+ * infrastructure / parse errors.
  */
 export async function validateAndConsumeAuthorizationCode(
   db: Kysely<AuthDatabase>,
   authorization_code: string,
+  client_app_id: AppId,
   code_verifier: string,
   challenge_time: number,
   debug: boolean = false,
@@ -92,10 +99,24 @@ export async function validateAndConsumeAuthorizationCode(
     const {
       code_challenge: code_challenge_from_database,
       uid,
+      client_app_id: stored_client_app_id,
       expires_at,
     } = parsed_authorization_code.data;
 
-    // 3. Expiry check.
+    // 3. Defense-in-depth: the code must be redeemed by the same client
+    // application it was issued for. Rejecting here (before the atomic
+    // consume UPDATE) preserves the code for a legitimate retry; a
+    // malicious mismatched exchange cannot burn a user's in-flight code.
+    if (stored_client_app_id !== client_app_id) {
+      if (debug) {
+        console.warn(
+          `[validateAndConsumeAuthorizationCode] client_app_id mismatch: code was issued for "${stored_client_app_id}", redeem attempted as "${client_app_id}"`,
+        );
+      }
+      return null;
+    }
+
+    // 4. Expiry check.
     const now: number = Date.now();
     if (expires_at <= now) {
       if (debug) {

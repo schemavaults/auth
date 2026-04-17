@@ -1,6 +1,7 @@
 import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type { AppId } from "@schemavaults/app-definitions";
 import {
   MAX_AUTHORIZATION_CODE_AGE,
   PKCE_ProofKeyManager,
@@ -10,6 +11,7 @@ import { type AuthorizationCodeRecord } from "./authorization-codes-table";
 export async function generateAuthorizationCode(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   uid: string,
+  client_app_id: AppId,
   code_challenge: string,
   code_challenge_method: "S256",
   challenge_time: number,
@@ -56,6 +58,7 @@ export async function generateAuthorizationCode(
     const authorization_code_row: AuthorizationCodeRecord = {
       authorization_code,
       uid,
+      client_app_id,
       code_challenge,
       code_challenge_method,
       created_at: now,

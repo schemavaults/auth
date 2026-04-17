@@ -184,11 +184,19 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     return;
   }
 
+  // The authorization code must be bound to the app it will be redeemed
+  // for. In the third-party PKCE flow that's the resource server
+  // (from the URL `?app_id=...` → `opts.app.app_id`); in the
+  // account-page flow the caller is the auth server itself.
+  const target_client_app_id =
+    opts.app?.app_id ?? SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+
   // Exchange credentials for an authorization code
   let authorization_code: string;
   try {
     authorization_code = await authClient.sendAuthenticateRequest(
       type,
+      target_client_app_id,
       values,
       code_challenge,
     );

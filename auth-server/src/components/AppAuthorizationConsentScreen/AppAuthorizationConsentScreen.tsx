@@ -121,6 +121,7 @@ export function AppAuthorizationConsentScreen({
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            client_app_id: app_id,
             code_challenge,
             code_challenge_method: "S256",
             challenge_time,

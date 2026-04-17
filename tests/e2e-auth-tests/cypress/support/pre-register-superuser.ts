@@ -2,6 +2,7 @@ import {
   PKCE_ProofKeyManager,
   EmailRegistrationCredentials,
 } from "@schemavaults/auth-common";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 
 async function preRegisterSuperuser(
   auth_server_url: string,
@@ -27,6 +28,7 @@ async function preRegisterSuperuser(
         password: credentials["password"],
       },
       invite_code: credentials["invite_code"],
+      client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
       code_challenge: codeChallenge.code_challenge,
       challenge_time,
     }),
