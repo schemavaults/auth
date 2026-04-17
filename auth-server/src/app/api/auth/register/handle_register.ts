@@ -20,7 +20,7 @@ import {
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import shouldCreateAsSuperuser from "./shouldCreateAsSuperuser";
 import lookupInviteCode from "@/lib/auth-db/users/lookup-invite-code";
-import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { appIdSchema, getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import sendVerificationEmail from "@/lib/send-verification-email";
@@ -35,11 +35,13 @@ const registerBodySchema = z
   .object({
     credentials: emailCredentialsSchema,
     invite_code: z.string().min(8).optional(),
+    client_app_id: appIdSchema,
     code_challenge: PKCE_ProofKeyManager.codeChallengeSchema,
     challenge_time: z.number().nonnegative(),
   })
   .required({
     credentials: true,
+    client_app_id: true,
     code_challenge: true,
     challenge_time: true,
   })
@@ -97,6 +99,7 @@ export async function handleRegister({
 
   // Get values from registration data
   const email_credentials = registrationData.credentials;
+  const client_app_id = registrationData.client_app_id;
   const code_challenge: string = registrationData.code_challenge;
   const challenge_time: number = registrationData.challenge_time;
   const invite_code: string | undefined = registrationData.invite_code;
@@ -374,6 +377,7 @@ export async function handleRegister({
   try {
     authorization_code = await userRegistry.generateAuthorizationCode(
       newUser.uid satisfies string,
+      client_app_id,
       code_challenge,
       "S256",
       challenge_time,

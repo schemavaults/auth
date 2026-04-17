@@ -13,7 +13,7 @@ import type { UserData } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
-import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { appIdSchema, getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
@@ -28,11 +28,13 @@ interface HandleLoginOptions {
 const loginBodySchema = z
   .object({
     credentials: emailCredentialsSchema,
+    client_app_id: appIdSchema,
     code_challenge: PKCE_ProofKeyManager.codeChallengeSchema,
     challenge_time: z.number().nonnegative(),
   })
   .required({
     credentials: true,
+    client_app_id: true,
     code_challenge: true,
     challenge_time: true,
   })
@@ -50,6 +52,7 @@ export async function handleLogin({
     return NextResponse.json(parse_login_body.error, { status: 400 });
   }
   const email_credentials = parse_login_body.data.credentials;
+  const client_app_id = parse_login_body.data.client_app_id;
   const code_challenge: string = parse_login_body.data.code_challenge;
   const challenge_time: number = parse_login_body.data.challenge_time;
 
@@ -188,6 +191,7 @@ export async function handleLogin({
   try {
     authorization_code = await userRegistry.generateAuthorizationCode(
       uid,
+      client_app_id,
       code_challenge,
       "S256",
       challenge_time,

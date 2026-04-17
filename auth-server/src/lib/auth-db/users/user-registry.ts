@@ -5,6 +5,7 @@ import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import {
   getAppEnvironment,
+  type AppId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { ICreateUserOptions } from "./ICreateUserOptions";
@@ -95,6 +96,7 @@ export class UserRegistry {
 
   public async generateAuthorizationCode(
     uid: string,
+    client_app_id: AppId,
     code_challenge: string,
     code_challenge_method: "S256",
     challenge_time: number,
@@ -102,6 +104,7 @@ export class UserRegistry {
     return generateAuthorizationCodeFn(
       this.db,
       uid,
+      client_app_id,
       code_challenge,
       code_challenge_method,
       challenge_time,
@@ -112,17 +115,21 @@ export class UserRegistry {
   /**
    * Atomically validates an OAuth2 PKCE authorization code and marks it
    * consumed. The code is single-use: subsequent calls with the same
-   * `authorization_code` return `null`. Expired codes and codes with a
-   * mismatched `code_verifier` also return `null` without throwing.
+   * `authorization_code` return `null`. Expired codes, codes with a
+   * mismatched `code_verifier`, and codes whose stored `client_app_id`
+   * does not match the supplied `client_app_id` all return `null`
+   * without throwing.
    */
   public async validateAndConsumeAuthorizationCode(
     authorization_code: string,
+    client_app_id: AppId,
     code_verifier: string,
     challenge_time: number,
   ): Promise<{ uid: string } | null> {
     return validateAndConsumeAuthorizationCodeFn(
       this.db,
       authorization_code,
+      client_app_id,
       code_verifier,
       challenge_time,
       this.debug

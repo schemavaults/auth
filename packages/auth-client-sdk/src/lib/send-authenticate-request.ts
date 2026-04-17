@@ -17,6 +17,7 @@ export async function sendAuthenticateRequest(
   opts: ISendAuthenticateRequestOptions,
 ): Promise<string> {
   const credentials: Credentials = opts.credentials;
+  const client_app_id = opts.client_app_id;
   const code_challenge: CodeChallengeWithDetails = opts.code_challenge;
   const authentication_type: AuthenticationOutcomeType =
     opts.authentication_type;
@@ -86,6 +87,7 @@ export async function sendAuthenticateRequest(
       password: credentials.password,
     },
     invite_code: credentials.invite_code,
+    client_app_id,
     code_challenge: code_challenge.code_challenge,
     challenge_time: code_challenge.challenge_time,
   };

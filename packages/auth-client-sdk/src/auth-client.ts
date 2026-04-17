@@ -887,6 +887,7 @@ export class SchemaVaultsAuthClient
     return await sendAuthenticateRequest({
       adapter: this._adapter,
       authentication_type,
+      client_app_id: this.app_id,
       credentials,
       code_challenge,
       app_environment: this.environment,
