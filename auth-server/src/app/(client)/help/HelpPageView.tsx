@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useMemo, useDeferredValue, type ReactElement } from "react";
+import {
+  useState,
+  useMemo,
+  useDeferredValue,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import {
   ThemedPageBackground,
   Card,
@@ -21,6 +27,7 @@ interface FaqItem {
   id: string;
   question: string;
   answer: string;
+  answerComponent?: ReactNode;
 }
 
 interface HelpPageViewProps {
@@ -30,8 +37,13 @@ interface HelpPageViewProps {
 export default function HelpPageView({
   invite_code_required,
 }: HelpPageViewProps): ReactElement {
-  const faqItems: FaqItem[] = useMemo(
-    () => [
+  const faqItems: FaqItem[] = useMemo(() => {
+    const createAccountAnswer =
+      "Navigate to the registration page and fill in your email address and password. Your password must be at least 10 characters long and include uppercase letters, lowercase letters, numbers, and special characters.";
+    const inviteCodeRequirementAnswer =
+      "An invite code is currently required to register. You will need to obtain a valid invite code from an administrator before you can create an account.";
+
+    return [
       {
         id: "what-is-schemavaults",
         question: "What is SchemaVaults Auth?",
@@ -41,8 +53,15 @@ export default function HelpPageView({
       {
         id: "create-account",
         question: "How do I create an account?",
-        answer:
-          "Navigate to the registration page and fill in your email address and password. Your password must be at least 10 characters long and include uppercase letters, lowercase letters, numbers, and special characters.",
+        answer: invite_code_required
+          ? `${createAccountAnswer} ${inviteCodeRequirementAnswer}`
+          : createAccountAnswer,
+        answerComponent: (
+          <div className="flex flex-col gap-2">
+            <p>{createAccountAnswer}</p>
+            {invite_code_required ? <p>{inviteCodeRequirementAnswer}</p> : null}
+          </div>
+        ),
       },
       {
         id: "invite-code",
@@ -69,9 +88,29 @@ export default function HelpPageView({
         answer:
           "SchemaVaults uses the OAuth2 Authorization Code flow with PKCE for secure application integration. Register your application in the admin dashboard to receive a client app ID, then configure your application to use the SchemaVaults authorization endpoints with the @schemavaults/auth-client-sdk.",
       },
-    ],
-    [invite_code_required],
-  );
+      {
+        id: "open-source",
+        question: "Is this open source?",
+        answer:
+          "Yes, SchemaVaults Auth is open source. The source code is available on GitHub at https://github.com/schemavaults/auth.",
+        answerComponent: (
+          <span>
+            Yes, SchemaVaults Auth is open source. The source code is available
+            on{" "}
+            <a
+              href="https://github.com/schemavaults/auth"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline underline-offset-4 hover:opacity-80"
+            >
+              GitHub
+            </a>
+            .
+          </span>
+        ),
+      },
+    ];
+  }, [invite_code_required]);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
   const deferredQuery = useDeferredValue(searchQuery);
@@ -123,7 +162,9 @@ export default function HelpPageView({
               {filteredFaqs.map((faq) => (
                 <AccordionItem key={faq.id} value={faq.id}>
                   <AccordionTrigger>{faq.question}</AccordionTrigger>
-                  <AccordionContent>{faq.answer}</AccordionContent>
+                  <AccordionContent>
+                    {faq.answerComponent ?? faq.answer}
+                  </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>

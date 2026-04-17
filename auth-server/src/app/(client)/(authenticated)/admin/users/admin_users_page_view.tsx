@@ -14,7 +14,11 @@ export default function AdminUsersPageView({
 }: AdminUsersPageViewProps): ReactElement {
   return (
     <PageContainer>
-      <UsersCard cardClassName={"w-full"} preloaded={preloaded} />
+      <UsersCard
+        cardClassName={"w-full"}
+        preloaded={preloaded}
+        getUserHref={(user: UserData): string => `/admin/users/${user.uid}`}
+      />
     </PageContainer>
   );
 }
