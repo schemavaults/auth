@@ -55,6 +55,37 @@ from `CLAUDE.md`'s package hierarchy):
 `auth-resource-server-codegen-templates` is independent — list it last when mixed
 with the others.
 
+## Downstream dependents (REQUIRED cascade bumps)
+
+**Whenever you bump a package, you MUST also bump every package listed in its
+"downstream dependents" column**, even if the downstream package has no source
+changes of its own. Published npm / GitHub Packages consumers need a new
+downstream version to pull in the updated base package; skipping this leaves
+`auth-react-provider@0.10.31` on a `workspace:*` resolution of
+`auth-client-sdk@0.9.42` that never appears in published artifacts.
+
+| Bumped package                            | Downstream dependents that MUST also be bumped                                       |
+| ----------------------------------------- | ------------------------------------------------------------------------------------ |
+| `app-definitions`                         | `auth-common`, `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server` |
+| `auth-common`                             | `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server` |
+| `jwt`                                     | `auth-server-sdk`, `auth-server`                                                     |
+| `auth-server-sdk`                         | `auth-resource-server-codegen-templates`, `auth-server`                              |
+| `auth-client-sdk`                         | `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server` |
+| `auth-react-provider`                     | `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server`                   |
+| `auth-ui`                                 | `auth-server`                                                                        |
+| `auth-resource-server-codegen-templates`  | (none)                                                                               |
+| `auth-server`                             | (none — leaf)                                                                        |
+
+If you are unsure, verify with:
+
+```bash
+grep -l '"@schemavaults/<pkg>"' packages/*/package.json auth-server/package.json
+```
+
+Real-world anchor: commit `1deac36` —
+`auth-server-sdk:0.22.20, auth-client-sdk:0.9.40, auth-react-provider:0.10.31, auth-ui:0.6.75, auth-resource-server-codegen-templates:0.0.27 - republish dependents of auth-common`.
+A single `auth-common` change cascaded to five downstream bumps.
+
 ## Workflow
 
 ### 1. Inspect
@@ -78,18 +109,29 @@ as a package change — bump the package version and stage the lockfile alongsid
 
 ### 3. Bump versions
 
-For each affected package:
+**Step 3a — Directly changed packages.** For each package whose source was
+modified, `Read` its `package.json` and bump the version:
 
-1. `Read` its `package.json`.
-2. Take the current `version` field.
-3. Bump the **patch** segment by default (`0.22.29` → `0.22.30`, `0.7.5` → `0.7.6`).
-4. Bump the **minor** segment only if the user explicitly says "minor", or the
+1. Bump the **patch** segment by default (`0.22.29` → `0.22.30`, `0.7.5` → `0.7.6`).
+2. Bump the **minor** segment only if the user explicitly says "minor", or the
    change is a clearly new feature/API addition.
-5. **Never** bump the major segment without an explicit instruction from the user.
-6. `Edit` the `package.json` to write the new version.
+3. **Never** bump the major segment without an explicit instruction from the user.
+4. `Edit` the `package.json` to write the new version.
 
 Do **not** run `bun version`, `npm version`, or any other version-bumping CLI —
 edit the file directly so the change is visible in the diff.
+
+**Step 3b — Cascade to downstream dependents (REQUIRED, do not skip).** For
+every package you bumped in Step 3a, look it up in the
+"Downstream dependents" table above and bump every package listed, even if its
+source code did not change. Add those `package.json` edits to the same commit.
+They belong in the same commit subject alongside the directly-changed ones.
+
+Sanity check before committing: every package named in the commit subject must
+have a corresponding `package.json` modification in `git diff --cached`. If you
+bumped `auth-client-sdk`, the subject MUST also name
+`auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, and
+`auth-server` — and those four `package.json` files must be staged.
 
 ### 4. Compose the commit subject
 
@@ -183,6 +225,18 @@ auth-client-sdk:0.9.36, auth-react-provider:0.10.26, auth-server:0.22.27 - fix t
 Files staged: source changes in all three packages plus each of their
 `package.json` files. Subject lists packages in dependency order
 (`auth-client-sdk` → `auth-react-provider` → `auth-server`).
+
+**Cascade bump — source change in one base package, dependents bumped with no
+source change of their own** (real commit `1deac36`):
+
+```
+auth-server-sdk:0.22.20, auth-client-sdk:0.9.40, auth-react-provider:0.10.31, auth-ui:0.6.75, auth-resource-server-codegen-templates:0.0.27 - republish dependents of auth-common
+```
+
+Here the only source change was in `auth-common`, but every downstream dependent
+still had its `package.json` version bumped so the new `auth-common` reaches
+published consumers. When you see this pattern, the subject names every package
+that got a version bump, not just the one whose code changed.
 
 **Repo-level chore** (real commit `dcda683`):
 

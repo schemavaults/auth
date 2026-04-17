@@ -42,6 +42,7 @@ export interface ISchemaVaultsAuthClient {
   // Send credentials to acquire an authorization code
   sendAuthenticateRequest: (
     authentication_type: AuthenticationOutcomeType,
+    client_app_id: AppId,
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
   ) => Promise<string>;

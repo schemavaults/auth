@@ -877,6 +877,7 @@ export class SchemaVaultsAuthClient
    */
   public async sendAuthenticateRequest(
     authentication_type: AuthenticationOutcomeType,
+    client_app_id: AppId,
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
   ): Promise<string> {
@@ -887,6 +888,7 @@ export class SchemaVaultsAuthClient
     return await sendAuthenticateRequest({
       adapter: this._adapter,
       authentication_type,
+      client_app_id,
       credentials,
       code_challenge,
       app_environment: this.environment,

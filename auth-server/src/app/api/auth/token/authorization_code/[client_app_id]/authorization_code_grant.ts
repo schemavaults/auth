@@ -69,6 +69,7 @@ export async function handleAuthorizationCodeGrant(
 
     const result = await userRegistry.validateAndConsumeAuthorizationCode(
       authorization_code,
+      body.client_app_id,
       code_verifier,
       challenge_time,
     );

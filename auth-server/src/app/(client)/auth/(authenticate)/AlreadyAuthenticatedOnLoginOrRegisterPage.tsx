@@ -104,6 +104,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
   const authorization_code: string = await generateAuthorizationCode(
     dbh.db,
     uid,
+    app_id,
     code_challenge,
     code_challenge_method,
     challenge_time,
