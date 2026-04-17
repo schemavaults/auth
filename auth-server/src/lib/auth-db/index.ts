@@ -13,6 +13,9 @@ export type * from "./users";
 export * from "./organizations";
 export type * from "./organizations";
 
+export * from "./token-revocations";
+export type * from "./token-revocations";
+
 // Only export types from server-settings to avoid pulling in server-only code
 // For server-side functions, import directly from "@/lib/auth-db/server-settings"
 export type * from "./server-settings/types";

@@ -14,6 +14,7 @@ import is_authenticated from "@/actions/is_authenticated";
 import login from "@/actions/login";
 import logout from "@/actions/logout";
 import register from "@/actions/register";
+import reset_rate_limit from "@/actions/reset_rate_limit";
 import open_dialog_with_button from "@/actions/open_dialog_with_button";
 import log_active_toasts from "@/actions/log_active_toasts";
 import is_invite_code_required from "@/actions/is_invite_code_required";
@@ -29,6 +30,8 @@ export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("login", login);
 
   commands.add("register", register);
+
+  commands.add("reset_rate_limit", reset_rate_limit);
 
   commands.add("create_and_login_as_superuser", createAndLoginAsSuperuser);
 

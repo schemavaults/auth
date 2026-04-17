@@ -11,12 +11,17 @@ import {
   type AppId,
   appIdSchema,
   getAppEnvironment,
+  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
   ServerlessDatabase,
   SchemaVaultsAppRegistry,
+  revokeToken,
 } from "@/lib/auth-db";
+import { refreshTokenExpiry } from "@schemavaults/auth-common";
+import { getKeysetIdFromToken, decodeJWT } from "@schemavaults/jwt";
+import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import {
   getOriginFromRequest,
   getAppAllowedOriginsForEnvironment,
@@ -187,6 +192,39 @@ export async function POST(
   const refresh_token_cookie_name: string = RefreshTokenCookieName(client_app_id);
   const refresh_token_expiry_cookie_name: string =
     RefreshTokenExpiryCookieName(client_app_id);
+
+  // Attempt to revoke the refresh token's jti before clearing cookies
+  try {
+    const refresh_token_value = req.cookies.get(refresh_token_cookie_name)?.value;
+    if (refresh_token_value) {
+      const keyset_id = getKeysetIdFromToken(refresh_token_value);
+      const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
+      const keyset = await jwt_keys_manager.getKeyset(
+        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+        keyset_id,
+      );
+      const decoded = await decodeJWT({
+        type: "refresh",
+        jwt: refresh_token_value,
+        jwt_keys: keyset,
+        env: environment,
+      });
+      if (decoded.jti) {
+        const expires_at = Date.now() + refreshTokenExpiry * 1000;
+        await revokeToken(dbh.db, decoded.jti, decoded.uid, expires_at);
+        if (debug) {
+          console.log(
+            `[/api/auth/logout/${client_app_id}] Revoked refresh token jti '${decoded.jti}' for user '${decoded.uid}'`
+          );
+        }
+      }
+    }
+  } catch (e: unknown) {
+    // Token may be expired, invalid, or missing -- still proceed with cookie clearing
+    if (debug) {
+      console.warn("[logout] Could not revoke token jti (token may be expired/invalid): ", e);
+    }
+  }
 
   try {
     const domain: string = getHostname(req);

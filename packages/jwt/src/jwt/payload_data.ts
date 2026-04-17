@@ -27,6 +27,7 @@ export const jwtPayloadSchema = z
     sig: z.string().min(32).max(4096),
     iss: z.literal(REFRESH_TOKEN_AUDIENCE),
     env: schemaVaultsAppEnvironmentSchema,
+    jti: z.string().uuid().optional(),
   })
   .required({
     uid: true,

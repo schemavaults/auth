@@ -310,6 +310,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       sub,
       uid,
       env: environment,
+      ...(payload.jti ? { jti: payload.jti } : {}),
     });
     if (!isValidSig) {
       throw new Error("Invalid JWT signature!");

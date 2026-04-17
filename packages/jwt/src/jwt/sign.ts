@@ -14,6 +14,7 @@ interface BaseSignJSONWebTokenInputOptions<TokenType extends AuthTokenTypes> {
   audience: string;
   type: TokenType;
   env: SchemaVaultsAppEnvironment;
+  jti?: string;
 }
 
 interface SignJSONWebTokenInputWithAllKeysOptions<
@@ -83,6 +84,7 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
     uid,
     type,
     env,
+    ...(opts.jti ? { jti: opts.jti } : {}),
   };
 
   try {
