@@ -39,6 +39,7 @@ describe("Token Revocation on Logout", () => {
             headers: {
               Authorization: `Bearer ${capturedRefreshToken}`,
               "Content-Type": "application/json",
+              Origin: Cypress.config("baseUrl") as string,
             },
             failOnStatusCode: false,
           }).then((response) => {
