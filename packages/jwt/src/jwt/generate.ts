@@ -134,6 +134,8 @@ export async function generateJWT<T extends AuthTokenTypes>(
     throw new Error("Invalid audience for refresh token");
   }
 
+  const jti: string | undefined = type === "refresh" ? crypto.randomUUID() : undefined;
+
   let signing_key: CryptoKey;
   try {
     if ("jwt_keys" in opts) {
@@ -171,6 +173,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
       email,
       type,
       env,
+      ...(jti ? { jti } : {}),
     });
   } catch (e: unknown) {
     console.error(
@@ -220,6 +223,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
       created_at: user.created_at,
       env,
       sig,
+      ...(jti ? { jti } : {}),
     };
 
     const jwt = await new EncryptJWT(additionalClaims)
@@ -250,6 +254,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
       exp: expiryTime,
       token: jwt,
       aud,
+      ...(jti ? { jti } : {}),
     };
 
     if (typeof tokenData.token !== "string") {

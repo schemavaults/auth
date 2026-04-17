@@ -1,5 +1,6 @@
 import {
   type I_JWT_Keys,
+  type CustomJWTPayload,
   decodeJWT,
   getAudienceFromToken,
   getKeysetIdFromToken,
@@ -9,6 +10,7 @@ import {
   type ServerlessDatabase,
   type UserRegistry,
   loadUserData,
+  isTokenRevoked,
 } from "@/lib/auth-db";
 import {
   type OrganizationID,
@@ -119,7 +121,7 @@ export async function handleRefreshTokenGrant(
     );
   }
 
-  let decoded: UserData;
+  let decoded: CustomJWTPayload;
   try {
     decoded = await decodeJWT({
       type: "refresh",
@@ -147,6 +149,37 @@ export async function handleRefreshTokenGrant(
         status: 401,
       },
     );
+  }
+
+  // Check if the refresh token has been revoked
+  if (decoded.jti) {
+    try {
+      const revoked = await isTokenRevoked(dbh.db, decoded.jti);
+      if (revoked) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: true,
+            message: "Refresh token has been revoked",
+          } satisfies RequestTokensResult,
+          {
+            status: 401,
+          },
+        );
+      }
+    } catch (e: unknown) {
+      console.error("Failed to check token revocation status: ", e);
+      return NextResponse.json(
+        {
+          success: false,
+          error: true,
+          message: "Failed to check token revocation status",
+        } satisfies RequestTokensResult,
+        {
+          status: 500,
+        },
+      );
+    }
   }
 
   const { uid } = decoded;

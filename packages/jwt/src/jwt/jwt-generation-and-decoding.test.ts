@@ -80,6 +80,80 @@ describe("JWT Generation & Decoding", () => {
     expect(decoded.app).toBe(client_app_id);
   });
 
+  it("should include a jti claim on generated refresh tokens", async () => {
+    const user: UserData = new MockUser();
+    const now = Date.now();
+
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    });
+
+    const audience = REFRESH_TOKEN_AUDIENCE;
+    const generateOptions: GenerateJWTOptions<"refresh"> = {
+      type: "refresh",
+      user,
+      audience,
+      iat: now,
+      client_app_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      jwt_keys,
+      env,
+    };
+
+    const jwt = await generateJWT(generateOptions);
+
+    // jti should be present on the generated token object
+    expect(jwt.jti).toBeDefined();
+    expect(typeof jwt.jti).toBe("string");
+
+    // Decode and verify jti is in the payload
+    const decoded = await decodeJWT({
+      jwt: jwt.token,
+      type: "refresh",
+      jwt_keys,
+      env,
+    });
+
+    expect(decoded.jti).toBe(jwt.jti);
+  });
+
+  it("should not include a jti claim on generated access tokens", async () => {
+    const user = new MockUser();
+    const now = Date.now();
+
+    const client_app_id = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: audience,
+    });
+
+    const generateOptions: GenerateJWTOptions<"access"> = {
+      type: "access",
+      user,
+      audience,
+      iat: now,
+      client_app_id,
+      jwt_keys,
+      env,
+    };
+
+    const jwt = await generateJWT(generateOptions);
+
+    // jti should not be present on access tokens
+    expect(jwt.jti).toBeUndefined();
+
+    // Decode and verify jti is not in the payload
+    const decoded = await decodeJWT({
+      jwt: jwt.token,
+      type: "access",
+      audience,
+      jwt_keys,
+      env,
+    });
+
+    expect(decoded.jti).toBeUndefined();
+  });
+
   it("should throw an error attempting to generate refresh token for non-auth server audience", async () => {
     const user: UserData = new MockUser();
     const now = Date.now();
