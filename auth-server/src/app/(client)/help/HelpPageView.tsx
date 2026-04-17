@@ -23,6 +23,7 @@ import {
   cn,
 } from "@schemavaults/ui";
 import { HelpCircle, Search } from "lucide-react";
+import Link from "next/link";
 import AuthActionButtons from "@/components/AuthActionButtons";
 
 interface FaqItem {
@@ -110,6 +111,54 @@ export default function HelpPageView({
             .
           </span>
         ),
+      },
+      {
+        id: "create-organization",
+        question: "How do I create an organization?",
+        answer:
+          "Once you are signed in, navigate to the \"Create organization\" page at /org/new, enter a name and any other required details, and submit the form. After creation you will be redirected to your new organization's page where you can manage members, invitations, and settings.",
+        answerComponent: (
+          <span>
+            Once you are signed in, navigate to the{" "}
+            <Link
+              href="/org/new"
+              className="text-primary underline underline-offset-4 hover:opacity-80"
+            >
+              Create organization
+            </Link>{" "}
+            page, enter a name and any other required details, and submit the
+            form. After creation you will be redirected to your new
+            organization&apos;s page where you can manage members, invitations,
+            and settings.
+          </span>
+        ),
+      },
+      {
+        id: "join-organization",
+        question: "How do I join an organization?",
+        answer:
+          "To join an organization, an owner or administrator of that organization must first send you an invitation. Once invited, sign in and open your account page \u2014 any pending invitations will be listed there. Accept an invitation to become a member of the organization.",
+        answerComponent: (
+          <span>
+            To join an organization, an owner or administrator of that
+            organization must first send you an invitation. Once invited, sign
+            in and open your{" "}
+            <Link
+              href="/account"
+              className="text-primary underline underline-offset-4 hover:opacity-80"
+            >
+              account page
+            </Link>{" "}
+            &mdash; any pending invitations will be listed there. Accept an
+            invitation to become a member of the organization.
+          </span>
+        ),
+      },
+      {
+        id: "invite-user-to-organization",
+        question: "How do I invite a user to my organization?",
+        answer:
+          "Open your organization's page from the organizations list on your account page. In the members section, use the invite form to add a user by email address or user ID. The invited user will see the invitation on their own account page and can accept or decline it. Only organization owners and administrators can send invitations.",
       },
     ];
   }, [invite_code_required]);
