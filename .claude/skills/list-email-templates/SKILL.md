@@ -110,3 +110,5 @@ If the description is ambiguous about the props shape, either:
 ## Relationship to the send-email-to-mailing-list skill
 
 Use this skill first to discover template IDs, then use the `send-email-to-mailing-list` skill (or `sendEmail()` / `sendEmailToMailingList()` directly) to send the email. If none of the registered templates fit your notification, skip template discovery and use the raw `text`/`html` form instead.
+
+Once you've picked a template, validate your `template_props` shape with `--dry-run` on the relevant send CLI (`bunx schemavaults-send-email send --dry-run …` or `send-to-mailing-list --dry-run …`) **instead of sending a blank real email**. Server-side props validation only runs on `POST /api/send`, so dry-run is the only way to catch `template_props` mismatches without delivering.
