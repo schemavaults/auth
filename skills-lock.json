@@ -4,12 +4,12 @@
     "list-email-templates": {
       "source": "schemavaults/send-email",
       "sourceType": "github",
-      "computedHash": "c94a9a1712b7af3961feed2ec60bdc044dd1616b929c0db22ddbaea480f93aa3"
+      "computedHash": "f6373a01cb21f8d48f300ad297e9b750a5169f497ccbc4169d7aca273822d04c"
     },
     "send-email-to-mailing-list": {
       "source": "schemavaults/send-email",
       "sourceType": "github",
-      "computedHash": "82dc502142976eafc01183e25ba6637c74821a3ca748137e137d441d3db66cae"
+      "computedHash": "0d32a4cd229419d2d83d523e9308d6077e183d3c7922aba3931fbc0702b9daaa"
     }
   }
 }
