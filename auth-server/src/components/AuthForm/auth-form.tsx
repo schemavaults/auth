@@ -21,7 +21,7 @@ import {
   FormMessage,
 } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { Input, PasswordInput } from "@schemavaults/ui";
+import { Input, PasswordInput, SecurePasswordCreationInput } from "@schemavaults/ui";
 import {
   Card,
   CardContent,
@@ -44,6 +44,7 @@ import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { AuthFormData } from "./auth-form-data";
 import type { AuthFormType } from "./auth-form-type";
 import AuthFormSwapLink from "./swap-auth-type-link";
+import { authPasswordRequirements } from "./password-requirements";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { AppAuthorizationConsentScreen } from "@/components/AppAuthorizationConsentScreen";
 
@@ -289,19 +290,29 @@ export function AuthForm<T extends "login" | "register">({
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <PasswordInput
-                      {...field}
-                      autoComplete={
-                        type === "login" ? "current-password" : "new-password"
-                      }
-                      name={field.name}
-                      disabled={field.disabled || submitting}
-                    />
+                    {type === "register" ? (
+                      <SecurePasswordCreationInput
+                        {...field}
+                        autoComplete="new-password"
+                        name={field.name}
+                        disabled={field.disabled || submitting}
+                        requirements={authPasswordRequirements}
+                      />
+                    ) : (
+                      <PasswordInput
+                        {...field}
+                        autoComplete="current-password"
+                        name={field.name}
+                        disabled={field.disabled || submitting}
+                      />
+                    )}
                   </FormControl>
-                  <FormDescription>
-                    Please enter {type === "login" ? "your" : "a"} secret
-                    password. Never share it with anyone else.
-                  </FormDescription>
+                  {type === "login" ? (
+                    <FormDescription>
+                      Please enter your secret password. Never share it with
+                      anyone else.
+                    </FormDescription>
+                  ) : null}
                   <FormMessage />
                 </FormItem>
               )}
