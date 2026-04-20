@@ -115,27 +115,33 @@ describe("OAuth2State (RFC 6749 §10.12 state parameter)", () => {
               password,
               invite_code: inviteCode,
             }).then(() => {
+              // Fully reset — clear auth-server session AND RP origin
+              // storage, otherwise a residual refresh token on the RP
+              // auto-redirects past /auth/login before we can capture
+              // the PKCE URL.
               cy.logout();
-
-              // Kick off a fresh login flow. This stores a new `state` on
-              // the RP origin keyed by challenge_time. We grab
-              // challenge_time from the authorize URL and then visit the
-              // callback URL ourselves with a mangled `state`. The SDK
-              // MUST reject before attempting to exchange the code.
+              cy.clearAllCookies();
               cy.origin(exampleAppOrigin, () => {
+                localStorage.clear();
+                sessionStorage.clear();
                 cy.visit("/");
                 cy.contains("button", "Login").click();
               });
 
+              // Wait until the login FORM is interactive — that
+              // guarantees we've settled on /auth/login and the PKCE
+              // params are still in the URL.
               cy.url({ timeout: 20000 }).should("include", "/auth/login");
-              cy.url().then((authorizeUrl: string) => {
-                const params = new URL(authorizeUrl).searchParams;
+              cy.get("input[name='email']", { timeout: 15000 }).should(
+                "be.visible",
+              );
+              cy.location("search").then((search: string) => {
+                const params = new URLSearchParams(search);
                 const challengeTime = params.get("challenge_time");
                 expect(challengeTime, "challenge_time present").to.be.a(
                   "string",
                 );
 
-                // Visit the callback URL with an obviously-wrong state.
                 cy.origin(
                   exampleAppOrigin,
                   { args: { challengeTime } },
@@ -146,14 +152,9 @@ describe("OAuth2State (RFC 6749 §10.12 state parameter)", () => {
 
                     // SDK rejects → user redirected away from /account.
                     cy.url({ timeout: 15000 }).should("not.include", "/account");
-                    cy.get(
-                      'h1, [role="heading"], body',
-                      { timeout: 15000 },
-                    ).should(($el) => {
-                      const text = $el.text();
-                      // We either see the homepage or some error indicator;
-                      // the only failure case is landing on /account.
-                      expect(text.includes("Example Account Page")).to.be.false;
+                    cy.get("body", { timeout: 15000 }).should(($el) => {
+                      expect($el.text().includes("Example Account Page")).to.be
+                        .false;
                     });
                   },
                 );
@@ -186,15 +187,20 @@ describe("OAuth2State (RFC 6749 §10.12 state parameter)", () => {
               invite_code: inviteCode,
             }).then(() => {
               cy.logout();
-
+              cy.clearAllCookies();
               cy.origin(exampleAppOrigin, () => {
+                localStorage.clear();
+                sessionStorage.clear();
                 cy.visit("/");
                 cy.contains("button", "Login").click();
               });
 
               cy.url({ timeout: 20000 }).should("include", "/auth/login");
-              cy.url().then((authorizeUrl: string) => {
-                const params = new URL(authorizeUrl).searchParams;
+              cy.get("input[name='email']", { timeout: 15000 }).should(
+                "be.visible",
+              );
+              cy.location("search").then((search: string) => {
+                const params = new URLSearchParams(search);
                 const challengeTime = params.get("challenge_time");
                 expect(challengeTime, "challenge_time present").to.be.a(
                   "string",
