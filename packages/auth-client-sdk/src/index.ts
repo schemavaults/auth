@@ -44,7 +44,9 @@ export {
 // OAuth2 `state` CSRF-nonce generation (RFC 6749 §10.12). Useful for
 // consumers that want to mirror the SDK's own nonce shape in bespoke
 // adapters or tests.
-export {
-  generateOAuth2State,
-  constantTimeStringEqual,
-} from "./lib/generate-oauth2-state";
+export { generateOAuth2State } from "./lib/generate-oauth2-state";
+
+// Re-export the timing-safe string comparator from auth-common so
+// consumers who import this SDK don't need a separate auth-common dep
+// just to validate their own callback URLs.
+export { timingSafeStringEqual } from "@schemavaults/auth-common";

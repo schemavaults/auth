@@ -16,7 +16,7 @@ import type {
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { z } from "zod";
 import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "./assert-http-only-refresh-token-has-accompanying-expiry-marker";
-import { constantTimeStringEqual } from "./generate-oauth2-state";
+import { timingSafeStringEqual } from "@schemavaults/auth-common";
 
 export interface IHandleSuccessfulAuthenticationOpts {
   authorization_code: string;
@@ -139,7 +139,7 @@ export async function handleSuccessfulAuthentication({
         "Missing OAuth2 state on callback — possible CSRF attempt",
       );
     }
-    if (!constantTimeStringEqual(stored_state, received_state)) {
+    if (!timingSafeStringEqual(stored_state, received_state)) {
       if (debug) {
         console.error(
           "[SchemaVaultsAuthClient::handleSuccessfulAuthentication] OAuth2 state mismatch",
