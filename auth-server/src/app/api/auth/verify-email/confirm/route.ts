@@ -6,11 +6,32 @@ import { type NextRequest, NextResponse } from "next/server";
 import handleVerifyEmailConfirm from "./handle_verify_email_confirm";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { withServerTrace } from "@/lib/withServerTrace";
+import { RedisCache } from "@/lib/redis";
+import {
+  extractClientIp,
+  checkRateLimit,
+  VERIFY_EMAIL_CONFIRM_RATE_LIMIT,
+  rateLimitResponse,
+  ipRequiredResponse,
+} from "@/lib/rate-limit";
 
 export async function POST(
   req: NextRequest,
 ): Promise<NextResponse> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
+
+  const ip = extractClientIp(req);
+  if (!ip) {
+    return ipRequiredResponse();
+  }
+
+  {
+    await using redis = RedisCache.createConnection();
+    const result = await checkRateLimit(redis.client, VERIFY_EMAIL_CONFIRM_RATE_LIMIT, { ip });
+    if (!result.allowed) {
+      return rateLimitResponse(result);
+    }
+  }
 
   let body_json: unknown;
   try {
