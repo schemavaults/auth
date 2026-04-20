@@ -9,7 +9,11 @@ import type { AppId, SchemaVaultsApp } from "@schemavaults/app-definitions";
 import AppAuthorizationConsentScreen from "@/components/AppAuthorizationConsentScreen";
 import NativeAppCodeDelivery from "@/components/NativeAppCodeDelivery";
 import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
-import type { UserData } from "@schemavaults/auth-common";
+import {
+  OAuth2StateValidationError,
+  parseOAuth2State,
+  type UserData,
+} from "@schemavaults/auth-common";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
@@ -24,6 +28,9 @@ export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   code_challenge_method: string | null;
   challenge_time_str: string | null;
   redirect_uri: string | null;
+  // OAuth2 `state` (RFC 6749 §10.12) — echoed back on the callback URL
+  // so the client can verify its stored CSRF nonce.
+  state: string | null;
 }
 
 export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
@@ -115,6 +122,23 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     redirectWithError(500, "internal_server_error");
   }
 
+  // Defense-in-depth: re-validate at the echo boundary so a malformed
+  // value cannot slip through even if an upstream caller forgets to
+  // validate before handing us `opts.state`.
+  let echoedState: string | null;
+  try {
+    echoedState = parseOAuth2State(opts.state);
+  } catch (e: unknown) {
+    if (e instanceof OAuth2StateValidationError) {
+      console.warn(
+        "[AlreadyAuthenticatedOnLoginOrRegisterPage] Rejecting invalid OAuth2 state:",
+        e.reasons,
+      );
+      redirectWithError(400, "bad_request");
+    }
+    throw e;
+  }
+
   if (on_successful_authenticate === "redirect-with-authorization-code") {
     if (!redirect_uri) {
       redirectWithError(400, "bad_request");
@@ -123,6 +147,9 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     queryParams.set('challenge_time', challenge_time.toString());
     queryParams.set('code_challenge_method', 'S256');
     queryParams.set('authorization_code', authorization_code);
+    if (echoedState) {
+      queryParams.set('state', echoedState);
+    }
     return redirect(`${redirect_uri}?${queryParams.toString()}`);
   } else if (on_successful_authenticate === "send-authorization-code-to-native-app-then-close") {
     if (!redirect_uri) {
@@ -134,6 +161,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
         redirect_uri={redirect_uri}
         code_challenge_method="S256"
         challenge_time={challenge_time}
+        state={echoedState}
       />
     );
   } else {

@@ -10,6 +10,7 @@ import {
   PKCE_ProofKeyManager,
 } from "@schemavaults/auth-common";
 import AuthenticateURLEncoder from "./authenticate-url-encoder";
+import { generateOAuth2State } from "./generate-oauth2-state";
 
 export interface IAuthenticateWithRedirectOpts {
   type: "login" | "register";
@@ -20,6 +21,7 @@ export interface IAuthenticateWithRedirectOpts {
   environment: SchemaVaultsAppEnvironment;
   authorize_uri: string;
   storeCodeVerifier: (code_verifier: string, challenge_time: number) => void;
+  storeOAuth2State: (state: string, challenge_time: number) => void;
 }
 
 export default async function authenticateWithRedirect({
@@ -31,6 +33,7 @@ export default async function authenticateWithRedirect({
   environment,
   authorize_uri,
   storeCodeVerifier,
+  storeOAuth2State,
 }: IAuthenticateWithRedirectOpts): Promise<void> {
   if (debug) {
     console.log(
@@ -118,6 +121,28 @@ export default async function authenticateWithRedirect({
   // If the authentication is successful, the auth server will redirect the user back to the client
   // and the code_verifier will be used to prove that the client initiating the flow is the same as the client that the authorization server issued the code to
 
+  // Generate and persist the OAuth2 `state` CSRF nonce. We key it by
+  // challenge_time to align with the code_verifier storage contract and
+  // to support concurrent in-flight flows from the same browser. The
+  // base64url encoder comes from the adapter so the SDK doesn't carry
+  // a browser/Node encoding shim.
+  let state: string;
+  try {
+    state = generateOAuth2State(adapter.toBase64UrlFromBytes.bind(adapter));
+    if (typeof state !== "string" || state.length === 0) {
+      throw new Error("generateOAuth2State produced an empty value");
+    }
+  } catch (e: unknown) {
+    console.error("Failed to generate OAuth2 state: ", e);
+    throw new Error("Failed to generate OAuth2 state");
+  }
+  try {
+    storeOAuth2State(state, code_challenge.challenge_time) satisfies void;
+  } catch (e: unknown) {
+    console.error("Failed to store OAuth2 state: ", e);
+    throw new Error("Failed to store OAuth2 state!");
+  }
+
   if (!client_app_id) {
     console.error("App ID not set, but required for PKCE flow");
     throw new Error("App ID not set, but required for PKCE flow");
@@ -150,6 +175,7 @@ export default async function authenticateWithRedirect({
       app_id: client_app_id,
       auth_server_uri,
       app_env: environment,
+      state,
     });
   } catch (e: unknown) {
     console.error("Failed to build authenticate URL: ", e);
