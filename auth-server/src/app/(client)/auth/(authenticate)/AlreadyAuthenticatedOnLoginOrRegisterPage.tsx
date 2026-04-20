@@ -24,6 +24,9 @@ export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   code_challenge_method: string | null;
   challenge_time_str: string | null;
   redirect_uri: string | null;
+  // OAuth2 `state` (RFC 6749 §10.12) — echoed back on the callback URL
+  // so the client can verify its stored CSRF nonce.
+  state: string | null;
 }
 
 export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
@@ -123,6 +126,9 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     queryParams.set('challenge_time', challenge_time.toString());
     queryParams.set('code_challenge_method', 'S256');
     queryParams.set('authorization_code', authorization_code);
+    if (typeof opts.state === 'string' && opts.state.length > 0) {
+      queryParams.set('state', opts.state);
+    }
     return redirect(`${redirect_uri}?${queryParams.toString()}`);
   } else if (on_successful_authenticate === "send-authorization-code-to-native-app-then-close") {
     if (!redirect_uri) {
@@ -134,6 +140,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
         redirect_uri={redirect_uri}
         code_challenge_method="S256"
         challenge_time={challenge_time}
+        state={opts.state}
       />
     );
   } else {

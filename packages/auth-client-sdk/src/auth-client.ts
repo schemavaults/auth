@@ -313,6 +313,33 @@ export class SchemaVaultsAuthClient
     return;
   }
 
+  // OAuth2 `state` CSRF-nonce storage wrappers. Lifecycle mirrors the
+  // code-verifier wrappers above.
+  private storeOAuth2State(state: string, challenge_time: number): void {
+    const now = Date.now();
+    if (!challenge_time || typeof challenge_time !== "number") {
+      throw new Error("Invalid challenge_time; not a number");
+    } else if (challenge_time > now) {
+      throw new Error("Invalid challenge_time; in the future");
+    }
+    if (typeof state !== "string" || state.length === 0) {
+      throw new TypeError("Expected 'state' to be a non-empty string");
+    }
+    this.adapter.storeOAuth2State(state, challenge_time);
+  }
+
+  private loadOAuth2State(challenge_time: number): string | null {
+    const now = Date.now();
+    if (!challenge_time || typeof challenge_time !== "number") {
+      throw new Error("Invalid challenge_time; not a number");
+    } else if (challenge_time > now) {
+      throw new Error("Invalid challenge_time; in the future");
+    } else if (now - challenge_time > PKCE_ProofKeyManager.max_age) {
+      throw new Error("OAuth2 state has expired");
+    }
+    return this.adapter.loadOAuth2State(challenge_time);
+  }
+
   // Load the code verifier from a secure location
   private loadCodeVerifier(challenge_time: number): string | null {
     const now = Date.now();
@@ -396,6 +423,7 @@ export class SchemaVaultsAuthClient
       auth_server_uri: this._authServerUri,
       client_app_id: this._app_id,
       storeCodeVerifier: this.storeCodeVerifier.bind(this),
+      storeOAuth2State: this.storeOAuth2State.bind(this),
       environment: this.environment,
       authorize_uri: this.authorize_uri,
       debug: this.debug,
@@ -556,12 +584,15 @@ export class SchemaVaultsAuthClient
     authorization_code: string,
     challenge_time: number,
     code_verifier?: string,
+    received_state?: string | null,
   ): Promise<void> {
     return await handleSuccessfulAuthentication({
       authorization_code,
       challenge_time,
       code_verifier,
+      received_state: received_state ?? null,
       loadCodeVerifier: this.loadCodeVerifier.bind(this),
+      loadOAuth2State: this.loadOAuth2State.bind(this),
       auth_server_uri: this.auth_server_uri,
       client_app_id: this.app_id,
       adapter: this.adapter,
@@ -1047,11 +1078,12 @@ export class SchemaVaultsAuthClient
 
   public async sendAuthorizeClientApplicationRequest(
     app_id: AppId,
+    state?: string | null,
   ): Promise<void> {
     const sendAuthorizeRequest = await import(
       "@/lib/send-authorize-client-application-request"
     ).then((mod) => mod.default);
-    return await sendAuthorizeRequest({ app_id, adapter: this.adapter });
+    return await sendAuthorizeRequest({ app_id, adapter: this.adapter, state });
   }
 
   public async checkAppAuthorization(app_id: AppId): Promise<boolean> {

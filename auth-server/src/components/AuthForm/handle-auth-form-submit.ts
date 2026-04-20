@@ -25,6 +25,10 @@ export interface PendingAuthorizationState {
   code_challenge: CodeChallengeWithDetails;
   code_verifier: CodeVerifierWithDetails;
   redirect_uri: string | null | undefined;
+  // OAuth2 `state` observed on the authorize URL. Threaded through the
+  // consent-screen interstitial so the callback redirect can echo it
+  // untouched (RFC 6749 §10.12).
+  state: string | null;
 }
 
 interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
@@ -233,11 +237,13 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     if (!alreadyAuthorized) {
       const redirect_uri: string | null | undefined =
         searchParams.get("redirect_uri");
+      const state: string | null = searchParams.get("state");
       opts.onAppAuthorizationNeeded({
         authorization_code,
         code_challenge,
         code_verifier,
         redirect_uri,
+        state,
       });
       return;
     }
@@ -290,6 +296,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
 
   const redirect_uri: string | null | undefined =
     searchParams.get("redirect_uri");
+  const state: string | null = searchParams.get("state");
 
   await performPostAuthRedirect({
     onSuccessfulAuthenticate,
@@ -297,6 +304,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     code_challenge,
     code_verifier,
     redirect_uri,
+    state,
     auth,
     router,
     toast,

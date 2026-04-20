@@ -12,6 +12,17 @@ interface AuthClientCodeVerifierActions {
   clearCodeVerifier: (challenge_time: number) => void;
 }
 
+// OAuth2 `state` (RFC 6749 §10.12) is a client-side CSRF nonce generated
+// before the authorize redirect, persisted across the redirect, and
+// verified against the value echoed back on the callback. Mirrors the
+// code-verifier storage contract — keyed by `challenge_time` so concurrent
+// flows don't clobber each other.
+interface AuthClientOAuth2StateActions {
+  storeOAuth2State: (state: string, challenge_time: number) => void;
+  loadOAuth2State: (challenge_time: number) => string | null;
+  clearOAuth2State: (challenge_time: number) => void;
+}
+
 interface AuthClientUserDataActions {
   storeUserData: (userData: UserData) => void;
   getUserData: () => UserData | null;
@@ -82,6 +93,7 @@ interface AuthClientNetworkActions {
 // E.g. the next.js adapter uses cookies-next to manage cookies
 export interface ISchemaVaultsAuthClientAdapter
   extends AuthClientCodeVerifierActions,
+    AuthClientOAuth2StateActions,
     AuthClientUserDataActions,
     AuthClientAuthTokensActions,
     AuthClientNetworkActions {

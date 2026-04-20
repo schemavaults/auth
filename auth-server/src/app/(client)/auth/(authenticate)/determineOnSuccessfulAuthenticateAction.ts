@@ -43,7 +43,8 @@ export async function determineOnSuccessfulAuthenticateActionMightThrow({
       searchParams.redirect_uri ||
       searchParams.code_challenge ||
       searchParams.code_challenge_method ||
-      searchParams.challenge_time
+      searchParams.challenge_time ||
+      searchParams.state
     ) {
       console.warn("Received PKCE params when app_id is not set");
       redirectWithError(400, 'bad_request');

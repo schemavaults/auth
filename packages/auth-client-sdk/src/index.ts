@@ -40,3 +40,11 @@ export {
   isValidErrorId,
   ERROR_MESSAGE_CATALOG,
 } from "@schemavaults/auth-common";
+
+// OAuth2 `state` CSRF-nonce generation (RFC 6749 §10.12). Useful for
+// consumers that want to mirror the SDK's own nonce shape in bespoke
+// adapters or tests.
+export {
+  generateOAuth2State,
+  constantTimeStringEqual,
+} from "./lib/generate-oauth2-state";

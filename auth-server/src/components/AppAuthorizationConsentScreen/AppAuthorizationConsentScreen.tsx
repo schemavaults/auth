@@ -67,9 +67,12 @@ export function AppAuthorizationConsentScreen({
 
     const authClient = auth.client.current;
 
-    // Step 1: Authorize the app
+    // Step 1: Authorize the app. Pass the URL `state` through for API
+    // hygiene — the server does not persist it, but accepting it here
+    // formalizes the contract and lets us log it in development.
+    const urlState = searchParams.get("state");
     try {
-      await authClient.sendAuthorizeClientApplicationRequest(app_id);
+      await authClient.sendAuthorizeClientApplicationRequest(app_id, urlState);
     } catch (e: unknown) {
       console.error("[AppAuthorizationConsentScreen] Failed to authorize app:", e);
       toast({
@@ -95,6 +98,7 @@ export function AppAuthorizationConsentScreen({
       const code_challenge = searchParams.get("code_challenge");
       const challenge_time_str = searchParams.get("challenge_time");
       const redirect_uri = searchParams.get("redirect_uri");
+      const state = searchParams.get("state");
 
       if (!code_challenge) {
         throw new Error("Missing code_challenge parameter");
@@ -161,6 +165,7 @@ export function AppAuthorizationConsentScreen({
           authorization_code,
           code_challenge: codeChallengeDetails,
           app_environment: appEnv,
+          state,
         });
       } else if (
         onSuccessfulAuthenticate ===
@@ -177,6 +182,9 @@ export function AppAuthorizationConsentScreen({
             code_challenge_method: "S256",
             challenge_time: challenge_time.toString(),
             authorization_code,
+            ...(typeof state === "string" && state.length > 0
+              ? { state }
+              : {}),
           }),
         });
 

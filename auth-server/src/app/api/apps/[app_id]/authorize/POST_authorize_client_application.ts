@@ -4,6 +4,19 @@ import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import { type AppId, appIdSchema, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import AuthorizedAppsRegistry from "@/lib/auth-db/apps/authorized-apps-registry";
+import { z } from "zod";
+
+// Optional OAuth2 `state` parameter (RFC 6749 §10.12). Accepted on the
+// consent POST so clients can declare the nonce they generated — it is
+// not persisted here (the browser round-trips state through the
+// authorize URL → callback URL path on its own). Parsing it lets the
+// server reject malformed values early and log the CSRF nonce length
+// in development for debugging mismatches.
+const authorizeRequestBodySchema = z
+  .object({
+    state: z.string().min(1).max(1024).optional(),
+  })
+  .strict();
 
 /**
  * Authorize a frontend application to receive authentication tokens on your behalf
@@ -51,6 +64,40 @@ export async function POST_authorize_client_application(
           {
             status: 403,
           },
+        );
+      }
+
+      // Parse (optional) OAuth2 `state` from the body. A missing body or
+      // an empty body is fine — older clients simply won't send it.
+      let parsedState: string | undefined = undefined;
+      try {
+        const text = await request.text();
+        if (text && text.length > 0) {
+          const parsed = authorizeRequestBodySchema.safeParse(JSON.parse(text));
+          if (!parsed.success) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: "Invalid request body",
+              } satisfies ResourceCreationResponse,
+              { status: 400 },
+            );
+          }
+          parsedState = parsed.data.state;
+        }
+      } catch (e: unknown) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Failed to parse request body",
+          } satisfies ResourceCreationResponse,
+          { status: 400 },
+        );
+      }
+
+      if (environment === "development" && typeof parsedState === "string") {
+        console.log(
+          `[/api/apps/${app_id}/authorize] Received OAuth2 state (length=${parsedState.length}); will be echoed on callback by the browser, not persisted server-side.`,
         );
       }
 

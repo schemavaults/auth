@@ -66,6 +66,7 @@ export default async function RegisterPage(props: {
       code_challenge_method: typeof searchParams.code_challenge_method === 'string' ? searchParams.code_challenge_method : null,
       challenge_time_str: typeof searchParams.challenge_time === 'string' ? searchParams.challenge_time : null,
       redirect_uri: typeof searchParams.redirect_uri === 'string' ? searchParams.redirect_uri : null,
+      state: typeof searchParams.state === 'string' ? searchParams.state : null,
       debug
     });
   }

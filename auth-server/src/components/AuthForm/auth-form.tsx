@@ -143,6 +143,7 @@ export function AuthForm<T extends "login" | "register">({
         code_challenge: pendingAuthorization.code_challenge,
         code_verifier: pendingAuthorization.code_verifier,
         redirect_uri: pendingAuthorization.redirect_uri,
+        state: pendingAuthorization.state,
         auth,
         router,
         toast,

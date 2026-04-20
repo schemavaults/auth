@@ -16,12 +16,18 @@ import type {
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { z } from "zod";
 import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "./assert-http-only-refresh-token-has-accompanying-expiry-marker";
+import { constantTimeStringEqual } from "./generate-oauth2-state";
 
 export interface IHandleSuccessfulAuthenticationOpts {
   authorization_code: string;
   challenge_time: number;
   code_verifier?: string;
+  // OAuth2 `state` parameter as received on the callback URL. The SDK
+  // rejects the exchange if this does not match the value it persisted
+  // before the authorize redirect.
+  received_state: string | null | undefined;
   loadCodeVerifier: (challenge_time: number) => string | null;
+  loadOAuth2State: (challenge_time: number) => string | null;
   debug: boolean;
   environment: SchemaVaultsAppEnvironment;
   adapter: ISchemaVaultsAuthClientAdapter;
@@ -41,7 +47,9 @@ export async function handleSuccessfulAuthentication({
   authorization_code,
   challenge_time,
   code_verifier,
+  received_state,
   loadCodeVerifier,
+  loadOAuth2State,
   debug,
   environment,
   adapter,
@@ -100,6 +108,51 @@ export async function handleSuccessfulAuthentication({
     throw new Error("Code verifier has expired");
   }
 
+  // OAuth2 `state` CSRF validation (RFC 6749 §10.12). Applies only to the
+  // redirect flow — when `code_verifier` is passed directly the caller is
+  // completing the flow in the same JS context that initiated it (e.g. the
+  // auth server's own /account login), so there is no cross-origin
+  // callback to defend against. In the redirect flow the verifier is
+  // loaded from storage below and the state check MUST run before any
+  // code redemption so a mismatched callback can never burn the stored
+  // state or trade a victim's code.
+  const isRedirectFlow: boolean =
+    typeof code_verifier !== "string" || code_verifier.length === 0;
+  if (isRedirectFlow) {
+    let stored_state: string | null;
+    try {
+      stored_state = loadOAuth2State(challenge_time);
+    } catch (e: unknown) {
+      console.error(
+        "[SchemaVaultsAuthClient::handleSuccessfulAuthentication] Failed to load stored OAuth2 state: ",
+        e,
+      );
+      throw new Error("Failed to load stored OAuth2 state");
+    }
+    if (typeof stored_state !== "string" || stored_state.length === 0) {
+      throw new Error(
+        "Missing stored OAuth2 state — cannot verify callback CSRF nonce",
+      );
+    }
+    if (typeof received_state !== "string" || received_state.length === 0) {
+      throw new Error(
+        "Missing OAuth2 state on callback — possible CSRF attempt",
+      );
+    }
+    if (!constantTimeStringEqual(stored_state, received_state)) {
+      if (debug) {
+        console.error(
+          "[SchemaVaultsAuthClient::handleSuccessfulAuthentication] OAuth2 state mismatch",
+          {
+            stored_state_length: stored_state.length,
+            received_state_length: received_state.length,
+          },
+        );
+      }
+      throw new Error("OAuth2 state mismatch — possible CSRF attempt");
+    }
+  }
+
   // The auth server will redirect the user back to the client
   // The client will have a code in the query parameters
   // The client will use the code to get an access token
@@ -147,6 +200,22 @@ export async function handleSuccessfulAuthentication({
       );
       if (debug) {
         throw new Error("Failed to clear code verifiers");
+      }
+    }
+
+    // Clear the OAuth2 state nonce — it has done its job. Only applies
+    // in the redirect flow where state was actually persisted.
+    if (isRedirectFlow) {
+      try {
+        adapter.clearOAuth2State(challenge_time);
+      } catch (e: unknown) {
+        console.error(
+          "[SchemaVaultsAuthClient] Failed to clear OAuth2 state: ",
+          e,
+        );
+        if (debug) {
+          throw new Error("Failed to clear OAuth2 state");
+        }
       }
     }
   } else {

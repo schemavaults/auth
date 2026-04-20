@@ -32,6 +32,7 @@ import isClientRuntime from "@/lib/isClientRuntime";
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
+  OAUTH2_STATES = "oauth2_states",
   USER_DATA = "user_data",
 }
 
@@ -301,9 +302,111 @@ export class ReactAuthClientSdkAdapter
       window.localStorage.removeItem(
         AuthClientSdkAdapterLocalStorageKeys.CODE_VERIFIERS,
       );
+      window.localStorage.removeItem(
+        AuthClientSdkAdapterLocalStorageKeys.OAUTH2_STATES,
+      );
     } catch (e: unknown) {
       console.error(e);
       throw new Error("Failed to clear code verifiers from local storage");
+    }
+  }
+
+  private loadOAuth2States(): Record<number, string> {
+    try {
+      const raw = window.localStorage.getItem(
+        AuthClientSdkAdapterLocalStorageKeys.OAUTH2_STATES,
+      );
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") {
+        window.localStorage.removeItem(
+          AuthClientSdkAdapterLocalStorageKeys.OAUTH2_STATES,
+        );
+        return {};
+      }
+      for (const [k, v] of Object.entries(parsed)) {
+        if (isNaN(Number(k)) || typeof v !== "string") {
+          window.localStorage.removeItem(
+            AuthClientSdkAdapterLocalStorageKeys.OAUTH2_STATES,
+          );
+          return {};
+        }
+      }
+      return parsed as Record<number, string>;
+    } catch (e: unknown) {
+      console.error("Failed to load OAuth2 states: ", e);
+      return {};
+    }
+  }
+
+  public storeOAuth2State(state: string, challenge_time: number): void {
+    if (typeof state !== "string" || state.length === 0) {
+      throw new TypeError(
+        "Expected 'state' to be a non-empty string for OAuth2 state storage!",
+      );
+    }
+    try {
+      const states = this.loadOAuth2States();
+
+      // Evict entries older than the PKCE challenge max-age so the
+      // bag doesn't grow unboundedly across abandoned flows.
+      const now = Date.now();
+      for (const key of Object.keys(states)) {
+        const t = parseInt(key);
+        if (isNaN(t) || now - t > PKCE_ProofKeyManager.max_age) {
+          delete states[t];
+        }
+      }
+
+      states[challenge_time] = state;
+      window.localStorage.setItem(
+        AuthClientSdkAdapterLocalStorageKeys.OAUTH2_STATES,
+        JSON.stringify(states),
+      );
+      if (this.environment === "development") {
+        console.log(
+          `[ReactAuthClientSdkAdapter] Stored OAuth2 state at t=${challenge_time}`,
+        );
+      }
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error(
+        `Failed to store OAuth2 state for challenge_time ${challenge_time}`,
+      );
+    }
+  }
+
+  public loadOAuth2State(challenge_time: number): string | null {
+    try {
+      const states = this.loadOAuth2States();
+      const value = states[challenge_time];
+      if (typeof value !== "string" || value.length === 0) return null;
+      if (value.startsWith("deleted-at-")) {
+        throw new Error("OAuth2 state has already been used & deleted!");
+      }
+      return value;
+    } catch (e: unknown) {
+      console.error(
+        "[ReactAuthClientSdkAdapter] Failed to load OAuth2 state: ",
+        e,
+      );
+      throw new Error("Failed to load OAuth2 state from local storage");
+    }
+  }
+
+  public clearOAuth2State(challenge_time: number): void {
+    try {
+      const states = this.loadOAuth2States();
+      if (typeof states[challenge_time] === "string") {
+        states[challenge_time] = `deleted-at-${Date.now()}`;
+        window.localStorage.setItem(
+          AuthClientSdkAdapterLocalStorageKeys.OAUTH2_STATES,
+          JSON.stringify(states),
+        );
+      }
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error("Failed to clear OAuth2 state from local storage");
     }
   }
 
