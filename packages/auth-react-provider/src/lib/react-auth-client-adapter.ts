@@ -774,6 +774,19 @@ export class ReactAuthClientSdkAdapter
     const absolute_url: string = `${window.location.origin}${relative_url}`;
     return absolute_url;
   }
+
+  /**
+   * Browser implementation of base64url encoding. Uses `btoa` which is
+   * available in every browser environment this adapter targets.
+   */
+  public toBase64UrlFromBytes(bytes: Uint8Array): string {
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]!);
+    }
+    const base64 = window.btoa(binary);
+    return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
 }
 
 export default ReactAuthClientSdkAdapter;

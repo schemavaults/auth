@@ -103,6 +103,4 @@ export {
 } from "./pagination";
 export type { PaginationOptions } from "./pagination";
 
-export { toBase64UrlFromBytes } from "./base64url";
-
 export { timingSafeStringEqual } from "./timing-safe-string-equal";

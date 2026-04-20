@@ -123,10 +123,12 @@ export default async function authenticateWithRedirect({
 
   // Generate and persist the OAuth2 `state` CSRF nonce. We key it by
   // challenge_time to align with the code_verifier storage contract and
-  // to support concurrent in-flight flows from the same browser.
+  // to support concurrent in-flight flows from the same browser. The
+  // base64url encoder comes from the adapter so the SDK doesn't carry
+  // a browser/Node encoding shim.
   let state: string;
   try {
-    state = generateOAuth2State();
+    state = generateOAuth2State(adapter.toBase64UrlFromBytes.bind(adapter));
     if (typeof state !== "string" || state.length === 0) {
       throw new Error("generateOAuth2State produced an empty value");
     }

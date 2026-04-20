@@ -1,14 +1,25 @@
-import { toBase64UrlFromBytes } from "@schemavaults/auth-common";
-
 // Generates a cryptographically-random OAuth2 `state` value
 // (RFC 6749 §10.12). The value is opaque to the server; it only needs
 // to be unpredictable to an attacker. 32 random bytes base64url-encoded
 // produces a 43-character token — equivalent in strength to the PKCE
 // code_verifier contract used elsewhere in the SDK.
+//
+// The base64url encoding step is delegated to the platform adapter so
+// the SDK does not need to carry a browser/Node encoding shim.
 
 const STATE_BYTE_LENGTH = 32 as const;
 
-export function generateOAuth2State(): string {
+export type Base64UrlEncoder = (bytes: Uint8Array) => string;
+
+export function generateOAuth2State(
+  toBase64UrlFromBytes: Base64UrlEncoder,
+): string {
+  if (typeof toBase64UrlFromBytes !== "function") {
+    throw new TypeError(
+      "generateOAuth2State requires a `toBase64UrlFromBytes` encoder (provided by the platform adapter)",
+    );
+  }
+
   const hasWebCrypto: boolean =
     typeof crypto === "object" &&
     !!crypto &&
