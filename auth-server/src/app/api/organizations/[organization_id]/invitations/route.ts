@@ -10,6 +10,7 @@ import {
   listOrganizationInvitations,
 } from "@/lib/auth-db/organizations";
 import { getUserByEmail, getUserByUID } from "@/lib/auth-db/users";
+import { sendTeamInvitationEmail } from "@/lib/send-team-invitation-emails";
 import {
   type OrganizationID,
   organizationIdSchema,
@@ -175,6 +176,20 @@ async function POST_create_invitation_handler(
       inviter_uid: user.uid,
       invitee_uid,
     });
+
+    try {
+      await sendTeamInvitationEmail({
+        db: dbh.db,
+        organization_id,
+        inviter_uid: user.uid,
+        invitee_uid,
+      });
+    } catch (emailError: unknown) {
+      console.error(
+        `[POST /organizations/${organization_id}/invitations] Failed to send team-invitation email:`,
+        emailError,
+      );
+    }
 
     return NextResponse.json(
       {
