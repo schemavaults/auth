@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.22.51",
+      "version": "0.22.58",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -73,7 +73,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.9.42",
+      "version": "0.9.47",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -92,7 +92,7 @@
     },
     "packages/auth-common": {
       "name": "@schemavaults/auth-common",
-      "version": "0.10.11",
+      "version": "0.10.15",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "crypto-js": "4.2.0",
@@ -112,7 +112,7 @@
     },
     "packages/auth-react-provider": {
       "name": "@schemavaults/auth-react-provider",
-      "version": "0.10.32",
+      "version": "0.10.37",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -144,7 +144,7 @@
     },
     "packages/auth-resource-server-codegen-templates": {
       "name": "@schemavaults/auth-resource-server-codegen-templates",
-      "version": "0.0.28",
+      "version": "0.0.34",
       "devDependencies": {
         "@eslint/js": "9.39.1",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -169,7 +169,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.22.20",
+      "version": "0.22.24",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -195,7 +195,7 @@
     },
     "packages/auth-ui": {
       "name": "@schemavaults/auth-ui",
-      "version": "0.6.76",
+      "version": "0.6.82",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
       },
@@ -230,7 +230,7 @@
     },
     "packages/jwt": {
       "name": "@schemavaults/jwt",
-      "version": "0.7.8",
+      "version": "0.7.12",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -250,7 +250,7 @@
     },
     "packages/trpc-backend-init": {
       "name": "@schemavaults/trpc-backend-init",
-      "version": "0.8.4",
+      "version": "0.8.5",
       "devDependencies": {
         "bun-types": "1.3.11",
         "tsc-alias": "1.8.16",
@@ -279,7 +279,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.2.28",
+      "version": "0.2.31",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -675,7 +675,7 @@
 
     "@schemavaults/jwt": ["@schemavaults/jwt@workspace:packages/jwt"],
 
-    "@schemavaults/send-email": ["@schemavaults/send-email@0.0.16", "", { "dependencies": { "@schemavaults/app-definitions": "0.6.23", "commander": "^14.0.1", "zod": "3.25.8" }, "bin": { "schemavaults-send-email": "dist/cli.js" } }, "sha512-/wg52Zmf2N+Uabs4ejWyhPK4x2c8l9FZsHALc7wh+AYHm+IhLlFlDR/AAvnqR3c91Frv4iviO0d9V4VWchqAkw=="],
+    "@schemavaults/send-email": ["@schemavaults/send-email@0.0.18", "", { "dependencies": { "@schemavaults/app-definitions": "0.6.23", "commander": "^14.0.1", "zod": "3.25.8" }, "bin": { "schemavaults-send-email": "dist/cli.js" } }, "sha512-do4LCUTpKT9I0Sy3PJRCPQrHrlah/hswj7oG08PknqTgV5S1VXxeS4rGOOIwz4iUl9TJ1F8pbpMdU2mLiafZnA=="],
 
     "@schemavaults/send-email-api-options": ["@schemavaults/send-email-api-options@0.0.4", "", { "dependencies": { "zod": "3.25.8" } }, "sha512-1YaoK2ajVsrXIbCQZyfd2zgS5TEt3/Fy+diQblkie25MpzzMFz7QwIaCfwVMUpHE0VhyvuBuJx/7pzHN3Jxpow=="],
 
