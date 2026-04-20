@@ -9,7 +9,11 @@ import type { AppId, SchemaVaultsApp } from "@schemavaults/app-definitions";
 import AppAuthorizationConsentScreen from "@/components/AppAuthorizationConsentScreen";
 import NativeAppCodeDelivery from "@/components/NativeAppCodeDelivery";
 import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
-import { parseOAuth2StateOrNull, type UserData } from "@schemavaults/auth-common";
+import {
+  OAuth2StateValidationError,
+  parseOAuth2State,
+  type UserData,
+} from "@schemavaults/auth-common";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
@@ -121,7 +125,19 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
   // Defense-in-depth: re-validate at the echo boundary so a malformed
   // value cannot slip through even if an upstream caller forgets to
   // validate before handing us `opts.state`.
-  const echoedState: string | null = parseOAuth2StateOrNull(opts.state);
+  let echoedState: string | null;
+  try {
+    echoedState = parseOAuth2State(opts.state);
+  } catch (e: unknown) {
+    if (e instanceof OAuth2StateValidationError) {
+      console.warn(
+        "[AlreadyAuthenticatedOnLoginOrRegisterPage] Rejecting invalid OAuth2 state:",
+        e.reasons,
+      );
+      redirectWithError(400, "bad_request");
+    }
+    throw e;
+  }
 
   if (on_successful_authenticate === "redirect-with-authorization-code") {
     if (!redirect_uri) {

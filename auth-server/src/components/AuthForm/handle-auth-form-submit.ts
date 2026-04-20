@@ -9,7 +9,7 @@ import {
   type CodeChallengeWithDetails,
   type CodeVerifierWithDetails,
   PKCE_ProofKeyManager,
-  parseOAuth2StateOrNull,
+  parseOAuth2State,
 } from "@schemavaults/auth-common";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import {
@@ -238,7 +238,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     if (!alreadyAuthorized) {
       const redirect_uri: string | null | undefined =
         searchParams.get("redirect_uri");
-      const state: string | null = parseOAuth2StateOrNull(
+      const state: string | null = parseOAuth2State(
         searchParams.get("state"),
       );
       opts.onAppAuthorizationNeeded({
@@ -299,9 +299,9 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
 
   const redirect_uri: string | null | undefined =
     searchParams.get("redirect_uri");
-  const state: string | null = parseOAuth2StateOrNull(
-    searchParams.get("state"),
-  );
+  // Throws `OAuth2StateValidationError` on malformed state; the caller
+  // (auth-form.tsx onSubmit) catches and shows a destructive toast.
+  const state: string | null = parseOAuth2State(searchParams.get("state"));
 
   await performPostAuthRedirect({
     onSuccessfulAuthenticate,

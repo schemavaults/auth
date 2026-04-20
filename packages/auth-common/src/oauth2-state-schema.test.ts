@@ -1,7 +1,8 @@
-import { describe, test, expect, spyOn } from "bun:test";
+import { describe, test, expect } from "bun:test";
 import {
   oauth2StateSchema,
-  parseOAuth2StateOrNull,
+  parseOAuth2State,
+  OAuth2StateValidationError,
 } from "./oauth2-state-schema";
 
 describe("oauth2StateSchema", () => {
@@ -42,24 +43,49 @@ describe("oauth2StateSchema", () => {
   });
 });
 
-describe("parseOAuth2StateOrNull", () => {
+describe("parseOAuth2State", () => {
   test("returns the string for valid input", () => {
-    expect(parseOAuth2StateOrNull("abc-123")).toBe("abc-123");
+    expect(parseOAuth2State("abc-123")).toBe("abc-123");
   });
 
-  test("returns null for non-string input without logging", () => {
-    expect(parseOAuth2StateOrNull(undefined)).toBeNull();
-    expect(parseOAuth2StateOrNull(null)).toBeNull();
-    expect(parseOAuth2StateOrNull(42)).toBeNull();
+  test("returns null for absent input (null/undefined)", () => {
+    expect(parseOAuth2State(undefined)).toBeNull();
+    expect(parseOAuth2State(null)).toBeNull();
   });
 
-  test("returns null for malformed input and warns", () => {
-    const warn = spyOn(console, "warn").mockImplementation(() => {});
+  test("throws OAuth2StateValidationError for non-string types", () => {
+    expect(() => parseOAuth2State(42)).toThrow(OAuth2StateValidationError);
+    expect(() => parseOAuth2State(["a", "b"])).toThrow(
+      OAuth2StateValidationError,
+    );
+    expect(() => parseOAuth2State({ state: "a" })).toThrow(
+      OAuth2StateValidationError,
+    );
+  });
+
+  test("throws OAuth2StateValidationError for empty string", () => {
+    expect(() => parseOAuth2State("")).toThrow(OAuth2StateValidationError);
+  });
+
+  test("throws OAuth2StateValidationError for malformed content", () => {
+    expect(() => parseOAuth2State("bad\nstate")).toThrow(
+      OAuth2StateValidationError,
+    );
+    expect(() => parseOAuth2State("a".repeat(513))).toThrow(
+      OAuth2StateValidationError,
+    );
+    expect(() => parseOAuth2State("café")).toThrow(OAuth2StateValidationError);
+  });
+
+  test("thrown error exposes the underlying zod reasons", () => {
     try {
-      expect(parseOAuth2StateOrNull("bad\nstate")).toBeNull();
-      expect(warn).toHaveBeenCalled();
-    } finally {
-      warn.mockRestore();
+      parseOAuth2State("bad\nstate");
+      throw new Error("expected throw");
+    } catch (e) {
+      expect(e).toBeInstanceOf(OAuth2StateValidationError);
+      expect((e as OAuth2StateValidationError).reasons.length).toBeGreaterThan(
+        0,
+      );
     }
   });
 });

@@ -35,21 +35,46 @@ export const oauth2StateSchema = z
 export type OAuth2State = z.infer<typeof oauth2StateSchema>;
 
 /**
- * Treats malformed `state` as absent so a buggy or hostile client
- * cannot force the auth server to round-trip a garbage value through
- * its logs and callback URLs. Returns null in any rejection case;
- * emits a warning so integrators can debug legitimate client bugs.
+ * Thrown by `parseOAuth2State` when the caller supplied a `state`
+ * value that is present but fails schema validation. Callers at
+ * server-side entry points should turn this into a 400 response
+ * (e.g. `redirectWithError(400, "bad_request")` for page routes,
+ * `NextResponse.json(..., { status: 400 })` for API routes).
  */
-export function parseOAuth2StateOrNull(raw: unknown): string | null {
-  if (typeof raw !== "string") return null;
+export class OAuth2StateValidationError extends Error {
+  public readonly reasons: readonly string[];
+  public constructor(reasons: readonly string[]) {
+    super(`Invalid OAuth2 'state' parameter: ${reasons.join("; ")}`);
+    this.name = "OAuth2StateValidationError";
+    this.reasons = reasons;
+  }
+}
+
+/**
+ * Validates an OAuth2 `state` at a server boundary.
+ *
+ *   - Absent / null / undefined → returns `null` (RFC-legal; `state`
+ *     is optional).
+ *   - Present + well-formed → returns the validated string.
+ *   - Present + malformed (wrong type, empty, too long, non-VSCHAR)
+ *     → throws `OAuth2StateValidationError` so the caller can 400.
+ *
+ * Empty strings are treated as malformed (not absent) so a client
+ * that accidentally serializes `?state=` gets a loud signal instead
+ * of a silent downgrade.
+ */
+export function parseOAuth2State(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "string") {
+    throw new OAuth2StateValidationError([
+      `Expected string, got ${Array.isArray(raw) ? "array" : typeof raw}`,
+    ]);
+  }
   const parsed = oauth2StateSchema.safeParse(raw);
   if (!parsed.success) {
-    console.warn(
-      "[oauth2StateSchema] Dropping invalid OAuth2 state (length=%d, errors=%o)",
-      raw.length,
+    throw new OAuth2StateValidationError(
       parsed.error.issues.map((i) => i.message),
     );
-    return null;
   }
   return parsed.data;
 }
