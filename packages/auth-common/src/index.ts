@@ -104,3 +104,10 @@ export {
 export type { PaginationOptions } from "./pagination";
 
 export { timingSafeStringEqual } from "./timing-safe-string-equal";
+
+export {
+  oauth2StateSchema,
+  OAUTH2_STATE_VSCHAR_REGEX,
+  parseOAuth2StateOrNull,
+} from "./oauth2-state-schema";
+export type { OAuth2State } from "./oauth2-state-schema";

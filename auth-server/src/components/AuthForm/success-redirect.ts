@@ -1,5 +1,8 @@
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
-import type { CodeChallengeWithDetails } from "@schemavaults/auth-common";
+import {
+  type CodeChallengeWithDetails,
+  parseOAuth2StateOrNull,
+} from "@schemavaults/auth-common";
 
 export interface SuccessRedirectInputOptions {
   redirect_uri: string,
@@ -29,8 +32,12 @@ export function successRedirect({
   queryParams.set('challenge_time', code_challenge.challenge_time.toString());
   queryParams.set('code_challenge_method', code_challenge.code_challenge_method);
   queryParams.set('authorization_code', authorization_code);
-  if (typeof state === 'string' && state.length > 0) {
-    queryParams.set('state', state);
+  // Defense-in-depth: re-validate at this echo boundary so a malformed
+  // `state` cannot be smuggled into the callback URL even if an
+  // upstream caller skipped validation.
+  const echoedState: string | null = parseOAuth2StateOrNull(state);
+  if (echoedState) {
+    queryParams.set('state', echoedState);
   }
 
   try {

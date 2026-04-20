@@ -5,6 +5,7 @@ import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGua
 import { type AppId, appIdSchema, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import AuthorizedAppsRegistry from "@/lib/auth-db/apps/authorized-apps-registry";
 import { z } from "zod";
+import { oauth2StateSchema } from "@schemavaults/auth-common";
 
 // Optional OAuth2 `state` parameter (RFC 6749 §10.12). Accepted on the
 // consent POST so clients can declare the nonce they generated — it is
@@ -14,7 +15,7 @@ import { z } from "zod";
 // in development for debugging mismatches.
 const authorizeRequestBodySchema = z
   .object({
-    state: z.string().min(1).max(1024).optional(),
+    state: oauth2StateSchema.optional(),
   })
   .strict();
 

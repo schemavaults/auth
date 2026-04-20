@@ -9,7 +9,7 @@ import {
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import determineOnSuccessfulAuthenticateAction from "../determineOnSuccessfulAuthenticateAction";
 import type { ServerRuntime } from "next/types";
-import type { UserData } from "@schemavaults/auth-common";
+import { parseOAuth2StateOrNull, type UserData } from "@schemavaults/auth-common";
 import { doesSsrContextHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import redirectWithError from "@/lib/redirect-with-error";
@@ -66,7 +66,7 @@ export default async function LoginPage(props: {
       code_challenge_method: typeof searchParams.code_challenge_method === 'string' ? searchParams.code_challenge_method : null,
       challenge_time_str: typeof searchParams.challenge_time === 'string' ? searchParams.challenge_time : null,
       redirect_uri: typeof searchParams.redirect_uri === 'string' ? searchParams.redirect_uri : null,
-      state: typeof searchParams.state === 'string' ? searchParams.state : null,
+      state: parseOAuth2StateOrNull(searchParams.state),
       debug
     });
   }

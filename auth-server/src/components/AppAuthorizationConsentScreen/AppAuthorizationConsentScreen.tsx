@@ -21,6 +21,7 @@ import { closeWindowRedirect } from "@/components/AuthForm/close-window-redirect
 import { Loader2, ShieldCheck, X } from "lucide-react";
 import type { PendingAuthorizationState } from "@/components/AuthForm/handle-auth-form-submit";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
+import { parseOAuth2StateOrNull } from "@schemavaults/auth-common";
 
 export interface AppAuthorizationConsentScreenProps {
   app_id: string;
@@ -70,7 +71,9 @@ export function AppAuthorizationConsentScreen({
     // Step 1: Authorize the app. Pass the URL `state` through for API
     // hygiene — the server does not persist it, but accepting it here
     // formalizes the contract and lets us log it in development.
-    const urlState = searchParams.get("state");
+    // Validate before forwarding so a malformed value is dropped
+    // rather than round-tripped to the server.
+    const urlState = parseOAuth2StateOrNull(searchParams.get("state"));
     try {
       await authClient.sendAuthorizeClientApplicationRequest(app_id, urlState);
     } catch (e: unknown) {
@@ -98,7 +101,7 @@ export function AppAuthorizationConsentScreen({
       const code_challenge = searchParams.get("code_challenge");
       const challenge_time_str = searchParams.get("challenge_time");
       const redirect_uri = searchParams.get("redirect_uri");
-      const state = searchParams.get("state");
+      const state = parseOAuth2StateOrNull(searchParams.get("state"));
 
       if (!code_challenge) {
         throw new Error("Missing code_challenge parameter");

@@ -9,7 +9,7 @@ import type { AppId, SchemaVaultsApp } from "@schemavaults/app-definitions";
 import AppAuthorizationConsentScreen from "@/components/AppAuthorizationConsentScreen";
 import NativeAppCodeDelivery from "@/components/NativeAppCodeDelivery";
 import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
-import type { UserData } from "@schemavaults/auth-common";
+import { parseOAuth2StateOrNull, type UserData } from "@schemavaults/auth-common";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
@@ -118,6 +118,11 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     redirectWithError(500, "internal_server_error");
   }
 
+  // Defense-in-depth: re-validate at the echo boundary so a malformed
+  // value cannot slip through even if an upstream caller forgets to
+  // validate before handing us `opts.state`.
+  const echoedState: string | null = parseOAuth2StateOrNull(opts.state);
+
   if (on_successful_authenticate === "redirect-with-authorization-code") {
     if (!redirect_uri) {
       redirectWithError(400, "bad_request");
@@ -126,8 +131,8 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     queryParams.set('challenge_time', challenge_time.toString());
     queryParams.set('code_challenge_method', 'S256');
     queryParams.set('authorization_code', authorization_code);
-    if (typeof opts.state === 'string' && opts.state.length > 0) {
-      queryParams.set('state', opts.state);
+    if (echoedState) {
+      queryParams.set('state', echoedState);
     }
     return redirect(`${redirect_uri}?${queryParams.toString()}`);
   } else if (on_successful_authenticate === "send-authorization-code-to-native-app-then-close") {
@@ -140,7 +145,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
         redirect_uri={redirect_uri}
         code_challenge_method="S256"
         challenge_time={challenge_time}
-        state={opts.state}
+        state={echoedState}
       />
     );
   } else {

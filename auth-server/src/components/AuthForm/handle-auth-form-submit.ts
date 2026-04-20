@@ -9,6 +9,7 @@ import {
   type CodeChallengeWithDetails,
   type CodeVerifierWithDetails,
   PKCE_ProofKeyManager,
+  parseOAuth2StateOrNull,
 } from "@schemavaults/auth-common";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import {
@@ -237,7 +238,9 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     if (!alreadyAuthorized) {
       const redirect_uri: string | null | undefined =
         searchParams.get("redirect_uri");
-      const state: string | null = searchParams.get("state");
+      const state: string | null = parseOAuth2StateOrNull(
+        searchParams.get("state"),
+      );
       opts.onAppAuthorizationNeeded({
         authorization_code,
         code_challenge,
@@ -296,7 +299,9 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
 
   const redirect_uri: string | null | undefined =
     searchParams.get("redirect_uri");
-  const state: string | null = searchParams.get("state");
+  const state: string | null = parseOAuth2StateOrNull(
+    searchParams.get("state"),
+  );
 
   await performPostAuthRedirect({
     onSuccessfulAuthenticate,
