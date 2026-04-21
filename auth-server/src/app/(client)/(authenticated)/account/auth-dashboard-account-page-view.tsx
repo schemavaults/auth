@@ -8,7 +8,7 @@ import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import {
   useAdmin,
   useAppEnvironment,
-  useCurrentUser,
+  useCurrentUserWithRevalidation,
 } from "@schemavaults/auth-react-provider";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
@@ -26,7 +26,7 @@ export default function AccountPageView({
   const router = useRouter();
   const environment = useAppEnvironment();
   const admin: boolean = useAdmin();
-  const user = useCurrentUser();
+  const user = useCurrentUserWithRevalidation();
 
   const cardsClassName = "grow";
 

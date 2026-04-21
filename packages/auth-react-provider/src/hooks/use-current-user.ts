@@ -1,84 +1,51 @@
 "use client";
 
 import type { UserData } from "@schemavaults/auth-common";
-import useAuth from "@/hooks/use-auth";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
-import useAppEnvironment from "@/hooks/use-app-environment";
-import { useDebug } from "@/hooks/use-debug";
-import { useState } from "react";
-import { useAuthClientStateWatcher } from "./use-auth-client-state-watcher";
-
-function getCurrentUser(auth: ISchemaVaultsAuthClient): UserData | null {
-  return auth.currentUser;
-}
-
-function maybeGetCurrentUserFromAuthHook(
-  authClientRef: ReturnType<typeof useAuth>,
-  debug: boolean = false,
-): UserData | null {
-  if (
-    authClientRef.ready &&
-    authClientRef.client &&
-    authClientRef.client.current
-  ) {
-    const auth: ISchemaVaultsAuthClient = authClientRef.client.current;
-    const currentUser: UserData | null = getCurrentUser(auth);
-
-    if (currentUser) {
-      if (debug) {
-        console.log(
-          "[maybeGetCurrentUserFromAuthHook] Loaded current user data from auth client: ",
-          currentUser,
-        );
-      }
-      return currentUser satisfies UserData;
-    }
-
-    if (debug) {
-      console.log(
-        "[maybeGetCurrentUserFromAuthHook] Auth client appears to be ready-- but no current user was found!",
-      );
-    }
-
-    return currentUser;
-  }
-
-  return null;
-}
+import { useCallback, useSyncExternalStore } from "react";
+import useAuth from "@/hooks/use-auth";
 
 export function useCurrentUser(): UserData | null {
-  const environment = useAppEnvironment();
-  const authClientRef = useAuth();
-  const debug: boolean = useDebug(environment);
+  const auth = useAuth();
+  const ready = auth.ready;
+  const clientRef = auth.ready ? auth.client : null;
 
-  const [user, setUser] = useState<UserData | null>(
-    maybeGetCurrentUserFromAuthHook(authClientRef, debug),
+  const subscribe = useCallback(
+    (onStoreChange: () => void): (() => void) => {
+      if (!ready || !clientRef) {
+        return (): void => {};
+      }
+      const authClient: ISchemaVaultsAuthClient | null = clientRef.current;
+      if (!authClient) {
+        return (): void => {};
+      }
+      const listener_id: string = authClient.onAuthStateChanged(onStoreChange);
+      return (): void => {
+        if (clientRef.current) {
+          try {
+            clientRef.current.removeAuthStateChangeListener(listener_id);
+          } catch (e: unknown) {
+            console.error(
+              "[useCurrentUser] Failed to remove auth state change listener: ",
+              e,
+            );
+          }
+        }
+      };
+    },
+    [ready, clientRef],
   );
 
-  useAuthClientStateWatcher({
-    debug,
-    onAuthStateChanged: async function updateCurrentUserOnAuthStateChanged({
-      auth,
-    }): Promise<void> {
-      const user = auth.currentUser;
-      if (debug) {
-        console.log(
-          "[updateCurrentUserOnAuthStateChanged] Updating current user: ",
-          user,
-        );
-      }
-      setUser(user);
-      return;
-    },
-  });
+  const getSnapshot = useCallback((): UserData | null => {
+    if (!ready || !clientRef || !clientRef.current) {
+      return null;
+    }
+    return clientRef.current.currentUser;
+  }, [ready, clientRef]);
 
-  if (debug) {
-    console.warn(
-      "[useCurrentUser] Auth client is not ready yet, returning null for user data!",
-    );
-  }
+  const getServerSnapshot = useCallback((): UserData | null => null, []);
 
-  return user satisfies UserData | null;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 export default useCurrentUser;
