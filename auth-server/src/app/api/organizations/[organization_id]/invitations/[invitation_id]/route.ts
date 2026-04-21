@@ -18,6 +18,7 @@ import {
   type OrganizationID,
   organizationIdSchema,
 } from "@schemavaults/auth-common";
+import { sendTeamInvitationAcceptedEmail } from "@/lib/send-team-invitation-emails";
 import { z } from "zod";
 import type { ServerRuntime } from "next";
 
@@ -142,6 +143,21 @@ async function PATCH_respond_to_invitation_handler(
       );
     }
 
+    if (action === "accept") {
+      try {
+        await sendTeamInvitationAcceptedEmail({
+          db: dbh.db,
+          organization_id,
+          inviter_uid: invitation.inviter_uid,
+          accepter_uid: user.uid,
+        });
+      } catch (emailError: unknown) {
+        console.error(
+          `[PATCH /organizations/${organization_id}/invitations/${invitation_id}] Failed to send team-invitation-accepted email:`,
+          emailError,
+        );
+      }
+    }
 
   } catch (e: unknown) {
     console.error("Failed to respond to invitation:", e);

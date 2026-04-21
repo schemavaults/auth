@@ -21,6 +21,10 @@ import { closeWindowRedirect } from "@/components/AuthForm/close-window-redirect
 import { Loader2, ShieldCheck, X } from "lucide-react";
 import type { PendingAuthorizationState } from "@/components/AuthForm/handle-auth-form-submit";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
+import {
+  OAuth2StateValidationError,
+  parseOAuth2State,
+} from "@schemavaults/auth-common";
 
 export interface AppAuthorizationConsentScreenProps {
   app_id: string;
@@ -67,9 +71,28 @@ export function AppAuthorizationConsentScreen({
 
     const authClient = auth.client.current;
 
-    // Step 1: Authorize the app
+    // Step 1: Authorize the app. Pass the URL `state` through for API
+    // hygiene — the server does not persist it, but accepting it here
+    // formalizes the contract and lets us log it in development. A
+    // malformed value fails the flow with a destructive toast rather
+    // than being round-tripped to the server.
+    let urlState: string | null;
     try {
-      await authClient.sendAuthorizeClientApplicationRequest(app_id);
+      urlState = parseOAuth2State(searchParams.get("state"));
+    } catch (e: unknown) {
+      if (e instanceof OAuth2StateValidationError) {
+        toast({
+          variant: "destructive",
+          title: "Invalid OAuth2 state",
+          description:
+            "The OAuth2 'state' parameter was malformed. Please restart the flow from the requesting app.",
+        });
+        return;
+      }
+      throw e;
+    }
+    try {
+      await authClient.sendAuthorizeClientApplicationRequest(app_id, urlState);
     } catch (e: unknown) {
       console.error("[AppAuthorizationConsentScreen] Failed to authorize app:", e);
       toast({
@@ -95,6 +118,10 @@ export function AppAuthorizationConsentScreen({
       const code_challenge = searchParams.get("code_challenge");
       const challenge_time_str = searchParams.get("challenge_time");
       const redirect_uri = searchParams.get("redirect_uri");
+      // Already validated in Step 1 above, but re-parse so a second
+      // read survives code-refactor reordering. Throws on malformed;
+      // the outer try/catch surfaces a destructive toast.
+      const state = parseOAuth2State(searchParams.get("state"));
 
       if (!code_challenge) {
         throw new Error("Missing code_challenge parameter");
@@ -161,6 +188,7 @@ export function AppAuthorizationConsentScreen({
           authorization_code,
           code_challenge: codeChallengeDetails,
           app_environment: appEnv,
+          state,
         });
       } else if (
         onSuccessfulAuthenticate ===
@@ -177,6 +205,9 @@ export function AppAuthorizationConsentScreen({
             code_challenge_method: "S256",
             challenge_time: challenge_time.toString(),
             authorization_code,
+            ...(typeof state === "string" && state.length > 0
+              ? { state }
+              : {}),
           }),
         });
 

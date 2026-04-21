@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.22.36",
+      "version": "0.22.58",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -24,7 +24,7 @@
         "@schemavaults/jwt": "workspace:*",
         "@schemavaults/send-email-api-options": "0.0.4",
         "@schemavaults/theme": "0.25.9",
-        "@schemavaults/ui": "0.16.2",
+        "@schemavaults/ui": "0.18.0",
         "cookies-next": "6.1.1",
         "ioredis": "5.10.1",
         "lucide-react": "0.575.0",
@@ -73,7 +73,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.9.39",
+      "version": "0.9.47",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -92,7 +92,7 @@
     },
     "packages/auth-common": {
       "name": "@schemavaults/auth-common",
-      "version": "0.10.10",
+      "version": "0.10.15",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "crypto-js": "4.2.0",
@@ -112,7 +112,7 @@
     },
     "packages/auth-react-provider": {
       "name": "@schemavaults/auth-react-provider",
-      "version": "0.10.30",
+      "version": "0.10.37",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -144,14 +144,14 @@
     },
     "packages/auth-resource-server-codegen-templates": {
       "name": "@schemavaults/auth-resource-server-codegen-templates",
-      "version": "0.0.26",
+      "version": "0.0.34",
       "devDependencies": {
         "@eslint/js": "9.39.1",
         "@schemavaults/auth-client-sdk": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/jwt": "workspace:*",
-        "@schemavaults/ui": "^0.16.2",
+        "@schemavaults/ui": "^0.18.0",
         "@types/react": "19.2.14",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
@@ -169,7 +169,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.22.19",
+      "version": "0.22.24",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -195,7 +195,7 @@
     },
     "packages/auth-ui": {
       "name": "@schemavaults/auth-ui",
-      "version": "0.6.74",
+      "version": "0.6.82",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
       },
@@ -218,7 +218,7 @@
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/auth-react-provider": "workspace:*",
-        "@schemavaults/ui": "^0.16.2",
+        "@schemavaults/ui": "^0.18.0",
         "lucide-react": "0.575.0",
         "next": "^16.2.4",
         "postcss": "8.5.3",
@@ -230,7 +230,7 @@
     },
     "packages/jwt": {
       "name": "@schemavaults/jwt",
-      "version": "0.7.7",
+      "version": "0.7.12",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -250,7 +250,7 @@
     },
     "packages/trpc-backend-init": {
       "name": "@schemavaults/trpc-backend-init",
-      "version": "0.8.4",
+      "version": "0.8.5",
       "devDependencies": {
         "bun-types": "1.3.11",
         "tsc-alias": "1.8.16",
@@ -264,7 +264,7 @@
     },
     "tests/cypress-e2e-auth-tests-helper-commands": {
       "name": "@schemavaults/cypress-e2e-auth-tests-helper-commands",
-      "version": "0.1.6",
+      "version": "0.1.7",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -279,7 +279,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.2.27",
+      "version": "0.2.31",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -301,7 +301,7 @@
         "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/auth-server-sdk": "workspace:*",
         "@schemavaults/theme": "0.25.9",
-        "@schemavaults/ui": "0.16.2",
+        "@schemavaults/ui": "0.18.0",
         "next": "16.2.4",
         "react": "19.2.5",
         "react-dom": "19.2.5",
@@ -675,7 +675,7 @@
 
     "@schemavaults/jwt": ["@schemavaults/jwt@workspace:packages/jwt"],
 
-    "@schemavaults/send-email": ["@schemavaults/send-email@0.0.16", "", { "dependencies": { "@schemavaults/app-definitions": "0.6.23", "commander": "^14.0.1", "zod": "3.25.8" }, "bin": { "schemavaults-send-email": "dist/cli.js" } }, "sha512-/wg52Zmf2N+Uabs4ejWyhPK4x2c8l9FZsHALc7wh+AYHm+IhLlFlDR/AAvnqR3c91Frv4iviO0d9V4VWchqAkw=="],
+    "@schemavaults/send-email": ["@schemavaults/send-email@0.0.18", "", { "dependencies": { "@schemavaults/app-definitions": "0.6.23", "commander": "^14.0.1", "zod": "3.25.8" }, "bin": { "schemavaults-send-email": "dist/cli.js" } }, "sha512-do4LCUTpKT9I0Sy3PJRCPQrHrlah/hswj7oG08PknqTgV5S1VXxeS4rGOOIwz4iUl9TJ1F8pbpMdU2mLiafZnA=="],
 
     "@schemavaults/send-email-api-options": ["@schemavaults/send-email-api-options@0.0.4", "", { "dependencies": { "zod": "3.25.8" } }, "sha512-1YaoK2ajVsrXIbCQZyfd2zgS5TEt3/Fy+diQblkie25MpzzMFz7QwIaCfwVMUpHE0VhyvuBuJx/7pzHN3Jxpow=="],
 
@@ -683,7 +683,7 @@
 
     "@schemavaults/trpc-backend-init": ["@schemavaults/trpc-backend-init@workspace:packages/trpc-backend-init"],
 
-    "@schemavaults/ui": ["@schemavaults/ui@0.16.2", "", { "dependencies": { "@emotion/is-prop-valid": "1.4.0", "@hookform/resolvers": "3.9.0", "@radix-ui/react-accordion": "1.2.12", "@radix-ui/react-avatar": "^1.1.11", "@radix-ui/react-checkbox": "1.3.2", "@radix-ui/react-context-menu": "2.2.15", "@radix-ui/react-dialog": "1.1.14", "@radix-ui/react-dropdown-menu": "2.1.15", "@radix-ui/react-hover-card": "1.1.14", "@radix-ui/react-label": "2.1.7", "@radix-ui/react-navigation-menu": "1.2.13", "@radix-ui/react-popover": "1.1.14", "@radix-ui/react-radio-group": "1.3.7", "@radix-ui/react-scroll-area": "1.2.9", "@radix-ui/react-select": "2.2.5", "@radix-ui/react-separator": "1.1.7", "@radix-ui/react-slider": "1.3.6", "@radix-ui/react-slot": "1.2.4", "@radix-ui/react-switch": "1.2.6", "@radix-ui/react-tabs": "1.1.13", "@radix-ui/react-toast": "1.2.14", "@radix-ui/react-tooltip": "1.2.7", "@radix-ui/react-visually-hidden": "1.2.3", "@schemavaults/theme": "0.25.9", "@tanstack/react-table": "8.20.1", "class-variance-authority": "0.7.1", "clsx": "2.1.1", "cmdk": "1.1.1", "framer-motion": "12.23.24", "lucide-react": "0.575.0", "next-themes": "0.4.6", "react-hook-form": "7.58.1", "tailwind-merge": "3.0.2" }, "peerDependencies": { "react": "^19.2.5", "react-dom": "^19.2.5" } }, "sha512-HIqEou39p8pqKgC9coJAFpxRddiW/BrfGkjth2ZujgGB+K1TxTYn1GcDacW4IByREdZ6eBm8h7WBsEa6QIJ7lQ=="],
+    "@schemavaults/ui": ["@schemavaults/ui@0.18.0", "", { "dependencies": { "@emotion/is-prop-valid": "1.4.0", "@hookform/resolvers": "3.9.0", "@radix-ui/react-accordion": "1.2.12", "@radix-ui/react-avatar": "^1.1.11", "@radix-ui/react-checkbox": "1.3.2", "@radix-ui/react-context-menu": "2.2.15", "@radix-ui/react-dialog": "1.1.14", "@radix-ui/react-dropdown-menu": "2.1.15", "@radix-ui/react-hover-card": "1.1.14", "@radix-ui/react-label": "2.1.7", "@radix-ui/react-navigation-menu": "1.2.13", "@radix-ui/react-popover": "1.1.14", "@radix-ui/react-radio-group": "1.3.7", "@radix-ui/react-scroll-area": "1.2.9", "@radix-ui/react-select": "2.2.5", "@radix-ui/react-separator": "1.1.7", "@radix-ui/react-slider": "1.3.6", "@radix-ui/react-slot": "1.2.4", "@radix-ui/react-switch": "1.2.6", "@radix-ui/react-tabs": "1.1.13", "@radix-ui/react-toast": "1.2.14", "@radix-ui/react-tooltip": "1.2.7", "@radix-ui/react-visually-hidden": "1.2.3", "@schemavaults/theme": "0.25.9", "@tanstack/react-table": "8.20.1", "class-variance-authority": "0.7.1", "clsx": "2.1.1", "cmdk": "1.1.1", "framer-motion": "12.23.24", "lucide-react": "0.575.0", "next-themes": "0.4.6", "react-hook-form": "7.58.1", "tailwind-merge": "3.0.2" }, "peerDependencies": { "react": "^19.2.5", "react-dom": "^19.2.5" } }, "sha512-+v1DGsQMVjGlr4qN3o0Au2uWABrHtTVFjnPNL1djBCC4CriB3jQwEu04AwItx9ao0buRG/Y3J27AI3ss/g7Lew=="],
 
     "@swc/helpers": ["@swc/helpers@0.5.15", "", { "dependencies": { "tslib": "^2.8.0" } }, "sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g=="],
 

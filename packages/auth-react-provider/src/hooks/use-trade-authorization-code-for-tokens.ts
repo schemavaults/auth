@@ -10,6 +10,7 @@ import { useDebugWithSpecifiedBooleanOrLookupDefault } from "./use-debug";
 const enum AuthorizePageSearchParam {
   AuthorizationCode = "authorization_code",
   ChallengeTime = "challenge_time",
+  State = "state",
 }
 
 export interface IUseTradeAuthorizationCodeForTokensEffectOptions {
@@ -219,6 +220,8 @@ export function useTradeAuthorizationCodeForTokensEffect(
 
       // This uses PKCE behind the scenes to ensure that the authorization code is valid (and came from this client)
 
+      const received_state = searchParams.get(AuthorizePageSearchParam.State);
+
       try {
         if (debug) {
           console.log(
@@ -228,6 +231,8 @@ export function useTradeAuthorizationCodeForTokensEffect(
         await auth.handleSuccessfulAuthentication(
           authorization_code,
           challenge_time,
+          undefined,
+          received_state,
         );
       } catch (e: unknown) {
         if (e instanceof Error) {

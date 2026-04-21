@@ -53,11 +53,16 @@ export interface ISchemaVaultsAuthClient {
   // Where to send the user in order to trade an authorization code + code verifier for a refresh token
   authorize_uri: string | undefined;
 
-  // Takes an authorization code, attempts to retrieve the code_verifier from storage using the challenge_time, and exchanges the authorization code + verifier for auth tokens
+  // Takes an authorization code, attempts to retrieve the code_verifier from storage using the challenge_time, and exchanges the authorization code + verifier for auth tokens.
+  // The `received_state` argument is the OAuth2 `state` parameter as
+  // observed on the callback URL. The SDK compares it to the value it
+  // persisted before the authorize redirect and rejects any mismatch as
+  // a CSRF / session-fixation attempt (RFC 6749 §10.12).
   handleSuccessfulAuthentication: (
     authorization_code: string,
     challenge_time: number,
     code_verifier?: string,
+    received_state?: string | null,
   ) => Promise<void>;
 
   getAccessTokenFromCache: (token_id: string) => AccessToken | null;
@@ -119,9 +124,14 @@ export interface ISchemaVaultsAuthClient {
   /**
    * @name sendAuthorizeClientApplicationRequest
    * @description Sends a request to the auth server to authorize a client application request auth tokens on your behalf (still need to be logged in)
+   * @param app_id The ID of the app to authorize
+   * @param state Optional OAuth2 `state` CSRF nonce for the in-flight authorize request. Not persisted server-side — only passed for API hygiene.
    * @returns A promise that resolves or rejects based on if the request succeeds
    */
-  sendAuthorizeClientApplicationRequest: (app_id: AppId) => Promise<void>;
+  sendAuthorizeClientApplicationRequest: (
+    app_id: AppId,
+    state?: string | null,
+  ) => Promise<void>;
 
   /**
    * @name checkAppAuthorization
