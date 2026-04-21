@@ -1,6 +1,9 @@
 "use client";
 
-import { OrganizationsCard } from "@schemavaults/auth-ui";
+import {
+  OrganizationsCard,
+  OrganizationsStatsRow,
+} from "@schemavaults/auth-ui";
 import type { ReactElement } from "react";
 import PageContainer from "@/components/PageContainer";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
@@ -14,7 +17,10 @@ export default function AdminOrganizationsPageView({
 }: AdminOrganizationsPageViewProps): ReactElement {
   return (
     <PageContainer>
-      <OrganizationsCard cardClassName={"w-full"} preloaded={preloaded} />
+      <div className="flex w-full flex-col gap-4">
+        <OrganizationsStatsRow preloaded={preloaded} />
+        <OrganizationsCard cardClassName={"w-full"} preloaded={preloaded} />
+      </div>
     </PageContainer>
   );
 }
