@@ -18,6 +18,7 @@ import {
   type UserData,
   type refreshTokenPOSTbody,
   MAXIMUM_USER_ORGANIZATIONS,
+  ERROR_MESSAGE_CATALOG,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
@@ -197,6 +198,22 @@ export async function handleRefreshTokenGrant(
       } satisfies RequestTokensResult,
       {
         status: 500,
+      },
+    );
+  }
+
+  if (user.disabled) {
+    console.warn(
+      `[RefreshTokenGrant] Blocked token refresh for disabled account (uid: ${uid})`,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: ERROR_MESSAGE_CATALOG.account_disabled,
+      } satisfies RequestTokensResult,
+      {
+        status: 403,
       },
     );
   }

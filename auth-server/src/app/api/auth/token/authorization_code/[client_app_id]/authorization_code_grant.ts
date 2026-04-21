@@ -7,6 +7,7 @@ import {
   type UserData,
   type authorizationCodePOSTbody,
   MAXIMUM_USER_ORGANIZATIONS,
+  ERROR_MESSAGE_CATALOG,
 } from "@schemavaults/auth-common";
 import {
   type ServerlessDatabase,
@@ -136,6 +137,22 @@ export async function handleAuthorizationCodeGrant(
     console.log(
       `[AuthorizationCodeGrant] Loaded user data for uid "${uid}": `,
       user,
+    );
+  }
+
+  if (user.disabled) {
+    console.warn(
+      `[AuthorizationCodeGrant] Blocked token grant for disabled account (uid: ${uid})`,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: ERROR_MESSAGE_CATALOG.account_disabled,
+      } satisfies RequestTokensResult,
+      {
+        status: 403,
+      },
     );
   }
 

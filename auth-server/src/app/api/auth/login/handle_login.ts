@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth-db";
 import {
   emailCredentialsSchema,
+  ERROR_MESSAGE_CATALOG,
   PKCE_ProofKeyManager,
 } from "@schemavaults/auth-common";
 import type { UserData } from "@schemavaults/auth-common";
@@ -143,6 +144,21 @@ export async function handleLogin({
       } satisfies AuthenticateResult,
       {
         status: 401,
+      },
+    );
+  }
+
+  if (user.disabled) {
+    console.warn(
+      `[handleLogin] Blocked login for disabled account (uid: ${uid})`,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        message: ERROR_MESSAGE_CATALOG.account_disabled,
+      } satisfies AuthenticateResult,
+      {
+        status: 403,
       },
     );
   }
