@@ -15,6 +15,9 @@ import {
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apps/[app_id]/domains";
 
 /**
  * Create a new domain for an application
@@ -50,7 +53,12 @@ export async function POST_create_app_domain(
       try {
         appRegistry = new SchemaVaultsAppRegistry(dbh.db);
       } catch (e: unknown) {
-        console.error(e);
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_create_app_domain.loadAppsRegistry",
+          route: ROUTE,
+          uid: user.uid,
+          context: { app_id },
+        });
         return NextResponse.json(
           {
             success: false,
@@ -76,7 +84,12 @@ export async function POST_create_app_domain(
             }
           }
         } catch (e: unknown) {
-          console.error("Failed to check org membership for app domain creation: ", e);
+          await captureServerException(dbh.db, e, {
+            op_name: "POST_create_app_domain.checkOrgMembership",
+            route: ROUTE,
+            uid: user.uid,
+            context: { app_id, nonFatal: true },
+          });
         }
 
         if (!authorized) {
@@ -137,7 +150,12 @@ export async function POST_create_app_domain(
             { status: 409 },
           );
         }
-        console.error("Failed to add domain to app: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_create_app_domain.addAppDomain",
+          route: ROUTE,
+          uid: user.uid,
+          context: { app_id },
+        });
         return NextResponse.json(
           {
             success: false,

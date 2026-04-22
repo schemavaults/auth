@@ -8,6 +8,7 @@ import {
 import type { InviteCodeDefinition, UserData } from "@schemavaults/auth-common";
 import { type IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
 
 export const runtime: ServerRuntime = "nodejs"
 
@@ -34,7 +35,11 @@ export async function GET_list_invite_codes({ user }: IProtectedAdminApiRoutePro
     const registry = new UserRegistry(dbh.db);
     invite_codes = await registry.listAllInviteCodes();
   } catch (e: unknown) {
-    console.error("Failed to list all invite codes: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_list_invite_codes.listAllInviteCodes",
+      route: "/api/admin/invite-codes",
+      uid: userData.uid,
+    });
     return NextResponse.json(
       {
         success: false,

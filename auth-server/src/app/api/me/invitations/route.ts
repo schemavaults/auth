@@ -6,6 +6,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { listUserPendingInvitations } from "@/lib/auth-db/organizations";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,11 @@ async function GET_user_invitations_handler(
       { status: 200 }
     );
   } catch (e: unknown) {
-    console.error("Failed to list user invitations:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_user_invitations_handler.listUserPendingInvitations",
+      route: "/api/me/invitations",
+      uid: user.uid,
+    });
     return NextResponse.json(
       {
         success: false,

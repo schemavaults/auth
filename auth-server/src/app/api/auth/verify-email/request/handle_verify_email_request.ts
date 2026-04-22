@@ -10,6 +10,9 @@ import { z } from "zod";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import sendVerificationEmail from "@/lib/send-verification-email";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/auth/verify-email/request";
 
 const verifyEmailRequestBodySchema = z
   .object({
@@ -52,7 +55,10 @@ export async function handleVerifyEmailRequest({
   try {
     user = await userRegistry.getUserByEmail(email);
   } catch (e: unknown) {
-    console.error("[handleVerifyEmailRequest] Failed to query user:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleVerifyEmailRequest.getUserByEmail",
+      route: ROUTE,
+    });
     // Still return generic success to prevent email enumeration
     return NextResponse.json(
       { success: true, message: GENERIC_SUCCESS_MESSAGE },
@@ -92,7 +98,11 @@ export async function handleVerifyEmailRequest({
       console.log(`[handleVerifyEmailRequest] Verification email sent to: ${email}`);
     }
   } catch (e: unknown) {
-    console.error("[handleVerifyEmailRequest] Failed to create token or send email:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleVerifyEmailRequest.createTokenOrSendEmail",
+      route: ROUTE,
+      uid: user.uid,
+    });
     // Still return generic success to prevent email enumeration
   }
 

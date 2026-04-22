@@ -4,6 +4,7 @@ import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
 import verifyJwksAccessAssertion from "./verifyJwksAccessAssertion";
+import captureServerException from "@/lib/captureServerException";
 
 
 function isValidApiServerId(val: unknown): val is ApiServerId {
@@ -52,7 +53,11 @@ export async function GET(
   try {
     await key_manager.createAndSaveKeysetIfNoneExists(audience);
   } catch (e: unknown) {
-    console.error("Failed to ensure that there are active keys in the JWKS for audience: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_load_audience_jwks.createAndSaveKeysetIfNoneExists",
+      route: "/api/jwks/[audience]",
+      context: { audience },
+    });
     return NextResponse.json({ error: "Failed to ensure that there are active keys in the JWKS for audience!", success: false }, { status: 500 });
   }
 

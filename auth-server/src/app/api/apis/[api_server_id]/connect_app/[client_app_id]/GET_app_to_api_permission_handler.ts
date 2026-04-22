@@ -17,6 +17,9 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apis/[api_server_id]/connect_app/[client_app_id]";
 
 export type GetAppToApiPermissionResponse =
   | { success: true; is_allowed: boolean }
@@ -191,7 +194,12 @@ export async function GET_app_to_api_permission_handler(
           is_allowed,
         } satisfies GetAppToApiPermissionResponse);
       } catch (e: unknown) {
-        console.error("Failed to check app-to-api permission: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_app_to_api_permission_handler.isAllowed",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id, client_app_id },
+        });
         return NextResponse.json(
           {
             success: false,

@@ -13,6 +13,7 @@ import {
   withAdminApiRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,10 +56,12 @@ async function setDisabledHandler(
       );
     }
 
-    console.error(
-      `Failed to set disabled=${disabled} for user '${target_uid}': `,
-      e,
-    );
+    await captureServerException(dbh.db, e, {
+      op_name: "setDisabledHandler.setUserDisabled",
+      route: "/api/admin/users/[uid]/disable",
+      uid: user.uid,
+      context: { target_uid, disabled },
+    });
     return NextResponse.json(
       {
         success: false,
