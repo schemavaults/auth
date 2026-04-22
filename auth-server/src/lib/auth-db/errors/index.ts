@@ -3,3 +3,4 @@ export type {
   ErrorRow,
   NewErrorRow,
 } from "./errors-table";
+export { listErrorsCreatedSince } from "./list-errors-created-since";
