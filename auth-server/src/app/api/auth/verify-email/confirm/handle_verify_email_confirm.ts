@@ -9,6 +9,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/auth/verify-email/confirm";
 
 const verifyEmailConfirmBodySchema = z
   .object({
@@ -45,7 +48,10 @@ export async function handleVerifyEmailConfirm({
   try {
     validToken = await userRegistry.validateEmailVerificationToken(token);
   } catch (e: unknown) {
-    console.error("[handleVerifyEmailConfirm] Failed to validate token:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleVerifyEmailConfirm.validateEmailVerificationToken",
+      route: ROUTE,
+    });
     return NextResponse.json(
       { success: false, message: "Failed to validate verification token" },
       { status: 500 },
@@ -63,7 +69,11 @@ export async function handleVerifyEmailConfirm({
     await userRegistry.markEmailVerified(validToken.uid);
     await userRegistry.consumeEmailVerificationToken(validToken.token_id);
   } catch (e: unknown) {
-    console.error("[handleVerifyEmailConfirm] Failed to mark email as verified:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleVerifyEmailConfirm.markEmailVerified",
+      route: ROUTE,
+      uid: validToken.uid,
+    });
     return NextResponse.json(
       { success: false, message: "Failed to verify email" },
       { status: 500 },

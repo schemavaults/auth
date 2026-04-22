@@ -9,6 +9,7 @@ import {
   withAdminApiRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import captureServerException from "@/lib/captureServerException";
 
 async function GET_list_organizations_handler({
   user,
@@ -43,7 +44,11 @@ async function GET_list_organizations_handler({
     const registry = new OrganizationsRegistry(dbh.db);
     organizations = await registry.listAllOrganizations();
   } catch (e: unknown) {
-    console.error("Failed to list all organizations: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_list_organizations_handler.listAllOrganizations",
+      route: "/api/organizations",
+      uid: user.uid,
+    });
     return NextResponse.json(
       {
         success: false,

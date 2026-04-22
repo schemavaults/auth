@@ -11,6 +11,9 @@ import {
   hardcodedOrgs,
 } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/organizations/[organization_id]";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,7 +133,12 @@ async function DELETE_organization_handler(
       { status: 200 }
     );
   } catch (e: unknown) {
-    console.error("Failed to delete organization:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "DELETE_organization_handler.deleteOrganization",
+      route: ROUTE,
+      uid: user.uid,
+      context: { organization_id },
+    });
     return NextResponse.json(
       {
         success: false,

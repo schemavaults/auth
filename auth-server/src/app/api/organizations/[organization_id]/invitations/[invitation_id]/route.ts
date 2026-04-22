@@ -21,6 +21,9 @@ import {
 import { sendTeamInvitationAcceptedEmail } from "@/lib/send-team-invitation-emails";
 import { z } from "zod";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/organizations/[organization_id]/invitations/[invitation_id]";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -152,15 +155,16 @@ async function PATCH_respond_to_invitation_handler(
           accepter_uid: user.uid,
         });
       } catch (emailError: unknown) {
-        console.error(
-          `[PATCH /organizations/${organization_id}/invitations/${invitation_id}] Failed to send team-invitation-accepted email:`,
-          emailError,
-        );
+        await captureServerException(dbh.db, emailError, {
+          op_name: "PATCH_respond_to_invitation_handler.sendTeamInvitationAcceptedEmail",
+          route: ROUTE,
+          uid: user.uid,
+          context: { organization_id, invitation_id, nonFatal: true },
+        });
       }
     }
 
   } catch (e: unknown) {
-    console.error("Failed to respond to invitation:", e);
     if (e instanceof ExceededMembershipLimitError) {
       return NextResponse.json(
         {
@@ -170,6 +174,12 @@ async function PATCH_respond_to_invitation_handler(
         { status: 409 }
       );
     }
+    await captureServerException(dbh.db, e, {
+      op_name: "PATCH_respond_to_invitation_handler.respondToInvitation",
+      route: ROUTE,
+      uid: user.uid,
+      context: { organization_id, invitation_id, action },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -282,7 +292,12 @@ async function DELETE_revoke_invitation_handler(
       { status: 200 }
     );
   } catch (e: unknown) {
-    console.error("Failed to revoke invitation:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "DELETE_revoke_invitation_handler.revokeInvitation",
+      route: ROUTE,
+      uid: user.uid,
+      context: { organization_id, invitation_id },
+    });
     return NextResponse.json(
       {
         success: false,

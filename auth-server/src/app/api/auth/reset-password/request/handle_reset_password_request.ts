@@ -11,6 +11,9 @@ import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavault
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { getAuthServerUri } from "@schemavaults/app-definitions";
 import sendEmailViaMailServer from "@/lib/send-email-via-mail-server";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/auth/reset-password/request";
 
 const resetPasswordRequestBodySchema = z
   .object({
@@ -52,7 +55,10 @@ export async function handleResetPasswordRequest({
   try {
     user = await userRegistry.getUserByEmail(email);
   } catch (e: unknown) {
-    console.error("[handleResetPasswordRequest] Failed to query user:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleResetPasswordRequest.getUserByEmail",
+      route: ROUTE,
+    });
     // Still return generic success to prevent email enumeration
     return NextResponse.json(
       { success: true, message: GENERIC_SUCCESS_MESSAGE },
@@ -102,7 +108,11 @@ export async function handleResetPasswordRequest({
       console.log(`[handleResetPasswordRequest] Reset email sent to: ${email}`);
     }
   } catch (e: unknown) {
-    console.error("[handleResetPasswordRequest] Failed to create token or send email:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleResetPasswordRequest.createTokenOrSendEmail",
+      route: ROUTE,
+      uid: user.uid,
+    });
     // Still return generic success to prevent email enumeration
   }
 

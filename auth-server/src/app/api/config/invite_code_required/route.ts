@@ -4,6 +4,7 @@ import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import { RedisCache } from "@/lib/redis";
 import type { ServerRuntime } from "next/types";
+import captureServerException from "@/lib/captureServerException";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   void req;
@@ -15,7 +16,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     inviteCodeRequired = await inviteCodesRequired(dbh.db, redis.client);
   } catch (e: unknown) {
-    console.error("Failed to load server setting on whether invite codes are required: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_invite_code_required.inviteCodesRequired",
+      route: "/api/config/invite_code_required",
+    });
     return NextResponse.json({
       error: true,
       success: false,

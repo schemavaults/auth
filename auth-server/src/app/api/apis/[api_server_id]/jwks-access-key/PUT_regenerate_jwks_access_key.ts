@@ -5,6 +5,9 @@ import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGua
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
 import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apis/[api_server_id]/jwks-access-key";
 
 /**
  * PUT /api/apis/[api_server_id]/jwks-access-key
@@ -48,7 +51,12 @@ export async function PUT_regenerate_jwks_access_key(req: NextRequest, context: 
           );
         }
       } catch (e: unknown) {
-        console.error("Failed to verify user authorization:", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "PUT_regenerate_jwks_access_key.isUserInApiOwnerOrganization",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           { success: false, message: "Failed to verify authorization" },
           { status: 500 }
@@ -68,7 +76,12 @@ export async function PUT_regenerate_jwks_access_key(req: NextRequest, context: 
           private_key: privateKey,
         });
       } catch (e: unknown) {
-        console.error("Failed to regenerate JWKS access key:", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "PUT_regenerate_jwks_access_key.regenerateKey",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           { success: false, message: "Failed to regenerate JWKS access key" },
           { status: 500 }

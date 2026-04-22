@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import { type AppId, appIdSchema, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import AuthorizedAppsRegistry from "@/lib/auth-db/apps/authorized-apps-registry";
+import captureServerException from "@/lib/captureServerException";
 
 /**
  * Check whether the current user has already authorized a given app
@@ -60,10 +61,12 @@ export async function GET_check_app_authorization(
           authorized,
         });
       } catch (e: unknown) {
-        console.error(
-          "Failed to check app authorization status: ",
-          e,
-        );
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_check_app_authorization.isAppAuthorizedForUser",
+          route: "/api/apps/[app_id]/check-authorization",
+          uid: user.uid,
+          context: { app_id },
+        });
         return NextResponse.json(
           {
             success: false,
