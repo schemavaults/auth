@@ -33,6 +33,9 @@ export type { UsersDatatableProps } from "./UsersTable";
 export { UsersCard } from "./UsersCard";
 export type { UsersCardProps } from "./UsersCard";
 
+export { UsersStatsRow } from "./UsersStatsRow";
+export type { UsersStatsRowProps } from "./UsersStatsRow";
+
 export {
   OrganizationsTable,
   useAllOrganizationsList,
@@ -45,6 +48,9 @@ export type {
 
 export { OrganizationsCard } from "./OrganizationsCard";
 export type { OrganizationsCardProps } from "./OrganizationsCard";
+
+export { OrganizationsStatsRow } from "./OrganizationsStatsRow";
+export type { OrganizationsStatsRowProps } from "./OrganizationsStatsRow";
 
 export { CreateOrganizationDialog } from "./CreateOrganizationDialog";
 export type * from "./CreateOrganizationDialog";
