@@ -11,6 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
+import { LocalDateTime } from "@schemavaults/auth-ui";
 import type { ServerSettingRecord } from "@/lib/auth-db/server-settings/types";
 
 export interface ColumnOptions {
@@ -96,12 +97,7 @@ export function createColumns(options: ColumnOptions): ColumnDef<ServerSettingRe
         if (!updatedAt || updatedAt === 0) {
           return <span className="text-muted-foreground text-sm">Default</span>;
         }
-        const date = new Date(updatedAt);
-        return (
-          <span className="text-sm">
-            {date.toLocaleDateString()} {date.toLocaleTimeString()}
-          </span>
-        );
+        return <LocalDateTime value={updatedAt} className="text-sm" />;
       },
     },
     {

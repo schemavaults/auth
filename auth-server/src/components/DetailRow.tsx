@@ -1,7 +1,7 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import Link from "next/link";
 
-export function DetailRow({ label, value, href }: { label: string; value: string; href?: string }): ReactElement {
+export function DetailRow({ label, value, href }: { label: string; value: ReactNode; href?: string }): ReactElement {
   return (
     <div className="flex flex-col gap-1 py-2">
       <span className="text-sm text-muted-foreground">{label}</span>

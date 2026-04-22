@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
-import printDateTime from "@/lib/printDateTime";
+import { LocalDateTime } from "@/lib/LocalDateTime";
 import { useSWRConfig } from "swr";
 
 export type OrganizationMemberTableData = {
@@ -121,9 +121,7 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
     header: "Joined At",
     cell: ({ row }): ReactElement => {
       const member = row.original;
-      const created_at = member.membership_created_at;
-      const asDate = new Date(created_at);
-      return <div>{printDateTime(asDate)}</div>;
+      return <LocalDateTime value={member.membership_created_at} />;
     },
   },
   {
