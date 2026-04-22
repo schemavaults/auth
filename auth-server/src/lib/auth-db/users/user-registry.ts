@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { InviteCodeDefinition } from "@schemavaults/auth-common";
+import type { InviteCode, InviteCodeDefinition } from "@schemavaults/auth-common";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import {
@@ -24,6 +24,7 @@ import { generateAuthorizationCode as generateAuthorizationCodeFn } from "./gene
 import { validateAndConsumeAuthorizationCode as validateAndConsumeAuthorizationCodeFn } from "./validate-and-consume-authorization-code";
 import { createInviteCode as createInviteCodeFn } from "./create-invite-code";
 import { listAllInviteCodes as listAllInviteCodesFn } from "./list-all-invite-codes";
+import { countInviteCodeUsages as countInviteCodeUsagesFn } from "./count-invite-code-usages";
 import { promoteToAdmin as promoteToAdminFn } from "./promote-to-admin";
 import { setUserDisabled as setUserDisabledFn } from "./set-user-disabled";
 import { createUser as createUserFn } from "./create-user";
@@ -151,6 +152,10 @@ export class UserRegistry {
 
   public async listAllInviteCodes(): Promise<readonly InviteCodeDefinition[]> {
     return listAllInviteCodesFn(this.db, this.debug);
+  }
+
+  public async countInviteCodeUsages(invite_code: InviteCode): Promise<number> {
+    return countInviteCodeUsagesFn(this.db, invite_code, this.debug);
   }
 
   /**
