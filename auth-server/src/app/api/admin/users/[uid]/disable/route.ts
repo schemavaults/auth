@@ -18,12 +18,10 @@ export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function setDisabledHandler(
-  { user }: IProtectedAdminApiRouteProps,
+  { user, dbh }: IProtectedAdminApiRouteProps,
   target_uid: string,
   disabled: boolean,
 ): Promise<NextResponse> {
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-
   if (!user.admin) {
     return NextResponse.json(
       {

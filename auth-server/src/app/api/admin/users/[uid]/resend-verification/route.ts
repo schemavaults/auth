@@ -19,11 +19,9 @@ export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function POST_resend_verification_handler(
-  { user }: IProtectedAdminApiRouteProps,
+  { user, dbh }: IProtectedAdminApiRouteProps,
   target_uid: string,
 ): Promise<NextResponse> {
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
-
   if (!user.admin) {
     return NextResponse.json(
       {
