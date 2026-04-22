@@ -26,6 +26,10 @@ export function useAuthClientStateWatcher({
   ...opts
 }: UseAuthClientStateWatcherOptions): void {
   const auth = useAuth();
+  const ready = auth.ready;
+  const clientRef: RefObject<ISchemaVaultsAuthClient | null> | null = auth.ready
+    ? auth.client
+    : null;
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const debug: boolean = useDebugWithSpecifiedBooleanOrLookupDefault(
     environment,
@@ -39,13 +43,13 @@ export function useAuthClientStateWatcher({
       }
 
       try {
-        if (!auth.ready) {
+        if (!ready || !clientRef) {
           throw new Error(
             "Cannot handle auth SDK state change event when auth client is not initialized",
           );
         }
 
-        const authClient = auth.client.current;
+        const authClient = clientRef.current;
         if (!authClient) {
           if (debug) {
             console.warn("[useAuthClientStateWatcher] Auth client is null.");
@@ -84,7 +88,7 @@ export function useAuthClientStateWatcher({
 
   // Attach an auth-state change listener to the auth client
   useEffect((): void | UnsubscribeFn => {
-    if (!auth.ready) {
+    if (!ready || !clientRef) {
       if (debug) {
         console.log(
           "[useAuthClientStateWatcher] Auth client not ready, skipping...",
@@ -93,8 +97,7 @@ export function useAuthClientStateWatcher({
       return;
     }
 
-    const authClientRef: RefObject<ISchemaVaultsAuthClient | null> =
-      auth.client;
+    const authClientRef: RefObject<ISchemaVaultsAuthClient | null> = clientRef;
 
     if (authClientRef.current) {
       if (debug) {
@@ -141,5 +144,5 @@ export function useAuthClientStateWatcher({
       };
       return unsubscribe;
     }
-  }, [auth, debug]);
+  }, [ready, clientRef, debug]);
 }

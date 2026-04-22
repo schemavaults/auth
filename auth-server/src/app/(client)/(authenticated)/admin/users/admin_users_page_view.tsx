@@ -1,6 +1,6 @@
 "use client";
 
-import { UsersCard } from "@schemavaults/auth-ui";
+import { UsersCard, UsersStatsRow } from "@schemavaults/auth-ui";
 import type { ReactElement } from "react";
 import PageContainer from "@/components/PageContainer";
 import type { UserData } from "@schemavaults/auth-common";
@@ -14,11 +14,14 @@ export default function AdminUsersPageView({
 }: AdminUsersPageViewProps): ReactElement {
   return (
     <PageContainer>
-      <UsersCard
-        cardClassName={"w-full"}
-        preloaded={preloaded}
-        getUserHref={(user: UserData): string => `/admin/users/${user.uid}`}
-      />
+      <div className="flex w-full flex-col gap-4">
+        <UsersStatsRow preloaded={preloaded} />
+        <UsersCard
+          cardClassName={"w-full"}
+          preloaded={preloaded}
+          getUserHref={(user: UserData): string => `/admin/users/${user.uid}`}
+        />
+      </div>
     </PageContainer>
   );
 }
