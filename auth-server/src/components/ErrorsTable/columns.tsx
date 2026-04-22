@@ -1,9 +1,10 @@
 "use client";
 
 import type { ReactElement } from "react";
+import Link from "next/link";
 import type { ColumnDef } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { MoreHorizontal, Copy } from "lucide-react";
+import { MoreHorizontal, Copy, ExternalLink } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,12 +43,13 @@ export function createColumns(): ColumnDef<ErrorRow>[] {
       accessorKey: "message",
       header: "Message",
       cell: ({ row }): ReactElement => (
-        <span
-          className="block max-w-xl truncate text-sm"
+        <Link
+          href={`/admin/errors/${row.original.error_id}`}
+          className="block max-w-xl truncate text-sm hover:underline"
           title={row.original.message}
         >
           {row.original.message}
-        </span>
+        </Link>
       ),
     },
     {
@@ -95,9 +97,12 @@ export function createColumns(): ColumnDef<ErrorRow>[] {
       accessorKey: "error_id",
       header: "Error ID",
       cell: ({ row }): ReactElement => (
-        <code className="font-mono text-xs text-muted-foreground">
+        <Link
+          href={`/admin/errors/${row.original.error_id}`}
+          className="font-mono text-xs text-muted-foreground hover:underline"
+        >
           {row.original.error_id.slice(0, 8)}...
-        </code>
+        </Link>
       ),
     },
     {
@@ -114,6 +119,11 @@ export function createColumns(): ColumnDef<ErrorRow>[] {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link href={`/admin/errors/${errorRow.error_id}`}>
+                  <ExternalLink className="h-4 w-4 mr-2" /> View details
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={(): void => {
                   navigator.clipboard.writeText(errorRow.error_id);
