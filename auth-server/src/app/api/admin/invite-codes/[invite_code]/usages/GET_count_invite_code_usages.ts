@@ -57,6 +57,20 @@ export async function GET_count_invite_code_usages(
     );
   }
 
+  if (typeof usage_count !== "number" || !Number.isFinite(usage_count)) {
+    console.error(
+      `countInviteCodeUsages returned a non-numeric value for invite code '${invite_code}':`,
+      usage_count,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to count invite code usages!",
+      } satisfies ResourceCreationResponse,
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json(
     {
       success: true,
