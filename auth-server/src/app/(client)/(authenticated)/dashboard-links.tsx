@@ -5,6 +5,7 @@ import type {
 } from "@schemavaults/ui";
 import {
   Activity,
+  AlertTriangle,
   AppWindow,
   Building2,
   HelpCircle,
@@ -103,6 +104,14 @@ export function getAuthenticatedUserDashboardLinks(
           url: "/admin/traces",
           icon: ({ className }: { className: string }): ReactElement => (
             <Activity className={className} />
+          ),
+        },
+        {
+          type: "dashboard-sidebar-item-definition" as const,
+          title: "Errors",
+          url: "/admin/errors",
+          icon: ({ className }: { className: string }): ReactElement => (
+            <AlertTriangle className={className} />
           ),
         },
         {
