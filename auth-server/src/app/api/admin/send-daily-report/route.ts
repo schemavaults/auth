@@ -21,7 +21,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     return await sendDailyReportHandler({ dbh });
   }
   const protected_route = await withAdminApiRouteGuard(
-    async ({ dbh }) => sendDailyReportHandler({ dbh }),
+    async ({ dbh, user }) => sendDailyReportHandler({ dbh, uid: user.uid }),
   );
   return await protected_route(req);
 }
