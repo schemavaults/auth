@@ -15,6 +15,7 @@ export async function loadUserData(uid: string, userRegistry: UserRegistry): Pro
     created_at: user.created_at,
     admin: user.admin ?? false,
     disabled: user.disabled ?? false,
+    invite_code: user.invite_code,
   } satisfies UserData)
 
   if (!parsed.success) throw new Error(`Invalid user data for uid ${uid}`);
