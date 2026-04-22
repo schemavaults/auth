@@ -1,11 +1,13 @@
 import "server-only";
 import { getAppEnvironment, getHardcodedApiServerDomain, SCHEMAVAULTS_AUTH_APP_ID, SCHEMAVAULTS_MAIL_SERVER, type SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
-import { sendEmailRequestBodySchema, type SendEmailRequestBody } from "@schemavaults/send-email-api-options"
+import { createSendEmailRequestBodySchema, type SendEmailRequestBody } from "@schemavaults/send-email"
 import spoofSuperuserAccessToken from "./spoofSuperuserAccessToken";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import type { AccessToken } from "@schemavaults/auth-common";
+
+const sendEmailRequestBodySchema = createSendEmailRequestBodySchema(true);
 
 function getDefaultMailServerUrl(): string {
   const hardcodedApiServerDomain: SchemaVaultsApiServerDomainRef = getHardcodedApiServerDomain(SCHEMAVAULTS_MAIL_SERVER.api_server_id, getAppEnvironment());
