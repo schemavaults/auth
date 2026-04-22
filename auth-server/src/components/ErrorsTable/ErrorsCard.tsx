@@ -28,7 +28,7 @@ export function ErrorsCard(props: ErrorsCardProps): ReactElement {
   const cardClassName: string = cn("w-full", props.cardClassName);
 
   return (
-    <Card className={cardClassName}>
+    <Card className={cardClassName} data-testid="admin-errors-card">
       <CardHeader>
         <CardTitle>{cardTitle}</CardTitle>
         <CardDescription>{cardDescription}</CardDescription>
