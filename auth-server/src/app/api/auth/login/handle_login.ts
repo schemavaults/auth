@@ -18,6 +18,9 @@ import { appIdSchema, getAppEnvironment, type SchemaVaultsAppEnvironment } from 
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/auth/login";
 
 interface HandleLoginOptions {
   body: unknown;
@@ -63,7 +66,10 @@ export async function handleLogin({
   try {
     userRegistry = new UserRegistry(dbh.db, debug);
   } catch (e: unknown) {
-    console.error(e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleLogin.createUserRegistry",
+      route: ROUTE,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -80,7 +86,10 @@ export async function handleLogin({
   try {
     user = await userRegistry.getUserByEmail(email_credentials.email);
   } catch (e: unknown) {
-    console.error("Failed to query user: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleLogin.getUserByEmail",
+      route: ROUTE,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -123,7 +132,11 @@ export async function handleLogin({
     compare_password_matches = compare_password_result.matches;
     compare_password_needs_upgrade = compare_password_result.needsUpgrade;
   } catch (e: unknown) {
-    console.error("Failed to compare password: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleLogin.comparePassword",
+      route: ROUTE,
+      uid,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -174,10 +187,12 @@ export async function handleLogin({
         email_credentials.password,
       );
     } catch (e: unknown) {
-      console.error(
-        "[handleLogin] Lazy password-hash upgrade failed (non-fatal):",
-        e,
-      );
+      await captureServerException(dbh.db, e, {
+        op_name: "handleLogin.upgradePasswordHashIfNeeded",
+        route: ROUTE,
+        uid,
+        context: { nonFatal: true },
+      });
     }
   }
 
@@ -213,7 +228,12 @@ export async function handleLogin({
       challenge_time,
     );
   } catch (e: unknown) {
-    console.error("Failed to generate authorization code: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleLogin.generateAuthorizationCode",
+      route: ROUTE,
+      uid,
+      context: { client_app_id },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -249,7 +269,12 @@ export async function handleLogin({
       debug,
     });
   } catch (e: unknown) {
-    console.error("[handleLogin] Failed to set auth-server refresh token cookie (non-fatal):", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleLogin.setAuthServerRefreshTokenCookie",
+      route: ROUTE,
+      uid,
+      context: { nonFatal: true },
+    });
   }
 
   return response;

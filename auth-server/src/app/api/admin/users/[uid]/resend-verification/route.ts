@@ -14,6 +14,9 @@ import {
 } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
 import sendVerificationEmail from "@/lib/send-verification-email";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/admin/users/[uid]/resend-verification";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,10 +41,12 @@ async function POST_resend_verification_handler(
   try {
     targetUser = await registry.getUserByUID(target_uid);
   } catch (e: unknown) {
-    console.error(
-      `[admin/resend-verification] Failed to load user '${target_uid}': `,
-      e,
-    );
+    await captureServerException(dbh.db, e, {
+      op_name: "POST_resend_verification_handler.getUserByUID",
+      route: ROUTE,
+      uid: user.uid,
+      context: { target_uid },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -81,10 +86,12 @@ async function POST_resend_verification_handler(
       db: dbh.db,
     });
   } catch (e: unknown) {
-    console.error(
-      `[admin/resend-verification] Failed to send verification email to user '${target_uid}': `,
-      e,
-    );
+    await captureServerException(dbh.db, e, {
+      op_name: "POST_resend_verification_handler.sendVerificationEmail",
+      route: ROUTE,
+      uid: user.uid,
+      context: { target_uid },
+    });
     return NextResponse.json(
       {
         success: false,

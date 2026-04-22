@@ -6,6 +6,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { OrganizationsRegistry, type OrganizationMemberWithUserData } from "@/lib/auth-db/organizations";
 import { type OrganizationID, organizationIdSchema } from "@schemavaults/auth-common";
+import captureServerException from "@/lib/captureServerException";
 
 interface RouteContext {
   params: Promise<{ organization_id: string }>;
@@ -50,7 +51,12 @@ async function GET_organization_members_handler(
   try {
     members = await registry.listOrganizationMembers(organization_id);
   } catch (e: unknown) {
-    console.error(`Failed to list organization members for '${organization_id}': `, e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_organization_members_handler.listOrganizationMembers",
+      route: "/api/organizations/[organization_id]/members",
+      uid: user.uid,
+      context: { organization_id },
+    });
     return NextResponse.json(
       {
         success: false,

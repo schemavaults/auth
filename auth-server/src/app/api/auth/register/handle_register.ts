@@ -24,6 +24,9 @@ import { appIdSchema, getAppEnvironment, type SchemaVaultsAppEnvironment } from 
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import sendVerificationEmail from "@/lib/send-verification-email";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/auth/register";
 
 export interface HandleRegisterOptions {
   body: unknown;
@@ -111,7 +114,10 @@ export async function handleRegister({
   try {
     inviteCodeRequired = await inviteCodesRequired(dbh.db);
   } catch (e: unknown) {
-    console.error(e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRegister.inviteCodesRequired",
+      route: ROUTE,
+    });
     return NextResponse.json({
       error: true,
       success: false,
@@ -203,7 +209,10 @@ export async function handleRegister({
     }
     userRegistry = new UserRegistry(dbh.db, debug);
   } catch (e: unknown) {
-    console.error(e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRegister.createUserRegistry",
+      route: ROUTE,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -270,10 +279,10 @@ export async function handleRegister({
         }
       }
     } catch (e: unknown) {
-      console.error(
-        "[handleRegister] Failed to check if invite code exists: ",
-        e,
-      );
+      await captureServerException(dbh.db, e, {
+        op_name: "handleRegister.lookupInviteCode",
+        route: ROUTE,
+      });
       return NextResponse.json(
         {
           success: false,
@@ -295,7 +304,10 @@ export async function handleRegister({
   try {
     user = await userRegistry.getUserByEmail(email);
   } catch (e: unknown) {
-    console.error("Failed to query user by email: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRegister.getUserByEmail",
+      route: ROUTE,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -341,7 +353,10 @@ export async function handleRegister({
       invite_code,
     });
   } catch (e: unknown) {
-    console.error("[handleRegister] Failed to create user: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRegister.createUser",
+      route: ROUTE,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -370,7 +385,12 @@ export async function handleRegister({
       console.log(`[handleRegister] Verification email sent to: ${email}`);
     }
   } catch (e: unknown) {
-    console.error("[handleRegister] Failed to send verification email (non-fatal):", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRegister.sendVerificationEmail",
+      route: ROUTE,
+      uid: newUser.uid,
+      context: { nonFatal: true },
+    });
   }
 
   let authorization_code: string;
@@ -383,7 +403,12 @@ export async function handleRegister({
       challenge_time,
     );
   } catch (e: unknown) {
-    console.error("Failed to generate authorization code: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRegister.generateAuthorizationCode",
+      route: ROUTE,
+      uid: newUser.uid,
+      context: { client_app_id },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -420,7 +445,12 @@ export async function handleRegister({
       debug,
     });
   } catch (e: unknown) {
-    console.error("[handleRegister] Failed to set auth-server refresh token cookie (non-fatal):", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRegister.setAuthServerRefreshTokenCookie",
+      route: ROUTE,
+      uid: newUser.uid,
+      context: { nonFatal: true },
+    });
   }
 
   return response;

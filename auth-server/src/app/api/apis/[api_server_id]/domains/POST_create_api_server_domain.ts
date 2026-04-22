@@ -15,6 +15,9 @@ import {
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apis/[api_server_id]/domains";
 
 /**
  * Create a new domain for an API server
@@ -50,7 +53,12 @@ export async function POST_create_api_server_domain(
       try {
         apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
       } catch (e: unknown) {
-        console.error(e);
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_create_api_server_domain.loadApiServersRegistry",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           {
             success: false,
@@ -76,7 +84,12 @@ export async function POST_create_api_server_domain(
             }
           }
         } catch (e: unknown) {
-          console.error("Failed to check org membership for API server domain creation: ", e);
+          await captureServerException(dbh.db, e, {
+            op_name: "POST_create_api_server_domain.checkOrgMembership",
+            route: ROUTE,
+            uid: user.uid,
+            context: { api_server_id, nonFatal: true },
+          });
         }
 
         if (!authorized) {
@@ -137,7 +150,12 @@ export async function POST_create_api_server_domain(
             { status: 409 },
           );
         }
-        console.error("Failed to add domain to API server: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_create_api_server_domain.addApiServerDomain",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           {
             success: false,

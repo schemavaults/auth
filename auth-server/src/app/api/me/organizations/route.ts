@@ -8,6 +8,9 @@ import { listUserOrganizationMemberships, OrganizationsRegistry } from "@/lib/au
 import type { OrganizationMembershipRoleDefinition } from "@/lib/auth-db/organizations";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/me/organizations";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,10 +51,15 @@ async function GET_my_organizations_handler(
         enrichedMemberships.push(result.value);
       } else {
         const failedMembership = memberships[i];
-        console.error(
-          `Failed to enrich membership for org ${failedMembership?.organization_id ?? "unknown"}:`,
-          result.reason,
-        );
+        await captureServerException(dbh.db, result.reason, {
+          op_name: "GET_my_organizations_handler.enrichMembership",
+          route: ROUTE,
+          uid: user.uid,
+          context: {
+            organization_id: failedMembership?.organization_id ?? "unknown",
+            nonFatal: true,
+          },
+        });
       }
     }
 
@@ -66,7 +74,11 @@ async function GET_my_organizations_handler(
       { status: 200 },
     );
   } catch (e: unknown) {
-    console.error("Failed to list user organization memberships:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_my_organizations_handler.listUserOrganizationMemberships",
+      route: ROUTE,
+      uid: user.uid,
+    });
     return NextResponse.json(
       {
         success: false,

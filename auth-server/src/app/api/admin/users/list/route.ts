@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth-db";
 import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
 export const dynamic = "force-dynamic"; // defaults to auto
 export const runtime: ServerRuntime = "nodejs";
 
@@ -29,7 +30,11 @@ async function GET_list_users_handler({ user, dbh }: IProtectedAdminApiRouteProp
     const registry = new UserRegistry(dbh.db);
     users = await registry.listAllUsers();
   } catch (e: unknown) {
-    console.error("Failed to list all users: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_list_users_handler.listAllUsers",
+      route: "/api/admin/users/list",
+      uid: user.uid,
+    });
     return NextResponse.json(
       {
         success: false,

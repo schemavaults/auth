@@ -18,6 +18,9 @@ import {
   type OrganizationID,
 } from "@schemavaults/auth-common";
 import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apis";
 
 /**
  * List available SchemaVaults API servers
@@ -83,7 +86,11 @@ async function GET_api_list_handler(
       try {
         apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
       } catch (e: unknown) {
-        console.error(e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_api_list_handler.loadApiServersRegistry",
+          route: ROUTE,
+          uid: user.uid,
+        });
         return NextResponse.json(
           {
             success: false,
@@ -122,7 +129,11 @@ async function GET_api_list_handler(
                 },
               );
             } catch (e: unknown) {
-              console.error(e);
+              await captureServerException(dbh.db, e, {
+                op_name: "GET_api_list_handler.listAllApiServers",
+                route: ROUTE,
+                uid: user.uid,
+              });
               return NextResponse.json(
                 {
                   success: false,
@@ -172,7 +183,12 @@ async function GET_api_list_handler(
                 },
               );
             } catch (e: unknown) {
-              console.error(e);
+              await captureServerException(dbh.db, e, {
+                op_name: "GET_api_list_handler.listOrganizationApiServers",
+                route: ROUTE,
+                uid: user.uid,
+                context: { organization_id },
+              });
               return NextResponse.json(
                 {
                   success: false,
@@ -197,7 +213,12 @@ async function GET_api_list_handler(
             );
         }
       } catch (e: unknown) {
-        console.error("Failed to list SchemaVaults API servers: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_api_list_handler.outerCatch",
+          route: ROUTE,
+          uid: user.uid,
+          context: { list_apis_query_type, organization_id },
+        });
         return NextResponse.json(
           {
             success: false,

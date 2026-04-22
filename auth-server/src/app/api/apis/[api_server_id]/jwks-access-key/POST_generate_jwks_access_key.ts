@@ -6,6 +6,9 @@ import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
 import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
 import type { JwksAccessKeyStatusQueryResponse } from '@/lib/auth-db/jwks-access-keys';
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apis/[api_server_id]/jwks-access-key";
 /**
  * POST /api/apis/[api_server_id]/jwks-access-key
  * Generate initial JWKS access key pair for an API server
@@ -42,7 +45,12 @@ export async function POST_generate_jwks_access_key(request: NextRequest, ctx: R
           );
         }
       } catch (e: unknown) {
-        console.error("Failed to verify user authorization:", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_generate_jwks_access_key.isUserInApiOwnerOrganization",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           { success: false, message: "Failed to verify authorization" },
           { status: 500 }
@@ -74,7 +82,12 @@ export async function POST_generate_jwks_access_key(request: NextRequest, ctx: R
           private_key: privateKey,
         });
       } catch (e: unknown) {
-        console.error("Failed to generate JWKS access key:", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_generate_jwks_access_key.generateNewKeyForAudience",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           { success: false, message: "Failed to generate JWKS access key" },
           { status: 500 }

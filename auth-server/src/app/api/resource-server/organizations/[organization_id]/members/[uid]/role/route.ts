@@ -8,6 +8,9 @@ import isValidUuid from "@/lib/is-valid-uuid";
 import SchemaVaultsApiServerRegistry from "@/lib/auth-db/apis";
 import getUserByUID from "@/lib/auth-db/users/get-user-by-uid";
 import isUserInOrganization from "@/lib/isUserInOrganization";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/resource-server/organizations/[organization_id]/members/[uid]/role";
 
 export async function GET(
   request: NextRequest,
@@ -89,10 +92,11 @@ export async function GET(
       );
     }
   } catch (e: unknown) {
-    console.error(
-      `[resource-server/organizations] Failed to verify API server ownership for api_server_id="${api_server_id}" org="${organization_id}":`,
-      e,
-    );
+    await captureServerException(dbh.db, e, {
+      op_name: "resource-server-organization-role.verifyApiServerOwnership",
+      route: ROUTE,
+      context: { api_server_id, organization_id },
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },
@@ -120,10 +124,12 @@ export async function GET(
       },
     });
   } catch (e: unknown) {
-    console.error(
-      `[resource-server/organizations] Failed to check membership for uid="${uid}" in org="${organization_id}":`,
-      e,
-    );
+    await captureServerException(dbh.db, e, {
+      op_name: "resource-server-organization-role.checkMembership",
+      route: ROUTE,
+      uid,
+      context: { api_server_id, organization_id },
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

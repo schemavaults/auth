@@ -14,6 +14,9 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { type OrganizationID } from "@schemavaults/auth-common";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apps/[app_id]";
 
 export type GetAppResponse =
   | {
@@ -61,7 +64,12 @@ export async function GET_app_handler(
       try {
         apps = new SchemaVaultsAppRegistry(dbh.db);
       } catch (e: unknown) {
-        console.error(e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_app_handler.loadAppsRegistry",
+          route: ROUTE,
+          uid: user.uid,
+          context: { app_id },
+        });
         return NextResponse.json(
           {
             success: false,
@@ -75,7 +83,12 @@ export async function GET_app_handler(
       try {
         app = await apps.getApp(app_id);
       } catch (e: unknown) {
-        console.error("Failed to load app: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_app_handler.getApp",
+          route: ROUTE,
+          uid: user.uid,
+          context: { app_id },
+        });
         return NextResponse.json(
           {
             success: false,

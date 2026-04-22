@@ -6,6 +6,7 @@ import { type AppId, appIdSchema, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@sche
 import AuthorizedAppsRegistry from "@/lib/auth-db/apps/authorized-apps-registry";
 import { z } from "zod";
 import { oauth2StateSchema } from "@schemavaults/auth-common";
+import captureServerException from "@/lib/captureServerException";
 
 // Optional OAuth2 `state` parameter (RFC 6749 §10.12). Accepted on the
 // consent POST so clients can declare the nonce they generated — it is
@@ -116,10 +117,12 @@ export async function POST_authorize_client_application(
           resource_id: app_id,
         } satisfies ResourceCreationResponse);
       } catch (e: unknown) {
-        console.error(
-          "Failed to authorize SchemaVaults frontend application: ",
-          e,
-        );
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_authorize_client_application.authorizeAppForUser",
+          route: "/api/apps/[app_id]/authorize",
+          uid: user.uid,
+          context: { app_id },
+        });
         return NextResponse.json(
           {
             success: false,

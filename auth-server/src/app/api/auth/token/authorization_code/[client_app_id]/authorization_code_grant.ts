@@ -28,6 +28,9 @@ import {
 import returnGeneratedTokensToUser from "@/lib/returnGeneratedTokensToUser";
 import getHostname from "@/lib/hostname";
 import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/auth/token/authorization_code/[client_app_id]";
 
 export async function handleAuthorizationCodeGrant(
   req: NextRequest,
@@ -88,10 +91,11 @@ export async function handleAuthorizationCodeGrant(
     }
     uid = result.uid;
   } catch (e: unknown) {
-    console.error(
-      "[AuthorizationCodeGrant] Failed to validate authorization code",
-      e,
-    );
+    await captureServerException(dbh.db, e, {
+      op_name: "handleAuthorizationCodeGrant.validateAndConsumeAuthorizationCode",
+      route: ROUTE,
+      context: { client_app_id: body.client_app_id },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -120,7 +124,11 @@ export async function handleAuthorizationCodeGrant(
     }
     user = await loadUserData(uid, userRegistry);
   } catch (e: unknown) {
-    console.error("Failed to load user data: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleAuthorizationCodeGrant.loadUserData",
+      route: ROUTE,
+      uid,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -201,10 +209,12 @@ export async function handleAuthorizationCodeGrant(
         },
       );
     }
-    console.error(
-      "[handleAuthorizationCodeGrant] Failed to validate token audience: ",
-      e,
-    );
+    await captureServerException(dbh.db, e, {
+      op_name: "handleAuthorizationCodeGrant.validateAudience",
+      route: ROUTE,
+      uid,
+      context: { client_app_id: body.client_app_id, audience },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -233,7 +243,11 @@ export async function handleAuthorizationCodeGrant(
       user.admin ?? false
     );
   } catch (e: unknown) {
-    console.error("Failed to list user's associated organizations: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleAuthorizationCodeGrant.listUserOrganizationMembershipIds",
+      route: ROUTE,
+      uid,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -264,7 +278,11 @@ export async function handleAuthorizationCodeGrant(
   try {
     jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
   } catch (e: unknown) {
-    console.error("Failed to initialize JWT key manager: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleAuthorizationCodeGrant.initJwtKeysManager",
+      route: ROUTE,
+      uid,
+    });
     throw new Error("Failed to initialize JWT key manager");
   }
 
@@ -309,7 +327,12 @@ export async function handleAuthorizationCodeGrant(
       debug,
     })) satisfies NextResponse;
   } catch (e: unknown) {
-    console.error("Failed to generate jwt auth tokens: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleAuthorizationCodeGrant.generateTokens",
+      route: ROUTE,
+      uid,
+      context: { client_app_id: body.client_app_id, audience },
+    });
     return NextResponse.json(
       {
         success: false,

@@ -4,6 +4,7 @@ import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib
 import type { ServerRuntime } from "next";
 import type { ServerTraceRow } from "@/lib/auth-db/server-traces";
 import type { ResourceCreationResponse } from "@/lib/auth-db";
+import captureServerException from "@/lib/captureServerException";
 
 export const dynamic = "force-dynamic";
 export const runtime: ServerRuntime = "nodejs";
@@ -30,7 +31,11 @@ async function GET_list_server_traces_handler({ user, dbh }: IProtectedAdminApiR
       .limit(200)
       .execute();
   } catch (e: unknown) {
-    console.error("Failed to list server traces: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_list_server_traces_handler.listServerTraces",
+      route: "/api/admin/server-traces",
+      uid: user.uid,
+    });
     return NextResponse.json(
       {
         success: false,

@@ -10,6 +10,9 @@ import {
 } from "@schemavaults/auth-common";
 import { type IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/admin/invite-codes/[invite_code]/usages";
 
 export const runtime: ServerRuntime = "nodejs";
 
@@ -44,10 +47,12 @@ export async function GET_count_invite_code_usages(
     const registry = new UserRegistry(dbh.db);
     usage_count = await registry.countInviteCodeUsages(invite_code);
   } catch (e: unknown) {
-    console.error(
-      `Failed to count usages for invite code '${invite_code}':`,
-      e,
-    );
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_count_invite_code_usages.countInviteCodeUsages",
+      route: ROUTE,
+      uid: user.uid,
+      context: { invite_code },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -58,9 +63,17 @@ export async function GET_count_invite_code_usages(
   }
 
   if (typeof usage_count !== "number" || !Number.isFinite(usage_count)) {
-    console.error(
-      `countInviteCodeUsages returned a non-numeric value for invite code '${invite_code}':`,
-      usage_count,
+    await captureServerException(
+      dbh.db,
+      new Error(
+        `countInviteCodeUsages returned a non-numeric value for invite code '${invite_code}': ${String(usage_count)}`,
+      ),
+      {
+        op_name: "GET_count_invite_code_usages.nonNumericResult",
+        route: ROUTE,
+        uid: user.uid,
+        context: { invite_code, usage_count },
+      },
     );
     return NextResponse.json(
       {
