@@ -28,7 +28,7 @@ export function useCurrentUserWithRevalidation(): UserData | null {
   const enabled = !!(auth.ready && clientRef?.current && inMemoryUser);
 
   const { data: revalidatedUser } = useSWR<UserData | null>(
-    enabled ? `schemavaults:whoami:${app_id}` : null,
+    enabled ? `/api/auth/whoami/${app_id}` : null,
     async (): Promise<UserData | null> => {
       const authClient: ISchemaVaultsAuthClient | null = clientRef?.current ?? null;
       if (!authClient) {
