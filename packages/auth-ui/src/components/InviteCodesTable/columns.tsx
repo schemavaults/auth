@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";
-import printDateTime from "@/lib/printDateTime";
+import { LocalDateTime } from "@/lib/LocalDateTime";
 
 export const columns: ColumnDef<InviteCodeDefinition>[] = [
   {
@@ -62,9 +62,7 @@ export const columns: ColumnDef<InviteCodeDefinition>[] = [
     header: "Creation Time",
     cell: ({ row }): ReactElement => {
       const invite_code_definition: InviteCodeDefinition = row.original;
-      const created_at = invite_code_definition.created_at;
-      const asDate = new Date(created_at);
-      return <div>{printDateTime(asDate)}</div>;
+      return <LocalDateTime value={invite_code_definition.created_at} />;
     },
   },
   {

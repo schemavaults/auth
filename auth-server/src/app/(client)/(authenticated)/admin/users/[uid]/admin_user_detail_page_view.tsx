@@ -11,6 +11,7 @@ import {
 import { ShieldCheck, ShieldX } from "lucide-react";
 import PageContainer from "@/components/PageContainer";
 import type { UserData } from "@schemavaults/auth-common";
+import { LocalDateTime } from "@schemavaults/auth-ui";
 import AdminUserActionsCard from "./admin_user_actions_card";
 
 export interface AdminUserDetailPageViewProps {
@@ -55,7 +56,6 @@ export function AdminUserDetailPageView({
   sessionUid,
 }: AdminUserDetailPageViewProps): ReactElement {
   const isAdmin = user.admin === true;
-  const createdAt = new Date(user.created_at);
 
   return (
     <PageContainer>
@@ -103,7 +103,7 @@ export function AdminUserDetailPageView({
               <span>{user.invite_code ?? "-"}</span>
             </Row>
             <Row label="Created At">
-              <span>{createdAt.toLocaleString()}</span>
+              <LocalDateTime value={user.created_at} />
             </Row>
           </CardContent>
         </Card>

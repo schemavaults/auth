@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardFooter, CardHeader, CardTitle, cn } from "@schemavaults/ui";
+import { LocalDateTime } from "@schemavaults/auth-ui";
 import { KeyRound, Loader2 } from "lucide-react";
 import type { SWRResponse } from "swr";
 import type { KeyMetadataResponse } from "./KeyMetadataResponse";
@@ -11,11 +12,6 @@ interface ApiJwksAccessKeysStatusCardProps {
   keypairStatus: SWRResponse<KeyMetadataResponse>;
   handleGenerateKey: () => void;
   handleRegenerateKey: () => void;
-}
-
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleString();
 }
 
 function KeyStatusCardContent(
@@ -70,7 +66,7 @@ function KeyStatusCardContent(
               Created At
             </dt>
             <dd className="text-sm">
-              {formatDate(keyData.key_metadata.created_at)}
+              <LocalDateTime value={keyData.key_metadata.created_at} />
             </dd>
           </div>
           <div>

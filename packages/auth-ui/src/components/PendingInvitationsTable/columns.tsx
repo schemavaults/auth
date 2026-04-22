@@ -5,7 +5,7 @@ import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox, useToast, Button } from "@schemavaults/ui";
 import { Check, X, Loader2 } from "lucide-react";
 import type { UserPendingInvitation } from "@schemavaults/auth-common";
-import printDateTime from "@/lib/printDateTime";
+import { LocalDateTime } from "@/lib/LocalDateTime";
 import { useSWRConfig } from "swr";
 import { clearPendingInvitationsCache } from "./usePendingInvitations";
 
@@ -134,9 +134,7 @@ export const columns: ColumnDef<UserPendingInvitation>[] = [
     header: "Invited At",
     cell: ({ row }): ReactElement => {
       const invitation: UserPendingInvitation = row.original;
-      const created_at = invitation.created_at;
-      const asDate = new Date(created_at);
-      return <div>{printDateTime(asDate, false)}</div>;
+      return <LocalDateTime value={invitation.created_at} showSeconds={false} />;
     },
   },
   {
@@ -145,9 +143,7 @@ export const columns: ColumnDef<UserPendingInvitation>[] = [
     header: "Expires At",
     cell: ({ row }): ReactElement => {
       const invitation: UserPendingInvitation = row.original;
-      const expires_at = invitation.expires_at;
-      const asDate = new Date(expires_at);
-      return <div>{printDateTime(asDate, false)}</div>;
+      return <LocalDateTime value={invitation.expires_at} showSeconds={false} />;
     },
   },
   {
