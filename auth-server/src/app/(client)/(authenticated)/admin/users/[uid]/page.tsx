@@ -48,7 +48,7 @@ async function PreloadedAdminUserDetailPage(
     redirectWithError(400, "bad_request");
   }
 
-  return <AdminUserDetailPageView user={targetUser} />;
+  return <AdminUserDetailPageView user={targetUser} sessionUid={user.uid} />;
 }
 
 export default async function AdminUserDetailPage(

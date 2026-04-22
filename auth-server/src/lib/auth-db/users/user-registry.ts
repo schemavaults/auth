@@ -25,6 +25,7 @@ import { validateAndConsumeAuthorizationCode as validateAndConsumeAuthorizationC
 import { createInviteCode as createInviteCodeFn } from "./create-invite-code";
 import { listAllInviteCodes as listAllInviteCodesFn } from "./list-all-invite-codes";
 import { promoteToAdmin as promoteToAdminFn } from "./promote-to-admin";
+import { setUserDisabled as setUserDisabledFn } from "./set-user-disabled";
 import { createUser as createUserFn } from "./create-user";
 import { createPasswordResetToken as createPasswordResetTokenFn } from "./create-password-reset-token";
 import { validatePasswordResetToken as validatePasswordResetTokenFn, type ValidPasswordResetToken } from "./validate-password-reset-token";
@@ -138,6 +139,10 @@ export class UserRegistry {
 
   public async promoteToAdmin(uid: string): Promise<void> {
     return promoteToAdminFn(this.db, uid, this.debug);
+  }
+
+  public async setUserDisabled(uid: string, disabled: boolean): Promise<void> {
+    return setUserDisabledFn(this.db, uid, disabled, this.debug);
   }
 
   public async createInviteCode(invite_code_def: InviteCodeDefinition): Promise<void> {
