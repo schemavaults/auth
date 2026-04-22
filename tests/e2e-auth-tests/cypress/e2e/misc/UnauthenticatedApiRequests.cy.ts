@@ -427,5 +427,25 @@ describe("Unauthenticated API Requests", () => {
         expect(response.status).to.eq(401);
       });
     });
+
+    it("GET /api/admin/send-daily-report returns 401", () => {
+      cy.request({
+        method: "GET",
+        url: "/api/admin/send-daily-report",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("POST /api/admin/send-daily-report returns 401", () => {
+      cy.request({
+        method: "POST",
+        url: "/api/admin/send-daily-report",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
   });
 });
