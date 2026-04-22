@@ -2,7 +2,6 @@ import "server-only";
 import { NextResponse } from "next/server";
 import {
   type ResourceCreationResponse,
-  ServerlessDatabase,
   UserRegistry,
 } from "@/lib/auth-db";
 import {
@@ -15,7 +14,7 @@ import type { ServerRuntime } from "next";
 export const runtime: ServerRuntime = "nodejs";
 
 export async function GET_count_invite_code_usages(
-  { user }: IProtectedAdminApiRouteProps,
+  { user, dbh }: IProtectedAdminApiRouteProps,
   raw_invite_code: string,
 ): Promise<NextResponse> {
   if (!user.admin) {
@@ -39,8 +38,6 @@ export async function GET_count_invite_code_usages(
     );
   }
   const invite_code: InviteCode = parsed.data;
-
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   let usage_count: number;
   try {
