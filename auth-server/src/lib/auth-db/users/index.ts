@@ -7,6 +7,7 @@ export { userDocumentSchema } from "./parse-user-document";
 export { getUserByEmail } from "./get-user-by-email";
 export { getUserByUID } from "./get-user-by-uid";
 export { listAllUsers } from "./list-all-users";
+export { listUsersCreatedSince } from "./list-users-created-since";
 export { parseUserDocument } from "./parse-user-document";
 export { getPasswordHash, getPasswordRecord } from "./get-password-hash";
 export { comparePassword } from "./compare-password";
