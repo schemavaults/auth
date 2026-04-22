@@ -316,7 +316,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
         } as unknown as TProps)
       : (base_server_component_props as unknown as TProps);
 
-  if (opts?.required_organization) {
+  if (opts?.required_organization && !user.admin) {
     const required_organization: OrganizationID = opts?.required_organization;
     if (!isValidOrganizationID(required_organization)) {
       console.error(

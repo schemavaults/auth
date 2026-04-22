@@ -349,7 +349,7 @@ export function withAuthenticatedApiRouteGuard<
       return org_role;
     }
 
-    if (opts?.required_organization) {
+    if (opts?.required_organization && !user.admin) {
       const required_organization: OrganizationID = opts?.required_organization;
       if (!isValidOrganizationID(required_organization)) {
         console.error(
