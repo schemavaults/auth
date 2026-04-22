@@ -117,10 +117,10 @@ export function UsersStatsRow(props: UsersStatsRowProps): ReactElement {
         <StatCardDescription>All registered user accounts.</StatCardDescription>
       </StatCard>
 
-      <StatCard variant="primary">
+      <StatCard>
         <StatCardHeader>
           <StatCardLabel>Admins</StatCardLabel>
-          <StatCardIcon variant="primary">
+          <StatCardIcon>
             <ShieldCheck />
           </StatCardIcon>
         </StatCardHeader>
