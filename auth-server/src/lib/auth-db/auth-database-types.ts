@@ -24,6 +24,7 @@ import type { JwksAccessKeysForHardcodedTable, JwksAccessKeysTable } from "./jwk
 import type { ServerSettingsTable } from "./server-settings";
 import type { TokenRevocationsTable } from "./token-revocations";
 import type { ServerTracesTable } from "./server-traces";
+import type { ErrorsTable } from "./errors";
 
 export type AuthDatabase = {
   apps: AppsTable;
@@ -49,4 +50,5 @@ export type AuthDatabase = {
   token_revocations: TokenRevocationsTable;
   server_settings: ServerSettingsTable;
   server_traces: ServerTracesTable;
+  errors: ErrorsTable;
 };
