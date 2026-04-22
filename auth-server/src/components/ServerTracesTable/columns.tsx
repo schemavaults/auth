@@ -11,6 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
+import { LocalDateTime } from "@schemavaults/auth-ui";
 import type { ServerTraceRow } from "@/lib/auth-db/server-traces";
 
 export function createColumns(): ColumnDef<ServerTraceRow>[] {
@@ -56,11 +57,11 @@ export function createColumns(): ColumnDef<ServerTraceRow>[] {
       accessorKey: "start_time",
       header: "Start Time",
       cell: ({ row }): ReactElement => {
-        const date = new Date(Number(row.original.start_time));
         return (
-          <span className="text-sm">
-            {date.toLocaleDateString()} {date.toLocaleTimeString()}
-          </span>
+          <LocalDateTime
+            value={Number(row.original.start_time)}
+            className="text-sm"
+          />
         );
       },
     },
@@ -69,11 +70,11 @@ export function createColumns(): ColumnDef<ServerTraceRow>[] {
       accessorKey: "end_time",
       header: "End Time",
       cell: ({ row }): ReactElement => {
-        const date = new Date(Number(row.original.end_time));
         return (
-          <span className="text-sm">
-            {date.toLocaleDateString()} {date.toLocaleTimeString()}
-          </span>
+          <LocalDateTime
+            value={Number(row.original.end_time)}
+            className="text-sm"
+          />
         );
       },
     },

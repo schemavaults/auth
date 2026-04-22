@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
-import printDateTime from "@/lib/printDateTime";
+import { LocalDateTime } from "@/lib/LocalDateTime";
 
 export const columns: ColumnDef<OrganizationDefinition>[] = [
   {
@@ -80,9 +80,7 @@ export const columns: ColumnDef<OrganizationDefinition>[] = [
     header: "Created At",
     cell: ({ row }): ReactElement => {
       const org: OrganizationDefinition = row.original;
-      const created_at = org.created_at;
-      const asDate = new Date(created_at);
-      return <div>{printDateTime(asDate)}</div>;
+      return <LocalDateTime value={org.created_at} />;
     },
   },
   {

@@ -5,7 +5,7 @@ import type { SchemaVaultsApiServerDefinition, SchemaVaultsApiServerDomainRef, S
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { DeleteApiServerDialog } from "@schemavaults/auth-ui";
+import { DeleteApiServerDialog, LocalDateTime } from "@schemavaults/auth-ui";
 import { Trash2, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -35,9 +35,11 @@ function DomainRow({ domain, dateKey }: { domain: { domain: string; environment:
         <p className="text-sm font-medium">{domain.domain}</p>
         <p className="text-xs text-muted-foreground">{domain.environment}</p>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {new Date(domain.created_at).toLocaleDateString()}
-      </p>
+      <LocalDateTime
+        value={domain.created_at}
+        showSeconds={false}
+        className="text-xs text-muted-foreground"
+      />
     </div>
   );
 }
@@ -72,7 +74,7 @@ export default function ApiServerDetailPageView({
             <DetailRow label="Owner Organization ID" value={api_server.owner_organization_id} href={`/org/${api_server.owner_organization_id}`} />
           )}
           <DetailRow label="Public" value={api_server.public ? "Yes" : "No"} />
-          <DetailRow label="Created At" value={new Date(api_server.created_at).toLocaleDateString()} />
+          <DetailRow label="Created At" value={<LocalDateTime value={api_server.created_at} showSeconds={false} />} />
           {isOrgOwner && (
             <div className="pt-4">
               <Link href={`/apis/${api_server.api_server_id}/jwks-access-keys`}>
@@ -148,9 +150,11 @@ export default function ApiServerDetailPageView({
                     <p className="text-sm font-medium">{app.app_name}</p>
                     <p className="text-xs text-muted-foreground">{app.client_app_id}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(app.created_at).toLocaleDateString()}
-                  </p>
+                  <LocalDateTime
+                    value={app.created_at}
+                    showSeconds={false}
+                    className="text-xs text-muted-foreground"
+                  />
                 </Link>
               ))}
             </div>
