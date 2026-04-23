@@ -99,7 +99,12 @@ export async function GET_list_api_server_domains(
       if (!user.admin) {
         let authorized = false;
         try {
-          authorized = await isUserInApiOwnerOrganization(user, api_server_id, dbh.db);
+          authorized = await isUserInApiOwnerOrganization(
+            user,
+            api_server_id,
+            dbh.db,
+            ['owner', 'admin', 'member'],
+          );
         } catch (e: unknown) {
           await captureServerException(dbh.db, e, {
             op_name: "GET_list_api_server_domains.isUserInApiOwnerOrganization",
