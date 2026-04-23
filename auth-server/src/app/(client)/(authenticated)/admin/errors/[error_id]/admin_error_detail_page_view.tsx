@@ -14,6 +14,7 @@ import { ArrowLeft } from "lucide-react";
 import PageContainer from "@/components/PageContainer";
 import { LocalDateTime } from "@schemavaults/auth-ui";
 import type { ErrorRow } from "@/lib/auth-db/errors";
+import { DeleteErrorButton } from "@/components/ErrorsTable";
 
 export interface AdminErrorDetailPageViewProps {
   errorRow: ErrorRow;
@@ -161,6 +162,10 @@ export function AdminErrorDetailPageView({
             )}
           </CardContent>
         </Card>
+
+        <div className="flex justify-end">
+          <DeleteErrorButton error_id={errorRow.error_id} />
+        </div>
       </div>
     </PageContainer>
   );

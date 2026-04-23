@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 import PageContainer from "@/components/PageContainer";
-import { ErrorsCard } from "@/components/ErrorsTable";
+import { DeleteOldErrorsCard, ErrorsCard } from "@/components/ErrorsTable";
 import type { ErrorRow } from "@/lib/auth-db/errors";
 
 export interface AdminErrorsPageViewProps {
@@ -14,7 +14,10 @@ function AdminErrorsPageView({
 }: AdminErrorsPageViewProps): ReactElement {
   return (
     <PageContainer>
-      <ErrorsCard cardClassName="w-full" preloaded={preloaded} />
+      <div className="flex flex-col gap-6">
+        <ErrorsCard cardClassName="w-full" preloaded={preloaded} />
+        <DeleteOldErrorsCard />
+      </div>
     </PageContainer>
   );
 }
