@@ -56,7 +56,7 @@ function parseBeforeParam(
 
 async function DELETE_errors_before_handler(
   { user, dbh }: IProtectedAdminApiRouteProps,
-  before_ms: number,
+  req: NextRequest,
 ): Promise<NextResponse> {
   if (!user.admin) {
     return NextResponse.json(
@@ -67,6 +67,21 @@ async function DELETE_errors_before_handler(
       { status: 403 },
     );
   }
+
+  // Parse query params AFTER the admin guard has accepted the caller so that
+  // unauthenticated/non-admin probes can never reach 400 and distinguish
+  // "missing/invalid param" from "not allowed". 401/403 must always win.
+  const parsed = parseBeforeParam(req.nextUrl.searchParams.get("before"));
+  if (!parsed.ok) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: parsed.message,
+      } satisfies ResourceCreationResponse,
+      { status: 400 },
+    );
+  }
+  const before_ms = parsed.before_ms;
 
   try {
     const deleted_count = await deleteErrorsBefore(dbh.db, before_ms);
@@ -93,21 +108,9 @@ async function DELETE_errors_before_handler(
 }
 
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
-  const parsed = parseBeforeParam(req.nextUrl.searchParams.get("before"));
-  if (!parsed.ok) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: parsed.message,
-      } satisfies ResourceCreationResponse,
-      { status: 400 },
-    );
-  }
-  const before_ms = parsed.before_ms;
-
   const protected_route = await withAdminApiRouteGuard(
     async (opts: IProtectedAdminApiRouteProps): Promise<NextResponse> =>
-      await DELETE_errors_before_handler(opts, before_ms),
+      await DELETE_errors_before_handler(opts, req),
   );
   return await protected_route(req);
 }

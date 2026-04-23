@@ -9,6 +9,7 @@
 describe("Regular User Admin API Forbidden", () => {
   const fakeUid = "00000000-0000-0000-0000-000000000001";
   const fakeSettingKey = "nonexistent_setting_key";
+  const fakeErrorId = "00000000-0000-0000-0000-000000000002";
 
   // Create + login a fresh regular (non-admin) user before each test so that
   // no state leaks between the individual 403 assertions.
@@ -99,6 +100,44 @@ describe("Regular User Admin API Forbidden", () => {
     cy.request({
       method: "GET",
       url: "/api/admin/server-traces",
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("DELETE /api/admin/errors returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "DELETE",
+      url: `/api/admin/errors?before=${encodeURIComponent(
+        new Date().toISOString(),
+      )}`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("DELETE /api/admin/errors without 'before' param returns 403 for authenticated non-admin", () => {
+    // The admin guard must short-circuit before parameter validation so that
+    // a non-admin can never distinguish "missing before" (400) from "not
+    // admin" (403). 403 must beat 400.
+    cy.request({
+      method: "DELETE",
+      url: "/api/admin/errors",
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("DELETE /api/admin/errors/:errorId returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "DELETE",
+      url: `/api/admin/errors/${fakeErrorId}`,
       failOnStatusCode: false,
     }).then((response) => {
       expect(response.status).to.eq(403);
