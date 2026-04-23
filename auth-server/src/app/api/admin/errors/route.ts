@@ -15,7 +15,7 @@ export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const beforeParamSchema = z.union([
-  z.coerce.number().int().positive(),
+  z.coerce.number().int().nonnegative(),
   z.string().datetime(),
 ]);
 
@@ -35,16 +35,18 @@ function parseBeforeParam(
     return {
       ok: false,
       message:
-        "Invalid 'before' search parameter; expected an ISO-8601 datetime or a positive integer ms epoch.",
+        "Invalid 'before' search parameter; expected an ISO-8601 datetime or a non-negative integer ms epoch.",
     };
   }
 
+  // ms epoch of 0 (1970-01-01Z) is a semantically valid cutoff — it just
+  // deletes nothing — so we accept any finite non-negative value here.
   const before_ms =
     typeof parsed.data === "number"
       ? parsed.data
       : new Date(parsed.data).getTime();
 
-  if (!Number.isFinite(before_ms) || before_ms <= 0) {
+  if (!Number.isFinite(before_ms) || before_ms < 0) {
     return {
       ok: false,
       message: "Invalid 'before' search parameter; could not derive a timestamp.",
