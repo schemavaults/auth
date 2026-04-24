@@ -15,7 +15,7 @@ import {
 } from "@schemavaults/ui";
 import { MoreHorizontal, X, Loader2 } from "lucide-react";
 import type { OrganizationInvitationWithUserData, OrganizationInvitationStatus } from "@schemavaults/auth-common";
-import printDateTime from "@/lib/printDateTime";
+import { LocalDateTime } from "@/lib/LocalDateTime";
 import { useSWRConfig } from "swr";
 import { clearSentInvitationsCache } from "./useSentInvitations";
 
@@ -163,9 +163,7 @@ export const columns: ColumnDef<OrganizationInvitationWithUserData>[] = [
     header: "Sent At",
     cell: ({ row }): ReactElement => {
       const invitation: OrganizationInvitationWithUserData = row.original;
-      const created_at = invitation.created_at;
-      const asDate = new Date(created_at);
-      return <div>{printDateTime(asDate, false)}</div>;
+      return <LocalDateTime value={invitation.created_at} showSeconds={false} />;
     },
   },
   {
@@ -175,11 +173,10 @@ export const columns: ColumnDef<OrganizationInvitationWithUserData>[] = [
     cell: ({ row }): ReactElement => {
       const invitation: OrganizationInvitationWithUserData = row.original;
       const expires_at = invitation.expires_at;
-      const asDate = new Date(expires_at);
       const isExpired = Date.now() > expires_at;
       return (
         <div className={isExpired && invitation.status === "pending" ? "text-destructive" : ""}>
-          {printDateTime(asDate, false)}
+          <LocalDateTime value={expires_at} showSeconds={false} />
           {isExpired && invitation.status === "pending" && " (Expired)"}
         </div>
       );
@@ -194,8 +191,7 @@ export const columns: ColumnDef<OrganizationInvitationWithUserData>[] = [
       if (!invitation.responded_at) {
         return <div className="text-muted-foreground">-</div>;
       }
-      const asDate = new Date(invitation.responded_at);
-      return <div>{printDateTime(asDate, false)}</div>;
+      return <LocalDateTime value={invitation.responded_at} showSeconds={false} />;
     },
   },
   {

@@ -8,6 +8,9 @@ export interface NativeAppCodeDeliveryProps {
   redirect_uri: string;
   code_challenge_method: "S256";
   challenge_time: number;
+  // OAuth2 `state` (RFC 6749 §10.12) — forwarded to native clients so
+  // they can validate CSRF protection end-to-end, same as web clients.
+  state?: string | null;
 }
 
 export function NativeAppCodeDelivery({
@@ -15,6 +18,7 @@ export function NativeAppCodeDelivery({
   redirect_uri,
   code_challenge_method,
   challenge_time,
+  state,
 }: NativeAppCodeDeliveryProps) {
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +34,9 @@ export function NativeAppCodeDelivery({
             code_challenge_method,
             challenge_time: challenge_time.toString(),
             authorization_code,
+            ...(typeof state === "string" && state.length > 0
+              ? { state }
+              : {}),
           }),
         });
 
@@ -53,7 +60,7 @@ export function NativeAppCodeDelivery({
     return () => {
       cancelled = true;
     };
-  }, [authorization_code, redirect_uri, code_challenge_method, challenge_time]);
+  }, [authorization_code, redirect_uri, code_challenge_method, challenge_time, state]);
 
   if (error) {
     return <ErrorPage error="authorization_failed" message={error} />;

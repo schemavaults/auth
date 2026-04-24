@@ -6,6 +6,7 @@ import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
 import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
 import type { JwksAccessKeyStatusQueryResponse } from '@/lib/auth-db/jwks-access-keys';
+import captureServerException from "@/lib/captureServerException";
 
 /**
  * GET /api/apis/[api_server_id]/jwks-access-key
@@ -43,7 +44,12 @@ export async function GET_jwks_access_key_metadata(request: NextRequest, ctx: Ro
           );
         }
       } catch (e: unknown) {
-        console.error("Failed to verify user authorization:", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_jwks_access_key_metadata.isUserInApiOwnerOrganization",
+          route: "/api/apis/[api_server_id]/jwks-access-key",
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           { success: false, message: "Failed to verify authorization" },
           { status: 500 }

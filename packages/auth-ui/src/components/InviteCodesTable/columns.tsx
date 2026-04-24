@@ -5,7 +5,7 @@ import type { ReactElement } from "react";
 import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { ClipboardCopy, MoreHorizontal } from "lucide-react";
+import { ClipboardCopy, Hash, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";
-import printDateTime from "@/lib/printDateTime";
+import { LocalDateTime } from "@/lib/LocalDateTime";
 
 export const columns: ColumnDef<InviteCodeDefinition>[] = [
   {
@@ -62,9 +62,7 @@ export const columns: ColumnDef<InviteCodeDefinition>[] = [
     header: "Creation Time",
     cell: ({ row }): ReactElement => {
       const invite_code_definition: InviteCodeDefinition = row.original;
-      const created_at = invite_code_definition.created_at;
-      const asDate = new Date(created_at);
-      return <div>{printDateTime(asDate)}</div>;
+      return <LocalDateTime value={invite_code_definition.created_at} />;
     },
   },
   {
@@ -112,6 +110,47 @@ export const columns: ColumnDef<InviteCodeDefinition>[] = [
               }}
             >
               <ClipboardCopy className="h-4 w-4 pr-2" /> Copy Invite Code
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async (e): Promise<void> => {
+                e.preventDefault();
+                const invite_code: string = invite_code_definition.invite_code;
+                let usage_count: number;
+                try {
+                  const res = await fetch(
+                    `/api/admin/invite-codes/${encodeURIComponent(invite_code)}/usages`,
+                    { method: "GET", credentials: "include" },
+                  );
+                  const body: {
+                    success: boolean;
+                    message?: string;
+                    data?: { invite_code: string; usage_count: number };
+                  } = await res.json();
+                  if (!res.ok || !body.success || !body.data) {
+                    throw new Error(
+                      body.message ??
+                        `Request failed with status ${res.status}`,
+                    );
+                  }
+                  usage_count = body.data.usage_count;
+                } catch (e: unknown) {
+                  toast({
+                    title: "Failed to count invite code usages!",
+                    description:
+                      e instanceof Error
+                        ? e.message
+                        : "An unknown error has occurred!",
+                  });
+                  return;
+                }
+
+                toast({
+                  title: "Invite code usage count",
+                  description: `'${invite_code}' has been used ${usage_count} time(s).`,
+                });
+              }}
+            >
+              <Hash className="h-4 w-4 pr-2" /> Count Uses
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

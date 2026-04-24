@@ -10,6 +10,7 @@ import {
   listOrganizationInvitations,
 } from "@/lib/auth-db/organizations";
 import { getUserByEmail, getUserByUID } from "@/lib/auth-db/users";
+import { sendTeamInvitationEmail } from "@/lib/send-team-invitation-emails";
 import {
   type OrganizationID,
   organizationIdSchema,
@@ -17,6 +18,9 @@ import {
 } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import { z } from "zod";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/organizations/[organization_id]/invitations";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -133,7 +137,12 @@ async function POST_create_invitation_handler(
       invitee_uid = invitee.uid;
     }
   } catch (e: unknown) {
-    console.error("Failed to lookup invitee:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "POST_create_invitation_handler.lookupInvitee",
+      route: ROUTE,
+      uid: user.uid,
+      context: { organization_id, input_mode },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -176,6 +185,22 @@ async function POST_create_invitation_handler(
       invitee_uid,
     });
 
+    try {
+      await sendTeamInvitationEmail({
+        db: dbh.db,
+        organization_id,
+        inviter_uid: user.uid,
+        invitee_uid,
+      });
+    } catch (emailError: unknown) {
+      await captureServerException(dbh.db, emailError, {
+        op_name: "POST_create_invitation_handler.sendTeamInvitationEmail",
+        route: ROUTE,
+        uid: user.uid,
+        context: { organization_id, invitee_uid, nonFatal: true },
+      });
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -187,7 +212,12 @@ async function POST_create_invitation_handler(
       { status: 201 }
     );
   } catch (e: unknown) {
-    console.error("Failed to create invitation:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "POST_create_invitation_handler.createOrganizationInvitation",
+      route: ROUTE,
+      uid: user.uid,
+      context: { organization_id, invitee_uid },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -246,7 +276,12 @@ async function GET_list_invitations_handler(
       { status: 200 }
     );
   } catch (e: unknown) {
-    console.error("Failed to list invitations:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_list_invitations_handler.listOrganizationInvitations",
+      route: ROUTE,
+      uid: user.uid,
+      context: { organization_id },
+    });
     return NextResponse.json(
       {
         success: false,

@@ -28,6 +28,7 @@ import {
   isOriginAllowedForClientApp,
   buildCorsHeaders,
 } from "@/lib/cors/cors-for-client-app";
+import captureServerException from "@/lib/captureServerException";
 
 /**
  * Handle CORS preflight requests for the logout endpoint
@@ -251,7 +252,11 @@ export async function POST(
       domain,
     });
   } catch (e: unknown) {
-    console.error("Failed to delete refresh token cookie: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "logout.deleteRefreshTokenCookies",
+      route: "/api/auth/logout/[client_app_id]",
+      context: { client_app_id },
+    });
     return NextResponse.json(
       {
         message: "Failed to delete your refresh token cookies!",

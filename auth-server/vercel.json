@@ -5,5 +5,11 @@
   "devCommand": "cd .. && bun run dev:server",
   "framework": "nextjs",
   "bunVersion": "1.x",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/admin/send-daily-report",
+      "schedule": "0 21 * * *"
+    }
+  ]
 }

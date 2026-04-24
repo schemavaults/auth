@@ -10,6 +10,9 @@ import { z } from "zod";
 import { passwordSchema } from "@schemavaults/auth-common";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/auth/reset-password/confirm";
 
 const resetPasswordConfirmBodySchema = z
   .object({
@@ -47,7 +50,10 @@ export async function handleResetPasswordConfirm({
   try {
     validToken = await userRegistry.validatePasswordResetToken(token);
   } catch (e: unknown) {
-    console.error("[handleResetPasswordConfirm] Failed to validate token:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleResetPasswordConfirm.validatePasswordResetToken",
+      route: ROUTE,
+    });
     return NextResponse.json(
       { success: false, message: "Failed to validate reset token" },
       { status: 500 },
@@ -65,7 +71,11 @@ export async function handleResetPasswordConfirm({
     await userRegistry.updatePassword(validToken.uid, new_password);
     await userRegistry.consumePasswordResetToken(validToken.token_id);
   } catch (e: unknown) {
-    console.error("[handleResetPasswordConfirm] Failed to update password:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleResetPasswordConfirm.updatePassword",
+      route: ROUTE,
+      uid: validToken.uid,
+    });
     return NextResponse.json(
       { success: false, message: "Failed to reset password" },
       { status: 500 },

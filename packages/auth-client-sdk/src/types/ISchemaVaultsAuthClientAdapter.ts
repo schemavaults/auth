@@ -12,6 +12,17 @@ interface AuthClientCodeVerifierActions {
   clearCodeVerifier: (challenge_time: number) => void;
 }
 
+// OAuth2 `state` (RFC 6749 §10.12) is a client-side CSRF nonce generated
+// before the authorize redirect, persisted across the redirect, and
+// verified against the value echoed back on the callback. Mirrors the
+// code-verifier storage contract — keyed by `challenge_time` so concurrent
+// flows don't clobber each other.
+interface AuthClientOAuth2StateActions {
+  storeOAuth2State: (state: string, challenge_time: number) => void;
+  loadOAuth2State: (challenge_time: number) => string | null;
+  clearOAuth2State: (challenge_time: number) => void;
+}
+
 interface AuthClientUserDataActions {
   storeUserData: (userData: UserData) => void;
   getUserData: () => UserData | null;
@@ -82,9 +93,22 @@ interface AuthClientNetworkActions {
 // E.g. the next.js adapter uses cookies-next to manage cookies
 export interface ISchemaVaultsAuthClientAdapter
   extends AuthClientCodeVerifierActions,
+    AuthClientOAuth2StateActions,
     AuthClientUserDataActions,
     AuthClientAuthTokensActions,
     AuthClientNetworkActions {
   redirect: (uri: string) => void | Promise<void>;
   uuid: () => string;
+
+  /**
+   * @name toBase64UrlFromBytes
+   * @description Base64url-encode (RFC 4648 §5) a byte buffer. Each
+   * environment provides its own implementation so that the SDK does
+   * not have to carry a browser/Node compatibility shim: a browser
+   * adapter can use `btoa`, a Node adapter can use `Buffer`, a React
+   * Native adapter can use its platform primitive.
+   * @argument bytes - The raw bytes to encode.
+   * @returns A base64url string (no padding, no `+`/`/`).
+   */
+  toBase64UrlFromBytes: (bytes: Uint8Array) => string;
 }

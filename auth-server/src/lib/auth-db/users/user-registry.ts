@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { InviteCodeDefinition } from "@schemavaults/auth-common";
+import type { InviteCode, InviteCodeDefinition } from "@schemavaults/auth-common";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import {
@@ -24,7 +24,9 @@ import { generateAuthorizationCode as generateAuthorizationCodeFn } from "./gene
 import { validateAndConsumeAuthorizationCode as validateAndConsumeAuthorizationCodeFn } from "./validate-and-consume-authorization-code";
 import { createInviteCode as createInviteCodeFn } from "./create-invite-code";
 import { listAllInviteCodes as listAllInviteCodesFn } from "./list-all-invite-codes";
+import { countInviteCodeUsages as countInviteCodeUsagesFn } from "./count-invite-code-usages";
 import { promoteToAdmin as promoteToAdminFn } from "./promote-to-admin";
+import { setUserDisabled as setUserDisabledFn } from "./set-user-disabled";
 import { createUser as createUserFn } from "./create-user";
 import { createPasswordResetToken as createPasswordResetTokenFn } from "./create-password-reset-token";
 import { validatePasswordResetToken as validatePasswordResetTokenFn, type ValidPasswordResetToken } from "./validate-password-reset-token";
@@ -140,12 +142,20 @@ export class UserRegistry {
     return promoteToAdminFn(this.db, uid, this.debug);
   }
 
+  public async setUserDisabled(uid: string, disabled: boolean): Promise<void> {
+    return setUserDisabledFn(this.db, uid, disabled, this.debug);
+  }
+
   public async createInviteCode(invite_code_def: InviteCodeDefinition): Promise<void> {
     return createInviteCodeFn(this.db, invite_code_def, this.debug);
   }
 
   public async listAllInviteCodes(): Promise<readonly InviteCodeDefinition[]> {
     return listAllInviteCodesFn(this.db, this.debug);
+  }
+
+  public async countInviteCodeUsages(invite_code: InviteCode): Promise<number> {
+    return countInviteCodeUsagesFn(this.db, invite_code, this.debug);
   }
 
   /**

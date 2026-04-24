@@ -18,6 +18,7 @@ import {
   type UserData,
   type refreshTokenPOSTbody,
   MAXIMUM_USER_ORGANIZATIONS,
+  ERROR_MESSAGE_CATALOG,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
@@ -34,6 +35,9 @@ import AuthServerJwtKeysManager, {
 import returnGeneratedTokensToUser from "@/lib/returnGeneratedTokensToUser";
 import getHostname from "@/lib/hostname";
 import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/auth/token/refresh_token/[client_app_id]";
 
 export async function handleRefreshTokenGrant(
   req: NextRequest,
@@ -49,7 +53,11 @@ export async function handleRefreshTokenGrant(
   try {
     refresh_token_keyset_id = getKeysetIdFromToken(refresh_token);
   } catch (e: unknown) {
-    console.error(e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRefreshTokenGrant.getKeysetIdFromToken",
+      route: ROUTE,
+      context: { client_app_id: body.client_app_id },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -66,7 +74,11 @@ export async function handleRefreshTokenGrant(
   try {
     refresh_token_audience_id = getAudienceFromToken(refresh_token);
   } catch (e: unknown) {
-    console.error(e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRefreshTokenGrant.getAudienceFromToken",
+      route: ROUTE,
+      context: { client_app_id: body.client_app_id },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -95,7 +107,11 @@ export async function handleRefreshTokenGrant(
   try {
     jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
   } catch (e: unknown) {
-    console.error("Failed to initialize JWT key manager: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRefreshTokenGrant.initJwtKeysManager",
+      route: ROUTE,
+      context: { client_app_id: body.client_app_id },
+    });
     throw new Error("Failed to initialize JWT key manager");
   }
 
@@ -106,9 +122,15 @@ export async function handleRefreshTokenGrant(
       refresh_token_keyset_id,
     );
   } catch (e: unknown) {
-    console.error("Failed to retrieve refresh token keyset: ", e);
     const isKeysetExpiredError: boolean =
       e instanceof Error && e.message.includes("expired");
+    if (!isKeysetExpiredError) {
+      await captureServerException(dbh.db, e, {
+        op_name: "handleRefreshTokenGrant.getKeyset",
+        route: ROUTE,
+        context: { client_app_id: body.client_app_id, refresh_token_keyset_id },
+      });
+    }
     return NextResponse.json(
       {
         success: false,
@@ -131,14 +153,22 @@ export async function handleRefreshTokenGrant(
     });
   } catch (e: unknown) {
     let errorDecodingTokenMsg: string = "Failed to decode refresh token";
+    let isJwtExpired: boolean = false;
 
     if (!!e && typeof e === "object") {
       if ("code" in e && e.code === "ERR_JWT_EXPIRED") {
         errorDecodingTokenMsg = "[ERR_JWT_EXPIRED] Refresh token has expired!";
+        isJwtExpired = true;
       }
     }
 
-    console.error(e);
+    if (!isJwtExpired) {
+      await captureServerException(dbh.db, e, {
+        op_name: "handleRefreshTokenGrant.decodeJWT",
+        route: ROUTE,
+        context: { client_app_id: body.client_app_id },
+      });
+    }
     return NextResponse.json(
       {
         success: false,
@@ -168,7 +198,12 @@ export async function handleRefreshTokenGrant(
         );
       }
     } catch (e: unknown) {
-      console.error("Failed to check token revocation status: ", e);
+      await captureServerException(dbh.db, e, {
+        op_name: "handleRefreshTokenGrant.isTokenRevoked",
+        route: ROUTE,
+        uid: decoded.uid,
+        context: { client_app_id: body.client_app_id, jti: decoded.jti },
+      });
       return NextResponse.json(
         {
           success: false,
@@ -188,7 +223,11 @@ export async function handleRefreshTokenGrant(
   try {
     user = await loadUserData(uid, usersRegistry);
   } catch (e: unknown) {
-    console.error("Failed to load user data: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRefreshTokenGrant.loadUserData",
+      route: ROUTE,
+      uid,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -197,6 +236,22 @@ export async function handleRefreshTokenGrant(
       } satisfies RequestTokensResult,
       {
         status: 500,
+      },
+    );
+  }
+
+  if (user.disabled) {
+    console.warn(
+      `[RefreshTokenGrant] Blocked token refresh for disabled account (uid: ${uid})`,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: ERROR_MESSAGE_CATALOG.account_disabled,
+      } satisfies RequestTokensResult,
+      {
+        status: 403,
       },
     );
   }
@@ -236,7 +291,12 @@ export async function handleRefreshTokenGrant(
         },
       );
     }
-    console.error("Failed to validate token audience(s): ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRefreshTokenGrant.validateAudience",
+      route: ROUTE,
+      uid,
+      context: { client_app_id: body.client_app_id, audience },
+    });
     return NextResponse.json(
       {
         success: false,
@@ -256,7 +316,11 @@ export async function handleRefreshTokenGrant(
       user.admin ?? false
     );
   } catch (e: unknown) {
-    console.error("Failed to list user's associated organizations: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRefreshTokenGrant.listUserOrganizationMembershipIds",
+      route: ROUTE,
+      uid,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -313,7 +377,12 @@ export async function handleRefreshTokenGrant(
       debug,
     })) satisfies NextResponse;
   } catch (e: unknown) {
-    console.error("Failed to generate new tokens: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRefreshTokenGrant.generateTokens",
+      route: ROUTE,
+      uid,
+      context: { client_app_id: body.client_app_id, audience },
+    });
     return NextResponse.json(
       {
         success: false,

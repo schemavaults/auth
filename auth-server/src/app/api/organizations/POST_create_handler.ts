@@ -17,6 +17,9 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/organizations";
 
 class ExceededMembershipLimitError extends Error {}
 
@@ -83,7 +86,6 @@ async function POST_create_organization_handler({
       await addOrganizationMembership(trx, organization_id, uid, "owner");
     })
   } catch (e: unknown) {
-    console.error("Failed to create organization: ", e);
     if (e instanceof ExceededMembershipLimitError) {
       return NextResponse.json(
         {
@@ -96,6 +98,12 @@ async function POST_create_organization_handler({
       );
     }
 
+    await captureServerException(dbh.db, e, {
+      op_name: "POST_create_organization_handler.createOrganizationTx",
+      route: ROUTE,
+      uid,
+      context: { organization_id },
+    });
     return NextResponse.json(
       {
         success: false,

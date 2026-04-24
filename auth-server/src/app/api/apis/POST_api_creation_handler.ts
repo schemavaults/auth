@@ -14,6 +14,9 @@ import isUserInOrganization from "@/lib/isUserInOrganization";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import { ConflictError } from "@/lib/error/ConflictError";
 import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apis";
 
 /**
  * Create a new API server
@@ -104,7 +107,11 @@ export default async function POST_api_creation_handler(request: NextRequest): P
       try {
         apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
       } catch (e: unknown) {
-        console.error(e);
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_api_creation_handler.loadApiServersRegistry",
+          route: ROUTE,
+          uid: user.uid,
+        });
         return NextResponse.json(
           {
             success: false,
@@ -140,7 +147,12 @@ export default async function POST_api_creation_handler(request: NextRequest): P
             { status: 409 },
           );
         }
-        console.error("Failed to create SchemaVaults API server: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_api_creation_handler.registerApiServer",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id: newResource.api_server_id, owner_organization_id },
+        });
         return NextResponse.json(
           {
             success: false,

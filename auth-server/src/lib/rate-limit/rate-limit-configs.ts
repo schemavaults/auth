@@ -37,6 +37,13 @@ export const RESET_PASSWORD_CONFIRM_RATE_LIMIT: RateLimitConfig = {
   keySource: "ip",
 };
 
+export const VERIFY_EMAIL_CONFIRM_RATE_LIMIT: RateLimitConfig = {
+  name: "verify-email-confirm",
+  maxAttempts: 5,
+  windowSeconds: 15 * 60,
+  keySource: "ip",
+};
+
 export const REFRESH_TOKEN_RATE_LIMIT: RateLimitConfig = {
   name: "refresh-token",
   maxAttempts: 30,

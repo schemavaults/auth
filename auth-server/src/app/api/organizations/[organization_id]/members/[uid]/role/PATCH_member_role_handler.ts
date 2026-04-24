@@ -10,6 +10,7 @@ import {
 } from "@schemavaults/auth-common";
 import { type OrganizationID, organizationIdSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/lib/is-valid-uuid";
+import captureServerException from "@/lib/captureServerException";
 
 async function PATCH_member_role_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps,
@@ -84,8 +85,6 @@ async function PATCH_member_role_handler(
   try {
     await registry.updateMemberRole(organization_id, target_uid, new_role);
   } catch (e: unknown) {
-    console.error(`Failed to update member role: `, e);
-
     const errorMessage = e instanceof Error ? e.message : "Failed to update member role!";
 
     // Check for specific error messages
@@ -117,6 +116,12 @@ async function PATCH_member_role_handler(
       );
     }
 
+    await captureServerException(dbh.db, e, {
+      op_name: "PATCH_member_role_handler.updateMemberRole",
+      route: "/api/organizations/[organization_id]/members/[uid]/role",
+      uid: user.uid,
+      context: { organization_id, target_uid, new_role },
+    });
     return NextResponse.json(
       {
         success: false,

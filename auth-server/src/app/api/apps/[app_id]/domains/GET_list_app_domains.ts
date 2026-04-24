@@ -15,6 +15,9 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { type OrganizationID } from "@schemavaults/auth-common";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apps/[app_id]/domains";
 
 export type ListAppDomainsResponse =
   | {
@@ -65,7 +68,12 @@ export async function GET_list_app_domains(
       try {
         apps = new SchemaVaultsAppRegistry(dbh.db);
       } catch (e: unknown) {
-        console.error(e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_list_app_domains.loadAppsRegistry",
+          route: ROUTE,
+          uid: user.uid,
+          context: { app_id },
+        });
         return NextResponse.json(
           {
             success: false,
@@ -85,10 +93,12 @@ export async function GET_list_app_domains(
         }
         app = loadAppQuery;
       } catch (e: unknown) {
-        console.error(
-          "Failed to load SchemaVaults app with given 'app_id': ",
-          e,
-        );
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_list_app_domains.getApp",
+          route: ROUTE,
+          uid: user.uid,
+          context: { app_id },
+        });
         return NextResponse.json(
           {
             success: false,
@@ -134,7 +144,12 @@ export async function GET_list_app_domains(
           list: domains,
         } satisfies ListAppDomainsResponse);
       } catch (e: unknown) {
-        console.error("Failed to list domains for SchemaVaults app: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_list_app_domains.getAppDomains",
+          route: ROUTE,
+          uid: user.uid,
+          context: { app_id },
+        });
         return NextResponse.json(
           {
             success: false,

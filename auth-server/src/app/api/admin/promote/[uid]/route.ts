@@ -9,6 +9,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { type IProtectedAdminApiRouteProps, withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
 
 export const runtime: ServerRuntime = "nodejs"
 export const dynamic = "force-dynamic"; // defaults to auto
@@ -35,8 +36,6 @@ async function POST_admin_promotion_handler(
   try {
     await new UserRegistry(dbh.db).promoteToAdmin(new_superuser_uid);
   } catch (e: unknown) {
-    console.error("Failed to set user as superuser: ", e);
-
     if (e instanceof Error) {
       if (
         e.message.includes("not found") ||
@@ -54,6 +53,12 @@ async function POST_admin_promotion_handler(
       }
     }
 
+    await captureServerException(dbh.db, e, {
+      op_name: "POST_admin_promotion_handler.promoteToAdmin",
+      route: "/api/admin/promote/[uid]",
+      uid: user.uid,
+      context: { target_uid: new_superuser_uid },
+    });
     return NextResponse.json(
       {
         success: false,

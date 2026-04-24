@@ -4,6 +4,7 @@ describe("Unauthenticated API Requests", () => {
   const fakeOrgId = "00000000-0000-0000-0000-000000000003";
   const fakeUid = "00000000-0000-0000-0000-000000000004";
   const fakeInvitationId = "00000000-0000-0000-0000-000000000005";
+  const fakeErrorId = "00000000-0000-0000-0000-000000000006";
 
   describe("Authenticated API routes", () => {
     it("GET /api/auth/whoami/:appId returns 401", () => {
@@ -422,6 +423,60 @@ describe("Unauthenticated API Requests", () => {
       cy.request({
         method: "GET",
         url: "/api/admin/server-traces",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("GET /api/admin/send-daily-report returns 401", () => {
+      cy.request({
+        method: "GET",
+        url: "/api/admin/send-daily-report",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("POST /api/admin/send-daily-report returns 401", () => {
+      cy.request({
+        method: "POST",
+        url: "/api/admin/send-daily-report",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("DELETE /api/admin/errors returns 401", () => {
+      cy.request({
+        method: "DELETE",
+        url: `/api/admin/errors?before=${encodeURIComponent(
+          new Date().toISOString(),
+        )}`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("DELETE /api/admin/errors without 'before' param returns 401", () => {
+      // Auth must be enforced before input validation so that unauthenticated
+      // callers can't probe parameter handling. 401 must beat 400.
+      cy.request({
+        method: "DELETE",
+        url: "/api/admin/errors",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("DELETE /api/admin/errors/:errorId returns 401", () => {
+      cy.request({
+        method: "DELETE",
+        url: `/api/admin/errors/${fakeErrorId}`,
         failOnStatusCode: false,
       }).then((response) => {
         expect(response.status).to.eq(401);

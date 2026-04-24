@@ -4,20 +4,29 @@ import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import SchemaVaultsApiServerRegistry from "@/lib/auth-db/apis";
 import type { OrganizationID, UserData } from "@schemavaults/auth-common";
-import isUserInOrganization from "@/lib/isUserInOrganization";
+import { isUserInOrganizationWithRole } from "@/lib/isUserInOrganization";
+import type { OrganizationMembershipRoleType } from "@/lib/auth-db/organizations";
 import type { SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
+
+const DEFAULT_ROLES: readonly OrganizationMembershipRoleType[] = ['owner', 'admin'];
 
 /**
  * @name isUserInApiOwnerOrganization
- * @param uid The user ID
+ * @param user The user to check
  * @param api_server_id The API server ID
  * @param db Database handle
- * @returns A promise resolving to true if user with ID 'uid' is in an organization that owns API server with ID 'api_server_id'
+ * @param roles Accepted organization roles. Defaults to ['owner', 'admin'] —
+ * i.e. only organization owners (and the virtual SchemaVaults-org admin role)
+ * pass. Pass ['owner', 'admin', 'member'] for read-only flows where any
+ * member legitimately has access.
+ * @returns A promise resolving to true if the user has one of the accepted
+ * roles in the organization that owns the given API server.
  */
 export default async function isUserInApiOwnerOrganization(
   user: UserData,
   api_server_id: string,
-  db: Kysely<AuthDatabase>
+  db: Kysely<AuthDatabase>,
+  roles: readonly OrganizationMembershipRoleType[] = DEFAULT_ROLES,
 ): Promise<boolean> {
   const apiServerRegistry = new SchemaVaultsApiServerRegistry(db);
   const apiServer: SchemaVaultsApiServerDefinition | null = await apiServerRegistry.getApiServer(api_server_id);
@@ -32,10 +41,5 @@ export default async function isUserInApiOwnerOrganization(
   }
 
   const owner_organization_id: OrganizationID = apiServer.owner_organization_id;
-  const role = await isUserInOrganization(
-    db,
-    user,
-    owner_organization_id
-  );
-  return role === 'admin' || role === 'owner' || role === 'member';
+  return await isUserInOrganizationWithRole(user, owner_organization_id, roles, db);
 }

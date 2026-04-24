@@ -9,6 +9,7 @@ import {
   getSettingSchema,
   type ServerSettingKey,
 } from "@/lib/auth-db/server-settings";
+import captureServerException from "@/lib/captureServerException";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,7 +67,12 @@ async function PATCH_update_setting(
       body.description
     );
   } catch (e: unknown) {
-    console.error(`Failed to update setting "${key}":`, e);
+    await captureServerException(dbh.db, e, {
+      op_name: "PATCH_update_setting.setSetting",
+      route: "/api/admin/settings/[key]",
+      uid: user.uid,
+      context: { key },
+    });
     return NextResponse.json(
       {
         success: false,

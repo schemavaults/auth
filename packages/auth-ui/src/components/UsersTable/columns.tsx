@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
 import type { UserData } from "@schemavaults/auth-common";
-import printDateTime from "@/lib/printDateTime";
+import { LocalDateTime } from "@/lib/LocalDateTime";
 
 export interface BuildUsersTableColumnsOptions {
   getUserHref?: (user: UserData) => string;
@@ -145,9 +145,7 @@ export function buildColumns(
       header: "Created At",
       cell: ({ row }): ReactElement => {
         const user: UserData = row.original;
-        const created_at = user.created_at;
-        const asDate = new Date(created_at);
-        return <div>{printDateTime(asDate)}</div>;
+        return <LocalDateTime value={user.created_at} />;
       },
     },
     {

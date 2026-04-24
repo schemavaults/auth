@@ -15,6 +15,9 @@ import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { ConflictError } from "@/lib/error/ConflictError";
 import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apps";
 
 /**
  * Create a new frontend application
@@ -109,7 +112,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
       appRegistry = new SchemaVaultsAppRegistry(dbh.db);
     } catch (e: unknown) {
-      console.error(e);
+      await captureServerException(dbh.db, e, {
+        op_name: "POST_app_creation_handler.loadAppsRegistry",
+        route: ROUTE,
+        uid: user.uid,
+      });
       return NextResponse.json(
         {
           success: false,
@@ -159,7 +166,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           { status: 409 },
         );
       }
-      console.error("Failed to create SchemaVaults frontend app: ", e);
+      await captureServerException(dbh.db, e, {
+        op_name: "POST_app_creation_handler.registerApp",
+        route: ROUTE,
+        uid: user.uid,
+        context: { app_id: newResource.app_id, owner_organization_id },
+      });
       return NextResponse.json(
         {
           success: false,

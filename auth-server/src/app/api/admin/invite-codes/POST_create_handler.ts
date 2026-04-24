@@ -10,6 +10,7 @@ import {
 } from "@schemavaults/auth-common";
 import { NextResponse } from "next/server";
 import type { IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
+import captureServerException from "@/lib/captureServerException";
 
 export default async function POST_create_handler(
   { req, dbh, user }: IProtectedAdminApiRouteProps
@@ -82,7 +83,11 @@ export default async function POST_create_handler(
       resource_id: new_invite_code.invite_code,
     } satisfies ResourceCreationResponse);
   } catch (e: unknown) {
-    console.error("Failed to insert invite code into database: ", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "POST_create_invite_code.createInviteCode",
+      route: "/api/admin/invite-codes",
+      uid: user.uid,
+    });
     return NextResponse.json(
       {
         success: false,

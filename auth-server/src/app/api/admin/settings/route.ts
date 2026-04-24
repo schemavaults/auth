@@ -5,6 +5,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import type { IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
 import { ServerSettingsRegistry } from "@/lib/auth-db/server-settings";
 import type { ServerSettingRecord } from "@/lib/auth-db/server-settings";
+import captureServerException from "@/lib/captureServerException";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,11 @@ async function GET_list_settings({
     const registry = new ServerSettingsRegistry(dbh.db, undefined, redis?.client);
     settings = await registry.listAllSettings();
   } catch (e: unknown) {
-    console.error("Failed to list server settings:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_list_settings.listAllSettings",
+      route: "/api/admin/settings",
+      uid: user.uid,
+    });
     return NextResponse.json(
       {
         success: false,

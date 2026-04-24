@@ -1,15 +1,22 @@
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
-import type { CodeChallengeWithDetails } from "@schemavaults/auth-common";
+import {
+  type CodeChallengeWithDetails,
+  parseOAuth2State,
+} from "@schemavaults/auth-common";
 
 export interface SuccessRedirectInputOptions {
   redirect_uri: string,
   authorization_code: string,
   code_challenge: CodeChallengeWithDetails,
-  app_environment: SchemaVaultsAppEnvironment
+  app_environment: SchemaVaultsAppEnvironment,
+  // OAuth2 `state` (RFC 6749 §10.12) received from the client in the
+  // authorize request. Must be echoed untouched on the callback so the
+  // client can validate its stored CSRF nonce against this value.
+  state?: string | null
 }
 
 export function successRedirect({
-  redirect_uri, authorization_code, code_challenge, app_environment
+  redirect_uri, authorization_code, code_challenge, app_environment, state
 }: SuccessRedirectInputOptions): void {
   if (app_environment !== 'production') {
     console.log('[successRedirect] Attempting redirect to: ', redirect_uri);
@@ -25,6 +32,13 @@ export function successRedirect({
   queryParams.set('challenge_time', code_challenge.challenge_time.toString());
   queryParams.set('code_challenge_method', code_challenge.code_challenge_method);
   queryParams.set('authorization_code', authorization_code);
+  // Defense-in-depth: re-validate at this echo boundary. `parseOAuth2State`
+  // throws `OAuth2StateValidationError` on a malformed value, which
+  // aborts the redirect — the caller then surfaces a destructive toast.
+  const echoedState: string | null = parseOAuth2State(state);
+  if (echoedState) {
+    queryParams.set('state', echoedState);
+  }
 
   try {
     const final_redirect_url = `${redirect_uri}?${queryParams.toString()}` as const;

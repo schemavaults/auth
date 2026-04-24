@@ -78,5 +78,16 @@ describe("Unauthenticated Redirects", () => {
       cy.visit("/admin/traces");
       cy.url().should("not.include", "/admin/traces");
     });
+
+    it("is redirected off the admin errors page", () => {
+      cy.visit("/admin/errors");
+      cy.url().should("not.include", "/admin/errors");
+    });
+
+    it("is redirected off the admin error detail page", () => {
+      const fakeErrorId = "00000000-0000-0000-0000-000000000003";
+      cy.visit(`/admin/errors/${fakeErrorId}`);
+      cy.url().should("not.include", `/admin/errors/${fakeErrorId}`);
+    });
   });
 });

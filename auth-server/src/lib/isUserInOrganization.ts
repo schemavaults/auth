@@ -51,19 +51,30 @@ export default isUserInOrganization;
 export async function isUserInOrganizationWithRole(
   user: UserData,
   organization_id: OrganizationID,
-  role: OrganizationMembershipRoleType,
+  role: OrganizationMembershipRoleType | readonly OrganizationMembershipRoleType[],
   db: Kysely<AuthDatabase>,
 ): Promise<boolean> {
   if (!organizationIdSchema.safeParse(organization_id).success) {
     throw new TypeError("Invalid organization ID to check if user is a member of!")
-  } else if (!organizationMembershipRoleTypeSchema.safeParse(role).success) {
-    throw new TypeError("Invalid role to check if user is a member of!")
+  }
+
+  const roles: readonly OrganizationMembershipRoleType[] = Array.isArray(role) ? role : [role as OrganizationMembershipRoleType];
+  if (roles.length === 0) {
+    throw new TypeError("At least one role must be provided to check if user is a member of!")
+  }
+  for (const r of roles) {
+    if (!organizationMembershipRoleTypeSchema.safeParse(r).success) {
+      throw new TypeError("Invalid role to check if user is a member of!")
+    }
   }
 
   const { uid, admin } = user;
 
-  if (organization_id === SCHEMAVAULTS_ORGANIZATION_ID && !admin) {
-    return false;
+  if (organization_id === SCHEMAVAULTS_ORGANIZATION_ID) {
+    if (!admin) {
+      return false;
+    }
+    return roles.includes('admin');
   }
 
   const organizationsRegistry = new OrganizationsRegistry(db);
@@ -71,5 +82,5 @@ export async function isUserInOrganizationWithRole(
     uid,
     admin ?? false
   );
-  return userMemberships.some(membership => membership.organization_id === organization_id && membership.role === role);
+  return userMemberships.some(membership => membership.organization_id === organization_id && roles.includes(membership.role));
 }

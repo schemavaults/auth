@@ -21,6 +21,9 @@ export interface PerformPostAuthRedirectOptions {
   code_challenge: CodeChallengeWithDetails;
   code_verifier: CodeVerifierWithDetails;
   redirect_uri: string | null | undefined;
+  // OAuth2 `state` received from the client — echoed untouched on the
+  // callback redirect for CSRF defence.
+  state: string | null | undefined;
   auth: ReturnType<typeof useAuth>;
   router: ReturnType<typeof useRouter>;
   toast: ReturnType<typeof useToast>["toast"];
@@ -37,6 +40,7 @@ export async function performPostAuthRedirect(
     code_challenge,
     code_verifier,
     redirect_uri,
+    state,
     auth,
     router,
     toast,
@@ -83,6 +87,7 @@ export async function performPostAuthRedirect(
           authorization_code,
           code_challenge,
           app_environment: env,
+          state,
         });
       } catch (e: unknown) {
         console.error(e);
@@ -117,6 +122,9 @@ export async function performPostAuthRedirect(
             code_challenge_method: code_challenge.code_challenge_method,
             challenge_time: code_challenge.challenge_time.toString(),
             authorization_code,
+            ...(typeof state === "string" && state.length > 0
+              ? { state }
+              : {}),
           }),
         });
 

@@ -14,6 +14,9 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { type OrganizationID } from "@schemavaults/auth-common";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apis/[api_server_id]";
 
 export type GetApiServerResponse =
   | {
@@ -68,7 +71,12 @@ export async function GET_api_server_handler(
       try {
         apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
       } catch (e: unknown) {
-        console.error(e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_api_server_handler.loadApiServersRegistry",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           {
             success: false,
@@ -82,7 +90,12 @@ export async function GET_api_server_handler(
       try {
         apiServer = await apiServerRegistry.getApiServer(api_server_id);
       } catch (e: unknown) {
-        console.error("Failed to load API server: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_api_server_handler.getApiServer",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           {
             success: false,

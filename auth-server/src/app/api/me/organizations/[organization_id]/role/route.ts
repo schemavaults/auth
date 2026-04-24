@@ -7,6 +7,7 @@ import {
 import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations";
 import { organizationIdSchema, type OrganizationID } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
+import captureServerException from "@/lib/captureServerException";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,7 +52,11 @@ async function GET_my_organization_role_handler(
       { status: 200 },
     );
   } catch (e: unknown) {
-    console.error("Failed to get user organization role:", e);
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_my_organization_role_handler.listUserOrganizationMemberships",
+      route: "/api/me/organizations/[organization_id]/role",
+      uid: user.uid,
+    });
     return NextResponse.json(
       { success: false, message: "Failed to get user organization role" },
       { status: 500 },

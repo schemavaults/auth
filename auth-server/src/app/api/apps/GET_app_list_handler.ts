@@ -24,11 +24,17 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { isUserInOrganization } from "@/lib/isUserInOrganization";
 import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
+import captureServerException from "@/lib/captureServerException";
+import type { Kysely } from "@schemavaults/dbh";
+import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+
+const ROUTE = "/api/apps";
 
 async function listAuthorizedAppsForUser(
   appsRegistry: SchemaVaultsAppRegistry,
   authorizedAppsRegistry: AuthorizedAppsRegistry,
   userData: UserData,
+  db: Kysely<AuthDatabase>,
 ): Promise<NextResponse<ListAppsQueryResponse>> {
   const user_authorized_apps: AuthorizedAppDeclaration[] =
     await authorizedAppsRegistry.listAuthorizedAppsForUser(userData.uid);
@@ -62,10 +68,11 @@ async function listAuthorizedAppsForUser(
       loadAppDefinitionsForAuthorizedAppsPromises,
     );
   } catch (e: unknown) {
-    console.error(
-      "Failed to load full app definitions for apps marked as authorized: ",
-      e,
-    );
+    await captureServerException(db, e, {
+      op_name: "listAuthorizedAppsForUser.getDefinitionForAuthorizedDeclaration",
+      route: ROUTE,
+      uid: userData.uid,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -157,7 +164,11 @@ export async function GET_app_list_handler(
         appsRegistry = new SchemaVaultsAppRegistry(dbh.db);
         authorizedAppsRegistry = new AuthorizedAppsRegistry(dbh.db);
       } catch (e: unknown) {
-        console.error(e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_app_list_handler.loadAppsRegistry",
+          route: ROUTE,
+          uid: user.uid,
+        });
         return NextResponse.json(
           {
             success: false,
@@ -195,7 +206,11 @@ export async function GET_app_list_handler(
                 },
               );
             } catch (e: unknown) {
-              console.error("Failed to list all apps:", e);
+              await captureServerException(dbh.db, e, {
+                op_name: "GET_app_list_handler.listApps.all",
+                route: ROUTE,
+                uid: user.uid,
+              });
               return NextResponse.json(
                 {
                   success: false,
@@ -221,7 +236,11 @@ export async function GET_app_list_handler(
                 },
               );
             } catch (e: unknown) {
-              console.error("Failed to list public apps:", e);
+              await captureServerException(dbh.db, e, {
+                op_name: "GET_app_list_handler.listApps.public",
+                route: ROUTE,
+                uid: user.uid,
+              });
               return NextResponse.json(
                 {
                   success: false,
@@ -239,9 +258,14 @@ export async function GET_app_list_handler(
                 appsRegistry,
                 authorizedAppsRegistry,
                 user,
+                dbh.db,
               );
             } catch (e: unknown) {
-              console.error("Failed to list authorized apps for user:", e);
+              await captureServerException(dbh.db, e, {
+                op_name: "GET_app_list_handler.listAuthorizedAppsForUser",
+                route: ROUTE,
+                uid: user.uid,
+              });
               return NextResponse.json(
                 {
                   success: false,
@@ -293,7 +317,12 @@ export async function GET_app_list_handler(
                 },
               );
             } catch (e: unknown) {
-              console.error("Failed to list apps for organization:", e);
+              await captureServerException(dbh.db, e, {
+                op_name: "GET_app_list_handler.listOrganizationApps",
+                route: ROUTE,
+                uid: user.uid,
+                context: { organization_id },
+              });
               return NextResponse.json(
                 {
                   success: false,
@@ -318,7 +347,12 @@ export async function GET_app_list_handler(
             );
         }
       } catch (e: unknown) {
-        console.error("Failed to list SchemaVaults apps: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_app_list_handler.outerCatch",
+          route: ROUTE,
+          uid: user.uid,
+          context: { list_apps_query_type, organization_id },
+        });
         return NextResponse.json(
           {
             success: false,

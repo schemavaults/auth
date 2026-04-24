@@ -4,6 +4,9 @@ export type * from "./use-auth";
 export { useCurrentUser } from "./use-current-user";
 export type * from "./use-current-user";
 
+export { useCurrentUserWithRevalidation } from "./use-current-user-swr";
+export type * from "./use-current-user-swr";
+
 export { useAdmin } from "./use-admin";
 export type * from "./use-admin";
 

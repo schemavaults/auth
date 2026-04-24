@@ -9,7 +9,11 @@ import {
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import determineOnSuccessfulAuthenticateAction from "../determineOnSuccessfulAuthenticateAction";
 import type { ServerRuntime } from "next/types";
-import type { UserData } from "@schemavaults/auth-common";
+import {
+  OAuth2StateValidationError,
+  parseOAuth2State,
+  type UserData,
+} from "@schemavaults/auth-common";
 import { doesSsrContextHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import redirectWithError from "@/lib/redirect-with-error";
@@ -55,6 +59,20 @@ export default async function LoginPage(props: {
     redirectWithError(500, "internal_server_error");
   }
 
+  // Validate OAuth2 `state` at the entry boundary. Malformed values
+  // get a 400 so the client can't push garbage through the server's
+  // logs or callback URL buffers via the echo path.
+  let parsedState: string | null;
+  try {
+    parsedState = parseOAuth2State(searchParams.state);
+  } catch (e: unknown) {
+    if (e instanceof OAuth2StateValidationError) {
+      console.warn("[LoginPage] Rejecting invalid OAuth2 state:", e.reasons);
+      redirectWithError(400, "bad_request");
+    }
+    throw e;
+  }
+
   const alreadyAuthenticated: UserData | false = await doesSsrContextHaveValidAuthServerRefreshToken();
   if (alreadyAuthenticated) {
     return await AlreadyAuthenticatedOnLoginOrRegisterPage({
@@ -66,6 +84,7 @@ export default async function LoginPage(props: {
       code_challenge_method: typeof searchParams.code_challenge_method === 'string' ? searchParams.code_challenge_method : null,
       challenge_time_str: typeof searchParams.challenge_time === 'string' ? searchParams.challenge_time : null,
       redirect_uri: typeof searchParams.redirect_uri === 'string' ? searchParams.redirect_uri : null,
+      state: parsedState,
       debug
     });
   }

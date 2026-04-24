@@ -24,6 +24,9 @@ import {
 import { ConflictError } from "@/lib/error/ConflictError";
 import type { ServerRuntime } from "next";
 import { appToHardcodedApiPermissionSchema } from "@/lib/auth-db/apis/apps-to-hardcoded-apis-permissions-table";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apis/[api_server_id]/connect_app/[client_app_id]";
 
 export const runtime: ServerRuntime = "nodejs"
 
@@ -239,7 +242,12 @@ export async function POST(
             { status: 409 },
           );
         }
-        console.error("Failed to connect app to API server: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_connect_app_to_api.allow",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id, client_app_id },
+        });
         return NextResponse.json(
           {
             success: false,

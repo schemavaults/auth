@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.22.51",
+  "version": "0.22.84",
   "private": true,
   "repository": {
     "type": "git",
@@ -12,7 +12,7 @@
     "next": "16.2.4",
     "react": "19.2.5",
     "react-dom": "19.2.5",
-    "@schemavaults/ui": "0.16.2",
+    "@schemavaults/ui": "0.21.0",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-ui": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
@@ -21,7 +21,7 @@
     "@schemavaults/auth-server-sdk": "workspace:*",
     "@schemavaults/auth-client-sdk": "workspace:*",
     "@schemavaults/theme": "0.25.9",
-    "@schemavaults/send-email-api-options": "0.0.4",
+    "@schemavaults/send-email": "latest",
     "zod": "3.25.8",
     "swr": "2.3.4",
     "@schemavaults/dbh": "0.8.7",

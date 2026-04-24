@@ -13,6 +13,9 @@ import {
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/apis/[api_server_id]/domains";
 
 export type ListApiServerDomainsResponse =
   | {
@@ -63,7 +66,12 @@ export async function GET_list_api_server_domains(
       try {
         apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
       } catch (e: unknown) {
-        console.error(e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_list_api_server_domains.loadApiServersRegistry",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           {
             success: false,
@@ -91,9 +99,19 @@ export async function GET_list_api_server_domains(
       if (!user.admin) {
         let authorized = false;
         try {
-          authorized = await isUserInApiOwnerOrganization(user, api_server_id, dbh.db);
+          authorized = await isUserInApiOwnerOrganization(
+            user,
+            api_server_id,
+            dbh.db,
+            ['owner', 'admin', 'member'],
+          );
         } catch (e: unknown) {
-          console.error("Failed to check org membership for API server domain listing: ", e);
+          await captureServerException(dbh.db, e, {
+            op_name: "GET_list_api_server_domains.isUserInApiOwnerOrganization",
+            route: ROUTE,
+            uid: user.uid,
+            context: { api_server_id, nonFatal: true },
+          });
         }
         if (!authorized) {
           return NextResponse.json(
@@ -116,7 +134,12 @@ export async function GET_list_api_server_domains(
           list: domains,
         } satisfies ListApiServerDomainsResponse);
       } catch (e: unknown) {
-        console.error("Failed to list domains for API server: ", e);
+        await captureServerException(dbh.db, e, {
+          op_name: "GET_list_api_server_domains.getApiServerDomains",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id },
+        });
         return NextResponse.json(
           {
             success: false,
