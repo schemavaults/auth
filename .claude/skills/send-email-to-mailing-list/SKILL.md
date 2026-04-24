@@ -152,6 +152,19 @@ bunx schemavaults-send-email send-to-mailing-list --body-file /tmp/payload.json
 
 Run `bunx schemavaults-send-email send-to-mailing-list --help` for the full flag reference.
 
+### Validating before sending (`--dry-run`)
+
+Because a mailing-list send fans out to every subscriber, **never use a real send to validate your request**. Use `--dry-run` to round-trip Zod body + `template_props` shape + API-key/mailing-list scoping through the server without dispatching anything:
+
+```bash
+bunx schemavaults-send-email send-to-mailing-list --dry-run \
+  --subject "Welcome aboard, Alice" \
+  --template-id welcome-email \
+  --template-props '{"name":"Alice"}'
+```
+
+A successful dry-run prints `[dry-run] mailing-list request validated; no email sent.` and exits `0`. A malformed request exits non-zero with the server's validation error.
+
 ## Usage -- Claude Code post-workflow notification
 
 Claude itself can use this skill to send a one-shot notification to a mailing list at the end of a workflow in any repo that depends on `@schemavaults/send-email` (this repo already does).
@@ -224,6 +237,7 @@ Send **exactly one** notification at the **end** of a workflow, after all commit
 - **One notification per workflow, not per step.** If a workflow had no meaningful outcome (e.g. "user asked a question, Claude answered"), skip the notification entirely. The inbox should not become chatty.
 - **Do not send the notification before the work is finished.** Push first, notify second.
 - **Ask before sending** if the user hasn't explicitly opted in to post-workflow notifications. Sending email is a side effect visible to other humans; don't do it silently on tasks where the user hasn't asked for it.
+- **Never send a blank or "test" email to a mailing list to validate a request.** Use `--dry-run` (CLI) or `dryRun: true` (helper body). The mail-server validates the full request -- including `template_props` shape -- without dispatching to the audience. A misfired real test reaches every subscriber.
 
 ## Request body shape
 
@@ -237,6 +251,7 @@ type MailingListNotificationBody = {
     | { text: string; html: string };
   from?: string;      // defaults to the mail-server's configured sender
   replyTo?: string;   // optional reply-to override
+  dryRun?: boolean;   // server validates without dispatching
 };
 
 // Full call signature:
@@ -246,6 +261,7 @@ type ISendEmailToMailingListOpts = {
   bearerToken?: string;   // override SCHEMAVAULTS_MAIL_API_KEY; rarely needed
   mailServerUrl?: string; // override the server origin; rarely needed
   environment?: "production" | "development" | "staging";
+  dryRun?: boolean;       // convenience; sets body.dryRun
 };
 ```
 
