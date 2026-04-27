@@ -35,5 +35,6 @@ export { addOrganizationMembership } from './add-organization-membership';
 export { countUserRealMemberships } from './count-user-real-memberships';
 export { hasUserExceededMaximumOrgMemberships } from './has-user-exceeded-maximum-org-memberships';
 export { listAllOrganizations } from './list-all-organizations';
+export { listOrganizationsCreatedSince } from './list-organizations-created-since';
 export { listUserOrganizationMemberships } from './list-user-organization-memberships';
 export { listUserOrganizations } from './list-user-organizations';
