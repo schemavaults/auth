@@ -1,5 +1,6 @@
 import "server-only";
 import { brandColors } from "@schemavaults/theme";
+import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import type { UserDocument } from "@/lib/auth-db/users";
 import type { ErrorRow } from "@/lib/auth-db/errors";
 
@@ -8,6 +9,7 @@ interface BuildReportOpts {
   windowStart: Date;
   windowEnd: Date;
   newUsers: readonly UserDocument[];
+  newOrganizations: readonly OrganizationDefinition[];
   newErrors: readonly ErrorRow[];
 }
 
@@ -40,6 +42,7 @@ export function buildDailyAdminReport({
   windowStart,
   windowEnd,
   newUsers,
+  newOrganizations,
   newErrors,
 }: BuildReportOpts): ReportContent {
   const windowLabel = `${formatTimestamp(windowStart.getTime())} → ${formatTimestamp(windowEnd.getTime())}`;
@@ -53,6 +56,19 @@ export function buildDailyAdminReport({
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(u.uid)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${BRAND_BLUE};text-decoration:none;">${escapeHtml(u.email)}</a></td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};font-size:13px;">${formatTimestamp(u.created_at)}</td>
+</tr>`;
+        })
+        .join("\n");
+
+  const organizationsRows = newOrganizations.length === 0
+    ? `<tr><td colspan="3" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No new organizations in the last 24 hours.</td></tr>`
+    : newOrganizations
+        .map((o) => {
+          const link = `${authServerUri}/org/${encodeURIComponent(o.organization_id)}`;
+          return `<tr>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(o.organization_id)}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${BRAND_BLUE};text-decoration:none;">${escapeHtml(o.name)}</a></td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};font-size:13px;">${formatTimestamp(o.created_at)}</td>
 </tr>`;
         })
         .join("\n");
@@ -101,6 +117,23 @@ ${usersRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
+        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">New organizations (${newOrganizations.length})</h2>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Organization ID</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Name</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Created at</th>
+            </tr>
+          </thead>
+          <tbody>
+${organizationsRows}
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 32px 24px;">
         <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_RED};">New errors (${newErrors.length})</h2>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
@@ -132,6 +165,17 @@ ${errorsRows}
     for (const u of newUsers) {
       textLines.push(
         `  - ${u.email} — ${formatTimestamp(u.created_at)} — ${authServerUri}/admin/users/${u.uid}`,
+      );
+    }
+  }
+  textLines.push("");
+  textLines.push(`New organizations (${newOrganizations.length}):`);
+  if (newOrganizations.length === 0) {
+    textLines.push("  (none)");
+  } else {
+    for (const o of newOrganizations) {
+      textLines.push(
+        `  - ${o.name} [${o.organization_id}] — ${formatTimestamp(o.created_at)} — ${authServerUri}/org/${o.organization_id}`,
       );
     }
   }
