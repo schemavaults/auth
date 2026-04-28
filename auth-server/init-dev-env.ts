@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join, normalize } from "path";
 import { postgresCredentialEnvironmentVariables } from "../auth-postgres-db/add-dev-db-credentials-to-auth-server-env";
 import { cwd } from "process";
+import { randomBytes } from "crypto";
 
 const thisScriptName = "init-dev-env.ts";
 
@@ -45,6 +46,8 @@ function generateEnvContent(
   superuserInviteCode: string,
   passwordSalt: string,
   passwordHashRounds: number,
+  mfaSecretKek: string,
+  mfaRecoveryPepper: string,
 ): string {
   const lines: string[] = [];
 
@@ -58,6 +61,11 @@ function generateEnvContent(
   lines.push(`# Password Hashing`);
   lines.push(`PRIVATE_GLOBAL_PASSWORD_SALT="${passwordSalt}"`);
   lines.push(`PRIVATE_PASSWORD_HASH_ROUNDS=${passwordHashRounds}`);
+  lines.push("");
+
+  lines.push(`# Multi-Factor Authentication (TOTP)`);
+  lines.push(`PRIVATE_MFA_SECRET_KEK="${mfaSecretKek}"`);
+  lines.push(`PRIVATE_MFA_RECOVERY_PEPPER="${mfaRecoveryPepper}"`);
   lines.push("");
 
   if (superuserInviteCode) {
@@ -110,10 +118,25 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // The MFA KEK and recovery pepper are private secrets that don't have
+  // useful default values in development; auto-generate fresh 32-byte
+  // base64 strings on each first run, but accept overrides if a developer
+  // pastes existing values.
+  const mfaSecretKek = promptWithDefault(
+    "Enter PRIVATE_MFA_SECRET_KEK (32-byte base64; leave blank to auto-generate)",
+    randomBytes(32).toString("base64"),
+  );
+  const mfaRecoveryPepper = promptWithDefault(
+    "Enter PRIVATE_MFA_RECOVERY_PEPPER (32-byte base64; leave blank to auto-generate)",
+    randomBytes(32).toString("base64"),
+  );
+
   const envContent = generateEnvContent(
     superuserInviteCode,
     passwordSalt,
     passwordHashRounds,
+    mfaSecretKek,
+    mfaRecoveryPepper,
   );
 
   writeFileSync(devEnvFile, envContent, { encoding: "utf-8" });
