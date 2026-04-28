@@ -1,0 +1,125 @@
+"use client";
+
+import { useState, type FC, type ReactElement } from "react";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  cn,
+} from "@schemavaults/ui";
+import { useMfa } from "@schemavaults/auth-react-provider";
+import { ShieldCheck, ShieldAlert } from "lucide-react";
+import { TotpEnrollmentDialog } from "../TotpEnrollmentDialog";
+import { MfaRemoveFactorDialog } from "../MfaRemoveFactorDialog";
+import { MfaRegenerateRecoveryCodesDialog } from "../MfaRegenerateRecoveryCodesDialog";
+
+export interface MfaSettingsCardProps {
+  className?: string;
+}
+
+export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
+  className,
+}): ReactElement => {
+  const { status, isLoading } = useMfa();
+  const [enrolling, setEnrolling] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const enabled = !!status?.enabled;
+
+  return (
+    <Card className={cn("w-full", className)}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {enabled ? (
+            <ShieldCheck className="h-5 w-5 text-emerald-600" />
+          ) : (
+            <ShieldAlert className="h-5 w-5 text-muted-foreground" />
+          )}
+          Multi-Factor Authentication
+        </CardTitle>
+        <CardDescription>
+          {enabled
+            ? "An authenticator app is required at sign-in."
+            : "Add a second factor to protect your account."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading status…</p>
+        ) : enabled ? (
+          <div className="space-y-2 text-sm">
+            <div>
+              <strong>Status:</strong> Enabled (TOTP)
+            </div>
+            {typeof status?.recovery_codes_remaining === "number" && (
+              <div>
+                <strong>Recovery codes remaining:</strong>{" "}
+                {status.recovery_codes_remaining}
+              </div>
+            )}
+            {typeof status?.verified_at === "number" && (
+              <div className="text-muted-foreground">
+                Enabled on{" "}
+                {new Date(status.verified_at).toLocaleString()}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            MFA is not currently enabled on your account.
+          </p>
+        )}
+      </CardContent>
+      <CardFooter className="flex flex-wrap gap-2">
+        {enabled ? (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setRegenerating(true)}
+              disabled={regenerating}
+            >
+              Regenerate recovery codes
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setRemoving(true)}
+              disabled={removing}
+            >
+              Remove authenticator
+            </Button>
+          </>
+        ) : (
+          <Button onClick={() => setEnrolling(true)} disabled={enrolling}>
+            Set up authenticator app
+          </Button>
+        )}
+      </CardFooter>
+      {enrolling && (
+        <TotpEnrollmentDialog
+          open={enrolling}
+          onClose={() => setEnrolling(false)}
+        />
+      )}
+      {removing && status?.factor_id && (
+        <MfaRemoveFactorDialog
+          open={removing}
+          factor_id={status.factor_id}
+          onClose={() => setRemoving(false)}
+        />
+      )}
+      {regenerating && (
+        <MfaRegenerateRecoveryCodesDialog
+          open={regenerating}
+          onClose={() => setRegenerating(false)}
+        />
+      )}
+    </Card>
+  );
+};
+
+export default MfaSettingsCard;
