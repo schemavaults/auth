@@ -196,10 +196,8 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   const target_client_app_id =
     opts.app?.app_id ?? SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
 
-  // Exchange credentials for an authorization code (or an MFA challenge).
-  // The SDK now returns the discriminated AuthenticateResult union; the
-  // MFA-required branch is wired up in a later commit. For now, treat any
-  // non-authenticated outcome as an error so existing flows compile.
+  // Exchange credentials for an authorization code, or be told that the
+  // user must complete an MFA challenge first.
   let authorization_code: string;
   try {
     const result = await authClient.sendAuthenticateRequest(
@@ -208,10 +206,17 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       values,
       code_challenge,
     );
+    if (result.kind === "mfa_required") {
+      const params = new URLSearchParams({
+        challenge_id: result.challenge_id,
+        client_app_id: target_client_app_id,
+        expires_at: String(result.expires_at),
+      });
+      window.location.assign(`/auth/mfa?${params.toString()}`);
+      return;
+    }
     if (result.kind !== "authenticated") {
-      throw new Error(
-        `Unexpected authenticate result kind: ${result.kind}`,
-      );
+      throw new Error(`Unexpected authenticate result kind: ${result.kind}`);
     }
     authorization_code = result.authorization_code;
   } catch (e: unknown) {
