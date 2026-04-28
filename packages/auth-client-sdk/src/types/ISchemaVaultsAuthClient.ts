@@ -5,6 +5,9 @@ import type {
   CodeChallengeWithDetails,
   PaginationOptions,
   AuthenticateResult,
+  MfaStatusResponse,
+  MfaEnrollResponse,
+  MfaVerifyEnrollmentResponse,
 } from "@schemavaults/auth-common";
 import type { Credentials } from "@/types/credentials";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
@@ -42,14 +45,61 @@ export interface ISchemaVaultsAuthClient {
 
   // Send credentials to start authentication. Returns the parsed
   // AuthenticateResult discriminated union; callers must branch on `kind`
-  // to handle the `mfa_required` case (see verifyMfaChallenge — added in a
-  // follow-up commit alongside the auth-server MFA routes).
+  // to handle the `mfa_required` case (see verifyMfaChallenge).
   sendAuthenticateRequest: (
     authentication_type: AuthenticationOutcomeType,
     client_app_id: AppId,
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
   ) => Promise<AuthenticateResult>;
+
+  /**
+   * Submit a TOTP code or recovery code for an in-flight MFA challenge
+   * received from sendAuthenticateRequest. Resolves with the resulting
+   * AuthenticateResult — `authenticated` on success, `failure` if the
+   * challenge has been exhausted, or `mfa_required` is never returned
+   * here (the server only returns it from the password endpoint).
+   */
+  verifyMfaChallenge: (
+    challenge_id: string,
+    client_app_id: AppId,
+    proof:
+      | { type: "totp"; code: string }
+      | { type: "recovery_code"; recovery_code: string },
+  ) => Promise<AuthenticateResult>;
+
+  /** Get the current user's MFA enrollment status. */
+  getMfaStatus: () => Promise<MfaStatusResponse>;
+
+  /**
+   * Begin TOTP enrollment for the current user. Returns the new factor's
+   * id along with otpauth_url + qr_code_data_url for display.
+   */
+  enrollTotp: () => Promise<MfaEnrollResponse>;
+
+  /**
+   * Confirm a pending TOTP enrollment by submitting a current code. On
+   * success the factor is marked verified and recovery codes are returned
+   * (one-time display).
+   */
+  confirmTotpEnrollment: (
+    factor_id: string,
+    code: string,
+  ) => Promise<MfaVerifyEnrollmentResponse>;
+
+  /**
+   * Remove an MFA factor by id. Requires the user's current TOTP code as
+   * proof of possession.
+   */
+  removeFactor: (factor_id: string, code: string) => Promise<void>;
+
+  /**
+   * Regenerate the user's recovery codes. Invalidates all previous codes.
+   * Requires the current TOTP code as proof.
+   */
+  regenerateRecoveryCodes: (
+    code: string,
+  ) => Promise<MfaVerifyEnrollmentResponse>;
 
   // Where to send the user after they are successfully logged in and have acquired access/refresh tokens
   successful_authentication_redirect_uri: string;

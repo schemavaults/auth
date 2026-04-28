@@ -18,6 +18,14 @@ import {
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { IAuthClientConstructorOptions } from "@/types/IAuthClientConstructorOptions";
 import { sendAuthenticateRequest } from "@/lib/send-authenticate-request";
+import {
+  verifyMfaChallenge as verifyMfaChallengeFn,
+  enrollTotp as enrollTotpFn,
+  confirmTotpEnrollment as confirmTotpEnrollmentFn,
+  removeFactor as removeFactorFn,
+  regenerateRecoveryCodes as regenerateRecoveryCodesFn,
+  getMfaStatus as getMfaStatusFn,
+} from "@/lib/mfa";
 import type { Credentials } from "@/types/credentials";
 import type { ISchemaVaultsAuthClient } from "@/types/ISchemaVaultsAuthClient";
 import type {
@@ -931,6 +939,57 @@ export class SchemaVaultsAuthClient
       code_challenge,
       app_environment: this.environment,
       invite_code_required: this._invite_code_required,
+    });
+  }
+
+  public async verifyMfaChallenge(
+    challenge_id: string,
+    client_app_id: AppId,
+    proof:
+      | { type: "totp"; code: string }
+      | { type: "recovery_code"; recovery_code: string },
+  ): Promise<AuthenticateResult> {
+    return await verifyMfaChallengeFn({
+      adapter: this._adapter,
+      challenge_id,
+      client_app_id,
+      proof,
+    });
+  }
+
+  public async getMfaStatus(): Promise<MfaStatusResponse> {
+    return await getMfaStatusFn(this._adapter);
+  }
+
+  public async enrollTotp(): Promise<MfaEnrollResponse> {
+    return await enrollTotpFn(this._adapter);
+  }
+
+  public async confirmTotpEnrollment(
+    factor_id: string,
+    code: string,
+  ): Promise<MfaVerifyEnrollmentResponse> {
+    return await confirmTotpEnrollmentFn({
+      adapter: this._adapter,
+      factor_id,
+      code,
+    });
+  }
+
+  public async removeFactor(factor_id: string, code: string): Promise<void> {
+    await removeFactorFn({
+      adapter: this._adapter,
+      factor_id,
+      code,
+    });
+  }
+
+  public async regenerateRecoveryCodes(
+    code: string,
+  ): Promise<MfaVerifyEnrollmentResponse> {
+    return await regenerateRecoveryCodesFn({
+      adapter: this._adapter,
+      code,
     });
   }
 
