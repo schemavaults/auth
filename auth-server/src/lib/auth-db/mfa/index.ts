@@ -11,3 +11,6 @@ export type {
   NewUserMfaRecoveryCodeRow,
   UserMfaRecoveryCodeRowUpdate,
 } from "./user-mfa-recovery-codes-table";
+
+export { MfaRegistry } from "./mfa-registry";
+export { type VerifiedFactor } from "./get-verified-factor";
