@@ -50,3 +50,23 @@ export const REFRESH_TOKEN_RATE_LIMIT: RateLimitConfig = {
   windowSeconds: 60,
   keySource: "ip",
 };
+
+// Caps cross-challenge MFA verify abuse from a single IP. Per-challenge
+// attempts are independently capped at 5 by challenge-store.ts; this
+// limiter exists to prevent a bot from rotating challenge_ids to evade
+// the per-challenge cap.
+export const MFA_VERIFY_RATE_LIMIT: RateLimitConfig = {
+  name: "mfa-verify",
+  maxAttempts: 20,
+  windowSeconds: 60 * 60,
+  keySource: "ip",
+};
+
+// Caps enrollment churn so an attacker who obtains a valid session
+// cannot rapidly cycle through factors.
+export const MFA_ENROLL_RATE_LIMIT: RateLimitConfig = {
+  name: "mfa-enroll",
+  maxAttempts: 10,
+  windowSeconds: 60 * 60,
+  keySource: "ip",
+};
