@@ -3,6 +3,7 @@ import "server-only";
 import {
   ServerlessDatabase,
   UserRegistry,
+  MfaRegistry,
   type UserDocument,
 } from "@/lib/auth-db";
 import {
@@ -19,6 +20,8 @@ import shouldEnableDebug from "@/lib/should-enable-debug";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import captureServerException from "@/lib/captureServerException";
+import { RedisCache } from "@/lib/redis";
+import { createChallenge } from "@/lib/mfa";
 
 const ROUTE = "/api/auth/login";
 
@@ -222,6 +225,62 @@ export async function handleLogin({
 
   if (debug) {
     console.log(`Login successful as ${email_credentials.email} (uid: ${uid})`);
+  }
+
+  // MFA gate: if the user has any verified factor, do NOT issue an
+  // authorization code yet. Instead, persist a short-lived Redis
+  // challenge keyed by a fresh UUID and return mfa_required. The client
+  // exchanges the challenge_id at /api/auth/mfa/verify, where the same
+  // generateAuthorizationCode call below is performed on success.
+  let userHasMfa = false;
+  try {
+    const mfaRegistry = new MfaRegistry(dbh.db);
+    userHasMfa = await mfaRegistry.hasVerifiedFactor(uid);
+  } catch (e: unknown) {
+    await captureServerException(dbh.db, e, {
+      op_name: "handleLogin.hasVerifiedFactor",
+      route: ROUTE,
+      uid,
+      context: { nonFatal: true },
+    });
+  }
+
+  if (userHasMfa) {
+    try {
+      const challenge_id = crypto.randomUUID();
+      await using redis = RedisCache.createConnection();
+      const { expires_at } = await createChallenge(redis.client, {
+        challenge_id,
+        uid,
+        client_app_id,
+        code_challenge,
+        challenge_time,
+      });
+      return NextResponse.json(
+        {
+          kind: "mfa_required",
+          success: true,
+          message: "MFA required",
+          challenge_id,
+          expires_at,
+        } satisfies AuthenticateResult,
+        { status: 200 },
+      );
+    } catch (e: unknown) {
+      await captureServerException(dbh.db, e, {
+        op_name: "handleLogin.createMfaChallenge",
+        route: ROUTE,
+        uid,
+      });
+      return NextResponse.json(
+        {
+          kind: "failure",
+          success: false,
+          message: "Failed to create MFA challenge. Please try again.",
+        } satisfies AuthenticateResult,
+        { status: 500 },
+      );
+    }
   }
 
   let authorization_code: string;
