@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FC, type ReactElement } from "react";
+import { useState, type FC, type FormEvent, type ReactElement } from "react";
 import {
   Button,
   Card,
@@ -35,7 +35,7 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
@@ -96,7 +96,6 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
             }
             placeholder={useRecovery ? "abcde-fghij" : "123456"}
             data-testid="mfa-challenge-input"
-            autoFocus
           />
           <button
             type="button"

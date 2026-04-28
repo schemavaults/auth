@@ -77,14 +77,17 @@ export const RecoveryCodesPanel: FC<RecoveryCodesPanelProps> = ({
           Download .txt
         </Button>
       </div>
-      <label className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-2 text-sm">
         <Checkbox
+          id="mfa-recovery-codes-acknowledge"
           checked={acknowledged}
           onCheckedChange={(v) => handleAck(v === true)}
           data-testid="mfa-recovery-codes-acknowledge"
         />
-        I have saved these recovery codes somewhere safe.
-      </label>
+        <label htmlFor="mfa-recovery-codes-acknowledge">
+          I have saved these recovery codes somewhere safe.
+        </label>
+      </div>
     </div>
   );
 };

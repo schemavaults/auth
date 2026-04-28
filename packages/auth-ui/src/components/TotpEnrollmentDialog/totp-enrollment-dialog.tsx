@@ -95,7 +95,7 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
         )}
         {step === "scan" && enrollment && (
           <div className="space-y-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <img
               src={enrollment.qr_code_data_url}
               alt="TOTP QR code"
