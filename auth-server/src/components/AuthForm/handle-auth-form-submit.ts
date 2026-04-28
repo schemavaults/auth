@@ -196,15 +196,24 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   const target_client_app_id =
     opts.app?.app_id ?? SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
 
-  // Exchange credentials for an authorization code
+  // Exchange credentials for an authorization code (or an MFA challenge).
+  // The SDK now returns the discriminated AuthenticateResult union; the
+  // MFA-required branch is wired up in a later commit. For now, treat any
+  // non-authenticated outcome as an error so existing flows compile.
   let authorization_code: string;
   try {
-    authorization_code = await authClient.sendAuthenticateRequest(
+    const result = await authClient.sendAuthenticateRequest(
       type,
       target_client_app_id,
       values,
       code_challenge,
     );
+    if (result.kind !== "authenticated") {
+      throw new Error(
+        `Unexpected authenticate result kind: ${result.kind}`,
+      );
+    }
+    authorization_code = result.authorization_code;
   } catch (e: unknown) {
     console.error("[handleAuthFormSubmit] Error", e);
     const errMsg: string =

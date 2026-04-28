@@ -45,6 +45,7 @@ export async function POST(
     }
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "Invalid body JSON",
       } satisfies AuthenticateResult,
@@ -70,6 +71,7 @@ export async function POST(
     );
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "Internal server error",
       } satisfies AuthenticateResult,
