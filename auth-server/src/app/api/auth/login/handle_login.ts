@@ -92,6 +92,7 @@ export async function handleLogin({
     });
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "Failed to query user",
       } satisfies AuthenticateResult,
@@ -104,6 +105,7 @@ export async function handleLogin({
   if (!user) {
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "User not found",
       } satisfies AuthenticateResult,
@@ -139,6 +141,7 @@ export async function handleLogin({
     });
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "Failed to compare password",
       } satisfies AuthenticateResult,
@@ -152,6 +155,7 @@ export async function handleLogin({
     console.error("[handleLogin] Incorrect password");
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "Incorrect password",
       } satisfies AuthenticateResult,
@@ -167,6 +171,7 @@ export async function handleLogin({
     );
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: ERROR_MESSAGE_CATALOG.account_disabled,
       } satisfies AuthenticateResult,
@@ -205,6 +210,7 @@ export async function handleLogin({
     );
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "You are already signed in as a different user. Please log out first.",
       } satisfies AuthenticateResult,
@@ -236,6 +242,7 @@ export async function handleLogin({
     });
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "Failed to generate authorization code",
       } satisfies AuthenticateResult,
@@ -247,6 +254,7 @@ export async function handleLogin({
 
   const response = NextResponse.json(
     {
+      kind: "authenticated",
       success: true,
       message: "Login successful",
       authorization_code,

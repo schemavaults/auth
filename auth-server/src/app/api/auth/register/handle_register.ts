@@ -91,6 +91,7 @@ export async function handleRegister({
     );
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "You are already signed in. Please log out before registering a new account.",
       } satisfies AuthenticateResult,
@@ -136,6 +137,7 @@ export async function handleRegister({
       );
       return NextResponse.json(
         {
+          kind: "failure",
           success: false,
           message: "An invite code is required!",
         } satisfies AuthenticateResult,
@@ -164,6 +166,7 @@ export async function handleRegister({
       );
       return NextResponse.json(
         {
+          kind: "failure",
           success: false,
           message: "Invalid format for invite code!",
         } satisfies AuthenticateResult,
@@ -179,6 +182,7 @@ export async function handleRegister({
         );
         return NextResponse.json(
           {
+            kind: "failure",
             success: false,
             message: "Error parsing invite code!",
           } satisfies AuthenticateResult,
@@ -326,6 +330,7 @@ export async function handleRegister({
   if (user) {
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "User already exists",
       } satisfies AuthenticateResult,
@@ -359,6 +364,7 @@ export async function handleRegister({
     });
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "Failed to create user",
       } satisfies AuthenticateResult,
@@ -411,6 +417,7 @@ export async function handleRegister({
     });
     return NextResponse.json(
       {
+        kind: "failure",
         success: false,
         message: "Failed to generate authorization code",
       } satisfies AuthenticateResult,
@@ -422,6 +429,7 @@ export async function handleRegister({
 
   const response = NextResponse.json(
     {
+      kind: "authenticated",
       success: true,
       message: "User created successfully",
       authorization_code,

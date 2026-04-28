@@ -10,6 +10,10 @@ import {
   type RefreshToken,
   audienceSchema,
   type SuccessfullyGeneratedTokensRecord,
+  type AuthenticateResult,
+  type MfaStatusResponse,
+  type MfaEnrollResponse,
+  type MfaVerifyEnrollmentResponse,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { IAuthClientConstructorOptions } from "@/types/IAuthClientConstructorOptions";
@@ -904,14 +908,17 @@ export class SchemaVaultsAuthClient
    * @param authentication_type 'login' | 'register' | 'reset-password'
    * @param credentials Username/email/password/invite code
    * @param code_challenge A code challenge for Oauth2 PKCE flow. Allows ensuring that trading authorization code for refresh token is done by the client that initialized the attempt to acquire the authorization code!
-   * @returns A 'string' authorization code, that can be exchanged for refresh/access JWTs (in combination with the code verifier-- which was used to generate the code challenge!)
+   * @returns The parsed `AuthenticateResult` discriminated union. On
+   *   `kind: "authenticated"` callers can use `result.authorization_code`
+   *   to exchange for tokens. On `kind: "mfa_required"` callers must
+   *   complete the challenge via `verifyMfaChallenge`.
    */
   public async sendAuthenticateRequest(
     authentication_type: AuthenticationOutcomeType,
     client_app_id: AppId,
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
-  ): Promise<string> {
+  ): Promise<AuthenticateResult> {
     if (this.DEBUG)
       console.log(
         "[SchemaVaultsAuthClient] Attempting to send authenticate request...",
