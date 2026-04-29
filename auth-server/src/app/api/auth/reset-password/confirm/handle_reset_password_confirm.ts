@@ -4,7 +4,6 @@ import {
   ServerlessDatabase,
   UserRegistry,
 } from "@/lib/auth-db";
-import type { ValidPasswordResetToken } from "@/lib/auth-db/users/validate-password-reset-token";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { passwordSchema } from "@schemavaults/auth-common";
@@ -46,35 +45,16 @@ export async function handleResetPasswordConfirm({
 
   const userRegistry = new UserRegistry(dbh.db, debug);
 
-  let validToken: ValidPasswordResetToken | null;
+  let result: { uid: string } | null;
   try {
-    validToken = await userRegistry.validatePasswordResetToken(token);
+    result = await userRegistry.validateAndConsumePasswordResetToken(
+      token,
+      new_password,
+    );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
-      op_name: "handleResetPasswordConfirm.validatePasswordResetToken",
+      op_name: "handleResetPasswordConfirm.validateAndConsumePasswordResetToken",
       route: ROUTE,
-    });
-    return NextResponse.json(
-      { success: false, message: "Failed to validate reset token" },
-      { status: 500 },
-    );
-  }
-
-  if (!validToken) {
-    return NextResponse.json(
-      { success: false, message: "Invalid or expired reset token" },
-      { status: 400 },
-    );
-  }
-
-  try {
-    await userRegistry.updatePassword(validToken.uid, new_password);
-    await userRegistry.consumePasswordResetToken(validToken.token_id);
-  } catch (e: unknown) {
-    await captureServerException(dbh.db, e, {
-      op_name: "handleResetPasswordConfirm.updatePassword",
-      route: ROUTE,
-      uid: validToken.uid,
     });
     return NextResponse.json(
       { success: false, message: "Failed to reset password" },
@@ -82,8 +62,15 @@ export async function handleResetPasswordConfirm({
     );
   }
 
+  if (!result) {
+    return NextResponse.json(
+      { success: false, message: "Invalid or expired reset token" },
+      { status: 400 },
+    );
+  }
+
   if (debug) {
-    console.log(`[handleResetPasswordConfirm] Password reset for uid: ${validToken.uid}`);
+    console.log(`[handleResetPasswordConfirm] Password reset for uid: ${result.uid}`);
   }
 
   return NextResponse.json(

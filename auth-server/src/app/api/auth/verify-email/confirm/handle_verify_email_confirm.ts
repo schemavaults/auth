@@ -4,7 +4,6 @@ import {
   ServerlessDatabase,
   UserRegistry,
 } from "@/lib/auth-db";
-import type { ValidEmailVerificationToken } from "@/lib/auth-db/users/validate-email-verification-token";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
@@ -44,35 +43,13 @@ export async function handleVerifyEmailConfirm({
 
   const userRegistry = new UserRegistry(dbh.db, debug);
 
-  let validToken: ValidEmailVerificationToken | null;
+  let result: { uid: string } | null;
   try {
-    validToken = await userRegistry.validateEmailVerificationToken(token);
+    result = await userRegistry.validateAndConsumeEmailVerificationToken(token);
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
-      op_name: "handleVerifyEmailConfirm.validateEmailVerificationToken",
+      op_name: "handleVerifyEmailConfirm.validateAndConsumeEmailVerificationToken",
       route: ROUTE,
-    });
-    return NextResponse.json(
-      { success: false, message: "Failed to validate verification token" },
-      { status: 500 },
-    );
-  }
-
-  if (!validToken) {
-    return NextResponse.json(
-      { success: false, message: "Invalid or expired verification token" },
-      { status: 400 },
-    );
-  }
-
-  try {
-    await userRegistry.markEmailVerified(validToken.uid);
-    await userRegistry.consumeEmailVerificationToken(validToken.token_id);
-  } catch (e: unknown) {
-    await captureServerException(dbh.db, e, {
-      op_name: "handleVerifyEmailConfirm.markEmailVerified",
-      route: ROUTE,
-      uid: validToken.uid,
     });
     return NextResponse.json(
       { success: false, message: "Failed to verify email" },
@@ -80,8 +57,15 @@ export async function handleVerifyEmailConfirm({
     );
   }
 
+  if (!result) {
+    return NextResponse.json(
+      { success: false, message: "Invalid or expired verification token" },
+      { status: 400 },
+    );
+  }
+
   if (debug) {
-    console.log(`[handleVerifyEmailConfirm] Email verified for uid: ${validToken.uid}`);
+    console.log(`[handleVerifyEmailConfirm] Email verified for uid: ${result.uid}`);
   }
 
   return NextResponse.json(
