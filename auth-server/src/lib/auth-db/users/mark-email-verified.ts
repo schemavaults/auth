@@ -1,9 +1,9 @@
 import "server-only";
-import type { Kysely } from "@schemavaults/dbh";
+import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
 export async function markEmailVerified(
-  db: Kysely<AuthDatabase>,
+  db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   uid: string,
   debug: boolean = false,
 ): Promise<void> {
