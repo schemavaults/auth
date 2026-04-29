@@ -1,5 +1,5 @@
 import "server-only";
-import type { Kysely } from "@schemavaults/dbh";
+import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { hashToken } from "./hash-token";
 
@@ -9,7 +9,7 @@ export interface ValidPasswordResetToken {
 }
 
 export async function validatePasswordResetToken(
-  db: Kysely<AuthDatabase>,
+  db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   rawToken: string,
   debug: boolean = false,
 ): Promise<ValidPasswordResetToken | null> {
