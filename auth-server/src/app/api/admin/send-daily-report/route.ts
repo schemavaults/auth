@@ -3,20 +3,14 @@ import type { ServerRuntime } from "next";
 import { type NextRequest, NextResponse } from "next/server";
 import { withAdminApiRouteGuard } from "@/lib/withAdminRouteGuard";
 import ServerlessDatabase from "@/lib/auth-db/serverless-database";
+import { isCronAuthorizationHeaderValid } from "@/lib/CronSecret";
 import sendDailyReportHandler from "./sendDailyReportHandler";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function isCronAuthorized(req: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return false;
-  const header = req.headers.get("authorization");
-  return header === `Bearer ${cronSecret}`;
-}
-
 async function handle(req: NextRequest): Promise<NextResponse> {
-  if (isCronAuthorized(req)) {
+  if (isCronAuthorizationHeaderValid(req.headers.get("authorization"))) {
     await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
     return await sendDailyReportHandler({ dbh });
   }

@@ -29,13 +29,9 @@ import { promoteToAdmin as promoteToAdminFn } from "./promote-to-admin";
 import { setUserDisabled as setUserDisabledFn } from "./set-user-disabled";
 import { createUser as createUserFn } from "./create-user";
 import { createPasswordResetToken as createPasswordResetTokenFn } from "./create-password-reset-token";
-import { validatePasswordResetToken as validatePasswordResetTokenFn, type ValidPasswordResetToken } from "./validate-password-reset-token";
-import { consumePasswordResetToken as consumePasswordResetTokenFn } from "./consume-password-reset-token";
-import { updateUserPassword as updateUserPasswordFn } from "./update-user-password";
+import { validateAndConsumePasswordResetToken as validateAndConsumePasswordResetTokenFn } from "./validate-and-consume-password-reset-token";
 import { createEmailVerificationToken as createEmailVerificationTokenFn } from "./create-email-verification-token";
-import { validateEmailVerificationToken as validateEmailVerificationTokenFn, type ValidEmailVerificationToken } from "./validate-email-verification-token";
-import { consumeEmailVerificationToken as consumeEmailVerificationTokenFn } from "./consume-email-verification-token";
-import { markEmailVerified as markEmailVerifiedFn } from "./mark-email-verified";
+import { validateAndConsumeEmailVerificationToken as validateAndConsumeEmailVerificationTokenFn } from "./validate-and-consume-email-verification-token";
 
 // Re-export types and schema from parse-user-document
 export { type UserDocument, userDocumentSchema } from "./parse-user-document";
@@ -171,31 +167,43 @@ export class UserRegistry {
     return createPasswordResetTokenFn(this.db, uid, this.debug);
   }
 
-  public async validatePasswordResetToken(rawToken: string): Promise<ValidPasswordResetToken | null> {
-    return validatePasswordResetTokenFn(this.db, rawToken, this.debug);
-  }
-
-  public async consumePasswordResetToken(tokenId: string): Promise<void> {
-    return consumePasswordResetTokenFn(this.db, tokenId, this.debug);
-  }
-
-  public async updatePassword(uid: string, newPassword: string): Promise<void> {
-    return updateUserPasswordFn(this.db, uid, newPassword, this.debug);
+  /**
+   * Atomically validates a password reset token, marks it consumed, and
+   * writes the new password — all inside a single database transaction.
+   * Returns `{ uid }` on success, or `null` for every reject case (token
+   * not found, expired, already consumed, lost-race). The single-use
+   * guarantee is enforced by a conditional `WHERE used_at IS NULL`
+   * UPDATE; concurrent racers do not both succeed.
+   */
+  public async validateAndConsumePasswordResetToken(
+    rawToken: string,
+    newPassword: string,
+  ): Promise<{ uid: string } | null> {
+    return validateAndConsumePasswordResetTokenFn(
+      this.db,
+      rawToken,
+      newPassword,
+      this.debug,
+    );
   }
 
   public async createEmailVerificationToken(uid: string): Promise<string> {
     return createEmailVerificationTokenFn(this.db, uid, this.debug);
   }
 
-  public async validateEmailVerificationToken(rawToken: string): Promise<ValidEmailVerificationToken | null> {
-    return validateEmailVerificationTokenFn(this.db, rawToken, this.debug);
-  }
-
-  public async consumeEmailVerificationToken(tokenId: string): Promise<void> {
-    return consumeEmailVerificationTokenFn(this.db, tokenId, this.debug);
-  }
-
-  public async markEmailVerified(uid: string): Promise<void> {
-    return markEmailVerifiedFn(this.db, uid, this.debug);
+  /**
+   * Atomically validates an email verification token, marks it consumed,
+   * and flips `users.email_verified` — all inside a single database
+   * transaction. Returns `{ uid }` on success, or `null` for every reject
+   * case (token not found, expired, already consumed, lost-race).
+   */
+  public async validateAndConsumeEmailVerificationToken(
+    rawToken: string,
+  ): Promise<{ uid: string } | null> {
+    return validateAndConsumeEmailVerificationTokenFn(
+      this.db,
+      rawToken,
+      this.debug,
+    );
   }
 }

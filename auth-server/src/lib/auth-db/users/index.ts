@@ -25,10 +25,12 @@ export { createPasswordResetToken } from "./create-password-reset-token";
 export { validatePasswordResetToken } from "./validate-password-reset-token";
 export { consumePasswordResetToken } from "./consume-password-reset-token";
 export { updateUserPassword } from "./update-user-password";
+export { validateAndConsumePasswordResetToken } from "./validate-and-consume-password-reset-token";
 export { createEmailVerificationToken } from "./create-email-verification-token";
 export { validateEmailVerificationToken } from "./validate-email-verification-token";
 export { consumeEmailVerificationToken } from "./consume-email-verification-token";
 export { markEmailVerified } from "./mark-email-verified";
+export { validateAndConsumeEmailVerificationToken } from "./validate-and-consume-email-verification-token";
 
 // Existing exports
 export { loadUserData } from "./load-user-by-uid";

@@ -8,6 +8,7 @@ import {
 import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import { listUsersCreatedSince } from "@/lib/auth-db/users";
 import { listErrorsCreatedSince } from "@/lib/auth-db/errors";
+import { listOrganizationsCreatedSince } from "@/lib/auth-db/organizations";
 import sendEmailViaMailServer from "@/lib/send-email-via-mail-server";
 import captureServerException from "@/lib/captureServerException";
 import { buildDailyAdminReport } from "./buildReportHtml";
@@ -30,8 +31,9 @@ export async function sendDailyReportHandler({
     const windowEnd = new Date();
     const windowStart = new Date(windowEnd.getTime() - TWENTY_FOUR_HOURS_MS);
 
-    const [newUsers, newErrors] = await Promise.all([
+    const [newUsers, newOrganizations, newErrors] = await Promise.all([
       listUsersCreatedSince(dbh.db, windowStart.getTime()),
+      listOrganizationsCreatedSince(dbh.db, windowStart.getTime()),
       listErrorsCreatedSince(dbh.db, windowStart.getTime()),
     ]);
 
@@ -43,6 +45,7 @@ export async function sendDailyReportHandler({
       windowStart,
       windowEnd,
       newUsers,
+      newOrganizations,
       newErrors,
     });
 
@@ -60,6 +63,7 @@ export async function sendDailyReportHandler({
     return NextResponse.json({
       ok: true,
       users_count: newUsers.length,
+      organizations_count: newOrganizations.length,
       errors_count: newErrors.length,
       window_start: windowStart.toISOString(),
       window_end: windowEnd.toISOString(),
