@@ -1,7 +1,7 @@
 import "server-only";
 import { brandColors } from "@schemavaults/theme";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
-import type { UserDocument } from "@/lib/auth-db/users";
+import type { TopSignedInUserRow, UserDocument } from "@/lib/auth-db/users";
 import type { ErrorRow } from "@/lib/auth-db/errors";
 
 interface BuildReportOpts {
@@ -11,6 +11,7 @@ interface BuildReportOpts {
   newUsers: readonly UserDocument[];
   newOrganizations: readonly OrganizationDefinition[];
   newErrors: readonly ErrorRow[];
+  topSignedInUsers: readonly TopSignedInUserRow[];
 }
 
 interface ReportContent {
@@ -44,6 +45,7 @@ export function buildDailyAdminReport({
   newUsers,
   newOrganizations,
   newErrors,
+  topSignedInUsers,
 }: BuildReportOpts): ReportContent {
   const windowLabel = `${formatTimestamp(windowStart.getTime())} → ${formatTimestamp(windowEnd.getTime())}`;
 
@@ -69,6 +71,20 @@ export function buildDailyAdminReport({
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(o.organization_id)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${BRAND_BLUE};text-decoration:none;">${escapeHtml(o.name)}</a></td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};font-size:13px;">${formatTimestamp(o.created_at)}</td>
+</tr>`;
+        })
+        .join("\n");
+
+  const topSignedInRows = topSignedInUsers.length === 0
+    ? `<tr><td colspan="4" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No sign-ins in the last 24 hours.</td></tr>`
+    : topSignedInUsers
+        .map((u, i) => {
+          const link = `${authServerUri}/admin/users/${encodeURIComponent(u.uid)}`;
+          return `<tr>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;width:48px;">#${i + 1}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(u.uid)}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${BRAND_BLUE};text-decoration:none;">${escapeHtml(u.email)}</a></td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${u.sign_in_count.toLocaleString("en-US")}</td>
 </tr>`;
         })
         .join("\n");
@@ -134,6 +150,24 @@ ${organizationsRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
+        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">Top signed-in users (${topSignedInUsers.length})</h2>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Rank</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">UID</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Email</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Sign-ins</th>
+            </tr>
+          </thead>
+          <tbody>
+${topSignedInRows}
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 32px 24px;">
         <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_RED};">New errors (${newErrors.length})</h2>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
@@ -178,6 +212,17 @@ ${errorsRows}
         `  - ${o.name} [${o.organization_id}] — ${formatTimestamp(o.created_at)} — ${authServerUri}/org/${o.organization_id}`,
       );
     }
+  }
+  textLines.push("");
+  textLines.push(`Top signed-in users (${topSignedInUsers.length}):`);
+  if (topSignedInUsers.length === 0) {
+    textLines.push("  (none)");
+  } else {
+    topSignedInUsers.forEach((u, i) => {
+      textLines.push(
+        `  ${i + 1}. ${u.email} — ${u.sign_in_count.toLocaleString("en-US")} sign-in(s) — ${authServerUri}/admin/users/${u.uid}`,
+      );
+    });
   }
   textLines.push("");
   textLines.push(`New errors (${newErrors.length}):`);
