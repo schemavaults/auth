@@ -4,11 +4,13 @@
     "list-email-templates": {
       "source": "schemavaults/send-email",
       "sourceType": "github",
+      "skillPath": ".claude/skills/list-email-templates/SKILL.md",
       "computedHash": "f6373a01cb21f8d48f300ad297e9b750a5169f497ccbc4169d7aca273822d04c"
     },
     "send-email-to-mailing-list": {
       "source": "schemavaults/send-email",
       "sourceType": "github",
+      "skillPath": ".claude/skills/send-email-to-mailing-list/SKILL.md",
       "computedHash": "0d32a4cd229419d2d83d523e9308d6077e183d3c7922aba3931fbc0702b9daaa"
     }
   }
