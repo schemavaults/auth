@@ -6,7 +6,10 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
-import { listUsersCreatedSince } from "@/lib/auth-db/users";
+import {
+  listTopSignedInUsersSince,
+  listUsersCreatedSince,
+} from "@/lib/auth-db/users";
 import { listErrorsCreatedSince } from "@/lib/auth-db/errors";
 import { listOrganizationsCreatedSince } from "@/lib/auth-db/organizations";
 import sendEmailViaMailServer from "@/lib/send-email-via-mail-server";
@@ -31,11 +34,13 @@ export async function sendDailyReportHandler({
     const windowEnd = new Date();
     const windowStart = new Date(windowEnd.getTime() - TWENTY_FOUR_HOURS_MS);
 
-    const [newUsers, newOrganizations, newErrors] = await Promise.all([
-      listUsersCreatedSince(dbh.db, windowStart.getTime()),
-      listOrganizationsCreatedSince(dbh.db, windowStart.getTime()),
-      listErrorsCreatedSince(dbh.db, windowStart.getTime()),
-    ]);
+    const [newUsers, newOrganizations, newErrors, topSignedInUsers] =
+      await Promise.all([
+        listUsersCreatedSince(dbh.db, windowStart.getTime()),
+        listOrganizationsCreatedSince(dbh.db, windowStart.getTime()),
+        listErrorsCreatedSince(dbh.db, windowStart.getTime()),
+        listTopSignedInUsersSince(dbh.db, windowStart.getTime(), 10),
+      ]);
 
     const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
     const authServerUri: string = getAuthServerUri(appEnv);
@@ -47,6 +52,7 @@ export async function sendDailyReportHandler({
       newUsers,
       newOrganizations,
       newErrors,
+      topSignedInUsers,
     });
 
     const dateLabel = windowEnd.toISOString().slice(0, 10);
@@ -65,6 +71,7 @@ export async function sendDailyReportHandler({
       users_count: newUsers.length,
       organizations_count: newOrganizations.length,
       errors_count: newErrors.length,
+      top_signed_in_users_count: topSignedInUsers.length,
       window_start: windowStart.toISOString(),
       window_end: windowEnd.toISOString(),
     });
