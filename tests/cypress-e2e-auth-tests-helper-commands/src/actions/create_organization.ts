@@ -105,10 +105,17 @@ export default function createOrganization(
               })
               .then((interception) => {
                 interception.response?.statusCode &&
-                  cy.wrap(interception.response?.statusCode).should("eq", 200, "Create organization API request should return 200");
+                  cy
+                    .wrap(interception.response?.statusCode)
+                    .should(
+                      "eq",
+                      200,
+                      "Create organization API request should return 200",
+                    );
                 cy.log(
                   `Organization creation request (for org with ID '${organization_id}' and name '${name}') appears to have been a success!`,
                 );
+                cy.wait(150);
                 cy.get(`#${createOrganizationDialogContentId}`, {
                   log: false,
                 }).should("not.exist");
