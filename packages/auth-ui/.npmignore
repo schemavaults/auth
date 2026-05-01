@@ -20,3 +20,6 @@ eslint.config.js
 eslint.config.mjs
 
 auth-ui.tgz
+
+tsconfig.json
+tsconfig.pkg.json
