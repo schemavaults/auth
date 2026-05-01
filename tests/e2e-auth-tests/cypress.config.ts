@@ -1,8 +1,13 @@
 import { defineConfig } from "cypress";
 import { createJwksAccessProofToken, importPKCS8 } from "@schemavaults/jwt";
+import { authenticator } from "otplib";
 import triggerTestEnvironmentDbMigration from "./cypress/support/triggerTestEnvironmentDbMigration";
 import preRegisterSuperuser from "./cypress/support/pre-register-superuser";
 import seedAppAndApiForExampleResourceServer from "./cypress/support/seed-app-and-api-for-example-resource-server";
+
+// Mirror the auth-server's TOTP_WINDOW = 1 setting so any code computed
+// here verifies on the server.
+authenticator.options = { window: 1 };
 
 const devAuthServer: string = "http://localhost:6767";
 
@@ -23,6 +28,15 @@ export default defineConfig({
             api_server_id,
             private_key: privateKey,
           });
+        },
+        // otplib's HMAC implementation depends on Node's `crypto.createHmac`,
+        // which doesn't exist inside Cypress's browser context. Compute the
+        // TOTP here on the Node side and hand the string back to the spec.
+        computeTotpCode(secret: string): string {
+          if (typeof secret !== "string" || secret.length === 0) {
+            throw new TypeError("computeTotpCode requires a non-empty secret");
+          }
+          return authenticator.generate(secret);
         },
       });
 

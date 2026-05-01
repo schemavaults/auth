@@ -1,14 +1,11 @@
-import { authenticator } from "otplib";
-
-// Cypress doesn't await Promises returned from synchronous helpers, but
-// otplib's authenticator.generate is fully synchronous, so we expose it
-// as a regular function returning the current TOTP code for a given
-// secret. Mirrors the auth-server's TOTP_WINDOW = 1 setting so any code
-// produced here verifies on the server.
-authenticator.options = { window: 1 };
+// otplib's default HMAC implementation calls `crypto.createHmac`, which
+// only exists on Node — so importing `otplib` directly into a Cypress
+// spec throws "crypto.createHmac is not a function" the moment the
+// spec runs in the browser. Delegate the computation to a Node-side
+// `cy.task` registered by `cypress.config.ts` instead.
 
 export default function compute_totp_code(
   secret: string,
 ): Cypress.Chainable<string> {
-  return cy.wrap(authenticator.generate(secret));
+  return cy.task<string>("computeTotpCode", secret);
 }
