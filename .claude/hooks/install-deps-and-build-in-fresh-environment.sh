@@ -4,4 +4,5 @@ if [ ! -d "node_modules" ]; then
   bun install
   bun run build:packages
   bun run build:server
+  bun run build --filter @schemavaults/cypress-e2e-auth-tests-helper-commands
 fi
