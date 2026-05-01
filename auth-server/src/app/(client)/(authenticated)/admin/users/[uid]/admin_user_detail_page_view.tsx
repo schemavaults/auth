@@ -108,9 +108,9 @@ export function AdminUserDetailPageView({
             </Row>
           </CardContent>
         </Card>
-        <AdminUserActionsCard user={user} sessionUid={sessionUid} />
         <UserTokensCard uid={user.uid} tokenType="refresh" />
         <UserTokensCard uid={user.uid} tokenType="access" />
+        <AdminUserActionsCard user={user} sessionUid={sessionUid} />
       </div>
     </PageContainer>
   );
