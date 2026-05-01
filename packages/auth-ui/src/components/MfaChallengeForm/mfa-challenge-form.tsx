@@ -54,7 +54,6 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
       }
       if (result.kind === "failure") {
         setError(result.message || "Verification failed");
-        if (onChallengeExpired) onChallengeExpired();
         return;
       }
       setError(`Unexpected response kind: ${result.kind}`);
