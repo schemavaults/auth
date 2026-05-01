@@ -13,6 +13,7 @@ import PageContainer from "@/components/PageContainer";
 import type { UserData } from "@schemavaults/auth-common";
 import { LocalDateTime } from "@schemavaults/auth-ui";
 import AdminUserActionsCard from "./admin_user_actions_card";
+import { UserTokensCard } from "@/components/UserTokensTable";
 
 export interface AdminUserDetailPageViewProps {
   user: UserData;
@@ -108,6 +109,8 @@ export function AdminUserDetailPageView({
           </CardContent>
         </Card>
         <AdminUserActionsCard user={user} sessionUid={sessionUid} />
+        <UserTokensCard uid={user.uid} tokenType="refresh" />
+        <UserTokensCard uid={user.uid} tokenType="access" />
       </div>
     </PageContainer>
   );
