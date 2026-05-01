@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, type FC, type ReactElement } from "react";
+import { useCallback, type ReactElement } from "react";
 import { MfaChallengeForm } from "@schemavaults/auth-ui";
 
 export interface MfaChallengePageViewProps {
@@ -10,11 +10,11 @@ export interface MfaChallengePageViewProps {
   expires_at?: number;
 }
 
-const MfaChallengePageView: FC<MfaChallengePageViewProps> = ({
+export default function MfaChallengePageView({
   challenge_id,
   client_app_id,
   expires_at,
-}): ReactElement => {
+}: MfaChallengePageViewProps): ReactElement {
   const router = useRouter();
 
   const onAuthenticated = useCallback(
@@ -54,5 +54,3 @@ const MfaChallengePageView: FC<MfaChallengePageViewProps> = ({
     </div>
   );
 };
-
-export default MfaChallengePageView;
