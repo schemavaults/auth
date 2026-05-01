@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.22.91",
+      "version": "0.23.1",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -172,7 +172,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.22.25",
+      "version": "0.22.27",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -198,7 +198,7 @@
     },
     "packages/auth-ui": {
       "name": "@schemavaults/auth-ui",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
       },
@@ -233,7 +233,7 @@
     },
     "packages/jwt": {
       "name": "@schemavaults/jwt",
-      "version": "0.7.12",
+      "version": "0.7.14",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -267,7 +267,7 @@
     },
     "tests/cypress-e2e-auth-tests-helper-commands": {
       "name": "@schemavaults/cypress-e2e-auth-tests-helper-commands",
-      "version": "0.1.7",
+      "version": "0.2.0",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -283,7 +283,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.2.36",
+      "version": "0.3.1",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",

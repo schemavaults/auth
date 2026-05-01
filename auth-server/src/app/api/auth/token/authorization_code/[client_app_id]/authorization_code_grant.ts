@@ -301,6 +301,10 @@ export async function handleAuthorizationCodeGrant(
         audiences: typeof audience === "string" ? [audience] : audience,
         generate_refresh,
         auth_jwt_manager: jwt_keys_manager,
+        tracking: {
+          db: dbh.db,
+          grant_type: "authorization_code",
+        },
       });
 
     if (!tokenGenerationResult.success || tokenGenerationResult.error) {
