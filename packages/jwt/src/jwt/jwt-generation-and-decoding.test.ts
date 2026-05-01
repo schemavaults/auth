@@ -116,7 +116,7 @@ describe("JWT Generation & Decoding", () => {
     expect(decoded.jti).toBe(jwt.jti);
   });
 
-  it("should not include a jti claim on generated access tokens", async () => {
+  it("should include a jti claim on generated access tokens", async () => {
     const user = new MockUser();
     const now = Date.now();
 
@@ -139,10 +139,9 @@ describe("JWT Generation & Decoding", () => {
 
     const jwt = await generateJWT(generateOptions);
 
-    // jti should not be present on access tokens
-    expect(jwt.jti).toBeUndefined();
+    expect(jwt.jti).toBeDefined();
+    expect(typeof jwt.jti).toBe("string");
 
-    // Decode and verify jti is not in the payload
     const decoded = await decodeJWT({
       jwt: jwt.token,
       type: "access",
@@ -151,7 +150,7 @@ describe("JWT Generation & Decoding", () => {
       env,
     });
 
-    expect(decoded.jti).toBeUndefined();
+    expect(decoded.jti).toBe(jwt.jti);
   });
 
   it("should throw an error attempting to generate refresh token for non-auth server audience", async () => {
