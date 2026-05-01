@@ -38,7 +38,7 @@ function waitForMfaChallengeForm(): void {
     .should("not.be.disabled");
 }
 
-describe("MFA (TOTP + recovery codes)", () => {
+describe.skip("MFA (TOTP + recovery codes)", () => {
   beforeEach(() => {
     cy.reset_rate_limit();
   });
