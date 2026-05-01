@@ -38,7 +38,7 @@ function waitForMfaChallengeForm(): void {
     .should("not.be.disabled");
 }
 
-describe.skip("MFA (TOTP + recovery codes)", () => {
+describe("MFA (TOTP + recovery codes)", () => {
   beforeEach(() => {
     cy.reset_rate_limit();
   });
@@ -55,7 +55,7 @@ describe.skip("MFA (TOTP + recovery codes)", () => {
     });
   });
 
-  it("MFA-enrolled user is redirected to /auth/mfa on login and a valid TOTP completes the flow", () => {
+  it.skip("MFA-enrolled user is redirected to /auth/mfa on login and a valid TOTP completes the flow", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");
@@ -83,7 +83,7 @@ describe.skip("MFA (TOTP + recovery codes)", () => {
     });
   });
 
-  it("MFA-enrolled user can log in with a recovery code (single-use)", () => {
+  it.skip("MFA-enrolled user can log in with a recovery code (single-use)", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");
@@ -110,7 +110,7 @@ describe.skip("MFA (TOTP + recovery codes)", () => {
     });
   });
 
-  it("three wrong codes invalidate the challenge and redirect back to /auth/login", () => {
+  it.skip("three wrong codes invalidate the challenge and redirect back to /auth/login", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");
