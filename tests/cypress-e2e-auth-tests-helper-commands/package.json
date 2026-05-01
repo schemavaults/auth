@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/cypress-e2e-auth-tests-helper-commands",
-  "version": "0.2.2",
+  "version": "0.2.4",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/schemavaults/auth.git",
@@ -13,8 +13,7 @@
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
     "@schemavaults/jwt": "workspace:*",
-    "cypress": "15.12.0",
-    "otplib": "12.0.1"
+    "cypress": "15.12.0"
   },
   "devDependencies": {
     "typescript": "5.9.3",

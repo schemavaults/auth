@@ -211,7 +211,22 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         challenge_id: result.challenge_id,
         client_app_id: target_client_app_id,
         expires_at: String(result.expires_at),
+        on_successful_authenticate: onSuccessfulAuthenticate,
       });
+      // Forward the OAuth2 PKCE redirect parameters so the MFA challenge
+      // page can complete the authorize flow back to the third-party
+      // client after a successful TOTP/recovery-code submission. Without
+      // this, the MFA page has no way to reach the original `redirect_uri`
+      // and the OAuth2 callback gets dropped on the floor.
+      for (const key of [
+        "redirect_uri",
+        "state",
+        "challenge_time",
+        "code_challenge_method",
+      ] as const) {
+        const value = searchParams.get(key);
+        if (value) params.set(key, value);
+      }
       window.location.assign(`/auth/mfa?${params.toString()}`);
       return;
     }

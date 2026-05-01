@@ -1,8 +1,27 @@
 import { defineConfig } from "cypress";
 import { createJwksAccessProofToken, importPKCS8 } from "@schemavaults/jwt";
+import {
+  NobleCryptoPlugin,
+  ScureBase32Plugin,
+  createGuardrails,
+  generateSync as generateTotpSync,
+} from "otplib";
 import triggerTestEnvironmentDbMigration from "./cypress/support/triggerTestEnvironmentDbMigration";
 import preRegisterSuperuser from "./cypress/support/pre-register-superuser";
 import seedAppAndApiForExampleResourceServer from "./cypress/support/seed-app-and-api-for-example-resource-server";
+
+// Crypto + base32 plugins for otplib v13's plugin-based API. The
+// auth-server uses otplib's default settings (SHA-1 / 6 digits / 30 s
+// period / Base32-encoded secret), so the no-arg defaults match here.
+const totpCryptoPlugin = new NobleCryptoPlugin();
+const totpBase32Plugin = new ScureBase32Plugin();
+
+// otplib v12 (used by the auth-server) defaults to a 10-byte (80-bit)
+// shared secret per RFC 4226's lower bound, but otplib v13 enforces the
+// RFC 6238 recommendation of ≥ 16 bytes by default. Loosen the lower
+// bound here so codes generated against the seeded test secret verify
+// against the server-side check that issued it.
+const totpTestGuardrails = createGuardrails({ MIN_SECRET_BYTES: 10 });
 
 const devAuthServer: string = "http://localhost:6767";
 
@@ -22,6 +41,20 @@ export default defineConfig({
           return createJwksAccessProofToken({
             api_server_id,
             private_key: privateKey,
+          });
+        },
+        // otplib's HMAC implementation depends on Node's `crypto.createHmac`,
+        // which doesn't exist inside Cypress's browser context. Compute the
+        // TOTP here on the Node side and hand the string back to the spec.
+        computeTotpCode(secret: string): string {
+          if (typeof secret !== "string" || secret.length === 0) {
+            throw new TypeError("computeTotpCode requires a non-empty secret");
+          }
+          return generateTotpSync({
+            secret,
+            crypto: totpCryptoPlugin,
+            base32: totpBase32Plugin,
+            guardrails: totpTestGuardrails,
           });
         },
       });
