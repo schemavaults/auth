@@ -27,6 +27,16 @@ export function createColumns(): ColumnDef<IssuedTokenRow>[] {
       ),
     },
     {
+      id: "audience",
+      accessorKey: "audience",
+      header: "Audience",
+      cell: ({ row }): ReactElement => (
+        <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded break-all">
+          {row.original.audience}
+        </code>
+      ),
+    },
+    {
       id: "expires_at",
       accessorKey: "expires_at",
       header: "Expires At",
