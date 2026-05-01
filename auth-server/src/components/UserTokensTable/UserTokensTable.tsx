@@ -43,6 +43,7 @@ export function UserTokensTable({
       HeaderButtons={() => <></>}
       initialVisibleColumns={{
         jti: true,
+        audience: true,
         expires_at: true,
         actions: true,
       }}
