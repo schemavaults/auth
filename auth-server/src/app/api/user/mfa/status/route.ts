@@ -21,12 +21,17 @@ async function GET_status_handler(
     }
     const recovery_codes_remaining =
       await mfaRegistry.countRecoveryCodesRemaining(user.uid);
+    // Postgres returns BIGINT columns as strings; coerce to number so the
+    // client-side mfaStatusResponseSchema (which expects z.number()) parses.
+    const verified_at_raw = verified.row.verified_at;
+    const verified_at =
+      verified_at_raw == null ? undefined : Number(verified_at_raw);
     return NextResponse.json(
       {
         enabled: true,
         factor_id: verified.row.factor_id,
         factor_type: "totp" as const,
-        verified_at: verified.row.verified_at ?? undefined,
+        verified_at,
         recovery_codes_remaining,
       },
       { status: 200 },
