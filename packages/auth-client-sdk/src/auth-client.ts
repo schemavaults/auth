@@ -10,10 +10,22 @@ import {
   type RefreshToken,
   audienceSchema,
   type SuccessfullyGeneratedTokensRecord,
+  type AuthenticateResult,
+  type MfaStatusResponse,
+  type MfaEnrollResponse,
+  type MfaVerifyEnrollmentResponse,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { IAuthClientConstructorOptions } from "@/types/IAuthClientConstructorOptions";
 import { sendAuthenticateRequest } from "@/lib/send-authenticate-request";
+import {
+  verifyMfaChallenge as verifyMfaChallengeFn,
+  enrollTotp as enrollTotpFn,
+  confirmTotpEnrollment as confirmTotpEnrollmentFn,
+  removeFactor as removeFactorFn,
+  regenerateRecoveryCodes as regenerateRecoveryCodesFn,
+  getMfaStatus as getMfaStatusFn,
+} from "@/lib/mfa";
 import type { Credentials } from "@/types/credentials";
 import type { ISchemaVaultsAuthClient } from "@/types/ISchemaVaultsAuthClient";
 import type {
@@ -904,14 +916,17 @@ export class SchemaVaultsAuthClient
    * @param authentication_type 'login' | 'register' | 'reset-password'
    * @param credentials Username/email/password/invite code
    * @param code_challenge A code challenge for Oauth2 PKCE flow. Allows ensuring that trading authorization code for refresh token is done by the client that initialized the attempt to acquire the authorization code!
-   * @returns A 'string' authorization code, that can be exchanged for refresh/access JWTs (in combination with the code verifier-- which was used to generate the code challenge!)
+   * @returns The parsed `AuthenticateResult` discriminated union. On
+   *   `kind: "authenticated"` callers can use `result.authorization_code`
+   *   to exchange for tokens. On `kind: "mfa_required"` callers must
+   *   complete the challenge via `verifyMfaChallenge`.
    */
   public async sendAuthenticateRequest(
     authentication_type: AuthenticationOutcomeType,
     client_app_id: AppId,
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
-  ): Promise<string> {
+  ): Promise<AuthenticateResult> {
     if (this.DEBUG)
       console.log(
         "[SchemaVaultsAuthClient] Attempting to send authenticate request...",
@@ -924,6 +939,57 @@ export class SchemaVaultsAuthClient
       code_challenge,
       app_environment: this.environment,
       invite_code_required: this._invite_code_required,
+    });
+  }
+
+  public async verifyMfaChallenge(
+    challenge_id: string,
+    client_app_id: AppId,
+    proof:
+      | { type: "totp"; code: string }
+      | { type: "recovery_code"; recovery_code: string },
+  ): Promise<AuthenticateResult> {
+    return await verifyMfaChallengeFn({
+      adapter: this._adapter,
+      challenge_id,
+      client_app_id,
+      proof,
+    });
+  }
+
+  public async getMfaStatus(): Promise<MfaStatusResponse> {
+    return await getMfaStatusFn(this._adapter);
+  }
+
+  public async enrollTotp(): Promise<MfaEnrollResponse> {
+    return await enrollTotpFn(this._adapter);
+  }
+
+  public async confirmTotpEnrollment(
+    factor_id: string,
+    code: string,
+  ): Promise<MfaVerifyEnrollmentResponse> {
+    return await confirmTotpEnrollmentFn({
+      adapter: this._adapter,
+      factor_id,
+      code,
+    });
+  }
+
+  public async removeFactor(factor_id: string, code: string): Promise<void> {
+    await removeFactorFn({
+      adapter: this._adapter,
+      factor_id,
+      code,
+    });
+  }
+
+  public async regenerateRecoveryCodes(
+    code: string,
+  ): Promise<MfaVerifyEnrollmentResponse> {
+    return await regenerateRecoveryCodesFn({
+      adapter: this._adapter,
+      code,
     });
   }
 

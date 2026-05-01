@@ -24,8 +24,18 @@ export type * from "./pkce";
 
 export {
   authenticateResultSchema,
+  authenticatedAuthenticateResultSchema,
+  mfaRequiredAuthenticateResultSchema,
+  authenticateFailureResultSchema,
+  challengeExpiredAuthenticateResultSchema,
   type AuthenticateResult,
+  type AuthenticatedAuthenticateResult,
+  type MfaRequiredAuthenticateResult,
+  type AuthenticateFailureResult,
+  type ChallengeExpiredAuthenticateResult,
 } from "./authenticate_result";
+
+export * from "./mfa";
 export {
   requestTokensResultSchema,
   type RequestTokensResult,

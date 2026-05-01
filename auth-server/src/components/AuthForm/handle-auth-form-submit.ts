@@ -196,15 +196,29 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   const target_client_app_id =
     opts.app?.app_id ?? SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
 
-  // Exchange credentials for an authorization code
+  // Exchange credentials for an authorization code, or be told that the
+  // user must complete an MFA challenge first.
   let authorization_code: string;
   try {
-    authorization_code = await authClient.sendAuthenticateRequest(
+    const result = await authClient.sendAuthenticateRequest(
       type,
       target_client_app_id,
       values,
       code_challenge,
     );
+    if (result.kind === "mfa_required") {
+      const params = new URLSearchParams({
+        challenge_id: result.challenge_id,
+        client_app_id: target_client_app_id,
+        expires_at: String(result.expires_at),
+      });
+      window.location.assign(`/auth/mfa?${params.toString()}`);
+      return;
+    }
+    if (result.kind !== "authenticated") {
+      throw new Error(`Unexpected authenticate result kind: ${result.kind}`);
+    }
+    authorization_code = result.authorization_code;
   } catch (e: unknown) {
     console.error("[handleAuthFormSubmit] Error", e);
     const errMsg: string =

@@ -41,3 +41,9 @@ export { useAutoReacquireDefaultAccessTokens } from "./use-auto-reacquire-defaul
 
 export { useOnLogout } from "./use-on-logout";
 export type * from "./use-on-logout";
+
+export { useMfaStatusSwr } from "./use-mfa-status-swr";
+export type * from "./use-mfa-status-swr";
+
+export { useMfa } from "./use-mfa";
+export type * from "./use-mfa";

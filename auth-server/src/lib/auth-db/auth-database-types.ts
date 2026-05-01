@@ -26,6 +26,10 @@ import type { TokenRevocationsTable } from "./token-revocations";
 import type { IssuedTokensTable } from "./issued-tokens";
 import type { ServerTracesTable } from "./server-traces";
 import type { ErrorsTable } from "./errors";
+import type {
+  UserMfaFactorsTable,
+  UserMfaRecoveryCodesTable,
+} from "./mfa";
 
 export type AuthDatabase = {
   apps: AppsTable;
@@ -53,4 +57,6 @@ export type AuthDatabase = {
   server_settings: ServerSettingsTable;
   server_traces: ServerTracesTable;
   errors: ErrorsTable;
+  user_mfa_factors: UserMfaFactorsTable;
+  user_mfa_recovery_codes: UserMfaRecoveryCodesTable;
 };

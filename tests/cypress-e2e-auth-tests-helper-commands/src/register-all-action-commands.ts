@@ -25,6 +25,8 @@ import promoteMemberToOwner from "@/actions/promote_member_to_owner";
 import inviteAndAcceptOrgMembership from "@/actions/invite_and_accept_org_membership";
 import register_via_resource_server_pkce_flow from "@/actions/register_via_resource_server_pkce_flow";
 import login_via_resource_server_pkce_flow from "@/actions/login_via_resource_server_pkce_flow";
+import enroll_test_user_mfa from "@/actions/enroll_test_user_mfa";
+import compute_totp_code from "@/actions/compute_totp_code";
 
 export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("login", login);
@@ -91,6 +93,9 @@ export function registerAllActionCommands(commands: Cypress.Commands) {
     "login_via_resource_server_pkce_flow",
     login_via_resource_server_pkce_flow,
   );
+
+  commands.add("enroll_test_user_mfa", enroll_test_user_mfa);
+  commands.add("compute_totp_code", compute_totp_code);
 }
 
 export default registerAllActionCommands;

@@ -2,6 +2,7 @@ import {
   type CodeChallengeWithDetails,
   PKCE_ProofKeyManager,
   authenticateResultSchema,
+  type AuthenticateResult,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import { credentialsSchema } from "@/lib/credentials-schema";
@@ -12,10 +13,13 @@ import {
 import type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
 import type { Credentials } from "@/types/credentials";
 
-// Send an authentication request to the auth server, hopefully get an authorization code back, else throw an error
+// Send an authentication request to the auth server. Returns the parsed
+// AuthenticateResult discriminated union so callers can branch between
+// `authenticated` (authorization code present), `mfa_required` (challenge
+// must be completed at /api/auth/mfa/verify), and `failure` outcomes.
 export async function sendAuthenticateRequest(
   opts: ISendAuthenticateRequestOptions,
-): Promise<string> {
+): Promise<AuthenticateResult> {
   const credentials: Credentials = opts.credentials;
   const client_app_id = opts.client_app_id;
   const code_challenge: CodeChallengeWithDetails = opts.code_challenge;
@@ -191,19 +195,13 @@ export async function sendAuthenticateRequest(
     if (!parsed_auth_response.success) {
       throw new Error(parsed_auth_response.error.errors.join(", "));
     }
-    const data = parsed_auth_response.data;
+    const data: AuthenticateResult = parsed_auth_response.data;
 
-    if (!data.success) {
+    if (data.kind === "failure") {
       throw new Error(data.message);
     }
 
-    const authorization_code: string | undefined = data.authorization_code;
-
-    if (typeof authorization_code !== "string") {
-      throw new Error("Invalid authorization code");
-    }
-
-    return authorization_code satisfies string;
+    return data;
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("Invalid credentials")) {
       throw new Error("Invalid credentials");

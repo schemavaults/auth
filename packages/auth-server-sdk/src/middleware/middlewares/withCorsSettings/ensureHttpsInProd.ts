@@ -28,6 +28,7 @@ export function ensureHttpsInProduction(
     console.error("Origins must be HTTPS in production environment.");
     return json(
       {
+        kind: "failure",
         message: "Origin must be HTTPS",
         success: false,
       } satisfies AuthenticateResult,

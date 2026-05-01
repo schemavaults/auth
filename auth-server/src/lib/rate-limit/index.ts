@@ -18,6 +18,8 @@ export {
   RESET_PASSWORD_CONFIRM_RATE_LIMIT,
   VERIFY_EMAIL_CONFIRM_RATE_LIMIT,
   REFRESH_TOKEN_RATE_LIMIT,
+  MFA_VERIFY_RATE_LIMIT,
+  MFA_ENROLL_RATE_LIMIT,
 } from "./rate-limit-configs";
 export {
   rateLimitResponse,

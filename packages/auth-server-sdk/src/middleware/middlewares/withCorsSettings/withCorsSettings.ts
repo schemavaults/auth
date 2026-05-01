@@ -91,6 +91,7 @@ class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
       }
       return json(
         {
+          kind: "failure",
           message: "Origin not allowed",
           success: false,
         } satisfies AuthenticateResult,
@@ -124,6 +125,7 @@ class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
         );
         return json(
           {
+            kind: "failure",
             success: false,
             message: "Error applying preflight headers",
           } satisfies AuthenticateResult,
@@ -160,6 +162,7 @@ class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
         );
         return json(
           {
+            kind: "failure",
             success: false,
             message: "Error building/returning preflight response",
           } satisfies AuthenticateResult,
@@ -309,6 +312,7 @@ class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
         );
         return json(
           {
+            kind: "failure",
             success: false,
             message: "Error applying preflight headers",
           } satisfies AuthenticateResult,

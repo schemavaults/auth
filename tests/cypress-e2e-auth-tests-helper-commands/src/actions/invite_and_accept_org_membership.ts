@@ -138,10 +138,13 @@ export default function inviteAndAcceptOrgMembership(
         }).as("acceptInvitationRequest");
 
         // Find and click the Accept button for the organization
-        cy.contains("button", "Accept")
-          .should("exist")
-          .should("be.visible")
+        cy.get(`button[id^=accept-invitation-][id*=${organization_id}]`)
+          .should("have.length", 1)
           .first()
+          .should("contain", "Accept")
+          .should("exist")
+          .scrollIntoView()
+          .should("be.visible")
           .click();
 
         return cy

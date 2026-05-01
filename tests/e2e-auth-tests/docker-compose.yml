@@ -80,6 +80,11 @@ services:
       PRIVATE_GLOBAL_PASSWORD_SALT: examplePasswordSalt12
       PRIVATE_PASSWORD_HASH_ROUNDS: 5
       PRIVATE_SUPERUSER_INVITE_CODE: superuser
+      # Deterministic 32-byte base64 keys so MFA enrolment + verification work
+      # in CI. These are throwaway values; never reuse them anywhere outside
+      # of the ephemeral test container.
+      PRIVATE_MFA_SECRET_KEK: GsQ9z/exSHSgYkJh1+7/Y7h+CKy/u5T5b+tCPGuRu6k=
+      PRIVATE_MFA_RECOVERY_PEPPER: nlDsk6vFAVtk7EGAe3HvgLdlZDCc+GX6lb6DD3byfTk=
       NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS: yes
     expose:
       - 80

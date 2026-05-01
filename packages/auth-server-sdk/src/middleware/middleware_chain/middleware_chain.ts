@@ -79,6 +79,7 @@ export class MiddlewareChain
       console.error("[MiddlewareChain] failed to execute chain: ", e);
       return json(
         {
+          kind: "failure",
           success: false,
           message:
             "An unhandled error occurred while running SchemaVaults server middleware!",

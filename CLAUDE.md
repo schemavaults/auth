@@ -139,6 +139,12 @@ There is an interactive helper script for initializing environment variables for
 bun run dev:init-env
 ```
 
+## Multi-Factor Authentication
+
+TOTP-based MFA lives in `auth-server/src/lib/mfa/` (KEK, recovery-code HMAC, TOTP via `otplib`, QR rendering, Redis challenge store) plus the `MfaRegistry` resource group at `auth-server/src/lib/auth-db/mfa/`. The login handler intercepts users with a verified factor and returns an `mfa_required` discriminated-union variant instead of an authorization code; the client completes the flow at `POST /api/auth/mfa/verify`. Required env vars: `PRIVATE_MFA_SECRET_KEK`, `PRIVATE_MFA_RECOVERY_PEPPER` (both 32-byte base64).
+
+UI components live in `@schemavaults/auth-ui` (`MfaSettingsCard`, `TotpEnrollmentDialog`, `MfaChallengeForm`, `RecoveryCodesPanel`, `MfaRemoveFactorDialog`, `MfaRegenerateRecoveryCodesDialog`). The React state hook is `useMfa()` in `@schemavaults/auth-react-provider`.
+
 ## Continuous Integration & Continuous Delivery (C.I. & C.D. )
 The `.github/workflows` directory contains GitHub Actions workflows for automatically testing & publishing the `@schemavaults/auth` application/package suite.
 

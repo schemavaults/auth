@@ -21,6 +21,10 @@ import type {
 } from "@/actions/invite_and_accept_org_membership";
 import type { RegisterViaResourceServerPkceFlowParams } from "@/actions/register_via_resource_server_pkce_flow";
 import type { LoginViaResourceServerPkceFlowParams } from "@/actions/login_via_resource_server_pkce_flow";
+import type {
+  EnrollTestUserMfaParams,
+  EnrollTestUserMfaResult,
+} from "@/actions/enroll_test_user_mfa";
 
 declare global {
   namespace Cypress {
@@ -89,6 +93,10 @@ declare global {
       login_via_resource_server_pkce_flow(
         params: LoginViaResourceServerPkceFlowParams,
       ): Chainable<boolean>;
+      enroll_test_user_mfa(
+        params: EnrollTestUserMfaParams,
+      ): Chainable<EnrollTestUserMfaResult>;
+      compute_totp_code(secret: string): Chainable<string>;
     }
   }
 }
