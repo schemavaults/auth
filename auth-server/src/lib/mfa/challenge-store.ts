@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const CHALLENGE_KEY_PREFIX = "mfa:challenge:";
 export const MFA_CHALLENGE_TTL_SECONDS = 300;
-export const MFA_CHALLENGE_MAX_ATTEMPTS = 5;
+export const MFA_CHALLENGE_MAX_ATTEMPTS = 3;
 
 const challengeStateSchema = z
   .object({

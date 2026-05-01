@@ -49,7 +49,7 @@ export async function handleMfaVerify({
   if (!challenge) {
     return NextResponse.json(
       {
-        kind: "failure",
+        kind: "challenge_expired",
         success: false,
         message: "MFA challenge not found or expired. Please log in again.",
       } satisfies AuthenticateResult,
@@ -77,7 +77,7 @@ export async function handleMfaVerify({
   if (!existed) {
     return NextResponse.json(
       {
-        kind: "failure",
+        kind: "challenge_expired",
         success: false,
         message: "MFA challenge not found or expired. Please log in again.",
       } satisfies AuthenticateResult,
@@ -127,7 +127,7 @@ export async function handleMfaVerify({
       // Challenge already deleted by consumeAttempt — instruct client to restart.
       return NextResponse.json(
         {
-          kind: "failure",
+          kind: "challenge_expired",
           success: false,
           message:
             "Too many incorrect attempts. Please log in again to start a new challenge.",

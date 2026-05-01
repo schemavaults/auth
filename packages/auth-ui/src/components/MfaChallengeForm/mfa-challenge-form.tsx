@@ -52,6 +52,14 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
         await onAuthenticated(result.authorization_code);
         return;
       }
+      if (result.kind === "challenge_expired") {
+        setError(
+          result.message ||
+            "Too many attempts. Please log in again to start a new challenge.",
+        );
+        if (onChallengeExpired) onChallengeExpired();
+        return;
+      }
       if (result.kind === "failure") {
         setError(result.message || "Verification failed");
         return;

@@ -4,6 +4,7 @@ import {
   authenticatedAuthenticateResultSchema,
   mfaRequiredAuthenticateResultSchema,
   authenticateFailureResultSchema,
+  challengeExpiredAuthenticateResultSchema,
 } from "./authenticate_result";
 
 describe("authenticateResultSchema (discriminated union)", () => {
@@ -61,6 +62,19 @@ describe("authenticateResultSchema (discriminated union)", () => {
     const parsed = authenticateResultSchema.parse(value);
     expect(parsed.kind).toBe("failure");
     expect(authenticateFailureResultSchema.safeParse(value).success).toBe(true);
+  });
+
+  test("parses challenge_expired variant", () => {
+    const value = {
+      kind: "challenge_expired" as const,
+      success: false as const,
+      message: "Too many incorrect attempts. Please log in again.",
+    };
+    const parsed = authenticateResultSchema.parse(value);
+    expect(parsed.kind).toBe("challenge_expired");
+    expect(
+      challengeExpiredAuthenticateResultSchema.safeParse(value).success,
+    ).toBe(true);
   });
 
   test("rejects an object missing kind discriminator", () => {

@@ -110,7 +110,7 @@ describe("MFA (TOTP + recovery codes)", () => {
     });
   });
 
-  it("five wrong codes leave the user on /auth/mfa with a 'log in again' error", () => {
+  it("three wrong codes invalidate the challenge and redirect back to /auth/login", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");
@@ -120,7 +120,9 @@ describe("MFA (TOTP + recovery codes)", () => {
           submitLoginForm(credentials.email, credentials.password);
           waitForMfaChallengeForm();
 
-          for (let i = 0; i < 5; i += 1) {
+          // First two wrong codes — challenge stays alive, user stays on
+          // /auth/mfa with an error message rendered.
+          for (let i = 0; i < 2; i += 1) {
             cy.get("[data-testid='mfa-challenge-input']")
               .should("be.visible")
               .should("not.be.disabled")
@@ -129,14 +131,24 @@ describe("MFA (TOTP + recovery codes)", () => {
             cy.get("[data-testid='mfa-challenge-submit']")
               .should("not.be.disabled")
               .click();
-            // Wait for the form to settle (submitting=false) before the
-            // next iteration, so .clear()/.type() never race with the
-            // disabled-while-submitting state.
+            // Wait for submitting=false before the next iteration so
+            // .clear()/.type() never race with the disabled state.
             cy.get("[data-testid='mfa-challenge-submit']", { timeout: 10_000 })
               .should("not.be.disabled");
+            cy.url().should("include", "/auth/mfa");
           }
-          cy.url().should("include", "/auth/mfa");
-          cy.contains(/log in again|too many|attempts/i).should("be.visible");
+
+          // Third wrong code — server returns 410 challenge_expired,
+          // the form fires onChallengeExpired which navigates back to
+          // /auth/login.
+          cy.get("[data-testid='mfa-challenge-input']")
+            .should("be.visible")
+            .clear()
+            .type("000000");
+          cy.get("[data-testid='mfa-challenge-submit']")
+            .should("not.be.disabled")
+            .click();
+          cy.url({ timeout: 15_000 }).should("include", "/auth/login");
         });
       });
     });
