@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  useToast,
 } from "@schemavaults/ui";
 import type { MfaEnrollResponse } from "@schemavaults/auth-common";
 import { useMfa } from "@schemavaults/auth-react-provider";
@@ -32,6 +33,7 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
   onClose,
 }): ReactElement => {
   const { enrollTotp, confirmTotpEnrollment } = useMfa();
+  const { toast } = useToast();
   const [step, setStep] = useState<Step>("loading");
   const [enrollment, setEnrollment] = useState<MfaEnrollResponse | null>(null);
   const [code, setCode] = useState("");
@@ -68,6 +70,12 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
       const result = await confirmTotpEnrollment(enrollment.factor_id, code);
       setRecoveryCodes(result.recovery_codes);
       setStep("recovery");
+      toast({
+        variant: "default",
+        title: "Multi-factor authentication enabled",
+        description:
+          "Your authenticator app is now required at sign-in. Save the recovery codes before closing this dialog.",
+      });
     } catch (e: unknown) {
       setError(
         e instanceof Error ? e.message : "Failed to confirm authenticator code",
