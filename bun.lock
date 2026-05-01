@@ -267,13 +267,12 @@
     },
     "tests/cypress-e2e-auth-tests-helper-commands": {
       "name": "@schemavaults/cypress-e2e-auth-tests-helper-commands",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/jwt": "workspace:*",
         "cypress": "15.12.0",
-        "otplib": "12.0.1",
       },
       "devDependencies": {
         "@types/node": "24.4.0",
