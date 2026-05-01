@@ -27,6 +27,7 @@ import { useSWRConfig } from "swr";
 import {
   type OrganizationDefinition,
   organizationDefinitionSchema,
+  type OrganizationID,
 } from "@schemavaults/auth-common";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Building2 } from "lucide-react";
@@ -158,12 +159,12 @@ export function CreateOrganizationForm({
 
       toast({
         variant: "default",
-        title: "Created new organization successfully",
+        title: "Created new organization successfully!",
+        description: `The organization '${values.organization_id satisfies OrganizationID}' should now exist.`,
       });
       clearOrganizationsCache();
-      const submittedOrgId = values.organization_id;
       form.reset();
-      onSuccess(submittedOrgId);
+      onSuccess(values.organization_id satisfies OrganizationID);
       return;
     });
     return;
