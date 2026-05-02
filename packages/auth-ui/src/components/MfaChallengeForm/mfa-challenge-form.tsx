@@ -85,7 +85,9 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
           {useRecovery
             ? "Enter one of your recovery codes."
             : "Enter the 6-digit code from your authenticator app."}
-          {expiresLabel ? ` ${expiresLabel}.` : null}
+          {expiresLabel ? (
+            <span suppressHydrationWarning>{` ${expiresLabel}.`}</span>
+          ) : null}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
