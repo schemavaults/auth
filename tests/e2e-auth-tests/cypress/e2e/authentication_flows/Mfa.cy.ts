@@ -55,7 +55,7 @@ describe("MFA (TOTP + recovery codes)", () => {
     });
   });
 
-  it.skip("MFA-enrolled user is redirected to /auth/mfa on login and a valid TOTP completes the flow", () => {
+  it("MFA-enrolled user is redirected to /auth/mfa on login and a valid TOTP completes the flow", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");
@@ -77,13 +77,24 @@ describe("MFA (TOTP + recovery codes)", () => {
             cy.getCookie(
               RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
             ).should("exist");
+
+            // Guard against a regression of the bug this fix addresses:
+            // pre-fix, /account loaded with the SDK in-memory state empty
+            // (AccountCard email/uid stuck on skeletons, useAdmin → false).
+            // We assert the user's email is rendered as text and the
+            // server agrees the session is live.
+            cy.wait_for_page_hydration();
+            cy.contains(credentials.email, { timeout: 10_000 }).should(
+              "be.visible",
+            );
+            cy.is_authenticated().should("be.true");
           });
         });
       });
     });
   });
 
-  it.skip("MFA-enrolled user can log in with a recovery code (single-use)", () => {
+  it("MFA-enrolled user can log in with a recovery code (single-use)", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");
@@ -110,7 +121,7 @@ describe("MFA (TOTP + recovery codes)", () => {
     });
   });
 
-  it.skip("three wrong codes invalidate the challenge and redirect back to /auth/login", () => {
+  it("three wrong codes invalidate the challenge and redirect back to /auth/login", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");

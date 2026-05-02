@@ -43,6 +43,19 @@ export interface ISchemaVaultsAuthClient {
   // Used in authenticate-with-redirect login /register flows
   generateCodeChallenge: () => Promise<CodeChallengeWithDetails>;
 
+  // Persist a PKCE code verifier so it can be loaded again across a full
+  // page navigation (e.g. the login → /auth/mfa redirect, where the
+  // verifier was created in the login form's JS context and would
+  // otherwise be lost). Keyed by `challenge_time`, matching the loader.
+  storeCodeVerifier: (code_verifier: string, challenge_time: number) => void;
+
+  // Load a previously-stored PKCE code verifier by `challenge_time`.
+  // Returns `null` if no verifier was stored. Used when completing a
+  // login that started in a different page-load context (e.g. the MFA
+  // challenge page redeeming an authorization code on the auth server's
+  // own /account flow).
+  loadCodeVerifier: (challenge_time: number) => string | null;
+
   // Send credentials to start authentication. Returns the parsed
   // AuthenticateResult discriminated union; callers must branch on `kind`
   // to handle the `mfa_required` case (see verifyMfaChallenge).

@@ -207,6 +207,19 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       code_challenge,
     );
     if (result.kind === "mfa_required") {
+      // The MFA challenge page lives at a different URL, so the
+      // `code_verifier` we just generated would be garbage-collected on
+      // navigation. Persist it (keyed by challenge_time) so the MFA page
+      // can redeem the resulting authorization_code at the token
+      // endpoint after the user submits their TOTP / recovery code.
+      // Only matters for the account-page flow — third-party PKCE flows
+      // are redeemed by the requesting app itself, with its own verifier.
+      if (onSuccessfulAuthenticate === "account-page") {
+        authClient.storeCodeVerifier(
+          code_verifier.code_verifier,
+          code_challenge.challenge_time,
+        );
+      }
       const params = new URLSearchParams({
         challenge_id: result.challenge_id,
         client_app_id: target_client_app_id,
@@ -226,6 +239,20 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       ] as const) {
         const value = searchParams.get(key);
         if (value) params.set(key, value);
+      }
+      // Account-page logins don't carry a `challenge_time` on the URL
+      // (no third-party authorize handoff), but the MFA page needs it to
+      // look the verifier back up from storage after submission. The
+      // third-party PKCE branch above already populates this from the
+      // incoming `searchParams`, so only set it if it wasn't forwarded.
+      if (!params.has("challenge_time")) {
+        params.set("challenge_time", String(code_challenge.challenge_time));
+      }
+      if (!params.has("code_challenge_method")) {
+        params.set(
+          "code_challenge_method",
+          code_challenge.code_challenge_method,
+        );
       }
       window.location.assign(`/auth/mfa?${params.toString()}`);
       return;

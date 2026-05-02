@@ -305,7 +305,7 @@ export class SchemaVaultsAuthClient
   // The code verifier is stored securely within the client
   // The code challenge is sent to the auth server
   // The auth server will hash the code challenge and compare it to the code verifier
-  private storeCodeVerifier(
+  public storeCodeVerifier(
     code_verifier: string,
     challenge_time: number,
   ): void {
@@ -353,7 +353,7 @@ export class SchemaVaultsAuthClient
   }
 
   // Load the code verifier from a secure location
-  private loadCodeVerifier(challenge_time: number): string | null {
+  public loadCodeVerifier(challenge_time: number): string | null {
     const now = Date.now();
     if (!challenge_time || typeof challenge_time !== "number") {
       throw new Error("Invalid challenge_time; not a number");
