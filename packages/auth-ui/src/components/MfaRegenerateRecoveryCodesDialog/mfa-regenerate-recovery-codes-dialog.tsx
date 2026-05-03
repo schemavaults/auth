@@ -12,6 +12,7 @@ import {
   Input,
 } from "@schemavaults/ui";
 import { useMfa } from "@schemavaults/auth-react-provider";
+import { Check, RefreshCw, X } from "lucide-react";
 import { RecoveryCodesPanel } from "../RecoveryCodesPanel";
 
 export interface MfaRegenerateRecoveryCodesDialogProps {
@@ -78,7 +79,9 @@ export const MfaRegenerateRecoveryCodesDialog: FC<
               onClick={onClose}
               disabled={!acknowledged}
               data-testid="mfa-regenerate-done"
+              className="flex flex-row gap-2 flex-nowrap"
             >
+              <Check className="h-4 w-4" />
               Done
             </Button>
           ) : (
@@ -87,14 +90,18 @@ export const MfaRegenerateRecoveryCodesDialog: FC<
                 variant="outline"
                 onClick={onClose}
                 disabled={submitting}
+                className="flex flex-row gap-2 flex-nowrap"
               >
+                <X className="h-4 w-4" />
                 Cancel
               </Button>
               <Button
                 onClick={handleConfirm}
                 disabled={submitting || code.length !== 6}
                 data-testid="mfa-regenerate-confirm"
+                className="flex flex-row gap-2 flex-nowrap"
               >
+                <RefreshCw className="h-4 w-4" />
                 {submitting ? "Generating…" : "Generate new codes"}
               </Button>
             </>

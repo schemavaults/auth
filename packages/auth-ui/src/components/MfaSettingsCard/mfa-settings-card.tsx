@@ -12,7 +12,13 @@ import {
   cn,
 } from "@schemavaults/ui";
 import { useMfa } from "@schemavaults/auth-react-provider";
-import { ShieldCheck, ShieldAlert } from "lucide-react";
+import {
+  ShieldCheck,
+  ShieldAlert,
+  KeyRound,
+  ShieldOff,
+  Smartphone,
+} from "lucide-react";
 import { TotpEnrollmentDialog } from "../TotpEnrollmentDialog";
 import { MfaRemoveFactorDialog } from "../MfaRemoveFactorDialog";
 import { MfaRegenerateRecoveryCodesDialog } from "../MfaRegenerateRecoveryCodesDialog";
@@ -82,19 +88,28 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
               variant="outline"
               onClick={() => setRegenerating(true)}
               disabled={regenerating}
+              className="flex flex-row gap-2 flex-nowrap"
             >
+              <KeyRound className="h-4 w-4" />
               Regenerate recovery codes
             </Button>
             <Button
               variant="destructive"
               onClick={() => setRemoving(true)}
               disabled={removing}
+              className="flex flex-row gap-2 flex-nowrap"
             >
+              <ShieldOff className="h-4 w-4" />
               Remove authenticator
             </Button>
           </>
         ) : (
-          <Button onClick={() => setEnrolling(true)} disabled={enrolling}>
+          <Button
+            onClick={() => setEnrolling(true)}
+            disabled={enrolling}
+            className="flex flex-row gap-2 flex-nowrap"
+          >
+            <Smartphone className="h-4 w-4" />
             Set up authenticator app
           </Button>
         )}

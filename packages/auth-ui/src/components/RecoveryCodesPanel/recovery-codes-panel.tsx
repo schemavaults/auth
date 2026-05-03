@@ -68,12 +68,22 @@ export const RecoveryCodesPanel: FC<RecoveryCodesPanelProps> = ({
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" type="button" onClick={handleCopy}>
-          <ClipboardCopy className="mr-2 h-4 w-4" />
+        <Button
+          variant="outline"
+          type="button"
+          onClick={handleCopy}
+          className="flex flex-row gap-2 flex-nowrap"
+        >
+          <ClipboardCopy className="h-4 w-4" />
           Copy all
         </Button>
-        <Button variant="outline" type="button" onClick={handleDownload}>
-          <Download className="mr-2 h-4 w-4" />
+        <Button
+          variant="outline"
+          type="button"
+          onClick={handleDownload}
+          className="flex flex-row gap-2 flex-nowrap"
+        >
+          <Download className="h-4 w-4" />
           Download .txt
         </Button>
       </div>
