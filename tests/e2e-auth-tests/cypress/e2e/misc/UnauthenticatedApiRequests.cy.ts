@@ -399,6 +399,16 @@ describe("Unauthenticated API Requests", () => {
       });
     });
 
+    it("GET /api/admin/users/:uid/mfa returns 401", () => {
+      cy.request({
+        method: "GET",
+        url: `/api/admin/users/${fakeUid}/mfa`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
     it("GET /api/organizations returns 401", () => {
       cy.request({
         method: "GET",
