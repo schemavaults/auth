@@ -144,4 +144,15 @@ describe("Regular User Admin API Forbidden", () => {
       expect(response.body).to.have.property("success", false);
     });
   });
+
+  it("GET /api/admin/users/:uid/mfa returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "GET",
+      url: `/api/admin/users/${fakeUid}/mfa`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
 });

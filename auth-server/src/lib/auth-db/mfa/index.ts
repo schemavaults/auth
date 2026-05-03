@@ -14,3 +14,4 @@ export type {
 
 export { MfaRegistry } from "./mfa-registry";
 export { type VerifiedFactor } from "./get-verified-factor";
+export { listVerifiedFactorTypesForUser } from "./list-verified-factor-types-for-user";

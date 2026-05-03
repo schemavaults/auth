@@ -21,6 +21,7 @@ import {
 } from "@schemavaults/ui";
 import type { UserData } from "@schemavaults/auth-common";
 import { LocalDateTime } from "@/lib/LocalDateTime";
+import { UserMfaFactorsCell } from "./UserMfaFactorsCell";
 
 export interface BuildUsersTableColumnsOptions {
   getUserHref?: (user: UserData) => string;
@@ -99,6 +100,14 @@ export function buildColumns(
           </div>
         );
       },
+    },
+    {
+      id: "mfa_factors",
+      header: "MFA",
+      cell: ({ row }): ReactElement => (
+        <UserMfaFactorsCell uid={row.original.uid} />
+      ),
+      enableSorting: false,
     },
     {
       id: "email_verified",

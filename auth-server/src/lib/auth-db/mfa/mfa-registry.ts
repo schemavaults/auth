@@ -7,6 +7,8 @@ import {
   getVerifiedFactor as getVerifiedFactorFn,
   type VerifiedFactor,
 } from "./get-verified-factor";
+import { listVerifiedFactorTypesForUser as listVerifiedFactorTypesForUserFn } from "./list-verified-factor-types-for-user";
+import type { MfaFactorType } from "@schemavaults/auth-common";
 import { getFactorById as getFactorByIdFn } from "./get-factor-by-id";
 import { createUnverifiedFactor as createUnverifiedFactorFn } from "./create-unverified-factor";
 import { verifyFactor as verifyFactorFn } from "./verify-factor";
@@ -33,6 +35,10 @@ export class MfaRegistry {
 
   public getVerifiedFactor(uid: string): Promise<VerifiedFactor | null> {
     return getVerifiedFactorFn(this.db, uid);
+  }
+
+  public listVerifiedFactorTypesForUser(uid: string): Promise<MfaFactorType[]> {
+    return listVerifiedFactorTypesForUserFn(this.db, uid);
   }
 
   public getFactorById(args: {
