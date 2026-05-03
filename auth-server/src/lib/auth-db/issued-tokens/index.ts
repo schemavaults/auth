@@ -3,6 +3,8 @@ export { countActiveTokensForUser } from "./count-active-tokens-for-user";
 export type { ActiveTokenCounts } from "./count-active-tokens-for-user";
 export { countTokensCreatedByUser } from "./count-tokens-created-by-user";
 export type { CreatedTokenCounts } from "./count-tokens-created-by-user";
+export { countTokensIssuedSinceByUids } from "./count-tokens-issued-since-by-uids";
+export type { IssuedTokenCounts } from "./count-tokens-issued-since-by-uids";
 export { listIssuedTokensForUser } from "./list-issued-tokens-for-user";
 export type { ListIssuedTokensForUserOptions } from "./list-issued-tokens-for-user";
 export type * from "./issued-tokens-table";

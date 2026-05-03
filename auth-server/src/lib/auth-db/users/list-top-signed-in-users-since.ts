@@ -1,11 +1,14 @@
 import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import { countTokensIssuedSinceByUids } from "@/lib/auth-db/issued-tokens";
 
 export interface TopSignedInUserRow {
   uid: string;
   email: string;
   sign_in_count: number;
+  access_token_count: number;
+  refresh_token_count: number;
 }
 
 function toNumber(raw: string | number | bigint): number {
@@ -37,11 +40,26 @@ export async function listTopSignedInUsersSince(
     .limit(limit)
     .execute();
 
-  return rows.map((row) => ({
-    uid: row.uid,
-    email: row.email,
-    sign_in_count: toNumber(row.sign_in_count),
-  }));
+  const topUids = rows.map((row) => row.uid);
+  const tokenCountsByUid = await countTokensIssuedSinceByUids(
+    db,
+    since_ms,
+    topUids,
+  );
+
+  return rows.map((row) => {
+    const tokenCounts = tokenCountsByUid.get(row.uid) ?? {
+      access: 0,
+      refresh: 0,
+    };
+    return {
+      uid: row.uid,
+      email: row.email,
+      sign_in_count: toNumber(row.sign_in_count),
+      access_token_count: tokenCounts.access,
+      refresh_token_count: tokenCounts.refresh,
+    };
+  });
 }
 
 export default listTopSignedInUsersSince;
