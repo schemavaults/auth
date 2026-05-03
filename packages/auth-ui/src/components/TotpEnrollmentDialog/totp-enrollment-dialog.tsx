@@ -19,6 +19,7 @@ import {
 } from "@schemavaults/ui";
 import type { MfaEnrollResponse } from "@schemavaults/auth-common";
 import { useMfa } from "@schemavaults/auth-react-provider";
+import { Check, ShieldCheck, X } from "lucide-react";
 import { RecoveryCodesPanel } from "../RecoveryCodesPanel";
 
 export interface TotpEnrollmentDialogProps {
@@ -129,14 +130,22 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
             <DialogFooter>
-              <Button variant="outline" onClick={onClose} disabled={submitting}>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={submitting}
+                className="flex flex-row gap-2 flex-nowrap"
+              >
+                <X className="h-4 w-4" />
                 Cancel
               </Button>
               <Button
                 onClick={handleConfirm}
                 disabled={submitting || code.length !== 6}
                 data-testid="mfa-enroll-confirm"
+                className="flex flex-row gap-2 flex-nowrap"
               >
+                <ShieldCheck className="h-4 w-4" />
                 {submitting ? "Verifying…" : "Verify code"}
               </Button>
             </DialogFooter>
@@ -153,7 +162,9 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
                 onClick={onClose}
                 disabled={!acknowledged}
                 data-testid="mfa-enroll-done"
+                className="flex flex-row gap-2 flex-nowrap"
               >
+                <Check className="h-4 w-4" />
                 Done
               </Button>
             </DialogFooter>
