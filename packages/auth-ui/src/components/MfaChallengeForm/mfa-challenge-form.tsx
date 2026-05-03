@@ -13,6 +13,7 @@ import {
 } from "@schemavaults/ui";
 import { useMfa } from "@schemavaults/auth-react-provider";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
+import { ShieldCheck } from "lucide-react";
 
 export interface MfaChallengeFormProps {
   challenge_id: string;
@@ -127,7 +128,9 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
             type="submit"
             disabled={submitting || value.length === 0}
             data-testid="mfa-challenge-submit"
+            className="flex flex-row gap-2 flex-nowrap"
           >
+            <ShieldCheck className="h-4 w-4" />
             {submitting ? "Verifying…" : "Verify"}
           </Button>
         </CardFooter>

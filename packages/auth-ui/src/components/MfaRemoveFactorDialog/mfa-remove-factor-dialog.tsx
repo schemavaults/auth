@@ -12,6 +12,7 @@ import {
   Input,
 } from "@schemavaults/ui";
 import { useMfa } from "@schemavaults/auth-react-provider";
+import { Trash2, X } from "lucide-react";
 
 export interface MfaRemoveFactorDialogProps {
   open: boolean;
@@ -64,7 +65,13 @@ export const MfaRemoveFactorDialog: FC<MfaRemoveFactorDialogProps> = ({
         />
         {error && <p className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={submitting}
+            className="flex flex-row gap-2 flex-nowrap"
+          >
+            <X className="h-4 w-4" />
             Cancel
           </Button>
           <Button
@@ -72,7 +79,9 @@ export const MfaRemoveFactorDialog: FC<MfaRemoveFactorDialogProps> = ({
             onClick={handleConfirm}
             disabled={submitting || code.length !== 6}
             data-testid="mfa-remove-factor-confirm"
+            className="flex flex-row gap-2 flex-nowrap"
           >
+            <Trash2 className="h-4 w-4" />
             {submitting ? "Removing…" : "Remove"}
           </Button>
         </DialogFooter>
