@@ -40,6 +40,7 @@ export function UsersTable({
         select: true,
         email: true,
         admin: true,
+        mfa_factors: true,
         email_verified: false,
         disabled: false,
         invite_code: false,
