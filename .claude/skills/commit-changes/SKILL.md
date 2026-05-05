@@ -42,18 +42,18 @@ right is the `package.json` to read and edit when bumping a version.
 | `auth-resource-server-codegen-templates`| `packages/auth-resource-server-codegen-templates/package.json` |
 
 Dependency order (base first, used to order multi-package commit subjects — taken
-from `CLAUDE.md`'s package hierarchy):
+from `CLAUDE.md`'s package hierarchy and `auth-server-sdk`'s build-time
+codegen-template bundling):
 
 1. `app-definitions`
 2. `auth-common`
 3. `jwt`
-4. `auth-server-sdk`, `auth-client-sdk`
+4. `auth-client-sdk`
 5. `auth-react-provider`
 6. `auth-ui`
-7. `auth-server`
-
-`auth-resource-server-codegen-templates` is independent — list it last when mixed
-with the others.
+7. `auth-resource-server-codegen-templates`
+8. `auth-server-sdk` (build copies codegen-templates source into its dist)
+9. `auth-server`
 
 ## Downstream dependents (REQUIRED cascade bumps)
 
@@ -70,11 +70,24 @@ downstream version to pull in the updated base package; skipping this leaves
 | `auth-common`                             | `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server` |
 | `jwt`                                     | `auth-server-sdk`, `auth-server`                                                     |
 | `auth-server-sdk`                         | `auth-resource-server-codegen-templates`, `auth-server`                              |
-| `auth-client-sdk`                         | `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server` |
-| `auth-react-provider`                     | `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server`                   |
-| `auth-ui`                                 | `auth-server`                                                                        |
-| `auth-resource-server-codegen-templates`  | (none)                                                                               |
+| `auth-client-sdk`                         | `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server` |
+| `auth-react-provider`                     | `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server` |
+| `auth-ui`                                 | `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server`           |
+| `auth-resource-server-codegen-templates`  | `auth-server-sdk`, `auth-server`                                                     |
 | `auth-server`                             | (none — leaf)                                                                        |
+
+**Note on `auth-resource-server-codegen-templates` → `auth-server-sdk`:** the
+`auth-server-sdk` build script (`copy-codegen-templates.sh`) copies the codegen
+templates' source into `auth-server-sdk/dist/codegen-templates/` and bundles them
+into the published CLI. There is no `package.json` `dependencies` edge between
+the two — the coupling is build-time only — so `grep` won't reveal it. Any
+change to `auth-resource-server-codegen-templates` (including updating one of
+its own dependencies, like `@schemavaults/ui`) requires republishing
+`auth-server-sdk` so consumers of the CLI pick up the new template content.
+
+**Note on `auth-ui` → `auth-resource-server-codegen-templates`:** the codegen
+templates render `auth-ui` components, so a published `auth-ui` bump must
+cascade through codegen-templates and on to `auth-server-sdk`.
 
 If you are unsure, verify with:
 
