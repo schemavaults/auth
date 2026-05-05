@@ -17,18 +17,15 @@ function toNumber(raw: string | number | bigint): number {
   return parsed;
 }
 
-export async function countTokensIssuedSinceByUids(
+export async function countTokensIssuedSinceGroupedByUid(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   since_ms: number,
-  uids: readonly string[],
 ): Promise<Map<string, IssuedTokenCounts>> {
   const result = new Map<string, IssuedTokenCounts>();
-  if (uids.length === 0) return result;
 
   const rows = await db
     .selectFrom("issued_tokens")
     .where("issued_at", ">", since_ms)
-    .where("uid", "in", uids)
     .select(["uid", "token_type"])
     .select((eb) => eb.fn.countAll().as("count"))
     .groupBy(["uid", "token_type"])
@@ -48,4 +45,4 @@ export async function countTokensIssuedSinceByUids(
   return result;
 }
 
-export default countTokensIssuedSinceByUids;
+export default countTokensIssuedSinceGroupedByUid;

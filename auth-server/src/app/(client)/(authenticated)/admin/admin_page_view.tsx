@@ -47,7 +47,7 @@ export default function AdminPageView(): ReactElement {
         }
         toast({
           title: "Daily report sent",
-          description: `Emailed admin mailing list: ${body.users_count} new sign-ups, ${body.top_signed_in_users_count} active users, ${body.errors_count} new errors in the last 24 hours.`,
+          description: `Emailed admin mailing list: ${body.users_count} new sign-ups, ${body.top_most_active_users_count} active users, ${body.errors_count} new errors in the last 24 hours.`,
         });
       } catch (e: unknown) {
         console.error("Failed to send daily admin report:", e);
