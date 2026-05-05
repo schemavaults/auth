@@ -7,7 +7,7 @@ import {
 } from "@schemavaults/app-definitions";
 import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import {
-  listTopSignedInUsersSince,
+  listTopMostActiveUsersSince,
   listUsersCreatedSince,
 } from "@/lib/auth-db/users";
 import { listErrorsCreatedSince } from "@/lib/auth-db/errors";
@@ -34,12 +34,12 @@ export async function sendDailyReportHandler({
     const windowEnd = new Date();
     const windowStart = new Date(windowEnd.getTime() - TWENTY_FOUR_HOURS_MS);
 
-    const [newUsers, newOrganizations, newErrors, topSignedInUsers] =
+    const [newUsers, newOrganizations, newErrors, topMostActiveUsers] =
       await Promise.all([
         listUsersCreatedSince(dbh.db, windowStart.getTime()),
         listOrganizationsCreatedSince(dbh.db, windowStart.getTime()),
         listErrorsCreatedSince(dbh.db, windowStart.getTime()),
-        listTopSignedInUsersSince(dbh.db, windowStart.getTime(), 10),
+        listTopMostActiveUsersSince(dbh.db, windowStart.getTime(), 10),
       ]);
 
     const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
@@ -52,7 +52,7 @@ export async function sendDailyReportHandler({
       newUsers,
       newOrganizations,
       newErrors,
-      topSignedInUsers,
+      topMostActiveUsers,
     });
 
     const dateLabel = windowEnd.toISOString().slice(0, 10);
@@ -71,7 +71,7 @@ export async function sendDailyReportHandler({
       users_count: newUsers.length,
       organizations_count: newOrganizations.length,
       errors_count: newErrors.length,
-      top_signed_in_users_count: topSignedInUsers.length,
+      top_most_active_users_count: topMostActiveUsers.length,
       window_start: windowStart.toISOString(),
       window_end: windowEnd.toISOString(),
     });

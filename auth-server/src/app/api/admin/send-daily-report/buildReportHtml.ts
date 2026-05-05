@@ -1,7 +1,7 @@
 import "server-only";
 import { brandColors } from "@schemavaults/theme";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
-import type { TopSignedInUserRow, UserDocument } from "@/lib/auth-db/users";
+import type { TopMostActiveUserRow, UserDocument } from "@/lib/auth-db/users";
 import type { ErrorRow } from "@/lib/auth-db/errors";
 
 interface BuildReportOpts {
@@ -11,7 +11,7 @@ interface BuildReportOpts {
   newUsers: readonly UserDocument[];
   newOrganizations: readonly OrganizationDefinition[];
   newErrors: readonly ErrorRow[];
-  topSignedInUsers: readonly TopSignedInUserRow[];
+  topMostActiveUsers: readonly TopMostActiveUserRow[];
 }
 
 interface ReportContent {
@@ -45,7 +45,7 @@ export function buildDailyAdminReport({
   newUsers,
   newOrganizations,
   newErrors,
-  topSignedInUsers,
+  topMostActiveUsers,
 }: BuildReportOpts): ReportContent {
   const windowLabel = `${formatTimestamp(windowStart.getTime())} → ${formatTimestamp(windowEnd.getTime())}`;
 
@@ -75,9 +75,9 @@ export function buildDailyAdminReport({
         })
         .join("\n");
 
-  const topSignedInRows = topSignedInUsers.length === 0
-    ? `<tr><td colspan="6" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No sign-ins in the last 24 hours.</td></tr>`
-    : topSignedInUsers
+  const topMostActiveRows = topMostActiveUsers.length === 0
+    ? `<tr><td colspan="6" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No user activity in the last 24 hours.</td></tr>`
+    : topMostActiveUsers
         .map((u, i) => {
           const link = `${authServerUri}/admin/users/${encodeURIComponent(u.uid)}`;
           return `<tr>
@@ -152,7 +152,7 @@ ${organizationsRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">Top signed-in users (${topSignedInUsers.length})</h2>
+        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">Top most-active users (${topMostActiveUsers.length})</h2>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -165,7 +165,7 @@ ${organizationsRows}
             </tr>
           </thead>
           <tbody>
-${topSignedInRows}
+${topMostActiveRows}
           </tbody>
         </table>
       </td>
@@ -218,11 +218,11 @@ ${errorsRows}
     }
   }
   textLines.push("");
-  textLines.push(`Top signed-in users (${topSignedInUsers.length}):`);
-  if (topSignedInUsers.length === 0) {
+  textLines.push(`Top most-active users (${topMostActiveUsers.length}):`);
+  if (topMostActiveUsers.length === 0) {
     textLines.push("  (none)");
   } else {
-    topSignedInUsers.forEach((u, i) => {
+    topMostActiveUsers.forEach((u, i) => {
       textLines.push(
         `  ${i + 1}. ${u.email} — ${u.sign_in_count.toLocaleString("en-US")} sign-in(s) — ${u.access_token_count.toLocaleString("en-US")} access / ${u.refresh_token_count.toLocaleString("en-US")} refresh — ${authServerUri}/admin/users/${u.uid}`,
       );
