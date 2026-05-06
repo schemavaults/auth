@@ -52,27 +52,17 @@ jobs:
       BUN_VERSION: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
 
   Deploy-Vercel-Production:
-    runs-on: ubuntu-latest
     needs:
       - Run-E2E-Tests
       - Run-Unit-Tests
       - Run-ESLint
       - SetupCiCdConfig
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy-vercel-production.yml
+    with:
+      BUN_VERSION: ${{ needs.SetupCiCdConfig.outputs.bun_version }}
+    secrets: inherit
 
   Build-Auth-Packages-And-Upload-Tarballs-If-Changed:
     runs-on: ubuntu-latest
