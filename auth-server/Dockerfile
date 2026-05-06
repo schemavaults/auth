@@ -114,8 +114,18 @@ COPY --chown=bun:bun packages/auth-ui/src/ packages/auth-ui/src/
 # @schemavaults/jwt
 COPY --chown=bun:bun packages/jwt/src/ packages/jwt/src/
 
-### Build final server code ###
-FROM source AS build
+### Source variant: production (test routes stripped so they cannot be served)
+FROM source AS source-prod
+
+WORKDIR /schemavaults/auth
+
+RUN rm -rf auth-server/src/app/api/test
+
+### Source variant: test (test routes retained for E2E suite)
+FROM source AS source-test
+
+### Build final server code (production) ###
+FROM source-prod AS build-prod
 
 WORKDIR /schemavaults/auth
 
@@ -131,18 +141,33 @@ RUN bun run build --filter @schemavaults/auth-server
 WORKDIR /schemavaults/auth/auth-server
 RUN bun run build:migrations
 
+### Build final server code (test) ###
+FROM source-test AS build-test
+
+WORKDIR /schemavaults/auth
+
+ARG NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS
+ENV NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS=$NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS
+
+ENV NEXT_STANDALONE_DOCKER_BUILD true
+ENV NEXT_TELEMETRY_DISABLED 1
+RUN bun run build --filter @schemavaults/auth-server
+
+WORKDIR /schemavaults/auth/auth-server
+RUN bun run build:migrations
+
 FROM nodejsbase AS production
 
 WORKDIR /schemavaults/auth
 
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json auth-server/package.json
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ auth-server/.next/standalone/
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ auth-server/.next/standalone/auth-server/.next/static/
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/.next/standalone/auth-server/public/
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json auth-server/package.json
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ auth-server/.next/standalone/
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ auth-server/.next/standalone/auth-server/.next/static/
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/.next/standalone/auth-server/public/
 
 # Copy compiled migrations for runtime DB migrations
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/sql.js auth-server/dist/sql.js
-COPY --from=build --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ auth-server/dist/migrations/
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/sql.js auth-server/dist/sql.js
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ auth-server/dist/migrations/
 
 WORKDIR /schemavaults/auth/auth-server
 
@@ -154,6 +179,31 @@ ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_STANDALONE_DOCKER_BUILD true
 
 # Set migrations path for production
+ENV MIGRATIONS_PATH /schemavaults/auth/auth-server/dist/migrations
+
+CMD [ "node", "./.next/standalone/auth-server/server.js" ]
+
+FROM nodejsbase AS test
+
+WORKDIR /schemavaults/auth
+
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json auth-server/package.json
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ auth-server/.next/standalone/
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ auth-server/.next/standalone/auth-server/.next/static/
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/.next/standalone/auth-server/public/
+
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/sql.js auth-server/dist/sql.js
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ auth-server/dist/migrations/
+
+WORKDIR /schemavaults/auth/auth-server
+
+EXPOSE 80
+ENV PORT 80
+ENV HOSTNAME 0.0.0.0
+
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_STANDALONE_DOCKER_BUILD true
+
 ENV MIGRATIONS_PATH /schemavaults/auth/auth-server/dist/migrations
 
 CMD [ "node", "./.next/standalone/auth-server/server.js" ]
