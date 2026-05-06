@@ -33,7 +33,7 @@ jobs:
         if: ${{ inputs.skip-docker-build }}
         uses: actions/download-artifact@v8
         with:
-          name: docker-image-auth-server
+          name: docker-image-auth-server-test
           path: /tmp/docker-images
 
       - name: Download postgres DB Docker image
