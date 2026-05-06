@@ -8,7 +8,7 @@ import { extractVersion, getCodegenMarkerComment, hasCodegenMarker, prependCodeg
 
 export interface IAuthResourceServerCodegenOptions {
   /**
-   * Custom output directory for the generated `auth/` files.
+   * Custom output directory for the generated client `auth/` files.
    *
    * When provided, this is treated as the path to the auth directory itself
    * (i.e., the directory in which `login/page.tsx`, `register/page.tsx`,
@@ -20,7 +20,7 @@ export interface IAuthResourceServerCodegenOptions {
    * Example: `src/app/(client)/auth` to nest the generated routes inside a
    * Next.js route group.
    */
-  outputDirectory?: string;
+  clientOutputDirectory?: string;
   codegenTemplatesDirectory?: string;
   debug?: boolean;
 }
@@ -166,15 +166,18 @@ function createClientAuthProvider(authDirectory: string, templatesDir: string) {
   console.log(` - created '${relPath}'`);
 }
 
-function resolveAuthOutputDirectory(
-  outputDirectoryOption: string | undefined,
+function resolveClientAuthOutputDirectory(
+  clientOutputDirectoryOption: string | undefined,
   debug: boolean,
 ): string {
-  if (typeof outputDirectoryOption === "string" && outputDirectoryOption.length > 0) {
-    const resolved = isAbsolute(outputDirectoryOption)
-      ? outputDirectoryOption
-      : resolve(cwd(), outputDirectoryOption);
-    console.log(` - using custom auth output directory '${resolved}'`);
+  if (
+    typeof clientOutputDirectoryOption === "string" &&
+    clientOutputDirectoryOption.length > 0
+  ) {
+    const resolved = isAbsolute(clientOutputDirectoryOption)
+      ? clientOutputDirectoryOption
+      : resolve(cwd(), clientOutputDirectoryOption);
+    console.log(` - using custom client auth output directory '${resolved}'`);
     return resolved;
   }
   const appDirectory: string = resolveAppDirectory(debug);
@@ -191,15 +194,17 @@ export default async function codegen(
 
   const debug = opts?.debug ?? false;
 
-  const authDirectory: string = resolveAuthOutputDirectory(
-    opts?.outputDirectory,
+  const authDirectory: string = resolveClientAuthOutputDirectory(
+    opts?.clientOutputDirectory,
     debug,
   );
   if (!existsSync(authDirectory)) {
     mkdirSync(authDirectory, { recursive: true });
-    console.log(` - created auth output directory at '${authDirectory}'`);
+    console.log(` - created client auth output directory at '${authDirectory}'`);
   } else {
-    console.log(` - auth output directory already exists at '${authDirectory}'`);
+    console.log(
+      ` - client auth output directory already exists at '${authDirectory}'`,
+    );
   }
 
   const templatesDir: string =

@@ -8,14 +8,14 @@ Commands:
   codegen              Generate auth pages for your Next.js app (default)
 
 Options:
-  --output-dir <path>      Custom output directory for the generated auth files
-                           (defaults to <app>/auth, e.g. src/app/auth).
-                           Useful for nesting under a route group, e.g.
-                           src/app/(client)/auth.
-  --templates-dir <path>   Custom codegen templates directory
-  --debug                  Enable debug logging
-  --help, -h               Show this help message
-  --version, -v            Show package name
+  --client-output-dir <path>  Custom output directory for the generated client
+                              auth files (defaults to <app>/auth, e.g.
+                              src/app/auth). Useful for nesting under a route
+                              group, e.g. src/app/(client)/auth.
+  --templates-dir <path>      Custom codegen templates directory
+  --debug                     Enable debug logging
+  --help, -h                  Show this help message
+  --version, -v               Show package name
 `;
 
 function printHelp() {
@@ -61,9 +61,9 @@ async function main() {
     process.exit(1);
   }
 
-  const outputFlag = readStringFlag(args, "--output-dir");
-  if (outputFlag.present && !outputFlag.value) {
-    console.error("Error: --output-dir requires a path argument\n");
+  const clientOutputFlag = readStringFlag(args, "--client-output-dir");
+  if (clientOutputFlag.present && !clientOutputFlag.value) {
+    console.error("Error: --client-output-dir requires a path argument\n");
     printHelp();
     process.exit(1);
   }
@@ -74,7 +74,9 @@ async function main() {
     ...(templatesFlag.value
       ? { codegenTemplatesDirectory: templatesFlag.value }
       : {}),
-    ...(outputFlag.value ? { outputDirectory: outputFlag.value } : {}),
+    ...(clientOutputFlag.value
+      ? { clientOutputDirectory: clientOutputFlag.value }
+      : {}),
     debug,
   });
 }

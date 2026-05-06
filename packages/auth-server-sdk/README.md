@@ -13,13 +13,13 @@ and the `auth-provider.tsx` into your Next.js App Router project.
 
 ### Options
 
-- `--output-dir <path>` — Custom output directory for the generated `auth/`
-  files. Defaults to `<app>/auth` (e.g. `src/app/auth` or `app/auth`).
-  When set, the path is treated as the auth directory itself, so you can place
-  the generated files inside a Next.js route group:
+- `--client-output-dir <path>` — Custom output directory for the generated
+  client `auth/` files. Defaults to `<app>/auth` (e.g. `src/app/auth` or
+  `app/auth`). When set, the path is treated as the auth directory itself, so
+  you can place the generated files inside a Next.js route group:
 
   ```bash
-  bunx @schemavaults/auth-server-sdk codegen --output-dir src/app/\(client\)/auth
+  bunx @schemavaults/auth-server-sdk codegen --client-output-dir src/app/\(client\)/auth
   ```
 
   Relative paths are resolved against the current working directory.
