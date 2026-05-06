@@ -1,39 +1,55 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { dirname } from "path";
+import { dirname, isAbsolute, resolve } from "path";
+import { cwd } from "process";
 import resolveAppDirectory from "./resolve-app-directory";
 import { join } from "path";
 import resolveCodegenTemplatesDirectory from "./resolve-codegen-templates-directory";
 import { extractVersion, getCodegenMarkerComment, hasCodegenMarker, prependCodegenMarker } from "./codegen-marker";
 
 export interface IAuthResourceServerCodegenOptions {
+  /**
+   * Custom output directory for the generated `auth/` files.
+   *
+   * When provided, this is treated as the path to the auth directory itself
+   * (i.e., the directory in which `login/page.tsx`, `register/page.tsx`,
+   * `auth-provider.tsx`, etc. are written). Relative paths are resolved
+   * against the current working directory.
+   *
+   * When omitted, defaults to `<resolved-app-directory>/auth`.
+   *
+   * Example: `src/app/(client)/auth` to nest the generated routes inside a
+   * Next.js route group.
+   */
+  outputDirectory?: string;
   codegenTemplatesDirectory?: string;
   debug?: boolean;
 }
 
 interface ITemplateAuthPage {
-  app_dir_path: `/auth/${string}`;
+  /** Path of the page within the generated `auth/` directory. */
+  auth_relative_path: string;
   codegen_template_path: string;
 }
 
 const pagesToCreate: readonly ITemplateAuthPage[] = [
   {
-    app_dir_path: "/auth/login",
+    auth_relative_path: "login",
     codegen_template_path: "auth/login/page.tsx",
   },
   {
-    app_dir_path: "/auth/register",
+    auth_relative_path: "register",
     codegen_template_path: "auth/register/page.tsx",
   },
   {
-    app_dir_path: "/auth/logout",
+    auth_relative_path: "logout",
     codegen_template_path: "auth/logout/page.tsx",
   },
   {
-    app_dir_path: "/auth/authorize",
+    auth_relative_path: "authorize",
     codegen_template_path: "auth/authorize/page.tsx",
   },
   {
-    app_dir_path: "/auth/error",
+    auth_relative_path: "error",
     codegen_template_path: "auth/error/page.tsx",
   },
 ];
@@ -59,10 +75,10 @@ function formatVersionTransition(oldVersion: string | null): string {
   return "";
 }
 
-function createClientPages(appDirectory: string, templatesDir: string) {
+function createClientPages(authDirectory: string, templatesDir: string) {
   for (const page of pagesToCreate) {
-    const destPath: string = join(appDirectory, page.app_dir_path, "page.tsx");
-    const relPath = `${page.app_dir_path}/page.tsx`;
+    const destPath: string = join(authDirectory, page.auth_relative_path, "page.tsx");
+    const relPath = `auth/${page.auth_relative_path}/page.tsx`;
 
     if (existsSync(destPath)) {
       if (isCodegenManagedFile(destPath)) {
@@ -104,14 +120,14 @@ function createClientPages(appDirectory: string, templatesDir: string) {
   }
 }
 
-function createClientAuthProvider(appDirectory: string, templatesDir: string) {
+function createClientAuthProvider(authDirectory: string, templatesDir: string) {
   const srcTemplatePath: string = join(
     templatesDir,
     "auth",
     "auth-provider.tsx",
   );
-  const destPath: string = join(appDirectory, "auth", "auth-provider.tsx");
-  const relPath = "/auth/auth-provider.tsx";
+  const destPath: string = join(authDirectory, "auth-provider.tsx");
+  const relPath = "auth/auth-provider.tsx";
 
   if (existsSync(destPath)) {
     if (isCodegenManagedFile(destPath)) {
@@ -150,6 +166,22 @@ function createClientAuthProvider(appDirectory: string, templatesDir: string) {
   console.log(` - created '${relPath}'`);
 }
 
+function resolveAuthOutputDirectory(
+  outputDirectoryOption: string | undefined,
+  debug: boolean,
+): string {
+  if (typeof outputDirectoryOption === "string" && outputDirectoryOption.length > 0) {
+    const resolved = isAbsolute(outputDirectoryOption)
+      ? outputDirectoryOption
+      : resolve(cwd(), outputDirectoryOption);
+    console.log(` - using custom auth output directory '${resolved}'`);
+    return resolved;
+  }
+  const appDirectory: string = resolveAppDirectory(debug);
+  console.log(` - resolved /app directory at '${appDirectory}'`);
+  return join(appDirectory, "auth");
+}
+
 export default async function codegen(
   opts?: IAuthResourceServerCodegenOptions,
 ) {
@@ -159,14 +191,15 @@ export default async function codegen(
 
   const debug = opts?.debug ?? false;
 
-  const appDirectory: string = resolveAppDirectory(debug);
-  console.log(` - resolved /app directory at '${appDirectory}'`);
-  const authDirectory: string = join(appDirectory, "auth");
+  const authDirectory: string = resolveAuthOutputDirectory(
+    opts?.outputDirectory,
+    debug,
+  );
   if (!existsSync(authDirectory)) {
-    mkdirSync(authDirectory);
-    console.log(` - created /auth directory at '${authDirectory}'`);
+    mkdirSync(authDirectory, { recursive: true });
+    console.log(` - created auth output directory at '${authDirectory}'`);
   } else {
-    console.log(` - /auth directory already exists at '${authDirectory}'`);
+    console.log(` - auth output directory already exists at '${authDirectory}'`);
   }
 
   const templatesDir: string =
@@ -175,8 +208,8 @@ export default async function codegen(
       : resolveCodegenTemplatesDirectory(debug);
   console.log(` - resolved codegen templates directory at '${templatesDir}'`);
 
-  createClientPages(appDirectory, templatesDir);
-  createClientAuthProvider(appDirectory, templatesDir);
+  createClientPages(authDirectory, templatesDir);
+  createClientAuthProvider(authDirectory, templatesDir);
 
   console.log(
     `[@schemavaults/auth-server-sdk/NextjsAppDirectoryPlugin] Codegen complete.`,
