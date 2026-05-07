@@ -1,12 +1,28 @@
 "use client";
 
-import { ThemedPageContainer, cn } from "@schemavaults/ui";
+import {
+  PageColumnContainer,
+  ThemedPageBackground,
+  cn,
+} from "@schemavaults/ui";
 import type { PropsWithChildren } from "react";
 
 export function PageContainer({ children }: PropsWithChildren) {
-  return <ThemedPageContainer additionalContentContainerClassName={cn(
-    'no-scrollbar'
-  )}>{children}</ThemedPageContainer>;
+  return (
+    <ThemedPageBackground
+      className={cn(
+        "flex flex-col items-stretch justify-start",
+        "min-h-full",
+        "p-2 sm:p-4 lg:p-6",
+      )}
+    >
+      <PageColumnContainer
+        className={cn("rounded-lg", "gap-2 sm:gap-4 lg:gap-6", "no-scrollbar")}
+      >
+        {children}
+      </PageColumnContainer>
+    </ThemedPageBackground>
+  );
 }
 
 export default PageContainer;
