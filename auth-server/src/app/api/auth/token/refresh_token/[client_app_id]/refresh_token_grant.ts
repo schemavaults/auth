@@ -5,8 +5,6 @@ import {
   getAudienceFromToken,
   getKeysetIdFromToken,
 } from "@schemavaults/jwt";
-
-type DecodedRefreshTokenPayload = CustomJWTPayload & { iat: number };
 import {
   type OrganizationsRegistry,
   type ServerlessDatabase,
@@ -147,7 +145,7 @@ export async function handleRefreshTokenGrant(
     );
   }
 
-  let decoded: DecodedRefreshTokenPayload;
+  let decoded: CustomJWTPayload;
   try {
     decoded = await decodeJWT({
       type: "refresh",

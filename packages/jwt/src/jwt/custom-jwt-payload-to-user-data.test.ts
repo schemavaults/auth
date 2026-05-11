@@ -18,6 +18,7 @@ describe("customJwtPayloadToUserData", () => {
     sig: "a".repeat(64),
     iss: "schemavaults-auth",
     env: "test",
+    iat: Math.floor(Date.now() / 1000),
   };
 
   it("should extract only UserData fields from a CustomJWTPayload", () => {
