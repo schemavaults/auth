@@ -142,11 +142,14 @@ export function DeleteOldErrorsCard(): ReactElement {
                 onChange={handleChange}
                 disabled={isPending}
                 required
+                suppressHydrationWarning
               />
               {beforeDate ? (
                 <p className="text-xs text-muted-foreground">
                   Will delete errors captured before{" "}
-                  <span className="font-mono">{beforeDate.toISOString()}</span>
+                  <span className="font-mono" suppressHydrationWarning>
+                    {beforeDate.toISOString()}
+                  </span>
                   .
                 </p>
               ) : null}
@@ -176,7 +179,7 @@ export function DeleteOldErrorsCard(): ReactElement {
                 created_at
               </code>
               strictly before{" "}
-              <span className="font-mono">
+              <span className="font-mono" suppressHydrationWarning>
                 {beforeDate ? beforeDate.toISOString() : ""}
               </span>
               . This action cannot be undone.
