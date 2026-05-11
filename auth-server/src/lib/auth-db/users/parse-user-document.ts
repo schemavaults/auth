@@ -11,6 +11,7 @@ export const userDocumentSchema = z
     invite_code: inviteCodeFormatSchema.optional(),
     admin: z.boolean().optional(),
     disabled: z.boolean().optional(),
+    tokens_valid_after: z.number().nonnegative().optional(),
   })
   .required({
     email: true,
@@ -31,9 +32,18 @@ export async function parseUserDocument(row: unknown): Promise<UserDocument> {
       "Invalid user document from DB; missing created_at property",
     );
   }
+  const rawRow = row as Record<string, unknown>;
+  const rawTokensValidAfter = rawRow.tokens_valid_after;
+  const tokens_valid_after: number | undefined =
+    rawTokensValidAfter === undefined || rawTokensValidAfter === null
+      ? undefined
+      : typeof rawTokensValidAfter === "string"
+        ? parseInt(rawTokensValidAfter, 10)
+        : Number(rawTokensValidAfter);
   const parsed_user = await userDocumentSchema.safeParseAsync({
-    ...row,
+    ...rawRow,
     created_at: parseInt((row as { created_at: string }).created_at),
+    ...(tokens_valid_after === undefined ? {} : { tokens_valid_after }),
   });
   if (!parsed_user.success) {
     console.error(

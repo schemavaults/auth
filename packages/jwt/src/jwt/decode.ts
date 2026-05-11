@@ -54,7 +54,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     ? SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
     : undefined,
   ...opts
-}: DecodeJWTOptions<T>): Promise<CustomJWTPayload> {
+}: DecodeJWTOptions<T>): Promise<CustomJWTPayload & { iat: number }> {
   const environment: SchemaVaultsAppEnvironment = opts.env;
   if (!environment) {
     throw new Error("Invalid app environment to decode JWT within");
@@ -325,5 +325,5 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     throw new Error("Failed to verify 'sig' field of JWT using public key!");
   }
 
-  return payload;
+  return { ...payload, iat };
 }
