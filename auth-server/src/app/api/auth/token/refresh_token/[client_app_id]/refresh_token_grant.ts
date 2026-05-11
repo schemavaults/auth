@@ -11,6 +11,8 @@ import {
   type UserRegistry,
   loadUserData,
   isTokenRevoked,
+  getUserTokensValidAfter,
+  isTokenIatRevoked,
 } from "@/lib/auth-db";
 import {
   type OrganizationID,
@@ -215,6 +217,43 @@ export async function handleRefreshTokenGrant(
         },
       );
     }
+  }
+
+  // Check the per-user `tokens_valid_after` watermark. Bumped on
+  // password reset to revoke every refresh token issued before the
+  // reset, even ones we never recorded a JTI for.
+  let tokens_valid_after: number;
+  try {
+    tokens_valid_after = await getUserTokensValidAfter(dbh.db, decoded.uid);
+  } catch (e: unknown) {
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRefreshTokenGrant.getUserTokensValidAfter",
+      route: ROUTE,
+      uid: decoded.uid,
+      context: { client_app_id: body.client_app_id },
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Failed to check token revocation status",
+      } satisfies RequestTokensResult,
+      {
+        status: 500,
+      },
+    );
+  }
+  if (isTokenIatRevoked(decoded.iat, tokens_valid_after)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Refresh token has been revoked",
+      } satisfies RequestTokensResult,
+      {
+        status: 401,
+      },
+    );
   }
 
   const { uid } = decoded;

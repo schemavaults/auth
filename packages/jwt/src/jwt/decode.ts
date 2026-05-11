@@ -227,7 +227,6 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       iss: string;
     }
   > = { ...decoded.payload };
-  delete withoutJWTspecific.iat;
   delete withoutJWTspecific.exp;
 
   const parsedPayload =

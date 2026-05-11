@@ -28,6 +28,7 @@ export const jwtPayloadSchema = z
     iss: z.literal(REFRESH_TOKEN_AUDIENCE),
     env: schemaVaultsAppEnvironmentSchema,
     jti: z.string().uuid().optional(),
+    iat: z.number().nonnegative(), // unix seconds (jose's setIssuedAt output)
   })
   .required({
     uid: true,
@@ -42,6 +43,7 @@ export const jwtPayloadSchema = z
     sig: true,
     iss: true,
     env: true,
+    iat: true,
   })
   .strict()
   .refine((jwt_payload) => {
