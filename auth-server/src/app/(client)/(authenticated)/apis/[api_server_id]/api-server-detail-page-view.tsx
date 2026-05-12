@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
-import type { SchemaVaultsApiServerDefinition, SchemaVaultsApiServerDomainRef, SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { isHardcodedAppId, type SchemaVaultsApiServerDefinition, type SchemaVaultsApiServerDomainRef, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { DeleteApiServerDialog, LocalDateTime } from "@schemavaults/auth-ui";
-import { Trash2, KeyRound } from "lucide-react";
+import { DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
+import { Trash2, KeyRound, Unplug } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -53,6 +53,8 @@ export default function ApiServerDetailPageView({
   current_environment,
 }: ApiServerDetailPageViewProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [apps, setApps] = useState<ConnectedApp[]>(connected_apps);
+  const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApp | null>(null);
   const router = useRouter();
 
   const activeDomains = connected_domains.filter((d) => d.environment === current_environment);
@@ -134,33 +136,77 @@ export default function ApiServerDetailPageView({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {connected_apps.length === 0 ? (
+          {apps.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No applications are currently connected to this API server.
             </p>
           ) : (
             <div className="space-y-3">
-              {connected_apps.map((app) => (
-                <Link
-                  key={app.client_app_id}
-                  href={`/apps/${app.client_app_id}`}
-                  className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{app.app_name}</p>
-                    <p className="text-xs text-muted-foreground">{app.client_app_id}</p>
+              {apps.map((app) => {
+                const canDisconnect =
+                  isOrgOwner && !isHardcodedAppId(app.client_app_id);
+                return (
+                  <div
+                    key={app.client_app_id}
+                    className="flex items-center justify-between gap-2 rounded-md border p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <Link
+                      href={`/apps/${app.client_app_id}`}
+                      className="flex flex-1 items-center justify-between gap-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{app.app_name}</p>
+                        <p className="text-xs text-muted-foreground">{app.client_app_id}</p>
+                      </div>
+                      <LocalDateTime
+                        value={app.created_at}
+                        showSeconds={false}
+                        className="text-xs text-muted-foreground"
+                      />
+                    </Link>
+                    {canDisconnect && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Disconnect ${app.app_name}`}
+                        title="Disconnect"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDisconnectTarget(app);
+                        }}
+                      >
+                        <Unplug className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
-                  <LocalDateTime
-                    value={app.created_at}
-                    showSeconds={false}
-                    className="text-xs text-muted-foreground"
-                  />
-                </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {disconnectTarget && (
+        <DisconnectAppToApiDialog
+          api_server_id={api_server.api_server_id}
+          api_server_name={api_server.api_server_name}
+          client_app_id={disconnectTarget.client_app_id}
+          client_app_name={disconnectTarget.app_name}
+          confirmation_target="app"
+          open={!!disconnectTarget}
+          onOpenChange={(open: boolean) => {
+            if (!open) setDisconnectTarget(null);
+          }}
+          onDisconnected={() => {
+            const removedId = disconnectTarget.client_app_id;
+            setApps((current) =>
+              current.filter((a) => a.client_app_id !== removedId),
+            );
+            setDisconnectTarget(null);
+          }}
+        />
+      )}
 
       {!hardcoded && isOrgOwner && (
         <>

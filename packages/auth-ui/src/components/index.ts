@@ -105,6 +105,12 @@ export type { DeleteAppDialogProps } from "./DeleteAppDialog";
 export { DeleteApiServerDialog } from "./DeleteApiServerDialog";
 export type { DeleteApiServerDialogProps } from "./DeleteApiServerDialog";
 
+export { DisconnectAppToApiDialog } from "./DisconnectAppToApiDialog";
+export type {
+  DisconnectAppToApiDialogProps,
+  DisconnectAppToApiConfirmationTarget,
+} from "./DisconnectAppToApiDialog";
+
 export { MfaSettingsCard } from "./MfaSettingsCard";
 export type { MfaSettingsCardProps } from "./MfaSettingsCard";
 

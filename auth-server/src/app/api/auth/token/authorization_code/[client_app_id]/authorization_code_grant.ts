@@ -28,6 +28,7 @@ import {
 import returnGeneratedTokensToUser from "@/lib/returnGeneratedTokensToUser";
 import getHostname from "@/lib/hostname";
 import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
+import AppNotConnectedToApiServerError from "@/lib/error/AppNotConnectedToApiServerError";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/auth/token/authorization_code/[client_app_id]";
@@ -207,6 +208,26 @@ export async function handleAuthorizationCodeGrant(
         {
           status: 403,
         },
+      );
+    }
+    if (e instanceof AppNotConnectedToApiServerError) {
+      await captureServerException(dbh.db, e, {
+        op_name: "handleAuthorizationCodeGrant.app_not_connected_to_api",
+        route: ROUTE,
+        uid,
+        context: {
+          client_app_id: e.client_app_id,
+          api_server_id: e.api_server_id,
+        },
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: true,
+          message:
+            "Client application is not connected to the requested API server",
+        } satisfies RequestTokensResult,
+        { status: 403 },
       );
     }
     await captureServerException(dbh.db, e, {

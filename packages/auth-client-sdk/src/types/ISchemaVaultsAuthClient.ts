@@ -339,6 +339,18 @@ export interface ISchemaVaultsAuthClient {
   ) => Promise<void>;
 
   /**
+   * @name disconnectAppFromApiServer
+   * @description Revoke a previously-granted app-to-API connection, blocking the client application from requesting access tokens for that API server
+   * @argument api_server_id The unique ID of the API server
+   * @argument client_app_id The unique ID of the client application
+   * @returns A promise resolving if the disconnection succeeds
+   */
+  disconnectAppFromApiServer: (
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+  ) => Promise<void>;
+
+  /**
    * @name checkAppToApiPermission
    * @description Check if a frontend client application has permission to access an API server
    * @argument api_server_id The unique ID of the API server
