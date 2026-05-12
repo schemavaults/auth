@@ -72,29 +72,32 @@ export async function GET(
     );
   }
 
-  // Authenticate the request first, before CORS validation
+  // Validate CORS up front so that auth-failure responses (401/403 from the
+  // route guard) still carry Access-Control-Allow-Origin headers. Without this,
+  // unauthenticated cross-origin probes from registered client apps surface as
+  // a CORS error in the browser instead of a parseable 401, which breaks
+  // useStartLoginOauthPKCEFlow's "am I already logged in?" check.
+  await using dbh = ServerlessDatabase.createDBH();
+  const corsResult = await validateCorsForClientApp(
+    { client_app_id, request: req },
+    dbh,
+    debug,
+  );
+
+  if (!corsResult.allowed) {
+    if (debug) {
+      console.warn("Request blocked with CORS error: ", corsResult);
+    }
+    return NextResponse.json(
+      { success: false, error: true, message: corsResult.error },
+      { status: 403 },
+    );
+  }
+
   const protected_route: (req: NextRequest) => Promise<NextResponse> = await withAuthenticatedApiRouteGuard(
     async ({
       user,
-      dbh,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
-      // Validate CORS
-      const corsResult = await validateCorsForClientApp(
-        { client_app_id, request: req },
-        dbh,
-        debug,
-      );
-
-      if (!corsResult.allowed) {
-        if (debug) {
-          console.warn("Request blocked with CORS error: ", corsResult);
-        }
-        return NextResponse.json(
-          { success: false, error: true, message: corsResult.error },
-          { status: 403 },
-        );
-      }
-
       // Validate that user object contains only UserData fields.
       // userDataSchema is .strict(), so this returns an error if JWT-internal fields leaked through.
       const parseResult = await userDataSchema.safeParseAsync(user);
@@ -118,23 +121,22 @@ export async function GET(
         );
       }
 
-      const response = NextResponse.json(
+      return NextResponse.json(
         { success: true, user: validatedUser },
         { status: 200 },
-      );
-
-      // Apply CORS headers to response
-      return await applyCorsHeadersToResponse(
-        response,
-        client_app_id,
-        req,
-        dbh,
-        CORS_METHODS,
       );
     },
   );
 
-  return await protected_route(req);
+  const response = await protected_route(req);
+
+  return await applyCorsHeadersToResponse(
+    response,
+    client_app_id,
+    req,
+    dbh,
+    CORS_METHODS,
+  );
 }
 
 export const dynamic = "force-dynamic";
