@@ -84,6 +84,14 @@ export async function withAuthenticatedServerComponentRouteGuard<
     opts?.route_guard_type ?? "authenticated";
   assertValidRouteGuardType(route_guard_type);
 
+  if (
+    typeof opts?.error_page_url !== "undefined" &&
+    typeof opts?.error_page_url !== "string"
+  ) {
+    throw new TypeError(
+      `Expected 'error_page_url' option to be a string or undefined, got ${typeof opts?.error_page_url}`,
+    );
+  }
   const error_page_url: string = opts?.error_page_url ?? "/auth/error";
 
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
