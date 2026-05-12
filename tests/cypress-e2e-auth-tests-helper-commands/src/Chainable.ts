@@ -30,21 +30,35 @@ declare global {
   namespace Cypress {
     interface Chainable {
       login(email: string, password: string): Chainable<boolean>;
+      login_via_request(email: string, password: string): Chainable<boolean>;
       register(
+        email: string,
+        password: string,
+        invite_code?: string,
+      ): Chainable<number>;
+      register_via_request(
         email: string,
         password: string,
         invite_code?: string,
       ): Chainable<number>;
       reset_rate_limit(): Chainable<boolean>;
       create_and_login_as_superuser(): Chainable<boolean>;
+      create_and_login_as_superuser_via_request(): Chainable<boolean>;
       create_and_login_as_regular_user(credentials: {
         email: string;
         password: string;
+        invite_code?: string;
+      }): Chainable<boolean>;
+      create_and_login_as_regular_user_via_request(credentials: {
+        email: string;
+        password: string;
+        invite_code?: string;
       }): Chainable<boolean>;
       has_error_toast(containing_message?: string): Chainable<boolean>;
       // returns a list of all the text content within any active toasts. also prints it to the Cypress console.
       log_active_toasts(): Chainable<readonly string[]>;
       logout(): Chainable<void>;
+      logout_via_request(): Chainable<void>;
       is_authenticated(): Chainable<boolean>;
       is_admin(): Chainable<boolean>;
       as_admin<T>(run_once_admin: () => Chainable<T>): Chainable<T>;

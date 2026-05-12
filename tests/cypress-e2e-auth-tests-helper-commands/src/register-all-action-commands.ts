@@ -12,8 +12,13 @@ import is_admin from "@/actions/is_admin";
 import as_admin from "@/actions/as_admin";
 import is_authenticated from "@/actions/is_authenticated";
 import login from "@/actions/login";
+import login_via_request from "@/actions/login_via_request";
 import logout from "@/actions/logout";
+import logout_via_request from "@/actions/logout_via_request";
 import register from "@/actions/register";
+import register_via_request from "@/actions/register_via_request";
+import createAndLoginAsSuperuserViaRequest from "@/actions/create_and_login_as_superuser_via_request";
+import createAndLoginAsRegularUserViaRequest from "@/actions/create_and_login_as_regular_user_via_request";
 import reset_rate_limit from "@/actions/reset_rate_limit";
 import open_dialog_with_button from "@/actions/open_dialog_with_button";
 import log_active_toasts from "@/actions/log_active_toasts";
@@ -30,8 +35,10 @@ import compute_totp_code from "@/actions/compute_totp_code";
 
 export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("login", login);
+  commands.add("login_via_request", login_via_request);
 
   commands.add("register", register);
+  commands.add("register_via_request", register_via_request);
 
   commands.add("reset_rate_limit", reset_rate_limit);
 
@@ -42,6 +49,16 @@ export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("log_active_toasts", log_active_toasts);
 
   commands.add("logout", logout);
+  commands.add("logout_via_request", logout_via_request);
+
+  commands.add(
+    "create_and_login_as_superuser_via_request",
+    createAndLoginAsSuperuserViaRequest,
+  );
+  commands.add(
+    "create_and_login_as_regular_user_via_request",
+    createAndLoginAsRegularUserViaRequest,
+  );
 
   commands.add("is_authenticated", is_authenticated);
 

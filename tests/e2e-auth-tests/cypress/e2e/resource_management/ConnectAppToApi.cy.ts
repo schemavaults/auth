@@ -14,7 +14,7 @@ function expectNumber(val: unknown): val is number {
 describe("Connect App to API Server", () => {
   describe("Admin Success Cases", () => {
     it("admin can connect app to API from admin APIs page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -71,7 +71,7 @@ describe("Connect App to API Server", () => {
     });
 
     it("admin can connect app to API from organization page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -125,7 +125,7 @@ describe("Connect App to API Server", () => {
     });
 
     it("connecting apps from different organizations works for superuser", () => {
-      cy.create_and_login_as_superuser().then((success: boolean) => {
+      cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -190,7 +190,7 @@ describe("Connect App to API Server", () => {
   describe("Organization Owner Success Cases", () => {
     it("non-admin org owner can connect app to API within their organization", () => {
       // First create org and resources as admin
-      cy.create_and_login_as_superuser().then((adminSuccess: boolean) => {
+      cy.create_and_login_as_superuser_via_request().then((adminSuccess: boolean) => {
         if (!adminSuccess) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -231,14 +231,14 @@ describe("Connect App to API Server", () => {
                 // Create a regular user to become owner
                 cy.generate_random_test_user_credentials().then(
                   (ownerCredentials: { email: string; password: string }) => {
-                    cy.create_and_login_as_regular_user(ownerCredentials).then(
+                    cy.create_and_login_as_regular_user_via_request(ownerCredentials).then(
                       (regularSuccess) => {
                         if (!regularSuccess) {
                           throw new Error("Failed to create regular user");
                         }
 
                         // Logout regular user
-                        cy.logout();
+                        cy.logout_via_request();
 
                         // Login as admin again to invite the user
                         const superuser_credentials = {
@@ -287,8 +287,8 @@ describe("Connect App to API Server", () => {
                             );
 
                             // Now login as admin and promote the member to owner
-                            cy.logout();
-                            cy.create_and_login_as_superuser().then(
+                            cy.logout_via_request();
+                            cy.create_and_login_as_superuser_via_request().then(
                               (loginAsSuperuserSuccess: boolean) => {
                                 if (!loginAsSuperuserSuccess) {
                                   throw new Error(
@@ -315,8 +315,8 @@ describe("Connect App to API Server", () => {
                                   }
 
                                   // Now logout and login as the owner
-                                  cy.logout();
-                                  cy.login(
+                                  cy.logout_via_request();
+                                  cy.login_via_request(
                                     ownerCredentials.email,
                                     ownerCredentials.password,
                                   ).then((ownerLoginSuccess) => {
@@ -364,8 +364,8 @@ describe("Connect App to API Server", () => {
                                       );
 
                                       // Cleanup - login as admin to delete org
-                                      cy.logout();
-                                      cy.create_and_login_as_superuser().then(
+                                      cy.logout_via_request();
+                                      cy.create_and_login_as_superuser_via_request().then(
                                         () => {
                                           cy.delete_organization({
                                             organization_id,
@@ -393,7 +393,7 @@ describe("Connect App to API Server", () => {
 
   describe("Authorization Failure Cases", () => {
     it("non-owner member cannot connect apps (403)", () => {
-      cy.create_and_login_as_superuser().then((adminSuccess) => {
+      cy.create_and_login_as_superuser_via_request().then((adminSuccess) => {
         if (!adminSuccess) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -433,16 +433,16 @@ describe("Connect App to API Server", () => {
                 // Create a regular user (will be member, not owner)
                 cy.generate_random_test_user_credentials().then(
                   (memberCredentials) => {
-                    cy.logout();
+                    cy.logout_via_request();
 
-                    cy.create_and_login_as_regular_user(memberCredentials).then(
+                    cy.create_and_login_as_regular_user_via_request(memberCredentials).then(
                       (regularSuccess) => {
                         if (!regularSuccess) {
                           throw new Error("Failed to create regular user");
                         }
 
-                        cy.logout();
-                        cy.create_and_login_as_superuser().then(() => {
+                        cy.logout_via_request();
+                        cy.create_and_login_as_superuser_via_request().then(() => {
                           // Invite the user to the organization (as member, not owner)
                           cy.visit(`/org/${organization_id}`);
                           cy.wait_for_page_hydration();
@@ -480,10 +480,10 @@ describe("Connect App to API Server", () => {
                                 throw new TypeError("Bad status code!");
                               }
 
-                              cy.logout();
+                              cy.logout_via_request();
 
                               // Login as member and accept invitation
-                              cy.login(
+                              cy.login_via_request(
                                 memberCredentials.email,
                                 memberCredentials.password,
                               ).then(() => {
@@ -523,8 +523,8 @@ describe("Connect App to API Server", () => {
                                       );
 
                                       // Cleanup - login as admin to delete org
-                                      cy.logout();
-                                      cy.create_and_login_as_superuser().then(
+                                      cy.logout_via_request();
+                                      cy.create_and_login_as_superuser_via_request().then(
                                         () => {
                                           cy.delete_organization({
                                             organization_id,
@@ -552,7 +552,7 @@ describe("Connect App to API Server", () => {
 
   describe("Validation Failure Cases", () => {
     it("connecting with non-existent app ID returns 404", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -595,7 +595,7 @@ describe("Connect App to API Server", () => {
     });
 
     it("connecting with non-existent API server ID returns 404", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
