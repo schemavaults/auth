@@ -18,9 +18,10 @@ import {
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import {
+  type CorsValidationResult,
   handleCorsPreflightForClientApp,
   validateCorsForClientApp,
-  applyCorsHeadersToResponse,
+  applyCorsHeadersFromResult,
 } from "@/lib/cors/cors-for-client-app";
 import handleAuthorizationCodeGrant from "./authorization_code_grant";
 
@@ -72,7 +73,11 @@ export async function POST(
     );
   }
 
-  // Validate client_app_id from URL
+  // Validate client_app_id from URL. Checked before CORS validation because
+  // the CORS allowance is keyed on this value; if it's malformed there is
+  // nothing to look up. The browser's preflight would have failed for the
+  // same reason, so the missing CORS headers here only affect non-browser
+  // callers.
   if (!appIdSchema.safeParse(url_client_app_id).success) {
     return NextResponse.json(
       {
@@ -84,55 +89,13 @@ export async function POST(
     );
   }
 
-  const schema = authorizationCodePOSTbody;
-
-  // Ensure body is valid JSON
-  let body: z.infer<typeof schema>;
-  try {
-    body = await schema.parseAsync(await req.json());
-  } catch (e: unknown) {
-    if (debug) {
-      console.error("Invalid body JSON: ", e);
-    }
-    return NextResponse.json(
-      {
-        success: false,
-        error: true,
-        message: "Invalid body JSON",
-      } satisfies RequestTokensResult,
-      { status: 400 }
-    );
-  }
-
-  // Verify URL client_app_id matches body client_app_id
-  if (url_client_app_id !== body.client_app_id) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: true,
-        message:
-          "client_app_id in URL does not match client_app_id in request body",
-      } satisfies RequestTokensResult,
-      { status: 400 }
-    );
-  }
-
-  if (body.grant_type !== grant_type) {
-    console.error(`Mismatched grant type, expected '${grant_type}'`);
-    return NextResponse.json(
-      {
-        success: false,
-        error: true,
-        message: "Mismatched grant type",
-      } satisfies RequestTokensResult,
-      { status: 400 }
-    );
-  }
-
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
-  // Validate CORS
-  const corsResult = await validateCorsForClientApp(
+  // Validate CORS up-front so every subsequent response — error or success —
+  // carries the same allowance. Without CORS headers on error responses, the
+  // browser blocks JS from reading them and the failure surfaces as a
+  // generic CORS error instead of the actual cause.
+  const corsResult: CorsValidationResult = await validateCorsForClientApp(
     { client_app_id: url_client_app_id, request: req },
     dbh,
     debug
@@ -149,18 +112,66 @@ export async function POST(
     );
   }
 
+  const withCors = <R extends NextResponse>(response: R): R =>
+    applyCorsHeadersFromResult(response, corsResult);
+
+  const schema = authorizationCodePOSTbody;
+
+  // Ensure body is valid JSON
+  let body: z.infer<typeof schema>;
+  try {
+    body = await schema.parseAsync(await req.json());
+  } catch (e: unknown) {
+    if (debug) {
+      console.error("Invalid body JSON: ", e);
+    }
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Invalid body JSON",
+      } satisfies RequestTokensResult,
+      { status: 400 }
+    ));
+  }
+
+  // Verify URL client_app_id matches body client_app_id
+  if (url_client_app_id !== body.client_app_id) {
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message:
+          "client_app_id in URL does not match client_app_id in request body",
+      } satisfies RequestTokensResult,
+      { status: 400 }
+    ));
+  }
+
+  if (body.grant_type !== grant_type) {
+    console.error(`Mismatched grant type, expected '${grant_type}'`);
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Mismatched grant type",
+      } satisfies RequestTokensResult,
+      { status: 400 }
+    ));
+  }
+
   let userRegistry: UserRegistry;
   try {
     userRegistry = new UserRegistry(dbh.db, debug satisfies boolean);
   } catch (e: unknown) {
     console.error("Failed to connect to user registry: ", e);
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       {
         success: false,
         message: "Failed to connect to user registry",
       },
       { status: 500 }
-    );
+    ));
   }
 
   let orgRegistry: OrganizationsRegistry;
@@ -168,13 +179,13 @@ export async function POST(
     orgRegistry = new OrganizationsRegistry(dbh.db, debug satisfies boolean);
   } catch (e: unknown) {
     console.error("Failed to connect to organizations registry: ", e);
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       {
         success: false,
         message: "Failed to connect to organizations registry",
       },
       { status: 500 }
-    );
+    ));
   }
 
   const response = await handleAuthorizationCodeGrant(
@@ -187,8 +198,7 @@ export async function POST(
     debug satisfies boolean
   );
 
-  // Apply CORS headers to response if needed
-  return await applyCorsHeadersToResponse(response, url_client_app_id, req, dbh) satisfies NextResponse;
+  return withCors(response);
 }
 
 export const dynamic = "force-dynamic";

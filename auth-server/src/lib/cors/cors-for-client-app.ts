@@ -219,3 +219,29 @@ export async function applyCorsHeadersToResponse(
 
   return response;
 }
+
+/**
+ * Apply CORS headers to a response based on a pre-computed CORS validation result.
+ *
+ * Use this when CORS has already been validated earlier in the request handler
+ * and you want to apply the same allowance to multiple responses (e.g. error
+ * branches) without re-running the database lookup each time.
+ *
+ * When the result indicates that CORS was not allowed or that headers should be
+ * skipped (e.g. native apps without an Origin header), the response is returned
+ * unchanged.
+ */
+export function applyCorsHeadersFromResult<R extends NextResponse>(
+  response: R,
+  corsResult: CorsValidationResult,
+  methods?: string,
+): R {
+  if (!corsResult.allowed || corsResult.skipCorsHeaders || !corsResult.origin) {
+    return response;
+  }
+  const corsHeaders = buildCorsHeaders(corsResult.origin, methods);
+  for (const [key, value] of Object.entries(corsHeaders)) {
+    response.headers.set(key, value);
+  }
+  return response;
+}
