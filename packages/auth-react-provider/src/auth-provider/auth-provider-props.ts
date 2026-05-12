@@ -26,6 +26,8 @@ export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
   successful_authentication_redirect_uri?: string;
   successful_logout_redirect_uri?: string;
   authorize_uri?: string;
+  // Optional override for the error page path (defaults to "/auth/error" on the auth client).
+  error_page_uri?: string;
 
   onLogout?: OnLogoutCallback;
 

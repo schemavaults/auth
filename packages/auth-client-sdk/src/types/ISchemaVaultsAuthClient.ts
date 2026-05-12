@@ -120,6 +120,12 @@ export interface ISchemaVaultsAuthClient {
   // Where to send the user in order to trade an authorization code + code verifier for a refresh token
   authorize_uri: string | undefined;
 
+  // Where to send the user when an unrecoverable error occurs in an
+  // SDK-driven flow (defaults to "/auth/error" if not configured at
+  // client construction). Hosting apps can override via
+  // `IAuthClientConstructorOptions.error_page_uri`.
+  error_page_uri: string;
+
   // Takes an authorization code, attempts to retrieve the code_verifier from storage using the challenge_time, and exchanges the authorization code + verifier for auth tokens.
   // The `received_state` argument is the OAuth2 `state` parameter as
   // observed on the callback URL. The SDK compares it to the value it

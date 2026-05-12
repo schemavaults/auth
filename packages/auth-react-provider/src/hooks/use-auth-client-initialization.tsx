@@ -16,6 +16,7 @@ export interface UseAuthClientInitializationOptions {
   successful_authentication_redirect_uri: string;
   successful_logout_redirect_uri: string;
   authorize_uri?: string | undefined;
+  error_page_uri?: string | undefined;
   auth_server_uri: string;
   app_id: string;
   debug?: boolean;
@@ -33,6 +34,7 @@ export function useAuthClientInitialization(
     successful_authentication_redirect_uri,
     successful_logout_redirect_uri,
     authorize_uri,
+    error_page_uri,
     authClientRef,
     auth_server_uri,
     app_id,
@@ -77,6 +79,7 @@ export function useAuthClientInitialization(
             successful_authentication_redirect_uri,
             successful_logout_redirect_uri,
             authorize_uri,
+            error_page_uri,
             environment,
             app_id,
             invite_code_required,
@@ -125,6 +128,7 @@ export function useAuthClientInitialization(
       app_id,
       auth_server_uri,
       authorize_uri,
+      error_page_uri,
       successful_authentication_redirect_uri,
       successful_logout_redirect_uri,
       environment,

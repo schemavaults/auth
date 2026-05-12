@@ -113,15 +113,16 @@ export function useStartLoginOauthPKCEFlow({
         return;
       }
       if (!serverAuthCheckSucceeded) {
+        const errorPagePath: string = auth.error_page_uri;
         console.error(
-          `[useStartLoginOauthPKCEFlow] Failed to determine server authentication status after ${maxServerAuthCheckAttempts} attempts. Redirecting to /auth/error.`,
+          `[useStartLoginOauthPKCEFlow] Failed to determine server authentication status after ${maxServerAuthCheckAttempts} attempts. Redirecting to "${errorPagePath}".`,
           serverAuthCheckError,
         );
         onError(serverAuthCheckError);
         const errorSearchParams = new URLSearchParams();
         errorSearchParams.set("error", "500");
         errorSearchParams.set("error_id", "load_user_data_failure");
-        router.push(`/auth/error?${errorSearchParams.toString()}`);
+        router.push(`${errorPagePath}?${errorSearchParams.toString()}`);
         return;
       }
 

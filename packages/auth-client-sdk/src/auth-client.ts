@@ -85,6 +85,8 @@ export class SchemaVaultsAuthClient
   private readonly _successful_logout_redirect_uri: string | undefined;
   // Where to send the user to trade an authorization code + code verifier for a refresh token
   private readonly _authorize_uri: string | undefined;
+  // Where to send the user when an SDK-driven flow needs to surface an error page
+  private readonly _error_page_uri: string;
 
   private readonly _app_id: string; // Undefined on the auth-server, set from 3rd party client
 
@@ -218,6 +220,19 @@ export class SchemaVaultsAuthClient
       );
     }
     this._authorize_uri = opts.authorize_uri;
+
+    if (
+      typeof opts.error_page_uri !== "string" &&
+      typeof opts.error_page_uri !== "undefined"
+    ) {
+      throw new Error(
+        `Expected 'error_page_uri' to be a string or undefined, received type '${typeof opts.error_page_uri}'`,
+      );
+    }
+    this._error_page_uri =
+      typeof opts.error_page_uri === "string" && opts.error_page_uri.length > 0
+        ? opts.error_page_uri
+        : "/auth/error";
 
     // Get default audiences
     // E.g. the web app has https://api.schemavaults.com('s app ID) as an audience
@@ -712,6 +727,17 @@ export class SchemaVaultsAuthClient
 
   public get authorize_uri(): string | undefined {
     return this._authorize_uri;
+  }
+
+  /**
+   * @name error_page_uri
+   * @description Path (or URL) of the error page on the hosting app.
+   *   Defaults to "/auth/error". Override via the `error_page_uri`
+   *   constructor option if the hosting app exposes its error page at
+   *   a non-default path.
+   */
+  public get error_page_uri(): string {
+    return this._error_page_uri;
   }
 
   /**
