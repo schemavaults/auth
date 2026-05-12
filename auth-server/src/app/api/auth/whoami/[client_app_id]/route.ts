@@ -72,29 +72,10 @@ export async function GET(
     );
   }
 
-  // Authenticate the request first, before CORS validation
   const protected_route: (req: NextRequest) => Promise<NextResponse> = await withAuthenticatedApiRouteGuard(
     async ({
       user,
-      dbh,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
-      // Validate CORS
-      const corsResult = await validateCorsForClientApp(
-        { client_app_id, request: req },
-        dbh,
-        debug,
-      );
-
-      if (!corsResult.allowed) {
-        if (debug) {
-          console.warn("Request blocked with CORS error: ", corsResult);
-        }
-        return NextResponse.json(
-          { success: false, error: true, message: corsResult.error },
-          { status: 403 },
-        );
-      }
-
       // Validate that user object contains only UserData fields.
       // userDataSchema is .strict(), so this returns an error if JWT-internal fields leaked through.
       const parseResult = await userDataSchema.safeParseAsync(user);
@@ -118,23 +99,53 @@ export async function GET(
         );
       }
 
-      const response = NextResponse.json(
+      return NextResponse.json(
         { success: true, user: validatedUser },
         { status: 200 },
-      );
-
-      // Apply CORS headers to response
-      return await applyCorsHeadersToResponse(
-        response,
-        client_app_id,
-        req,
-        dbh,
-        CORS_METHODS,
       );
     },
   );
 
-  return await protected_route(req);
+  // Run the auth guard first so unauthenticated callers always see 401 —
+  // regardless of whether the supplied client_app_id or Origin would have
+  // been accepted. This prevents unauthenticated probing of which apps /
+  // origins are registered, and keeps the "401 must beat input validation"
+  // invariant the rest of the API follows.
+  const guardResponse = await protected_route(req);
+
+  await using dbh = ServerlessDatabase.createDBH();
+  const corsResult = await validateCorsForClientApp(
+    { client_app_id, request: req },
+    dbh,
+    debug,
+  );
+
+  // For authenticated success responses, enforce CORS strictly: an
+  // authenticated session must not be able to read another app's user data
+  // from a foreign origin.
+  if (guardResponse.status === 200 && !corsResult.allowed) {
+    if (debug) {
+      console.warn("Request blocked with CORS error: ", corsResult);
+    }
+    return NextResponse.json(
+      { success: false, error: true, message: corsResult.error },
+      { status: 403 },
+    );
+  }
+
+  // Apply CORS headers to whatever the guard returned (200 or 401/403). This
+  // is the regression fix: cross-origin probes from registered client apps
+  // now receive a 401 with Access-Control-Allow-Origin attached, so the
+  // browser surfaces it as a parseable response instead of a CORS error.
+  // When the origin isn't registered, applyCorsHeadersToResponse is a no-op
+  // and the bare auth-failure response is returned as-is.
+  return await applyCorsHeadersToResponse(
+    guardResponse,
+    client_app_id,
+    req,
+    dbh,
+    CORS_METHODS,
+  );
 }
 
 export const dynamic = "force-dynamic";
