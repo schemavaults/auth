@@ -38,50 +38,50 @@ export async function POST(
   req: NextRequest,
   props: RouteContext<"/api/apis/[api_server_id]/connect_app/[client_app_id]">,
 ): Promise<NextResponse> {
-  const params = await props.params;
-
-  let client_app_id: string;
-  let api_server_id: string;
-  try {
-    if (
-      typeof params !== "object" ||
-      !params ||
-      !("client_app_id" in params) ||
-      typeof params.client_app_id !== "string" ||
-      !("api_server_id" in params) ||
-      typeof params.api_server_id !== "string"
-    ) {
-      throw new Error(
-        "Failed to load client_app_id and api_server_id from dynamic route segments!",
-      );
-    }
-    if (!(await apiServerIdSchema.safeParseAsync(params.api_server_id)).success) {
-      throw new TypeError("Invalid 'api_server_id' parameter!");
-    }
-    if (!(await appIdSchema.safeParseAsync(params.client_app_id)).success) {
-      throw new TypeError("Invalid 'client_app_id' parameter!")
-    }
-    client_app_id = params.client_app_id;
-    api_server_id = params.api_server_id;
-  } catch (e: unknown) {
-    console.error("Failed to parse route params: ", e);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to parse route parameters",
-      } satisfies ResourceCreationResponse,
-      {
-        status: 400,
-      },
-    );
-  }
-
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
       environment,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      const params = await props.params;
+
+      let client_app_id: string;
+      let api_server_id: string;
+      try {
+        if (
+          typeof params !== "object" ||
+          !params ||
+          !("client_app_id" in params) ||
+          typeof params.client_app_id !== "string" ||
+          !("api_server_id" in params) ||
+          typeof params.api_server_id !== "string"
+        ) {
+          throw new Error(
+            "Failed to load client_app_id and api_server_id from dynamic route segments!",
+          );
+        }
+        if (!(await apiServerIdSchema.safeParseAsync(params.api_server_id)).success) {
+          throw new TypeError("Invalid 'api_server_id' parameter!");
+        }
+        if (!(await appIdSchema.safeParseAsync(params.client_app_id)).success) {
+          throw new TypeError("Invalid 'client_app_id' parameter!");
+        }
+        client_app_id = params.client_app_id;
+        api_server_id = params.api_server_id;
+      } catch (e: unknown) {
+        console.error("Failed to parse route params: ", e);
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Failed to parse route parameters",
+          } satisfies ResourceCreationResponse,
+          {
+            status: 400,
+          },
+        );
+      }
+
       if (environment === "development") {
         console.log(`[/api/apis/${api_server_id}/connect_app/${client_app_id}] POST request received`);
       }
@@ -273,48 +273,48 @@ export async function DELETE(
   req: NextRequest,
   props: RouteContext<"/api/apis/[api_server_id]/connect_app/[client_app_id]">,
 ): Promise<NextResponse> {
-  const params = await props.params;
-
-  let client_app_id: string;
-  let api_server_id: string;
-  try {
-    if (
-      typeof params !== "object" ||
-      !params ||
-      !("client_app_id" in params) ||
-      typeof params.client_app_id !== "string" ||
-      !("api_server_id" in params) ||
-      typeof params.api_server_id !== "string"
-    ) {
-      throw new Error(
-        "Failed to load client_app_id and api_server_id from dynamic route segments!",
-      );
-    }
-    if (!(await apiServerIdSchema.safeParseAsync(params.api_server_id)).success) {
-      throw new TypeError("Invalid 'api_server_id' parameter!");
-    }
-    if (!(await appIdSchema.safeParseAsync(params.client_app_id)).success) {
-      throw new TypeError("Invalid 'client_app_id' parameter!");
-    }
-    client_app_id = params.client_app_id;
-    api_server_id = params.api_server_id;
-  } catch (e: unknown) {
-    console.error("Failed to parse route params: ", e);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to parse route parameters",
-      },
-      { status: 400 },
-    );
-  }
-
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
       environment,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      const params = await props.params;
+
+      let client_app_id: string;
+      let api_server_id: string;
+      try {
+        if (
+          typeof params !== "object" ||
+          !params ||
+          !("client_app_id" in params) ||
+          typeof params.client_app_id !== "string" ||
+          !("api_server_id" in params) ||
+          typeof params.api_server_id !== "string"
+        ) {
+          throw new Error(
+            "Failed to load client_app_id and api_server_id from dynamic route segments!",
+          );
+        }
+        if (!(await apiServerIdSchema.safeParseAsync(params.api_server_id)).success) {
+          throw new TypeError("Invalid 'api_server_id' parameter!");
+        }
+        if (!(await appIdSchema.safeParseAsync(params.client_app_id)).success) {
+          throw new TypeError("Invalid 'client_app_id' parameter!");
+        }
+        client_app_id = params.client_app_id;
+        api_server_id = params.api_server_id;
+      } catch (e: unknown) {
+        console.error("Failed to parse route params: ", e);
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Failed to parse route parameters",
+          },
+          { status: 400 },
+        );
+      }
+
       if (environment === "development") {
         console.log(
           `[/api/apis/${api_server_id}/connect_app/${client_app_id}] DELETE request received`,
