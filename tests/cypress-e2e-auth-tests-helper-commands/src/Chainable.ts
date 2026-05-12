@@ -58,7 +58,6 @@ declare global {
       // returns a list of all the text content within any active toasts. also prints it to the Cypress console.
       log_active_toasts(): Chainable<readonly string[]>;
       logout(): Chainable<void>;
-      logout_via_request(): Chainable<void>;
       is_authenticated(): Chainable<boolean>;
       is_admin(): Chainable<boolean>;
       as_admin<T>(run_once_admin: () => Chainable<T>): Chainable<T>;

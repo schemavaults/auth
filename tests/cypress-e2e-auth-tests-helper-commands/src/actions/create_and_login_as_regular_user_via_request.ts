@@ -27,7 +27,7 @@ export default function createAndLoginAsRegularUserViaRequest(
       .is_authenticated()
       .then((authenticated: boolean): Cypress.Chainable<boolean> => {
         if (authenticated) {
-          cy.logout_via_request();
+          cy.logout();
         }
         return cy
           .register_via_request(creds.email, creds.password, creds.invite_code)
@@ -70,9 +70,8 @@ export default function createAndLoginAsRegularUserViaRequest(
           });
         })
         .then((invite_code: string) => {
-          return cy.logout_via_request().then(() => {
-            return registerAndAssert({ ...credentials, invite_code });
-          });
+          cy.logout();
+          return registerAndAssert({ ...credentials, invite_code });
         });
     });
 }

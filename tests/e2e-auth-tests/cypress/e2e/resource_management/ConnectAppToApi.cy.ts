@@ -238,7 +238,7 @@ describe("Connect App to API Server", () => {
                         }
 
                         // Logout regular user
-                        cy.logout_via_request();
+                        cy.logout();
 
                         // Login as admin again to invite the user
                         const superuser_credentials = {
@@ -287,7 +287,7 @@ describe("Connect App to API Server", () => {
                             );
 
                             // Now login as admin and promote the member to owner
-                            cy.logout_via_request();
+                            cy.logout();
                             cy.create_and_login_as_superuser_via_request().then(
                               (loginAsSuperuserSuccess: boolean) => {
                                 if (!loginAsSuperuserSuccess) {
@@ -315,7 +315,7 @@ describe("Connect App to API Server", () => {
                                   }
 
                                   // Now logout and login as the owner
-                                  cy.logout_via_request();
+                                  cy.logout();
                                   cy.login_via_request(
                                     ownerCredentials.email,
                                     ownerCredentials.password,
@@ -364,7 +364,7 @@ describe("Connect App to API Server", () => {
                                       );
 
                                       // Cleanup - login as admin to delete org
-                                      cy.logout_via_request();
+                                      cy.logout();
                                       cy.create_and_login_as_superuser_via_request().then(
                                         () => {
                                           cy.delete_organization({
@@ -433,7 +433,7 @@ describe("Connect App to API Server", () => {
                 // Create a regular user (will be member, not owner)
                 cy.generate_random_test_user_credentials().then(
                   (memberCredentials) => {
-                    cy.logout_via_request();
+                    cy.logout();
 
                     cy.create_and_login_as_regular_user_via_request(memberCredentials).then(
                       (regularSuccess) => {
@@ -441,7 +441,7 @@ describe("Connect App to API Server", () => {
                           throw new Error("Failed to create regular user");
                         }
 
-                        cy.logout_via_request();
+                        cy.logout();
                         cy.create_and_login_as_superuser_via_request().then(() => {
                           // Invite the user to the organization (as member, not owner)
                           cy.visit(`/org/${organization_id}`);
@@ -480,7 +480,7 @@ describe("Connect App to API Server", () => {
                                 throw new TypeError("Bad status code!");
                               }
 
-                              cy.logout_via_request();
+                              cy.logout();
 
                               // Login as member and accept invitation
                               cy.login_via_request(
@@ -523,7 +523,7 @@ describe("Connect App to API Server", () => {
                                       );
 
                                       // Cleanup - login as admin to delete org
-                                      cy.logout_via_request();
+                                      cy.logout();
                                       cy.create_and_login_as_superuser_via_request().then(
                                         () => {
                                           cy.delete_organization({

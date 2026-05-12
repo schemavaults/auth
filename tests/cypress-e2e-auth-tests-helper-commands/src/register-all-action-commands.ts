@@ -14,7 +14,6 @@ import is_authenticated from "@/actions/is_authenticated";
 import login from "@/actions/login";
 import login_via_request from "@/actions/login_via_request";
 import logout from "@/actions/logout";
-import logout_via_request from "@/actions/logout_via_request";
 import register from "@/actions/register";
 import register_via_request from "@/actions/register_via_request";
 import createAndLoginAsSuperuserViaRequest from "@/actions/create_and_login_as_superuser_via_request";
@@ -49,7 +48,6 @@ export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("log_active_toasts", log_active_toasts);
 
   commands.add("logout", logout);
-  commands.add("logout_via_request", logout_via_request);
 
   commands.add(
     "create_and_login_as_superuser_via_request",
