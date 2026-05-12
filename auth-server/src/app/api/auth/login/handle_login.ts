@@ -232,7 +232,10 @@ export async function handleLogin({
   // challenge keyed by a fresh UUID and return mfa_required. The client
   // exchanges the challenge_id at /api/auth/mfa/verify, where the same
   // generateAuthorizationCode call below is performed on success.
-  let userHasMfa = false;
+  // Fail closed: if we cannot determine MFA enrollment, reject the login.
+  // Treating the lookup error as non-fatal would let a flaky query bypass MFA
+  // for users who have a verified factor enrolled.
+  let userHasMfa: boolean;
   try {
     const mfaRegistry = new MfaRegistry(dbh.db);
     userHasMfa = await mfaRegistry.hasVerifiedFactor(uid);
@@ -241,8 +244,15 @@ export async function handleLogin({
       op_name: "handleLogin.hasVerifiedFactor",
       route: ROUTE,
       uid,
-      context: { nonFatal: true },
     });
+    return NextResponse.json(
+      {
+        kind: "failure",
+        success: false,
+        message: "Failed to verify MFA enrollment status",
+      } satisfies AuthenticateResult,
+      { status: 500 },
+    );
   }
 
   if (userHasMfa) {
