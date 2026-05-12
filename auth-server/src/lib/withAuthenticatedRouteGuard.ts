@@ -11,6 +11,7 @@ import {
 import { ServerlessDatabase } from "./auth-db";
 import { RedisCache } from "./redis";
 import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import isUserInOrganization from "./isUserInOrganization";
 import { type NextRequest, NextResponse } from "next/server";
@@ -48,8 +49,13 @@ export interface IAuthenticatedApiRouteGuardInputs extends IBaseProtectedAuthent
 
 export type { IAuthenticatedApiRouteGuardInputs as IProtectedAuthenticatedApiRouteProps };
 
+export interface IWithAuthenticatedApiRouteGuardWrapperOpts {
+  additional_token_sources?: PotentiallyValidTokenSource[];
+}
+
 export async function withAuthenticatedApiRouteGuard(
-  api_route_handler: TProtectedAuthenticatedApiRoute<IAuthenticatedApiRouteGuardInputs>
+  api_route_handler: TProtectedAuthenticatedApiRoute<IAuthenticatedApiRouteGuardInputs>,
+  wrapper_opts?: IWithAuthenticatedApiRouteGuardWrapperOpts,
 ): Promise<(req: NextRequest) => Promise<NextResponse>> {
   await using dbh = ServerlessDatabase.createDBH();
   await using redis = RedisCache.createConnection();
@@ -62,7 +68,8 @@ export async function withAuthenticatedApiRouteGuard(
       jwt_keys_manager,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
       custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
-      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
+      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
+      additional_token_sources: wrapper_opts?.additional_token_sources,
     }
   );
 }
