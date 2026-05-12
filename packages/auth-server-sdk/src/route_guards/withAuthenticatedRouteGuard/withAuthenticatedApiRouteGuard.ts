@@ -69,6 +69,7 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
     user: UserData,
     org_id: OrganizationID,
   ) => Promise<OrganizationMembershipRoleType | false>;
+  additional_token_sources?: PotentiallyValidTokenSource[];
 }
 
 export function withAuthenticatedApiRouteGuard<
@@ -138,7 +139,9 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
-    const token_sources: PotentiallyValidTokenSource[] = [];
+    const token_sources: PotentiallyValidTokenSource[] = [
+      ...(opts?.additional_token_sources ?? []),
+    ];
 
     // Load refresh token cookie for auth server
     if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
