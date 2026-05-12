@@ -59,6 +59,12 @@ export interface IWithAuthenticatedServerComponentRouteGuardAdditionalOptions<
     user: UserData,
     org_id: OrganizationID,
   ) => Promise<OrganizationMembershipRoleType | false>;
+  /**
+   * Path to the error page that `redirectWithError` should redirect to.
+   * Defaults to `/auth/error` for resource servers; the auth-server itself
+   * should pass `/error` since its error route lives at the app root.
+   */
+  error_page_url?: string;
 }
 
 export async function withAuthenticatedServerComponentRouteGuard<
@@ -78,6 +84,8 @@ export async function withAuthenticatedServerComponentRouteGuard<
     opts?.route_guard_type ?? "authenticated";
   assertValidRouteGuardType(route_guard_type);
 
+  const error_page_url: string = opts?.error_page_url ?? "/auth/error";
+
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
 
   const [loadCookies, redirect] = await Promise.all([
@@ -88,6 +96,13 @@ export async function withAuthenticatedServerComponentRouteGuard<
     throw new TypeError("Expected 'loadCookies' to be a function");
   } else if (typeof redirect !== "function") {
     throw new TypeError("Expected 'redirect' to be a function");
+  }
+
+  function redirectToErrorPage(
+    error_code: number,
+    error_id: Parameters<typeof redirectWithError>[2],
+  ): never {
+    return redirectWithError(redirect, error_code, error_id, error_page_url);
   }
 
   let extracted_api_server_id: ApiServerId | undefined = undefined;
@@ -118,7 +133,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
       "[withAuthenticatedServerComponentRouteGuard] Received bad 'api_server_id' in options object: ",
       e,
     );
-    redirectWithError(redirect, 500, "server_misconfiguration");
+    redirectToErrorPage(500, "server_misconfiguration");
   }
 
   async function parseApiServerIdFromEnvironmentVariables(): Promise<ApiServerId> {
@@ -145,7 +160,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
         "[withAuthenticatedServerComponentRouteGuard] Failed to parse 'api_server_id' from environment variables: ",
         e,
       );
-      redirectWithError(redirect, 500, "server_misconfiguration");
+      redirectToErrorPage(500, "server_misconfiguration");
     }
   }
 
@@ -153,7 +168,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     console.error(
       "[withAuthenticatedServerComponentRouteGuard] Failed to parse 'api_server_id' from either options or environment variables!",
     );
-    redirectWithError(redirect, 500, "server_misconfiguration");
+    redirectToErrorPage(500, "server_misconfiguration");
   }
   const api_server_id: ApiServerId = extracted_api_server_id;
 
@@ -164,7 +179,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     console.error(
       "[withAuthenticatedServerComponentRouteGuard] JWT Keys Manager does not appear to be properly configured!",
     );
-    redirectWithError(redirect, 500, "server_misconfiguration");
+    redirectToErrorPage(500, "server_misconfiguration");
   }
 
   const cookies: RequestCookies = await loadCookies();
@@ -238,15 +253,15 @@ export async function withAuthenticatedServerComponentRouteGuard<
   const user: UserData = route_guard.user;
 
   if (user.disabled) {
-    return redirectWithError(redirect, 403, "account_disabled");
+    return redirectToErrorPage(403, "account_disabled");
   }
 
   if (!route_guard.isAccessAllowed()) {
-    redirectWithError(redirect, 403, "forbidden");
+    redirectToErrorPage(403, "forbidden");
   }
 
   if (!user.admin && route_guard_type === "admin") {
-    redirectWithError(redirect, 403, "forbidden");
+    redirectToErrorPage(403, "forbidden");
   }
 
   if (typeof server_component !== "function") {
@@ -322,7 +337,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
       console.error(
         "[withAuthenticatedServerComponentRouteGuard] Invalid organization ID passed as 'required_organization'!",
       );
-      redirectWithError(redirect, 500, "server_misconfiguration");
+      redirectToErrorPage(500, "server_misconfiguration");
     }
     let org_role: OrganizationMembershipRoleType | false = false;
     try {
@@ -332,14 +347,14 @@ export async function withAuthenticatedServerComponentRouteGuard<
         "[withAuthenticatedServerComponentRouteGuard] Organization membership check failed: ",
         e,
       );
-      redirectWithError(redirect, 500, "internal_server_error");
+      redirectToErrorPage(500, "internal_server_error");
     }
 
     if (org_role === false || !org_role) {
       console.warn(
         `[withAuthenticatedServerComponentRouteGuard] User '${user.uid}' does not appear to be in required organization '${required_organization}'!`,
       );
-      redirectWithError(redirect, 403, "account_not_in_organization");
+      redirectToErrorPage(403, "account_not_in_organization");
     }
   }
 
@@ -352,10 +367,10 @@ export async function withAuthenticatedServerComponentRouteGuard<
       );
     } catch (e: unknown) {
       console.error("Error in 'custom_is_authorized_check' handler: ", e);
-      redirectWithError(redirect, 500, "internal_server_error");
+      redirectToErrorPage(500, "internal_server_error");
     }
     if (!is_authorized) {
-      redirectWithError(redirect, 403, "forbidden");
+      redirectToErrorPage(403, "forbidden");
     }
   }
 
