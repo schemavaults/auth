@@ -256,6 +256,7 @@ export default function CoreSchemaVaultsAuthClientProvider(
       default_audiences,
       debug,
       authorize_uri,
+      error_page_uri: props.error_page_uri,
       environment: appEnvironment,
       invite_code_required:
         typeof props.invite_code_required === "boolean"

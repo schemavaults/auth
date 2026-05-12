@@ -8,6 +8,7 @@ import type {
   MfaStatusResponse,
   MfaEnrollResponse,
   MfaVerifyEnrollmentResponse,
+  SchemaVaultsAuthErrorId,
 } from "@schemavaults/auth-common";
 import type { Credentials } from "@/types/credentials";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
@@ -119,6 +120,28 @@ export interface ISchemaVaultsAuthClient {
 
   // Where to send the user in order to trade an authorization code + code verifier for a refresh token
   authorize_uri: string | undefined;
+
+  // Where to send the user when an unrecoverable error occurs in an
+  // SDK-driven flow (defaults to "/auth/error" if not configured at
+  // client construction). Hosting apps can override via
+  // `IAuthClientConstructorOptions.error_page_uri`.
+  error_page_uri: string;
+
+  /**
+   * @name buildErrorPageUrl
+   * @description Build a URL to the hosting app's error page, encoding the
+   *   given HTTP-style error code and SchemaVaults auth `error_id`. The
+   *   `error_id` is validated against the auth-common error catalog so
+   *   callers can only construct links the error page knows how to render.
+   * @argument error_id A SchemaVaults auth error identifier from the
+   *   auth-common error catalog
+   * @argument error_code Optional HTTP-style error code (4xx-5xx); defaults to 500
+   * @throws if `error_id` is not in the catalog or `error_code` is out of range
+   */
+  buildErrorPageUrl: (
+    error_id: SchemaVaultsAuthErrorId,
+    error_code?: number,
+  ) => string;
 
   // Takes an authorization code, attempts to retrieve the code_verifier from storage using the challenge_time, and exchanges the authorization code + verifier for auth tokens.
   // The `received_state` argument is the OAuth2 `state` parameter as

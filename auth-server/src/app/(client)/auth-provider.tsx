@@ -31,6 +31,7 @@ export function ClientAuthProvider({
       authed_on_unauthed_redirect_uri="/account"
       unauthed_on_authed_redirect_uri="/auth/login"
       authorize_uri={undefined} // not used for @schemavaults/auth-server
+      error_page_uri="/error"
       successful_logout_redirect_uri="/"
       successful_authentication_redirect_uri="/account"
       authMiddlewareRules={defaultAuthMiddlewareRules}

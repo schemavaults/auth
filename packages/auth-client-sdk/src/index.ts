@@ -40,6 +40,7 @@ export {
   isValidErrorId,
   ERROR_MESSAGE_CATALOG,
 } from "@schemavaults/auth-common";
+export type { SchemaVaultsAuthErrorId } from "@schemavaults/auth-common";
 
 // OAuth2 `state` CSRF-nonce generation (RFC 6749 §10.12). Useful for
 // consumers that want to mirror the SDK's own nonce shape in bespoke

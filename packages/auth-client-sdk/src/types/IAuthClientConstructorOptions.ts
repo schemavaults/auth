@@ -16,6 +16,12 @@ export interface IAuthClientConstructorOptions {
   // The URI to redirect to with an authorization code in Oauth2 PKCE flow
   authorize_uri?: string;
 
+  // The URI of the error page on this client (defaults to "/auth/error").
+  // Used when the SDK / provider hooks need to redirect a user to a generic
+  // error page (e.g. when the auth-server cannot be reached during a
+  // login-flow startup whoami check).
+  error_page_uri?: string;
+
   // The app ID of the frontend client app
   // This is either:
   //    A.) the UUID of the frontend client application

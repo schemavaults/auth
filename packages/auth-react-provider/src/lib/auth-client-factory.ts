@@ -21,6 +21,7 @@ export interface IAuthClientFactoryInitOpts {
   successful_authentication_redirect_uri: string;
   successful_logout_redirect_uri: string;
   authorize_uri?: string | undefined;
+  error_page_uri?: string | undefined;
   invite_code_required?: boolean;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
@@ -35,6 +36,7 @@ export class AuthClientFactory {
   private readonly successful_authentication_redirect_uri: string;
   private readonly successful_logout_redirect_uri: string;
   private readonly authorize_uri: string | undefined;
+  private readonly error_page_uri: string | undefined;
   private readonly invite_code_required: boolean;
   private readonly fetch: (
     url: string,
@@ -61,6 +63,7 @@ export class AuthClientFactory {
       opts.successful_authentication_redirect_uri;
     this.successful_logout_redirect_uri = opts.successful_logout_redirect_uri;
     this.authorize_uri = opts.authorize_uri;
+    this.error_page_uri = opts.error_page_uri;
     this.invite_code_required =
       typeof opts.invite_code_required === "boolean"
         ? opts.invite_code_required
@@ -115,6 +118,7 @@ export class AuthClientFactory {
       successful_logout_redirect_uri:
         this.successful_logout_redirect_uri ?? window.location.origin,
       authorize_uri: this.authorize_uri,
+      error_page_uri: this.error_page_uri,
       app_id: this.app_id,
       default_audiences: this.default_audiences,
       debug: this.debug,
