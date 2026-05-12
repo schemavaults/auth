@@ -14,6 +14,7 @@ import {
 import { audienceRefSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/lib/is-valid-uuid";
 import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
+import AppNotConnectedToApiServerError from "@/lib/error/AppNotConnectedToApiServerError";
 
 export type ValidateAudienceOutput =
   | "auth-server-only"
@@ -91,9 +92,12 @@ async function validateOneAudience(
       );
     }
     if (!permission) {
-      return false;
+      throw new AppNotConnectedToApiServerError(client_app_id, aud);
     }
   } catch (e: unknown) {
+    if (e instanceof AppNotConnectedToApiServerError) {
+      throw e;
+    }
     console.error(
       "Failed to check if frontend application has permission to access API server: ",
       e,

@@ -22,6 +22,7 @@ import {
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { ConflictError } from "@/lib/error/ConflictError";
+import { AppNotConnectedToApiServerError } from "@/lib/error/AppNotConnectedToApiServerError";
 import { appToHardcodedApiPermissionSchema } from "./apps-to-hardcoded-apis-permissions-table";
 
 /**
@@ -277,6 +278,62 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
       if (e instanceof ConflictError) throw e;
       console.error(e);
       throw new Error("Failed to grant client app access to API server");
+    }
+  }
+
+  /**
+   * @name revoke
+   * @description Revoke a previously-granted app-to-API permission. Throws
+   *   {@link AppNotConnectedToApiServerError} when no such permission exists —
+   *   the same error type the token-grant path raises when an app tries to use
+   *   an API server it isn't connected to.
+   * @param client_app_id Frontend client app UUID
+   * @param api_server_id API server UUID
+   */
+  public async revoke(
+    client_app_id: string,
+    api_server_id: string,
+  ): Promise<void> {
+    if (!appIdSchema.safeParse(client_app_id).success) {
+      throw new TypeError("Invalid frontend client app ID received");
+    }
+    if (!apiServerIdSchema.safeParse(api_server_id).success) {
+      throw new TypeError("Invalid API server ID received");
+    }
+
+    // Hardcoded app paired with a hardcoded API is baked in at compile time
+    // and cannot be revoked at runtime.
+    if (isHardcodedAppId(client_app_id) && isHardcodedApiServerId(api_server_id)) {
+      throw new Error(
+        "Cannot revoke a hardcoded app-to-hardcoded-API permission",
+      );
+    }
+
+    if (isHardcodedApiServerId(api_server_id)) {
+      const result = await this.db
+        .deleteFrom("apps_to_hardcoded_apis_permissions")
+        .where("client_app_id", "=", client_app_id)
+        .where("api_server_id", "=", api_server_id)
+        .executeTakeFirst();
+
+      if (result.numDeletedRows === BigInt(0)) {
+        throw new AppNotConnectedToApiServerError(client_app_id, api_server_id);
+      }
+      return;
+    }
+
+    if (!isValidUuid(api_server_id)) {
+      throw new TypeError("Expected API server ID to be a UUID!");
+    }
+
+    const result = await this.db
+      .deleteFrom("apps_to_apis_permissions")
+      .where("client_app_id", "=", client_app_id)
+      .where("api_server_id", "=", api_server_id)
+      .executeTakeFirst();
+
+    if (result.numDeletedRows === BigInt(0)) {
+      throw new AppNotConnectedToApiServerError(client_app_id, api_server_id);
     }
   }
 

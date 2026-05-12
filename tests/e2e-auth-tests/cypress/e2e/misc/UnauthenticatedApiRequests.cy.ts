@@ -117,6 +117,28 @@ describe("Unauthenticated API Requests", () => {
       });
     });
 
+    it("DELETE /api/apis/:apiId/connect_app/:appId returns 401", () => {
+      cy.request({
+        method: "DELETE",
+        url: `/api/apis/${fakeApiId}/connect_app/${fakeAppId}`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("DELETE /api/apis/:apiId/connect_app/:appId with invalid IDs returns 401", () => {
+      // Auth must be enforced before input validation so that unauthenticated
+      // callers can't probe parameter handling. 401 must beat 400.
+      cy.request({
+        method: "DELETE",
+        url: "/api/apis/not-a-uuid/connect_app/also-not-a-uuid",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
     it("GET /api/apps returns 401", () => {
       cy.request({
         method: "GET",
