@@ -25,9 +25,10 @@ import {
 import getStringByteSize from "@schemavaults/auth-server-sdk/getStringByteSize";
 import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
 import {
+  type CorsValidationResult,
   handleCorsPreflightForClientApp,
   validateCorsForClientApp,
-  applyCorsHeadersToResponse,
+  applyCorsHeadersFromResult,
 } from "@/lib/cors/cors-for-client-app";
 import { RedisCache } from "@/lib/redis";
 import {
@@ -136,7 +137,11 @@ export async function POST(
     );
   }
 
-  // Validate client_app_id from URL
+  // Validate client_app_id from URL. This is checked before CORS validation
+  // because the CORS lookup is keyed on the URL's client_app_id; a malformed
+  // value cannot map to allowed origins. The browser would have failed the
+  // preflight for the same reason, so reaching this branch implies a non-
+  // browser caller and the missing CORS headers are acceptable.
   if (!appIdSchema.safeParse(url_client_app_id).success) {
     return NextResponse.json(
       {
@@ -148,68 +153,13 @@ export async function POST(
     );
   }
 
-  const ip = extractClientIp(req);
-  if (!ip) {
-    return ipRequiredResponse();
-  }
-
-  {
-    await using redis = RedisCache.createConnection();
-    const rateLimitResult = await checkRateLimit(redis.client, REFRESH_TOKEN_RATE_LIMIT, { ip });
-    if (!rateLimitResult.allowed) {
-      return rateLimitResponse(rateLimitResult);
-    }
-  }
-
-  const schema = refreshTokenPOSTbody;
-
-  // Ensure body is valid JSON
-  let body: z.infer<typeof schema>;
-  try {
-    body = await schema.parseAsync(await req.json());
-  } catch (e: unknown) {
-    if (debug) {
-      console.error("Invalid body JSON: ", e);
-    }
-    return NextResponse.json(
-      {
-        success: false,
-        error: true,
-        message: "Invalid body JSON",
-      } satisfies RequestTokensResult,
-      { status: 400 }
-    );
-  }
-
-  // Verify URL client_app_id matches body client_app_id
-  if (url_client_app_id !== body.client_app_id) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: true,
-        message:
-          "client_app_id in URL does not match client_app_id in request body",
-      } satisfies RequestTokensResult,
-      { status: 400 }
-    );
-  }
-
-  if (body.grant_type !== grant_type) {
-    console.error(`Mismatched grant type, expected '${grant_type}'`);
-    return NextResponse.json(
-      {
-        success: false,
-        error: true,
-        message: "Mismatched grant type",
-      } satisfies RequestTokensResult,
-      { status: 400 }
-    );
-  }
-
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
-  // Validate CORS
-  const corsResult = await validateCorsForClientApp(
+  // Validate CORS up-front so the same allowance can be applied to every
+  // response branch below — including error responses. Without CORS headers
+  // on error responses, the browser blocks JS from reading them and the
+  // failure surfaces as a generic CORS error instead of the actual cause.
+  const corsResult: CorsValidationResult = await validateCorsForClientApp(
     { client_app_id: url_client_app_id, request: req },
     dbh,
     debug
@@ -226,18 +176,79 @@ export async function POST(
     );
   }
 
+  const withCors = <R extends NextResponse>(response: R): R =>
+    applyCorsHeadersFromResult(response, corsResult);
+
+  const ip = extractClientIp(req);
+  if (!ip) {
+    return withCors(ipRequiredResponse());
+  }
+
+  {
+    await using redis = RedisCache.createConnection();
+    const rateLimitResult = await checkRateLimit(redis.client, REFRESH_TOKEN_RATE_LIMIT, { ip });
+    if (!rateLimitResult.allowed) {
+      return withCors(rateLimitResponse(rateLimitResult));
+    }
+  }
+
+  const schema = refreshTokenPOSTbody;
+
+  // Ensure body is valid JSON
+  let body: z.infer<typeof schema>;
+  try {
+    body = await schema.parseAsync(await req.json());
+  } catch (e: unknown) {
+    if (debug) {
+      console.error("Invalid body JSON: ", e);
+    }
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Invalid body JSON",
+      } satisfies RequestTokensResult,
+      { status: 400 }
+    ));
+  }
+
+  // Verify URL client_app_id matches body client_app_id
+  if (url_client_app_id !== body.client_app_id) {
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message:
+          "client_app_id in URL does not match client_app_id in request body",
+      } satisfies RequestTokensResult,
+      { status: 400 }
+    ));
+  }
+
+  if (body.grant_type !== grant_type) {
+    console.error(`Mismatched grant type, expected '${grant_type}'`);
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Mismatched grant type",
+      } satisfies RequestTokensResult,
+      { status: 400 }
+    ));
+  }
+
   let userRegistry: UserRegistry;
   try {
     userRegistry = new UserRegistry(dbh.db, debug satisfies boolean);
   } catch (e: unknown) {
     console.error("Failed to connect to user registry: ", e);
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       {
         success: false,
         message: "Failed to connect to user registry",
       },
       { status: 500 }
-    );
+    ));
   }
 
   let orgRegistry: OrganizationsRegistry;
@@ -245,13 +256,13 @@ export async function POST(
     orgRegistry = new OrganizationsRegistry(dbh.db, debug satisfies boolean);
   } catch (e: unknown) {
     console.error("Failed to connect to organizations registry: ", e);
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       {
         success: false,
         message: "Failed to connect to organizations registry",
       },
       { status: 500 }
-    );
+    ));
   }
 
   const client_app_id: AppId = body.client_app_id;
@@ -273,7 +284,7 @@ export async function POST(
       "Failed to extract refresh token from request cookies or 'Authorization' header: ",
       e
     );
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       {
         success: false,
         error: true,
@@ -281,7 +292,7 @@ export async function POST(
           "Failed to extract refresh token from request cookies or 'Authorization' header",
       } satisfies RequestTokensResult,
       { status: 401 }
-    );
+    ));
   }
 
   const refreshTokenSize: number = getStringByteSize(unvalidated_refresh_token);
@@ -289,14 +300,14 @@ export async function POST(
     console.error(
       `Refresh token exceeded maximum size: ${refreshTokenSize} bytes > ${MaximumBrowserCookieSize} bytes`
     );
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       {
         success: false,
         error: true,
         message: "Refresh token exceeded maximum size.",
       } satisfies RequestTokensResult,
       { status: 500 }
-    );
+    ));
   }
 
   let response: NextResponse;
@@ -313,18 +324,17 @@ export async function POST(
     );
   } catch (e: unknown) {
     console.error("Failed to run refresh token grant handler: ", e);
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       {
         success: false,
         error: true,
         message: "Failed to run refresh token grant handler",
       } satisfies RequestTokensResult,
       { status: 500 }
-    );
+    ));
   }
 
-  // Apply CORS headers to response if needed
-  return await applyCorsHeadersToResponse(response, url_client_app_id, req, dbh) satisfies NextResponse;
+  return withCors(response);
 }
 
 export const dynamic = "force-dynamic";
