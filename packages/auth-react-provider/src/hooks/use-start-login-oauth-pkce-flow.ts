@@ -79,18 +79,50 @@ export function useStartLoginOauthPKCEFlow({
         ? true
         : false;
       let serverAuthenticationBelief: boolean = false;
-      try {
-        serverAuthenticationBelief = ((await checkIfAuthenticatedWithServer(
-          auth,
-        )) satisfies boolean)
-          ? true
-          : false;
-      } catch (e: unknown) {
-        // no-op
+      const maxServerAuthCheckAttempts: number = 3;
+      let serverAuthCheckError: unknown = undefined;
+      let serverAuthCheckSucceeded: boolean = false;
+      for (let attempt = 1; attempt <= maxServerAuthCheckAttempts; attempt++) {
+        if (cancelLoginEffect) {
+          return;
+        }
+        try {
+          serverAuthenticationBelief = ((await checkIfAuthenticatedWithServer(
+            auth,
+          )) satisfies boolean)
+            ? true
+            : false;
+          serverAuthCheckSucceeded = true;
+          serverAuthCheckError = undefined;
+          break;
+        } catch (e: unknown) {
+          serverAuthCheckError = e;
+          console.error(
+            `[useStartLoginOauthPKCEFlow] Attempt ${attempt}/${maxServerAuthCheckAttempts} failed to check if user already has a valid refresh token: `,
+            e,
+          );
+          if (attempt < maxServerAuthCheckAttempts) {
+            const backoffMs: number = 250 * Math.pow(2, attempt - 1);
+            await new Promise<void>((resolve) =>
+              setTimeout(resolve, backoffMs),
+            );
+          }
+        }
+      }
+      if (cancelLoginEffect) {
+        return;
+      }
+      if (!serverAuthCheckSucceeded) {
         console.error(
-          "[useStartLoginOauthPKCEFlow] (No-op) Error checking if user already has a valid refresh token: ",
-          e,
+          `[useStartLoginOauthPKCEFlow] Failed to determine server authentication status after ${maxServerAuthCheckAttempts} attempts. Redirecting to /auth/error.`,
+          serverAuthCheckError,
         );
+        onError(serverAuthCheckError);
+        const errorSearchParams = new URLSearchParams();
+        errorSearchParams.set("error", "500");
+        errorSearchParams.set("error_id", "load_user_data_failure");
+        router.push(`/auth/error?${errorSearchParams.toString()}`);
+        return;
       }
 
       const shouldLogin: boolean =
