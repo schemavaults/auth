@@ -14,6 +14,8 @@ import {
   type MfaStatusResponse,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentResponse,
+  isValidErrorId,
+  type SchemaVaultsAuthErrorId,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { IAuthClientConstructorOptions } from "@/types/IAuthClientConstructorOptions";
@@ -738,6 +740,38 @@ export class SchemaVaultsAuthClient
    */
   public get error_page_uri(): string {
     return this._error_page_uri;
+  }
+
+  /**
+   * @name buildErrorPageUrl
+   * @description Build a URL to the hosting app's error page, encoding the
+   *   given HTTP-style error code and SchemaVaults auth `error_id`. The
+   *   `error_id` is validated against the auth-common error catalog so
+   *   callers can only build links the error page knows how to render.
+   * @throws Error if `error_id` is not a known SchemaVaultsAuthErrorId
+   */
+  public buildErrorPageUrl(
+    error_id: SchemaVaultsAuthErrorId,
+    error_code: number = 500,
+  ): string {
+    if (!isValidErrorId(error_id)) {
+      throw new Error(
+        `[SchemaVaultsAuthClient] buildErrorPageUrl received unknown error_id "${error_id}". Expected one of the SchemaVaultsAuthErrorId values in the auth-common error catalog.`,
+      );
+    }
+    if (
+      !Number.isInteger(error_code) ||
+      error_code < 400 ||
+      error_code >= 600
+    ) {
+      throw new RangeError(
+        `[SchemaVaultsAuthClient] buildErrorPageUrl received error_code ${error_code}; expected an integer HTTP status in the 4xx-5xx range.`,
+      );
+    }
+    const params = new URLSearchParams();
+    params.set("error", `${error_code}`);
+    params.set("error_id", error_id);
+    return `${this._error_page_uri}?${params.toString()}` as const;
   }
 
   /**
