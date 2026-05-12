@@ -36,6 +36,7 @@ export async function withAuthenticatedServerComponentRouteGuard(
       route_guard_type: 'authenticated',
       jwt_keys_manager,
       api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      error_page_url: '/error',
       custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
     })
 }
