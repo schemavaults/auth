@@ -38,7 +38,11 @@ describe("whoami CORS headers", () => {
     });
   });
 
-  it("returns 403 with no CORS headers for an unauthenticated request from a disallowed origin", () => {
+  it("returns 401 with no CORS headers for an unauthenticated request from a disallowed origin", () => {
+    // Auth runs before CORS, so unauthenticated callers always see 401
+    // regardless of Origin. The CORS-headers leak would only matter for an
+    // *authenticated* request, so we don't expose Access-Control-* on a 401
+    // for an unregistered origin.
     const disallowedOrigin = "https://attacker.example.com";
     cy.request({
       method: "GET",
@@ -46,7 +50,7 @@ describe("whoami CORS headers", () => {
       headers: { Origin: disallowedOrigin },
       failOnStatusCode: false,
     }).then((response) => {
-      expect(response.status).to.eq(403);
+      expect(response.status).to.eq(401);
       expect(response.headers["access-control-allow-origin"]).to.be.undefined;
     });
   });

@@ -72,28 +72,6 @@ export async function GET(
     );
   }
 
-  // Validate CORS up front so that auth-failure responses (401/403 from the
-  // route guard) still carry Access-Control-Allow-Origin headers. Without this,
-  // unauthenticated cross-origin probes from registered client apps surface as
-  // a CORS error in the browser instead of a parseable 401, which breaks
-  // useStartLoginOauthPKCEFlow's "am I already logged in?" check.
-  await using dbh = ServerlessDatabase.createDBH();
-  const corsResult = await validateCorsForClientApp(
-    { client_app_id, request: req },
-    dbh,
-    debug,
-  );
-
-  if (!corsResult.allowed) {
-    if (debug) {
-      console.warn("Request blocked with CORS error: ", corsResult);
-    }
-    return NextResponse.json(
-      { success: false, error: true, message: corsResult.error },
-      { status: 403 },
-    );
-  }
-
   const protected_route: (req: NextRequest) => Promise<NextResponse> = await withAuthenticatedApiRouteGuard(
     async ({
       user,
@@ -128,10 +106,41 @@ export async function GET(
     },
   );
 
-  const response = await protected_route(req);
+  // Run the auth guard first so unauthenticated callers always see 401 —
+  // regardless of whether the supplied client_app_id or Origin would have
+  // been accepted. This prevents unauthenticated probing of which apps /
+  // origins are registered, and keeps the "401 must beat input validation"
+  // invariant the rest of the API follows.
+  const guardResponse = await protected_route(req);
 
+  await using dbh = ServerlessDatabase.createDBH();
+  const corsResult = await validateCorsForClientApp(
+    { client_app_id, request: req },
+    dbh,
+    debug,
+  );
+
+  // For authenticated success responses, enforce CORS strictly: an
+  // authenticated session must not be able to read another app's user data
+  // from a foreign origin.
+  if (guardResponse.status === 200 && !corsResult.allowed) {
+    if (debug) {
+      console.warn("Request blocked with CORS error: ", corsResult);
+    }
+    return NextResponse.json(
+      { success: false, error: true, message: corsResult.error },
+      { status: 403 },
+    );
+  }
+
+  // Apply CORS headers to whatever the guard returned (200 or 401/403). This
+  // is the regression fix: cross-origin probes from registered client apps
+  // now receive a 401 with Access-Control-Allow-Origin attached, so the
+  // browser surfaces it as a parseable response instead of a CORS error.
+  // When the origin isn't registered, applyCorsHeadersToResponse is a no-op
+  // and the bare auth-failure response is returned as-is.
   return await applyCorsHeadersToResponse(
-    response,
+    guardResponse,
     client_app_id,
     req,
     dbh,
