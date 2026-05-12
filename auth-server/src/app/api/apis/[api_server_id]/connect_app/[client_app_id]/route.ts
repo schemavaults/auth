@@ -22,7 +22,7 @@ import {
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
 import { ConflictError } from "@/lib/error/ConflictError";
-import { AppToApiPermissionNotFoundError } from "@/lib/error/AppToApiPermissionNotFoundError";
+import { AppNotConnectedToApiServerError } from "@/lib/error/AppNotConnectedToApiServerError";
 import type { ServerRuntime } from "next";
 import { appToHardcodedApiPermissionSchema } from "@/lib/auth-db/apis/apps-to-hardcoded-apis-permissions-table";
 import captureServerException from "@/lib/captureServerException";
@@ -430,7 +430,7 @@ export async function DELETE(
           message: "Successfully disconnected frontend application from API server",
         });
       } catch (e: unknown) {
-        if (e instanceof AppToApiPermissionNotFoundError) {
+        if (e instanceof AppNotConnectedToApiServerError) {
           return NextResponse.json(
             { success: false, message: "Connection does not exist" },
             { status: 404 },

@@ -22,7 +22,7 @@ import {
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { ConflictError } from "@/lib/error/ConflictError";
-import { AppToApiPermissionNotFoundError } from "@/lib/error/AppToApiPermissionNotFoundError";
+import { AppNotConnectedToApiServerError } from "@/lib/error/AppNotConnectedToApiServerError";
 import { appToHardcodedApiPermissionSchema } from "./apps-to-hardcoded-apis-permissions-table";
 
 /**
@@ -284,7 +284,9 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
   /**
    * @name revoke
    * @description Revoke a previously-granted app-to-API permission. Throws
-   *   {@link AppToApiPermissionNotFoundError} when no such permission exists.
+   *   {@link AppNotConnectedToApiServerError} when no such permission exists —
+   *   the same error type the token-grant path raises when an app tries to use
+   *   an API server it isn't connected to.
    * @param client_app_id Frontend client app UUID
    * @param api_server_id API server UUID
    */
@@ -315,7 +317,7 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
         .executeTakeFirst();
 
       if (result.numDeletedRows === BigInt(0)) {
-        throw new AppToApiPermissionNotFoundError(client_app_id, api_server_id);
+        throw new AppNotConnectedToApiServerError(client_app_id, api_server_id);
       }
       return;
     }
@@ -331,7 +333,7 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
       .executeTakeFirst();
 
     if (result.numDeletedRows === BigInt(0)) {
-      throw new AppToApiPermissionNotFoundError(client_app_id, api_server_id);
+      throw new AppNotConnectedToApiServerError(client_app_id, api_server_id);
     }
   }
 
