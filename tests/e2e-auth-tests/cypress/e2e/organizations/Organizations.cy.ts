@@ -13,7 +13,7 @@ describe("Organizations", () => {
 
   describe("Admin Organization Management", () => {
     it("admin can view organizations page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -25,7 +25,7 @@ describe("Organizations", () => {
     });
 
     it("admin can create organization and visit its page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -58,7 +58,7 @@ describe("Organizations", () => {
   describe("Non-Member Access Restrictions", () => {
     it("non-member regular user is redirected with 403 forbidden", () => {
       // First, create an organization as admin
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -77,7 +77,7 @@ describe("Organizations", () => {
 
             // Login as a regular user (non-member)
             cy.generate_random_test_user_credentials().then((credentials) => {
-              cy.create_and_login_as_regular_user(credentials).then(() => {
+              cy.create_and_login_as_regular_user_via_request(credentials).then(() => {
                 // Attempt to visit the organization page
                 cy.visit(`/org/${organization_id}`, {
                   failOnStatusCode: false,
@@ -90,7 +90,7 @@ describe("Organizations", () => {
 
                 // Cleanup - login as admin to delete org
                 cy.logout();
-                cy.create_and_login_as_superuser().then(() => {
+                cy.create_and_login_as_superuser_via_request().then(() => {
                   cy.delete_organization({ organization_id });
                 });
               });

@@ -20,7 +20,7 @@ interface MeOrganizationRoleResponseBody {
 
 describe("GET /api/me/organizations/:org_id/role for non-member", () => {
   it("returns 404 when the authenticated user is not a member of the org", () => {
-    cy.create_and_login_as_superuser().then((adminLoggedIn: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((adminLoggedIn: boolean) => {
       expect(adminLoggedIn, "superuser login should succeed").to.be.true;
 
       cy.generate_random_code(12).then((randomCode: string) => {
@@ -30,7 +30,7 @@ describe("GET /api/me/organizations/:org_id/role for non-member", () => {
         cy.create_organization({ organization_id, name }).then(() => {
           cy.logout().then(() => {
             cy.generate_random_test_user_credentials().then((credentials) => {
-              cy.create_and_login_as_regular_user(credentials).then(
+              cy.create_and_login_as_regular_user_via_request(credentials).then(
                 (regularLoggedIn: boolean) => {
                   expect(
                     regularLoggedIn,

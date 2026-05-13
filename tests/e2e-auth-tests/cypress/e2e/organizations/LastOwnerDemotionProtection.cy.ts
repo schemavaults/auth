@@ -29,7 +29,7 @@ interface OrganizationMembersResponseBody {
 describe("Last Owner Demotion Protection", () => {
   it("PATCH members/:uid/role refuses to demote the only owner of an organization (400)", () => {
     cy.generate_random_test_user_credentials().then((ownerCredentials) => {
-      cy.create_and_login_as_regular_user(ownerCredentials).then(
+      cy.create_and_login_as_regular_user_via_request(ownerCredentials).then(
         (registered: boolean) => {
           if (!registered) {
             throw new Error(
@@ -86,7 +86,7 @@ describe("Last Owner Demotion Protection", () => {
                 // change roles in any org) and attempt to demote the sole
                 // owner to `member`.
                 cy.logout();
-                cy.create_and_login_as_superuser().then((suSuccess) => {
+                cy.create_and_login_as_superuser_via_request().then((suSuccess) => {
                   if (!suSuccess) {
                     throw new Error("Failed to login as superuser");
                   }
