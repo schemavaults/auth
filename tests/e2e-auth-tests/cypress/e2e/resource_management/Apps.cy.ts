@@ -8,7 +8,7 @@ describe("Apps", () => {
 
   describe("Admin Apps Management", () => {
     it("admin can view apps page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -20,7 +20,7 @@ describe("Apps", () => {
     });
 
     it("admin can create app from admin page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -45,7 +45,7 @@ describe("Apps", () => {
   describe("Regular User Access Restrictions", () => {
     it("non-admin users are redirected from admin apps page with 403 forbidden", () => {
       cy.generate_random_test_user_credentials().then((credentials) => {
-        cy.create_and_login_as_regular_user(credentials).then(() => {
+        cy.create_and_login_as_regular_user_via_request(credentials).then(() => {
           cy.visit("/admin/apps", { failOnStatusCode: false });
           cy.url().should("include", "/error");
           cy.url().should("include", "error=403");
@@ -56,7 +56,7 @@ describe("Apps", () => {
 
   describe("Organization App Creation", () => {
     it("admin can create app from organization page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }

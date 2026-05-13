@@ -7,7 +7,7 @@ describe("System Organization Protection", () => {
   const SCHEMAVAULTS_ORG_ID = "schemavaults";
 
   it("POST /api/organizations with the reserved 'schemavaults' ID returns 400", () => {
-    cy.create_and_login_as_superuser().then((success: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to create and login as superuser");
       }
@@ -32,7 +32,7 @@ describe("System Organization Protection", () => {
   });
 
   it("DELETE /api/organizations/schemavaults returns 403", () => {
-    cy.create_and_login_as_superuser().then((success: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to create and login as superuser");
       }

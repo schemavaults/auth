@@ -149,7 +149,7 @@ describe("JWKS Access Key Authorization", () => {
   it("owner of the API's owner organization can POST, GET, and PUT jwks-access-key", () => {
     setup_org_with_api_and_member().then((ctx) => {
       // Promote the member to owner via the members-role API, as superuser.
-      cy.create_and_login_as_superuser()
+      cy.create_and_login_as_superuser_via_request()
         .then(() =>
           cy.request({
             method: "PATCH",
@@ -162,7 +162,7 @@ describe("JWKS Access Key Authorization", () => {
           cy.logout();
         })
         .then(() =>
-          cy.login(ctx.invitee_credentials.email, ctx.invitee_credentials.password),
+          cy.login_via_request(ctx.invitee_credentials.email, ctx.invitee_credentials.password),
         )
         .then((ownerLoggedIn: boolean) => {
           if (!ownerLoggedIn) {
@@ -211,7 +211,7 @@ describe("JWKS Access Key Authorization", () => {
   it("non-owner member of the API's owner organization receives 403 on POST, GET, and PUT", () => {
     setup_org_with_api_and_member().then((ctx) => {
       // Log in as the member (NOT promoted to owner).
-      cy.login(ctx.invitee_credentials.email, ctx.invitee_credentials.password).then(
+      cy.login_via_request(ctx.invitee_credentials.email, ctx.invitee_credentials.password).then(
         (memberLoggedIn: boolean) => {
           if (!memberLoggedIn) {
             throw new Error("Failed to login as invitee member");
@@ -252,7 +252,7 @@ describe("JWKS Access Key Authorization", () => {
     // Reuse the same setup so the API server exists and its owner org has
     // exactly one (non-admin) member. The superuser is not a member of this org.
     setup_org_with_api_and_member().then((ctx) => {
-      cy.create_and_login_as_superuser().then((adminLoggedIn: boolean) => {
+      cy.create_and_login_as_superuser_via_request().then((adminLoggedIn: boolean) => {
         if (!adminLoggedIn) {
           throw new Error("Failed to login as superuser for admin bypass test");
         }
