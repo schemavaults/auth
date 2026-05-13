@@ -32,6 +32,7 @@ import type { IJwtKeyManager } from "@/JwtKeyManager";
 import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType";
 import type { IBaseProtectedAuthenticatedApiRouteInputs } from "./IBaseProtectedAuthenticatedApiRouteInputs";
 import initDefaultJwtKeyManagerForAuthenticatedRouteGuard from "./initDefaultJwtKeyManagerForAuthenticatedRouteGuard";
+import assertValidTokenSourcesArray from "./assertValidTokenSourcesArray";
 
 export type TProtectedAuthenticatedApiRoute<
   TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs =
@@ -69,6 +70,8 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
     user: UserData,
     org_id: OrganizationID,
   ) => Promise<OrganizationMembershipRoleType | false>;
+  additional_token_sources?: PotentiallyValidTokenSource[];
+  debug?: boolean;
 }
 
 export function withAuthenticatedApiRouteGuard<
@@ -84,6 +87,7 @@ export function withAuthenticatedApiRouteGuard<
   const route_guard_type: "authenticated" | "admin" =
     opts?.route_guard_type ?? "authenticated";
   assertValidRouteGuardType(route_guard_type);
+  const debug: boolean = typeof opts?.debug === "boolean" ? opts.debug : false;
 
   const AuthenticatedApiRoute: TProtectedAuthenticatedApiRoute<TRouteInputs> =
     api_route_handler;
@@ -138,7 +142,15 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
-    const token_sources: PotentiallyValidTokenSource[] = [];
+    if (typeof opts?.additional_token_sources !== "undefined") {
+      assertValidTokenSourcesArray(
+        opts.additional_token_sources satisfies PotentiallyValidTokenSource[],
+      );
+    }
+
+    const token_sources: PotentiallyValidTokenSource[] = [
+      ...(opts?.additional_token_sources ?? []),
+    ];
 
     // Load refresh token cookie for auth server
     if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
@@ -244,6 +256,15 @@ export function withAuthenticatedApiRouteGuard<
           message: "Authentication failed, no token sources found for request",
         },
         { status: 401 },
+      );
+    }
+
+    if (debug) {
+      console.log(
+        "[withAuthenticatedApiRouteGuard]" +
+          " " +
+          `Creating guard from ${token_sources.length} token sources: `,
+        token_sources.map((ts) => `"${ts.sourceHint}" (${ts.type})`).join(","),
       );
     }
 

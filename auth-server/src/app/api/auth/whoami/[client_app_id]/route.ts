@@ -18,7 +18,13 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import { userDataSchema } from "@schemavaults/auth-common";
+import {
+  type PotentiallyValidTokenSource,
+  userDataSchema,
+} from "@schemavaults/auth-common";
+import { RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
+import getStringByteSize from "@schemavaults/auth-server-sdk/getStringByteSize";
+import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
 
 const CORS_METHODS = "GET, OPTIONS";
 
@@ -72,6 +78,28 @@ export async function GET(
     );
   }
 
+  // The auth guard normally only honors the auth server's own session cookie
+  // (refresh_token_schemavaults-auth). Callers of this endpoint may instead
+  // only hold the per-client-app refresh token cookie (refresh_token_<client_app_id>)
+  // issued during the OAuth2 grant flow, so promote it into the guard's token
+  // sources here.
+  const additional_token_sources: PotentiallyValidTokenSource[] = [];
+  const client_app_refresh_cookie = req.cookies.get(
+    RefreshTokenCookieName(client_app_id),
+  );
+  if (
+    typeof client_app_refresh_cookie?.value === "string" &&
+    client_app_refresh_cookie.value.length > 64 &&
+    getStringByteSize(client_app_refresh_cookie.value) <=
+      MaximumBrowserCookieSize
+  ) {
+    additional_token_sources.push({
+      sourceHint: `Client App Refresh Token from cookie '${RefreshTokenCookieName(client_app_id)}'`,
+      type: "refresh",
+      token: client_app_refresh_cookie.value,
+    });
+  }
+
   const protected_route: (req: NextRequest) => Promise<NextResponse> = await withAuthenticatedApiRouteGuard(
     async ({
       user,
@@ -104,6 +132,7 @@ export async function GET(
         { status: 200 },
       );
     },
+    { additional_token_sources, debug },
   );
 
   // Run the auth guard first so unauthenticated callers always see 401 —
