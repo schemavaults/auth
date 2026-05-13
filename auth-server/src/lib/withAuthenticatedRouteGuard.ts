@@ -51,6 +51,7 @@ export type { IAuthenticatedApiRouteGuardInputs as IProtectedAuthenticatedApiRou
 
 export interface IWithAuthenticatedApiRouteGuardWrapperOpts {
   additional_token_sources?: PotentiallyValidTokenSource[];
+  debug?: boolean;
 }
 
 export async function withAuthenticatedApiRouteGuard(
@@ -70,6 +71,7 @@ export async function withAuthenticatedApiRouteGuard(
       custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
       custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
       additional_token_sources: wrapper_opts?.additional_token_sources,
+      debug: wrapper_opts?.debug
     }
   );
 }

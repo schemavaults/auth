@@ -132,7 +132,7 @@ export async function GET(
         { status: 200 },
       );
     },
-    { additional_token_sources },
+    { additional_token_sources, debug },
   );
 
   // Run the auth guard first so unauthenticated callers always see 401 —
