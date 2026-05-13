@@ -95,7 +95,7 @@
     },
     "packages/auth-common": {
       "name": "@schemavaults/auth-common",
-      "version": "0.12.0",
+      "version": "0.12.1",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "crypto-js": "4.2.0",
@@ -172,7 +172,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.22.35",
+      "version": "0.22.40",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -233,7 +233,7 @@
     },
     "packages/jwt": {
       "name": "@schemavaults/jwt",
-      "version": "0.7.15",
+      "version": "0.7.16",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
