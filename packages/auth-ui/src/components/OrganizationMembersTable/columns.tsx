@@ -67,6 +67,14 @@ export const columns: ColumnDef<OrganizationMemberTableData>[] = [
     header: "Email",
   },
   {
+    id: "uid",
+    accessorKey: "uid",
+    header: "User ID",
+    cell: ({ row }): ReactElement => (
+      <span className="font-mono text-xs">{row.original.uid}</span>
+    ),
+  },
+  {
     id: "role",
     accessorKey: "role",
     header: "Role",
