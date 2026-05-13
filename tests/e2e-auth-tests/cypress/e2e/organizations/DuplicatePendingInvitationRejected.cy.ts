@@ -31,7 +31,7 @@ describe("Duplicate pending invitation rejected", () => {
 
       cy.generate_random_test_user_credentials().then((inviteeCredentials) => {
         // 1. Create the invitee account so the invitation lookup succeeds.
-        cy.create_and_login_as_regular_user(inviteeCredentials).then(
+        cy.create_and_login_as_regular_user_via_request(inviteeCredentials).then(
           (createdInvitee: boolean) => {
             if (!createdInvitee) {
               throw new Error("Failed to create invitee user");
@@ -39,7 +39,7 @@ describe("Duplicate pending invitation rejected", () => {
             cy.logout();
 
             // 2. Login as superuser, create the org.
-            cy.create_and_login_as_superuser().then((suSuccess: boolean) => {
+            cy.create_and_login_as_superuser_via_request().then((suSuccess: boolean) => {
               if (!suSuccess) {
                 throw new Error("Failed to login as superuser");
               }

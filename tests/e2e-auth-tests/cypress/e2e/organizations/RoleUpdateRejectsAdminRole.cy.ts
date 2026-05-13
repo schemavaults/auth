@@ -37,7 +37,7 @@ interface OrganizationMembersResponseBody {
 describe("PATCH org member role rejects 'admin'", () => {
   it("returns 400 when an org owner tries to set a member's role to 'admin' and the role is unchanged", () => {
     cy.generate_random_test_user_credentials().then((ownerCredentials) => {
-      cy.create_and_login_as_regular_user(ownerCredentials).then(
+      cy.create_and_login_as_regular_user_via_request(ownerCredentials).then(
         (registered: boolean) => {
           if (!registered) {
             throw new Error(

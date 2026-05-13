@@ -8,7 +8,7 @@ describe("API Servers", () => {
 
   describe("Admin API Server Management", () => {
     it("admin can view API servers page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -20,7 +20,7 @@ describe("API Servers", () => {
     });
 
     it("admin can create API server from admin page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -47,7 +47,7 @@ describe("API Servers", () => {
 
   describe("Organization API Server Creation", () => {
     it("admin can create API server from organization page", () => {
-      cy.create_and_login_as_superuser().then((success) => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }

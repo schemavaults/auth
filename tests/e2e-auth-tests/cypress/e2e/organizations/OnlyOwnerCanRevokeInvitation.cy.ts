@@ -63,7 +63,7 @@ describe("Only org owners can revoke invitations", () => {
         cy.generate_random_test_user_credentials().then(
           (outsiderCredentials) => {
             // 1. Pre-create the member account so we can later invite + accept.
-            cy.create_and_login_as_regular_user(memberCredentials).then(
+            cy.create_and_login_as_regular_user_via_request(memberCredentials).then(
               (createdMember: boolean) => {
                 if (!createdMember) {
                   throw new Error("Failed to create non-owner member user");
@@ -72,7 +72,7 @@ describe("Only org owners can revoke invitations", () => {
 
                 // 2. Pre-create the outsider so the owner can issue an
                 //    invitation referencing their email.
-                cy.create_and_login_as_regular_user(outsiderCredentials).then(
+                cy.create_and_login_as_regular_user_via_request(outsiderCredentials).then(
                   (createdOutsider: boolean) => {
                     if (!createdOutsider) {
                       throw new Error(
@@ -84,7 +84,7 @@ describe("Only org owners can revoke invitations", () => {
                     // 3. Become the org owner (superuser counts as a global
                     //    admin and is the simplest way to create the org +
                     //    issue invitations in this test setup).
-                    cy.create_and_login_as_superuser().then(
+                    cy.create_and_login_as_superuser_via_request().then(
                       (suSuccess: boolean) => {
                         if (!suSuccess) {
                           throw new Error("Failed to login as superuser");
@@ -116,7 +116,7 @@ describe("Only org owners can revoke invitations", () => {
                               //    in the organization — see
                               //    auth-server/src/lib/auth-db/organizations/respond-to-invitation.ts.
                               cy.logout();
-                              cy.login(
+                              cy.login_via_request(
                                 memberCredentials.email,
                                 memberCredentials.password,
                               ).then((memberLoggedIn: boolean) => {
@@ -158,7 +158,7 @@ describe("Only org owners can revoke invitations", () => {
                                 //    issue the invitation that the member
                                 //    will try to revoke.
                                 cy.logout();
-                                cy.create_and_login_as_superuser().then(() => {
+                                cy.create_and_login_as_superuser_via_request().then(() => {
                                   cy.request<CreateInvitationResponseBody>({
                                     method: "POST",
                                     url: `/api/organizations/${organization_id}/invitations`,
@@ -186,7 +186,7 @@ describe("Only org owners can revoke invitations", () => {
                                     // 7. Login as the non-owner member and
                                     //    attempt the forbidden DELETE.
                                     cy.logout();
-                                    cy.login(
+                                    cy.login_via_request(
                                       memberCredentials.email,
                                       memberCredentials.password,
                                     ).then((memberReLoggedIn: boolean) => {
@@ -222,7 +222,7 @@ describe("Only org owners can revoke invitations", () => {
                                       //    rejected DELETE had no
                                       //    side-effect on org state.
                                       cy.logout();
-                                      cy.create_and_login_as_superuser().then(
+                                      cy.create_and_login_as_superuser_via_request().then(
                                         () => {
                                           cy.request<ListOrganizationInvitationsResponseBody>(
                                             {
