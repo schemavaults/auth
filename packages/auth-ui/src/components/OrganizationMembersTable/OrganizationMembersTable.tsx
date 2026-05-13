@@ -92,6 +92,7 @@ export function OrganizationMembersTable({
         admin: false,
         email_verified: false,
         membership_created_at: true,
+        uid: false,
       }}
       HeaderButtons={showInviteButton ? InviteMemberDialogTriggerButton : undefined}
       datatypeLabel="Member"
