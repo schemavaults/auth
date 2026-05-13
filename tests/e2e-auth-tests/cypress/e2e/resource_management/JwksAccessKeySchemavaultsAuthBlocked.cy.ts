@@ -30,7 +30,7 @@ describe("JWKS Access Key Management Blocked for schemavaults-auth", () => {
     // could still produce a 403 is the schemavaults-auth-specific block. Any
     // other 403 here would come from the org-membership check, which the
     // superuser's `user.admin` bypass already defeats.
-    cy.create_and_login_as_superuser().then((success: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to create and login as superuser");
       }
