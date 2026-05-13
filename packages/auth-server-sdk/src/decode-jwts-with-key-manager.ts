@@ -64,25 +64,35 @@ export async function decodeJWTsWithKeyManager(
         token_sources,
         jwt_audience,
         decodeJWT: async (opts): Promise<UserData> => {
+          const sourceHintLabel: string =
+            typeof opts.sourceHint === "string" && opts.sourceHint.length > 0
+              ? opts.sourceHint
+              : "(no source hint)";
+          const sourceDescription: string = `source: '${sourceHintLabel}', type: '${opts.type}'`;
+
           if (debug) {
-            let debugMessage: string = `[decodeJWTsWithKeyManager] Attempting to decode ${opts.type} JWT for audience: '${opts.jwt_audience}'`;
-            if (opts.sourceHint) {
-              debugMessage += ` (Source: '${opts.sourceHint}')`;
-            }
-            console.log(debugMessage);
+            console.log(
+              `[decodeJWTsWithKeyManager] Attempting to decode ${opts.type} JWT for audience: '${opts.jwt_audience}' (${sourceDescription})`,
+            );
           }
 
           let keyset_id: string;
           try {
             keyset_id = getKeysetIdFromToken(opts.token satisfies string);
           } catch (e: unknown) {
-            console.error("Failed to load 'keyset_id' from auth token: ", e);
-            throw new Error("Failed to load 'keyset_id' from auth token!");
+            console.error(
+              `Failed to load 'keyset_id' from auth token (${sourceDescription}): `,
+              e,
+            );
+            throw new Error(
+              `Failed to load 'keyset_id' from auth token! (${sourceDescription})`,
+              { cause: e },
+            );
           }
 
           if (!keyset_id || !isValidUuid(keyset_id)) {
             throw new TypeError(
-              "Expected 'keyset_id' from token to be a valid UUID!",
+              `Expected 'keyset_id' from token to be a valid UUID! (${sourceDescription})`,
             );
           }
 
@@ -101,14 +111,15 @@ export async function decodeJWTsWithKeyManager(
             }
           } catch (e: unknown) {
             console.warn(
-              `[createGuardFromTokenSources] Failed to load keys associated with token-associated keyset '${keyset_id}': `,
+              `[createGuardFromTokenSources] Failed to load keys associated with token-associated keyset '${keyset_id}' (${sourceDescription}): `,
               e,
             );
             if (e instanceof JwtDecodingKeysetNotFoundError) {
               throw e;
             }
             throw new Error(
-              "Failed to load keys associated with token-associated keyset!",
+              `Failed to load keys associated with token-associated keyset! (${sourceDescription})`,
+              { cause: e },
             );
           }
           const { decryption_key, verification_key } = decodingKeys;
@@ -125,8 +136,14 @@ export async function decodeJWTsWithKeyManager(
             });
             return customJwtPayloadToUserData(jwtPayload);
           } catch (e: unknown) {
-            console.error("Failed to decode JSON web token: ", e);
-            throw new Error("Failed to decode JSON web token!");
+            console.error(
+              `Failed to decode JSON web token (${sourceDescription}): `,
+              e,
+            );
+            throw new Error(
+              `Failed to decode JSON web token! (${sourceDescription})`,
+              { cause: e },
+            );
           }
         },
       },

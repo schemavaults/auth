@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/jwt",
   "description": "Utility functions for authentication and authorization for use from the auth server or a resource server",
-  "version": "0.7.15",
+  "version": "0.7.16",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -38,9 +38,6 @@
     "globals": "16.5.0",
     "@typescript-eslint/eslint-plugin": "8.48.1",
     "@typescript-eslint/parser": "8.48.1"
-  },
-  "browser": {
-    "crypto": false
   },
   "publishConfig": {
     "access": "public"

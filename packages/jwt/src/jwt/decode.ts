@@ -83,7 +83,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     }
   } catch (error: unknown) {
     console.error("Failed to retrieve keyset ID:", error);
-    throw new Error("Failed to retrieve keyset ID");
+    throw new Error("Failed to retrieve keyset ID", { cause: error });
   }
 
   if (typeof jwt !== "string") {
@@ -172,7 +172,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     decoded_header_aud = decoded_header.aud;
   } catch (e: unknown) {
     console.error("Error decoding JWT header: ", e);
-    throw new Error("Error decoding JWT header!");
+    throw new Error("Error decoding JWT header!", { cause: e });
   }
 
   if (kid !== `${keyset_id}-decryption`) {
@@ -196,7 +196,9 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     }
   } catch (e: unknown) {
     console.error("Error loading decryption key from key store or inputs: ", e);
-    throw new Error("Error loading decryption key from key store or inputs!");
+    throw new Error("Error loading decryption key from key store or inputs!", {
+      cause: e,
+    });
   }
 
   const decoded: JWTDecryptResult = await jwtDecrypt(jwt, decryption_key, {
@@ -295,7 +297,10 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       "Error loading verification key from key store or inputs: ",
       e,
     );
-    throw new Error("Error loading verification key from key store or inputs!");
+    throw new Error(
+      "Error loading verification key from key store or inputs!",
+      { cause: e },
+    );
   }
 
   try {
@@ -321,7 +326,9 @@ export async function decodeJWT<T extends AuthTokenTypes>({
         e,
       );
     }
-    throw new Error("Failed to verify 'sig' field of JWT using public key!");
+    throw new Error("Failed to verify 'sig' field of JWT using public key!", {
+      cause: e,
+    });
   }
 
   return payload;
