@@ -18,7 +18,7 @@ describe("Hardcoded Resource Deletion Protection", () => {
   const HARDCODED_API_SERVER_ID = "schemavaults-registry";
 
   it("DELETE /api/apps/:hardcoded_app_id returns 403 for the superuser admin", () => {
-    cy.create_and_login_as_superuser().then((success: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to create and login as superuser");
       }
@@ -38,7 +38,7 @@ describe("Hardcoded Resource Deletion Protection", () => {
   });
 
   it("DELETE /api/apis/:hardcoded_api_server_id returns 403 for the superuser admin", () => {
-    cy.create_and_login_as_superuser().then((success: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to create and login as superuser");
       }

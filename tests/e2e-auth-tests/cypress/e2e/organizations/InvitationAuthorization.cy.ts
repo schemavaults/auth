@@ -38,7 +38,7 @@ describe("Invitation Authorization", () => {
       cy.generate_random_test_user_credentials().then((inviteeCredentials) => {
         cy.generate_random_test_user_credentials().then((attackerCredentials) => {
           // 1. Create the invitee account (regular user, not in the org).
-          cy.create_and_login_as_regular_user(inviteeCredentials).then(
+          cy.create_and_login_as_regular_user_via_request(inviteeCredentials).then(
             (createdInvitee: boolean) => {
               if (!createdInvitee) {
                 throw new Error("Failed to create invitee user");
@@ -46,7 +46,7 @@ describe("Invitation Authorization", () => {
               cy.logout();
 
               // 2. Create the attacker account (regular user, not in the org).
-              cy.create_and_login_as_regular_user(attackerCredentials).then(
+              cy.create_and_login_as_regular_user_via_request(attackerCredentials).then(
                 (createdAttacker: boolean) => {
                   if (!createdAttacker) {
                     throw new Error("Failed to create attacker user");
@@ -55,7 +55,7 @@ describe("Invitation Authorization", () => {
 
                   // 3. Login as superuser, create the org, then issue an
                   // invitation for the invitee via API.
-                  cy.create_and_login_as_superuser().then((suSuccess: boolean) => {
+                  cy.create_and_login_as_superuser_via_request().then((suSuccess: boolean) => {
                     if (!suSuccess) {
                       throw new Error("Failed to login as superuser");
                     }
@@ -84,7 +84,7 @@ describe("Invitation Authorization", () => {
                         // and attempt to accept the invitation that belongs
                         // to the invitee.
                         cy.logout();
-                        cy.login(
+                        cy.login_via_request(
                           attackerCredentials.email,
                           attackerCredentials.password,
                         ).then((attackerLoggedIn: boolean) => {
@@ -123,7 +123,7 @@ describe("Invitation Authorization", () => {
 
                           // 6. Cleanup - log back in as superuser and delete the org.
                           cy.logout();
-                          cy.create_and_login_as_superuser().then(() => {
+                          cy.create_and_login_as_superuser_via_request().then(() => {
                             cy.delete_organization({ organization_id });
                           });
                         });

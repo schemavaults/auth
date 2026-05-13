@@ -65,13 +65,48 @@ export async function decodeJWTs(
     );
   }
 
+  function describeTokenSource(source: PotentiallyValidTokenSource): string {
+    const hint: string =
+      typeof source.sourceHint === "string" && source.sourceHint.length > 0
+        ? source.sourceHint
+        : "(no source hint)";
+    return `source: '${hint}', type: '${source.type}'`;
+  }
+
   if (!successfulDecodeResult) {
+    const rejectedDescriptions: string[] = [];
+    const rejectionReasons: unknown[] = [];
+    decodeResults.forEach((result, index) => {
+      if (result.status !== "rejected") return;
+      const source: PotentiallyValidTokenSource | undefined =
+        token_sources[index];
+      const sourceDescription: string =
+        source !== undefined
+          ? describeTokenSource(source)
+          : `source: '(unknown, index=${index})', type: '(unknown)'`;
+      const reason: unknown = result.reason;
+      const reasonMessage: string =
+        reason instanceof Error
+          ? reason.message
+          : typeof reason === "string"
+            ? reason
+            : "Unknown error";
+      rejectedDescriptions.push(`{ ${sourceDescription}, error: ${reasonMessage} }`);
+      rejectionReasons.push(reason);
+    });
+
     const errorMessage: string =
       n_token_sources > 1
-        ? `Failed to decode any of the ${n_token_sources} provided JWTs`
-        : "Failed to decode the single JWT that was provided!";
+        ? `Failed to decode any of the ${n_token_sources} provided JWTs [${rejectedDescriptions.join("; ")}]`
+        : `Failed to decode the single JWT that was provided! [${rejectedDescriptions.join("; ")}]`;
     console.warn(errorMessage);
-    throw new Error(errorMessage);
+    const cause: unknown =
+      rejectionReasons.length === 0
+        ? undefined
+        : rejectionReasons.length === 1
+          ? rejectionReasons[0]
+          : new AggregateError(rejectionReasons, errorMessage);
+    throw new Error(errorMessage, cause === undefined ? undefined : { cause });
   }
 
   function validateSameInfoAcrossTokens(): void {
