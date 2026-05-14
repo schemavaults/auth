@@ -7,6 +7,7 @@ import {
   Wordmark,
 } from "@schemavaults/ui";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMemo, type PropsWithChildren, type ReactElement } from "react";
 import getAuthenticatedUserDashboardLinks from "./dashboard-links";
 import { useAdmin } from "@schemavaults/auth-react-provider";
@@ -34,6 +35,7 @@ export default function AuthenticatedAuthServerLayout({
       logo={<Logo width={40} height={40} />}
       topBarTitle={"@schemavaults/auth-server"}
       sidebarItems={links}
+      usePathname={usePathname}
     >
       {children}
     </DashboardLayout>
