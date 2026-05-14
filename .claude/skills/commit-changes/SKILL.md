@@ -40,6 +40,7 @@ right is the `package.json` to read and edit when bumping a version.
 | `auth-react-provider`                   | `packages/auth-react-provider/package.json`                    |
 | `auth-ui`                               | `packages/auth-ui/package.json`                                |
 | `auth-resource-server-codegen-templates`| `packages/auth-resource-server-codegen-templates/package.json` |
+| `trpc-backend-init`                     | `packages/trpc-backend-init/package.json`                      |
 
 Dependency order (base first, used to order multi-package commit subjects — taken
 from `CLAUDE.md`'s package hierarchy and `auth-server-sdk`'s build-time
@@ -53,7 +54,8 @@ codegen-template bundling):
 6. `auth-ui`
 7. `auth-resource-server-codegen-templates`
 8. `auth-server-sdk` (build copies codegen-templates source into its dist)
-9. `auth-server`
+9. `trpc-backend-init` (peerDeps on `auth-server-sdk` and `app-definitions`)
+10. `auth-server`
 
 ## Downstream dependents (REQUIRED cascade bumps)
 
@@ -66,14 +68,15 @@ downstream version to pull in the updated base package; skipping this leaves
 
 | Bumped package                            | Downstream dependents that MUST also be bumped                                       |
 | ----------------------------------------- | ------------------------------------------------------------------------------------ |
-| `app-definitions`                         | `auth-common`, `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server` |
+| `app-definitions`                         | `auth-common`, `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `trpc-backend-init`, `auth-server` |
 | `auth-common`                             | `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server` |
 | `jwt`                                     | `auth-server-sdk`, `auth-server`                                                     |
-| `auth-server-sdk`                         | `auth-resource-server-codegen-templates`, `auth-server`                              |
+| `auth-server-sdk`                         | `auth-resource-server-codegen-templates`, `trpc-backend-init`, `auth-server`         |
 | `auth-client-sdk`                         | `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server` |
 | `auth-react-provider`                     | `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server` |
 | `auth-ui`                                 | `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server`           |
 | `auth-resource-server-codegen-templates`  | `auth-server-sdk`, `auth-server`                                                     |
+| `trpc-backend-init`                       | (none — leaf)                                                                        |
 | `auth-server`                             | (none — leaf)                                                                        |
 
 **Note on `auth-resource-server-codegen-templates` → `auth-server-sdk`:** the
@@ -88,6 +91,14 @@ its own dependencies, like `@schemavaults/ui`) requires republishing
 **Note on `auth-ui` → `auth-resource-server-codegen-templates`:** the codegen
 templates render `auth-ui` components, so a published `auth-ui` bump must
 cascade through codegen-templates and on to `auth-server-sdk`.
+
+**Note on `auth-server-sdk` / `app-definitions` → `trpc-backend-init`:**
+`trpc-backend-init` peer-depends on both `@schemavaults/auth-server-sdk` and
+`@schemavaults/app-definitions` (workspace:* in the monorepo). Any bump to
+either of those base packages requires republishing `trpc-backend-init` so
+its peerDependency range advertised to npm consumers points at the new
+version. `trpc-backend-init` itself is a leaf — nothing else in the monorepo
+depends on it.
 
 If you are unsure, verify with:
 
