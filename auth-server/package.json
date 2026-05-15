@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.25.22",
+  "version": "0.25.23",
   "private": true,
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/send-email": "latest",
     "@schemavaults/theme": "0.25.9",
-    "@schemavaults/ui": "0.46.5",
+    "@schemavaults/ui": "0.46.6",
     "cookies-next": "6.1.1",
     "ioredis": "5.10.1",
     "lucide-react": "0.575.0",
