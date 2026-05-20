@@ -3,10 +3,7 @@ export {
   default as AuthProvider,
   default as default,
 } from "./auth-provider";
-export type {
-  SchemaVaultsAuthProviderProps,
-  AuthMiddlewareRules,
-} from "./auth-provider";
+export type { SchemaVaultsAuthProviderProps } from "./auth-provider";
 
 export type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 export type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
@@ -27,3 +24,15 @@ export {
 } from "@schemavaults/auth-client-sdk";
 
 export type { ApiServerId } from "@schemavaults/app-definitions";
+
+// Auth Middleware Re-exports
+export {
+  AuthMiddleware,
+  defaultAuthMiddlewareRules,
+} from "@schemavaults/auth-client-sdk";
+export type {
+  AuthMiddlewareRules,
+  AuthMiddlewareResult,
+  AuthMiddlewareOptions,
+  AuthMiddlewareError,
+} from "@schemavaults/auth-client-sdk";
