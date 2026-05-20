@@ -51,3 +51,15 @@ export { generateOAuth2State } from "./lib/generate-oauth2-state";
 // consumers who import this SDK don't need a separate auth-common dep
 // just to validate their own callback URLs.
 export { timingSafeStringEqual } from "@schemavaults/auth-common";
+
+// Auth Middleware Re-exports
+export {
+  AuthMiddleware,
+  defaultAuthMiddlewareRules,
+} from "@schemavaults/auth-common";
+export type {
+  AuthMiddlewareRules,
+  AuthMiddlewareResult,
+  AuthMiddlewareOptions,
+  AuthMiddlewareError,
+} from "@schemavaults/auth-common";
