@@ -237,7 +237,7 @@ export class SchemaVaultsAuthClient
         : "/auth/error";
 
     // Get default audiences
-    // E.g. the web app has https://api.schemavaults.com('s app ID) as an audience
+    // E.g. the web app has https://registry.schemavaults.com('s app ID) as an audience
     this._default_audiences = opts.default_audiences ?? [];
 
     // Should we require an invite code?
@@ -881,9 +881,8 @@ export class SchemaVaultsAuthClient
       inputs: IAcquireAccessTokenFnOptions,
     ) => Promise<AccessToken>;
     try {
-      tradeRefreshTokenForAccessToken = await import(
-        "@/lib/acquire-access-token"
-      ).then((mod) => mod.default);
+      tradeRefreshTokenForAccessToken =
+        await import("@/lib/acquire-access-token").then((mod) => mod.default);
       if (typeof tradeRefreshTokenForAccessToken !== "function") {
         throw new Error(
           "Expected default export from 'acquire-access-token' module to be a function!",
@@ -1206,9 +1205,10 @@ export class SchemaVaultsAuthClient
     app_id: AppId,
     state?: string | null,
   ): Promise<void> {
-    const sendAuthorizeRequest = await import(
-      "@/lib/send-authorize-client-application-request"
-    ).then((mod) => mod.default);
+    const sendAuthorizeRequest =
+      await import("@/lib/send-authorize-client-application-request").then(
+        (mod) => mod.default,
+      );
     return await sendAuthorizeRequest({ app_id, adapter: this.adapter, state });
   }
 
@@ -1236,7 +1236,7 @@ export class SchemaVaultsAuthClient
     if (!SchemaVaultsAuthClient.ADMIN_APP_IDS.has(this._app_id)) {
       throw new Error(
         `[SchemaVaultsAuthClient] ${method_name}() is restricted to SchemaVaults internal apps. ` +
-        `Current app_id "${this._app_id}" is not authorized to perform this operation.`,
+          `Current app_id "${this._app_id}" is not authorized to perform this operation.`,
       );
     }
   }
@@ -1249,7 +1249,13 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/list-client-applications").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, query_type, query_params, pagination });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      query_type,
+      query_params,
+      pagination,
+    });
   }
 
   public async createClientApplication(
@@ -1259,7 +1265,11 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/create-client-application").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, app_definition });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_definition,
+    });
   }
 
   public async createClientApplicationDomain(
@@ -1269,7 +1279,11 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/create-client-application-domain").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, app_domain_definition });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_domain_definition,
+    });
   }
 
   public async loadClientApplicationDefinition(
@@ -1278,7 +1292,11 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/load-client-application-definition").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, app_id });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
   }
 
   public async listClientApplicationDomains(
@@ -1287,7 +1305,11 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/list-client-application-domains").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, app_id });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
   }
 
   public async listApiServers(
@@ -1295,20 +1317,26 @@ export class SchemaVaultsAuthClient
     query_params?: URLSearchParams,
     pagination?: PaginationOptions,
   ): Promise<ListApiServersQueryResponse> {
-    const fn = await import("@/lib/list-api-servers").then(
-      (m) => m.default,
-    );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, query_type, query_params, pagination });
+    const fn = await import("@/lib/list-api-servers").then((m) => m.default);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      query_type,
+      query_params,
+      pagination,
+    });
   }
 
   public async createApiServer(
     api_server_definition: SchemaVaultsApiServerDefinition,
   ): Promise<void> {
     this.assertAppAndApiManagementWriteAccess("createApiServer");
-    const fn = await import("@/lib/create-api-server").then(
-      (m) => m.default,
-    );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_definition });
+    const fn = await import("@/lib/create-api-server").then((m) => m.default);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_definition,
+    });
   }
 
   public async createApiServerDomain(
@@ -1318,7 +1346,11 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/create-api-server-domain").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_domain_definition });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_domain_definition,
+    });
   }
 
   public async listApiServerDomains(
@@ -1327,7 +1359,11 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/list-api-server-domains").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+    });
   }
 
   public async loadApiServerDefinition(
@@ -1336,7 +1372,11 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/load-api-server-definition").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+    });
   }
 
   public async deleteClientApplication(app_id: AppId): Promise<void> {
@@ -1344,15 +1384,21 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/delete-client-application").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, app_id });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
   }
 
   public async deleteApiServer(api_server_id: ApiServerId): Promise<void> {
     this.assertAppAndApiManagementWriteAccess("deleteApiServer");
-    const fn = await import("@/lib/delete-api-server").then(
-      (m) => m.default,
-    );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id });
+    const fn = await import("@/lib/delete-api-server").then((m) => m.default);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+    });
   }
 
   public async connectAppToApiServer(
@@ -1363,7 +1409,12 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/connect-app-to-api-server").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id, client_app_id });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      client_app_id,
+    });
   }
 
   public async disconnectAppFromApiServer(
@@ -1374,7 +1425,12 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/disconnect-app-from-api-server").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id, client_app_id });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      client_app_id,
+    });
   }
 
   public async checkAppToApiPermission(
@@ -1384,6 +1440,11 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/check-app-to-api-permission").then(
       (m) => m.default,
     );
-    return await fn({ adapter: this.adapter, auth_server_uri: this.auth_server_uri, api_server_id, client_app_id });
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      client_app_id,
+    });
   }
 }

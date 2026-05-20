@@ -59,21 +59,12 @@ async function enforceValidAppIfOriginApplied(
     return true;
   }
 
-  if (origin === web_app_uri && audience.startsWith("schemavaults-fs:")) {
-    if (debug) {
-      console.log(
-        "[isAllowedOrigin] Ensuring that @schemavaults/web application can reach vault fileserver backend...",
-      );
-    }
-    return true;
-  }
-
-  // Ensure that https://api.schemavaults.com can be accessed by the core web app
+  // Ensure that https://registry.schemavaults.com can be accessed by the registry frontend
   const registry_app_id = SCHEMAVAULTS_REGISTRY_SERVER.api_server_id;
   if (origin === web_app_uri && audience === registry_app_id) {
     if (debug) {
       console.log(
-        "[isAllowedOrigin] Ensuring that @schemavaults/web application can reach registry API server backend...",
+        "[isAllowedOrigin] Ensuring that @schemavaults/registry-server frontend application can reach registry API server backend...",
       );
     }
     return true;

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { GET_app_to_api_permission_handler } from "./GET_app_to_api_permission_handler";
-import { applyCorsHeadersForSchemaVaultsWeb, handleCorsPreflightForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
+import { applyCorsHeadersForSchemaVaultsRegistry, handleCorsPreflightForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import {
   SchemaVaultsAppToApiPermissionsRegistry,
   type ResourceCreationResponse,
@@ -263,7 +263,7 @@ export async function POST(
   );
 
   const response = await protected_route(req);
-  return applyCorsHeadersForSchemaVaultsWeb(response, req);
+  return applyCorsHeadersForSchemaVaultsRegistry(response, req);
 }
 
 /**
@@ -454,7 +454,7 @@ export async function DELETE(
   );
 
   const response = await protected_route(req);
-  return applyCorsHeadersForSchemaVaultsWeb(response, req);
+  return applyCorsHeadersForSchemaVaultsRegistry(response, req);
 }
 
 export { GET_app_to_api_permission_handler as GET };
@@ -462,7 +462,7 @@ export { GET_app_to_api_permission_handler as GET };
 const CORS_METHODS = "GET, POST, DELETE, OPTIONS";
 
 export function OPTIONS(req: NextRequest): NextResponse {
-  return handleCorsPreflightForSchemaVaultsWeb(req, CORS_METHODS);
+  return handleCorsPreflightForSchemaVaultsRegistry(req, CORS_METHODS);
 }
 
 export const dynamic = "force-dynamic"; // defaults to auto

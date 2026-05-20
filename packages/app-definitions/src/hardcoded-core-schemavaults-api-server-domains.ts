@@ -34,9 +34,9 @@ export const SCHEMAVAULTS_REGISTRY_SERVER_STAGING_DOMAIN = {
 } as const satisfies SchemaVaultsApiServerDomainRef;
 
 export const SCHEMAVAULTS_REGISTRY_SERVER_PRODUCTION_DOMAIN = {
-  api_server_domain_ref_id: "f1ebac97-9869-422b-ad83-fbbb13642cad",
+  api_server_domain_ref_id: "761dca6f-7e9e-42ac-8022-3ce194cfeb7a",
   api_server_id: SCHEMAVAULTS_REGISTRY_SERVER.api_server_id,
-  domain: "https://api.schemavaults.com",
+  domain: "https://registry.schemavaults.com",
   environment: "production",
   hardcoded: true,
   created_at: defaultHardcodedAppCreationTime,
