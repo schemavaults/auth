@@ -1,6 +1,6 @@
 import "server-only";
 
-import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
+import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import {
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
@@ -169,7 +169,7 @@ export async function POST_create_api_server_domain(
     },
   );
   const response = await protected_route(request);
-  return applyCorsHeadersForSchemaVaultsWeb(response, request);
+  return applyCorsHeadersForSchemaVaultsRegistry(response, request);
 }
 
 export default POST_create_api_server_domain;

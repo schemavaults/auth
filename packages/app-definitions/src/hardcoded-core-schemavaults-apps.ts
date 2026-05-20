@@ -13,6 +13,17 @@ export const SCHEMAVAULTS_WEB = {
   owner_organization_id: "schemavaults",
 } as const satisfies SchemaVaultsApp;
 
+export const SCHEMAVAULTS_REGISTRY_FRONTEND = {
+  app_id: "schemavaults-registry" as const,
+  app_description: "Frontend for the SchemaVaults Registry server" as const,
+  public: true as const,
+  app_name: "SchemaVaults Registry" as const,
+  created_at: defaultHardcodedAppCreationTime,
+  web: true as const,
+  hardcoded: true as const,
+  owner_organization_id: "schemavaults",
+} as const satisfies SchemaVaultsApp;
+
 export const SCHEMAVAULTS_CLI = {
   app_id: "schemavaults-cli" as const,
   app_description:
@@ -49,6 +60,7 @@ export const SCHEMAVAULTS_MAIL_APP_DEFINITION = {
 
 export const HARDCODED_CORE_SCHEMAVAULTS_APPS = [
   SCHEMAVAULTS_WEB,
+  SCHEMAVAULTS_REGISTRY_FRONTEND,
   SCHEMAVAULTS_CLI,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   SCHEMAVAULTS_MAIL_APP_DEFINITION,
@@ -76,10 +88,16 @@ export const hardcodedAppIdSchema = z
   }, "Invalid hardcoded app ID");
 
 export function isHardcodedAppId(app_id: string): app_id is HardcodedAppId {
+  if (typeof app_id !== "string") return false;
   return hardcodedAppIdSchema.safeParse(app_id).success;
 }
 
 export function getHardcodedApp(app_id: string): SchemaVaultsApp {
+  if (typeof app_id !== "string" || app_id.length === 0) {
+    throw new TypeError(
+      "Expected 'app_id' to look up hardcoded app with to be a non-empty string!",
+    );
+  }
   if (isHardcodedAppId(app_id)) {
     const app = HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP.get(
       app_id satisfies HardcodedAppId,

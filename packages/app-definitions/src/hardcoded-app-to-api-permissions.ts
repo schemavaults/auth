@@ -1,6 +1,7 @@
 import {
-  HardcodedAppId,
+  type HardcodedAppId,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_REGISTRY_FRONTEND,
   SCHEMAVAULTS_WEB,
 } from "./hardcoded-core-schemavaults-apps";
 import { SCHEMAVAULTS_CLI } from "./hardcoded-core-schemavaults-apps";
@@ -18,9 +19,9 @@ const HARDCODED_APP_TO_API_PERMISSIONS: Record<
   HardcodedAppId,
   HardcodedApiServerId[]
 > = {
-  [SCHEMAVAULTS_WEB.app_id]: [
+  [SCHEMAVAULTS_WEB.app_id]: [SCHEMAVAULTS_MAIL_SERVER.api_server_id],
+  [SCHEMAVAULTS_REGISTRY_FRONTEND.app_id]: [
     SCHEMAVAULTS_REGISTRY_SERVER.api_server_id,
-    SCHEMAVAULTS_MAIL_SERVER.api_server_id,
   ],
   [SCHEMAVAULTS_CLI.app_id]: [
     SCHEMAVAULTS_REGISTRY_SERVER.api_server_id,
@@ -78,7 +79,9 @@ export function getHardcodedAppIdsForHardcodedApiServer(
   }
 
   const result: HardcodedAppId[] = [];
-  for (const [appId, apiServerIds] of Object.entries(HARDCODED_APP_TO_API_PERMISSIONS)) {
+  for (const [appId, apiServerIds] of Object.entries(
+    HARDCODED_APP_TO_API_PERMISSIONS,
+  )) {
     if (apiServerIds.includes(api_server_id)) {
       result.push(appId as HardcodedAppId);
     }

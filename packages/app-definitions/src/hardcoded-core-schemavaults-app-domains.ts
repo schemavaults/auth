@@ -4,6 +4,7 @@ import {
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   SCHEMAVAULTS_MAIL_APP_DEFINITION,
   SCHEMAVAULTS_WEB,
+  SCHEMAVAULTS_REGISTRY_FRONTEND,
 } from "./hardcoded-core-schemavaults-apps";
 
 export const SCHEMAVAULTS_WEB_APP_DEVELOPMENT_DOMAIN = {
@@ -135,10 +136,54 @@ const HARDCODED_CORE_SCHEMAVAULTS_MAIL_APP_DOMAINS = [
   SCHEMAVAULTS_MAIL_APP_STAGING_DOMAIN,
 ] as const;
 
+export const SCHEMAVAULTS_REGISTRY_APP_PRODUCTION_DOMAIN = {
+  app_domain_ref_id: "3b7532a4-9b69-4265-b987-b04892384301",
+  app_id: SCHEMAVAULTS_REGISTRY_FRONTEND.app_id,
+  domain: "https://registry.schemavaults.com",
+  environment: "production",
+  hardcoded: true,
+  created_at: defaultHardcodedAppCreationTime,
+} as const satisfies SchemaVaultsAppDomainRef;
+
+export const SCHEMAVAULTS_REGISTRY_APP_DEVELOPMENT_DOMAIN = {
+  app_domain_ref_id: "d6fc22a2-5f43-4e4b-bd42-4626f4b66190",
+  app_id: SCHEMAVAULTS_REGISTRY_FRONTEND.app_id,
+  domain: "http://localhost:8080",
+  environment: "development",
+  hardcoded: true,
+  created_at: defaultHardcodedAppCreationTime,
+} as const satisfies SchemaVaultsAppDomainRef;
+
+export const SCHEMAVAULTS_REGISTRY_APP_TEST_DOMAIN = {
+  app_domain_ref_id: "a0e284eb-793a-424a-80d0-d4fa87eef4b7",
+  app_id: SCHEMAVAULTS_REGISTRY_FRONTEND.app_id,
+  domain: "http://schemavaults-registry",
+  environment: "test",
+  hardcoded: true,
+  created_at: defaultHardcodedAppCreationTime,
+} as const satisfies SchemaVaultsAppDomainRef;
+
+export const SCHEMAVAULTS_REGISTRY_APP_STAGING_DOMAIN = {
+  app_domain_ref_id: "d5cae3e9-58cb-41d8-9edc-6e61148272dc",
+  app_id: SCHEMAVAULTS_REGISTRY_FRONTEND.app_id,
+  domain: "https://registry-staging.schemavaults.com",
+  environment: "staging",
+  hardcoded: true,
+  created_at: defaultHardcodedAppCreationTime,
+} as const satisfies SchemaVaultsAppDomainRef;
+
+const HARDCODED_CORE_SCHEMAVAULTS_REGISTRY_APP_DOMAINS = [
+  SCHEMAVAULTS_REGISTRY_APP_PRODUCTION_DOMAIN,
+  SCHEMAVAULTS_REGISTRY_APP_DEVELOPMENT_DOMAIN,
+  SCHEMAVAULTS_REGISTRY_APP_TEST_DOMAIN,
+  SCHEMAVAULTS_REGISTRY_APP_STAGING_DOMAIN,
+] as const;
+
 export const HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS = [
   ...HARDCODED_CORE_SCHEMAVAULTS_WEB_APP_DOMAINS,
   ...HARDCODED_CORE_SCHEMAVAULTS_AUTH_APP_DOMAINS,
   ...HARDCODED_CORE_SCHEMAVAULTS_MAIL_APP_DOMAINS,
+  ...HARDCODED_CORE_SCHEMAVAULTS_REGISTRY_APP_DOMAINS,
 ] as const satisfies readonly SchemaVaultsAppDomainRef[];
 
 export default HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS;

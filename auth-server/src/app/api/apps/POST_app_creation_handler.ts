@@ -14,7 +14,7 @@ import isUserInOrganization from "@/lib/isUserInOrganization";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { ConflictError } from "@/lib/error/ConflictError";
-import { applyCorsHeadersForSchemaVaultsWeb } from "@/lib/cors/cors-for-schemavaults-web";
+import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apps";
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   },
   );
   const response = await protected_route(request);
-  return applyCorsHeadersForSchemaVaultsWeb(response, request);
+  return applyCorsHeadersForSchemaVaultsRegistry(response, request);
 }
 
 export const dynamic = "force-dynamic"; // defaults to auto
