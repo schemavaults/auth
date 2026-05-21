@@ -9,6 +9,7 @@ export const defaultAuthMiddlewareRules = {
     ["api", "auth", "logout"],
     ["api", "environment"], // allow frontend client to ask server what environment this is running in
     ["error"],
+    ["auth", "error"],
   ],
   unauthed: [
     ["auth", "login"],
