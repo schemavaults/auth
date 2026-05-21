@@ -76,7 +76,8 @@ async function attemptToPreloadUserOrganizationMemberships(
         organization_id: membership.organization_id,
         organization_name: orgDef.name,
         role: membership.role,
-        created_at: membership.created_at,
+        created_at: orgDef.created_at,
+        joined_at: membership.created_at,
       });
       if (!parsed.success) {
         throw new Error(

@@ -37,7 +37,8 @@ async function GET_my_organizations_handler(
           organization_id: membership.organization_id,
           organization_name: orgDef.name,
           role: membership.role,
-          created_at: membership.created_at,
+          created_at: orgDef.created_at,
+          joined_at: membership.created_at,
         };
         const parsed = await organizationMembershipRoleDetailsSchema.safeParseAsync(
           candidate,
