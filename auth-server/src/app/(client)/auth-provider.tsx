@@ -7,7 +7,8 @@ import {
 import { defaultAuthMiddlewareRules } from "@schemavaults/auth-common";
 import AuthProvider from "@schemavaults/auth-react-provider";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, type ReactElement } from "react";
+import { useCallback, type ReactNode, type ReactElement } from "react";
+import { useSWRConfig } from "swr";
 
 export interface ClientAuthProviderProps {
   children: ReactNode | ReactElement;
@@ -23,6 +24,19 @@ export function ClientAuthProvider({
 }: ClientAuthProviderProps): ReactElement {
   const router = useRouter();
   const path = usePathname();
+  const { mutate } = useSWRConfig();
+
+  const handleLogout = useCallback(async (): Promise<void> => {
+    await mutate(() => true, undefined, { revalidate: false });
+
+    if (typeof window !== "undefined") {
+      try {
+        window.sessionStorage.clear();
+      } catch {
+        // Storage access can throw in locked-down browser contexts; ignore.
+      }
+    }
+  }, [mutate]);
 
   return (
     <AuthProvider
@@ -40,6 +54,7 @@ export function ClientAuthProvider({
       debug={typeof props.debug === 'boolean' ? props.debug : false}
       invite_code_required={typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true}
       fetch={async (url: string, init: RequestInit | undefined) => await fetch(url, init)}
+      onLogout={handleLogout}
     >
       {children}
     </AuthProvider>
