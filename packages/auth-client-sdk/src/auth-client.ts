@@ -760,6 +760,7 @@ export class SchemaVaultsAuthClient
       );
     }
     if (
+      typeof error_code !== "number" ||
       !Number.isInteger(error_code) ||
       error_code < 400 ||
       error_code >= 600
@@ -771,7 +772,16 @@ export class SchemaVaultsAuthClient
     const params = new URLSearchParams();
     params.set("error", `${error_code}`);
     params.set("error_id", error_id);
-    return `${this._error_page_uri}?${params.toString()}` as const;
+    const finalErrorPageUrl =
+      `${this._error_page_uri}?${params.toString()}` as const;
+
+    if (this.debug) {
+      console.log(
+        `[SchemaVaultsAuthClient] buildErrorPageUrl(${error_id}, ${error_code}) => "${finalErrorPageUrl}"`,
+      );
+    }
+
+    return finalErrorPageUrl;
   }
 
   /**
