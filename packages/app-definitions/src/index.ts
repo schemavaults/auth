@@ -42,6 +42,7 @@ export { PRODUCTION_AUTH_SERVER_URL } from "./production-auth-server-url";
 export {
   schemaVaultsAppEnvironments,
   schemaVaultsAppEnvironmentSchema,
+  isValidSchemaVaultsAppEnvironment,
 } from "./app-environments";
 export type { SchemaVaultsAppEnvironment } from "./app-environments";
 
