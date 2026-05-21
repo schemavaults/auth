@@ -39,7 +39,15 @@ async function GET_my_organizations_handler(
           role: membership.role,
           created_at: membership.created_at,
         };
-        return organizationMembershipRoleSchema.parse(candidate);
+        const parsed = await organizationMembershipRoleSchema.safeParseAsync(
+          candidate,
+        );
+        if (!parsed.success) {
+          throw new Error(
+            `Failed to validate OrganizationMembershipRole for organization "${membership.organization_id}": ${parsed.error.message}`,
+          );
+        }
+        return parsed.data;
       }),
     );
 
