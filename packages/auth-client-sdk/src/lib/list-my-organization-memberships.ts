@@ -10,13 +10,19 @@ export interface IListMyOrganizationMembershipsOpts {
   auth_server_uri: string;
 }
 
-const listMyOrganizationMembershipsResponseSchema = z.object({
-  success: z.literal(true),
-  message: z.string().optional(),
-  data: z.object({
-    memberships: z.array(organizationMembershipRoleSchema),
-  }),
-});
+const listMyOrganizationMembershipsResponseSchema = z
+  .object({
+    success: z.literal(true),
+    message: z.string(),
+    data: z
+      .object({
+        memberships: z.array(organizationMembershipRoleSchema),
+      })
+      .required({ memberships: true })
+      .strict(),
+  })
+  .required({ success: true, message: true, data: true })
+  .strict();
 
 export async function listMyOrganizationMemberships({
   adapter,
