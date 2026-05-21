@@ -9,7 +9,6 @@ import {
 import { useRouter } from "next/navigation";
 import type { ReactElement } from "react";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
-import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import {
   useAdmin,
   useAppEnvironment,
@@ -21,12 +20,10 @@ import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface AuthAccountPageViewProps {
   preloaded_authorized_apps_data?: PreloadedAppsTableDataWithDomainRefs;
-  preloaded_organizations?: readonly OrganizationDefinition[];
 }
 
 export default function AccountPageView({
   preloaded_authorized_apps_data,
-  preloaded_organizations,
 }: AuthAccountPageViewProps): ReactElement {
   const router = useRouter();
   const environment = useAppEnvironment();
@@ -62,7 +59,6 @@ export default function AccountPageView({
         isAdmin={admin}
         user={user}
         appEnvironment={environment}
-        organizations={preloaded_organizations}
       />
       <MfaSettingsCard className={cardsClassName} />
       <PendingInvitationsCard cardClassName={cardsClassName} />

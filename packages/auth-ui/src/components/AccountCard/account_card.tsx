@@ -13,17 +13,11 @@ import {
   cn,
 } from "@schemavaults/ui";
 import type { UserData } from "@schemavaults/auth-react-provider";
-import {
-  type OrganizationDefinition,
-  MAXIMUM_USER_ORGANIZATIONS,
-} from "@schemavaults/auth-common";
+import { MAXIMUM_USER_ORGANIZATIONS } from "@schemavaults/auth-common";
 import SignOutButton from "@/components/SignOutButton";
 import ViewFullUserProfileButton from "./view_full_user_profile";
 import ViewAdminDashboardButton from "./view_admin_page_link";
-import {
-  useMyOrganizations,
-  type MyOrganizationMembership,
-} from "./useMyOrganizations";
+import { useMyOrganizations } from "./useMyOrganizations";
 import {
   getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
@@ -39,7 +33,6 @@ export interface AccountDetailsCardProps {
   isAdmin: boolean;
   appEnvironment: SchemaVaultsAppEnvironment;
   user: UserData | null;
-  organizations?: readonly OrganizationDefinition[];
 }
 
 export function AccountDetailsCard(
@@ -58,18 +51,8 @@ export function AccountDetailsCard(
   const showLinkToAuthServerAccountPage: boolean =
     !props.isAuthServerAccountPage;
 
-  // Convert preloaded OrganizationDefinitions to MyOrganizationMembership format for SWR initialData
-  const preloadedMemberships: MyOrganizationMembership[] | undefined =
-    props.organizations?.map((org) => ({
-      organization_id: org.organization_id,
-      organization_name: org.name,
-      role: "",
-      created_at: org.created_at,
-    }));
-
   const { data: memberships } = useMyOrganizations({
     enabled: !!props.isAuthServerAccountPage,
-    initialData: props.isAuthServerAccountPage ? preloadedMemberships : undefined,
   });
 
   return (

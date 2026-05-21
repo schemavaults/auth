@@ -75,6 +75,8 @@ export {
   organizationMembershipRoleTypes,
   organizationMembershipRoleTypeSchema,
   isValidOrganizationMembershipRoleType,
+  organizationMembershipRoleSchema,
+  isValidOrganizationMembershipRole,
 } from "./organizations";
 export type {
   OrganizationID,
@@ -87,6 +89,7 @@ export type {
   UserPendingInvitation,
   OrganizationInvitationWithUserData,
   OrganizationMembershipRoleType,
+  OrganizationMembershipRole,
 } from "./organizations";
 
 export { MaximumBrowserCookieSize } from "./MaximumBrowserCookieSize";

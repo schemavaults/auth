@@ -8,6 +8,7 @@ import type {
   MfaStatusResponse,
   MfaEnrollResponse,
   MfaVerifyEnrollmentResponse,
+  OrganizationMembershipRole,
   SchemaVaultsAuthErrorId,
 } from "@schemavaults/auth-common";
 import type { Credentials } from "@/types/credentials";
@@ -384,6 +385,18 @@ export interface ISchemaVaultsAuthClient {
     api_server_id: ApiServerId,
     client_app_id: AppId,
   ) => Promise<boolean>;
+
+  /**
+   * @name listMyOrganizationMemberships
+   * @description Fetch the current user's organization memberships from
+   *   `GET /api/me/organizations`. Each entry carries the organization id,
+   *   display name, the user's role in that org, and the membership's
+   *   creation timestamp.
+   * @returns A promise resolving to a readonly array of OrganizationMembershipRole
+   */
+  listMyOrganizationMemberships: () => Promise<
+    readonly OrganizationMembershipRole[]
+  >;
 
   /**
    * @param feature_name Name of the feature to check if supported

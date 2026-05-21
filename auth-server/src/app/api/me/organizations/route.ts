@@ -6,7 +6,11 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { listUserOrganizationMemberships, OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import type { OrganizationMembershipRoleDefinition } from "@/lib/auth-db/organizations";
-import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import {
+  organizationMembershipRoleSchema,
+  type OrganizationDefinition,
+  type OrganizationMembershipRole,
+} from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
 
@@ -14,13 +18,6 @@ const ROUTE = "/api/me/organizations";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
-
-export interface UserOrganizationMembershipWithDefinition {
-  organization_id: string;
-  organization_name: string;
-  role: string;
-  created_at: number;
-}
 
 async function GET_my_organizations_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps,
@@ -33,19 +30,20 @@ async function GET_my_organizations_handler(
     const organizationsRegistry = new OrganizationsRegistry(dbh.db);
 
     const enrichedResults = await Promise.allSettled(
-      memberships.map(async (membership): Promise<UserOrganizationMembershipWithDefinition> => {
+      memberships.map(async (membership): Promise<OrganizationMembershipRole> => {
         const orgDef: OrganizationDefinition =
           await organizationsRegistry.lookupOrganization(membership.organization_id);
-        return {
+        const candidate = {
           organization_id: membership.organization_id,
           organization_name: orgDef.name,
           role: membership.role,
           created_at: membership.created_at,
         };
+        return organizationMembershipRoleSchema.parse(candidate);
       }),
     );
 
-    const enrichedMemberships: UserOrganizationMembershipWithDefinition[] = [];
+    const enrichedMemberships: OrganizationMembershipRole[] = [];
     for (const [i, result] of enrichedResults.entries()) {
       if (result.status === "fulfilled") {
         enrichedMemberships.push(result.value);
