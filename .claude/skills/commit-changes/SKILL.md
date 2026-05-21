@@ -71,7 +71,7 @@ downstream version to pull in the updated base package; skipping this leaves
 | `app-definitions`                         | `auth-common`, `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `trpc-backend-init`, `auth-server` |
 | `auth-common`                             | `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server` |
 | `jwt`                                     | `auth-server-sdk`, `auth-server`                                                     |
-| `auth-server-sdk`                         | `auth-resource-server-codegen-templates`, `trpc-backend-init`, `auth-server`         |
+| `auth-server-sdk`                         | **`trpc-backend-init` (REQUIRED — see note below)**, `auth-resource-server-codegen-templates`, `auth-server` |
 | `auth-client-sdk`                         | `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server` |
 | `auth-react-provider`                     | `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server` |
 | `auth-ui`                                 | `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server`           |
@@ -92,13 +92,22 @@ its own dependencies, like `@schemavaults/ui`) requires republishing
 templates render `auth-ui` components, so a published `auth-ui` bump must
 cascade through codegen-templates and on to `auth-server-sdk`.
 
-**Note on `auth-server-sdk` / `app-definitions` → `trpc-backend-init`:**
+**Note on `auth-server-sdk` / `app-definitions` → `trpc-backend-init` (DO NOT SKIP):**
 `trpc-backend-init` peer-depends on both `@schemavaults/auth-server-sdk` and
-`@schemavaults/app-definitions` (workspace:* in the monorepo). Any bump to
-either of those base packages requires republishing `trpc-backend-init` so
-its peerDependency range advertised to npm consumers points at the new
-version. `trpc-backend-init` itself is a leaf — nothing else in the monorepo
-depends on it.
+`@schemavaults/app-definitions` (workspace:* in the monorepo). **Any bump to
+either of those base packages — including transitive cascade bumps triggered
+by an `auth-common`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, or
+`auth-resource-server-codegen-templates` change that flows into
+`auth-server-sdk` — REQUIRES bumping `trpc-backend-init` in the same commit.**
+Without that bump, the peerDependency range advertised to npm consumers still
+points at the previous `auth-server-sdk` version and the new
+`auth-server-sdk` never reaches `trpc-backend-init` consumers.
+`trpc-backend-init` itself is a leaf — nothing else in the monorepo depends
+on it — so the cascade terminates there.
+
+In practice: **if `auth-server-sdk` appears in your commit subject,
+`trpc-backend-init` MUST appear in it too.** Sanity-check this before
+committing.
 
 If you are unsure, verify with:
 
@@ -154,8 +163,17 @@ They belong in the same commit subject alongside the directly-changed ones.
 Sanity check before committing: every package named in the commit subject must
 have a corresponding `package.json` modification in `git diff --cached`. If you
 bumped `auth-client-sdk`, the subject MUST also name
-`auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, and
-`auth-server` — and those four `package.json` files must be staged.
+`auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`,
+`auth-server-sdk`, `trpc-backend-init`, and `auth-server` — and those six
+`package.json` files must be staged.
+
+**Specific recurring miss: `trpc-backend-init`.** If `auth-server-sdk` (or
+`app-definitions`) is in the subject, `trpc-backend-init` must be too. This is
+easy to forget because `trpc-backend-init` has no `dependencies` edge to
+`auth-server-sdk` in its `package.json` — the relationship is via
+`peerDependencies`, which `grep` over `dependencies` will not catch. Always
+re-check the downstream-dependents table for `auth-server-sdk` before
+finalizing the subject.
 
 ### 4. Compose the commit subject
 
