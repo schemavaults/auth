@@ -49,8 +49,10 @@ export { default as getStringByteSize } from "./getStringByteSize";
 export { redirectToLogin } from "./redirect-to-login";
 export type * from "./redirect-with-error";
 
+// App Environment
 export { getAppEnvironment } from "./env/get-app-environment";
 export type { SchemaVaultsAppEnvironment } from "./env/get-app-environment";
+export { schemaVaultsAppEnvironmentSchema } from "@schemavaults/app-definitions";
 
 // Decode helper
 export { decodeJWTsWithKeyManager } from "./decode-jwts-with-key-manager";

@@ -172,7 +172,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.22.50",
+      "version": "0.22.51",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
