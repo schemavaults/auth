@@ -11,8 +11,12 @@ import {
   CardTitle,
   KeyValueWithSkeleton,
   cn,
+  useToast,
 } from "@schemavaults/ui";
-import type { UserData } from "@schemavaults/auth-react-provider";
+import {
+  useMyOrganizations,
+  type UserData,
+} from "@schemavaults/auth-react-provider";
 import {
   MAXIMUM_USER_ORGANIZATIONS,
   type OrganizationMembershipRoleDetails,
@@ -20,7 +24,6 @@ import {
 import SignOutButton from "@/components/SignOutButton";
 import ViewFullUserProfileButton from "./view_full_user_profile";
 import ViewAdminDashboardButton from "./view_admin_page_link";
-import { useMyOrganizations } from "./useMyOrganizations";
 import {
   getHardcodedClientWebAppDomain,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
@@ -61,11 +64,19 @@ export function AccountDetailsCard(
   const showLinkToAuthServerAccountPage: boolean =
     !props.isAuthServerAccountPage;
 
+  const { toast } = useToast();
   const { data: memberships } = useMyOrganizations({
     enabled: !!props.isAuthServerAccountPage,
     initialData: props.isAuthServerAccountPage
       ? props.preloaded_memberships
       : undefined,
+    onError: (error: unknown) => {
+      toast({
+        variant: "destructive",
+        title: "Error loading organizations",
+        description: `${error instanceof Error ? error.message : "An unknown error occurred."}`,
+      });
+    },
   });
 
   return (
