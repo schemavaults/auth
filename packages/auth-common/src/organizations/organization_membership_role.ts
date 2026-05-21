@@ -15,13 +15,20 @@ export interface OrganizationMembershipRole {
   created_at: number;
 }
 
-export const organizationMembershipRoleSchema: z.ZodType<OrganizationMembershipRole> =
-  z.object({
+export const organizationMembershipRoleSchema = z
+  .object({
     organization_id: organizationIdSchema,
     organization_name: z.string().min(1),
     role: organizationMembershipRoleTypeSchema as z.ZodType<OrganizationMembershipRoleType>,
     created_at: z.number().int().nonnegative(),
-  });
+  })
+  .required({
+    organization_id: true,
+    organization_name: true,
+    role: true,
+    created_at: true,
+  })
+  .strict();
 
 export function isValidOrganizationMembershipRole(
   value: unknown,

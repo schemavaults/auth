@@ -13,7 +13,10 @@ import {
   cn,
 } from "@schemavaults/ui";
 import type { UserData } from "@schemavaults/auth-react-provider";
-import { MAXIMUM_USER_ORGANIZATIONS } from "@schemavaults/auth-common";
+import {
+  MAXIMUM_USER_ORGANIZATIONS,
+  type OrganizationMembershipRole,
+} from "@schemavaults/auth-common";
 import SignOutButton from "@/components/SignOutButton";
 import ViewFullUserProfileButton from "./view_full_user_profile";
 import ViewAdminDashboardButton from "./view_admin_page_link";
@@ -33,6 +36,13 @@ export interface AccountDetailsCardProps {
   isAdmin: boolean;
   appEnvironment: SchemaVaultsAppEnvironment;
   user: UserData | null;
+  /**
+   * Optional SSR-preloaded organization memberships for the current user.
+   * Used as SWR `fallbackData` for `useMyOrganizations` so the card renders
+   * the user's orgs on first paint instead of waiting for the client-side
+   * fetch of `/api/me/organizations`.
+   */
+  preloaded_memberships?: readonly OrganizationMembershipRole[];
 }
 
 export function AccountDetailsCard(
@@ -53,6 +63,9 @@ export function AccountDetailsCard(
 
   const { data: memberships } = useMyOrganizations({
     enabled: !!props.isAuthServerAccountPage,
+    initialData: props.isAuthServerAccountPage
+      ? props.preloaded_memberships
+      : undefined,
   });
 
   return (

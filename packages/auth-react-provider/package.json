@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-react-provider",
   "description": "React hooks and components to make using the @schemavaults/auth-client-sdk a breeze",
-  "version": "0.11.11",
+  "version": "0.11.12",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
