@@ -1,19 +1,15 @@
 "use client";
 
 import { useCallback } from "react";
-import { useToast } from "@schemavaults/ui";
 import useSWR, { type SWRResponse, useSWRConfig } from "swr";
 import type { OrganizationMembershipRoleDetails } from "@schemavaults/auth-common";
-import {
-  useAuth,
-  type ISchemaVaultsAuthClient,
-} from "@schemavaults/auth-react-provider";
-
-export type { OrganizationMembershipRoleDetails } from "@schemavaults/auth-common";
+import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
+import useAuth from "@/hooks/use-auth";
 
 export interface UseMyOrganizationsOptions {
   enabled?: boolean;
   initialData?: readonly OrganizationMembershipRoleDetails[] | undefined;
+  onError?: (error: unknown) => void;
 }
 
 const MY_ORGANIZATIONS_SWR_KEY = "/api/me/organizations";
@@ -33,10 +29,10 @@ export function clearMyOrganizationsCache(
 export function useMyOrganizations({
   enabled = true,
   initialData,
-}: UseMyOrganizationsOptions): SWRResponse<
+  onError,
+}: UseMyOrganizationsOptions = {}): SWRResponse<
   readonly OrganizationMembershipRoleDetails[]
 > {
-  const { toast } = useToast();
   const auth = useAuth();
   const clientRef = auth.ready ? auth.client : null;
   const ready: boolean = !!(enabled && auth.ready && clientRef?.current);
@@ -54,14 +50,10 @@ export function useMyOrganizations({
     try {
       return await authClient.listMyOrganizationMemberships();
     } catch (error: unknown) {
-      toast({
-        variant: "destructive",
-        title: "Error loading organizations",
-        description: `${error instanceof Error ? error.message : "An unknown error occurred."}`,
-      });
+      onError?.(error);
       throw error;
     }
-  }, [clientRef, toast]);
+  }, [clientRef, onError]);
 
   return useSWR(
     ready ? MY_ORGANIZATIONS_SWR_KEY : null,

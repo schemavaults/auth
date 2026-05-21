@@ -5,8 +5,11 @@ export {
 } from "./account_card";
 export type * from "./account_card";
 
-export { useMyOrganizations, clearMyOrganizationsCache } from "./useMyOrganizations";
+export {
+  useMyOrganizations,
+  clearMyOrganizationsCache,
+} from "@schemavaults/auth-react-provider";
 export type {
-  OrganizationMembershipRoleDetails,
   UseMyOrganizationsOptions,
-} from "./useMyOrganizations";
+} from "@schemavaults/auth-react-provider";
+export type { OrganizationMembershipRoleDetails } from "@schemavaults/auth-common";

@@ -47,3 +47,9 @@ export type * from "./use-mfa-status-swr";
 
 export { useMfa } from "./use-mfa";
 export type * from "./use-mfa";
+
+export {
+  useMyOrganizations,
+  clearMyOrganizationsCache,
+} from "./use-my-organizations";
+export type * from "./use-my-organizations";
