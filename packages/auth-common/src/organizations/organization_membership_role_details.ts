@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { organizationIdSchema } from "./organization_id";
+import { organizationNameSchema } from "./organization_name";
 import { organizationMembershipRoleTypeSchema } from "./organization-membership-role-type";
 import type { OrganizationMembershipRoleType } from "./organization-membership-role-type";
 
@@ -29,7 +30,7 @@ export interface OrganizationMembershipRoleDetails {
 export const organizationMembershipRoleDetailsSchema = z
   .object({
     organization_id: organizationIdSchema,
-    organization_name: z.string().min(1),
+    organization_name: organizationNameSchema,
     role: organizationMembershipRoleTypeSchema as z.ZodType<OrganizationMembershipRoleType>,
     created_at: z.number().int().nonnegative(),
     joined_at: z.number().int().nonnegative(),
