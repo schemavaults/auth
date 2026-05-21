@@ -48,7 +48,7 @@ export {
 export type { OrganizationMembershipRoleType } from "./organization-membership-role-type";
 
 export {
-  organizationMembershipRoleSchema,
-  isValidOrganizationMembershipRole,
-} from "./organization_membership_role";
-export type { OrganizationMembershipRole } from "./organization_membership_role";
+  organizationMembershipRoleDetailsSchema,
+  isValidOrganizationMembershipRoleDetails,
+} from "./organization_membership_role_details";
+export type { OrganizationMembershipRoleDetails } from "./organization_membership_role_details";

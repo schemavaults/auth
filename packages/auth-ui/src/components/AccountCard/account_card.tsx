@@ -15,7 +15,7 @@ import {
 import type { UserData } from "@schemavaults/auth-react-provider";
 import {
   MAXIMUM_USER_ORGANIZATIONS,
-  type OrganizationMembershipRole,
+  type OrganizationMembershipRoleDetails,
 } from "@schemavaults/auth-common";
 import SignOutButton from "@/components/SignOutButton";
 import ViewFullUserProfileButton from "./view_full_user_profile";
@@ -42,7 +42,7 @@ export interface AccountDetailsCardProps {
    * the user's orgs on first paint instead of waiting for the client-side
    * fetch of `/api/me/organizations`.
    */
-  preloaded_memberships?: readonly OrganizationMembershipRole[];
+  preloaded_memberships?: readonly OrganizationMembershipRoleDetails[];
 }
 
 export function AccountDetailsCard(

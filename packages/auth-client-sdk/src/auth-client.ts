@@ -14,7 +14,7 @@ import {
   type MfaStatusResponse,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentResponse,
-  type OrganizationMembershipRole,
+  type OrganizationMembershipRoleDetails,
   isValidErrorId,
   type SchemaVaultsAuthErrorId,
 } from "@schemavaults/auth-common";
@@ -1445,7 +1445,7 @@ export class SchemaVaultsAuthClient
   }
 
   public async listMyOrganizationMemberships(): Promise<
-    readonly OrganizationMembershipRole[]
+    readonly OrganizationMembershipRoleDetails[]
   > {
     const fn = await import("@/lib/list-my-organization-memberships").then(
       (m) => m.default,

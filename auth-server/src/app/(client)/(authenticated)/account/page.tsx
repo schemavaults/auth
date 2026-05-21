@@ -3,8 +3,8 @@ import type { ReactElement } from "react";
 
 import AccountPageView from "./auth-dashboard-account-page-view";
 import {
-  organizationMembershipRoleSchema,
-  type OrganizationMembershipRole,
+  organizationMembershipRoleDetailsSchema,
+  type OrganizationMembershipRoleDetails,
   type UserData,
 } from "@schemavaults/auth-common";
 import {
@@ -57,7 +57,7 @@ async function attemptToPreloadAppsAndDomains(
 async function attemptToPreloadUserOrganizationMemberships(
   dbh: SchemaVaultsPostgresNeonProxyAdapter<AuthDatabase>,
   userData: UserData,
-): Promise<readonly OrganizationMembershipRole[]> {
+): Promise<readonly OrganizationMembershipRoleDetails[]> {
   const admin: boolean = userData.admin ?? false;
   const memberships = await listUserOrganizationMemberships(
     dbh.db,
@@ -68,11 +68,11 @@ async function attemptToPreloadUserOrganizationMemberships(
   const organizationsRegistry = new OrganizationsRegistry(dbh.db);
 
   const enrichedResults = await Promise.allSettled(
-    memberships.map(async (membership): Promise<OrganizationMembershipRole> => {
+    memberships.map(async (membership): Promise<OrganizationMembershipRoleDetails> => {
       const orgDef = await organizationsRegistry.lookupOrganization(
         membership.organization_id,
       );
-      const parsed = await organizationMembershipRoleSchema.safeParseAsync({
+      const parsed = await organizationMembershipRoleDetailsSchema.safeParseAsync({
         organization_id: membership.organization_id,
         organization_name: orgDef.name,
         role: membership.role,
@@ -80,20 +80,20 @@ async function attemptToPreloadUserOrganizationMemberships(
       });
       if (!parsed.success) {
         throw new Error(
-          `Failed to validate preloaded OrganizationMembershipRole for organization "${membership.organization_id}": ${parsed.error.message}`,
+          `Failed to validate preloaded OrganizationMembershipRoleDetails for organization "${membership.organization_id}": ${parsed.error.message}`,
         );
       }
       return parsed.data;
     }),
   );
 
-  const preloaded: OrganizationMembershipRole[] = [];
+  const preloaded: OrganizationMembershipRoleDetails[] = [];
   for (const [i, result] of enrichedResults.entries()) {
     if (result.status === "fulfilled") {
       preloaded.push(result.value);
     } else {
       console.error(
-        `Failed to preload OrganizationMembershipRole for organization ${memberships[i]?.organization_id ?? "unknown"}:`,
+        `Failed to preload OrganizationMembershipRoleDetails for organization ${memberships[i]?.organization_id ?? "unknown"}:`,
         result.reason,
       );
     }

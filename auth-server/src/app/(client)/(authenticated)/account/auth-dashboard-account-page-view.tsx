@@ -9,7 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import type { ReactElement } from "react";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
-import type { OrganizationMembershipRole } from "@schemavaults/auth-common";
+import type { OrganizationMembershipRoleDetails } from "@schemavaults/auth-common";
 import {
   useAdmin,
   useAppEnvironment,
@@ -21,7 +21,7 @@ import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface AuthAccountPageViewProps {
   preloaded_authorized_apps_data?: PreloadedAppsTableDataWithDomainRefs;
-  preloaded_organization_memberships?: readonly OrganizationMembershipRole[];
+  preloaded_organization_memberships?: readonly OrganizationMembershipRoleDetails[];
 }
 
 export default function AccountPageView({

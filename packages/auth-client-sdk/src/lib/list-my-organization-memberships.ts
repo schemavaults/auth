@@ -1,7 +1,7 @@
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import {
-  organizationMembershipRoleSchema,
-  type OrganizationMembershipRole,
+  organizationMembershipRoleDetailsSchema,
+  type OrganizationMembershipRoleDetails,
 } from "@schemavaults/auth-common";
 import { z } from "zod";
 
@@ -16,7 +16,7 @@ const listMyOrganizationMembershipsResponseSchema = z
     message: z.string(),
     data: z
       .object({
-        memberships: z.array(organizationMembershipRoleSchema),
+        memberships: z.array(organizationMembershipRoleDetailsSchema),
       })
       .required({ memberships: true })
       .strict(),
@@ -28,7 +28,7 @@ export async function listMyOrganizationMemberships({
   adapter,
   auth_server_uri,
 }: IListMyOrganizationMembershipsOpts): Promise<
-  readonly OrganizationMembershipRole[]
+  readonly OrganizationMembershipRoleDetails[]
 > {
   const response = await adapter.fetch(
     `${auth_server_uri}/api/me/organizations`,

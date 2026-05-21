@@ -7,6 +7,6 @@ export type * from "./account_card";
 
 export { useMyOrganizations, clearMyOrganizationsCache } from "./useMyOrganizations";
 export type {
-  OrganizationMembershipRole,
+  OrganizationMembershipRoleDetails,
   UseMyOrganizationsOptions,
 } from "./useMyOrganizations";

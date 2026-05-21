@@ -3,17 +3,17 @@
 import { useCallback } from "react";
 import { useToast } from "@schemavaults/ui";
 import useSWR, { type SWRResponse, useSWRConfig } from "swr";
-import type { OrganizationMembershipRole } from "@schemavaults/auth-common";
+import type { OrganizationMembershipRoleDetails } from "@schemavaults/auth-common";
 import {
   useAuth,
   type ISchemaVaultsAuthClient,
 } from "@schemavaults/auth-react-provider";
 
-export type { OrganizationMembershipRole } from "@schemavaults/auth-common";
+export type { OrganizationMembershipRoleDetails } from "@schemavaults/auth-common";
 
 export interface UseMyOrganizationsOptions {
   enabled?: boolean;
-  initialData?: readonly OrganizationMembershipRole[] | undefined;
+  initialData?: readonly OrganizationMembershipRoleDetails[] | undefined;
 }
 
 const MY_ORGANIZATIONS_SWR_KEY = "/api/me/organizations";
@@ -34,7 +34,7 @@ export function useMyOrganizations({
   enabled = true,
   initialData,
 }: UseMyOrganizationsOptions): SWRResponse<
-  readonly OrganizationMembershipRole[]
+  readonly OrganizationMembershipRoleDetails[]
 > {
   const { toast } = useToast();
   const auth = useAuth();
@@ -42,7 +42,7 @@ export function useMyOrganizations({
   const ready: boolean = !!(enabled && auth.ready && clientRef?.current);
 
   const fetcher = useCallback(async (): Promise<
-    readonly OrganizationMembershipRole[]
+    readonly OrganizationMembershipRoleDetails[]
   > => {
     const authClient: ISchemaVaultsAuthClient | null =
       clientRef?.current ?? null;

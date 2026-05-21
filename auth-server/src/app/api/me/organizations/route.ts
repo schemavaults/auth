@@ -7,9 +7,9 @@ import {
 import { listUserOrganizationMemberships, OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import type { OrganizationMembershipRoleDefinition } from "@/lib/auth-db/organizations";
 import {
-  organizationMembershipRoleSchema,
+  organizationMembershipRoleDetailsSchema,
   type OrganizationDefinition,
-  type OrganizationMembershipRole,
+  type OrganizationMembershipRoleDetails,
 } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
@@ -30,7 +30,7 @@ async function GET_my_organizations_handler(
     const organizationsRegistry = new OrganizationsRegistry(dbh.db);
 
     const enrichedResults = await Promise.allSettled(
-      memberships.map(async (membership): Promise<OrganizationMembershipRole> => {
+      memberships.map(async (membership): Promise<OrganizationMembershipRoleDetails> => {
         const orgDef: OrganizationDefinition =
           await organizationsRegistry.lookupOrganization(membership.organization_id);
         const candidate = {
@@ -39,19 +39,19 @@ async function GET_my_organizations_handler(
           role: membership.role,
           created_at: membership.created_at,
         };
-        const parsed = await organizationMembershipRoleSchema.safeParseAsync(
+        const parsed = await organizationMembershipRoleDetailsSchema.safeParseAsync(
           candidate,
         );
         if (!parsed.success) {
           throw new Error(
-            `Failed to validate OrganizationMembershipRole for organization "${membership.organization_id}": ${parsed.error.message}`,
+            `Failed to validate OrganizationMembershipRoleDetails for organization "${membership.organization_id}": ${parsed.error.message}`,
           );
         }
         return parsed.data;
       }),
     );
 
-    const enrichedMemberships: OrganizationMembershipRole[] = [];
+    const enrichedMemberships: OrganizationMembershipRoleDetails[] = [];
     for (const [i, result] of enrichedResults.entries()) {
       if (result.status === "fulfilled") {
         enrichedMemberships.push(result.value);

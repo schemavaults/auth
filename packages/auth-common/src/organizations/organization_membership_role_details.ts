@@ -4,18 +4,22 @@ import { organizationMembershipRoleTypeSchema } from "./organization-membership-
 import type { OrganizationMembershipRoleType } from "./organization-membership-role-type";
 
 /**
- * A single organization membership, as returned by
+ * A single organization-membership row, as returned by
  * `GET /api/me/organizations`. Carries enough info to display a button
  * linking to the org plus the user's role badge.
+ *
+ * Distinct from `OrganizationMembershipRoleType` (the role enum) and from
+ * the auth-server's internal `OrganizationMembershipRoleDefinition` (DB
+ * row shape with `uid` + `membership_declaration_id`).
  */
-export interface OrganizationMembershipRole {
+export interface OrganizationMembershipRoleDetails {
   organization_id: string;
   organization_name: string;
   role: OrganizationMembershipRoleType;
   created_at: number;
 }
 
-export const organizationMembershipRoleSchema = z
+export const organizationMembershipRoleDetailsSchema = z
   .object({
     organization_id: organizationIdSchema,
     organization_name: z.string().min(1),
@@ -30,8 +34,8 @@ export const organizationMembershipRoleSchema = z
   })
   .strict();
 
-export function isValidOrganizationMembershipRole(
+export function isValidOrganizationMembershipRoleDetails(
   value: unknown,
-): value is OrganizationMembershipRole {
-  return organizationMembershipRoleSchema.safeParse(value).success;
+): value is OrganizationMembershipRoleDetails {
+  return organizationMembershipRoleDetailsSchema.safeParse(value).success;
 }
