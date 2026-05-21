@@ -26,6 +26,7 @@ import RouteGuardFactory from "@/route_guards/route-guard-factory";
 import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
 import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
 import getSchemavaultsApiServerId from "@/env/get-schemavaults-api-server-id";
+import { JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME } from "@/env/loadJwksAccessPrivateKey";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 import redirectToLogin from "@/redirect-to-login";
 import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType";
@@ -138,7 +139,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     }
   } catch (e: unknown) {
     console.error(
-      "[withAuthenticatedServerComponentRouteGuard] Received bad 'api_server_id' in options object: ",
+      `[withAuthenticatedServerComponentRouteGuard] Received bad 'api_server_id' in options object (got typeof='${typeof opts?.api_server_id}', value='${String(opts?.api_server_id)}'). Redirecting to error page with 'server_misconfiguration'. Underlying error: `,
       e,
     );
     redirectToErrorPage(500, "server_misconfiguration");
@@ -150,7 +151,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     );
     if (!parsed_api_server_id.success) {
       console.error(
-        "[withAuthenticatedServerComponentRouteGuard] Did not receive a valid API server ID from withAuthenticatedServerComponentRouteGuard additional options object: ",
+        "[withAuthenticatedServerComponentRouteGuard] Did not receive a valid API server ID from the 'SCHEMAVAULTS_API_SERVER_ID' environment variable: ",
         parsed_api_server_id.error,
       );
       throw parsed_api_server_id.error;
@@ -165,7 +166,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
         await parseApiServerIdFromEnvironmentVariables();
     } catch (e: unknown) {
       console.error(
-        "[withAuthenticatedServerComponentRouteGuard] Failed to parse 'api_server_id' from environment variables: ",
+        "[withAuthenticatedServerComponentRouteGuard] Failed to resolve 'api_server_id'. No 'api_server_id' option was provided and reading the 'SCHEMAVAULTS_API_SERVER_ID' environment variable failed. Redirecting to error page with 'server_misconfiguration'. Underlying error: ",
         e,
       );
       redirectToErrorPage(500, "server_misconfiguration");
@@ -174,19 +175,52 @@ export async function withAuthenticatedServerComponentRouteGuard<
 
   if (typeof extracted_api_server_id !== "string") {
     console.error(
-      "[withAuthenticatedServerComponentRouteGuard] Failed to parse 'api_server_id' from either options or environment variables!",
+      "[withAuthenticatedServerComponentRouteGuard] Failed to parse 'api_server_id' from either the options object or the 'SCHEMAVAULTS_API_SERVER_ID' environment variable. Redirecting to error page with 'server_misconfiguration'.",
     );
     redirectToErrorPage(500, "server_misconfiguration");
   }
   const api_server_id: ApiServerId = extracted_api_server_id;
 
-  const jwt_keys_manager: IJwtKeyManager =
-    opts?.jwt_keys_manager ??
-    initDefaultJwtKeyManagerForAuthenticatedRouteGuard();
+  let jwt_keys_manager: IJwtKeyManager;
+  if (typeof opts?.jwt_keys_manager !== "undefined") {
+    jwt_keys_manager = opts.jwt_keys_manager;
+  } else {
+    try {
+      jwt_keys_manager = initDefaultJwtKeyManagerForAuthenticatedRouteGuard();
+    } catch (e: unknown) {
+      console.error(
+        `[withAuthenticatedServerComponentRouteGuard] Failed to construct the default JWT Keys Manager for api_server_id='${api_server_id}'. Redirecting to error page with 'server_misconfiguration'. Underlying error: `,
+        e,
+      );
+      redirectToErrorPage(500, "server_misconfiguration");
+    }
+  }
   if (!jwt_keys_manager.isConfigured()) {
-    console.error(
-      "[withAuthenticatedServerComponentRouteGuard] JWT Keys Manager does not appear to be properly configured!",
-    );
+    // Try to diagnose *why* the manager is unconfigured so the operator can
+    // fix the deploy without having to read the SDK source. The default
+    // JwtKeyManager (RemoteJwtKeyManager) requires the JWKS access private
+    // key env var; if the caller supplied a custom manager, we can't know
+    // which env vars it needs, so report only what we can.
+    const missing_env_vars: string[] = [];
+    if (
+      typeof process.env[JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME] !== "string" ||
+      process.env[JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME].length === 0
+    ) {
+      missing_env_vars.push(JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME);
+    }
+    if (missing_env_vars.length > 0) {
+      console.error(
+        `[withAuthenticatedServerComponentRouteGuard] JWT Keys Manager is not configured for api_server_id='${api_server_id}'. Missing required environment variable(s): ${missing_env_vars
+          .map((v) => `'${v}'`)
+          .join(
+            ", ",
+          )}. Redirecting to error page with 'server_misconfiguration'.`,
+      );
+    } else {
+      console.error(
+        `[withAuthenticatedServerComponentRouteGuard] JWT Keys Manager (${jwt_keys_manager.constructor?.name ?? "unknown"}) reports it is not configured for api_server_id='${api_server_id}', but no missing env vars were detected. A custom 'jwt_keys_manager' option may be missing configuration. Redirecting to error page with 'server_misconfiguration'.`,
+      );
+    }
     redirectToErrorPage(500, "server_misconfiguration");
   }
 
@@ -261,14 +295,23 @@ export async function withAuthenticatedServerComponentRouteGuard<
   const user: UserData = route_guard.user;
 
   if (user.disabled) {
+    console.warn(
+      `[withAuthenticatedServerComponentRouteGuard] Blocking disabled user '${user.uid}' from api_server_id='${api_server_id}'. Redirecting to error page with 'account_disabled'.`,
+    );
     return redirectToErrorPage(403, "account_disabled");
   }
 
   if (!route_guard.isAccessAllowed()) {
+    console.warn(
+      `[withAuthenticatedServerComponentRouteGuard] Access denied for user '${user.uid}' on api_server_id='${api_server_id}' (route_guard.isAccessAllowed() returned false). Redirecting to error page with 'forbidden'.`,
+    );
     redirectToErrorPage(403, "forbidden");
   }
 
   if (!user.admin && route_guard_type === "admin") {
+    console.warn(
+      `[withAuthenticatedServerComponentRouteGuard] Non-admin user '${user.uid}' attempted to access an 'admin' route_guard on api_server_id='${api_server_id}'. Redirecting to error page with 'forbidden'.`,
+    );
     redirectToErrorPage(403, "forbidden");
   }
 
@@ -343,7 +386,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     const required_organization: OrganizationID = opts?.required_organization;
     if (!isValidOrganizationID(required_organization)) {
       console.error(
-        "[withAuthenticatedServerComponentRouteGuard] Invalid organization ID passed as 'required_organization'!",
+        `[withAuthenticatedServerComponentRouteGuard] Invalid organization ID passed as 'required_organization' option: '${String(required_organization)}'. Redirecting to error page with 'server_misconfiguration'.`,
       );
       redirectToErrorPage(500, "server_misconfiguration");
     }
@@ -352,7 +395,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
       org_role = await isUserInOrganization(user, required_organization);
     } catch (e: unknown) {
       console.error(
-        "[withAuthenticatedServerComponentRouteGuard] Organization membership check failed: ",
+        `[withAuthenticatedServerComponentRouteGuard] Organization membership check failed for user '${user.uid}' / required_organization='${required_organization}' / api_server_id='${api_server_id}'. Redirecting to error page with 'internal_server_error'. Underlying error: `,
         e,
       );
       redirectToErrorPage(500, "internal_server_error");
@@ -374,10 +417,16 @@ export async function withAuthenticatedServerComponentRouteGuard<
         final_server_component_props,
       );
     } catch (e: unknown) {
-      console.error("Error in 'custom_is_authorized_check' handler: ", e);
+      console.error(
+        `[withAuthenticatedServerComponentRouteGuard] Error in 'custom_is_authorized_check' handler for user '${user.uid}' on api_server_id='${api_server_id}'. Redirecting to error page with 'internal_server_error'. Underlying error: `,
+        e,
+      );
       redirectToErrorPage(500, "internal_server_error");
     }
     if (!is_authorized) {
+      console.warn(
+        `[withAuthenticatedServerComponentRouteGuard] 'custom_is_authorized_check' returned false for user '${user.uid}' on api_server_id='${api_server_id}'. Redirecting to error page with 'forbidden'.`,
+      );
       redirectToErrorPage(403, "forbidden");
     }
   }
