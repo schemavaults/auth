@@ -25,7 +25,12 @@ export function useCurrentUserWithRevalidation(): UserData | null {
   const app_id = useAppId();
 
   const clientRef = auth.ready ? auth.client : null;
-  const enabled = !!(auth.ready && clientRef?.current && inMemoryUser);
+  // Don't gate on `inMemoryUser` — when resuming a session whose cached user
+  // data has been cleared (or never populated in this tab), the in-memory
+  // state is null but the refresh-token cookie may still be valid. The
+  // fetcher returns null early when no refresh token exists, so this is safe
+  // for unauthenticated users.
+  const enabled = !!(auth.ready && clientRef?.current);
 
   const { data: revalidatedUser } = useSWR<UserData | null>(
     enabled ? `/api/auth/whoami/${app_id}` : null,
