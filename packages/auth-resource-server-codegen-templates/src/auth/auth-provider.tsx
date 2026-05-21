@@ -21,6 +21,7 @@ export interface IAppAuthProviderProps extends PropsWithChildren {
   authorize_uri: string;
   autoreacquire_access_tokens?: boolean;
   authMiddlewareRules?: SchemaVaultsAuthProviderProps["authMiddlewareRules"];
+  onLogout?: SchemaVaultsAuthProviderProps["onLogout"];
 }
 
 export default function AppAuthProvider({
@@ -60,6 +61,7 @@ export default function AppAuthProvider({
         await fetch(url, init)
       }
       authMiddlewareRules={props.authMiddlewareRules}
+      onLogout={props.onLogout}
     >
       {props.children}
     </AuthProvider>
