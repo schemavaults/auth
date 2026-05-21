@@ -14,6 +14,7 @@ import {
   type MfaStatusResponse,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentResponse,
+  type OrganizationMembershipRoleDetails,
   isValidErrorId,
   type SchemaVaultsAuthErrorId,
 } from "@schemavaults/auth-common";
@@ -1440,6 +1441,18 @@ export class SchemaVaultsAuthClient
       auth_server_uri: this.auth_server_uri,
       api_server_id,
       client_app_id,
+    });
+  }
+
+  public async listMyOrganizationMemberships(): Promise<
+    readonly OrganizationMembershipRoleDetails[]
+  > {
+    const fn = await import("@/lib/list-my-organization-memberships").then(
+      (m) => m.default,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
     });
   }
 

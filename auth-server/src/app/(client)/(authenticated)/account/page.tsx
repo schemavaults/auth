@@ -2,9 +2,10 @@ import "server-only";
 import type { ReactElement } from "react";
 
 import AccountPageView from "./auth-dashboard-account-page-view";
-import type {
-  OrganizationDefinition,
-  UserData,
+import {
+  organizationMembershipRoleDetailsSchema,
+  type OrganizationMembershipRoleDetails,
+  type UserData,
 } from "@schemavaults/auth-common";
 import {
   type IProtectedAuthenticatedServerComponentPageProps,
@@ -12,9 +13,10 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import {
   AuthorizedAppsRegistry,
+  listUserOrganizationMemberships,
+  OrganizationsRegistry,
   preloadAppsTable,
   SchemaVaultsAppRegistry,
-  OrganizationsRegistry,
 } from "@/lib/auth-db";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
@@ -52,28 +54,53 @@ async function attemptToPreloadAppsAndDomains(
   );
 }
 
-async function attemptToPreloadUserOrganizations(
+async function attemptToPreloadUserOrganizationMemberships(
   dbh: SchemaVaultsPostgresNeonProxyAdapter<AuthDatabase>,
   userData: UserData,
-): Promise<readonly OrganizationDefinition[]> {
-  const organizationsRegistry = new OrganizationsRegistry(dbh.db);
+): Promise<readonly OrganizationMembershipRoleDetails[]> {
   const admin: boolean = userData.admin ?? false;
-  const organizationIds = await organizationsRegistry.listUserOrganizationMembershipIds(userData.uid, admin);
-
-  const orgResults = await Promise.allSettled(
-    organizationIds.map((orgId) => organizationsRegistry.lookupOrganization(orgId))
+  const memberships = await listUserOrganizationMemberships(
+    dbh.db,
+    userData.uid,
+    admin,
   );
 
-  const organizations: OrganizationDefinition[] = [];
-  for (const [i, result] of orgResults.entries()) {
-    if (result.status === 'fulfilled') {
-      organizations.push(result.value);
+  const organizationsRegistry = new OrganizationsRegistry(dbh.db);
+
+  const enrichedResults = await Promise.allSettled(
+    memberships.map(async (membership): Promise<OrganizationMembershipRoleDetails> => {
+      const orgDef = await organizationsRegistry.lookupOrganization(
+        membership.organization_id,
+      );
+      const parsed = await organizationMembershipRoleDetailsSchema.safeParseAsync({
+        organization_id: membership.organization_id,
+        organization_name: orgDef.name,
+        role: membership.role,
+        created_at: orgDef.created_at,
+        joined_at: membership.created_at,
+      });
+      if (!parsed.success) {
+        throw new Error(
+          `Failed to validate preloaded OrganizationMembershipRoleDetails for organization "${membership.organization_id}": ${parsed.error.message}`,
+        );
+      }
+      return parsed.data;
+    }),
+  );
+
+  const preloaded: OrganizationMembershipRoleDetails[] = [];
+  for (const [i, result] of enrichedResults.entries()) {
+    if (result.status === "fulfilled") {
+      preloaded.push(result.value);
     } else {
-      console.error(`Failed to lookup organization ${organizationIds[i]}:`, result.reason);
+      console.error(
+        `Failed to preload OrganizationMembershipRoleDetails for organization ${memberships[i]?.organization_id ?? "unknown"}:`,
+        result.reason,
+      );
     }
   }
 
-  return organizations;
+  return preloaded;
 }
 
 async function AuthServerAccountDashboardPageServerComponent(
@@ -91,26 +118,32 @@ async function AuthServerAccountDashboardPageServerComponent(
     op_name: "GET /account (preload data)",
     op_category: "subroutine",
     event_id: crypto.randomUUID(),
-    callback: async () => await Promise.allSettled([
-      attemptToPreloadAppsAndDomains(dbh, user),
-      attemptToPreloadUserOrganizations(dbh, user),
-    ]),
+    callback: async () =>
+      await Promise.allSettled([
+        attemptToPreloadAppsAndDomains(dbh, user),
+        attemptToPreloadUserOrganizationMemberships(dbh, user),
+      ]),
   });
 
-  const preloaded_authorized_apps = appsResult.status === 'fulfilled' ? appsResult.value : undefined;
-  const preloaded_organizations = orgsResult.status === 'fulfilled' ? orgsResult.value : undefined;
+  const preloaded_authorized_apps =
+    appsResult.status === "fulfilled" ? appsResult.value : undefined;
+  const preloaded_organization_memberships =
+    orgsResult.status === "fulfilled" ? orgsResult.value : undefined;
 
-  if (appsResult.status === 'rejected') {
+  if (appsResult.status === "rejected") {
     console.error("Failed to preload authorized apps:", appsResult.reason);
   }
-  if (orgsResult.status === 'rejected') {
-    console.error("Failed to preload user organizations:", orgsResult.reason);
+  if (orgsResult.status === "rejected") {
+    console.error(
+      "Failed to preload user organization memberships:",
+      orgsResult.reason,
+    );
   }
 
   return (
     <AccountPageView
       preloaded_authorized_apps_data={preloaded_authorized_apps}
-      preloaded_organizations={preloaded_organizations}
+      preloaded_organization_memberships={preloaded_organization_memberships}
     />
   );
 }
