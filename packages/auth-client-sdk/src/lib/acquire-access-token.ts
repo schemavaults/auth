@@ -17,6 +17,8 @@ export interface IAcquireAccessTokenFnOptions {
   opts: AcquireAccessTokenOptions;
   adapter: ISchemaVaultsAuthClientAdapter;
   logout: () => Promise<void>;
+  // Determines whether we actually call 'logout()' when we detect the refresh token is expired-- or leave it to the caller?
+  logoutOnExpiredRefreshToken?: boolean;
   exchangeAuthTokens: (
     refresh: RefreshToken | "AS_HTTP_ONLY_COOKIE",
     audience: string,
@@ -29,6 +31,7 @@ export default async function acquireAccessToken({
   opts,
   adapter,
   logout,
+  logoutOnExpiredRefreshToken = true,
   exchangeAuthTokens,
   debug,
 }: IAcquireAccessTokenFnOptions): Promise<AccessToken> {
@@ -173,14 +176,22 @@ export default async function acquireAccessToken({
         eMsg.includes("token has expired") ||
         eMsg.includes("ERR_JWT_EXPIRED")
       ) {
-        await logout();
+        if (logoutOnExpiredRefreshToken) {
+          await logout();
+        }
         throw new Error(
-          "Failed to exchange refresh token for access token; refresh token expired! We logged you out.",
+          "Failed to exchange refresh token for access token; refresh token expired!" +
+            (logoutOnExpiredRefreshToken ? " We logged you out." : ""),
+          {
+            cause: e,
+          },
         );
       }
     }
 
-    throw new Error("Failed to exchange refresh token for access token");
+    throw new Error("Failed to exchange refresh token for access token", {
+      cause: e,
+    });
   }
 
   const access_tokens = tokens?.access;
