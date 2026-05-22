@@ -16,7 +16,7 @@ interface AdminUsersListResponseBody {
 
 describe("Admin cannot disable own account", () => {
   it("POST /api/admin/users/:uid/disable returns 400 when admin targets their own uid", () => {
-    cy.create_and_login_as_superuser().then((loggedIn: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((loggedIn: boolean) => {
       expect(loggedIn, "superuser login should succeed").to.be.true;
 
       const adminEmail: string = Cypress.env("PRIVATE_SUPERUSER_EMAIL");

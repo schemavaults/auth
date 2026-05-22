@@ -10,7 +10,7 @@ describe("Non-Member Organization API Access", () => {
   // Yields the organization_id once the regular user is authenticated.
   function setup_non_member_against_new_org(): Cypress.Chainable<string> {
     return cy
-      .create_and_login_as_superuser()
+      .create_and_login_as_superuser_via_request()
       .then((adminLoggedIn: boolean) => {
         if (!adminLoggedIn) {
           throw new Error("Failed to create and login as superuser");
@@ -21,12 +21,12 @@ describe("Non-Member Organization API Access", () => {
         const organization_id = `nm-api-${randomCode.toLowerCase()}`;
         const name = `Non-Member API Org ${randomCode}`;
         return cy
-          .create_organization({ organization_id, name })
+          .create_organization_via_request({ organization_id, name })
           .then(() => cy.logout())
           .then(() => cy.generate_random_test_user_credentials())
           .then((credentials) =>
             cy
-              .create_and_login_as_regular_user(credentials)
+              .create_and_login_as_regular_user_via_request(credentials)
               .then((regularLoggedIn: boolean) => {
                 if (!regularLoggedIn) {
                   throw new Error("Failed to create and login as regular user");

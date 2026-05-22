@@ -11,7 +11,7 @@ describe("Admin User Detail Page", () => {
   describe("Regular User Access Restrictions", () => {
     it("non-admin users are redirected from the user detail page with 403 forbidden", () => {
       cy.generate_random_test_user_credentials().then((credentials) => {
-        cy.create_and_login_as_regular_user(credentials).then(() => {
+        cy.create_and_login_as_regular_user_via_request(credentials).then(() => {
           cy.visit(`/admin/users/${fakeUid}`, { failOnStatusCode: false });
           cy.url().should("include", "/error");
           cy.url().should("include", "error=403");
@@ -22,7 +22,7 @@ describe("Admin User Detail Page", () => {
 
   describe("Admin Access", () => {
     it("admin can view the user detail page", () => {
-      cy.create_and_login_as_superuser().then((success: boolean) => {
+      cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }

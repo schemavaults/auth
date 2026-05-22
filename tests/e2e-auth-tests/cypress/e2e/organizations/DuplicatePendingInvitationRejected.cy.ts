@@ -44,7 +44,7 @@ describe("Duplicate pending invitation rejected", () => {
                 throw new Error("Failed to login as superuser");
               }
 
-              cy.create_organization({ organization_id, name }).then(() => {
+              cy.create_organization_via_request({ organization_id, name }).then(() => {
                 // 3. Send the first invitation — should succeed (201).
                 cy.request<CreateInvitationResponseBody>({
                   method: "POST",

@@ -4,6 +4,7 @@ import createApp from "@/actions/create_app";
 import createInviteCode from "@/actions/create_invite_code";
 import createApiServer from "@/actions/create_api_server";
 import createOrganization from "@/actions/create_organization";
+import createOrganizationViaRequest from "@/actions/create_organization_via_request";
 import deleteOrganization from "@/actions/delete_organization";
 import generate_random_code from "@/actions/generate_random_code";
 import generateJwksAccessKey from "@/actions/generate_jwks_access_key";
@@ -75,6 +76,11 @@ export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("create_and_login_as_regular_user", createAndLoginAsRegularUser);
 
   commands.add("create_organization", createOrganization);
+
+  commands.add(
+    "create_organization_via_request",
+    createOrganizationViaRequest,
+  );
 
   commands.add("delete_organization", deleteOrganization);
 

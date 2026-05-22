@@ -24,7 +24,7 @@ describe("Admin Errors Pages", () => {
   describe("Regular User Access Restrictions", () => {
     beforeEach(() => {
       cy.generate_random_test_user_credentials().then((credentials) => {
-        cy.create_and_login_as_regular_user(credentials).then(
+        cy.create_and_login_as_regular_user_via_request(credentials).then(
           (loggedIn: boolean) => {
             if (!loggedIn) {
               throw new Error("Failed to create and login as regular user");
@@ -49,7 +49,7 @@ describe("Admin Errors Pages", () => {
 
   describe("Admin Access", () => {
     it("admin can view the /admin/errors list page", () => {
-      cy.create_and_login_as_superuser().then((success: boolean) => {
+      cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }
@@ -61,7 +61,7 @@ describe("Admin Errors Pages", () => {
     });
 
     it("admin hitting a nonexistent error_id is not blocked by the admin guard", () => {
-      cy.create_and_login_as_superuser().then((success: boolean) => {
+      cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
         if (!success) {
           throw new Error("Failed to create and login as superuser");
         }

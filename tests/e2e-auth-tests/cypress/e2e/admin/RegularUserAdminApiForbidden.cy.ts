@@ -15,7 +15,7 @@ describe("Regular User Admin API Forbidden", () => {
   // no state leaks between the individual 403 assertions.
   beforeEach(() => {
     cy.generate_random_test_user_credentials().then((credentials) => {
-      cy.create_and_login_as_regular_user(credentials).then(
+      cy.create_and_login_as_regular_user_via_request(credentials).then(
         (loggedIn: boolean) => {
           if (!loggedIn) {
             throw new Error("Failed to create and login as regular user");

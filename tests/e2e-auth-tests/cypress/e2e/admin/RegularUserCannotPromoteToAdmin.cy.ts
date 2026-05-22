@@ -10,7 +10,7 @@ import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 describe("Regular User Cannot Promote To Admin", () => {
   it("POST /api/admin/promote/:uid returns 403 when the caller is a regular user attempting self-promotion", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
-      cy.create_and_login_as_regular_user(credentials).then(
+      cy.create_and_login_as_regular_user_via_request(credentials).then(
         (success: boolean) => {
           expect(
             success,

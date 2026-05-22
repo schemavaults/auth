@@ -67,7 +67,7 @@ describe("Organizations", () => {
           const organization_id: string = `restricted-org-${randomCode.toLowerCase()}`;
           const name: string = `Restricted Organization ${randomCode}`;
 
-          cy.create_organization({ organization_id, name }).then(() => {
+          cy.create_organization_via_request({ organization_id, name }).then(() => {
             cy.log(
               `Created restricted organization '${organization_id}' as admin`,
             );

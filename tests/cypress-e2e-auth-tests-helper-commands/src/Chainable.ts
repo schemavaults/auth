@@ -66,6 +66,9 @@ declare global {
         max_uses: number,
       ): Chainable<boolean>;
       create_organization(params: CreateOrganizationParams): Chainable<boolean>;
+      create_organization_via_request(
+        params: CreateOrganizationParams,
+      ): Chainable<boolean>;
       delete_organization(
         params: DeleteOrganizationParams,
       ): Chainable<DeleteOrganizationResult>;

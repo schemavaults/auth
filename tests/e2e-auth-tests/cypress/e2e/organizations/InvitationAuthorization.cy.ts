@@ -60,7 +60,7 @@ describe("Invitation Authorization", () => {
                       throw new Error("Failed to login as superuser");
                     }
 
-                    cy.create_organization({ organization_id, name }).then(() => {
+                    cy.create_organization_via_request({ organization_id, name }).then(() => {
                       cy.request<CreateInvitationResponseBody>({
                         method: "POST",
                         url: `/api/organizations/${organization_id}/invitations`,

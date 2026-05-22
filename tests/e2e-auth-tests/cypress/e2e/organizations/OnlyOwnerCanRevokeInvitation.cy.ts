@@ -90,7 +90,7 @@ describe("Only org owners can revoke invitations", () => {
                           throw new Error("Failed to login as superuser");
                         }
 
-                        cy.create_organization({ organization_id, name }).then(
+                        cy.create_organization_via_request({ organization_id, name }).then(
                           () => {
                             // 4. Owner invites the future non-owner member.
                             cy.request<CreateInvitationResponseBody>({
