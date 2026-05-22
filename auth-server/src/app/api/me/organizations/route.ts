@@ -13,11 +13,46 @@ import {
 } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
+import { buildCorsHeaders, getOriginFromRequest } from "@/lib/cors/cors-for-client-app";
+import { getAuthServerUri } from "@/lib/auth_server_uri";
 
 const ROUTE = "/api/me/organizations";
+const CORS_METHODS = "GET, OPTIONS" as const;
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * Apply CORS headers so this endpoint can be called from any domain.
+ *
+ * When the request originates from the auth-server itself, its own origin is
+ * reflected and credentials are allowed so the cookie-based session is
+ * accepted. For any other origin, "Access-Control-Allow-Origin: *" is used;
+ * credentials are omitted because the CORS spec forbids "*" together with
+ * Access-Control-Allow-Credentials: true, and external apps authenticate with
+ * an Authorization Bearer token rather than cookies.
+ */
+function applyCorsHeaders(req: NextRequest, response: NextResponse): NextResponse {
+  const origin = getOriginFromRequest(req);
+  if (!origin) {
+    return response;
+  }
+
+  const corsHeaders: HeadersInit =
+    origin === getAuthServerUri()
+      ? buildCorsHeaders(origin, CORS_METHODS)
+      : {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": CORS_METHODS,
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
+          Vary: "Origin",
+        };
+
+  for (const [key, value] of Object.entries(corsHeaders)) {
+    response.headers.set(key, value);
+  }
+  return response;
+}
 
 async function GET_my_organizations_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps,
@@ -96,6 +131,11 @@ async function GET_my_organizations_handler(
   }
 }
 
+export function OPTIONS(req: NextRequest): NextResponse {
+  return applyCorsHeaders(req, new NextResponse(null, { status: 204 }));
+}
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  return await (await withAuthenticatedApiRouteGuard(GET_my_organizations_handler))(req);
+  const response = await (await withAuthenticatedApiRouteGuard(GET_my_organizations_handler))(req);
+  return applyCorsHeaders(req, response);
 }
