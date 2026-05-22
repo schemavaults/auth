@@ -9,19 +9,9 @@ The E2E test suite lives in `tests/e2e-auth-tests/` and uses Cypress. Tests run 
 
 ## Test suite organization
 
-Each **subdirectory** of `tests/e2e-auth-tests/cypress/e2e/` is a discrete test suite. Suites are discovered dynamically at runtime by reading the filesystem (see `e2e-auth-tests-cli.ts:listTestSuites()`), so adding a new folder automatically registers a new suite — no config changes needed in the CLI or Cypress config.
+Each **subdirectory** of `tests/e2e-auth-tests/cypress/e2e/` is a discrete test suite. For example, `tests/e2e-auth-tests/cypress/e2e/login/*` contains login related test suites. Suites are discovered dynamically at runtime by reading the filesystem (see `e2e-auth-tests-cli.ts:listTestSuites()`), so adding a new folder automatically registers a new suite — no config changes needed in the CLI or Cypress config.
 
-Current suites:
-
-| Suite folder              | What it covers                                                      |
-| ------------------------- | ------------------------------------------------------------------- |
-| `admin`                   | Admin pages (user detail)                                           |
-| `authentication_flows`    | Login, register, logout, reset password, verify email, invite codes |
-| `example_resource_server` | OAuth2 PKCE integration with the example Next.js resource server    |
-| `misc`                    | App environment endpoint, unauthenticated API/redirect behavior     |
-| `organizations`           | Organization CRUD                                                   |
-| `resource_management`     | Apps, API servers, connecting apps to APIs                          |
-| `superuser`               | Superuser creation and validation                                   |
+The current suites may be listed with the command: `cd tests/e2e-auth-tests && bun run cli suites`
 
 ## CI architecture
 
@@ -61,13 +51,13 @@ From `tests/e2e-auth-tests/`:
 bun run cli suites
 
 # Run a specific suite (builds + launches Docker Compose)
-bun run cli e2e authentication_flows
+bun run cli e2e login
 
 # Run with verbose output (all container logs, not just test runner)
-bun run cli e2e authentication_flows --verbose
+bun run cli e2e login --verbose
 
 # Skip Docker image builds (use pre-built images)
-bun run cli e2e authentication_flows --skip-build
+bun run cli e2e login --skip-build
 
 # Open Cypress interactive UI (for local development against a running server)
 bun run open
