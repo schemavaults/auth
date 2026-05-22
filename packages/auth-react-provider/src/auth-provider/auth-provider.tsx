@@ -1,17 +1,17 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { SchemaVaultsAuthProviderProps } from "./auth-provider-props";
+import type { SchemaVaultsAuthProviderProps } from "@/types/SchemaVaultsAuthProviderProps";
 
-// Auth Middleware Imports/Exports
-import { type AuthMiddlewareRules } from "@schemavaults/auth-common";
-export type { AuthMiddlewareRules };
+// Core Auth Provider Logic
+import CoreSchemaVaultsAuthClientProvider from "./core-schemavaults-auth-client-provider";
 
+// Subproviders
 import SchemaVaultsAppEnvironmentContextProvider from "@/subproviders/app-environment-provider";
 import AppIdProvider from "@/subproviders/app-id-provider";
 import DefaultAccessTokenAudiencesProvider from "@/subproviders/default-access-token-audiences-provider";
-import CoreSchemaVaultsAuthClientProvider from "./core-schemavaults-auth-client-provider";
 import OnLogoutProvider from "@/subproviders/on-logout-provider";
+import RedirectUrlConfigurationProvider from "@/subproviders/redirect-url-configuration-provider";
 
 /**
  * @name SchemaVaultsAuthProvider
@@ -22,13 +22,18 @@ export function SchemaVaultsAuthProvider(
   props: SchemaVaultsAuthProviderProps,
 ): ReactElement {
   return (
-    <SchemaVaultsAppEnvironmentContextProvider environment={props.environment}>
+    <SchemaVaultsAppEnvironmentContextProvider
+      environment={props.environment}
+      verbose={props.debug ? true : false}
+    >
       <AppIdProvider app_id={props.app_id}>
         <DefaultAccessTokenAudiencesProvider
           default_audiences={props.default_audiences}
         >
           <OnLogoutProvider onLogout={props.onLogout}>
-            <CoreSchemaVaultsAuthClientProvider {...props} />
+            <RedirectUrlConfigurationProvider {...props}>
+              <CoreSchemaVaultsAuthClientProvider {...props} />
+            </RedirectUrlConfigurationProvider>
           </OnLogoutProvider>
         </DefaultAccessTokenAudiencesProvider>
       </AppIdProvider>
@@ -38,4 +43,4 @@ export function SchemaVaultsAuthProvider(
 
 export default SchemaVaultsAuthProvider;
 
-export type { SchemaVaultsAuthProviderProps } from "./auth-provider-props";
+export type { SchemaVaultsAuthProviderProps } from "@/types/SchemaVaultsAuthProviderProps";

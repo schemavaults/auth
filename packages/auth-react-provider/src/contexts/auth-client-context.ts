@@ -1,3 +1,5 @@
+"use client";
+
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import { createContext, type RefObject } from "react";
 

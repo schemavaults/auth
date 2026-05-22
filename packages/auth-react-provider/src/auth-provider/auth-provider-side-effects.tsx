@@ -1,16 +1,17 @@
 "use client";
 
 import { useContext, type ReactNode } from "react";
-import type { SchemaVaultsAuthProviderProps } from "./auth-provider-props";
+import type { SchemaVaultsAuthProviderProps } from "@/types/SchemaVaultsAuthProviderProps";
 import useAutoReacquireDefaultAccessTokens from "@/hooks/use-auto-reacquire-default-access-tokens";
 import AuthClientMiddlewareManager from "./auth-client-middleware-manager";
 import type { AuthMiddlewareRules } from "@schemavaults/auth-common";
 import SchemaVaultsAuthContext from "@/contexts/auth-client-context";
 import resolveClientAuthMiddlewareRules from "@/lib/resolveClientAuthMiddlewareRules";
+import type { IAuthProviderRedirectUrlConfigurationWithDefaultsSet } from "@/types/IAuthProviderRedirectUrlConfiguration";
 
 export interface AuthSideEffectsProps extends Omit<
   SchemaVaultsAuthProviderProps,
-  "children"
+  "children" | keyof IAuthProviderRedirectUrlConfigurationWithDefaultsSet
 > {
   debug: boolean;
 }

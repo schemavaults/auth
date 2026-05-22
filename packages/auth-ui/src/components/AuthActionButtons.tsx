@@ -1,6 +1,10 @@
 "use client";
 
-import { useAuth, useCurrentUser } from "@schemavaults/auth-react-provider";
+import {
+  useAuth,
+  useCurrentUser,
+  useRedirectUrlConfiguration,
+} from "@schemavaults/auth-react-provider";
 import { Button, cn } from "@schemavaults/ui";
 import { AnimatePresence, m } from "@schemavaults/ui/framer-motion";
 import { Loader2, LogIn, User, UserPlus } from "lucide-react";
@@ -8,14 +12,17 @@ import Link from "next/link";
 import type { ReactElement } from "react";
 
 interface AuthActionButtonsProps {
+  authenticatedLinkLabel?: string;
   className?: string;
 }
 
-export default function AuthActionButtons({
+export function AuthActionButtons({
   className,
+  authenticatedLinkLabel = "Go to Account",
 }: AuthActionButtonsProps): ReactElement {
   const auth = useAuth();
   const currentUser = useCurrentUser();
+  const redirectUrls = useRedirectUrlConfiguration();
 
   const state: "loading" | "authenticated" | "unauthenticated" = !auth.ready
     ? "loading"
@@ -48,9 +55,9 @@ export default function AuthActionButtons({
               asChild
               className="bg-green-500 hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
             >
-              <Link href="/account">
+              <Link href={redirectUrls.authed_on_unauthed_redirect_uri}>
                 <User className="h-4 w-4 mr-2" />
-                Go to Account
+                {authenticatedLinkLabel}
               </Link>
             </Button>
           </m.div>
@@ -64,7 +71,7 @@ export default function AuthActionButtons({
               asChild
               className="bg-green-500 hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
             >
-              <Link href="/auth/login">
+              <Link href={redirectUrls.login_uri satisfies string}>
                 <LogIn className="h-4 w-4 mr-2" />
                 Sign In
               </Link>
@@ -74,7 +81,7 @@ export default function AuthActionButtons({
               variant="outline"
               className="font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
             >
-              <Link href="/auth/register">
+              <Link href={redirectUrls.register_uri satisfies string}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Register
               </Link>
@@ -85,3 +92,5 @@ export default function AuthActionButtons({
     </div>
   );
 }
+
+export default AuthActionButtons;

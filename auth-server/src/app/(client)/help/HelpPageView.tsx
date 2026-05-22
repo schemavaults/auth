@@ -24,7 +24,7 @@ import {
 } from "@schemavaults/ui";
 import { HelpCircle, Search } from "lucide-react";
 import Link from "next/link";
-import AuthActionButtons from "@/components/AuthActionButtons";
+import { AuthActionButtons } from "@schemavaults/auth-ui";
 
 interface FaqItem {
   id: string;

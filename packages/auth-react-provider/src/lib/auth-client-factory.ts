@@ -11,6 +11,7 @@ import type {
   AppId,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import buildAbsoluteUri from "@/lib/buildAbsoluteUri";
 
 export interface IAuthClientFactoryInitOpts {
   environment: SchemaVaultsAppEnvironment;
@@ -20,8 +21,8 @@ export interface IAuthClientFactoryInitOpts {
   auth_server_uri: string;
   successful_authentication_redirect_uri: string;
   successful_logout_redirect_uri: string;
-  authorize_uri?: string | undefined;
-  error_page_uri?: string | undefined;
+  authorize_uri: string;
+  error_page_uri: string;
   invite_code_required?: boolean;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
@@ -31,12 +32,12 @@ export class AuthClientFactory {
   private readonly secure: boolean;
   private readonly app_id: string;
   private readonly debug: boolean;
-  private default_audiences?: readonly ApiServerId[];
+  private readonly default_audiences: readonly ApiServerId[];
   private readonly auth_server_uri: string;
   private readonly successful_authentication_redirect_uri: string;
   private readonly successful_logout_redirect_uri: string;
-  private readonly authorize_uri: string | undefined;
-  private readonly error_page_uri: string | undefined;
+  private readonly authorize_uri: string;
+  private readonly error_page_uri: string;
   private readonly invite_code_required: boolean;
   private readonly fetch: (
     url: string,
@@ -50,6 +51,16 @@ export class AuthClientFactory {
     const isInsecureHTTPContext: boolean = (window.location.protocol.startsWith(
       "http:",
     ) && !window.location.hostname.includes("localhost")) satisfies boolean;
+
+    if (
+      isInsecureHTTPContext &&
+      (environment === "production" || environment === "staging")
+    ) {
+      throw new Error(
+        "Insecure HTTP context may not be used in production or staging environments!",
+      );
+    }
+
     this.secure = !isInsecureHTTPContext;
     this.debug =
       typeof opts.debug === "boolean"
@@ -57,13 +68,16 @@ export class AuthClientFactory {
         : environment === "development" ||
           environment === "test" ||
           environment === "staging";
-    this.default_audiences = opts.default_audiences;
+    this.default_audiences = opts.default_audiences ?? [];
     this.auth_server_uri = opts.auth_server_uri;
     this.successful_authentication_redirect_uri =
       opts.successful_authentication_redirect_uri;
-    this.successful_logout_redirect_uri = opts.successful_logout_redirect_uri;
-    this.authorize_uri = opts.authorize_uri;
-    this.error_page_uri = opts.error_page_uri;
+    this.successful_logout_redirect_uri = buildAbsoluteUri(
+      opts.successful_logout_redirect_uri,
+      environment,
+    );
+    this.authorize_uri = buildAbsoluteUri(opts.authorize_uri, environment);
+    this.error_page_uri = buildAbsoluteUri(opts.error_page_uri, environment);
     this.invite_code_required =
       typeof opts.invite_code_required === "boolean"
         ? opts.invite_code_required

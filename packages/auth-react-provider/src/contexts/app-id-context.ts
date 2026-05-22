@@ -1,3 +1,5 @@
+"use client";
+
 import type { AppId } from "@schemavaults/app-definitions";
 import { createContext } from "react";
 

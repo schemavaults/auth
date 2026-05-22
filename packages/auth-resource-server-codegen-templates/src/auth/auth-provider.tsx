@@ -39,6 +39,8 @@ export default function AppAuthProvider({
   return (
     <AuthProvider
       app_id={app_id}
+      login_uri="/auth/login"
+      register_uri="/auth/register"
       authed_on_unauthed_redirect_uri={props.authed_on_unauthed_redirect_uri}
       unauthed_on_authed_redirect_uri={props.unauthed_on_authed_redirect_uri}
       successful_logout_redirect_uri={props.successful_logout_redirect_uri}

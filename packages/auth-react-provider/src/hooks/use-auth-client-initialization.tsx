@@ -8,6 +8,7 @@ import { type RefObject, useEffect } from "react";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import AuthClientFactory from "@/lib/auth-client-factory";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "./use-debug";
+import useRedirectUrlConfiguration from "./use-redirect-url-configuration";
 
 export interface UseAuthClientInitializationOptions {
   ready: boolean;
@@ -35,6 +36,9 @@ export function useAuthClientInitialization(
     successful_logout_redirect_uri,
     authorize_uri,
     error_page_uri,
+  } = useRedirectUrlConfiguration();
+
+  const {
     authClientRef,
     auth_server_uri,
     app_id,

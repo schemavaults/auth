@@ -53,3 +53,5 @@ export {
   clearMyOrganizationsCache,
 } from "./use-my-organizations";
 export type * from "./use-my-organizations";
+
+export { useRedirectUrlConfiguration } from "./use-redirect-url-configuration";

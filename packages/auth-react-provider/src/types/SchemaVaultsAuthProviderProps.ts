@@ -8,8 +8,10 @@ import type { useRouter } from "next/navigation";
 import type { PropsWithChildren } from "react";
 import type { AuthMiddlewareRulesBuilderFn } from "@/types/AuthMiddlewareRulesBuilderFn";
 import type { OnLogoutCallback } from "@/contexts/on-logout-context";
+import type { IAuthProviderRedirectUrlConfiguration } from "./IAuthProviderRedirectUrlConfiguration";
 
-export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
+export interface SchemaVaultsAuthProviderProps
+  extends PropsWithChildren, IAuthProviderRedirectUrlConfiguration {
   // Use a hardcoded auth server URI
   // if not supplied, this can be loaded from @schemavaults/app-definitions based on the environment
   auth_server_uri?: string;
@@ -20,15 +22,14 @@ export interface SchemaVaultsAuthProviderProps extends PropsWithChildren {
   path: string;
 
   authMiddlewareRules?: AuthMiddlewareRules | AuthMiddlewareRulesBuilderFn;
-  authed_on_unauthed_redirect_uri: string;
-  unauthed_on_authed_redirect_uri: string;
 
-  successful_authentication_redirect_uri?: string;
-  successful_logout_redirect_uri?: string;
-  authorize_uri?: string;
-  // Optional override for the error page path (defaults to "/auth/error" on the auth client).
-  error_page_uri?: string;
-
+  /**
+   * A callback that can be called when logging out.
+   * We already handle clearing all auth tokens from cookies or localStorage,
+   * but this may be useful for clearing other authenticated state you've added
+   * in your custom application. (E.g. clear SWR cache)
+   * @default undefined
+   */
   onLogout?: OnLogoutCallback;
 
   debug?: boolean;

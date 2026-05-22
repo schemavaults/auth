@@ -128,3 +128,5 @@ export type { MfaRemoveFactorDialogProps } from "./MfaRemoveFactorDialog";
 
 export { MfaRegenerateRecoveryCodesDialog } from "./MfaRegenerateRecoveryCodesDialog";
 export type { MfaRegenerateRecoveryCodesDialogProps } from "./MfaRegenerateRecoveryCodesDialog";
+
+export { AuthActionButtons } from "@/components/AuthActionButtons";

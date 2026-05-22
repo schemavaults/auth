@@ -15,7 +15,7 @@ import {
 import { HelpCircle } from "lucide-react";
 import Link from "next/link";
 import type { ReactElement } from "react";
-import AuthActionButtons from "@/components/AuthActionButtons";
+import { AuthActionButtons } from "@schemavaults/auth-ui";
 
 export default function HomePageView(): ReactElement {
   const auth = useAuth();

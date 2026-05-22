@@ -2,33 +2,34 @@
 
 import type { ReactNode } from "react";
 import useAuthClientMiddleware from "@/hooks/use-auth-client-middleware";
-import type { SchemaVaultsAuthProviderProps } from "./auth-provider-props";
+import type { SchemaVaultsAuthProviderProps } from "@/types/SchemaVaultsAuthProviderProps";
 import { useRouter } from "next/navigation";
 import {
   useAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@/hooks/use-app-environment";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "@/hooks/use-debug";
+import type { IAuthProviderRedirectUrlConfigurationWithDefaultsSet } from "@/types/IAuthProviderRedirectUrlConfiguration";
+import useRedirectUrlConfiguration from "@/hooks/use-redirect-url-configuration";
 
 export function AuthClientMiddlewareManager(
   props: Omit<
     SchemaVaultsAuthProviderProps,
-    "children" | "authMiddlewareRules"
+    | "children"
+    | "authMiddlewareRules"
+    | keyof IAuthProviderRedirectUrlConfigurationWithDefaultsSet
   > &
     Required<Pick<SchemaVaultsAuthProviderProps, "authMiddlewareRules">>,
 ): ReactNode {
   const router = useRouter();
-
   const {
-    // auth_server_uri,
-    // successful_authentication_redirect_uri,
+    authorize_uri,
     successful_logout_redirect_uri,
-    // app_id,
-    path,
-    authMiddlewareRules,
     authed_on_unauthed_redirect_uri,
     unauthed_on_authed_redirect_uri,
-  } = props;
+  } = useRedirectUrlConfiguration();
+
+  const { path, authMiddlewareRules } = props;
 
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
 
@@ -47,8 +48,6 @@ export function AuthClientMiddlewareManager(
     );
   }
 
-  const authorize_uri: string = props.authorize_uri ?? "/auth/authorize";
-
   if (!authMiddlewareRules || typeof authMiddlewareRules !== "object") {
     throw new TypeError(
       "AuthClientMiddlewareManager did not receive an 'authMiddlewareRules' object!",
@@ -60,10 +59,6 @@ export function AuthClientMiddlewareManager(
     authMiddlewareRules,
     path,
     router,
-    unauthed_on_authed_redirect_uri,
-    authed_on_unauthed_redirect_uri,
-    authorize_uri,
-    successful_logout_redirect_uri,
     debug,
   });
 

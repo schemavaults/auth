@@ -23,7 +23,7 @@ export {
   ERROR_MESSAGE_CATALOG,
 } from "@schemavaults/auth-client-sdk";
 
-export type { ApiServerId } from "@schemavaults/app-definitions";
+export type { ApiServerId, AppId } from "@schemavaults/app-definitions";
 
 // Auth Middleware Re-exports
 export {
@@ -36,3 +36,8 @@ export type {
   AuthMiddlewareOptions,
   AuthMiddlewareError,
 } from "@schemavaults/auth-client-sdk";
+
+export type {
+  IAuthProviderRedirectUrlConfiguration,
+  IAuthProviderRedirectUrlConfigurationWithDefaultsSet,
+} from "@/types/IAuthProviderRedirectUrlConfiguration";

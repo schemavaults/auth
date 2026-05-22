@@ -19,15 +19,12 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "./use-app-environment";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "./use-debug";
+import useRedirectUrlConfiguration from "@/hooks/use-redirect-url-configuration";
 
 export type UseAuthClientMiddlewareOptions = {
   router: ReturnType<typeof useRouter>;
   authMiddlewareRules: AuthMiddlewareRules;
   path: string;
-  authed_on_unauthed_redirect_uri: string;
-  unauthed_on_authed_redirect_uri: string;
-  authorize_uri: string;
-  successful_logout_redirect_uri?: string;
   debug?: boolean;
 };
 
@@ -39,6 +36,12 @@ export function useAuthClientMiddleware(
     environment,
     opts.debug,
   );
+  const {
+    authed_on_unauthed_redirect_uri,
+    unauthed_on_authed_redirect_uri,
+    authorize_uri,
+    successful_logout_redirect_uri,
+  } = useRedirectUrlConfiguration();
 
   async function onAuthStateChangedRunMiddleware({
     auth,
@@ -127,16 +130,14 @@ export function useAuthClientMiddleware(
         );
       }
 
-      const authorize_uri: string = opts.authorize_uri;
-
       const authMiddlewareResult = AuthMiddleware({
         path: opts.path,
         authStatus,
         rules: opts.authMiddlewareRules,
-        authedOnUnauthedRouteRedirectTo: opts.authed_on_unauthed_redirect_uri,
-        unauthedOnAuthedRouteRedirectTo: opts.unauthed_on_authed_redirect_uri,
+        authedOnUnauthedRouteRedirectTo: authed_on_unauthed_redirect_uri,
+        unauthedOnAuthedRouteRedirectTo: unauthed_on_authed_redirect_uri,
         authorize_uri,
-        successful_logout_redirect_uri: opts.successful_logout_redirect_uri,
+        successful_logout_redirect_uri,
         environment,
       } satisfies AuthMiddlewareOptions);
 
