@@ -1,7 +1,6 @@
 import "server-only";
 
 import {
-  ServerlessDatabase,
   type ResourceCreationResponse,
   UserRegistry,
   UserNotFoundError,

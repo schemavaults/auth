@@ -54,4 +54,5 @@ export interface IAuthProviderRedirectUrlConfiguration {
   error_page_uri?: string;
 }
 
-export interface IAuthProviderRedirectUrlConfigurationWithDefaultsSet extends Required<IAuthProviderRedirectUrlConfiguration> {}
+export type IAuthProviderRedirectUrlConfigurationWithDefaultsSet =
+  Required<IAuthProviderRedirectUrlConfiguration>;

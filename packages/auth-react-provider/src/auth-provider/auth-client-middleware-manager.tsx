@@ -10,7 +10,6 @@ import {
 } from "@/hooks/use-app-environment";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "@/hooks/use-debug";
 import type { IAuthProviderRedirectUrlConfigurationWithDefaultsSet } from "@/types/IAuthProviderRedirectUrlConfiguration";
-import useRedirectUrlConfiguration from "@/hooks/use-redirect-url-configuration";
 
 export function AuthClientMiddlewareManager(
   props: Omit<
@@ -22,12 +21,6 @@ export function AuthClientMiddlewareManager(
     Required<Pick<SchemaVaultsAuthProviderProps, "authMiddlewareRules">>,
 ): ReactNode {
   const router = useRouter();
-  const {
-    authorize_uri,
-    successful_logout_redirect_uri,
-    authed_on_unauthed_redirect_uri,
-    unauthed_on_authed_redirect_uri,
-  } = useRedirectUrlConfiguration();
 
   const { path, authMiddlewareRules } = props;
 
@@ -37,16 +30,6 @@ export function AuthClientMiddlewareManager(
     environment,
     props.debug,
   );
-
-  if (!authed_on_unauthed_redirect_uri) {
-    throw new Error(
-      "[SchemaVaultsAuthProvider] authed_on_unauthed_redirect_uri is required.",
-    );
-  } else if (!unauthed_on_authed_redirect_uri) {
-    throw new Error(
-      "[SchemaVaultsAuthProvider] unauthed_on_authed_redirect_uri is required.",
-    );
-  }
 
   if (!authMiddlewareRules || typeof authMiddlewareRules !== "object") {
     throw new TypeError(

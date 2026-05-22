@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  type FC,
-  type ReactElement,
-} from "react";
+import { useEffect, useState, type FC, type ReactElement } from "react";
 import {
   Button,
   Dialog,
@@ -54,7 +49,9 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
         })
         .catch((e: unknown) => {
           if (cancelled) return;
-          setError(e instanceof Error ? e.message : "Failed to start enrollment");
+          setError(
+            e instanceof Error ? e.message : "Failed to start enrollment",
+          );
           setStep("error");
         });
     }
@@ -92,8 +89,8 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Set up an authenticator app</DialogTitle>
           <DialogDescription>
-            Scan the QR code with your authenticator app, then enter the
-            6-digit code it generates.
+            Scan the QR code with your authenticator app, then enter the 6-digit
+            code it generates.
           </DialogDescription>
         </DialogHeader>
         {step === "loading" && (
@@ -104,7 +101,6 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
         )}
         {step === "scan" && enrollment && (
           <div className="space-y-3">
-            {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <img
               src={enrollment.qr_code_data_url}
               alt="TOTP QR code"

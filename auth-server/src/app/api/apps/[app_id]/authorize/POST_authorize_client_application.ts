@@ -88,6 +88,7 @@ export async function POST_authorize_client_application(
           parsedState = parsed.data.state;
         }
       } catch (e: unknown) {
+        console.error("Failed to parse authorize request body: ", e);
         return NextResponse.json(
           {
             success: false,

@@ -5,8 +5,6 @@ import createRedirectUrlConfigurationWithDefaultsSet from "@/lib/createRedirectU
 import type { IAuthProviderRedirectUrlConfiguration } from "@/types/IAuthProviderRedirectUrlConfiguration";
 import { useMemo, type PropsWithChildren, type ReactElement } from "react";
 
-export interface RedirectUrlConfigurationProviderProps extends PropsWithChildren<IAuthProviderRedirectUrlConfiguration> {}
-
 export default function RedirectUrlConfigurationProvider({
   children,
   login_uri,
@@ -17,7 +15,7 @@ export default function RedirectUrlConfigurationProvider({
   unauthed_on_authed_redirect_uri,
   authorize_uri,
   error_page_uri,
-}: RedirectUrlConfigurationProviderProps): ReactElement {
+}: PropsWithChildren<IAuthProviderRedirectUrlConfiguration>): ReactElement {
   const configuration = useMemo(
     () =>
       createRedirectUrlConfigurationWithDefaultsSet({
