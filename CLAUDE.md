@@ -154,3 +154,7 @@ The `tests/e2e-auth-tests` directory contains Cypress E2E test suite for testing
 - `tests/e2e-auth-tests/cypress/support/e2e.ts`, `tests/e2e-auth-tests/cypress/support/commands.ts`, and `tests/e2e-auth-tests/cypress/support/actions/` contain reusable commands (e.g. `cy.login()`, `cy.register()`, etc.) for making writing tests easier.
 
 The actual E2E tests live within the `tests/e2e-auth-tests/cypress/e2e/` directory.
+
+## NextJS Documentation
+
+Your training data is likely outdated; documentation on the current version of NextJS is available at: `./auth-server/node_modules/next/dist/docs/`.
