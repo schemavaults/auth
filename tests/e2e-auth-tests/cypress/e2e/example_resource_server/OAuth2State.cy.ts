@@ -141,6 +141,9 @@ describe("OAuth2State (RFC 6749 §10.12 state parameter)", () => {
                 expect(challengeTime, "challenge_time present").to.be.a(
                   "string",
                 );
+                if (typeof challengeTime !== "string") {
+                  throw new Error("challenge_time missing from login URL");
+                }
 
                 cy.origin(
                   exampleAppOrigin,
@@ -205,6 +208,9 @@ describe("OAuth2State (RFC 6749 §10.12 state parameter)", () => {
                 expect(challengeTime, "challenge_time present").to.be.a(
                   "string",
                 );
+                if (typeof challengeTime !== "string") {
+                  throw new Error("challenge_time missing from login URL");
+                }
 
                 cy.origin(
                   exampleAppOrigin,

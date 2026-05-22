@@ -18,6 +18,10 @@ interface EmailVerificationTokenResponseBody {
   token?: string;
 }
 
+// Module marker: keeps this spec's top-level interfaces file-scoped so they
+// do not collide with same-named interfaces in other spec files.
+export {};
+
 describe("Admin resend-verification rejects already-verified user", () => {
   it("POST /api/admin/users/:uid/resend-verification returns 409 when the target email is already verified", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {

@@ -49,6 +49,10 @@ interface ListOrganizationInvitationsResponseBody {
   };
 }
 
+// Module marker: keeps this spec's top-level interfaces file-scoped so they
+// do not collide with same-named interfaces in other spec files.
+export {};
+
 describe("Only org owners can revoke invitations", () => {
   it("DELETE /api/organizations/:org_id/invitations/:invitation_id returns 403 when caller is a non-owner member", () => {
     cy.generate_random_code(12).then((randomCode: string) => {

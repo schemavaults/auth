@@ -27,6 +27,10 @@ interface MyOrganizationsResponseBody {
   };
 }
 
+// Module marker: keeps this spec's top-level interfaces file-scoped so they
+// do not collide with same-named interfaces in other spec files.
+export {};
+
 describe("Invitation Authorization", () => {
   it("non-invitee user cannot accept another user's pending invitation (403)", () => {
     cy.generate_random_code(12).then((randomCode: string) => {

@@ -23,6 +23,10 @@ interface CreateInvitationResponseBody {
   };
 }
 
+// Module marker: keeps this spec's top-level interfaces file-scoped so they
+// do not collide with same-named interfaces in other spec files.
+export {};
+
 describe("Duplicate pending invitation rejected", () => {
   it("POST /api/organizations/:organization_id/invitations returns 409 when an invitation is already pending for the invitee", () => {
     cy.generate_random_code(12).then((randomCode: string) => {

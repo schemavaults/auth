@@ -14,6 +14,10 @@ interface AdminUsersListResponseBody {
   };
 }
 
+// Module marker: keeps this spec's top-level interfaces file-scoped so they
+// do not collide with same-named interfaces in other spec files.
+export {};
+
 describe("Admin cannot disable own account", () => {
   it("POST /api/admin/users/:uid/disable returns 400 when admin targets their own uid", () => {
     cy.create_and_login_as_superuser_via_request().then((loggedIn: boolean) => {
