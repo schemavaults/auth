@@ -31,7 +31,9 @@ export default function createOrganizationViaRequest(
     .request({
       method: "POST",
       url: "/api/organizations",
-      body: { organization_id, name },
+      // organizationDefinitionSchema (@schemavaults/auth-common) is strict and
+      // requires created_at; the server overwrites created_by, so it is omitted.
+      body: { organization_id, name, created_at: Date.now() },
       failOnStatusCode: false,
     })
     .then((response): Cypress.Chainable<boolean> => {
