@@ -9,6 +9,7 @@ import {
   apiServerIdSchema,
   type AppId,
   appIdSchema,
+  isHardcodedAppId,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
 } from "@schemavaults/app-definitions";
 import { audienceRefSchema } from "@schemavaults/auth-common";
@@ -163,20 +164,21 @@ export async function validateAudience(
     return false;
   }
 
-  const isThisAuthServer: boolean =
-    client_app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+  // Access tokens for the auth server itself may be requested by any
+  // hardcoded SchemaVaults app, not just the auth server app.
+  const isHardcodedSchemaVaultsApp: boolean = isHardcodedAppId(client_app_id);
 
   if (
     validationResults.some(function isValidationResultInvalid(
       result: ValidateAudienceOutput,
     ): boolean {
       return typeof result === "string"
-        ? result === "auth-server-only" && !isThisAuthServer
+        ? result === "auth-server-only" && !isHardcodedSchemaVaultsApp
         : false;
     })
   ) {
     console.error(
-      "Some of the audiences for access tokens can only be requested from the auth server",
+      "Some of the audiences for access tokens can only be requested from a hardcoded SchemaVaults app",
     );
     return false;
   }
