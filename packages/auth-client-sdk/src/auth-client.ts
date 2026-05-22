@@ -1453,6 +1453,8 @@ export class SchemaVaultsAuthClient
     return await fn({
       adapter: this.adapter,
       auth_server_uri: this.auth_server_uri,
+      is_auth_server: this.isClientForAuthServer,
+      acquireAccessToken: this.acquireAccessToken.bind(this),
     });
   }
 
