@@ -129,7 +129,7 @@ jobs:
           path: tests/e2e-auth-tests/dist/e2e-auth-tests-cli.js
           retention-days: 1
 
-  Run-Authentication-Flows-E2E-Tests:
+  Run-Apis-E2E-Tests:
     needs:
       - Build-Auth-Server-Test-Docker-Image
       - Build-Postgres-DB-Docker-Image
@@ -138,7 +138,79 @@ jobs:
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
-      test-suite-name: authentication_flows
+      test-suite-name: apis
+      skip-docker-build: true
+
+  Run-Apps-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: apps
+      skip-docker-build: true
+
+  Run-Login-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: login
+      skip-docker-build: true
+
+  Run-Logout-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: logout
+      skip-docker-build: true
+
+  Run-Multi-Factor-Authentication-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: mfa
+      skip-docker-build: true
+
+  Run-Register-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: register
+      skip-docker-build: true
+
+  Run-Reset-Password-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: reset_password
       skip-docker-build: true
 
   Run-Organizations-E2E-Tests:
