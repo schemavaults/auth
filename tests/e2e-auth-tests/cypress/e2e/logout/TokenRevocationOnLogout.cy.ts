@@ -8,11 +8,14 @@ const REFRESH_TOKEN_COOKIE = RefreshTokenCookieName(APP_ID);
 
 describe("Token Revocation on Logout", () => {
   it("rejects a refresh token that was used before logout (revoked)", () => {
-    cy.create_and_login_as_superuser().then((success: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to create and login as superuser");
       }
 
+      // The request-based login does not navigate the browser; land on the
+      // account page before driving the logout UI.
+      cy.visit("/account");
       cy.url().should("include", "/account");
 
       // Capture the refresh token cookie value before logout

@@ -4,7 +4,7 @@
 // `user.uid === target_uid` check in `setDisabledHandler`) and exists so an
 // admin cannot accidentally lock themselves out of the platform. The happy
 // path (admin disabling another user) is already covered by
-// authentication_flows/DisabledUserLoginBlocked.cy.ts, but the self-target
+// login/DisabledUserLoginBlocked.cy.ts, but the self-target
 // edge case had no coverage.
 
 interface AdminUsersListResponseBody {
@@ -14,9 +14,13 @@ interface AdminUsersListResponseBody {
   };
 }
 
+// Module marker: keeps this spec's top-level interfaces file-scoped so they
+// do not collide with same-named interfaces in other spec files.
+export {};
+
 describe("Admin cannot disable own account", () => {
   it("POST /api/admin/users/:uid/disable returns 400 when admin targets their own uid", () => {
-    cy.create_and_login_as_superuser().then((loggedIn: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((loggedIn: boolean) => {
       expect(loggedIn, "superuser login should succeed").to.be.true;
 
       const adminEmail: string = Cypress.env("PRIVATE_SUPERUSER_EMAIL");

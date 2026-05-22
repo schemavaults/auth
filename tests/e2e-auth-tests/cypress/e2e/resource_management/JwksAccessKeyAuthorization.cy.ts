@@ -145,6 +145,10 @@ function setup_org_with_api_and_member(): Cypress.Chainable<OrgApiContext> {
     });
 }
 
+// Module marker: keeps this spec's top-level interfaces file-scoped so they
+// do not collide with same-named interfaces in other spec files.
+export {};
+
 describe("JWKS Access Key Authorization", () => {
   it("owner of the API's owner organization can POST, GET, and PUT jwks-access-key", () => {
     setup_org_with_api_and_member().then((ctx) => {

@@ -27,7 +27,7 @@ describe("GET /api/me/organizations/:org_id/role for non-member", () => {
         const organization_id = `me-role-nm-${randomCode.toLowerCase()}`;
         const name = `Me Role Non-Member Org ${randomCode}`;
 
-        cy.create_organization({ organization_id, name }).then(() => {
+        cy.create_organization_via_request({ organization_id, name }).then(() => {
           cy.logout().then(() => {
             cy.generate_random_test_user_credentials().then((credentials) => {
               cy.create_and_login_as_regular_user_via_request(credentials).then(

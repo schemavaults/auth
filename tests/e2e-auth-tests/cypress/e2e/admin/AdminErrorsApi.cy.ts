@@ -13,7 +13,7 @@ describe("Admin Errors API", () => {
   const nonexistentErrorId = "00000000-0000-0000-0000-000000000099";
 
   beforeEach(() => {
-    cy.create_and_login_as_superuser().then((success: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to create and login as superuser");
       }

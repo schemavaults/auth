@@ -32,11 +32,14 @@ describe("Logout", () => {
   });
 
   it("can logout from the superuser account from the sign out button on account page", () => {
-    cy.create_and_login_as_superuser().then((success: boolean) => {
+    cy.create_and_login_as_superuser_via_request().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to create and login as superuser");
       }
 
+      // The request-based login does not navigate the browser; land on the
+      // account page so the sign-out button is available for the logout test.
+      cy.visit("/account");
       cy.url().should("include", "/account");
 
       // We should now be logged in (as superuser) on the account page
