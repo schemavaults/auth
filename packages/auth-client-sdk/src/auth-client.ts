@@ -40,6 +40,7 @@ import {
   type ApiServerId,
   type AppId,
   appIdSchema,
+  isHardcodedAppId,
   SCHEMAVAULTS_AUTH_APP_DEFINITION,
   SCHEMAVAULTS_WEB,
   type SchemaVaultsAppEnvironment,
@@ -888,6 +889,17 @@ export class SchemaVaultsAuthClient
   public async acquireAccessToken(
     opts: AcquireAccessTokenOptions,
   ): Promise<AccessToken> {
+    if (
+      opts.audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id &&
+      !isHardcodedAppId(this.app_id)
+    ) {
+      throw new Error(
+        `Client application '${this.app_id}' cannot acquire ` +
+          `'${SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}' audience access tokens: ` +
+          `only hardcoded SchemaVaults apps may request auth-server access tokens.`,
+      );
+    }
+
     let tradeRefreshTokenForAccessToken: (
       inputs: IAcquireAccessTokenFnOptions,
     ) => Promise<AccessToken>;
