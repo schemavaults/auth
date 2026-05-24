@@ -18,6 +18,13 @@ export const SERVER_SETTING_DEFINITIONS = {
     schema: z.boolean(),
     description: "Whether the server is running in private beta mode",
   },
+  admin_only_organization_creation: {
+    valueType: "boolean" as const,
+    defaultValue: false,
+    schema: z.boolean(),
+    description:
+      "Whether only admins can create new organizations. When false, any non-disabled user can create organizations.",
+  },
 } as const satisfies Record<
   string,
   {

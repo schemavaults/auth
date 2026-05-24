@@ -18,6 +18,7 @@ import {
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
 import captureServerException from "@/lib/captureServerException";
+import adminOnlyOrganizationCreation from "@/lib/config/admin-only-organization-creation";
 
 const ROUTE = "/api/organizations";
 
@@ -27,10 +28,39 @@ async function POST_create_organization_handler({
   req,
   user,
   dbh,
+  redis,
   environment,
 }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> {
   if (environment === "development") {
     console.log("POST => /api/organizations");
+  }
+
+  // Enforce admin-only organization creation when the server setting is enabled
+  let adminOnly: boolean;
+  try {
+    adminOnly = await adminOnlyOrganizationCreation(dbh.db, redis?.client);
+  } catch (e: unknown) {
+    await captureServerException(dbh.db, e, {
+      op_name: "POST_create_organization_handler.adminOnlyOrganizationCreation",
+      route: ROUTE,
+      uid: user.uid,
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to check organization creation permissions",
+      } satisfies ResourceCreationResponse,
+      { status: 500 },
+    );
+  }
+  if (adminOnly && !user.admin) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Only admins may create new organizations on this server",
+      } satisfies ResourceCreationResponse,
+      { status: 403 },
+    );
   }
 
   // Parse new organization definitions from request body
