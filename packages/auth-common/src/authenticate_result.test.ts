@@ -57,7 +57,7 @@ describe("authenticateResultSchema (discriminated union)", () => {
     const value = {
       kind: "failure" as const,
       success: false as const,
-      message: "Incorrect password",
+      message: "Invalid email or password",
     };
     const parsed = authenticateResultSchema.parse(value);
     expect(parsed.kind).toBe("failure");
