@@ -151,3 +151,30 @@ export async function verifyPassword(opts: {
   }
   return timingSafeEqual(computedBuf, savedBuf);
 }
+
+// All-zeros UUID, in the same uid-shape that real users have so the v2
+// hash pre-image has the same length as a real verification call.
+const DUMMY_UID = "00000000-0000-0000-0000-000000000000";
+// 64-char lowercase hex (256 bits) — same shape as a real SHA-256 digest.
+const DUMMY_SAVED_HASH = "0".repeat(64);
+
+/**
+ * Run a password verification against a constant dummy uid and a constant
+ * dummy stored hash. The result is always `false` and is intentionally
+ * discarded — the sole purpose of this call is to perform the same amount
+ * of hashing work that a real {@link verifyPassword} call would perform,
+ * so that the latency of the login endpoint does not depend on whether
+ * the supplied email belongs to a real user. Used by `handleLogin` on the
+ * "user not found" branch to close the timing side channel that
+ * accompanies email-enumeration.
+ */
+export async function runDummyPasswordVerification(
+  password: string,
+): Promise<void> {
+  await verifyPassword({
+    uid: DUMMY_UID,
+    password,
+    savedHash: DUMMY_SAVED_HASH,
+    version: LATEST_PASSWORD_HASH_VERSION,
+  });
+}

@@ -83,7 +83,10 @@ export async function POST(
       callback: async () => await handleLogin({ body: body_json, req }),
     });
 
-    if (email && (response.status === 401 || response.status === 404)) {
+    // Both the "no such user" and "wrong password" branches in handleLogin
+    // now return 401 with a constant body, so a single 401 check covers
+    // both negative cases for lockout-counter increment.
+    if (email && response.status === 401) {
       await using redis = RedisCache.createConnection();
       await incrementRateLimitCounter(redis.client, LOGIN_LOCKOUT, { ip, email });
     }

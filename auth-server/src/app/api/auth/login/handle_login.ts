@@ -22,6 +22,12 @@ import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHav
 import captureServerException from "@/lib/captureServerException";
 import { RedisCache } from "@/lib/redis";
 import { createChallenge } from "@/lib/mfa";
+import { runDummyPasswordVerification } from "@/lib/hash_password";
+
+// Constant message returned for both "no such user" and "wrong password"
+// failures, so that an unauthenticated caller cannot tell whether an email
+// is registered. Paired with a uniform 401 status code on both branches.
+const INVALID_CREDENTIALS_MESSAGE = "Invalid email or password";
 
 const ROUTE = "/api/auth/login";
 
@@ -106,14 +112,20 @@ export async function handleLogin({
   }
 
   if (!user) {
+    // Constant-time guard against email enumeration: do the same hashing
+    // work a real password verification would do, then return the same
+    // 401 with the same body as the "wrong password" branch below. The
+    // result of the dummy verification is intentionally discarded.
+    await runDummyPasswordVerification(email_credentials.password);
+    console.error("[handleLogin] Invalid credentials (no such user)");
     return NextResponse.json(
       {
         kind: "failure",
         success: false,
-        message: "User not found",
+        message: INVALID_CREDENTIALS_MESSAGE,
       } satisfies AuthenticateResult,
       {
-        status: 404,
+        status: 401,
       },
     );
   }
@@ -155,12 +167,12 @@ export async function handleLogin({
   }
 
   if (!compare_password_matches) {
-    console.error("[handleLogin] Incorrect password");
+    console.error("[handleLogin] Invalid credentials");
     return NextResponse.json(
       {
         kind: "failure",
         success: false,
-        message: "Incorrect password",
+        message: INVALID_CREDENTIALS_MESSAGE,
       } satisfies AuthenticateResult,
       {
         status: 401,
