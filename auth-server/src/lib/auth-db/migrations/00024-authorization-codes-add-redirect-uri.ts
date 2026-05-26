@@ -12,11 +12,13 @@
 // row stores NULL in that case, and the redemption must also present
 // NULL (or no `redirect_uri` at all) to match.
 //
-// Existing rows are deleted rather than backfilled: authorization codes
-// are ≤10 minutes ephemeral (see MAX_AUTHORIZATION_CODE_AGE /
-// migration 00015) and cannot be associated with a redirect_uri
-// retroactively. Any in-flight OAuth flow will simply need to be
-// restarted. (Precedent: migration 00018, which added client_app_id.)
+// Pre-migration rows are intentionally NOT deleted: NULL is now a
+// legitimate, permanent value for this column (the account-page flow),
+// so `WHERE redirect_uri IS NULL` cannot distinguish "stale" from
+// "valid." The existing rows naturally expire within 10 minutes
+// (MAX_AUTHORIZATION_CODE_AGE) and the post-migration redemption logic
+// rejects them for any third-party redirect_uri presentation anyway —
+// the stored NULL won't match a non-null presented value.
 import type { Kysely } from "@schemavaults/dbh";
 import { sql } from "@/sql";
 
@@ -24,13 +26,6 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`
     ALTER TABLE AUTHORIZATION_CODES
     ADD COLUMN IF NOT EXISTS redirect_uri TEXT;
-  `.execute(db);
-
-  // Existing rows cannot be associated with a redirect_uri retroactively;
-  // drop them. They would have expired within 10 minutes anyway.
-  await sql`
-    DELETE FROM AUTHORIZATION_CODES
-    WHERE redirect_uri IS NULL;
   `.execute(db);
 }
 
