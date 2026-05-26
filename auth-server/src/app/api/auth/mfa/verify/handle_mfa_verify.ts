@@ -158,6 +158,7 @@ export async function handleMfaVerify({
       challenge.code_challenge,
       "S256",
       challenge.challenge_time,
+      challenge.redirect_uri ?? null,
     );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

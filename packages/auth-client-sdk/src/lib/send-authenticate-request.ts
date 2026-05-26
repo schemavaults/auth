@@ -27,6 +27,7 @@ export async function sendAuthenticateRequest(
     opts.authentication_type;
   const adapter: ISchemaVaultsAuthClientAdapter = opts.adapter;
   const env = opts.app_environment;
+  const redirect_uri: string | null = opts.redirect_uri;
 
   if (env === "development") {
     console.log(
@@ -94,6 +95,7 @@ export async function sendAuthenticateRequest(
     client_app_id,
     code_challenge: code_challenge.code_challenge,
     challenge_time: code_challenge.challenge_time,
+    redirect_uri,
   };
 
   let response: Response;

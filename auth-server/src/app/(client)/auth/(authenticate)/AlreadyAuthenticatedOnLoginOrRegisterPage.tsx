@@ -6,6 +6,8 @@ import generateAuthorizationCode from "@/lib/auth-db/users/generate-authorizatio
 import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import type { AppId, SchemaVaultsApp } from "@schemavaults/app-definitions";
+import { getAppEnvironment } from "@schemavaults/app-definitions";
+import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 import AppAuthorizationConsentScreen from "@/components/AppAuthorizationConsentScreen";
 import NativeAppCodeDelivery from "@/components/NativeAppCodeDelivery";
 import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
@@ -88,6 +90,23 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
   }
   const redirect_uri = opts.redirect_uri;
 
+  // OAuth2 redirect_uri allowlist check. The redirect_uri arrived on
+  // the URL untrusted; refuse to mint an authorization code unless its
+  // origin is registered for this client_app_id in the current
+  // environment.
+  const redirectUriAllowed = await isRedirectUriRegisteredForClientApp({
+    redirect_uri,
+    client_app_id: app_id,
+    environment: getAppEnvironment(),
+    dbh,
+  });
+  if (!redirectUriAllowed) {
+    console.warn(
+      `[AlreadyAuthenticatedOnLoginOrRegisterPage] redirect_uri '${redirect_uri}' is not registered for app '${app_id}'`,
+    );
+    redirectWithError(400, "invalid_redirect_uri");
+  }
+
   if (typeof opts.code_challenge_method !== 'string' || !opts.code_challenge_method || opts.code_challenge_method !== 'S256') {
     console.warn("Bad code challenge method!");
     redirectWithError(400, "bad_request");
@@ -115,6 +134,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     code_challenge,
     code_challenge_method,
     challenge_time,
+    redirect_uri,
     opts.debug,
   );
   if (typeof authorization_code !== 'string') {

@@ -23,6 +23,14 @@ export const authorizationCodePOSTbody = _createTokenEndpointBaseSchema
       .refine((value) => /^[A-Za-z0-9_-]+$/.test(value)),
     code_verifier: PKCE_ProofKeyManager.codeChallengeSchema,
     challenge_time: z.number().nonnegative(),
+    // OAuth2 `redirect_uri` (RFC 6749 §4.1.3) bound to the issued
+    // authorization code. The token endpoint verifies this matches the
+    // value persisted on the authorization_codes row by exact string
+    // equality, so a code minted for URI A cannot be redeemed by
+    // presenting URI B even when both share an allowlisted origin.
+    // Null/absent is reserved for the auth server's own account flow,
+    // which has no third-party callback.
+    redirect_uri: z.string().url().nullable().optional(),
   })
   .required({
     grant_type: true,

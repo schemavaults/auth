@@ -15,7 +15,7 @@ import type { UserData } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
-import { appIdSchema, getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { appIdSchema, getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
@@ -23,6 +23,7 @@ import captureServerException from "@/lib/captureServerException";
 import { RedisCache } from "@/lib/redis";
 import { createChallenge } from "@/lib/mfa";
 import { runDummyPasswordVerification } from "@/lib/hash_password";
+import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 
 // Constant message returned for both "no such user" and "wrong password"
 // failures, so that an unauthenticated caller cannot tell whether an email
@@ -44,6 +45,10 @@ const loginBodySchema = z
     client_app_id: appIdSchema,
     code_challenge: PKCE_ProofKeyManager.codeChallengeSchema,
     challenge_time: z.number().nonnegative(),
+    // OAuth2 `redirect_uri` to bind to the issued authorization code.
+    // Required for third-party app flows; null/absent only for the auth
+    // server's own /account flow (client_app_id === auth-server's own).
+    redirect_uri: z.string().url().nullable().optional(),
   })
   .required({
     credentials: true,
@@ -68,8 +73,42 @@ export async function handleLogin({
   const client_app_id = parse_login_body.data.client_app_id;
   const code_challenge: string = parse_login_body.data.code_challenge;
   const challenge_time: number = parse_login_body.data.challenge_time;
+  const redirect_uri: string | null = parse_login_body.data.redirect_uri ?? null;
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
+  // OAuth2 redirect_uri allowlist check. Refuse to mint a code if a
+  // redirect_uri was supplied but is not registered for the requesting
+  // client_app_id. For the auth server's own /account flow there is no
+  // third-party redirect_uri to bind, so null is accepted only for the
+  // hardcoded auth-server app_id.
+  if (redirect_uri !== null) {
+    const allowed = await isRedirectUriRegisteredForClientApp({
+      redirect_uri,
+      client_app_id,
+      environment: appEnv,
+      dbh,
+    });
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          kind: "failure",
+          success: false,
+          message: "redirect_uri is not registered for this client_app_id",
+        } satisfies AuthenticateResult,
+        { status: 400 },
+      );
+    }
+  } else if (client_app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+    return NextResponse.json(
+      {
+        kind: "failure",
+        success: false,
+        message: "redirect_uri is required for this client_app_id",
+      } satisfies AuthenticateResult,
+      { status: 400 },
+    );
+  }
 
   let userRegistry: UserRegistry;
   try {
@@ -277,6 +316,7 @@ export async function handleLogin({
         client_app_id,
         code_challenge,
         challenge_time,
+        redirect_uri,
       });
       return NextResponse.json(
         {
@@ -313,6 +353,7 @@ export async function handleLogin({
       code_challenge,
       "S256",
       challenge_time,
+      redirect_uri,
     );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

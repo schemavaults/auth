@@ -26,6 +26,12 @@ export interface IHandleSuccessfulAuthenticationOpts {
   // rejects the exchange if this does not match the value it persisted
   // before the authorize redirect.
   received_state: string | null | undefined;
+  // OAuth2 `redirect_uri` that was sent at issuance. The token endpoint
+  // verifies this matches the value persisted on the authorization
+  // code's row by exact string equality — refusing to swap a code's
+  // redirect_uri between issuance and redemption. `null` for the auth
+  // server's own /account flow.
+  redirect_uri: string | null;
   loadCodeVerifier: (challenge_time: number) => string | null;
   loadOAuth2State: (challenge_time: number) => string | null;
   debug: boolean;
@@ -48,6 +54,7 @@ export async function handleSuccessfulAuthentication({
   challenge_time,
   code_verifier,
   received_state,
+  redirect_uri,
   loadCodeVerifier,
   loadOAuth2State,
   debug,
@@ -261,6 +268,7 @@ export async function handleSuccessfulAuthentication({
       client_app_id,
       audience,
       challenge_time,
+      redirect_uri,
     } satisfies z.infer<typeof authorizationCodePOSTbody>);
     if (!parsed.success) {
       throw parsed.error;

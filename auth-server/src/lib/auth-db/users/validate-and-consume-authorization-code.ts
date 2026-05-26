@@ -38,6 +38,7 @@ export async function validateAndConsumeAuthorizationCode(
   client_app_id: AppId,
   code_verifier: string,
   challenge_time: number,
+  redirect_uri: string | null,
   debug: boolean = false,
 ): Promise<{ uid: string } | null> {
   if (debug) {
@@ -101,6 +102,7 @@ export async function validateAndConsumeAuthorizationCode(
       uid,
       client_app_id: stored_client_app_id,
       expires_at,
+      redirect_uri: stored_redirect_uri,
     } = parsed_authorization_code.data;
 
     // 3. Defense-in-depth: the code must be redeemed by the same client
@@ -111,6 +113,39 @@ export async function validateAndConsumeAuthorizationCode(
       if (debug) {
         console.warn(
           `[validateAndConsumeAuthorizationCode] client_app_id mismatch: code was issued for "${stored_client_app_id}", redeem attempted as "${client_app_id}"`,
+        );
+      }
+      return null;
+    }
+
+    // 3b. Defense against authorization-code interception: the
+    // `redirect_uri` presented at redemption MUST equal the one bound
+    // to the code at issuance (RFC 6749 §4.1.3). Without this, an
+    // attacker who phished a victim through a crafted login URL with an
+    // attacker-controlled `redirect_uri` and `code_challenge` could trade
+    // the stolen authorization code by presenting their own URI at the
+    // token endpoint. Comparison treats null/undefined as the same
+    // "no redirect_uri" sentinel (the account-page flow); a null vs
+    // string mismatch is rejected. String-vs-string compare is
+    // timing-safe over UTF-8 bytes, mirroring the PKCE compare below.
+    const presented_redirect_uri: string | null = redirect_uri ?? null;
+    const expected_redirect_uri: string | null = stored_redirect_uri ?? null;
+    const bothNull =
+      presented_redirect_uri === null && expected_redirect_uri === null;
+    let redirectUriMatches: boolean = bothNull;
+    if (
+      !bothNull &&
+      typeof presented_redirect_uri === "string" &&
+      typeof expected_redirect_uri === "string"
+    ) {
+      const a = Buffer.from(presented_redirect_uri, "utf8");
+      const b = Buffer.from(expected_redirect_uri, "utf8");
+      redirectUriMatches = a.length === b.length && timingSafeEqual(a, b);
+    }
+    if (!redirectUriMatches) {
+      if (debug) {
+        console.warn(
+          "[validateAndConsumeAuthorizationCode] redirect_uri mismatch — issued vs presented differ",
         );
       }
       return null;
