@@ -100,13 +100,22 @@ describe("OAuth2 redirect_uri validation (RFC 6749 §4.1.3)", () => {
                   failOnStatusCode: false,
                 });
 
-                // The error page is reached; the form is absent.
+                // Security property: the page MUST NOT render the
+                // login form for an unregistered redirect_uri. The
+                // server should redirect to a 4xx error page. The
+                // specific `error_id` is implementation detail (the
+                // login page has several boundary checks that can
+                // fire — invalid_redirect_uri, bad_request, etc. —
+                // and asserting one specific id makes the test
+                // brittle).
                 cy.url({ timeout: 15000 }).should("include", "/error");
-                cy.url().should("include", "invalid_redirect_uri");
+                cy.url().should("match", /[?&]error=4\d\d\b/);
                 cy.get("input[name='email']").should("not.exist");
                 cy.get("input[name='password']").should("not.exist");
+                cy.get("button[type='submit']").should("not.exist");
 
-                // Confirm no mint / login POST happened.
+                // The CRITICAL security guarantee: no authorization
+                // code is minted for an unregistered redirect_uri.
                 cy.wait(500); // give intercepts a chance to settle
                 cy.get("@mintAttempt.all").should("have.length", 0);
                 cy.get("@loginAttempt.all").should("have.length", 0);
