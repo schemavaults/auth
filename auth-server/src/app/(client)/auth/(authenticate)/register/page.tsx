@@ -23,6 +23,7 @@ import validateAppIdSearchParamOrRedirectWithError from "../validateAppIdSearchP
 import AlreadyAuthenticatedOnLoginOrRegisterPage from "../AlreadyAuthenticatedOnLoginOrRegisterPage";
 import toPartialAppInfo from "@/lib/PartialAppInfo";
 import { connection } from "next/server";
+import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 
 export default async function RegisterPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -57,6 +58,33 @@ export default async function RegisterPage(props: {
   if (on_successful_authenticate !== 'account-page' && !app) {
     console.error("Failed to load app definition despite 'on_successful_authenticate' of: ", on_successful_authenticate);
     redirectWithError(500, "internal_server_error");
+  }
+
+  // OAuth2 redirect_uri allowlist check. For any third-party PKCE flow,
+  // the `redirect_uri` arrived on the URL untrusted; refuse to render
+  // the register form unless its origin is registered for this app in
+  // the current environment. The /account flow has no redirect_uri so
+  // this gate is skipped there.
+  if (on_successful_authenticate !== 'account-page' && app) {
+    const raw_redirect_uri = typeof searchParams.redirect_uri === 'string'
+      ? searchParams.redirect_uri
+      : null;
+    if (!raw_redirect_uri) {
+      console.warn("[RegisterPage] Third-party PKCE flow missing redirect_uri");
+      redirectWithError(400, "invalid_redirect_uri");
+    }
+    const allowed = await isRedirectUriRegisteredForClientApp({
+      redirect_uri: raw_redirect_uri,
+      client_app_id: app.app_id,
+      environment,
+      dbh,
+    });
+    if (!allowed) {
+      console.warn(
+        `[RegisterPage] redirect_uri '${raw_redirect_uri}' is not registered for app '${app.app_id}'`,
+      );
+      redirectWithError(400, "invalid_redirect_uri");
+    }
   }
 
   // Validate OAuth2 `state` at the entry boundary. Malformed values

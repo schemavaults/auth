@@ -61,11 +61,17 @@ export interface ISchemaVaultsAuthClient {
   // Send credentials to start authentication. Returns the parsed
   // AuthenticateResult discriminated union; callers must branch on `kind`
   // to handle the `mfa_required` case (see verifyMfaChallenge).
+  //
+  // `redirect_uri` is bound to the issued authorization code and
+  // verified at the token-exchange step. Pass the same value the SDK
+  // sent to `/auth/login?redirect_uri=…`. Use `null` only for the auth
+  // server's own /account flow (no third-party callback).
   sendAuthenticateRequest: (
     authentication_type: AuthenticationOutcomeType,
     client_app_id: AppId,
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
+    redirect_uri: string | null,
   ) => Promise<AuthenticateResult>;
 
   /**

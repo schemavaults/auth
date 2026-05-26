@@ -12,6 +12,7 @@ const ERROR_IDS = [
   "server_misconfiguration",
   "account_not_in_organization",
   "pkce_challenge_expired",
+  "invalid_redirect_uri",
 ] as const satisfies readonly string[];
 
 export type SchemaVaultsAuthErrorId = (typeof ERROR_IDS)[number];
@@ -38,6 +39,8 @@ export const ERROR_MESSAGE_CATALOG: Record<SchemaVaultsAuthErrorId, string> = {
     "Your account is not a member of the organization required for the attempted action.",
   pkce_challenge_expired:
     "Your authorization session has expired. Please return to the requesting application and try again.",
+  invalid_redirect_uri:
+    "The redirect URI presented by the requesting application is not registered for it. For your safety, login has been blocked.",
 };
 
 export function isValidErrorId(id: string): id is SchemaVaultsAuthErrorId {

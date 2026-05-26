@@ -12,6 +12,12 @@ export interface ISendAuthenticateRequestOptions {
   code_challenge: CodeChallengeWithDetails;
   app_environment: SchemaVaultsAppEnvironment;
   invite_code_required: boolean;
+  // OAuth2 `redirect_uri` to bind the issued authorization code to.
+  // Required for third-party PKCE flows so the auth server can refuse
+  // to mint a code for an unregistered URI, and so the redemption-time
+  // exact-string compare in `handleSuccessfulAuthentication` has a
+  // value to match. Null only for the auth server's own /account flow.
+  redirect_uri: string | null;
 }
 
 export type { ISendAuthenticateRequestOptions as SendAuthenticateRequestOptions };

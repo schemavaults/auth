@@ -98,6 +98,7 @@ export class UserRegistry {
     code_challenge: string,
     code_challenge_method: "S256",
     challenge_time: number,
+    redirect_uri: string | null,
   ): Promise<string> {
     return generateAuthorizationCodeFn(
       this.db,
@@ -106,6 +107,7 @@ export class UserRegistry {
       code_challenge,
       code_challenge_method,
       challenge_time,
+      redirect_uri,
       this.debug
     );
   }
@@ -123,6 +125,7 @@ export class UserRegistry {
     client_app_id: AppId,
     code_verifier: string,
     challenge_time: number,
+    redirect_uri: string | null,
   ): Promise<{ uid: string } | null> {
     return validateAndConsumeAuthorizationCodeFn(
       this.db,
@@ -130,6 +133,7 @@ export class UserRegistry {
       client_app_id,
       code_verifier,
       challenge_time,
+      redirect_uri,
       this.debug
     );
   }

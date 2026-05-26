@@ -6,9 +6,10 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { generateAuthorizationCode } from "@/lib/auth-db/users/generate-authorization-code";
 import { z } from "zod";
-import { appIdSchema } from "@schemavaults/app-definitions";
+import { appIdSchema, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
+import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 
 const requestBodySchema = z
   .object({
@@ -16,6 +17,11 @@ const requestBodySchema = z
     code_challenge: codeChallengeSchema,
     code_challenge_method: z.literal("S256"),
     challenge_time: z.number().nonnegative(),
+    // OAuth2 `redirect_uri` to bind to the issued authorization code.
+    // Required when minting for a third-party app; absent only when the
+    // auth server itself is the requesting app (the /account flow has
+    // no third-party callback to bind).
+    redirect_uri: z.string().url().nullable().optional(),
   })
   .required({
     client_app_id: true,
@@ -65,6 +71,40 @@ export async function POST_generate_authorization_code(
         );
       }
 
+      // OAuth2 redirect_uri allowlist check. Refuse to mint a code if a
+      // redirect_uri was supplied that is not registered for the
+      // requesting client app. The auth server's own /account flow
+      // legitimately has no redirect_uri to bind, so null is accepted
+      // only for the hardcoded auth-server app_id.
+      const presentedRedirectUri: string | null = body.redirect_uri ?? null;
+      if (presentedRedirectUri !== null) {
+        const allowed = await isRedirectUriRegisteredForClientApp({
+          redirect_uri: presentedRedirectUri,
+          client_app_id: body.client_app_id,
+          environment,
+          dbh,
+        });
+        if (!allowed) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "redirect_uri is not registered for this client_app_id",
+              error_id: "invalid_redirect_uri",
+            },
+            { status: 400 },
+          );
+        }
+      } else if (body.client_app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "redirect_uri is required for this client_app_id",
+            error_id: "invalid_redirect_uri",
+          },
+          { status: 400 },
+        );
+      }
+
       try {
         const authorization_code = await generateAuthorizationCode(
           dbh.db,
@@ -73,6 +113,7 @@ export async function POST_generate_authorization_code(
           body.code_challenge,
           body.code_challenge_method,
           body.challenge_time,
+          presentedRedirectUri,
           environment === "development",
         );
 

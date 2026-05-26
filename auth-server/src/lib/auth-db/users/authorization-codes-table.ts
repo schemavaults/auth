@@ -13,6 +13,13 @@ export const authorizationCodeRecordSchema = z
     created_at: z.number().nonnegative(),
     expires_at: z.number().positive(),
     used_at: z.number().positive().nullable().optional(),
+    // OAuth2 `redirect_uri` (RFC 6749 §4.1.3) bound at issuance. Null for
+    // the auth server's own /account flow, which has no third-party
+    // callback; the redemption must present the same null/string value
+    // or it is rejected. Enforced as a valid URL so a malformed value
+    // cannot reach the DB even if a server-side caller skips its own
+    // body-schema check.
+    redirect_uri: z.string().url().max(2048).nullable().optional(),
   })
   .required({
     authorization_code: true,

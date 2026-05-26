@@ -15,6 +15,14 @@ const challengeStateSchema = z
     challenge_time: z.number(),
     attempts_remaining: z.number().int().nonnegative(),
     created_at: z.number().int().nonnegative(),
+    // OAuth2 `redirect_uri` carried across the MFA gate so the
+    // authorization code issued by /api/auth/mfa/verify can be bound to
+    // the same redirect_uri the user originally arrived with. Null for
+    // the auth server's own /account flow. Made nullable here for
+    // backwards-compatibility with in-flight challenges minted before
+    // this field was added; on a server restart with stale entries the
+    // verify path treats absent as null.
+    redirect_uri: z.string().nullable().optional(),
   })
   .strict();
 
@@ -32,6 +40,7 @@ export async function createChallenge(
     client_app_id: string;
     code_challenge: string;
     challenge_time: number;
+    redirect_uri: string | null;
     ttl_seconds?: number;
   },
 ): Promise<{ expires_at: number }> {
@@ -44,6 +53,7 @@ export async function createChallenge(
     challenge_time: args.challenge_time,
     attempts_remaining: MFA_CHALLENGE_MAX_ATTEMPTS,
     created_at: now,
+    redirect_uri: args.redirect_uri,
   };
   await client.set(makeKey(args.challenge_id), JSON.stringify(state), "EX", ttl);
   return { expires_at: now + ttl * 1000 };

@@ -617,11 +617,29 @@ export class SchemaVaultsAuthClient
     code_verifier?: string,
     received_state?: string | null,
   ): Promise<void> {
+    // Recompute the `redirect_uri` we sent at issuance so the token
+    // endpoint's exact-string binding check has a value to match. In the
+    // redirect flow the SDK built `redirect_uri = absolute(authorize_uri)`
+    // before sending the user to the auth server; we rebuild it from the
+    // same inputs here. In the account-page flow no third-party callback
+    // is involved, so `redirect_uri` is null.
+    const isRedirectFlow: boolean =
+      typeof code_verifier !== "string" || code_verifier.length === 0;
+    let redirect_uri: string | null = null;
+    if (isRedirectFlow) {
+      const cfgAuthorizeUri = this._authorize_uri;
+      if (typeof cfgAuthorizeUri === "string" && cfgAuthorizeUri.length > 0) {
+        redirect_uri = cfgAuthorizeUri.startsWith("/")
+          ? this.adapter.relativeUrlToAbsoluteUrl(cfgAuthorizeUri)
+          : cfgAuthorizeUri;
+      }
+    }
     return await handleSuccessfulAuthentication({
       authorization_code,
       challenge_time,
       code_verifier,
       received_state: received_state ?? null,
+      redirect_uri,
       loadCodeVerifier: this.loadCodeVerifier.bind(this),
       loadOAuth2State: this.loadOAuth2State.bind(this),
       auth_server_uri: this.auth_server_uri,
@@ -1008,6 +1026,7 @@ export class SchemaVaultsAuthClient
     client_app_id: AppId,
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
+    redirect_uri: string | null,
   ): Promise<AuthenticateResult> {
     if (this.DEBUG)
       console.log(
@@ -1021,6 +1040,7 @@ export class SchemaVaultsAuthClient
       code_challenge,
       app_environment: this.environment,
       invite_code_required: this._invite_code_required,
+      redirect_uri,
     });
   }
 

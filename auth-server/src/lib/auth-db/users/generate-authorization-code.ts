@@ -15,6 +15,7 @@ export async function generateAuthorizationCode(
   code_challenge: string,
   code_challenge_method: "S256",
   challenge_time: number,
+  redirect_uri: string | null,
   debug: boolean = false
 ): Promise<string> {
   if (debug) {
@@ -65,6 +66,7 @@ export async function generateAuthorizationCode(
       expires_at: now + MAX_AUTHORIZATION_CODE_AGE,
       used_at: null,
       challenge_time,
+      redirect_uri,
     };
 
     if (debug) {

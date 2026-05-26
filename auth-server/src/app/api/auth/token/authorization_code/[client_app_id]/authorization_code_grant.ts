@@ -77,6 +77,7 @@ export async function handleAuthorizationCodeGrant(
       body.client_app_id,
       code_verifier,
       challenge_time,
+      body.redirect_uri ?? null,
     );
     if (!result || typeof result.uid !== "string") {
       return NextResponse.json(

@@ -55,6 +55,30 @@ export function isOriginAllowedForClientApp(
 }
 
 /**
+ * Check whether an OAuth2 `redirect_uri` belongs to a client app's
+ * registered allowed-origins list for the given environment. The URI is
+ * parsed and its origin (scheme + host + port) is compared via
+ * {@link isOriginAllowedForClientApp}. A malformed URI is rejected.
+ *
+ * This is the single source of truth for "is this redirect_uri safe to
+ * issue an authorization code for?"; all auth-code minting endpoints,
+ * the login/register page render guard, and the SDK-driven
+ * client-side defense-in-depth check must funnel through here.
+ */
+export function isRedirectUriAllowedForClientApp(
+  redirect_uri: string,
+  allowedOrigins: readonly string[],
+): boolean {
+  let url: URL;
+  try {
+    url = new URL(redirect_uri);
+  } catch {
+    return false;
+  }
+  return isOriginAllowedForClientApp(url.origin, allowedOrigins);
+}
+
+/**
  * Build CORS headers for an allowed origin
  */
 export function buildCorsHeaders(origin: string, methods: string = "POST, OPTIONS"): HeadersInit {

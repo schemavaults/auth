@@ -20,7 +20,8 @@ import {
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import shouldCreateAsSuperuser from "./shouldCreateAsSuperuser";
 import lookupInviteCode from "@/lib/auth-db/users/lookup-invite-code";
-import { appIdSchema, getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { appIdSchema, getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import sendVerificationEmail from "@/lib/send-verification-email";
@@ -41,6 +42,10 @@ const registerBodySchema = z
     client_app_id: appIdSchema,
     code_challenge: PKCE_ProofKeyManager.codeChallengeSchema,
     challenge_time: z.number().nonnegative(),
+    // OAuth2 `redirect_uri` to bind to the issued authorization code.
+    // Required for third-party app flows; null/absent only for the auth
+    // server's own /account flow (client_app_id === auth-server's own).
+    redirect_uri: z.string().url().nullable().optional(),
   })
   .required({
     credentials: true,
@@ -107,8 +112,45 @@ export async function handleRegister({
   const code_challenge: string = registrationData.code_challenge;
   const challenge_time: number = registrationData.challenge_time;
   const invite_code: string | undefined = registrationData.invite_code;
+  const redirect_uri: string | null = registrationData.redirect_uri ?? null;
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
+
+  // OAuth2 redirect_uri allowlist check. Refuse to mint a code if a
+  // redirect_uri was supplied but is not registered for the requesting
+  // client_app_id. For the auth server's own /account flow there is no
+  // third-party redirect_uri to bind, so null is accepted only for the
+  // hardcoded auth-server app_id.
+  {
+    const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
+    if (redirect_uri !== null) {
+      const allowed = await isRedirectUriRegisteredForClientApp({
+        redirect_uri,
+        client_app_id,
+        environment: appEnv,
+        dbh,
+      });
+      if (!allowed) {
+        return NextResponse.json(
+          {
+            kind: "failure",
+            success: false,
+            message: "redirect_uri is not registered for this client_app_id",
+          } satisfies AuthenticateResult,
+          { status: 400 },
+        );
+      }
+    } else if (client_app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+      return NextResponse.json(
+        {
+          kind: "failure",
+          success: false,
+          message: "redirect_uri is required for this client_app_id",
+        } satisfies AuthenticateResult,
+        { status: 400 },
+      );
+    }
+  }
 
   // Details on invite code
   let inviteCodeRequired: boolean;
@@ -407,6 +449,7 @@ export async function handleRegister({
       code_challenge,
       "S256",
       challenge_time,
+      redirect_uri,
     );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

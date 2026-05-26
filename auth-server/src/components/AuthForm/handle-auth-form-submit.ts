@@ -196,6 +196,16 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   const target_client_app_id =
     opts.app?.app_id ?? SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
 
+  // The `redirect_uri` is sent on the auth request body so the server
+  // can refuse to mint a code for an unregistered URI and so the
+  // issued code can be bound to it for the redemption-time exact-string
+  // compare. The third-party PKCE flow carries it on the URL we landed
+  // on; the account-page flow has no third-party callback (null).
+  const request_redirect_uri: string | null =
+    opts.app && opts.app.app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+      ? searchParams.get("redirect_uri") ?? null
+      : null;
+
   // Exchange credentials for an authorization code, or be told that the
   // user must complete an MFA challenge first.
   let authorization_code: string;
@@ -205,6 +215,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       target_client_app_id,
       values,
       code_challenge,
+      request_redirect_uri,
     );
     if (result.kind === "mfa_required") {
       // The MFA challenge page lives at a different URL, so the
