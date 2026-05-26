@@ -1,6 +1,6 @@
 name: Run tests on feature branch
 env:
-  BUN_VERSION: 1.3.11
+  BUN_VERSION: 1.3.14
   NODE_VERSION: 24
 
 on:
