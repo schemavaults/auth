@@ -4,6 +4,7 @@ import { useState, type ReactElement } from "react";
 import { Button, useToast } from "@schemavaults/ui";
 import { Check, Loader2, X } from "lucide-react";
 import { clearPendingInvitationsCache } from "./usePendingInvitations";
+import { clearMyOrganizationsCache } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import type {
   OrganizationID,
@@ -54,6 +55,9 @@ export default function AcceptDeclineOrgInvitationButtons({
 
       // Refresh the invitations list
       clearPendingInvitationsCache(mutate);
+      if (action === "accept") {
+        clearMyOrganizationsCache(mutate);
+      }
     } catch (error: unknown) {
       toast({
         variant: "destructive",
