@@ -308,6 +308,11 @@ export async function handleLogin({
 
   if (userHasMfa) {
     try {
+      const mfaRegistry = new MfaRegistry(dbh.db);
+      const [available_factors, recovery_codes_remaining] = await Promise.all([
+        mfaRegistry.listVerifiedFactorsForUser(uid),
+        mfaRegistry.countRecoveryCodesRemaining(uid),
+      ]);
       const challenge_id = crypto.randomUUID();
       await using redis = RedisCache.createConnection();
       const { expires_at } = await createChallenge(redis.client, {
@@ -325,6 +330,8 @@ export async function handleLogin({
           message: "MFA required",
           challenge_id,
           expires_at,
+          available_factors,
+          recovery_codes_available: recovery_codes_remaining > 0,
         } satisfies AuthenticateResult,
         { status: 200 },
       );

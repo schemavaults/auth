@@ -5,6 +5,7 @@ import type {
   MfaStatusResponse,
   MfaEnrollResponse,
   MfaVerifyEnrollmentResponse,
+  MfaChallengeFactorsResponse,
   AuthenticateResult,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
@@ -28,9 +29,13 @@ export interface UseMfaResult {
     challenge_id: string,
     client_app_id: string,
     proof:
-      | { type: "totp"; code: string }
+      | { type: "totp"; factor_id: string; code: string }
       | { type: "recovery_code"; recovery_code: string },
   ) => Promise<AuthenticateResult>;
+  getChallengeFactors: (
+    challenge_id: string,
+    client_app_id: string,
+  ) => Promise<MfaChallengeFactorsResponse>;
 }
 
 function requireClient(
@@ -95,11 +100,19 @@ export function useMfa(): UseMfaResult {
       challenge_id: string,
       client_app_id: string,
       proof:
-        | { type: "totp"; code: string }
+        | { type: "totp"; factor_id: string; code: string }
         | { type: "recovery_code"; recovery_code: string },
     ) => {
       const client = requireClient(auth);
       return await client.verifyMfaChallenge(challenge_id, client_app_id, proof);
+    },
+    [auth],
+  );
+
+  const getChallengeFactors = useCallback(
+    async (challenge_id: string, client_app_id: string) => {
+      const client = requireClient(auth);
+      return await client.getMfaChallengeFactors(challenge_id, client_app_id);
     },
     [auth],
   );
@@ -113,5 +126,6 @@ export function useMfa(): UseMfaResult {
     removeFactor,
     regenerateRecoveryCodes,
     submitChallenge,
+    getChallengeFactors,
   };
 }

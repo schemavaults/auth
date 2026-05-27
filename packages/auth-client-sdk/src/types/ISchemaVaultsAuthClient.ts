@@ -8,6 +8,7 @@ import type {
   MfaStatusResponse,
   MfaEnrollResponse,
   MfaVerifyEnrollmentResponse,
+  MfaChallengeFactorsResponse,
   OrganizationMembershipRoleDetails,
   SchemaVaultsAuthErrorId,
 } from "@schemavaults/auth-common";
@@ -85,12 +86,27 @@ export interface ISchemaVaultsAuthClient {
     challenge_id: string,
     client_app_id: AppId,
     proof:
-      | { type: "totp"; code: string }
+      | { type: "totp"; factor_id: string; code: string }
       | { type: "recovery_code"; recovery_code: string },
   ) => Promise<AuthenticateResult>;
 
   /** Get the current user's MFA enrollment status. */
   getMfaStatus: () => Promise<MfaStatusResponse>;
+
+  /**
+   * Fetch the list of MFA factors that can resolve a specific in-flight
+   * challenge. The auth server resolves the underlying user from the
+   * Redis challenge store, so this can be called from an unauthenticated
+   * MFA challenge page using just `challenge_id` + `client_app_id`.
+   *
+   * Throws `MfaChallengeExpiredError` when the challenge has been
+   * exhausted or expired (HTTP 410); callers should redirect the user
+   * back to the login page.
+   */
+  getMfaChallengeFactors: (
+    challenge_id: string,
+    client_app_id: AppId,
+  ) => Promise<MfaChallengeFactorsResponse>;
 
   /**
    * Begin TOTP enrollment for the current user. Returns the new factor's

@@ -33,8 +33,10 @@ async function POST_regenerate_handler(
   const mfaRegistry = new MfaRegistry(dbh.db);
 
   try {
-    const verified = await mfaRegistry.getVerifiedFactor(user.uid);
-    if (!verified) {
+    const verifiedSummaries = await mfaRegistry.listVerifiedFactorsForUser(
+      user.uid,
+    );
+    if (verifiedSummaries.length === 0) {
       return NextResponse.json(
         {
           success: false,
@@ -43,7 +45,20 @@ async function POST_regenerate_handler(
         { status: 409 },
       );
     }
-    if (!verifyTotpCode({ secret: verified.secret, code })) {
+    // Accept a TOTP code from any of the user's verified factors.
+    let codeAccepted = false;
+    for (const summary of verifiedSummaries) {
+      const fullFactor = await mfaRegistry.getVerifiedFactorById({
+        uid: user.uid,
+        factor_id: summary.factor_id,
+      });
+      if (!fullFactor) continue;
+      if (verifyTotpCode({ secret: fullFactor.secret, code })) {
+        codeAccepted = true;
+        break;
+      }
+    }
+    if (!codeAccepted) {
       return NextResponse.json(
         { success: false, message: "Invalid TOTP code" },
         { status: 401 },

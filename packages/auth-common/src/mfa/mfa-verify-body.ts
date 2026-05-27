@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { appIdSchema } from "@schemavaults/app-definitions";
+import { availableMfaFactorSchema } from "../authenticate_result";
 
 export const totpCodeSchema = z
   .string()
@@ -15,7 +16,13 @@ export const mfaVerifyBodySchema = z
     challenge_id: z.string().uuid(),
     client_app_id: appIdSchema,
     proof: z.discriminatedUnion("type", [
-      z.object({ type: z.literal("totp"), code: totpCodeSchema }).strict(),
+      z
+        .object({
+          type: z.literal("totp"),
+          factor_id: z.string().uuid(),
+          code: totpCodeSchema,
+        })
+        .strict(),
       z
         .object({ type: z.literal("recovery_code"), recovery_code: recoveryCodeSchema })
         .strict(),
@@ -78,3 +85,19 @@ export const mfaCodeOnlyBodySchema = z
   .strict();
 
 export type MfaCodeOnlyBody = z.infer<typeof mfaCodeOnlyBodySchema>;
+
+// Response from `GET /api/auth/mfa/challenge/factors` — describes which
+// MFA factors a particular in-flight challenge can be resolved with. The
+// caller proves possession of the challenge by supplying its `challenge_id`
+// (and the bound `client_app_id`); the endpoint resolves the underlying
+// user via the Redis challenge store and reports their verified factors.
+export const mfaChallengeFactorsResponseSchema = z
+  .object({
+    available_factors: z.array(availableMfaFactorSchema),
+    recovery_codes_available: z.boolean(),
+  })
+  .strict();
+
+export type MfaChallengeFactorsResponse = z.infer<
+  typeof mfaChallengeFactorsResponseSchema
+>;

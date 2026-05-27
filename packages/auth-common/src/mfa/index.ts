@@ -19,10 +19,12 @@ export {
   mfaVerifyEnrollmentResponseSchema,
   mfaStatusResponseSchema,
   mfaCodeOnlyBodySchema,
+  mfaChallengeFactorsResponseSchema,
   type MfaVerifyBody,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentBody,
   type MfaVerifyEnrollmentResponse,
   type MfaStatusResponse,
   type MfaCodeOnlyBody,
+  type MfaChallengeFactorsResponse,
 } from "./mfa-verify-body";

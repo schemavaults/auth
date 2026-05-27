@@ -9,7 +9,7 @@ export interface VerifyMfaChallengeOpts {
   challenge_id: string;
   client_app_id: string;
   proof:
-    | { type: "totp"; code: string }
+    | { type: "totp"; factor_id: string; code: string }
     | { type: "recovery_code"; recovery_code: string };
 }
 

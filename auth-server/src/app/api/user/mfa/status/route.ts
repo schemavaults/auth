@@ -19,23 +19,33 @@ async function GET_status_handler(
 ): Promise<NextResponse> {
   try {
     const mfaRegistry = new MfaRegistry(dbh.db);
-    const verified = await mfaRegistry.getVerifiedFactor(user.uid);
+    const verifiedSummaries = await mfaRegistry.listVerifiedFactorsForUser(
+      user.uid,
+    );
     const payload: MfaStatusResponse = await (async () => {
-      if (!verified) {
+      const primary = verifiedSummaries[0];
+      if (!primary) {
         return { enabled: false } satisfies MfaStatusResponse;
       }
+      // The current response shape carries one factor's metadata. When
+      // additional factor types ship, this endpoint will need to be
+      // extended to return the full factor list.
+      const fullFactor = await mfaRegistry.getVerifiedFactorById({
+        uid: user.uid,
+        factor_id: primary.factor_id,
+      });
       const recovery_codes_remaining =
         await mfaRegistry.countRecoveryCodesRemaining(user.uid);
       // Postgres returns BIGINT columns as strings; coerce to number so the
       // mfaStatusResponseSchema (which expects z.number()) parses on both
       // ends of the wire.
-      const verified_at_raw = verified.row.verified_at;
+      const verified_at_raw = fullFactor?.row.verified_at ?? null;
       const verified_at =
         verified_at_raw == null ? undefined : Number(verified_at_raw);
       return {
         enabled: true,
-        factor_id: verified.row.factor_id,
-        factor_type: "totp",
+        factor_id: primary.factor_id,
+        factor_type: primary.factor_type,
         verified_at,
         recovery_codes_remaining,
       } satisfies MfaStatusResponse;

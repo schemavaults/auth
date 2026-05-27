@@ -61,13 +61,30 @@ async function DELETE_factor_handler(
     // For an unverified factor we still verify against its secret since
     // that's the only credential available; this prevents an idle session
     // hijack from quietly deleting a partially-enrolled factor.
-    const verified = await mfaRegistry.getVerifiedFactor(user.uid);
-    if (verified) {
-      const isValid = verifyTotpCode({
-        secret: verified.secret,
-        code,
-      });
-      if (!isValid) {
+    const verifiedSummaries = await mfaRegistry.listVerifiedFactorsForUser(
+      user.uid,
+    );
+    const isLastVerifiedFactor =
+      verifiedSummaries.length === 1 &&
+      verifiedSummaries[0]?.factor_id === factor_id;
+    if (verifiedSummaries.length > 0) {
+      // Accept a TOTP code from any of the user's verified factors. This
+      // preserves the single-factor UX and allows a user with multiple
+      // factors to authorize the deletion with whichever one they have
+      // handy.
+      let codeAccepted = false;
+      for (const summary of verifiedSummaries) {
+        const fullFactor = await mfaRegistry.getVerifiedFactorById({
+          uid: user.uid,
+          factor_id: summary.factor_id,
+        });
+        if (!fullFactor) continue;
+        if (verifyTotpCode({ secret: fullFactor.secret, code })) {
+          codeAccepted = true;
+          break;
+        }
+      }
+      if (!codeAccepted) {
         return NextResponse.json(
           { success: false, message: "Invalid TOTP code" },
           { status: 401 },
@@ -77,7 +94,7 @@ async function DELETE_factor_handler(
 
     // Delete this factor and (if it was the last verified factor) wipe
     // recovery codes too.
-    if (verified && verified.row.factor_id === factor_id) {
+    if (isLastVerifiedFactor) {
       await mfaRegistry.deleteAllFactorsForUser(user.uid);
     } else {
       await mfaRegistry.deleteFactor({ uid: user.uid, factor_id });

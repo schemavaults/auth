@@ -4,9 +4,13 @@ import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { hasVerifiedFactor as hasVerifiedFactorFn } from "./has-verified-factor";
 import {
-  getVerifiedFactor as getVerifiedFactorFn,
+  getVerifiedFactorById as getVerifiedFactorByIdFn,
   type VerifiedFactor,
-} from "./get-verified-factor";
+} from "./get-verified-factor-by-id";
+import {
+  listVerifiedFactorsForUser as listVerifiedFactorsForUserFn,
+  type VerifiedFactorSummary,
+} from "./list-verified-factors-for-user";
 import { listVerifiedFactorTypesForUser as listVerifiedFactorTypesForUserFn } from "./list-verified-factor-types-for-user";
 import type { MfaFactorType } from "@schemavaults/auth-common";
 import { getFactorById as getFactorByIdFn } from "./get-factor-by-id";
@@ -33,8 +37,17 @@ export class MfaRegistry {
     return hasVerifiedFactorFn(this.db, uid);
   }
 
-  public getVerifiedFactor(uid: string): Promise<VerifiedFactor | null> {
-    return getVerifiedFactorFn(this.db, uid);
+  public getVerifiedFactorById(args: {
+    uid: string;
+    factor_id: string;
+  }): Promise<VerifiedFactor | null> {
+    return getVerifiedFactorByIdFn(this.db, args);
+  }
+
+  public listVerifiedFactorsForUser(
+    uid: string,
+  ): Promise<VerifiedFactorSummary[]> {
+    return listVerifiedFactorsForUserFn(this.db, uid);
   }
 
   public listVerifiedFactorTypesForUser(uid: string): Promise<MfaFactorType[]> {
