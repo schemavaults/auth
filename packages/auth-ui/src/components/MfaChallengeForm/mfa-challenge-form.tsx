@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  type FC,
-  type FormEvent,
-  type ReactElement,
-} from "react";
+import { useState, type FC, type FormEvent, type ReactElement } from "react";
 import {
   Button,
   Card,
@@ -29,79 +23,36 @@ export interface MfaChallengeFormProps {
   challenge_id: string;
   client_app_id: string;
   expires_at?: number;
+  // Factor list and recovery-code availability for this challenge. The
+  // login form stashes these from the `mfa_required` response into
+  // sessionStorage; the page that renders this form reads them back out
+  // and passes them in. Required props because the picker needs them to
+  // render — there is no in-form fallback fetch.
+  available_factors: AvailableMfaFactor[];
+  recovery_codes_available: boolean;
   onAuthenticated: (authorization_code: string) => Promise<void> | void;
   onChallengeExpired?: () => void;
-}
-
-interface FactorsState {
-  loading: boolean;
-  factors: AvailableMfaFactor[];
-  recovery_codes_available: boolean;
-  error: string | null;
 }
 
 export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
   challenge_id,
   client_app_id,
   expires_at,
+  available_factors,
+  recovery_codes_available,
   onAuthenticated,
   onChallengeExpired,
 }): ReactElement => {
-  const { submitChallenge, getChallengeFactors } = useMfa();
+  const { submitChallenge } = useMfa();
   const [useRecovery, setUseRecovery] = useState(false);
   const [value, setValue] = useState("");
-  const [selectedFactorId, setSelectedFactorId] = useState<string>("");
+  const [selectedFactorId, setSelectedFactorId] = useState<string>(
+    // Default to the most-recently-used factor — the login response sorts
+    // available_factors by last_used_at DESC NULLS LAST.
+    available_factors[0]?.factor_id ?? "",
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [factorsState, setFactorsState] = useState<FactorsState>({
-    loading: true,
-    factors: [],
-    recovery_codes_available: false,
-    error: null,
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const result = await getChallengeFactors(challenge_id, client_app_id);
-        if (cancelled) return;
-        setFactorsState({
-          loading: false,
-          factors: result.available_factors,
-          recovery_codes_available: result.recovery_codes_available,
-          error: null,
-        });
-        // Default to the most-recently-used factor (server returns the
-        // list pre-sorted by last_used_at DESC).
-        if (result.available_factors[0]) {
-          setSelectedFactorId(result.available_factors[0].factor_id);
-        }
-      } catch (e: unknown) {
-        if (cancelled) return;
-        // The SDK signals expired/exhausted challenges by throwing an
-        // Error with `name === "MfaChallengeExpiredError"`. Matching on
-        // the name avoids depending on `@schemavaults/auth-client-sdk`
-        // here just to import the error class.
-        const isExpired =
-          e instanceof Error && e.name === "MfaChallengeExpiredError";
-        const message =
-          e instanceof Error ? e.message : "Failed to load MFA factors";
-        setFactorsState({
-          loading: false,
-          factors: [],
-          recovery_codes_available: false,
-          error: message,
-        });
-        if (isExpired && onChallengeExpired) {
-          onChallengeExpired();
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [challenge_id, client_app_id, getChallengeFactors, onChallengeExpired]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -149,8 +100,7 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
       ? `Expires ${new Date(expires_at).toLocaleTimeString()}`
       : null;
 
-  const showFactorPicker =
-    !useRecovery && factorsState.factors.length > 1;
+  const showFactorPicker = !useRecovery && available_factors.length > 1;
 
   const canSubmit =
     !submitting &&
@@ -172,62 +122,49 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-3">
-          {factorsState.loading ? (
-            <p
-              className="text-sm text-muted-foreground"
-              data-testid="mfa-challenge-loading"
+          {showFactorPicker ? (
+            <MfaFactorPicker
+              factors={available_factors}
+              selected_factor_id={selectedFactorId}
+              onSelect={(id) => {
+                setSelectedFactorId(id);
+                setValue("");
+                setError(null);
+              }}
+              disabled={submitting}
+            />
+          ) : null}
+          <Input
+            inputMode={useRecovery ? "text" : "numeric"}
+            autoComplete="one-time-code"
+            value={value}
+            onChange={(e) =>
+              setValue(
+                useRecovery
+                  ? e.target.value
+                  : e.target.value.replace(/\D+/g, "").slice(0, 6),
+              )
+            }
+            placeholder={useRecovery ? "abcde-fghij" : "123456"}
+            data-testid="mfa-challenge-input"
+          />
+          {recovery_codes_available ? (
+            <button
+              type="button"
+              className="text-sm underline text-muted-foreground"
+              onClick={() => {
+                setUseRecovery((p) => !p);
+                setValue("");
+                setError(null);
+              }}
+              data-testid="mfa-challenge-toggle-recovery"
             >
-              Loading verification options…
-            </p>
-          ) : factorsState.error ? (
-            <p className="text-sm text-destructive">{factorsState.error}</p>
-          ) : (
-            <>
-              {showFactorPicker ? (
-                <MfaFactorPicker
-                  factors={factorsState.factors}
-                  selected_factor_id={selectedFactorId}
-                  onSelect={(id) => {
-                    setSelectedFactorId(id);
-                    setValue("");
-                    setError(null);
-                  }}
-                  disabled={submitting}
-                />
-              ) : null}
-              <Input
-                inputMode={useRecovery ? "text" : "numeric"}
-                autoComplete="one-time-code"
-                value={value}
-                onChange={(e) =>
-                  setValue(
-                    useRecovery
-                      ? e.target.value
-                      : e.target.value.replace(/\D+/g, "").slice(0, 6),
-                  )
-                }
-                placeholder={useRecovery ? "abcde-fghij" : "123456"}
-                data-testid="mfa-challenge-input"
-              />
-              {factorsState.recovery_codes_available ? (
-                <button
-                  type="button"
-                  className="text-sm underline text-muted-foreground"
-                  onClick={() => {
-                    setUseRecovery((p) => !p);
-                    setValue("");
-                    setError(null);
-                  }}
-                  data-testid="mfa-challenge-toggle-recovery"
-                >
-                  {useRecovery
-                    ? "Use authenticator app instead"
-                    : "Use a recovery code instead"}
-                </button>
-              ) : null}
-              {error && <p className="text-sm text-destructive">{error}</p>}
-            </>
-          )}
+              {useRecovery
+                ? "Use authenticator app instead"
+                : "Use a recovery code instead"}
+            </button>
+          ) : null}
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
         <CardFooter>
           <Button

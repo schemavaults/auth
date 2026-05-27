@@ -23,11 +23,6 @@ export {
   RefreshTokenExpiryCookieName,
 } from "@schemavaults/auth-common/RefreshTokenCookieNames";
 
-// Thrown by MFA-challenge lookups when the underlying Redis challenge
-// state has expired or been exhausted (HTTP 410). Callers should
-// redirect the user back to the login page.
-export { MfaChallengeExpiredError } from "./lib/mfa";
-
 // Hardcoded Apps
 export {
   getHardcodedApp,

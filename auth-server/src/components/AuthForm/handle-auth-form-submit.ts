@@ -20,6 +20,7 @@ import type { useRouter } from "next/navigation";
 import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { setMfaChallengeFactorsInSession } from "@/lib/mfa-challenge-factors-session-storage";
 
 export interface PendingAuthorizationState {
   authorization_code: string;
@@ -231,6 +232,15 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
           code_challenge.challenge_time,
         );
       }
+      // Stash the factor list and recovery-code availability into
+      // sessionStorage so the MFA challenge page can render the factor
+      // picker without re-fetching from the server. Tab-scoped, survives
+      // page refresh within the same tab — matches the lifetime of the
+      // in-flight challenge.
+      setMfaChallengeFactorsInSession(result.challenge_id, {
+        available_factors: result.available_factors,
+        recovery_codes_available: result.recovery_codes_available,
+      });
       const params = new URLSearchParams({
         challenge_id: result.challenge_id,
         client_app_id: target_client_app_id,

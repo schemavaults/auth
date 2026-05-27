@@ -86,18 +86,18 @@ export const mfaCodeOnlyBodySchema = z
 
 export type MfaCodeOnlyBody = z.infer<typeof mfaCodeOnlyBodySchema>;
 
-// Response from `GET /api/auth/mfa/challenge/factors` — describes which
-// MFA factors a particular in-flight challenge can be resolved with. The
-// caller proves possession of the challenge by supplying its `challenge_id`
-// (and the bound `client_app_id`); the endpoint resolves the underlying
-// user via the Redis challenge store and reports their verified factors.
-export const mfaChallengeFactorsResponseSchema = z
+// Shape of the MFA challenge factor list that the login form stashes in
+// sessionStorage (keyed by challenge_id) so the downstream MFA challenge
+// page can render the factor picker without a second server round-trip.
+// Mirrors the `available_factors` + `recovery_codes_available` fields the
+// server already includes in the `mfa_required` login response.
+export const mfaChallengeFactorsPayloadSchema = z
   .object({
     available_factors: z.array(availableMfaFactorSchema),
     recovery_codes_available: z.boolean(),
   })
   .strict();
 
-export type MfaChallengeFactorsResponse = z.infer<
-  typeof mfaChallengeFactorsResponseSchema
+export type MfaChallengeFactorsPayload = z.infer<
+  typeof mfaChallengeFactorsPayloadSchema
 >;

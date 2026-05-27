@@ -1,15 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, type ReactElement } from "react";
+import {
+  useCallback,
+  useRef,
+  useSyncExternalStore,
+  type ReactElement,
+} from "react";
 import { MfaChallengeForm } from "@schemavaults/auth-ui";
 import {
   useAppEnvironment,
   useAuth,
 } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
+import type { MfaChallengeFactorsPayload } from "@schemavaults/auth-common";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import { successRedirect } from "@/components/AuthForm/success-redirect";
+import {
+  clearMfaChallengeFactorsFromSession,
+  getMfaChallengeFactorsFromSession,
+} from "@/lib/mfa-challenge-factors-session-storage";
+
+type FactorsSnapshot = MfaChallengeFactorsPayload | "missing" | null;
 
 export interface MfaChallengePageViewProps {
   challenge_id: string;
@@ -186,8 +198,43 @@ export default function MfaChallengePageView({
   );
 
   const onChallengeExpired = useCallback(() => {
+    if (challenge_id) clearMfaChallengeFactorsFromSession(challenge_id);
     router.replace("/auth/login");
-  }, [router]);
+  }, [challenge_id, router]);
+
+  // Hydrate the factor list from sessionStorage. The login form wrote it
+  // there after receiving `mfa_required` from /api/auth/login, so we
+  // never need a second server round-trip. `null` is the SSR / pre-mount
+  // value; `"missing"` means the page was opened without a valid stash
+  // and the user must restart the login flow. We read via
+  // `useSyncExternalStore` so the snapshot reference is stable across
+  // renders (avoids re-render loops and the `setState-in-effect` lint).
+  const snapshotRef = useRef<{
+    challenge_id: string;
+    value: FactorsSnapshot;
+  } | null>(null);
+  const subscribeFactorsStore = useCallback(() => {
+    // No live updates — the login form writes once before navigation,
+    // and this page only consumes the stash. Returning a no-op
+    // unsubscribe is the documented pattern for a one-shot snapshot.
+    return () => {};
+  }, []);
+  const getFactorsSnapshot = useCallback((): FactorsSnapshot => {
+    if (!challenge_id) return null;
+    if (snapshotRef.current?.challenge_id === challenge_id) {
+      return snapshotRef.current.value;
+    }
+    const payload = getMfaChallengeFactorsFromSession(challenge_id);
+    const value: FactorsSnapshot = payload ?? "missing";
+    snapshotRef.current = { challenge_id, value };
+    return value;
+  }, [challenge_id]);
+  const getFactorsServerSnapshot = useCallback((): FactorsSnapshot => null, []);
+  const factorsData = useSyncExternalStore(
+    subscribeFactorsStore,
+    getFactorsSnapshot,
+    getFactorsServerSnapshot,
+  );
 
   if (!challenge_id || !client_app_id) {
     return (
@@ -199,13 +246,52 @@ export default function MfaChallengePageView({
     );
   }
 
+  if (factorsData === null) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-6">
+        <p
+          className="text-sm text-muted-foreground"
+          data-testid="mfa-challenge-loading"
+        >
+          Loading verification options…
+        </p>
+      </div>
+    );
+  }
+
+  if (factorsData === "missing") {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-6 flex-col gap-3">
+        <p className="text-sm text-destructive">
+          This MFA challenge could not be loaded in this tab. Please log
+          in again.
+        </p>
+        <button
+          type="button"
+          className="text-sm underline text-muted-foreground"
+          onClick={() => router.replace("/auth/login")}
+        >
+          Back to login
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-6">
       <MfaChallengeForm
         challenge_id={challenge_id}
         client_app_id={client_app_id}
         expires_at={expires_at}
-        onAuthenticated={onAuthenticated}
+        available_factors={factorsData.available_factors}
+        recovery_codes_available={factorsData.recovery_codes_available}
+        onAuthenticated={async (authorization_code) => {
+          // Drop the stashed factor list now that the challenge is
+          // resolved — keeps sessionStorage tidy if the user comes back
+          // through a fresh login.
+          clearMfaChallengeFactorsFromSession(challenge_id);
+          await onAuthenticated(authorization_code);
+        }}
         onChallengeExpired={onChallengeExpired}
       />
     </div>

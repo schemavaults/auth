@@ -14,7 +14,6 @@ import {
   type MfaStatusResponse,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentResponse,
-  type MfaChallengeFactorsResponse,
   type OrganizationMembershipRoleDetails,
   isValidErrorId,
   type SchemaVaultsAuthErrorId,
@@ -29,7 +28,6 @@ import {
   removeFactor as removeFactorFn,
   regenerateRecoveryCodes as regenerateRecoveryCodesFn,
   getMfaStatus as getMfaStatusFn,
-  getMfaChallengeFactors as getMfaChallengeFactorsFn,
 } from "@/lib/mfa";
 import type { Credentials } from "@/types/credentials";
 import type { ISchemaVaultsAuthClient } from "@/types/ISchemaVaultsAuthClient";
@@ -1063,17 +1061,6 @@ export class SchemaVaultsAuthClient
 
   public async getMfaStatus(): Promise<MfaStatusResponse> {
     return await getMfaStatusFn(this._adapter);
-  }
-
-  public async getMfaChallengeFactors(
-    challenge_id: string,
-    client_app_id: AppId,
-  ): Promise<MfaChallengeFactorsResponse> {
-    return await getMfaChallengeFactorsFn({
-      adapter: this._adapter,
-      challenge_id,
-      client_app_id,
-    });
   }
 
   public async enrollTotp(): Promise<MfaEnrollResponse> {
