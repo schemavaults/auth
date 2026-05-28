@@ -12,43 +12,12 @@ import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-ema
 
 const ROUTE = "/api/admin/users/[uid]/mfa";
 
-function extractTargetUidOrError(
-  req: NextRequest,
-): { ok: true; uid: string } | { ok: false; response: NextResponse } {
-  const url = new URL(req.url);
-  // Path is /api/admin/users/<uid>/mfa
-  const segments = url.pathname.split("/").filter(Boolean);
-  // segments[-2] is the uid (last is "mfa")
-  const target_uid = segments[segments.length - 2];
-  if (!target_uid) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { success: false, message: "Missing uid in URL" },
-        { status: 400 },
-      ),
-    };
-  }
-  const parsed = z.string().uuid().safeParse(target_uid);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { success: false, message: "Invalid uid in URL" },
-        { status: 400 },
-      ),
-    };
-  }
-  return { ok: true, uid: parsed.data };
-}
+const uidSchema = z.string().uuid();
 
 async function DELETE_admin_reset_handler(
-  { dbh, req }: IProtectedAdminApiRouteProps,
+  { dbh }: IProtectedAdminApiRouteProps,
+  target_uid: string,
 ): Promise<NextResponse> {
-  const parsed = extractTargetUidOrError(req);
-  if (!parsed.ok) return parsed.response;
-  const target_uid = parsed.uid;
-
   try {
     const userRegistry = new UserRegistry(dbh.db);
     const target = await userRegistry.getUserByUID(target_uid);
@@ -82,17 +51,29 @@ async function DELETE_admin_reset_handler(
   }
 }
 
-export async function DELETE(req: NextRequest): Promise<NextResponse> {
-  return await (await withAdminApiRouteGuard(DELETE_admin_reset_handler))(req);
+export async function DELETE(
+  req: NextRequest,
+  ctx: RouteContext<"/api/admin/users/[uid]/mfa">,
+): Promise<NextResponse> {
+  const { uid } = await ctx.params;
+  const parsed = uidSchema.safeParse(uid);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, message: "Invalid uid in URL" },
+      { status: 400 },
+    );
+  }
+  return await (
+    await withAdminApiRouteGuard((props) =>
+      DELETE_admin_reset_handler(props, parsed.data),
+    )
+  )(req);
 }
 
 async function GET_admin_list_factor_types_handler(
-  { dbh, req }: IProtectedAdminApiRouteProps,
+  { dbh }: IProtectedAdminApiRouteProps,
+  target_uid: string,
 ): Promise<NextResponse> {
-  const parsed = extractTargetUidOrError(req);
-  if (!parsed.ok) return parsed.response;
-  const target_uid = parsed.uid;
-
   try {
     const userRegistry = new UserRegistry(dbh.db);
     const target = await userRegistry.getUserByUID(target_uid);
@@ -125,8 +106,23 @@ async function GET_admin_list_factor_types_handler(
   }
 }
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
-  return await (await withAdminApiRouteGuard(GET_admin_list_factor_types_handler))(req);
+export async function GET(
+  req: NextRequest,
+  ctx: RouteContext<"/api/admin/users/[uid]/mfa">,
+): Promise<NextResponse> {
+  const { uid } = await ctx.params;
+  const parsed = uidSchema.safeParse(uid);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, message: "Invalid uid in URL" },
+      { status: 400 },
+    );
+  }
+  return await (
+    await withAdminApiRouteGuard((props) =>
+      GET_admin_list_factor_types_handler(props, parsed.data),
+    )
+  )(req);
 }
 
 export const runtime: ServerRuntime = "nodejs";

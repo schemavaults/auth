@@ -15,19 +15,8 @@ const ROUTE = "/api/user/mfa/totp/[factor_id]";
 
 async function DELETE_factor_handler(
   { user, dbh, req }: IProtectedAuthenticatedApiRouteProps,
+  factor_id: string,
 ): Promise<NextResponse> {
-  // Pull factor_id out of the URL path. The Next.js route guard does
-  // not pass dynamic segments through, so parse from the request URL.
-  const url = new URL(req.url);
-  const segments = url.pathname.split("/").filter(Boolean);
-  const factor_id = segments[segments.length - 1];
-  if (!factor_id) {
-    return NextResponse.json(
-      { success: false, message: "Missing factor_id in URL" },
-      { status: 400 },
-    );
-  }
-
   let body: unknown;
   try {
     body = await req.json();
@@ -120,10 +109,16 @@ async function DELETE_factor_handler(
   }
 }
 
-export async function DELETE(req: NextRequest): Promise<NextResponse> {
-  return await (await withAuthenticatedApiRouteGuard(DELETE_factor_handler))(
-    req,
-  );
+export async function DELETE(
+  req: NextRequest,
+  ctx: RouteContext<"/api/user/mfa/totp/[factor_id]">,
+): Promise<NextResponse> {
+  const { factor_id } = await ctx.params;
+  return await (
+    await withAuthenticatedApiRouteGuard((props) =>
+      DELETE_factor_handler(props, factor_id),
+    )
+  )(req);
 }
 
 export const runtime: ServerRuntime = "nodejs";
