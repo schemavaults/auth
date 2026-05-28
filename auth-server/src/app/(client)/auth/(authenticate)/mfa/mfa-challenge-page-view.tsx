@@ -1,27 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  useCallback,
-  useRef,
-  useSyncExternalStore,
-  type ReactElement,
-} from "react";
+import { useCallback, useEffect, type ReactElement } from "react";
 import { MfaChallengeForm } from "@schemavaults/auth-ui";
 import {
   useAppEnvironment,
   useAuth,
 } from "@schemavaults/auth-react-provider";
 import { useToast } from "@schemavaults/ui";
-import type { MfaChallengeFactorsPayload } from "@schemavaults/auth-common";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import { successRedirect } from "@/components/AuthForm/success-redirect";
-import {
-  clearMfaChallengeFactorsFromSession,
-  getMfaChallengeFactorsFromSession,
-} from "@/lib/mfa-challenge-factors-session-storage";
-
-type FactorsSnapshot = MfaChallengeFactorsPayload | "missing" | null;
+import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
 
 export interface MfaChallengePageViewProps {
   challenge_id: string;
@@ -197,43 +186,26 @@ export default function MfaChallengePageView({
     ],
   );
 
-  const onChallengeExpired = useCallback(() => {
-    if (challenge_id) clearMfaChallengeFactorsFromSession(challenge_id);
-    router.replace("/auth/login");
-  }, [challenge_id, router]);
+  const clearFactors = useMfaChallengeFactorsStore((s) => s.clearFactors);
 
-  // Hydrate the factor list from sessionStorage. The login form wrote it
-  // there after receiving `mfa_required` from /api/auth/login, so we
-  // never need a second server round-trip. `null` is the SSR / pre-mount
-  // value; `"missing"` means the page was opened without a valid stash
-  // and the user must restart the login flow. We read via
-  // `useSyncExternalStore` so the snapshot reference is stable across
-  // renders (avoids re-render loops and the `setState-in-effect` lint).
-  const snapshotRef = useRef<{
-    challenge_id: string;
-    value: FactorsSnapshot;
-  } | null>(null);
-  const subscribeFactorsStore = useCallback(() => {
-    // No live updates — the login form writes once before navigation,
-    // and this page only consumes the stash. Returning a no-op
-    // unsubscribe is the documented pattern for a one-shot snapshot.
-    return () => {};
+  const onChallengeExpired = useCallback(() => {
+    if (challenge_id) clearFactors(challenge_id);
+    router.replace("/auth/login");
+  }, [challenge_id, clearFactors, router]);
+
+  // Read the factor list from the zustand store (persisted to
+  // sessionStorage). The login form wrote it there after receiving
+  // `mfa_required` from /api/auth/login, so we never need a second server
+  // round-trip. The store is created with `skipHydration`, so we kick off
+  // rehydration from this client effect — `rehydrate()` updates the store
+  // internally (no setState here), keeping SSR and the first client render
+  // in agreement and avoiding a hydration mismatch.
+  useEffect(() => {
+    void useMfaChallengeFactorsStore.persist.rehydrate();
   }, []);
-  const getFactorsSnapshot = useCallback((): FactorsSnapshot => {
-    if (!challenge_id) return null;
-    if (snapshotRef.current?.challenge_id === challenge_id) {
-      return snapshotRef.current.value;
-    }
-    const payload = getMfaChallengeFactorsFromSession(challenge_id);
-    const value: FactorsSnapshot = payload ?? "missing";
-    snapshotRef.current = { challenge_id, value };
-    return value;
-  }, [challenge_id]);
-  const getFactorsServerSnapshot = useCallback((): FactorsSnapshot => null, []);
-  const factorsData = useSyncExternalStore(
-    subscribeFactorsStore,
-    getFactorsSnapshot,
-    getFactorsServerSnapshot,
+  const hasHydrated = useMfaChallengeFactorsStore((s) => s.hasHydrated);
+  const payload = useMfaChallengeFactorsStore((s) =>
+    challenge_id ? s.byChallengeId[challenge_id] : undefined,
   );
 
   if (!challenge_id || !client_app_id) {
@@ -246,7 +218,7 @@ export default function MfaChallengePageView({
     );
   }
 
-  if (factorsData === null) {
+  if (!hasHydrated) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6">
         <p
@@ -259,7 +231,7 @@ export default function MfaChallengePageView({
     );
   }
 
-  if (factorsData === "missing") {
+  if (!payload) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6 flex-col gap-3">
         <p className="text-sm text-destructive">
@@ -283,13 +255,13 @@ export default function MfaChallengePageView({
         challenge_id={challenge_id}
         client_app_id={client_app_id}
         expires_at={expires_at}
-        available_factors={factorsData.available_factors}
-        recovery_codes_available={factorsData.recovery_codes_available}
+        available_factors={payload.available_factors}
+        recovery_codes_available={payload.recovery_codes_available}
         onAuthenticated={async (authorization_code) => {
           // Drop the stashed factor list now that the challenge is
           // resolved — keeps sessionStorage tidy if the user comes back
           // through a fresh login.
-          clearMfaChallengeFactorsFromSession(challenge_id);
+          clearFactors(challenge_id);
           await onAuthenticated(authorization_code);
         }}
         onChallengeExpired={onChallengeExpired}
