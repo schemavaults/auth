@@ -1,11 +1,14 @@
 import "server-only";
 
+import { z } from "zod";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import {
   mfaFactorTypeSchema,
   type MfaFactorType,
 } from "@schemavaults/auth-common";
+
+const uidSchema = z.string().uuid();
 
 export interface VerifiedFactorSummary {
   factor_id: string;
@@ -18,10 +21,13 @@ export async function listVerifiedFactorsForUser(
   db: Kysely<AuthDatabase>,
   uid: string,
 ): Promise<VerifiedFactorSummary[]> {
+  // Validate the uid before it reaches the query.
+  const validatedUid = uidSchema.parse(uid);
+
   const rows = await db
     .selectFrom("user_mfa_factors")
     .select(["factor_id", "factor_type", "last_used_at", "verified_at"])
-    .where("uid", "=", uid)
+    .where("uid", "=", validatedUid)
     .where("verified", "=", true)
     .execute();
 
