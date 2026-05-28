@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server-sdk",
   "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
-  "version": "0.22.71",
+  "version": "0.22.72",
   "license": "UNLICENSED",
   "private": false,
   "repository": {

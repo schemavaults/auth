@@ -11,7 +11,10 @@ import {
   CardTitle,
   cn,
 } from "@schemavaults/ui";
-import { useMfa } from "@schemavaults/auth-react-provider";
+import {
+  useMfa,
+  useMfaFactorStatusSwr,
+} from "@schemavaults/auth-react-provider";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -30,18 +33,20 @@ export interface MfaSettingsCardProps {
 export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
   className,
 }): ReactElement => {
-  const { status, isLoading } = useMfa();
+  // The settings card only manages the TOTP factor, so query that factor
+  // type explicitly rather than picking an arbitrary entry out of the
+  // account-wide factor list (there is no "primary" factor — all are
+  // equivalent). Recovery codes are account-wide, so that count still
+  // comes from the aggregate status.
+  const { status, isLoading: aggregateLoading } = useMfa();
+  const { data: totpStatus, isLoading: totpLoading } =
+    useMfaFactorStatusSwr("totp");
   const [enrolling, setEnrolling] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
-  const enabled = !!status?.enabled;
-  // The settings card is single-factor today; surface the first enrolled
-  // factor for the "enabled on" timestamp and the remove dialog.
-  const primaryFactor = status?.factors?.[0];
-  const factorTypesLabel = status?.factors
-    .map((factor) => factor.factor_type.toUpperCase())
-    .join(", ");
+  const isLoading = aggregateLoading || totpLoading;
+  const enabled = !!totpStatus?.enabled;
 
   return (
     <Card className={cn("w-full", className)}>
@@ -66,8 +71,7 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
         ) : enabled ? (
           <div className="space-y-2 text-sm">
             <div>
-              <strong>Status:</strong> Enabled
-              {factorTypesLabel ? ` (${factorTypesLabel})` : ""}
+              <strong>Status:</strong> Enabled (TOTP)
             </div>
             {typeof status?.recovery_codes_remaining === "number" && (
               <div>
@@ -75,10 +79,10 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
                 {status.recovery_codes_remaining}
               </div>
             )}
-            {typeof primaryFactor?.verified_at === "number" && (
+            {typeof totpStatus?.verified_at === "number" && (
               <div className="text-muted-foreground">
                 Enabled on{" "}
-                {new Date(primaryFactor.verified_at).toLocaleString()}
+                {new Date(totpStatus.verified_at).toLocaleString()}
               </div>
             )}
           </div>
@@ -127,10 +131,10 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
           onClose={() => setEnrolling(false)}
         />
       )}
-      {removing && primaryFactor?.factor_id && (
+      {removing && totpStatus?.factor_id && (
         <MfaRemoveFactorDialog
           open={removing}
-          factor_id={primaryFactor.factor_id}
+          factor_id={totpStatus.factor_id}
           onClose={() => setRemoving(false)}
         />
       )}

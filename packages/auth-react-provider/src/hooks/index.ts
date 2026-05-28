@@ -45,6 +45,12 @@ export type * from "./use-on-logout";
 export { useMfaStatusSwr } from "./use-mfa-status-swr";
 export type * from "./use-mfa-status-swr";
 
+export {
+  useMfaFactorStatusSwr,
+  MFA_STATUS_SWR_KEY_PREFIX,
+} from "./use-mfa-factor-status-swr";
+export type * from "./use-mfa-factor-status-swr";
+
 export { useMfa } from "./use-mfa";
 export type * from "./use-mfa";
 
