@@ -1,9 +1,12 @@
 import "server-only";
 
+import { z } from "zod";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { UserMfaFactorRow } from "./user-mfa-factors-table";
 import { decryptSecret } from "@/lib/mfa/kek";
+
+const uuidSchema = z.string().uuid();
 
 export interface FactorWithSecret {
   row: UserMfaFactorRow;
@@ -19,11 +22,15 @@ export async function getFactorWithSecretById(
   db: Kysely<AuthDatabase>,
   args: { uid: string; factor_id: string },
 ): Promise<FactorWithSecret | null> {
+  // Validate inputs before they reach the query.
+  const uid = uuidSchema.parse(args.uid);
+  const factor_id = uuidSchema.parse(args.factor_id);
+
   const row = await db
     .selectFrom("user_mfa_factors")
     .selectAll()
-    .where("uid", "=", args.uid)
-    .where("factor_id", "=", args.factor_id)
+    .where("uid", "=", uid)
+    .where("factor_id", "=", factor_id)
     .executeTakeFirst();
   if (!row) return null;
   const secret = decryptSecret(row.secret_ciphertext, row.kek_version);
