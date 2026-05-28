@@ -14,7 +14,10 @@ import {
 import type { UserData } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { AuthenticateResult } from "@schemavaults/auth-common";
+import type {
+  AuthenticateResult,
+  AvailableMfaFactor,
+} from "@schemavaults/auth-common";
 import { appIdSchema, getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
@@ -308,6 +311,20 @@ export async function handleLogin({
 
   if (userHasMfa) {
     try {
+      const mfaRegistry = new MfaRegistry(dbh.db);
+      const [verifiedFactors, recovery_codes_remaining] = await Promise.all([
+        mfaRegistry.listVerifiedFactorsForUser(uid),
+        mfaRegistry.countRecoveryCodesRemaining(uid),
+      ]);
+      // Map to the strict AvailableMfaFactor shape — the summary carries an
+      // extra `verified_at` the client's strict schema would reject.
+      const available_factors: AvailableMfaFactor[] = verifiedFactors.map(
+        (factor) => ({
+          factor_id: factor.factor_id,
+          factor_type: factor.factor_type,
+          last_used_at: factor.last_used_at,
+        }),
+      );
       const challenge_id = crypto.randomUUID();
       await using redis = RedisCache.createConnection();
       const { expires_at } = await createChallenge(redis.client, {
@@ -325,6 +342,8 @@ export async function handleLogin({
           message: "MFA required",
           challenge_id,
           expires_at,
+          available_factors,
+          recovery_codes_available: recovery_codes_remaining > 0,
         } satisfies AuthenticateResult,
         { status: 200 },
       );

@@ -20,6 +20,7 @@ import type { useRouter } from "next/navigation";
 import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
 
 export interface PendingAuthorizationState {
   authorization_code: string;
@@ -231,6 +232,16 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
           code_challenge.challenge_time,
         );
       }
+      // Stash the factor list and recovery-code availability into the
+      // zustand store (persisted to sessionStorage) so the MFA challenge
+      // page can render the factor picker without re-fetching from the
+      // server. Tab-scoped, survives the full-page navigation to /auth/mfa
+      // and a page refresh — matches the lifetime of the in-flight
+      // challenge. Called outside React via the store's static getState().
+      useMfaChallengeFactorsStore.getState().setFactors(result.challenge_id, {
+        available_factors: result.available_factors,
+        recovery_codes_available: result.recovery_codes_available,
+      });
       const params = new URLSearchParams({
         challenge_id: result.challenge_id,
         client_app_id: target_client_app_id,

@@ -11,7 +11,9 @@ import {
   audienceSchema,
   type SuccessfullyGeneratedTokensRecord,
   type AuthenticateResult,
+  type MfaFactorType,
   type MfaStatusResponse,
+  type MfaFactorStatusResponse,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentResponse,
   type OrganizationMembershipRoleDetails,
@@ -28,6 +30,7 @@ import {
   removeFactor as removeFactorFn,
   regenerateRecoveryCodes as regenerateRecoveryCodesFn,
   getMfaStatus as getMfaStatusFn,
+  getMfaStatusForFactorType as getMfaStatusForFactorTypeFn,
 } from "@/lib/mfa";
 import type { Credentials } from "@/types/credentials";
 import type { ISchemaVaultsAuthClient } from "@/types/ISchemaVaultsAuthClient";
@@ -1048,7 +1051,7 @@ export class SchemaVaultsAuthClient
     challenge_id: string,
     client_app_id: AppId,
     proof:
-      | { type: "totp"; code: string }
+      | { type: "totp"; factor_id: string; code: string }
       | { type: "recovery_code"; recovery_code: string },
   ): Promise<AuthenticateResult> {
     return await verifyMfaChallengeFn({
@@ -1061,6 +1064,12 @@ export class SchemaVaultsAuthClient
 
   public async getMfaStatus(): Promise<MfaStatusResponse> {
     return await getMfaStatusFn(this._adapter);
+  }
+
+  public async getMfaStatusForFactorType(
+    factor_type: MfaFactorType,
+  ): Promise<MfaFactorStatusResponse> {
+    return await getMfaStatusForFactorTypeFn(this._adapter, factor_type);
   }
 
   public async enrollTotp(): Promise<MfaEnrollResponse> {
@@ -1087,10 +1096,12 @@ export class SchemaVaultsAuthClient
   }
 
   public async regenerateRecoveryCodes(
+    factor_id: string,
     code: string,
   ): Promise<MfaVerifyEnrollmentResponse> {
     return await regenerateRecoveryCodesFn({
       adapter: this._adapter,
+      factor_id,
       code,
     });
   }

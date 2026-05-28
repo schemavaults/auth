@@ -12,13 +12,24 @@ import {
   Input,
 } from "@schemavaults/ui";
 import { useMfa } from "@schemavaults/auth-react-provider";
-import type { AuthenticateResult } from "@schemavaults/auth-common";
+import type {
+  AuthenticateResult,
+  AvailableMfaFactor,
+} from "@schemavaults/auth-common";
 import { ShieldCheck } from "lucide-react";
+import { MfaFactorPicker } from "@/components/MfaFactorPicker";
 
 export interface MfaChallengeFormProps {
   challenge_id: string;
   client_app_id: string;
   expires_at?: number;
+  // Factor list and recovery-code availability for this challenge. The
+  // login form stashes these from the `mfa_required` response into
+  // sessionStorage; the page that renders this form reads them back out
+  // and passes them in. Required props because the picker needs them to
+  // render — there is no in-form fallback fetch.
+  available_factors: AvailableMfaFactor[];
+  recovery_codes_available: boolean;
   onAuthenticated: (authorization_code: string) => Promise<void> | void;
   onChallengeExpired?: () => void;
 }
@@ -27,12 +38,19 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
   challenge_id,
   client_app_id,
   expires_at,
+  available_factors,
+  recovery_codes_available,
   onAuthenticated,
   onChallengeExpired,
 }): ReactElement => {
   const { submitChallenge } = useMfa();
   const [useRecovery, setUseRecovery] = useState(false);
   const [value, setValue] = useState("");
+  const [selectedFactorId, setSelectedFactorId] = useState<string>(
+    // Default to the most-recently-used factor — the login response sorts
+    // available_factors by last_used_at DESC NULLS LAST.
+    available_factors[0]?.factor_id ?? "",
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,7 +61,11 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
     try {
       const proof = useRecovery
         ? ({ type: "recovery_code" as const, recovery_code: value })
-        : ({ type: "totp" as const, code: value });
+        : ({
+            type: "totp" as const,
+            factor_id: selectedFactorId,
+            code: value,
+          });
       const result: AuthenticateResult = await submitChallenge(
         challenge_id,
         client_app_id,
@@ -78,6 +100,13 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
       ? `Expires ${new Date(expires_at).toLocaleTimeString()}`
       : null;
 
+  const showFactorPicker = !useRecovery && available_factors.length > 1;
+
+  const canSubmit =
+    !submitting &&
+    value.length > 0 &&
+    (useRecovery || selectedFactorId.length > 0);
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
@@ -93,6 +122,18 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-3">
+          {showFactorPicker ? (
+            <MfaFactorPicker
+              factors={available_factors}
+              selected_factor_id={selectedFactorId}
+              onSelect={(id) => {
+                setSelectedFactorId(id);
+                setValue("");
+                setError(null);
+              }}
+              disabled={submitting}
+            />
+          ) : null}
           <Input
             inputMode={useRecovery ? "text" : "numeric"}
             autoComplete="one-time-code"
@@ -107,26 +148,29 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
             placeholder={useRecovery ? "abcde-fghij" : "123456"}
             data-testid="mfa-challenge-input"
           />
-          <button
-            type="button"
-            className="text-sm underline text-muted-foreground"
-            onClick={() => {
-              setUseRecovery((p) => !p);
-              setValue("");
-              setError(null);
-            }}
-            data-testid="mfa-challenge-toggle-recovery"
-          >
-            {useRecovery
-              ? "Use authenticator app instead"
-              : "Use a recovery code instead"}
-          </button>
+          {recovery_codes_available ? (
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0 text-sm text-muted-foreground"
+              onClick={() => {
+                setUseRecovery((p) => !p);
+                setValue("");
+                setError(null);
+              }}
+              data-testid="mfa-challenge-toggle-recovery"
+            >
+              {useRecovery
+                ? "Use authenticator app instead"
+                : "Use a recovery code instead"}
+            </Button>
+          ) : null}
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
         <CardFooter>
           <Button
             type="submit"
-            disabled={submitting || value.length === 0}
+            disabled={!canSubmit}
             data-testid="mfa-challenge-submit"
             className="flex flex-row gap-2 flex-nowrap"
           >

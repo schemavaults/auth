@@ -123,6 +123,16 @@ export type { RecoveryCodesPanelProps } from "./RecoveryCodesPanel";
 export { MfaChallengeForm } from "./MfaChallengeForm";
 export type { MfaChallengeFormProps } from "./MfaChallengeForm";
 
+export {
+  MfaFactorPicker,
+  MFA_FACTOR_TYPE_LABELS,
+  labelForFactorType,
+} from "./MfaFactorPicker";
+export type {
+  MfaFactorPickerProps,
+  MfaFactorTypeLabel,
+} from "./MfaFactorPicker";
+
 export { MfaRemoveFactorDialog } from "./MfaRemoveFactorDialog";
 export type { MfaRemoveFactorDialogProps } from "./MfaRemoveFactorDialog";
 

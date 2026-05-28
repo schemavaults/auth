@@ -1,5 +1,6 @@
 import "server-only";
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
@@ -13,21 +14,12 @@ import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-ema
 
 const ROUTE = "/api/user/mfa/totp/[factor_id]";
 
+const factorIdSchema = z.string().uuid();
+
 async function DELETE_factor_handler(
   { user, dbh, req }: IProtectedAuthenticatedApiRouteProps,
+  factor_id: string,
 ): Promise<NextResponse> {
-  // Pull factor_id out of the URL path. The Next.js route guard does
-  // not pass dynamic segments through, so parse from the request URL.
-  const url = new URL(req.url);
-  const segments = url.pathname.split("/").filter(Boolean);
-  const factor_id = segments[segments.length - 1];
-  if (!factor_id) {
-    return NextResponse.json(
-      { success: false, message: "Missing factor_id in URL" },
-      { status: 400 },
-    );
-  }
-
   let body: unknown;
   try {
     body = await req.json();
@@ -46,7 +38,12 @@ async function DELETE_factor_handler(
   const mfaRegistry = new MfaRegistry(dbh.db);
 
   try {
-    const factor = await mfaRegistry.getFactorById({
+    // Authorize the destructive change with a current TOTP code from the
+    // factor being removed — proving the caller controls it. One targeted
+    // lookup against the named factor rather than trying every enrolled
+    // factor's secret. Works for an unverified (partially-enrolled) factor
+    // too, since its secret is the only credential available.
+    const factor = await mfaRegistry.getFactorWithSecretById({
       uid: user.uid,
       factor_id,
     });
@@ -56,28 +53,23 @@ async function DELETE_factor_handler(
         { status: 404 },
       );
     }
-
-    // Require a valid current TOTP to authorize the destructive change.
-    // For an unverified factor we still verify against its secret since
-    // that's the only credential available; this prevents an idle session
-    // hijack from quietly deleting a partially-enrolled factor.
-    const verified = await mfaRegistry.getVerifiedFactor(user.uid);
-    if (verified) {
-      const isValid = verifyTotpCode({
-        secret: verified.secret,
-        code,
-      });
-      if (!isValid) {
-        return NextResponse.json(
-          { success: false, message: "Invalid TOTP code" },
-          { status: 401 },
-        );
-      }
+    if (!verifyTotpCode({ secret: factor.secret, code })) {
+      return NextResponse.json(
+        { success: false, message: "Invalid TOTP code" },
+        { status: 401 },
+      );
     }
 
     // Delete this factor and (if it was the last verified factor) wipe
     // recovery codes too.
-    if (verified && verified.row.factor_id === factor_id) {
+    const verifiedSummaries = await mfaRegistry.listVerifiedFactorsForUser(
+      user.uid,
+    );
+    const isLastVerifiedFactor =
+      factor.row.verified &&
+      verifiedSummaries.length === 1 &&
+      verifiedSummaries[0]?.factor_id === factor_id;
+    if (isLastVerifiedFactor) {
       await mfaRegistry.deleteAllFactorsForUser(user.uid);
     } else {
       await mfaRegistry.deleteFactor({ uid: user.uid, factor_id });
@@ -103,10 +95,23 @@ async function DELETE_factor_handler(
   }
 }
 
-export async function DELETE(req: NextRequest): Promise<NextResponse> {
-  return await (await withAuthenticatedApiRouteGuard(DELETE_factor_handler))(
-    req,
-  );
+export async function DELETE(
+  req: NextRequest,
+  ctx: RouteContext<"/api/user/mfa/totp/[factor_id]">,
+): Promise<NextResponse> {
+  const { factor_id } = await ctx.params;
+  const parsed = factorIdSchema.safeParse(factor_id);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, message: "Invalid factor_id in URL" },
+      { status: 400 },
+    );
+  }
+  return await (
+    await withAuthenticatedApiRouteGuard((props) =>
+      DELETE_factor_handler(props, parsed.data),
+    )
+  )(req);
 }
 
 export const runtime: ServerRuntime = "nodejs";

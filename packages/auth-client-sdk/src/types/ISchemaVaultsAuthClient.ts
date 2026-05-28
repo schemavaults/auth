@@ -5,7 +5,9 @@ import type {
   CodeChallengeWithDetails,
   PaginationOptions,
   AuthenticateResult,
+  MfaFactorType,
   MfaStatusResponse,
+  MfaFactorStatusResponse,
   MfaEnrollResponse,
   MfaVerifyEnrollmentResponse,
   OrganizationMembershipRoleDetails,
@@ -85,12 +87,21 @@ export interface ISchemaVaultsAuthClient {
     challenge_id: string,
     client_app_id: AppId,
     proof:
-      | { type: "totp"; code: string }
+      | { type: "totp"; factor_id: string; code: string }
       | { type: "recovery_code"; recovery_code: string },
   ) => Promise<AuthenticateResult>;
 
   /** Get the current user's MFA enrollment status. */
   getMfaStatus: () => Promise<MfaStatusResponse>;
+
+  /**
+   * Get the current user's MFA enrollment status for a single factor
+   * type. Returns `{ enabled: false }` when the user has no verified
+   * factor of that type.
+   */
+  getMfaStatusForFactorType: (
+    factor_type: MfaFactorType,
+  ) => Promise<MfaFactorStatusResponse>;
 
   /**
    * Begin TOTP enrollment for the current user. Returns the new factor's
@@ -116,9 +127,10 @@ export interface ISchemaVaultsAuthClient {
 
   /**
    * Regenerate the user's recovery codes. Invalidates all previous codes.
-   * Requires the current TOTP code as proof.
+   * Requires a current TOTP code from the named verified factor as proof.
    */
   regenerateRecoveryCodes: (
+    factor_id: string,
     code: string,
   ) => Promise<MfaVerifyEnrollmentResponse>;
 

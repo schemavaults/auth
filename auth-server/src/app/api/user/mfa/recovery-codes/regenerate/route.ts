@@ -6,7 +6,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { MfaRegistry } from "@/lib/auth-db";
 import { generateRecoveryCodes, verifyTotpCode } from "@/lib/mfa";
-import { mfaCodeOnlyBodySchema } from "@schemavaults/auth-common";
+import { mfaTotpProofBodySchema } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
 
@@ -24,26 +24,29 @@ async function POST_regenerate_handler(
       { status: 400 },
     );
   }
-  const parsed = await mfaCodeOnlyBodySchema.safeParseAsync(body);
+  const parsed = await mfaTotpProofBodySchema.safeParseAsync(body);
   if (!parsed.success) {
     return NextResponse.json(parsed.error, { status: 400 });
   }
-  const { code } = parsed.data;
+  const { factor_id, code } = parsed.data;
 
   const mfaRegistry = new MfaRegistry(dbh.db);
 
   try {
-    const verified = await mfaRegistry.getVerifiedFactor(user.uid);
-    if (!verified) {
+    // Authorize with a TOTP code from the named verified factor — one
+    // targeted lookup. A null result means the caller named a factor that
+    // isn't a verified factor of theirs (or MFA isn't enabled at all).
+    const factor = await mfaRegistry.getVerifiedFactorById({
+      uid: user.uid,
+      factor_id,
+    });
+    if (!factor) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "MFA is not enabled — nothing to regenerate.",
-        },
-        { status: 409 },
+        { success: false, message: "Unknown or unverified MFA factor" },
+        { status: 400 },
       );
     }
-    if (!verifyTotpCode({ secret: verified.secret, code })) {
+    if (!verifyTotpCode({ secret: factor.secret, code })) {
       return NextResponse.json(
         { success: false, message: "Invalid TOTP code" },
         { status: 401 },

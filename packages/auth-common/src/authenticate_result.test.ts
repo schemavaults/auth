@@ -37,10 +37,43 @@ describe("authenticateResultSchema (discriminated union)", () => {
       message: "MFA required",
       challenge_id: "11111111-1111-4111-8111-111111111111",
       expires_at: Date.now() + 5 * 60 * 1000,
+      available_factors: [
+        {
+          factor_id: "22222222-2222-4222-8222-222222222222",
+          factor_type: "totp" as const,
+          last_used_at: null,
+        },
+      ],
+      recovery_codes_available: true,
     };
     const parsed = authenticateResultSchema.parse(value);
     expect(parsed.kind).toBe("mfa_required");
     expect(mfaRequiredAuthenticateResultSchema.safeParse(value).success).toBe(true);
+  });
+
+  test("parses mfa_required variant with empty factor list", () => {
+    const value = {
+      kind: "mfa_required" as const,
+      success: true as const,
+      message: "MFA required",
+      challenge_id: "11111111-1111-4111-8111-111111111111",
+      expires_at: Date.now() + 5 * 60 * 1000,
+      available_factors: [],
+      recovery_codes_available: false,
+    };
+    expect(mfaRequiredAuthenticateResultSchema.safeParse(value).success).toBe(true);
+  });
+
+  test("rejects mfa_required variant missing available_factors", () => {
+    const value = {
+      kind: "mfa_required" as const,
+      success: true as const,
+      message: "MFA required",
+      challenge_id: "11111111-1111-4111-8111-111111111111",
+      expires_at: Date.now() + 5 * 60 * 1000,
+      recovery_codes_available: false,
+    };
+    expect(mfaRequiredAuthenticateResultSchema.safeParse(value).success).toBe(false);
   });
 
   test("rejects mfa_required variant without challenge_id", () => {

@@ -4,12 +4,21 @@ import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { hasVerifiedFactor as hasVerifiedFactorFn } from "./has-verified-factor";
 import {
-  getVerifiedFactor as getVerifiedFactorFn,
+  getVerifiedFactorById as getVerifiedFactorByIdFn,
   type VerifiedFactor,
-} from "./get-verified-factor";
+} from "./get-verified-factor-by-id";
+import {
+  listVerifiedFactorsForUser as listVerifiedFactorsForUserFn,
+  type VerifiedFactorSummary,
+} from "./list-verified-factors-for-user";
 import { listVerifiedFactorTypesForUser as listVerifiedFactorTypesForUserFn } from "./list-verified-factor-types-for-user";
 import type { MfaFactorType } from "@schemavaults/auth-common";
 import { getFactorById as getFactorByIdFn } from "./get-factor-by-id";
+import { getFactorByType as getFactorByTypeFn } from "./get-factor-by-type";
+import {
+  getFactorWithSecretById as getFactorWithSecretByIdFn,
+  type FactorWithSecret,
+} from "./get-factor-with-secret-by-id";
 import { createUnverifiedFactor as createUnverifiedFactorFn } from "./create-unverified-factor";
 import { verifyFactor as verifyFactorFn } from "./verify-factor";
 import { touchFactorLastUsed as touchFactorLastUsedFn } from "./touch-factor-last-used";
@@ -33,8 +42,17 @@ export class MfaRegistry {
     return hasVerifiedFactorFn(this.db, uid);
   }
 
-  public getVerifiedFactor(uid: string): Promise<VerifiedFactor | null> {
-    return getVerifiedFactorFn(this.db, uid);
+  public getVerifiedFactorById(args: {
+    uid: string;
+    factor_id: string;
+  }): Promise<VerifiedFactor | null> {
+    return getVerifiedFactorByIdFn(this.db, args);
+  }
+
+  public listVerifiedFactorsForUser(
+    uid: string,
+  ): Promise<VerifiedFactorSummary[]> {
+    return listVerifiedFactorsForUserFn(this.db, uid);
   }
 
   public listVerifiedFactorTypesForUser(uid: string): Promise<MfaFactorType[]> {
@@ -46,6 +64,20 @@ export class MfaRegistry {
     factor_id: string;
   }): Promise<UserMfaFactorRow | null> {
     return getFactorByIdFn(this.db, args);
+  }
+
+  public getFactorByType(args: {
+    uid: string;
+    factor_type: MfaFactorType;
+  }): Promise<UserMfaFactorRow | null> {
+    return getFactorByTypeFn(this.db, args);
+  }
+
+  public getFactorWithSecretById(args: {
+    uid: string;
+    factor_id: string;
+  }): Promise<FactorWithSecret | null> {
+    return getFactorWithSecretByIdFn(this.db, args);
   }
 
   public createUnverifiedFactor(args: {

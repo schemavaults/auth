@@ -10,16 +10,16 @@ export interface VerifiedFactor {
   secret: string;
 }
 
-export async function getVerifiedFactor(
+export async function getVerifiedFactorById(
   db: Kysely<AuthDatabase>,
-  uid: string,
+  args: { uid: string; factor_id: string },
 ): Promise<VerifiedFactor | null> {
   const row = await db
     .selectFrom("user_mfa_factors")
     .selectAll()
-    .where("uid", "=", uid)
+    .where("uid", "=", args.uid)
+    .where("factor_id", "=", args.factor_id)
     .where("verified", "=", true)
-    .limit(1)
     .executeTakeFirst();
   if (!row) return null;
   const secret = decryptSecret(row.secret_ciphertext, row.kek_version);

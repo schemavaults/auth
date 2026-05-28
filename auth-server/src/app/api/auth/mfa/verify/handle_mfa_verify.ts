@@ -90,7 +90,10 @@ export async function handleMfaVerify({
   let proofValid = false;
   try {
     if (proof.type === "totp") {
-      const factor = await mfaRegistry.getVerifiedFactor(challenge.uid);
+      const factor = await mfaRegistry.getVerifiedFactorById({
+        uid: challenge.uid,
+        factor_id: proof.factor_id,
+      });
       if (factor) {
         proofValid = verifyTotpCode({
           secret: factor.secret,

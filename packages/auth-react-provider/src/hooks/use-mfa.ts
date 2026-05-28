@@ -8,8 +8,10 @@ import type {
   AuthenticateResult,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
+import { useSWRConfig } from "swr";
 import useAuth from "@/hooks/use-auth";
 import { useMfaStatusSwr } from "./use-mfa-status-swr";
+import { MFA_STATUS_SWR_KEY_PREFIX } from "./use-mfa-factor-status-swr";
 
 export interface UseMfaResult {
   status: MfaStatusResponse | null;
@@ -22,13 +24,14 @@ export interface UseMfaResult {
   ) => Promise<MfaVerifyEnrollmentResponse>;
   removeFactor: (factor_id: string, code: string) => Promise<void>;
   regenerateRecoveryCodes: (
+    factor_id: string,
     code: string,
   ) => Promise<MfaVerifyEnrollmentResponse>;
   submitChallenge: (
     challenge_id: string,
     client_app_id: string,
     proof:
-      | { type: "totp"; code: string }
+      | { type: "totp"; factor_id: string; code: string }
       | { type: "recovery_code"; recovery_code: string },
   ) => Promise<AuthenticateResult>;
 }
@@ -54,6 +57,16 @@ function requireClient(
 export function useMfa(): UseMfaResult {
   const auth = useAuth();
   const { data, isLoading, refresh } = useMfaStatusSwr();
+  const { mutate: globalMutate } = useSWRConfig();
+
+  // Revalidate the aggregate status AND every per-factor-type status
+  // (e.g. /api/user/mfa/status/totp) so all MFA hooks reflect a mutation.
+  const refreshAllMfaStatus = useCallback(async () => {
+    await globalMutate(
+      (key) =>
+        typeof key === "string" && key.startsWith(MFA_STATUS_SWR_KEY_PREFIX),
+    );
+  }, [globalMutate]);
 
   const enrollTotp = useCallback(async () => {
     const client = requireClient(auth);
@@ -65,29 +78,29 @@ export function useMfa(): UseMfaResult {
     async (factor_id: string, code: string) => {
       const client = requireClient(auth);
       const result = await client.confirmTotpEnrollment(factor_id, code);
-      await refresh();
+      await refreshAllMfaStatus();
       return result;
     },
-    [auth, refresh],
+    [auth, refreshAllMfaStatus],
   );
 
   const removeFactor = useCallback(
     async (factor_id: string, code: string) => {
       const client = requireClient(auth);
       await client.removeFactor(factor_id, code);
-      await refresh();
+      await refreshAllMfaStatus();
     },
-    [auth, refresh],
+    [auth, refreshAllMfaStatus],
   );
 
   const regenerateRecoveryCodes = useCallback(
-    async (code: string) => {
+    async (factor_id: string, code: string) => {
       const client = requireClient(auth);
-      const result = await client.regenerateRecoveryCodes(code);
-      await refresh();
+      const result = await client.regenerateRecoveryCodes(factor_id, code);
+      await refreshAllMfaStatus();
       return result;
     },
-    [auth, refresh],
+    [auth, refreshAllMfaStatus],
   );
 
   const submitChallenge = useCallback(
@@ -95,7 +108,7 @@ export function useMfa(): UseMfaResult {
       challenge_id: string,
       client_app_id: string,
       proof:
-        | { type: "totp"; code: string }
+        | { type: "totp"; factor_id: string; code: string }
         | { type: "recovery_code"; recovery_code: string },
     ) => {
       const client = requireClient(auth);

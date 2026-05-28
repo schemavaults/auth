@@ -28,11 +28,13 @@ export {
   mfaRequiredAuthenticateResultSchema,
   authenticateFailureResultSchema,
   challengeExpiredAuthenticateResultSchema,
+  availableMfaFactorSchema,
   type AuthenticateResult,
   type AuthenticatedAuthenticateResult,
   type MfaRequiredAuthenticateResult,
   type AuthenticateFailureResult,
   type ChallengeExpiredAuthenticateResult,
+  type AvailableMfaFactor,
 } from "./authenticate_result";
 
 export * from "./mfa";

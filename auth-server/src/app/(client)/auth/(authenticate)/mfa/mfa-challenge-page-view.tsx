@@ -1,15 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, type ReactElement } from "react";
+import { useCallback, useEffect, type ReactElement } from "react";
 import { MfaChallengeForm } from "@schemavaults/auth-ui";
 import {
   useAppEnvironment,
   useAuth,
 } from "@schemavaults/auth-react-provider";
-import { useToast } from "@schemavaults/ui";
+import { Button, useToast } from "@schemavaults/ui";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import { successRedirect } from "@/components/AuthForm/success-redirect";
+import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
 
 export interface MfaChallengePageViewProps {
   challenge_id: string;
@@ -185,9 +186,27 @@ export default function MfaChallengePageView({
     ],
   );
 
+  const clearFactors = useMfaChallengeFactorsStore((s) => s.clearFactors);
+
   const onChallengeExpired = useCallback(() => {
+    if (challenge_id) clearFactors(challenge_id);
     router.replace("/auth/login");
-  }, [router]);
+  }, [challenge_id, clearFactors, router]);
+
+  // Read the factor list from the zustand store (persisted to
+  // sessionStorage). The login form wrote it there after receiving
+  // `mfa_required` from /api/auth/login, so we never need a second server
+  // round-trip. The store is created with `skipHydration`, so we kick off
+  // rehydration from this client effect — `rehydrate()` updates the store
+  // internally (no setState here), keeping SSR and the first client render
+  // in agreement and avoiding a hydration mismatch.
+  useEffect(() => {
+    void useMfaChallengeFactorsStore.persist.rehydrate();
+  }, []);
+  const hasHydrated = useMfaChallengeFactorsStore((s) => s.hasHydrated);
+  const payload = useMfaChallengeFactorsStore((s) =>
+    challenge_id ? s.byChallengeId[challenge_id] : undefined,
+  );
 
   if (!challenge_id || !client_app_id) {
     return (
@@ -199,13 +218,53 @@ export default function MfaChallengePageView({
     );
   }
 
+  if (!hasHydrated) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-6">
+        <p
+          className="text-sm text-muted-foreground"
+          data-testid="mfa-challenge-loading"
+        >
+          Loading verification options…
+        </p>
+      </div>
+    );
+  }
+
+  if (!payload) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-6 flex-col gap-3">
+        <p className="text-sm text-destructive">
+          This MFA challenge could not be loaded in this tab. Please log
+          in again.
+        </p>
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0 text-sm text-muted-foreground"
+          onClick={() => router.replace("/auth/login")}
+        >
+          Back to login
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-6">
       <MfaChallengeForm
         challenge_id={challenge_id}
         client_app_id={client_app_id}
         expires_at={expires_at}
-        onAuthenticated={onAuthenticated}
+        available_factors={payload.available_factors}
+        recovery_codes_available={payload.recovery_codes_available}
+        onAuthenticated={async (authorization_code) => {
+          // Drop the stashed factor list now that the challenge is
+          // resolved — keeps sessionStorage tidy if the user comes back
+          // through a fresh login.
+          clearFactors(challenge_id);
+          await onAuthenticated(authorization_code);
+        }}
         onChallengeExpired={onChallengeExpired}
       />
     </div>

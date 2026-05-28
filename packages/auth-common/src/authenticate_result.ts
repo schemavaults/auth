@@ -1,4 +1,15 @@
 import { z } from "zod";
+import { mfaFactorTypeSchema } from "./mfa/mfa-factor-type";
+
+export const availableMfaFactorSchema = z
+  .object({
+    factor_id: z.string().uuid(),
+    factor_type: mfaFactorTypeSchema,
+    last_used_at: z.number().int().positive().nullable(),
+  })
+  .strict();
+
+export type AvailableMfaFactor = z.infer<typeof availableMfaFactorSchema>;
 
 export const authenticatedAuthenticateResultSchema = z
   .object({
@@ -22,6 +33,8 @@ export const mfaRequiredAuthenticateResultSchema = z
     message: z.string(),
     challenge_id: z.string().uuid(),
     expires_at: z.number().int().positive(),
+    available_factors: z.array(availableMfaFactorSchema),
+    recovery_codes_available: z.boolean(),
   })
   .strict();
 
