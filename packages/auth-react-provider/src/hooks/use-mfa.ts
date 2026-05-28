@@ -24,6 +24,7 @@ export interface UseMfaResult {
   ) => Promise<MfaVerifyEnrollmentResponse>;
   removeFactor: (factor_id: string, code: string) => Promise<void>;
   regenerateRecoveryCodes: (
+    factor_id: string,
     code: string,
   ) => Promise<MfaVerifyEnrollmentResponse>;
   submitChallenge: (
@@ -93,9 +94,9 @@ export function useMfa(): UseMfaResult {
   );
 
   const regenerateRecoveryCodes = useCallback(
-    async (code: string) => {
+    async (factor_id: string, code: string) => {
       const client = requireClient(auth);
-      const result = await client.regenerateRecoveryCodes(code);
+      const result = await client.regenerateRecoveryCodes(factor_id, code);
       await refreshAllMfaStatus();
       return result;
     },

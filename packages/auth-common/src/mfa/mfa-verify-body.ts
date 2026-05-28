@@ -116,6 +116,19 @@ export const mfaCodeOnlyBodySchema = z
 
 export type MfaCodeOnlyBody = z.infer<typeof mfaCodeOnlyBodySchema>;
 
+// Authorize an action with a TOTP code from a specific factor. The caller
+// names which factor the code belongs to so the server verifies against
+// exactly that factor (one targeted lookup) instead of trying every
+// enrolled factor's secret in turn.
+export const mfaTotpProofBodySchema = z
+  .object({
+    factor_id: z.string().uuid(),
+    code: totpCodeSchema,
+  })
+  .strict();
+
+export type MfaTotpProofBody = z.infer<typeof mfaTotpProofBodySchema>;
+
 // Shape of the MFA challenge factor list that the login form stashes in
 // sessionStorage (keyed by challenge_id) so the downstream MFA challenge
 // page can render the factor picker without a second server round-trip.

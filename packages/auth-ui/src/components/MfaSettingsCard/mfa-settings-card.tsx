@@ -138,9 +138,10 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
           onClose={() => setRemoving(false)}
         />
       )}
-      {regenerating && (
+      {regenerating && totpStatus?.factor_id && (
         <MfaRegenerateRecoveryCodesDialog
           open={regenerating}
+          factor_id={totpStatus.factor_id}
           onClose={() => setRegenerating(false)}
         />
       )}

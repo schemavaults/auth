@@ -6,6 +6,7 @@ import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthCl
 
 export async function regenerateRecoveryCodes(args: {
   adapter: ISchemaVaultsAuthClientAdapter;
+  factor_id: string;
   code: string;
 }): Promise<MfaVerifyEnrollmentResponse> {
   const response = await args.adapter.fetch(
@@ -14,7 +15,7 @@ export async function regenerateRecoveryCodes(args: {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: args.code }),
+      body: JSON.stringify({ factor_id: args.factor_id, code: args.code }),
     },
   );
   if (!response.ok) {

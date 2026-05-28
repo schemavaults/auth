@@ -21,6 +21,7 @@ export {
   mfaFactorStatusResponseSchema,
   mfaEnrolledFactorSchema,
   mfaCodeOnlyBodySchema,
+  mfaTotpProofBodySchema,
   mfaChallengeFactorsPayloadSchema,
   type MfaVerifyBody,
   type MfaEnrollResponse,
@@ -30,5 +31,6 @@ export {
   type MfaFactorStatusResponse,
   type MfaEnrolledFactor,
   type MfaCodeOnlyBody,
+  type MfaTotpProofBody,
   type MfaChallengeFactorsPayload,
 } from "./mfa-verify-body";

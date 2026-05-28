@@ -17,12 +17,14 @@ import { RecoveryCodesPanel } from "../RecoveryCodesPanel";
 
 export interface MfaRegenerateRecoveryCodesDialogProps {
   open: boolean;
+  // The verified factor whose current TOTP code authorizes the regen.
+  factor_id: string;
   onClose: () => void;
 }
 
 export const MfaRegenerateRecoveryCodesDialog: FC<
   MfaRegenerateRecoveryCodesDialogProps
-> = ({ open, onClose }): ReactElement => {
+> = ({ open, factor_id, onClose }): ReactElement => {
   const { regenerateRecoveryCodes } = useMfa();
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +36,7 @@ export const MfaRegenerateRecoveryCodesDialog: FC<
     setSubmitting(true);
     setError(null);
     try {
-      const res = await regenerateRecoveryCodes(code);
+      const res = await regenerateRecoveryCodes(factor_id, code);
       setNewCodes(res.recovery_codes);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to regenerate codes");

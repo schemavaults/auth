@@ -1096,10 +1096,12 @@ export class SchemaVaultsAuthClient
   }
 
   public async regenerateRecoveryCodes(
+    factor_id: string,
     code: string,
   ): Promise<MfaVerifyEnrollmentResponse> {
     return await regenerateRecoveryCodesFn({
       adapter: this._adapter,
+      factor_id,
       code,
     });
   }

@@ -14,6 +14,10 @@ import {
 import { listVerifiedFactorTypesForUser as listVerifiedFactorTypesForUserFn } from "./list-verified-factor-types-for-user";
 import type { MfaFactorType } from "@schemavaults/auth-common";
 import { getFactorById as getFactorByIdFn } from "./get-factor-by-id";
+import {
+  getFactorWithSecretById as getFactorWithSecretByIdFn,
+  type FactorWithSecret,
+} from "./get-factor-with-secret-by-id";
 import { createUnverifiedFactor as createUnverifiedFactorFn } from "./create-unverified-factor";
 import { verifyFactor as verifyFactorFn } from "./verify-factor";
 import { touchFactorLastUsed as touchFactorLastUsedFn } from "./touch-factor-last-used";
@@ -59,6 +63,13 @@ export class MfaRegistry {
     factor_id: string;
   }): Promise<UserMfaFactorRow | null> {
     return getFactorByIdFn(this.db, args);
+  }
+
+  public getFactorWithSecretById(args: {
+    uid: string;
+    factor_id: string;
+  }): Promise<FactorWithSecret | null> {
+    return getFactorWithSecretByIdFn(this.db, args);
   }
 
   public createUnverifiedFactor(args: {

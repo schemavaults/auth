@@ -127,9 +127,10 @@ export interface ISchemaVaultsAuthClient {
 
   /**
    * Regenerate the user's recovery codes. Invalidates all previous codes.
-   * Requires the current TOTP code as proof.
+   * Requires a current TOTP code from the named verified factor as proof.
    */
   regenerateRecoveryCodes: (
+    factor_id: string,
     code: string,
   ) => Promise<MfaVerifyEnrollmentResponse>;
 
