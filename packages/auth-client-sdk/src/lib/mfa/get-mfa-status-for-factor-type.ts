@@ -1,5 +1,6 @@
 import {
   mfaFactorStatusResponseSchema,
+  mfaFactorTypeSchema,
   type MfaFactorType,
   type MfaFactorStatusResponse,
 } from "@schemavaults/auth-common";
@@ -9,8 +10,10 @@ export async function getMfaStatusForFactorType(
   adapter: ISchemaVaultsAuthClientAdapter,
   factor_type: MfaFactorType,
 ): Promise<MfaFactorStatusResponse> {
+  // Validate the factor type before building the request URL.
+  const validatedFactorType = mfaFactorTypeSchema.parse(factor_type);
   const response = await adapter.fetch(
-    `/api/user/mfa/status/${encodeURIComponent(factor_type)}`,
+    `/api/user/mfa/status/${encodeURIComponent(validatedFactorType)}`,
     {
       method: "GET",
       credentials: "include",
