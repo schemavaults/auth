@@ -5,6 +5,7 @@ import type {
   CodeChallengeWithDetails,
   PaginationOptions,
   AuthenticateResult,
+  MfaFactorType,
   MfaStatusResponse,
   MfaEnrollResponse,
   MfaVerifyEnrollmentResponse,
@@ -91,6 +92,15 @@ export interface ISchemaVaultsAuthClient {
 
   /** Get the current user's MFA enrollment status. */
   getMfaStatus: () => Promise<MfaStatusResponse>;
+
+  /**
+   * Get the current user's MFA enrollment status for a single factor
+   * type. Returns `{ enabled: false }` when the user has no verified
+   * factor of that type.
+   */
+  getMfaStatusForFactorType: (
+    factor_type: MfaFactorType,
+  ) => Promise<MfaStatusResponse>;
 
   /**
    * Begin TOTP enrollment for the current user. Returns the new factor's

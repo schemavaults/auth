@@ -11,6 +11,7 @@ import {
   audienceSchema,
   type SuccessfullyGeneratedTokensRecord,
   type AuthenticateResult,
+  type MfaFactorType,
   type MfaStatusResponse,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentResponse,
@@ -28,6 +29,7 @@ import {
   removeFactor as removeFactorFn,
   regenerateRecoveryCodes as regenerateRecoveryCodesFn,
   getMfaStatus as getMfaStatusFn,
+  getMfaStatusForFactorType as getMfaStatusForFactorTypeFn,
 } from "@/lib/mfa";
 import type { Credentials } from "@/types/credentials";
 import type { ISchemaVaultsAuthClient } from "@/types/ISchemaVaultsAuthClient";
@@ -1061,6 +1063,12 @@ export class SchemaVaultsAuthClient
 
   public async getMfaStatus(): Promise<MfaStatusResponse> {
     return await getMfaStatusFn(this._adapter);
+  }
+
+  public async getMfaStatusForFactorType(
+    factor_type: MfaFactorType,
+  ): Promise<MfaStatusResponse> {
+    return await getMfaStatusForFactorTypeFn(this._adapter, factor_type);
   }
 
   public async enrollTotp(): Promise<MfaEnrollResponse> {
