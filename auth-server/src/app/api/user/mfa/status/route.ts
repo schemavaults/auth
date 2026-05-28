@@ -7,6 +7,7 @@ import {
 import { MfaRegistry } from "@/lib/auth-db";
 import {
   mfaStatusResponseSchema,
+  type MfaEnrolledFactor,
   type MfaStatusResponse,
 } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
@@ -19,37 +20,23 @@ async function GET_status_handler(
 ): Promise<NextResponse> {
   try {
     const mfaRegistry = new MfaRegistry(dbh.db);
-    const verifiedSummaries = await mfaRegistry.listVerifiedFactorsForUser(
-      user.uid,
-    );
-    const payload: MfaStatusResponse = await (async () => {
-      const primary = verifiedSummaries[0];
-      if (!primary) {
-        return { enabled: false } satisfies MfaStatusResponse;
-      }
-      // The current response shape carries one factor's metadata. When
-      // additional factor types ship, this endpoint will need to be
-      // extended to return the full factor list.
-      const fullFactor = await mfaRegistry.getVerifiedFactorById({
-        uid: user.uid,
-        factor_id: primary.factor_id,
-      });
-      const recovery_codes_remaining =
-        await mfaRegistry.countRecoveryCodesRemaining(user.uid);
-      // Postgres returns BIGINT columns as strings; coerce to number so the
-      // mfaStatusResponseSchema (which expects z.number()) parses on both
-      // ends of the wire.
-      const verified_at_raw = fullFactor?.row.verified_at ?? null;
-      const verified_at =
-        verified_at_raw == null ? undefined : Number(verified_at_raw);
-      return {
-        enabled: true,
-        factor_id: primary.factor_id,
-        factor_type: primary.factor_type,
-        verified_at,
-        recovery_codes_remaining,
-      } satisfies MfaStatusResponse;
-    })();
+    const [verifiedSummaries, recovery_codes_remaining] = await Promise.all([
+      mfaRegistry.listVerifiedFactorsForUser(user.uid),
+      mfaRegistry.countRecoveryCodesRemaining(user.uid),
+    ]);
+
+    const factors: MfaEnrolledFactor[] = verifiedSummaries.map((summary) => ({
+      factor_id: summary.factor_id,
+      factor_type: summary.factor_type,
+      verified_at:
+        summary.verified_at == null ? undefined : summary.verified_at,
+    }));
+
+    const payload: MfaStatusResponse = {
+      enabled: factors.length > 0,
+      factors,
+      recovery_codes_remaining,
+    };
 
     const parsed = mfaStatusResponseSchema.safeParse(payload);
     if (!parsed.success) {

@@ -13,6 +13,7 @@ import {
   type AuthenticateResult,
   type MfaFactorType,
   type MfaStatusResponse,
+  type MfaFactorStatusResponse,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentResponse,
   type OrganizationMembershipRoleDetails,
@@ -1067,7 +1068,7 @@ export class SchemaVaultsAuthClient
 
   public async getMfaStatusForFactorType(
     factor_type: MfaFactorType,
-  ): Promise<MfaStatusResponse> {
+  ): Promise<MfaFactorStatusResponse> {
     return await getMfaStatusForFactorTypeFn(this._adapter, factor_type);
   }
 

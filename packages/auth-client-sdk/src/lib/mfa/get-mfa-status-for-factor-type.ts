@@ -1,14 +1,14 @@
 import {
-  mfaStatusResponseSchema,
+  mfaFactorStatusResponseSchema,
   type MfaFactorType,
-  type MfaStatusResponse,
+  type MfaFactorStatusResponse,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 
 export async function getMfaStatusForFactorType(
   adapter: ISchemaVaultsAuthClientAdapter,
   factor_type: MfaFactorType,
-): Promise<MfaStatusResponse> {
+): Promise<MfaFactorStatusResponse> {
   const response = await adapter.fetch(
     `/api/user/mfa/status/${encodeURIComponent(factor_type)}`,
     {
@@ -22,7 +22,7 @@ export async function getMfaStatusForFactorType(
     );
   }
   const json: unknown = await response.json();
-  const parsed = mfaStatusResponseSchema.safeParse(json);
+  const parsed = mfaFactorStatusResponseSchema.safeParse(json);
   if (!parsed.success) {
     throw new Error(
       `Unexpected getMfaStatusForFactorType response: ${parsed.error.message}`,

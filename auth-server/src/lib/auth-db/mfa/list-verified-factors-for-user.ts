@@ -11,6 +11,7 @@ export interface VerifiedFactorSummary {
   factor_id: string;
   factor_type: MfaFactorType;
   last_used_at: number | null;
+  verified_at: number | null;
 }
 
 export async function listVerifiedFactorsForUser(
@@ -19,7 +20,7 @@ export async function listVerifiedFactorsForUser(
 ): Promise<VerifiedFactorSummary[]> {
   const rows = await db
     .selectFrom("user_mfa_factors")
-    .select(["factor_id", "factor_type", "last_used_at"])
+    .select(["factor_id", "factor_type", "last_used_at", "verified_at"])
     .where("uid", "=", uid)
     .where("verified", "=", true)
     .execute();
@@ -36,8 +37,11 @@ export async function listVerifiedFactorsForUser(
     summaries.push({
       factor_id: row.factor_id,
       factor_type: parsed.data,
+      // Postgres returns BIGINT columns as strings; coerce to number.
       last_used_at:
         row.last_used_at == null ? null : Number(row.last_used_at),
+      verified_at:
+        row.verified_at == null ? null : Number(row.verified_at),
     });
   }
 

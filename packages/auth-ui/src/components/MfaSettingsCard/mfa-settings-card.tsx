@@ -36,6 +36,12 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
   const [regenerating, setRegenerating] = useState(false);
 
   const enabled = !!status?.enabled;
+  // The settings card is single-factor today; surface the first enrolled
+  // factor for the "enabled on" timestamp and the remove dialog.
+  const primaryFactor = status?.factors?.[0];
+  const factorTypesLabel = status?.factors
+    .map((factor) => factor.factor_type.toUpperCase())
+    .join(", ");
 
   return (
     <Card className={cn("w-full", className)}>
@@ -60,7 +66,8 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
         ) : enabled ? (
           <div className="space-y-2 text-sm">
             <div>
-              <strong>Status:</strong> Enabled (TOTP)
+              <strong>Status:</strong> Enabled
+              {factorTypesLabel ? ` (${factorTypesLabel})` : ""}
             </div>
             {typeof status?.recovery_codes_remaining === "number" && (
               <div>
@@ -68,10 +75,10 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
                 {status.recovery_codes_remaining}
               </div>
             )}
-            {typeof status?.verified_at === "number" && (
+            {typeof primaryFactor?.verified_at === "number" && (
               <div className="text-muted-foreground">
                 Enabled on{" "}
-                {new Date(status.verified_at).toLocaleString()}
+                {new Date(primaryFactor.verified_at).toLocaleString()}
               </div>
             )}
           </div>
@@ -120,10 +127,10 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
           onClose={() => setEnrolling(false)}
         />
       )}
-      {removing && status?.factor_id && (
+      {removing && primaryFactor?.factor_id && (
         <MfaRemoveFactorDialog
           open={removing}
-          factor_id={status.factor_id}
+          factor_id={primaryFactor.factor_id}
           onClose={() => setRemoving(false)}
         />
       )}

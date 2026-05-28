@@ -7,6 +7,7 @@ import type {
   AuthenticateResult,
   MfaFactorType,
   MfaStatusResponse,
+  MfaFactorStatusResponse,
   MfaEnrollResponse,
   MfaVerifyEnrollmentResponse,
   OrganizationMembershipRoleDetails,
@@ -100,7 +101,7 @@ export interface ISchemaVaultsAuthClient {
    */
   getMfaStatusForFactorType: (
     factor_type: MfaFactorType,
-  ) => Promise<MfaStatusResponse>;
+  ) => Promise<MfaFactorStatusResponse>;
 
   /**
    * Begin TOTP enrollment for the current user. Returns the new factor's

@@ -7,9 +7,9 @@ import {
 import { MfaRegistry } from "@/lib/auth-db";
 import {
   mfaFactorTypeSchema,
-  mfaStatusResponseSchema,
+  mfaFactorStatusResponseSchema,
   type MfaFactorType,
-  type MfaStatusResponse,
+  type MfaFactorStatusResponse,
 } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
@@ -29,32 +29,17 @@ async function GET_status_for_factor_type_handler(
       (summary) => summary.factor_type === factor_type,
     );
 
-    const payload: MfaStatusResponse = await (async () => {
-      if (!match) {
-        return { enabled: false } satisfies MfaStatusResponse;
-      }
-      const fullFactor = await mfaRegistry.getVerifiedFactorById({
-        uid: user.uid,
-        factor_id: match.factor_id,
-      });
-      const recovery_codes_remaining =
-        await mfaRegistry.countRecoveryCodesRemaining(user.uid);
-      // Postgres returns BIGINT columns as strings; coerce to number so the
-      // mfaStatusResponseSchema (which expects z.number()) parses on both
-      // ends of the wire.
-      const verified_at_raw = fullFactor?.row.verified_at ?? null;
-      const verified_at =
-        verified_at_raw == null ? undefined : Number(verified_at_raw);
-      return {
-        enabled: true,
-        factor_id: match.factor_id,
-        factor_type: match.factor_type,
-        verified_at,
-        recovery_codes_remaining,
-      } satisfies MfaStatusResponse;
-    })();
+    const payload: MfaFactorStatusResponse = match
+      ? {
+          enabled: true,
+          factor_id: match.factor_id,
+          factor_type: match.factor_type,
+          verified_at:
+            match.verified_at == null ? undefined : match.verified_at,
+        }
+      : { enabled: false };
 
-    const parsed = mfaStatusResponseSchema.safeParse(payload);
+    const parsed = mfaFactorStatusResponseSchema.safeParse(payload);
     if (!parsed.success) {
       await captureServerException(dbh.db, parsed.error, {
         op_name: "GET_status_for_factor_type_handler:response_schema_mismatch",

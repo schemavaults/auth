@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { appIdSchema } from "@schemavaults/app-definitions";
 import { availableMfaFactorSchema } from "../authenticate_result";
+import { mfaFactorTypeSchema } from "./mfa-factor-type";
 
 export const totpCodeSchema = z
   .string()
@@ -66,13 +67,42 @@ export type MfaVerifyEnrollmentResponse = z.infer<
   typeof mfaVerifyEnrollmentResponseSchema
 >;
 
-export const mfaStatusResponseSchema = z
+// Status of a single MFA factor type — returned by
+// GET /api/user/mfa/status/[factor_type]. `enabled` is false (and the
+// factor fields omitted) when the user has no verified factor of that type.
+export const mfaFactorStatusResponseSchema = z
   .object({
     enabled: z.boolean(),
     factor_id: z.string().uuid().optional(),
-    factor_type: z.literal("totp").optional(),
+    factor_type: mfaFactorTypeSchema.optional(),
     verified_at: z.number().int().positive().optional(),
-    recovery_codes_remaining: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
+export type MfaFactorStatusResponse = z.infer<
+  typeof mfaFactorStatusResponseSchema
+>;
+
+// A single verified factor in the account-wide MFA status list.
+export const mfaEnrolledFactorSchema = z
+  .object({
+    factor_id: z.string().uuid(),
+    factor_type: mfaFactorTypeSchema,
+    verified_at: z.number().int().positive().optional(),
+  })
+  .strict();
+
+export type MfaEnrolledFactor = z.infer<typeof mfaEnrolledFactorSchema>;
+
+// Account-wide MFA status — returned by GET /api/user/mfa/status. Lists
+// every verified factor rather than collapsing to a single one, plus the
+// account-wide recovery-code count. `enabled` is a convenience mirror of
+// `factors.length > 0`.
+export const mfaStatusResponseSchema = z
+  .object({
+    enabled: z.boolean(),
+    factors: z.array(mfaEnrolledFactorSchema),
+    recovery_codes_remaining: z.number().int().nonnegative(),
   })
   .strict();
 
