@@ -7,7 +7,7 @@ import {
   useAppEnvironment,
   useAuth,
 } from "@schemavaults/auth-react-provider";
-import { useToast } from "@schemavaults/ui";
+import { Button, useToast } from "@schemavaults/ui";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import { successRedirect } from "@/components/AuthForm/success-redirect";
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
@@ -238,13 +238,14 @@ export default function MfaChallengePageView({
           This MFA challenge could not be loaded in this tab. Please log
           in again.
         </p>
-        <button
+        <Button
           type="button"
-          className="text-sm underline text-muted-foreground"
+          variant="link"
+          className="h-auto p-0 text-sm text-muted-foreground"
           onClick={() => router.replace("/auth/login")}
         >
           Back to login
-        </button>
+        </Button>
       </div>
     );
   }

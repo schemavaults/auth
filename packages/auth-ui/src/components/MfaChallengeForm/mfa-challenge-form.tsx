@@ -149,9 +149,10 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
             data-testid="mfa-challenge-input"
           />
           {recovery_codes_available ? (
-            <button
+            <Button
               type="button"
-              className="text-sm underline text-muted-foreground"
+              variant="link"
+              className="h-auto p-0 text-sm text-muted-foreground"
               onClick={() => {
                 setUseRecovery((p) => !p);
                 setValue("");
@@ -162,7 +163,7 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
               {useRecovery
                 ? "Use authenticator app instead"
                 : "Use a recovery code instead"}
-            </button>
+            </Button>
           ) : null}
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
