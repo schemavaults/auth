@@ -68,11 +68,16 @@ export type MfaVerifyEnrollmentResponse = z.infer<
 >;
 
 // Status of a single MFA factor type — returned by
-// GET /api/user/mfa/status/[factor_type]. `enabled` is false (and the
-// factor fields omitted) when the user has no verified factor of that type.
+// GET /api/user/mfa/status/[factor_type]. `enabled` means a verified,
+// active factor of that type exists; `pending` means an enrollment is in
+// progress (an unverified factor exists but hasn't been confirmed yet).
+// The two are mutually exclusive. When neither is set the user has no
+// factor of that type. `factor_id`/`factor_type` are present whenever a
+// factor row exists (verified or pending); `verified_at` only when enabled.
 export const mfaFactorStatusResponseSchema = z
   .object({
     enabled: z.boolean(),
+    pending: z.boolean(),
     factor_id: z.string().uuid().optional(),
     factor_type: mfaFactorTypeSchema.optional(),
     verified_at: z.number().int().positive().optional(),

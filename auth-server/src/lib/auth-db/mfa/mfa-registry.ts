@@ -14,6 +14,7 @@ import {
 import { listVerifiedFactorTypesForUser as listVerifiedFactorTypesForUserFn } from "./list-verified-factor-types-for-user";
 import type { MfaFactorType } from "@schemavaults/auth-common";
 import { getFactorById as getFactorByIdFn } from "./get-factor-by-id";
+import { getFactorByType as getFactorByTypeFn } from "./get-factor-by-type";
 import {
   getFactorWithSecretById as getFactorWithSecretByIdFn,
   type FactorWithSecret,
@@ -63,6 +64,13 @@ export class MfaRegistry {
     factor_id: string;
   }): Promise<UserMfaFactorRow | null> {
     return getFactorByIdFn(this.db, args);
+  }
+
+  public getFactorByType(args: {
+    uid: string;
+    factor_type: MfaFactorType;
+  }): Promise<UserMfaFactorRow | null> {
+    return getFactorByTypeFn(this.db, args);
   }
 
   public getFactorWithSecretById(args: {

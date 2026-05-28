@@ -22,22 +22,38 @@ async function GET_status_for_factor_type_handler(
 ): Promise<NextResponse> {
   try {
     const mfaRegistry = new MfaRegistry(dbh.db);
-    const verifiedSummaries = await mfaRegistry.listVerifiedFactorsForUser(
-      user.uid,
-    );
-    const match = verifiedSummaries.find(
-      (summary) => summary.factor_type === factor_type,
-    );
+    // Filter by factor_type in SQL and include in-progress (unverified)
+    // enrollments so the status reflects a pending setup, not just active
+    // factors.
+    const factor = await mfaRegistry.getFactorByType({
+      uid: user.uid,
+      factor_type,
+    });
 
-    const payload: MfaFactorStatusResponse = match
-      ? {
+    const payload: MfaFactorStatusResponse = ((): MfaFactorStatusResponse => {
+      if (!factor) {
+        return { enabled: false, pending: false };
+      }
+      if (factor.verified) {
+        // Postgres returns BIGINT columns as strings; coerce to number.
+        const verified_at_raw = factor.verified_at;
+        return {
           enabled: true,
-          factor_id: match.factor_id,
-          factor_type: match.factor_type,
+          pending: false,
+          factor_id: factor.factor_id,
+          factor_type,
           verified_at:
-            match.verified_at == null ? undefined : match.verified_at,
-        }
-      : { enabled: false };
+            verified_at_raw == null ? undefined : Number(verified_at_raw),
+        };
+      }
+      // An unverified factor row means enrollment is in progress.
+      return {
+        enabled: false,
+        pending: true,
+        factor_id: factor.factor_id,
+        factor_type,
+      };
+    })();
 
     const parsed = mfaFactorStatusResponseSchema.safeParse(payload);
     if (!parsed.success) {
