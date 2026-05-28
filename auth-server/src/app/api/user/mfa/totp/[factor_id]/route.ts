@@ -1,5 +1,6 @@
 import "server-only";
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
@@ -12,6 +13,8 @@ import captureServerException from "@/lib/captureServerException";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 
 const ROUTE = "/api/user/mfa/totp/[factor_id]";
+
+const factorIdSchema = z.string().uuid();
 
 async function DELETE_factor_handler(
   { user, dbh, req }: IProtectedAuthenticatedApiRouteProps,
@@ -97,9 +100,16 @@ export async function DELETE(
   ctx: RouteContext<"/api/user/mfa/totp/[factor_id]">,
 ): Promise<NextResponse> {
   const { factor_id } = await ctx.params;
+  const parsed = factorIdSchema.safeParse(factor_id);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, message: "Invalid factor_id in URL" },
+      { status: 400 },
+    );
+  }
   return await (
     await withAuthenticatedApiRouteGuard((props) =>
-      DELETE_factor_handler(props, factor_id),
+      DELETE_factor_handler(props, parsed.data),
     )
   )(req);
 }
