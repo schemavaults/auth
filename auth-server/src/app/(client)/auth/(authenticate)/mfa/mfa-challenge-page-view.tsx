@@ -11,6 +11,7 @@ import { Button, useToast } from "@schemavaults/ui";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import { successRedirect } from "@/components/AuthForm/success-redirect";
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
+import { PasskeyChallengeButton } from "@/components/Passkeys";
 
 export interface MfaChallengePageViewProps {
   challenge_id: string;
@@ -266,6 +267,19 @@ export default function MfaChallengePageView({
           await onAuthenticated(authorization_code);
         }}
         onChallengeExpired={onChallengeExpired}
+        renderPasskeyAction={({ factor_id, onError }) => (
+          <PasskeyChallengeButton
+            challenge_id={challenge_id}
+            client_app_id={client_app_id}
+            factor_id={factor_id}
+            onError={onError}
+            onAuthenticated={async (authorization_code) => {
+              clearFactors(challenge_id);
+              await onAuthenticated(authorization_code);
+            }}
+            onChallengeExpired={onChallengeExpired}
+          />
+        )}
       />
     </div>
   );

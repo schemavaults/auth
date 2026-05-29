@@ -7,10 +7,13 @@ import {
 import { MfaRegistry } from "@/lib/auth-db";
 import {
   decryptSecret,
-  generateRecoveryCodes,
+  issueRecoveryCodesIfNeeded,
   verifyTotpCode,
 } from "@/lib/mfa";
-import { mfaVerifyEnrollmentBodySchema } from "@schemavaults/auth-common";
+import {
+  mfaVerifyEnrollmentBodySchema,
+  type MfaVerifyEnrollmentResponse,
+} from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
@@ -55,6 +58,16 @@ async function POST_verify_enrollment_handler(
       );
     }
 
+    if (
+      factor.factor_type !== "totp" ||
+      factor.secret_ciphertext === null ||
+      factor.kek_version === null
+    ) {
+      return NextResponse.json(
+        { success: false, message: "Factor is not a TOTP factor" },
+        { status: 400 },
+      );
+    }
     const secret = decryptSecret(
       factor.secret_ciphertext,
       factor.kek_version,
@@ -78,11 +91,11 @@ async function POST_verify_enrollment_handler(
       );
     }
 
-    const recovery_codes = generateRecoveryCodes();
-    await mfaRegistry.replaceRecoveryCodes({
-      uid: user.uid,
-      codes: recovery_codes,
-    });
+    // Recovery codes are minted only for the user's first verified factor;
+    // if they already have a passkey (and thus recovery codes), enrolling
+    // TOTP must not rotate the codes they already saved.
+    const { recovery_codes, recovery_codes_issued } =
+      await issueRecoveryCodesIfNeeded(mfaRegistry, user.uid);
 
     // Notify the user that MFA was enabled. Best-effort.
     void sendMfaSecurityAlertEmail({
@@ -92,7 +105,11 @@ async function POST_verify_enrollment_handler(
     });
 
     return NextResponse.json(
-      { success: true, recovery_codes },
+      {
+        success: true,
+        recovery_codes,
+        recovery_codes_issued,
+      } satisfies MfaVerifyEnrollmentResponse,
       { status: 200 },
     );
   } catch (e: unknown) {

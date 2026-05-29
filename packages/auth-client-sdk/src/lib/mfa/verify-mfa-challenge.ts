@@ -1,6 +1,7 @@
 import {
   authenticateResultSchema,
   type AuthenticateResult,
+  type MfaProof,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 
@@ -8,9 +9,7 @@ export interface VerifyMfaChallengeOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
   challenge_id: string;
   client_app_id: string;
-  proof:
-    | { type: "totp"; factor_id: string; code: string }
-    | { type: "recovery_code"; recovery_code: string };
+  proof: MfaProof;
 }
 
 export async function verifyMfaChallenge(

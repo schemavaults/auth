@@ -22,6 +22,9 @@ export async function getVerifiedFactorById(
     .where("verified", "=", true)
     .executeTakeFirst();
   if (!row) return null;
+  // Only TOTP factors carry a symmetric secret. A passkey (webauthn) factor
+  // has null secret material here and cannot be verified via this path.
+  if (row.secret_ciphertext === null || row.kek_version === null) return null;
   const secret = decryptSecret(row.secret_ciphertext, row.kek_version);
   return { row, secret };
 }

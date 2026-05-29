@@ -34,6 +34,7 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
   const [enrollment, setEnrollment] = useState<MfaEnrollResponse | null>(null);
   const [code, setCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [recoveryCodesIssued, setRecoveryCodesIssued] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -67,12 +68,14 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
     try {
       const result = await confirmTotpEnrollment(enrollment.factor_id, code);
       setRecoveryCodes(result.recovery_codes);
+      setRecoveryCodesIssued(result.recovery_codes_issued);
       setStep("recovery");
       toast({
         variant: "default",
         title: "Multi-factor authentication enabled",
-        description:
-          "Your authenticator app is now required at sign-in. Save the recovery codes before closing this dialog.",
+        description: result.recovery_codes_issued
+          ? "Your authenticator app is now required at sign-in. Save the recovery codes before closing this dialog."
+          : "Your authenticator app is now required at sign-in.",
       });
     } catch (e: unknown) {
       setError(
@@ -149,14 +152,24 @@ export const TotpEnrollmentDialog: FC<TotpEnrollmentDialogProps> = ({
         )}
         {step === "recovery" && (
           <div className="space-y-3">
-            <RecoveryCodesPanel
-              codes={recoveryCodes}
-              onAcknowledge={setAcknowledged}
-            />
+            {recoveryCodesIssued ? (
+              <RecoveryCodesPanel
+                codes={recoveryCodes}
+                onAcknowledge={setAcknowledged}
+              />
+            ) : (
+              <p
+                className="text-sm text-muted-foreground"
+                data-testid="mfa-enroll-existing-recovery-note"
+              >
+                Your authenticator app has been added. Your existing recovery
+                codes still apply — no new codes were generated.
+              </p>
+            )}
             <DialogFooter>
               <Button
                 onClick={onClose}
-                disabled={!acknowledged}
+                disabled={recoveryCodesIssued && !acknowledged}
                 data-testid="mfa-enroll-done"
                 className="flex flex-row gap-2 flex-nowrap"
               >

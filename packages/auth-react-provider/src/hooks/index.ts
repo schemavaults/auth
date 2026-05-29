@@ -55,6 +55,12 @@ export { useMfa } from "./use-mfa";
 export type * from "./use-mfa";
 
 export {
+  useWebauthnCredentialsSwr,
+  WEBAUTHN_CREDENTIALS_SWR_KEY,
+} from "./use-webauthn-credentials-swr";
+export type * from "./use-webauthn-credentials-swr";
+
+export {
   useMyOrganizations,
   clearMyOrganizationsCache,
 } from "./use-my-organizations";

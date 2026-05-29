@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import uuidSync from "@/lib/uuid/uuidSync";
+import { PasskeysSettingsSection } from "@/components/Passkeys";
 
 export interface AuthAccountPageViewProps {
   preloaded_authorized_apps_data?: PreloadedAppsTableDataWithDomainRefs;
@@ -64,7 +65,10 @@ export default function AccountPageView({
         appEnvironment={environment}
         preloaded_memberships={preloaded_organization_memberships}
       />
-      <MfaSettingsCard className={cardsClassName} />
+      <MfaSettingsCard
+        className={cardsClassName}
+        passkeysSection={<PasskeysSettingsSection />}
+      />
       <PendingInvitationsCard cardClassName={cardsClassName} />
       <AppsCard
         cardTitle="Authorized Applications"

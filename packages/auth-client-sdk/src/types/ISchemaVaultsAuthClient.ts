@@ -10,6 +10,11 @@ import type {
   MfaFactorStatusResponse,
   MfaEnrollResponse,
   MfaVerifyEnrollmentResponse,
+  MfaProof,
+  WebauthnEnrollOptionsResponse,
+  WebauthnCredentialSummary,
+  WebauthnAuthenticationOptionsResponse,
+  WebauthnRegistrationResponse,
   OrganizationMembershipRoleDetails,
   SchemaVaultsAuthErrorId,
 } from "@schemavaults/auth-common";
@@ -86,9 +91,7 @@ export interface ISchemaVaultsAuthClient {
   verifyMfaChallenge: (
     challenge_id: string,
     client_app_id: AppId,
-    proof:
-      | { type: "totp"; factor_id: string; code: string }
-      | { type: "recovery_code"; recovery_code: string },
+    proof: MfaProof,
   ) => Promise<AuthenticateResult>;
 
   /** Get the current user's MFA enrollment status. */
@@ -133,6 +136,50 @@ export interface ISchemaVaultsAuthClient {
     factor_id: string,
     code: string,
   ) => Promise<MfaVerifyEnrollmentResponse>;
+
+  /**
+   * Begin passkey (WebAuthn) enrollment. Returns the pending factor_id and
+   * the browser registration options to run the registration ceremony with.
+   */
+  beginWebauthnEnrollment: () => Promise<WebauthnEnrollOptionsResponse>;
+
+  /**
+   * Confirm a pending passkey enrollment with the browser's registration
+   * attestation. Recovery codes are returned only if this is the user's
+   * first verified factor (see `recovery_codes_issued`).
+   */
+  confirmWebauthnEnrollment: (
+    factor_id: string,
+    attestation: WebauthnRegistrationResponse,
+    label?: string,
+  ) => Promise<MfaVerifyEnrollmentResponse>;
+
+  /** List the current user's enrolled passkeys. */
+  listWebauthnCredentials: () => Promise<WebauthnCredentialSummary[]>;
+
+  /**
+   * Remove a passkey by id. Requires step-up proof: a TOTP code, a fresh
+   * passkey assertion (from getWebauthnStepUpOptions), or a recovery code.
+   */
+  removeWebauthnFactor: (
+    factor_id: string,
+    proof: MfaProof,
+  ) => Promise<void>;
+
+  /**
+   * Request a WebAuthn assertion challenge to authorize a sensitive action
+   * (removing a passkey) inside an authenticated session.
+   */
+  getWebauthnStepUpOptions: () => Promise<WebauthnAuthenticationOptionsResponse>;
+
+  /**
+   * Login-time request for a WebAuthn assertion challenge bound to an
+   * in-flight MFA challenge. Submit the assertion via verifyMfaChallenge.
+   */
+  getWebauthnAuthenticationOptions: (
+    challenge_id: string,
+    client_app_id: AppId,
+  ) => Promise<WebauthnAuthenticationOptionsResponse>;
 
   // Where to send the user after they are successfully logged in and have acquired access/refresh tokens
   successful_authentication_redirect_uri: string;

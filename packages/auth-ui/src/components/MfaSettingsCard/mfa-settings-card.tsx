@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FC, type ReactElement } from "react";
+import { useState, type FC, type ReactElement, type ReactNode } from "react";
 import {
   Button,
   Card,
@@ -28,10 +28,16 @@ import { MfaRegenerateRecoveryCodesDialog } from "../MfaRegenerateRecoveryCodesD
 
 export interface MfaSettingsCardProps {
   className?: string;
+  // Optional passkey (WebAuthn) management UI rendered as its own section
+  // below the authenticator-app controls. Supplied by the auth server, which
+  // owns the passkey browser ceremonies; this package stays free of any
+  // WebAuthn browser dependency for its external consumers.
+  passkeysSection?: ReactNode;
 }
 
 export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
   className,
+  passkeysSection,
 }): ReactElement => {
   // The settings card only manages the TOTP factor, so query that factor
   // type explicitly rather than picking an arbitrary entry out of the
@@ -125,6 +131,9 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
           </Button>
         )}
       </CardFooter>
+      {passkeysSection ? (
+        <div className="border-t px-6 py-4">{passkeysSection}</div>
+      ) : null}
       {enrolling && (
         <TotpEnrollmentDialog
           open={enrolling}

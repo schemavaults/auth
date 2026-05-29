@@ -6,6 +6,10 @@ import type {
   MfaEnrollResponse,
   MfaVerifyEnrollmentResponse,
   AuthenticateResult,
+  MfaProof,
+  WebauthnEnrollOptionsResponse,
+  WebauthnAuthenticationOptionsResponse,
+  WebauthnRegistrationResponse,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import { useSWRConfig } from "swr";
@@ -30,10 +34,20 @@ export interface UseMfaResult {
   submitChallenge: (
     challenge_id: string,
     client_app_id: string,
-    proof:
-      | { type: "totp"; factor_id: string; code: string }
-      | { type: "recovery_code"; recovery_code: string },
+    proof: MfaProof,
   ) => Promise<AuthenticateResult>;
+  beginWebauthnEnrollment: () => Promise<WebauthnEnrollOptionsResponse>;
+  confirmWebauthnEnrollment: (
+    factor_id: string,
+    attestation: WebauthnRegistrationResponse,
+    label?: string,
+  ) => Promise<MfaVerifyEnrollmentResponse>;
+  removeWebauthnFactor: (factor_id: string, proof: MfaProof) => Promise<void>;
+  getWebauthnStepUpOptions: () => Promise<WebauthnAuthenticationOptionsResponse>;
+  getWebauthnAuthenticationOptions: (
+    challenge_id: string,
+    client_app_id: string,
+  ) => Promise<WebauthnAuthenticationOptionsResponse>;
 }
 
 function requireClient(
@@ -104,15 +118,57 @@ export function useMfa(): UseMfaResult {
   );
 
   const submitChallenge = useCallback(
-    async (
-      challenge_id: string,
-      client_app_id: string,
-      proof:
-        | { type: "totp"; factor_id: string; code: string }
-        | { type: "recovery_code"; recovery_code: string },
-    ) => {
+    async (challenge_id: string, client_app_id: string, proof: MfaProof) => {
       const client = requireClient(auth);
       return await client.verifyMfaChallenge(challenge_id, client_app_id, proof);
+    },
+    [auth],
+  );
+
+  const beginWebauthnEnrollment = useCallback(async () => {
+    const client = requireClient(auth);
+    return await client.beginWebauthnEnrollment();
+  }, [auth]);
+
+  const confirmWebauthnEnrollment = useCallback(
+    async (
+      factor_id: string,
+      attestation: WebauthnRegistrationResponse,
+      label?: string,
+    ) => {
+      const client = requireClient(auth);
+      const result = await client.confirmWebauthnEnrollment(
+        factor_id,
+        attestation,
+        label,
+      );
+      await refreshAllMfaStatus();
+      return result;
+    },
+    [auth, refreshAllMfaStatus],
+  );
+
+  const removeWebauthnFactor = useCallback(
+    async (factor_id: string, proof: MfaProof) => {
+      const client = requireClient(auth);
+      await client.removeWebauthnFactor(factor_id, proof);
+      await refreshAllMfaStatus();
+    },
+    [auth, refreshAllMfaStatus],
+  );
+
+  const getWebauthnStepUpOptions = useCallback(async () => {
+    const client = requireClient(auth);
+    return await client.getWebauthnStepUpOptions();
+  }, [auth]);
+
+  const getWebauthnAuthenticationOptions = useCallback(
+    async (challenge_id: string, client_app_id: string) => {
+      const client = requireClient(auth);
+      return await client.getWebauthnAuthenticationOptions(
+        challenge_id,
+        client_app_id,
+      );
     },
     [auth],
   );
@@ -126,5 +182,10 @@ export function useMfa(): UseMfaResult {
     removeFactor,
     regenerateRecoveryCodes,
     submitChallenge,
+    beginWebauthnEnrollment,
+    confirmWebauthnEnrollment,
+    removeWebauthnFactor,
+    getWebauthnStepUpOptions,
+    getWebauthnAuthenticationOptions,
   };
 }

@@ -29,6 +29,7 @@ import type { ErrorsTable } from "./errors";
 import type {
   UserMfaFactorsTable,
   UserMfaRecoveryCodesTable,
+  UserWebauthnCredentialsTable,
 } from "./mfa";
 
 export type AuthDatabase = {
@@ -59,4 +60,5 @@ export type AuthDatabase = {
   errors: ErrorsTable;
   user_mfa_factors: UserMfaFactorsTable;
   user_mfa_recovery_codes: UserMfaRecoveryCodesTable;
+  user_webauthn_credentials: UserWebauthnCredentialsTable;
 };

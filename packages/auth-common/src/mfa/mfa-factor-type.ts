@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const mfaFactorTypes = ["totp"] as const;
+export const mfaFactorTypes = ["totp", "webauthn"] as const;
 
 export const mfaFactorTypeSchema = z.enum(mfaFactorTypes);
 

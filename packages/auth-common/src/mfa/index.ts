@@ -13,6 +13,7 @@ export {
 export {
   totpCodeSchema,
   recoveryCodeSchema,
+  mfaProofSchema,
   mfaVerifyBodySchema,
   mfaEnrollResponseSchema,
   mfaVerifyEnrollmentBodySchema,
@@ -23,6 +24,7 @@ export {
   mfaCodeOnlyBodySchema,
   mfaTotpProofBodySchema,
   mfaChallengeFactorsPayloadSchema,
+  type MfaProof,
   type MfaVerifyBody,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentBody,
@@ -34,3 +36,21 @@ export {
   type MfaTotpProofBody,
   type MfaChallengeFactorsPayload,
 } from "./mfa-verify-body";
+
+export {
+  webauthnRegistrationResponseSchema,
+  webauthnAuthenticationResponseSchema,
+  webauthnLabelSchema,
+  webauthnEnrollOptionsResponseSchema,
+  webauthnVerifyEnrollmentBodySchema,
+  webauthnAuthenticationOptionsResponseSchema,
+  webauthnCredentialSummarySchema,
+  webauthnCredentialListResponseSchema,
+  type WebauthnRegistrationResponse,
+  type WebauthnAuthenticationResponse,
+  type WebauthnEnrollOptionsResponse,
+  type WebauthnVerifyEnrollmentBody,
+  type WebauthnAuthenticationOptionsResponse,
+  type WebauthnCredentialSummary,
+  type WebauthnCredentialListResponse,
+} from "./webauthn";

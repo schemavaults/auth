@@ -14,6 +14,11 @@ export const MFA_FACTOR_TYPE_LABELS: Record<MfaFactorType, MfaFactorTypeLabel> =
       label: "Authenticator app",
       description: "Enter the 6-digit code from your authenticator app.",
     },
+    webauthn: {
+      label: "Passkey / Security key",
+      description:
+        "Use your passkey, security key, or device biometrics.",
+    },
   };
 
 export function labelForFactorType(factor_type: MfaFactorType): MfaFactorTypeLabel {

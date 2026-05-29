@@ -20,6 +20,19 @@ import {
   type FactorWithSecret,
 } from "./get-factor-with-secret-by-id";
 import { createUnverifiedFactor as createUnverifiedFactorFn } from "./create-unverified-factor";
+import { createUnverifiedWebauthnFactor as createUnverifiedWebauthnFactorFn } from "./create-unverified-webauthn-factor";
+import { persistWebauthnCredential as persistWebauthnCredentialFn } from "./persist-webauthn-credential";
+import {
+  getWebauthnCredentialByFactorId as getWebauthnCredentialByFactorIdFn,
+  getVerifiedWebauthnCredentialByFactorId as getVerifiedWebauthnCredentialByFactorIdFn,
+  getVerifiedWebauthnCredentialByCredentialId as getVerifiedWebauthnCredentialByCredentialIdFn,
+} from "./get-webauthn-credential-by-factor-id";
+import {
+  listWebauthnCredentialsForUser as listWebauthnCredentialsForUserFn,
+  type WebauthnCredentialSummaryRow,
+} from "./list-webauthn-credentials-for-user";
+import { updateWebauthnCounter as updateWebauthnCounterFn } from "./update-webauthn-counter";
+import type { UserWebauthnCredentialRow } from "./user-webauthn-credentials-table";
 import { verifyFactor as verifyFactorFn } from "./verify-factor";
 import { touchFactorLastUsed as touchFactorLastUsedFn } from "./touch-factor-last-used";
 import { deleteFactor as deleteFactorFn } from "./delete-factor";
@@ -85,6 +98,61 @@ export class MfaRegistry {
     secret: string;
   }): Promise<{ factor_id: string }> {
     return createUnverifiedFactorFn(this.db, args);
+  }
+
+  public createUnverifiedWebauthnFactor(args: {
+    uid: string;
+  }): Promise<{ factor_id: string }> {
+    return createUnverifiedWebauthnFactorFn(this.db, args);
+  }
+
+  public persistWebauthnCredential(args: {
+    factor_id: string;
+    uid: string;
+    credential_id: string;
+    public_key: string;
+    counter: number;
+    transports: string | null;
+    aaguid: string | null;
+    device_type: string | null;
+    backed_up: boolean | null;
+    label: string | null;
+  }): Promise<void> {
+    return persistWebauthnCredentialFn(this.db, args);
+  }
+
+  public getWebauthnCredentialByFactorId(args: {
+    uid: string;
+    factor_id: string;
+  }): Promise<UserWebauthnCredentialRow | null> {
+    return getWebauthnCredentialByFactorIdFn(this.db, args);
+  }
+
+  public getVerifiedWebauthnCredentialByFactorId(args: {
+    uid: string;
+    factor_id: string;
+  }): Promise<UserWebauthnCredentialRow | null> {
+    return getVerifiedWebauthnCredentialByFactorIdFn(this.db, args);
+  }
+
+  public getVerifiedWebauthnCredentialByCredentialId(args: {
+    uid: string;
+    credential_id: string;
+  }): Promise<UserWebauthnCredentialRow | null> {
+    return getVerifiedWebauthnCredentialByCredentialIdFn(this.db, args);
+  }
+
+  public listWebauthnCredentialsForUser(
+    uid: string,
+  ): Promise<WebauthnCredentialSummaryRow[]> {
+    return listWebauthnCredentialsForUserFn(this.db, uid);
+  }
+
+  public updateWebauthnCounter(args: {
+    factor_id: string;
+    counter: number;
+  }): Promise<void> {
+    return updateWebauthnCounterFn(this.db, args);
   }
 
   public verifyFactor(args: {

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { appIdSchema } from "@schemavaults/app-definitions";
 import { availableMfaFactorSchema } from "../authenticate_result";
 import { mfaFactorTypeSchema } from "./mfa-factor-type";
+import { webauthnAuthenticationResponseSchema } from "./webauthn";
 
 export const totpCodeSchema = z
   .string()
@@ -12,22 +13,38 @@ export const recoveryCodeSchema = z
   .min(8)
   .max(64);
 
+// The proof a user presents to satisfy an MFA gate. Shared between the
+// login second-factor exchange (POST /api/auth/mfa/verify) and step-up
+// authorization for destructive account actions (e.g. removing a passkey).
+// `totp`/`recovery_code` mirror the original v1 factors; `webauthn` carries
+// a passkey assertion bound to a server-issued challenge.
+export const mfaProofSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("totp"),
+      factor_id: z.string().uuid(),
+      code: totpCodeSchema,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("webauthn"),
+      factor_id: z.string().uuid(),
+      assertion: webauthnAuthenticationResponseSchema,
+    })
+    .strict(),
+  z
+    .object({ type: z.literal("recovery_code"), recovery_code: recoveryCodeSchema })
+    .strict(),
+]);
+
+export type MfaProof = z.infer<typeof mfaProofSchema>;
+
 export const mfaVerifyBodySchema = z
   .object({
     challenge_id: z.string().uuid(),
     client_app_id: appIdSchema,
-    proof: z.discriminatedUnion("type", [
-      z
-        .object({
-          type: z.literal("totp"),
-          factor_id: z.string().uuid(),
-          code: totpCodeSchema,
-        })
-        .strict(),
-      z
-        .object({ type: z.literal("recovery_code"), recovery_code: recoveryCodeSchema })
-        .strict(),
-    ]),
+    proof: mfaProofSchema,
   })
   .strict();
 
@@ -56,10 +73,19 @@ export type MfaVerifyEnrollmentBody = z.infer<
   typeof mfaVerifyEnrollmentBodySchema
 >;
 
+// Returned by both the TOTP and WebAuthn verify-enrollment endpoints after
+// a factor is confirmed. Recovery codes are an account-wide fallback issued
+// only when the user gains their *first* verified factor — enrolling a
+// second factor (e.g. a passkey on top of existing TOTP) must NOT rotate
+// the codes the user already saved. `recovery_codes_issued` tells the
+// client whether `recovery_codes` carries freshly minted codes to display
+// (true) or whether the existing codes still apply and the array is empty
+// (false).
 export const mfaVerifyEnrollmentResponseSchema = z
   .object({
     success: z.literal(true),
-    recovery_codes: z.array(recoveryCodeSchema).min(1),
+    recovery_codes: z.array(recoveryCodeSchema),
+    recovery_codes_issued: z.boolean(),
   })
   .strict();
 
