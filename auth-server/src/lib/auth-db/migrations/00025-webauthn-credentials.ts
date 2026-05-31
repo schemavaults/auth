@@ -78,8 +78,20 @@ export async function up(db: Kysely<any>): Promise<void> {
 export async function down(db: Kysely<any>): Promise<void> {
   await db.schema.dropTable("user_webauthn_credentials").ifExists().execute();
 
-  // Restore the TOTP-only verified index back to the global one. Safe only
-  // if no user holds multiple verified factors (true before this migration).
+  // Remove the now-orphaned 'webauthn' factor rows FIRST. Dropping the
+  // credentials table above only cascades from a parent delete, so the parent
+  // factor rows remain. They must go before we recreate the global verified
+  // index (a passkey + TOTP user would have two verified rows -> uniqueness
+  // violation) and before we re-add the TOTP-only CHECK constraint (Postgres
+  // validates it against existing rows, so any 'webauthn' row -> abort). Both
+  // would otherwise fail the whole rollback transaction.
+  await sql`
+    DELETE FROM USER_MFA_FACTORS WHERE factor_type = 'webauthn';
+  `.execute(db);
+
+  // Restore the TOTP-only verified index back to the global one. Safe now that
+  // every remaining verified factor is TOTP (one per user before this
+  // migration).
   await sql`
     DROP INDEX IF EXISTS user_mfa_factors_one_verified_totp_per_user;
   `.execute(db);
@@ -101,13 +113,8 @@ export async function down(db: Kysely<any>): Promise<void> {
     CHECK (factor_type IN ('totp'));
   `.execute(db);
 
-  // Restore NOT NULL. Any passkey rows (with null secret_ciphertext) must be
-  // gone first — they are, since dropping the credentials table above leaves
-  // orphan factor rows; clear them defensively.
-  await sql`
-    DELETE FROM USER_MFA_FACTORS WHERE factor_type = 'webauthn';
-  `.execute(db);
-
+  // Restore NOT NULL. The passkey rows (with null secret_ciphertext /
+  // kek_version) were already removed above.
   await sql`
     ALTER TABLE USER_MFA_FACTORS
     ALTER COLUMN secret_ciphertext SET NOT NULL;

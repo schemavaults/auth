@@ -153,9 +153,12 @@ export async function generateWebauthnAuthenticationOptions(args: {
       id: c.credential_id,
       transports: parseTransports(c.transports),
     })),
-    // Asserting as a second factor — the user already proved who they are
-    // with a password, so don't require an extra user-verification gesture.
-    userVerification: "discouraged",
+    // Asserting as a second factor. Request user verification when the
+    // authenticator supports it ("preferred") so a PIN/biometric gesture is
+    // exercised where available, but don't hard-require it — that would lock
+    // out possession-only roaming keys. verifyWebauthnAuthentication keeps
+    // requireUserVerification:false to match this opportunistic policy.
+    userVerification: "preferred",
   });
 }
 

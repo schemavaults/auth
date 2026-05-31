@@ -12,6 +12,12 @@ import {
   issueRecoveryCodesIfNeeded,
 } from "@/lib/mfa";
 import {
+  WEBAUTHN_ENROLL_RATE_LIMIT,
+  checkRateLimit,
+  extractClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
+import {
   webauthnVerifyEnrollmentBodySchema,
   type MfaVerifyEnrollmentResponse,
 } from "@schemavaults/auth-common";
@@ -25,6 +31,15 @@ const ROUTE = "/api/user/mfa/webauthn/verify-enrollment";
 async function POST_webauthn_verify_enrollment_handler(
   { user, dbh, req, redis }: IProtectedAuthenticatedApiRouteProps,
 ): Promise<NextResponse> {
+  // Throttle enrollment-verification attempts per uid (and per IP when
+  // available); each call performs credential writes and factor flips.
+  const ip = extractClientIp(req);
+  const rate = await checkRateLimit(redis.client, WEBAUTHN_ENROLL_RATE_LIMIT, {
+    ...(ip ? { ip } : {}),
+    uid: user.uid,
+  });
+  if (!rate.allowed) return rateLimitResponse(rate);
+
   let body: unknown;
   try {
     body = await req.json();

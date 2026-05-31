@@ -10,6 +10,12 @@ import {
   putStepUpChallenge,
 } from "@/lib/mfa";
 import {
+  WEBAUTHN_STEP_UP_RATE_LIMIT,
+  checkRateLimit,
+  extractClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
+import {
   webauthnAuthenticationOptionsResponseSchema,
   type WebauthnAuthenticationOptionsResponse,
 } from "@schemavaults/auth-common";
@@ -24,9 +30,18 @@ const ROUTE = "/api/user/mfa/webauthn/authenticate-options";
 // the DELETE handler. Distinct from the unauthenticated login-time options
 // endpoint under /api/auth/mfa/webauthn/options.
 async function POST_step_up_options_handler(
-  { user, dbh, redis }: IProtectedAuthenticatedApiRouteProps,
+  { user, dbh, redis, req }: IProtectedAuthenticatedApiRouteProps,
 ): Promise<NextResponse> {
   try {
+    // Throttle step-up challenge minting per uid (and per IP when available);
+    // each call overwrites the user's stored challenge and touches the DB.
+    const ip = extractClientIp(req);
+    const rate = await checkRateLimit(redis.client, WEBAUTHN_STEP_UP_RATE_LIMIT, {
+      ...(ip ? { ip } : {}),
+      uid: user.uid,
+    });
+    if (!rate.allowed) return rateLimitResponse(rate);
+
     const mfaRegistry = new MfaRegistry(dbh.db);
     const verified = (
       await mfaRegistry.listWebauthnCredentialsForUser(user.uid)

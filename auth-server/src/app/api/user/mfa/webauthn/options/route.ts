@@ -10,7 +10,7 @@ import {
   putRegChallenge,
 } from "@/lib/mfa";
 import {
-  MFA_ENROLL_RATE_LIMIT,
+  WEBAUTHN_ENROLL_RATE_LIMIT,
   checkRateLimit,
   extractClientIp,
   ipRequiredResponse,
@@ -26,11 +26,16 @@ import captureServerException from "@/lib/captureServerException";
 const ROUTE = "/api/user/mfa/webauthn/options";
 
 async function POST_webauthn_options_handler(
-  { user, dbh, redis }: IProtectedAuthenticatedApiRouteProps,
+  { user, dbh, redis, req }: IProtectedAuthenticatedApiRouteProps,
 ): Promise<NextResponse> {
   try {
-    const rate = await checkRateLimit(redis.client, MFA_ENROLL_RATE_LIMIT, {
-      ip: user.uid,
+    // Key the limiter on the real client IP (the POST wrapper already
+    // rejected requests without one) AND the uid, so the bucket can't be
+    // shared/bypassed and the per-account cap is enforced.
+    const ip = extractClientIp(req);
+    const rate = await checkRateLimit(redis.client, WEBAUTHN_ENROLL_RATE_LIMIT, {
+      ...(ip ? { ip } : {}),
+      uid: user.uid,
     });
     if (!rate.allowed) return rateLimitResponse(rate);
 

@@ -13,8 +13,12 @@ function buildKey(
 ): string {
   const prefix = `rl:${config.name}`;
   switch (config.keySource) {
-    case "ip":
+    case "ip": {
+      if (!identifiers.ip) {
+        throw new Error(`Rate limit '${config.name}' requires ip`);
+      }
       return `${prefix}:${identifiers.ip}`;
+    }
     case "email": {
       if (!identifiers.email) {
         throw new Error(`Rate limit '${config.name}' requires email`);
@@ -22,10 +26,28 @@ function buildKey(
       return `${prefix}:${identifiers.email.toLowerCase()}`;
     }
     case "ip+email": {
+      if (!identifiers.ip) {
+        throw new Error(`Rate limit '${config.name}' requires ip`);
+      }
       if (!identifiers.email) {
         throw new Error(`Rate limit '${config.name}' requires email`);
       }
       return `${prefix}:${identifiers.ip}:${identifiers.email.toLowerCase()}`;
+    }
+    case "uid": {
+      if (!identifiers.uid) {
+        throw new Error(`Rate limit '${config.name}' requires uid`);
+      }
+      return `${prefix}:${identifiers.uid}`;
+    }
+    case "ip+uid": {
+      if (!identifiers.uid) {
+        throw new Error(`Rate limit '${config.name}' requires uid`);
+      }
+      // IP is best-effort here: when it can't be determined we still bucket
+      // per-uid so the per-account cap always applies.
+      const ipPart = identifiers.ip ?? "unknown-ip";
+      return `${prefix}:${ipPart}:${identifiers.uid}`;
     }
   }
 }

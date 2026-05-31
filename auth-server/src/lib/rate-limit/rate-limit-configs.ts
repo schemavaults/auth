@@ -70,3 +70,22 @@ export const MFA_ENROLL_RATE_LIMIT: RateLimitConfig = {
   windowSeconds: 60 * 60,
   keySource: "ip",
 };
+
+// Authenticated WebAuthn/passkey management routes. Keyed by ip+uid so each
+// account is throttled (and can't dodge the cap by rotating IPs) while a
+// shared IP can't exhaust another user's bucket. Enrollment options +
+// verify-enrollment share the "enroll" bucket; step-up assertion options use
+// their own.
+export const WEBAUTHN_ENROLL_RATE_LIMIT: RateLimitConfig = {
+  name: "webauthn-enroll",
+  maxAttempts: 10,
+  windowSeconds: 60,
+  keySource: "ip+uid",
+};
+
+export const WEBAUTHN_STEP_UP_RATE_LIMIT: RateLimitConfig = {
+  name: "webauthn-step-up",
+  maxAttempts: 10,
+  windowSeconds: 60,
+  keySource: "ip+uid",
+};
