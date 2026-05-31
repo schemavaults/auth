@@ -95,7 +95,7 @@ async function POST_verify_enrollment_handler(
     // if they already have a passkey (and thus recovery codes), enrolling
     // TOTP must not rotate the codes they already saved.
     const { recovery_codes, recovery_codes_issued } =
-      await issueRecoveryCodesIfNeeded(mfaRegistry, user.uid);
+      await issueRecoveryCodesIfNeeded(dbh.db, user.uid);
 
     // Notify the user that MFA was enabled. Best-effort.
     void sendMfaSecurityAlertEmail({

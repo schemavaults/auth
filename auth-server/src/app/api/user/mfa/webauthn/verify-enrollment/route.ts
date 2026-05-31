@@ -126,7 +126,7 @@ async function POST_webauthn_verify_enrollment_handler(
     // Recovery codes are only minted for the user's first verified factor;
     // enrolling a passkey alongside existing TOTP must not rotate them.
     const { recovery_codes, recovery_codes_issued } =
-      await issueRecoveryCodesIfNeeded(mfaRegistry, user.uid);
+      await issueRecoveryCodesIfNeeded(dbh.db, user.uid);
 
     void sendMfaSecurityAlertEmail({
       to: user.email,
