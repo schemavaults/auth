@@ -2,6 +2,7 @@ import "server-only";
 
 import type Redis from "ioredis";
 import { z } from "zod";
+import isValidUuid from "@/lib/is-valid-uuid";
 
 // Short-lived store for a WebAuthn *step-up* assertion challenge used to
 // authorize a sensitive account action (e.g. removing a passkey) inside an
@@ -20,6 +21,14 @@ const stepUpStateSchema = z
   .strict();
 
 function makeKey(uid: string): string {
+  // The uid is interpolated directly into the Redis key, so reject anything
+  // that isn't a well-formed UUID — an empty or attacker-controlled value
+  // could otherwise read, overwrite, or delete a different key.
+  if (!isValidUuid(uid)) {
+    throw new TypeError(
+      "Cannot access WebAuthn step-up challenge: 'uid' is not a valid UUID",
+    );
+  }
   return `${STEP_UP_KEY_PREFIX}${uid}`;
 }
 
@@ -27,6 +36,11 @@ export async function putStepUpChallenge(
   client: Redis,
   args: { uid: string; challenge: string },
 ): Promise<void> {
+  if (typeof args.challenge !== "string" || args.challenge.length === 0) {
+    throw new TypeError(
+      "Cannot store WebAuthn step-up challenge: 'challenge' must be a non-empty string",
+    );
+  }
   await client.set(
     makeKey(args.uid),
     JSON.stringify({ challenge: args.challenge, created_at: Date.now() }),

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { MfaRegistry } from "@/lib/auth-db";
+import isValidUuid from "@/lib/is-valid-uuid";
 import { generateRecoveryCodes } from "./generate-recovery-codes";
 
 // Recovery codes are an account-wide MFA fallback, issued once when the user
@@ -15,6 +16,11 @@ export async function issueRecoveryCodesIfNeeded(
   mfaRegistry: MfaRegistry,
   uid: string,
 ): Promise<{ recovery_codes: string[]; recovery_codes_issued: boolean }> {
+  if (!isValidUuid(uid)) {
+    throw new TypeError(
+      "Cannot issue recovery codes: 'uid' is not a valid UUID",
+    );
+  }
   const remaining = await mfaRegistry.countRecoveryCodesRemaining(uid);
   if (remaining > 0) {
     return { recovery_codes: [], recovery_codes_issued: false };
