@@ -113,6 +113,12 @@ declare global {
         params: EnrollTestUserMfaParams,
       ): Chainable<EnrollTestUserMfaResult>;
       compute_totp_code(secret: string): Chainable<string>;
+      // Registers a CDP virtual WebAuthn authenticator and yields its id.
+      // Chromium-only (unavailable under Electron); see the action file.
+      add_virtual_authenticator(): Chainable<string>;
+      remove_virtual_authenticator(
+        authenticatorId: string,
+      ): Chainable<undefined>;
     }
   }
 }

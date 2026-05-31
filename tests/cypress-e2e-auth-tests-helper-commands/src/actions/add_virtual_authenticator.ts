@@ -6,41 +6,46 @@
 // `--browser chrome`. The virtual authenticator stands in for a real
 // platform/hardware authenticator so registration and assertion ceremonies
 // succeed headlessly.
-export function registerAddVirtualAuthenticatorCommand(
-  commands: typeof Cypress.Commands,
-): void {
-  commands.add("add_virtual_authenticator", () => {
-    return cy
-      .then(() =>
-        Cypress.automation("remote:debugger:protocol", {
-          command: "WebAuthn.enable",
-          params: { enableUI: false },
-        }),
-      )
-      .then(() =>
-        Cypress.automation("remote:debugger:protocol", {
-          command: "WebAuthn.addVirtualAuthenticator",
-          params: {
-            options: {
-              protocol: "ctap2",
-              transport: "internal",
-              hasResidentKey: true,
-              hasUserVerification: true,
-              isUserVerified: true,
-              automaticPresenceSimulation: true,
-            },
+
+// Cypress.automation's published overloads confuse TS arg-count inference for
+// the CDP `remote:debugger:protocol` command, so alias it to the documented
+// 2-arg promise signature.
+const cdpAutomation = Cypress.automation as unknown as (
+  name: string,
+  data?: object,
+) => Promise<unknown>;
+
+export default function add_virtual_authenticator(): Cypress.Chainable<string> {
+  return cy
+    .then(() =>
+      cdpAutomation("remote:debugger:protocol", {
+        command: "WebAuthn.enable",
+        params: { enableUI: false },
+      }),
+    )
+    .then(() =>
+      cdpAutomation("remote:debugger:protocol", {
+        command: "WebAuthn.addVirtualAuthenticator",
+        params: {
+          options: {
+            protocol: "ctap2",
+            transport: "internal",
+            hasResidentKey: true,
+            hasUserVerification: true,
+            isUserVerified: true,
+            automaticPresenceSimulation: true,
           },
-        }),
-      )
-      .then((result) => {
-        const authenticatorId = (result as { authenticatorId?: string })
-          ?.authenticatorId;
-        if (!authenticatorId) {
-          throw new Error(
-            "Failed to add CDP virtual authenticator — are you running with --browser chrome?",
-          );
-        }
-        return authenticatorId;
-      });
-  });
+        },
+      }),
+    )
+    .then((result): Cypress.Chainable<string> => {
+      const authenticatorId = (result as { authenticatorId?: string })
+        ?.authenticatorId;
+      if (!authenticatorId) {
+        throw new Error(
+          "Failed to add CDP virtual authenticator — are you running with --browser chrome?",
+        );
+      }
+      return cy.wrap(authenticatorId, { log: false });
+    });
 }

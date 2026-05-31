@@ -32,6 +32,8 @@ import register_via_resource_server_pkce_flow from "@/actions/register_via_resou
 import login_via_resource_server_pkce_flow from "@/actions/login_via_resource_server_pkce_flow";
 import enroll_test_user_mfa from "@/actions/enroll_test_user_mfa";
 import compute_totp_code from "@/actions/compute_totp_code";
+import add_virtual_authenticator from "@/actions/add_virtual_authenticator";
+import remove_virtual_authenticator from "@/actions/remove_virtual_authenticator";
 
 export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("login", login);
@@ -117,6 +119,11 @@ export function registerAllActionCommands(commands: Cypress.Commands) {
 
   commands.add("enroll_test_user_mfa", enroll_test_user_mfa);
   commands.add("compute_totp_code", compute_totp_code);
+  commands.add("add_virtual_authenticator", add_virtual_authenticator);
+  commands.add(
+    "remove_virtual_authenticator",
+    remove_virtual_authenticator,
+  );
 }
 
 export default registerAllActionCommands;
