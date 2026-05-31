@@ -12,3 +12,8 @@ export function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
   out.set(buf);
   return out;
 }
+
+const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
+export function isValidBase64Url(value: string): value is string {
+  return typeof value === 'string' && BASE64URL_RE.test(value);
+}

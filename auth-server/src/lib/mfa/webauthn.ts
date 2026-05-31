@@ -16,6 +16,8 @@ import type {
 import { getAuthServerUri } from "@/lib/auth_server_uri";
 import { TOTP_ISSUER } from "./totp";
 import { base64UrlToBytes, bytesToBase64Url } from "@/lib/base64url";
+import isValidUuid from "@/lib/is-valid-uuid";
+import { isValidBase64Url } from "@/lib/base64url";
 
 // Relying Party identity. WebAuthn binds a credential to an RP ID (a
 // registrable domain) and an origin; both must match at registration and
@@ -74,6 +76,16 @@ export async function generateWebauthnRegistrationOptions(args: {
   userName: string;
   excludeCredentials: ExistingCredentialDescriptor[];
 }): Promise<PublicKeyCredentialCreationOptionsJSON> {
+  if (!isValidUuid(args.uid)) {
+    throw new TypeError(
+      "Cannot generate WebAuthn registration options: 'uid' is not a valid UUID",
+    );
+  }
+  if (typeof args.userName !== "string" || args.userName.length === 0) {
+    throw new TypeError(
+      "Cannot generate WebAuthn registration options: 'userName' must be a non-empty string",
+    );
+  }
   return await generateRegistrationOptions({
     rpName: getRpName(),
     rpID: getRpId(),
@@ -106,6 +118,11 @@ export async function verifyWebauthnRegistration(args: {
   response: RegistrationResponseJSON;
   expectedChallenge: string;
 }): Promise<VerifiedWebauthnRegistration | null> {
+  if (!isValidBase64Url(args.expectedChallenge)) {
+    throw new TypeError(
+      "Cannot verify WebAuthn registration: 'expectedChallenge' is not base64url-encoded",
+    );
+  }
   const verification = await verifyRegistrationResponse({
     response: args.response,
     expectedChallenge: args.expectedChallenge,
@@ -158,6 +175,29 @@ export async function verifyWebauthnAuthentication(args: {
   expectedChallenge: string;
   credential: StoredWebauthnCredential;
 }): Promise<{ verified: boolean; newCounter: number } | null> {
+  if (!isValidBase64Url(args.expectedChallenge)) {
+    throw new TypeError(
+      "Cannot verify WebAuthn authentication: 'expectedChallenge' is not base64url-encoded",
+    );
+  }
+  if (!isValidBase64Url(args.credential.credential_id)) {
+    throw new TypeError(
+      "Cannot verify WebAuthn authentication: 'credential.credential_id' is not base64url-encoded",
+    );
+  }
+  if (!isValidBase64Url(args.credential.public_key)) {
+    throw new TypeError(
+      "Cannot verify WebAuthn authentication: 'credential.public_key' is not base64url-encoded",
+    );
+  }
+  if (
+    !Number.isSafeInteger(args.credential.counter) ||
+    args.credential.counter < 0
+  ) {
+    throw new TypeError(
+      "Cannot verify WebAuthn authentication: 'credential.counter' must be a non-negative integer",
+    );
+  }
   const verification = await verifyAuthenticationResponse({
     response: args.response,
     expectedChallenge: args.expectedChallenge,

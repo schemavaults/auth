@@ -3,10 +3,9 @@ import {
   getRpId,
   getRpName,
   getExpectedOrigin,
-  bytesToBase64Url,
-  base64UrlToBytes,
   parseTransports,
 } from "./webauthn";
+import { bytesToBase64Url, base64UrlToBytes } from "@/lib/base64url";
 
 // Snapshot and restore the RP-identity env overrides around each test so we
 // can exercise the override path deterministically without depending on the
