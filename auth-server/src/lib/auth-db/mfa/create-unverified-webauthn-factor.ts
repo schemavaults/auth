@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import isValidUuid from "@/lib/is-valid-uuid";
 
 // Generates a fresh factor_id and inserts an unverified WebAuthn (passkey)
 // factor for the user. Unlike TOTP factors, a passkey has no symmetric
@@ -13,6 +14,11 @@ export async function createUnverifiedWebauthnFactor(
   db: Kysely<AuthDatabase>,
   args: { uid: string },
 ): Promise<{ factor_id: string }> {
+  if (!isValidUuid(args.uid)) {
+    throw new TypeError(
+      "Cannot create WebAuthn factor: 'uid' is not a valid UUID",
+    );
+  }
   const factor_id = crypto.randomUUID();
   await db
     .insertInto("user_mfa_factors")
