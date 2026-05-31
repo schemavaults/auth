@@ -20,7 +20,7 @@
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/send-email": "latest",
     "@schemavaults/theme": "0.25.9",
-    "@schemavaults/ui": "0.54.3",
+    "@schemavaults/ui": "0.63.0",
     "@simplewebauthn/browser": "13.3.0",
     "@simplewebauthn/server": "13.3.1",
     "cookies-next": "6.1.1",
