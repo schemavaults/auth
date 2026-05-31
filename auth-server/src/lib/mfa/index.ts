@@ -50,11 +50,13 @@ export {
   verifyWebauthnRegistration,
   generateWebauthnAuthenticationOptions,
   verifyWebauthnAuthentication,
-  bytesToBase64Url,
-  base64UrlToBytes,
   parseTransports,
   type ExistingCredentialDescriptor,
   type VerifiedWebauthnRegistration,
   type StoredWebauthnCredential,
 } from "./webauthn";
+export {
+  bytesToBase64Url,
+  base64UrlToBytes,
+} from "@/lib/base64url";
 export { issueRecoveryCodesIfNeeded } from "./issue-recovery-codes-if-needed";

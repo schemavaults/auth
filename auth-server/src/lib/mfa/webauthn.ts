@@ -15,6 +15,7 @@ import type {
 } from "@simplewebauthn/server";
 import { getAuthServerUri } from "@/lib/auth_server_uri";
 import { TOTP_ISSUER } from "./totp";
+import { base64UrlToBytes, bytesToBase64Url } from "@/lib/base64url";
 
 // Relying Party identity. WebAuthn binds a credential to an RP ID (a
 // registrable domain) and an origin; both must match at registration and
@@ -37,23 +38,6 @@ export function getRpName(): string {
   if (typeof override === "string" && override.length > 0) return override;
   // Reuse the same issuer string surfaced for TOTP ("SchemaVaults").
   return TOTP_ISSUER;
-}
-
-// base64url <-> bytes helpers. credential_id is already a base64url string
-// from the browser; the COSE public key arrives as bytes and is stored
-// base64url-encoded.
-export function bytesToBase64Url(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString("base64url");
-}
-
-export function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
-  // Copy into a fresh ArrayBuffer-backed Uint8Array so the type is
-  // Uint8Array<ArrayBuffer> (what @simplewebauthn expects) rather than the
-  // Uint8Array<ArrayBufferLike> a Node Buffer view carries.
-  const buf = Buffer.from(value, "base64url");
-  const out = new Uint8Array(buf.byteLength);
-  out.set(buf);
-  return out;
 }
 
 function serializeTransports(
