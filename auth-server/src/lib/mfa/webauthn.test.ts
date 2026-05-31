@@ -3,10 +3,11 @@ import {
   getRpId,
   getRpName,
   getExpectedOrigin,
-  bytesToBase64Url,
-  base64UrlToBytes,
   parseTransports,
 } from "./webauthn";
+// base64url helpers were extracted to their own module (@/lib/base64url);
+// import them from there rather than re-exporting through webauthn.ts.
+import { bytesToBase64Url, base64UrlToBytes } from "@/lib/base64url";
 
 // Snapshot and restore the RP-identity env overrides around each test so we
 // can exercise the override path deterministically without depending on the
