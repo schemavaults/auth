@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, type ReactElement } from "react";
+import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { MfaChallengeForm } from "@schemavaults/auth-ui";
 import {
   useAppEnvironment,
@@ -41,6 +41,15 @@ export default function MfaChallengePageView({
   const env = useAppEnvironment();
   const auth = useAuth();
   const { toast } = useToast();
+
+  // Flipped to `true` the moment a factor (or passkey) verifies
+  // successfully, before we clear the stashed factor list and kick off
+  // the (async) redirect / token exchange. Without it, clearing the
+  // factors drops `payload` to `undefined` and the component briefly
+  // re-renders the "could not be loaded in this tab" error before the
+  // navigation resolves. The success branch takes priority so the user
+  // only ever sees a "finishing sign-in" state during that window.
+  const [succeeded, setSucceeded] = useState<boolean>(false);
 
   const onAuthenticated = useCallback(
     async (authorization_code: string) => {
@@ -119,6 +128,10 @@ export default function MfaChallengePageView({
       // non-MFA login does at perform-post-auth-redirect.ts → "account-page".
       const authClient = auth.ready ? auth.client.current : null;
       if (!authClient) {
+        // Verification succeeded but we can't finish: drop the success
+        // screen so the toast/error UI is visible instead of a stuck
+        // "Finishing sign-in…" spinner.
+        setSucceeded(false);
         toast({
           variant: "destructive",
           title: "Auth client not ready",
@@ -128,6 +141,7 @@ export default function MfaChallengePageView({
         return;
       }
       if (typeof challenge_time !== "number") {
+        setSucceeded(false);
         toast({
           variant: "destructive",
           title: "Missing challenge_time",
@@ -137,6 +151,7 @@ export default function MfaChallengePageView({
       }
       const verifier = authClient.loadCodeVerifier(challenge_time);
       if (!verifier) {
+        setSucceeded(false);
         toast({
           variant: "destructive",
           title: "Missing PKCE verifier",
@@ -157,6 +172,7 @@ export default function MfaChallengePageView({
           null,
         );
       } catch (e: unknown) {
+        setSucceeded(false);
         console.error(
           "[MfaChallengePageView] handleSuccessfulAuthentication failed:",
           e,
@@ -232,6 +248,23 @@ export default function MfaChallengePageView({
     );
   }
 
+  // A verified factor clears the stashed factor list (dropping `payload`)
+  // while the async redirect / token exchange is still in flight. Render
+  // a "finishing" state here so the user never sees the missing-payload
+  // error below during that window.
+  if (succeeded) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-6">
+        <p
+          className="text-sm text-muted-foreground"
+          data-testid="mfa-challenge-success"
+        >
+          Verification successful. Finishing sign-in…
+        </p>
+      </div>
+    );
+  }
+
   if (!payload) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6 flex-col gap-3">
@@ -260,6 +293,10 @@ export default function MfaChallengePageView({
         available_factors={payload.available_factors}
         recovery_codes_available={payload.recovery_codes_available}
         onAuthenticated={async (authorization_code) => {
+          // Show the success state before clearing factors so the
+          // resulting `payload === undefined` re-render doesn't flash the
+          // missing-payload error while the redirect is in flight.
+          setSucceeded(true);
           // Drop the stashed factor list now that the challenge is
           // resolved — keeps sessionStorage tidy if the user comes back
           // through a fresh login.
@@ -274,6 +311,7 @@ export default function MfaChallengePageView({
             factor_id={factor_id}
             onError={onError}
             onAuthenticated={async (authorization_code) => {
+              setSucceeded(true);
               clearFactors(challenge_id);
               await onAuthenticated(authorization_code);
             }}
