@@ -47,19 +47,28 @@ export interface IProtectedAdminApiRouteProps extends IBaseProtectedAdminApiRout
 export async function withAdminApiRouteGuard(
   api_server_handler: TProtectedAdminApiRoute<IProtectedAdminApiRouteProps>
 ): Promise<(req: NextRequest) => Promise<NextResponse>> {
-  await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH()
-  await using redis: RedisCache = RedisCache.createConnection()
-  const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
-  return _withAdminApiRouteGuard<IProtectedAdminApiRouteProps>(
-    api_server_handler,
-    { dbh, redis },
-    {
-      custom_is_authorized_check: async (props) => props.user.admin === true,
-      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
-      jwt_keys_manager,
-      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
-    }
-  );
+  // The guarded route below is a lazy handler that Next.js invokes *after*
+  // this factory returns. The dbh/redis resources must therefore be created
+  // and disposed inside that handler — if we `await using` them out here they
+  // get disposed the moment this factory returns (before the request runs),
+  // which closes the Redis connection and surfaces as
+  // "Connection is closed" when a handler touches `redis.client`.
+  return async (req: NextRequest): Promise<NextResponse> => {
+    await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH()
+    await using redis: RedisCache = RedisCache.createConnection()
+    const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
+    const guarded = _withAdminApiRouteGuard<IProtectedAdminApiRouteProps>(
+      api_server_handler,
+      { dbh, redis },
+      {
+        custom_is_authorized_check: async (props) => props.user.admin === true,
+        api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+        jwt_keys_manager,
+        custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
+      }
+    );
+    return await guarded(req);
+  };
 }
 
 export type { IProtectedAdminApiRouteProps as IProtectedAdminApiRouteInputs }
