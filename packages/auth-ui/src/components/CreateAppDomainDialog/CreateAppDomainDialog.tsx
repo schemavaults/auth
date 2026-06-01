@@ -170,7 +170,7 @@ export function CreateAppDomainDialog({
                   <FormLabel>Domain Name</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={"schemavaults.com"}
+                      placeholder={"https://schemavaults.com"}
                       {...field}
                       disabled={submitting}
                     />
