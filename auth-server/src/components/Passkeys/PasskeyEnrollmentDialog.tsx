@@ -19,7 +19,7 @@ import {
   browserSupportsWebAuthn,
 } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON } from "@simplewebauthn/browser";
-import { Check, Fingerprint, X } from "lucide-react";
+import { Check, Fingerprint, Repeat2, X } from "lucide-react";
 import type { WebauthnRegistrationResponse } from "@schemavaults/auth-common";
 
 export interface PasskeyEnrollmentDialogProps {
@@ -160,8 +160,9 @@ export function PasskeyEnrollmentDialog({
               </Button>
               <Button
                 onClick={() => setStep("intro")}
-                className="flex flex-row gap-2 flex-nowrap"
+                className="flex flex-row gap-2 flex-nowrap items-center justify-start"
               >
+                <Repeat2 className="h-4 w-4" />
                 Try again
               </Button>
             </DialogFooter>
