@@ -20,6 +20,8 @@ export {
   REFRESH_TOKEN_RATE_LIMIT,
   MFA_VERIFY_RATE_LIMIT,
   MFA_ENROLL_RATE_LIMIT,
+  WEBAUTHN_ENROLL_RATE_LIMIT,
+  WEBAUTHN_STEP_UP_RATE_LIMIT,
 } from "./rate-limit-configs";
 export {
   rateLimitResponse,

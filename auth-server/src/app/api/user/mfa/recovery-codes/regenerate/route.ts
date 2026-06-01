@@ -6,7 +6,10 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { MfaRegistry } from "@/lib/auth-db";
 import { generateRecoveryCodes, verifyTotpCode } from "@/lib/mfa";
-import { mfaTotpProofBodySchema } from "@schemavaults/auth-common";
+import {
+  mfaTotpProofBodySchema,
+  type MfaVerifyEnrollmentResponse,
+} from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
 
@@ -58,7 +61,12 @@ async function POST_regenerate_handler(
       codes: recovery_codes,
     });
     return NextResponse.json(
-      { success: true, recovery_codes },
+      {
+        success: true,
+        recovery_codes,
+        // Regeneration always issues a fresh set by definition.
+        recovery_codes_issued: true,
+      } satisfies MfaVerifyEnrollmentResponse,
       { status: 200 },
     );
   } catch (e: unknown) {

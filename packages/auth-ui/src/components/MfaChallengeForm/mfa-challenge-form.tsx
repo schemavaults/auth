@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, type FC, type FormEvent, type ReactElement } from "react";
+import {
+  useState,
+  type FC,
+  type FormEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import {
   Button,
   Card,
@@ -32,6 +38,16 @@ export interface MfaChallengeFormProps {
   recovery_codes_available: boolean;
   onAuthenticated: (authorization_code: string) => Promise<void> | void;
   onChallengeExpired?: () => void;
+  // Render slot for the passkey (WebAuthn) assertion action, supplied by the
+  // auth server. Passkey browser ceremonies live in the auth server (not this
+  // package, which has external consumers), so when a `webauthn` factor is
+  // selected the form delegates the action to this slot instead of showing a
+  // code input. `factor_id` is the selected passkey factor; `onError`
+  // surfaces ceremony errors in the form's error area.
+  renderPasskeyAction?: (args: {
+    factor_id: string;
+    onError: (message: string) => void;
+  }) => ReactNode;
 }
 
 export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
@@ -42,6 +58,7 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
   recovery_codes_available,
   onAuthenticated,
   onChallengeExpired,
+  renderPasskeyAction,
 }): ReactElement => {
   const { submitChallenge } = useMfa();
   const [useRecovery, setUseRecovery] = useState(false);
@@ -100,21 +117,35 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
       ? `Expires ${new Date(expires_at).toLocaleTimeString()}`
       : null;
 
+  const selectedFactor =
+    available_factors.find((f) => f.factor_id === selectedFactorId) ?? null;
+  // When a passkey factor is the active choice, delegate to the injected
+  // passkey slot (browser assertion ceremony) instead of the code input.
+  const usePasskey =
+    !useRecovery &&
+    selectedFactor?.factor_type === "webauthn" &&
+    typeof renderPasskeyAction === "function";
+
   const showFactorPicker = !useRecovery && available_factors.length > 1;
 
   const canSubmit =
     !submitting &&
+    !usePasskey &&
     value.length > 0 &&
     (useRecovery || selectedFactorId.length > 0);
+
+  const promptText = useRecovery
+    ? "Enter one of your recovery codes."
+    : usePasskey
+      ? "Use your passkey, security key, or device biometrics to verify."
+      : "Enter the 6-digit code from your authenticator app.";
 
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle>Verify it&apos;s you</CardTitle>
         <CardDescription>
-          {useRecovery
-            ? "Enter one of your recovery codes."
-            : "Enter the 6-digit code from your authenticator app."}
+          {promptText}
           {expiresLabel ? (
             <span suppressHydrationWarning>{` ${expiresLabel}.`}</span>
           ) : null}
@@ -134,20 +165,29 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
               disabled={submitting}
             />
           ) : null}
-          <Input
-            inputMode={useRecovery ? "text" : "numeric"}
-            autoComplete="one-time-code"
-            value={value}
-            onChange={(e) =>
-              setValue(
-                useRecovery
-                  ? e.target.value
-                  : e.target.value.replace(/\D+/g, "").slice(0, 6),
-              )
-            }
-            placeholder={useRecovery ? "abcde-fghij" : "123456"}
-            data-testid="mfa-challenge-input"
-          />
+          {usePasskey ? (
+            <div data-testid="mfa-challenge-passkey-action">
+              {renderPasskeyAction?.({
+                factor_id: selectedFactorId,
+                onError: (message) => setError(message),
+              })}
+            </div>
+          ) : (
+            <Input
+              inputMode={useRecovery ? "text" : "numeric"}
+              autoComplete="one-time-code"
+              value={value}
+              onChange={(e) =>
+                setValue(
+                  useRecovery
+                    ? e.target.value
+                    : e.target.value.replace(/\D+/g, "").slice(0, 6),
+                )
+              }
+              placeholder={useRecovery ? "abcde-fghij" : "123456"}
+              data-testid="mfa-challenge-input"
+            />
+          )}
           {recovery_codes_available ? (
             <Button
               type="button"
@@ -167,17 +207,19 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
           ) : null}
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
-        <CardFooter>
-          <Button
-            type="submit"
-            disabled={!canSubmit}
-            data-testid="mfa-challenge-submit"
-            className="flex flex-row gap-2 flex-nowrap"
-          >
-            <ShieldCheck className="h-4 w-4" />
-            {submitting ? "Verifying…" : "Verify"}
-          </Button>
-        </CardFooter>
+        {usePasskey ? null : (
+          <CardFooter>
+            <Button
+              type="submit"
+              disabled={!canSubmit}
+              data-testid="mfa-challenge-submit"
+              className="flex flex-row gap-2 flex-nowrap"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              {submitting ? "Verifying…" : "Verify"}
+            </Button>
+          </CardFooter>
+        )}
       </form>
     </Card>
   );

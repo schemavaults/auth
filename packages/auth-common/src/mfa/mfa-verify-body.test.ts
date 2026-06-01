@@ -39,4 +39,35 @@ describe("mfaVerifyBodySchema", () => {
     };
     expect(mfaVerifyBodySchema.safeParse(body).success).toBe(true);
   });
+
+  test("accepts a webauthn proof with factor_id and assertion", () => {
+    const body = {
+      challenge_id: CHALLENGE_ID,
+      client_app_id: CLIENT_APP_ID,
+      proof: {
+        type: "webauthn" as const,
+        factor_id: FACTOR_ID,
+        assertion: {
+          id: "credential-id",
+          rawId: "credential-id",
+          response: {
+            clientDataJSON: "x",
+            authenticatorData: "y",
+            signature: "z",
+          },
+          type: "public-key",
+        },
+      },
+    };
+    expect(mfaVerifyBodySchema.safeParse(body).success).toBe(true);
+  });
+
+  test("rejects a webauthn proof missing the assertion", () => {
+    const body = {
+      challenge_id: CHALLENGE_ID,
+      client_app_id: CLIENT_APP_ID,
+      proof: { type: "webauthn" as const, factor_id: FACTOR_ID },
+    };
+    expect(mfaVerifyBodySchema.safeParse(body).success).toBe(false);
+  });
 });

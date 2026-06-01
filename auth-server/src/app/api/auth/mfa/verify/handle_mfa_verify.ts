@@ -15,8 +15,8 @@ import {
   consumeAttempt,
   deleteChallenge,
   getChallenge,
-  verifyTotpCode,
 } from "@/lib/mfa";
+import { evaluateMfaProof } from "./evaluate-proof";
 import { RedisCache } from "@/lib/redis";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import captureServerException from "@/lib/captureServerException";
@@ -89,26 +89,12 @@ export async function handleMfaVerify({
 
   let proofValid = false;
   try {
-    if (proof.type === "totp") {
-      const factor = await mfaRegistry.getVerifiedFactorById({
-        uid: challenge.uid,
-        factor_id: proof.factor_id,
-      });
-      if (factor) {
-        proofValid = verifyTotpCode({
-          secret: factor.secret,
-          code: proof.code,
-        });
-        if (proofValid) {
-          await mfaRegistry.touchFactorLastUsed(factor.row.factor_id);
-        }
-      }
-    } else {
-      proofValid = await mfaRegistry.consumeRecoveryCode({
-        uid: challenge.uid,
-        code: proof.recovery_code,
-      });
-    }
+    proofValid = await evaluateMfaProof({
+      mfaRegistry,
+      uid: challenge.uid,
+      proof,
+      webauthnChallenge: challenge.webauthn_challenge ?? null,
+    });
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
       op_name: "handleMfaVerify.evaluateProof",

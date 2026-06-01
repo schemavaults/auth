@@ -23,8 +23,40 @@ export {
   createChallenge,
   getChallenge,
   consumeAttempt,
+  setWebauthnChallenge,
   deleteChallenge,
   MFA_CHALLENGE_TTL_SECONDS,
   MFA_CHALLENGE_MAX_ATTEMPTS,
   type MfaChallengeState,
 } from "./challenge-store";
+export {
+  putRegChallenge,
+  getRegChallenge,
+  deleteRegChallenge,
+  WEBAUTHN_REG_TTL_SECONDS,
+  type WebauthnRegChallengeState,
+} from "./webauthn-registration-store";
+export {
+  putStepUpChallenge,
+  getStepUpChallenge,
+  deleteStepUpChallenge,
+  WEBAUTHN_STEP_UP_TTL_SECONDS,
+} from "./webauthn-step-up-store";
+export {
+  getRpId,
+  getExpectedOrigin,
+  getRpName,
+  generateWebauthnRegistrationOptions,
+  verifyWebauthnRegistration,
+  generateWebauthnAuthenticationOptions,
+  verifyWebauthnAuthentication,
+  parseTransports,
+  type ExistingCredentialDescriptor,
+  type VerifiedWebauthnRegistration,
+  type StoredWebauthnCredential,
+} from "./webauthn";
+export {
+  bytesToBase64Url,
+  base64UrlToBytes,
+} from "@/lib/base64url";
+export { issueRecoveryCodesIfNeeded } from "./issue-recovery-codes-if-needed";

@@ -16,6 +16,11 @@ import {
   type MfaFactorStatusResponse,
   type MfaEnrollResponse,
   type MfaVerifyEnrollmentResponse,
+  type MfaProof,
+  type WebauthnEnrollOptionsResponse,
+  type WebauthnCredentialSummary,
+  type WebauthnAuthenticationOptionsResponse,
+  type WebauthnRegistrationResponse,
   type OrganizationMembershipRoleDetails,
   isValidErrorId,
   type SchemaVaultsAuthErrorId,
@@ -31,6 +36,12 @@ import {
   regenerateRecoveryCodes as regenerateRecoveryCodesFn,
   getMfaStatus as getMfaStatusFn,
   getMfaStatusForFactorType as getMfaStatusForFactorTypeFn,
+  beginWebauthnEnrollment as beginWebauthnEnrollmentFn,
+  confirmWebauthnEnrollment as confirmWebauthnEnrollmentFn,
+  listWebauthnCredentials as listWebauthnCredentialsFn,
+  removeWebauthnFactor as removeWebauthnFactorFn,
+  getWebauthnStepUpOptions as getWebauthnStepUpOptionsFn,
+  getWebauthnAuthenticationOptions as getWebauthnAuthenticationOptionsFn,
 } from "@/lib/mfa";
 import type { Credentials } from "@/types/credentials";
 import type { ISchemaVaultsAuthClient } from "@/types/ISchemaVaultsAuthClient";
@@ -1050,9 +1061,7 @@ export class SchemaVaultsAuthClient
   public async verifyMfaChallenge(
     challenge_id: string,
     client_app_id: AppId,
-    proof:
-      | { type: "totp"; factor_id: string; code: string }
-      | { type: "recovery_code"; recovery_code: string },
+    proof: MfaProof,
   ): Promise<AuthenticateResult> {
     return await verifyMfaChallengeFn({
       adapter: this._adapter,
@@ -1103,6 +1112,53 @@ export class SchemaVaultsAuthClient
       adapter: this._adapter,
       factor_id,
       code,
+    });
+  }
+
+  public async beginWebauthnEnrollment(): Promise<WebauthnEnrollOptionsResponse> {
+    return await beginWebauthnEnrollmentFn(this._adapter);
+  }
+
+  public async confirmWebauthnEnrollment(
+    factor_id: string,
+    attestation: WebauthnRegistrationResponse,
+    label?: string,
+  ): Promise<MfaVerifyEnrollmentResponse> {
+    return await confirmWebauthnEnrollmentFn({
+      adapter: this._adapter,
+      factor_id,
+      attestation,
+      label,
+    });
+  }
+
+  public async listWebauthnCredentials(): Promise<WebauthnCredentialSummary[]> {
+    return await listWebauthnCredentialsFn(this._adapter);
+  }
+
+  public async removeWebauthnFactor(
+    factor_id: string,
+    proof: MfaProof,
+  ): Promise<void> {
+    await removeWebauthnFactorFn({
+      adapter: this._adapter,
+      factor_id,
+      proof,
+    });
+  }
+
+  public async getWebauthnStepUpOptions(): Promise<WebauthnAuthenticationOptionsResponse> {
+    return await getWebauthnStepUpOptionsFn(this._adapter);
+  }
+
+  public async getWebauthnAuthenticationOptions(
+    challenge_id: string,
+    client_app_id: AppId,
+  ): Promise<WebauthnAuthenticationOptionsResponse> {
+    return await getWebauthnAuthenticationOptionsFn({
+      adapter: this._adapter,
+      challenge_id,
+      client_app_id,
     });
   }
 

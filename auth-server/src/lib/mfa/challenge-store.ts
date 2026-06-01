@@ -23,6 +23,10 @@ const challengeStateSchema = z
     // this field was added; on a server restart with stale entries the
     // verify path treats absent as null.
     redirect_uri: z.string().nullable().optional(),
+    // Server-issued WebAuthn assertion challenge (base64url) attached lazily
+    // when the user chooses to authenticate with a passkey. Absent until the
+    // client requests passkey options for this challenge.
+    webauthn_challenge: z.string().optional(),
   })
   .strict();
 
@@ -106,6 +110,38 @@ export async function consumeAttempt(
   )) as number;
   if (result === -1) return { remaining: 0, existed: false };
   return { remaining: result, existed: true };
+}
+
+// Attach a WebAuthn assertion challenge to an existing MFA challenge without
+// disturbing its remaining TTL or attempt counter. Done in a small Lua script
+// (GET + SET with the preserved PTTL) so requesting passkey options can't be
+// used to extend a challenge's lifetime or reset attempts. Returns false if
+// the challenge no longer exists.
+const SET_WEBAUTHN_CHALLENGE_LUA = `
+local key = KEYS[1]
+local raw = redis.call('GET', key)
+if not raw then return 0 end
+local ttl = redis.call('PTTL', key)
+if ttl < 0 then return 0 end
+local ok, state = pcall(cjson.decode, raw)
+if not ok or type(state) ~= 'table' then return 0 end
+state.webauthn_challenge = ARGV[1]
+redis.call('SET', key, cjson.encode(state), 'PX', ttl)
+return 1
+`;
+
+export async function setWebauthnChallenge(
+  client: Redis,
+  challenge_id: string,
+  webauthn_challenge: string,
+): Promise<boolean> {
+  const result = (await client.eval(
+    SET_WEBAUTHN_CHALLENGE_LUA,
+    1,
+    makeKey(challenge_id),
+    webauthn_challenge,
+  )) as number;
+  return result === 1;
 }
 
 export async function deleteChallenge(

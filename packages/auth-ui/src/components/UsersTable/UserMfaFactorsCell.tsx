@@ -13,6 +13,8 @@ function factorTypeLabel(t: MfaFactorType): string {
   switch (t) {
     case "totp":
       return "TOTP";
+    case "webauthn":
+      return "Passkey";
     default: {
       const _exhaustive: never = t;
       return _exhaustive;

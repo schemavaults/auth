@@ -33,6 +33,8 @@ export async function getFactorWithSecretById(
     .where("factor_id", "=", factor_id)
     .executeTakeFirst();
   if (!row) return null;
+  // Only TOTP factors carry a symmetric secret; a passkey factor has none.
+  if (row.secret_ciphertext === null || row.kek_version === null) return null;
   const secret = decryptSecret(row.secret_ciphertext, row.kek_version);
   return { row, secret };
 }
