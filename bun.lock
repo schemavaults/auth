@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.27.0",
+      "version": "0.27.8",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -270,7 +270,7 @@
     },
     "tests/cypress-e2e-auth-tests-helper-commands": {
       "name": "@schemavaults/cypress-e2e-auth-tests-helper-commands",
-      "version": "0.3.4",
+      "version": "0.3.5",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
