@@ -11,6 +11,7 @@ import {
   HelpCircle,
   Server,
   Settings,
+  ShieldCheck,
   ShieldUser,
   SwatchBook,
   User as UserIcon,
@@ -30,6 +31,15 @@ export function getAuthenticatedUserDashboardLinks(
     ),
   };
 
+  const mfaPageLink: DashboardSidebarItemDefinition = {
+    type: "dashboard-sidebar-item-definition" as const,
+    title: "Security",
+    url: "/mfa",
+    icon: ({ className }: { className: string }): ReactElement => (
+      <ShieldCheck className={className} />
+    ),
+  };
+
   const helpPageLink: DashboardSidebarItemDefinition = {
     type: "dashboard-sidebar-item-definition" as const,
     title: "Help",
@@ -42,7 +52,7 @@ export function getAuthenticatedUserDashboardLinks(
   const dashboardLinks: (
     | DashboardSidebarItemDefinition
     | DashboardSidebarItemGroupDefinition
-  )[] = [accountPageLink, helpPageLink];
+  )[] = [accountPageLink, mfaPageLink, helpPageLink];
 
   if (admin) {
     const adminLinkGroup: DashboardSidebarItemGroupDefinition = {

@@ -12,7 +12,7 @@ import {
   Input,
   useToast,
 } from "@schemavaults/ui";
-import { RecoveryCodesPanel } from "@schemavaults/auth-ui";
+import { RecoveryCodesPanel } from "@/components/RecoveryCodesPanel";
 import { useMfa } from "@schemavaults/auth-react-provider";
 import {
   startRegistration,

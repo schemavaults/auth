@@ -3,7 +3,6 @@
 import {
   AccountDetailsCard,
   AppsCard,
-  MfaSettingsCard,
   PendingInvitationsCard,
 } from "@schemavaults/auth-ui";
 import { useRouter } from "next/navigation";
@@ -15,10 +14,19 @@ import {
   useAppEnvironment,
   useCurrentUserWithRevalidation,
 } from "@schemavaults/auth-react-provider";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@schemavaults/ui";
+import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import uuidSync from "@/lib/uuid/uuidSync";
-import { PasskeysSettingsSection } from "@/components/Passkeys";
 
 export interface AuthAccountPageViewProps {
   preloaded_authorized_apps_data?: PreloadedAppsTableDataWithDomainRefs;
@@ -65,10 +73,32 @@ export default function AccountPageView({
         appEnvironment={environment}
         preloaded_memberships={preloaded_organization_memberships}
       />
-      <MfaSettingsCard
-        className={cardsClassName}
-        passkeysSection={<PasskeysSettingsSection />}
-      />
+      <Card className={cardsClassName}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+            Multi-Factor Authentication
+          </CardTitle>
+          <CardDescription>
+            Manage your authenticator app and passkeys on the dedicated security
+            page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Add a second factor — an authenticator app or a passkey — to protect
+            your account at sign-in.
+          </p>
+        </CardContent>
+        <CardFooter>
+          <Button asChild className="flex flex-row gap-2 flex-nowrap">
+            <Link href="/mfa">
+              <ShieldCheck className="h-4 w-4" />
+              Manage MFA
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
       <PendingInvitationsCard cardClassName={cardsClassName} />
       <AppsCard
         cardTitle="Authorized Applications"
