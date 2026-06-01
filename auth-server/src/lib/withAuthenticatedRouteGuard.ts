@@ -58,20 +58,30 @@ export async function withAuthenticatedApiRouteGuard(
   api_route_handler: TProtectedAuthenticatedApiRoute<IAuthenticatedApiRouteGuardInputs>,
   wrapper_opts?: IWithAuthenticatedApiRouteGuardWrapperOpts,
 ): Promise<(req: NextRequest) => Promise<NextResponse>> {
-  await using dbh = ServerlessDatabase.createDBH();
-  await using redis = RedisCache.createConnection();
-  const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
-  return _withAuthenticatedApiRouteGuard<IAuthenticatedApiRouteGuardInputs>(
-    api_route_handler,
-    { dbh, redis },
-    {
-      route_guard_type: 'authenticated',
-      jwt_keys_manager,
-      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
-      custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
-      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
-      additional_token_sources: wrapper_opts?.additional_token_sources,
-      debug: wrapper_opts?.debug
-    }
-  );
+  // The guarded route below is a lazy handler that Next.js invokes *after*
+  // this factory returns. The dbh/redis resources must therefore be created
+  // and disposed inside that handler — if we `await using` them out here they
+  // get disposed the moment this factory returns (before the request runs),
+  // which closes the Redis connection and surfaces as
+  // "Connection is closed" when a handler touches `redis.client`
+  // (e.g. rate-limiting during passkey enrollment).
+  return async (req: NextRequest): Promise<NextResponse> => {
+    await using dbh = ServerlessDatabase.createDBH();
+    await using redis = RedisCache.createConnection();
+    const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
+    const guarded = _withAuthenticatedApiRouteGuard<IAuthenticatedApiRouteGuardInputs>(
+      api_route_handler,
+      { dbh, redis },
+      {
+        route_guard_type: 'authenticated',
+        jwt_keys_manager,
+        api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+        custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
+        custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
+        additional_token_sources: wrapper_opts?.additional_token_sources,
+        debug: wrapper_opts?.debug
+      }
+    );
+    return await guarded(req);
+  };
 }
