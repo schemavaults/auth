@@ -15,7 +15,7 @@ import {
 import type { MfaEnrollResponse } from "@schemavaults/auth-common";
 import { useMfa } from "@schemavaults/auth-react-provider";
 import { Check, ShieldCheck, X } from "lucide-react";
-import { RecoveryCodesPanel } from "../RecoveryCodesPanel";
+import { RecoveryCodesPanel } from "@/components/RecoveryCodesPanel";
 
 export interface TotpEnrollmentDialogProps {
   open: boolean;

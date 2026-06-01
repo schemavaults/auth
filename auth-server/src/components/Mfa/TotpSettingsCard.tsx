@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FC, type ReactElement, type ReactNode } from "react";
+import { useState, type FC, type ReactElement } from "react";
 import {
   Button,
   Card,
@@ -22,22 +22,16 @@ import {
   ShieldOff,
   Smartphone,
 } from "lucide-react";
-import { TotpEnrollmentDialog } from "../TotpEnrollmentDialog";
-import { MfaRemoveFactorDialog } from "../MfaRemoveFactorDialog";
-import { MfaRegenerateRecoveryCodesDialog } from "../MfaRegenerateRecoveryCodesDialog";
+import { TotpEnrollmentDialog } from "@/components/Mfa/TotpEnrollmentDialog";
+import { MfaRemoveFactorDialog } from "@/components/Mfa/MfaRemoveFactorDialog";
+import { MfaRegenerateRecoveryCodesDialog } from "@/components/Mfa/MfaRegenerateRecoveryCodesDialog";
 
-export interface MfaSettingsCardProps {
+export interface TotpSettingsCardProps {
   className?: string;
-  // Optional passkey (WebAuthn) management UI rendered as its own section
-  // below the authenticator-app controls. Supplied by the auth server, which
-  // owns the passkey browser ceremonies; this package stays free of any
-  // WebAuthn browser dependency for its external consumers.
-  passkeysSection?: ReactNode;
 }
 
-export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
+export const TotpSettingsCard: FC<TotpSettingsCardProps> = ({
   className,
-  passkeysSection,
 }): ReactElement => {
   // The settings card only manages the TOTP factor, so query that factor
   // type explicitly rather than picking an arbitrary entry out of the
@@ -63,12 +57,12 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
           ) : (
             <ShieldAlert className="h-5 w-5 text-muted-foreground" />
           )}
-          Multi-Factor Authentication
+          Authenticator App
         </CardTitle>
         <CardDescription>
           {enabled
             ? "An authenticator app is required at sign-in."
-            : "Add a second factor to protect your account."}
+            : "Add an authenticator app as a second factor to protect your account."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -94,7 +88,7 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            MFA is not currently enabled on your account.
+            An authenticator app is not currently enabled on your account.
           </p>
         )}
       </CardContent>
@@ -131,9 +125,6 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
           </Button>
         )}
       </CardFooter>
-      {passkeysSection ? (
-        <div className="border-t px-6 py-4">{passkeysSection}</div>
-      ) : null}
       {enrolling && (
         <TotpEnrollmentDialog
           open={enrolling}
@@ -158,4 +149,4 @@ export const MfaSettingsCard: FC<MfaSettingsCardProps> = ({
   );
 };
 
-export default MfaSettingsCard;
+export default TotpSettingsCard;

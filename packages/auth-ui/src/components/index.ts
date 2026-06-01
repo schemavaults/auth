@@ -111,15 +111,6 @@ export type {
   DisconnectAppToApiConfirmationTarget,
 } from "./DisconnectAppToApiDialog";
 
-export { MfaSettingsCard } from "./MfaSettingsCard";
-export type { MfaSettingsCardProps } from "./MfaSettingsCard";
-
-export { TotpEnrollmentDialog } from "./TotpEnrollmentDialog";
-export type { TotpEnrollmentDialogProps } from "./TotpEnrollmentDialog";
-
-export { RecoveryCodesPanel } from "./RecoveryCodesPanel";
-export type { RecoveryCodesPanelProps } from "./RecoveryCodesPanel";
-
 export { MfaChallengeForm } from "./MfaChallengeForm";
 export type { MfaChallengeFormProps } from "./MfaChallengeForm";
 
@@ -132,11 +123,5 @@ export type {
   MfaFactorPickerProps,
   MfaFactorTypeLabel,
 } from "./MfaFactorPicker";
-
-export { MfaRemoveFactorDialog } from "./MfaRemoveFactorDialog";
-export type { MfaRemoveFactorDialogProps } from "./MfaRemoveFactorDialog";
-
-export { MfaRegenerateRecoveryCodesDialog } from "./MfaRegenerateRecoveryCodesDialog";
-export type { MfaRegenerateRecoveryCodesDialogProps } from "./MfaRegenerateRecoveryCodesDialog";
 
 export { AuthActionButtons } from "@/components/AuthActionButtons";

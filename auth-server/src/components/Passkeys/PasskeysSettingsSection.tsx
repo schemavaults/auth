@@ -3,7 +3,7 @@
 import { useState, type ReactElement } from "react";
 import { Button } from "@schemavaults/ui";
 import { useWebauthnCredentialsSwr } from "@schemavaults/auth-react-provider";
-import { Fingerprint, KeyRound, Plus, Trash2 } from "lucide-react";
+import { Fingerprint, Plus, Trash2 } from "lucide-react";
 import { PasskeyEnrollmentDialog } from "./PasskeyEnrollmentDialog";
 import { PasskeyRemoveDialog } from "./PasskeyRemoveDialog";
 
@@ -21,11 +21,7 @@ export function PasskeysSettingsSection(): ReactElement {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <KeyRound className="h-4 w-4 text-muted-foreground" />
-          Passkeys
-        </div>
+      <div className="flex items-center justify-end">
         <Button
           size="sm"
           variant="outline"

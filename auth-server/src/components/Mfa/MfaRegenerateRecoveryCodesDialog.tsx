@@ -13,7 +13,7 @@ import {
 } from "@schemavaults/ui";
 import { useMfa } from "@schemavaults/auth-react-provider";
 import { Check, RefreshCw, X } from "lucide-react";
-import { RecoveryCodesPanel } from "../RecoveryCodesPanel";
+import { RecoveryCodesPanel } from "@/components/RecoveryCodesPanel";
 
 export interface MfaRegenerateRecoveryCodesDialogProps {
   open: boolean;

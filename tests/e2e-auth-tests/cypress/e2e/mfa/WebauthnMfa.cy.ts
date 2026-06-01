@@ -25,7 +25,7 @@ function submitLoginForm(email: string, password: string): void {
     .click();
 }
 
-// Drive the account-page passkey enrollment UI through a successful
+// Drive the /mfa-page passkey enrollment UI through a successful
 // registration ceremony (the CDP virtual authenticator auto-responds).
 function enrollPasskeyViaUi(): void {
   cy.get("[data-testid='passkey-add-button']")
@@ -70,6 +70,9 @@ describeWebauthn("WebAuthn passkey MFA", () => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");
         cy.url().should("include", "/account");
+
+        // MFA settings now live on the dedicated /mfa route.
+        cy.visit("/mfa");
         cy.wait_for_page_hydration();
 
         enrollPasskeyViaUi();
@@ -117,10 +120,10 @@ describeWebauthn("WebAuthn passkey MFA", () => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");
 
-        // Seed a TOTP factor (and recovery codes) directly, then return to
-        // the account page where MFA status will reflect the new factor.
+        // Seed a TOTP factor (and recovery codes) directly, then go to the
+        // /mfa page where MFA status will reflect the new factor.
         cy.enroll_test_user_mfa({ email: credentials.email }).then(() => {
-          cy.visit("/account");
+          cy.visit("/mfa");
           cy.wait_for_page_hydration();
 
           enrollPasskeyViaUi();
@@ -149,7 +152,7 @@ describeWebauthn("WebAuthn passkey MFA", () => {
         if (!ok) throw new Error("Failed to register/login regular user");
 
         cy.enroll_test_user_mfa({ email: credentials.email }).then((mfa) => {
-          cy.visit("/account");
+          cy.visit("/mfa");
           cy.wait_for_page_hydration();
 
           enrollPasskeyViaUi();

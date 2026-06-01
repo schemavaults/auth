@@ -11,3 +11,7 @@ export {
   type PasskeyRemoveDialogProps,
 } from "./PasskeyRemoveDialog";
 export { PasskeysSettingsSection } from "./PasskeysSettingsSection";
+export {
+  PasskeysSettingsCard,
+  type PasskeysSettingsCardProps,
+} from "./PasskeysSettingsCard";
