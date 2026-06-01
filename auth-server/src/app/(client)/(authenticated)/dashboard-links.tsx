@@ -33,7 +33,7 @@ export function getAuthenticatedUserDashboardLinks(
 
   const mfaPageLink: DashboardSidebarItemDefinition = {
     type: "dashboard-sidebar-item-definition" as const,
-    title: "Security",
+    title: "MFA",
     url: "/mfa",
     icon: ({ className }: { className: string }): ReactElement => (
       <ShieldCheck className={className} />
