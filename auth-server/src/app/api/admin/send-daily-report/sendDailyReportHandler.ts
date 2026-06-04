@@ -12,6 +12,8 @@ import {
 } from "@/lib/auth-db/users";
 import { listErrorsCreatedSince } from "@/lib/auth-db/errors";
 import { listOrganizationsCreatedSince } from "@/lib/auth-db/organizations";
+import { listTopMostPopularAppsSince } from "@/lib/auth-db/apps";
+import { listTopMostPopularApisSince } from "@/lib/auth-db/apis";
 import sendEmailViaMailServer from "@/lib/send-email-via-mail-server";
 import captureServerException from "@/lib/captureServerException";
 import { buildDailyAdminReport } from "./buildReportHtml";
@@ -34,13 +36,21 @@ export async function sendDailyReportHandler({
     const windowEnd = new Date();
     const windowStart = new Date(windowEnd.getTime() - TWENTY_FOUR_HOURS_MS);
 
-    const [newUsers, newOrganizations, newErrors, topMostActiveUsers] =
-      await Promise.all([
-        listUsersCreatedSince(dbh.db, windowStart.getTime()),
-        listOrganizationsCreatedSince(dbh.db, windowStart.getTime()),
-        listErrorsCreatedSince(dbh.db, windowStart.getTime()),
-        listTopMostActiveUsersSince(dbh.db, windowStart.getTime(), 10),
-      ]);
+    const [
+      newUsers,
+      newOrganizations,
+      newErrors,
+      topMostActiveUsers,
+      topMostPopularApps,
+      topMostPopularApis,
+    ] = await Promise.all([
+      listUsersCreatedSince(dbh.db, windowStart.getTime()),
+      listOrganizationsCreatedSince(dbh.db, windowStart.getTime()),
+      listErrorsCreatedSince(dbh.db, windowStart.getTime()),
+      listTopMostActiveUsersSince(dbh.db, windowStart.getTime(), 10),
+      listTopMostPopularAppsSince(dbh.db, windowStart.getTime(), 10),
+      listTopMostPopularApisSince(dbh.db, windowStart.getTime(), 10),
+    ]);
 
     const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
     const authServerUri: string = getAuthServerUri(appEnv);
@@ -53,6 +63,8 @@ export async function sendDailyReportHandler({
       newOrganizations,
       newErrors,
       topMostActiveUsers,
+      topMostPopularApps,
+      topMostPopularApis,
     });
 
     const dateLabel = windowEnd.toISOString().slice(0, 10);
@@ -72,6 +84,8 @@ export async function sendDailyReportHandler({
       organizations_count: newOrganizations.length,
       errors_count: newErrors.length,
       top_most_active_users_count: topMostActiveUsers.length,
+      top_most_popular_apps_count: topMostPopularApps.length,
+      top_most_popular_apis_count: topMostPopularApis.length,
       window_start: windowStart.toISOString(),
       window_end: windowEnd.toISOString(),
     });

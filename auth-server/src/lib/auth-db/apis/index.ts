@@ -12,3 +12,6 @@ export { preloadApiServersTable } from './preload-api-servers-table';
 export type { QueryApiServersInputOptions } from './preload-api-servers-table';
 
 export { default as loadApiServerDefinitionFromDatabase } from './load-api-server-definition-from-db';
+
+export { listTopMostPopularApisSince } from './list-top-most-popular-apis-since';
+export type { TopMostPopularApiRow } from './list-top-most-popular-apis-since';

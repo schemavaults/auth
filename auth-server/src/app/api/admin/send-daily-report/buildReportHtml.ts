@@ -3,6 +3,8 @@ import { brandColors } from "@schemavaults/theme";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import type { TopMostActiveUserRow, UserDocument } from "@/lib/auth-db/users";
 import type { ErrorRow } from "@/lib/auth-db/errors";
+import type { TopMostPopularAppRow } from "@/lib/auth-db/apps";
+import type { TopMostPopularApiRow } from "@/lib/auth-db/apis";
 
 interface BuildReportOpts {
   authServerUri: string;
@@ -12,6 +14,8 @@ interface BuildReportOpts {
   newOrganizations: readonly OrganizationDefinition[];
   newErrors: readonly ErrorRow[];
   topMostActiveUsers: readonly TopMostActiveUserRow[];
+  topMostPopularApps: readonly TopMostPopularAppRow[];
+  topMostPopularApis: readonly TopMostPopularApiRow[];
 }
 
 interface ReportContent {
@@ -46,6 +50,8 @@ export function buildDailyAdminReport({
   newOrganizations,
   newErrors,
   topMostActiveUsers,
+  topMostPopularApps,
+  topMostPopularApis,
 }: BuildReportOpts): ReportContent {
   const windowLabel = `${formatTimestamp(windowStart.getTime())} → ${formatTimestamp(windowEnd.getTime())}`;
 
@@ -87,6 +93,34 @@ export function buildDailyAdminReport({
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${u.sign_in_count.toLocaleString("en-US")}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${u.access_token_count.toLocaleString("en-US")}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${u.refresh_token_count.toLocaleString("en-US")}</td>
+</tr>`;
+        })
+        .join("\n");
+
+  const topPopularAppsRows = topMostPopularApps.length === 0
+    ? `<tr><td colspan="5" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No application token activity in the last 24 hours.</td></tr>`
+    : topMostPopularApps
+        .map((a, i) => {
+          return `<tr>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;width:48px;">#${i + 1}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};">${escapeHtml(a.app_name)}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.client_app_id)}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.access_token_count.toLocaleString("en-US")}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.refresh_token_count.toLocaleString("en-US")}</td>
+</tr>`;
+        })
+        .join("\n");
+
+  const topPopularApisRows = topMostPopularApis.length === 0
+    ? `<tr><td colspan="5" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No API token activity in the last 24 hours.</td></tr>`
+    : topMostPopularApis
+        .map((a, i) => {
+          return `<tr>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;width:48px;">#${i + 1}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};">${escapeHtml(a.api_server_name)}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.api_server_id)}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.access_token_count.toLocaleString("en-US")}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.refresh_token_count.toLocaleString("en-US")}</td>
 </tr>`;
         })
         .join("\n");
@@ -172,6 +206,44 @@ ${topMostActiveRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
+        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">Most popular applications (${topMostPopularApps.length})</h2>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Rank</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Application</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Client app ID</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Access tokens</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Refresh tokens</th>
+            </tr>
+          </thead>
+          <tbody>
+${topPopularAppsRows}
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 32px 24px;">
+        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">Most popular APIs (${topMostPopularApis.length})</h2>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Rank</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">API</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Audience (API server ID)</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Access tokens</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Refresh tokens</th>
+            </tr>
+          </thead>
+          <tbody>
+${topPopularApisRows}
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 32px 24px;">
         <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_RED};">New errors (${newErrors.length})</h2>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
@@ -225,6 +297,28 @@ ${errorsRows}
     topMostActiveUsers.forEach((u, i) => {
       textLines.push(
         `  ${i + 1}. ${u.email} — ${u.sign_in_count.toLocaleString("en-US")} sign-in(s) — ${u.access_token_count.toLocaleString("en-US")} access / ${u.refresh_token_count.toLocaleString("en-US")} refresh — ${authServerUri}/admin/users/${u.uid}`,
+      );
+    });
+  }
+  textLines.push("");
+  textLines.push(`Most popular applications (${topMostPopularApps.length}):`);
+  if (topMostPopularApps.length === 0) {
+    textLines.push("  (none)");
+  } else {
+    topMostPopularApps.forEach((a, i) => {
+      textLines.push(
+        `  ${i + 1}. ${a.app_name} [${a.client_app_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${a.refresh_token_count.toLocaleString("en-US")} refresh`,
+      );
+    });
+  }
+  textLines.push("");
+  textLines.push(`Most popular APIs (${topMostPopularApis.length}):`);
+  if (topMostPopularApis.length === 0) {
+    textLines.push("  (none)");
+  } else {
+    topMostPopularApis.forEach((a, i) => {
+      textLines.push(
+        `  ${i + 1}. ${a.api_server_name} [${a.api_server_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${a.refresh_token_count.toLocaleString("en-US")} refresh`,
       );
     });
   }
