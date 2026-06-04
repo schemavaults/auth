@@ -10,6 +10,7 @@ import {
   emailCredentialsSchema,
   ERROR_MESSAGE_CATALOG,
   PKCE_ProofKeyManager,
+  collapseWebauthnFactors,
 } from "@schemavaults/auth-common";
 import type { UserData } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
@@ -317,13 +318,17 @@ export async function handleLogin({
         mfaRegistry.countRecoveryCodesRemaining(uid),
       ]);
       // Map to the strict AvailableMfaFactor shape — the summary carries an
-      // extra `verified_at` the client's strict schema would reject.
-      const available_factors: AvailableMfaFactor[] = verifiedFactors.map(
-        (factor) => ({
+      // extra `verified_at` the client's strict schema would reject — then
+      // collapse multiple passkeys into a single "Passkey / Security key"
+      // picker row. The login WebAuthn ceremony offers every enrolled passkey
+      // through the platform sheet, so one representative row stands in for
+      // all of them (see collapseWebauthnFactors).
+      const available_factors: AvailableMfaFactor[] = collapseWebauthnFactors(
+        verifiedFactors.map((factor) => ({
           factor_id: factor.factor_id,
           factor_type: factor.factor_type,
           last_used_at: factor.last_used_at,
-        }),
+        })),
       );
       const challenge_id = crypto.randomUUID();
       await using redis = RedisCache.createConnection();
