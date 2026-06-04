@@ -5,6 +5,8 @@ import {
   mfaRequiredAuthenticateResultSchema,
   authenticateFailureResultSchema,
   challengeExpiredAuthenticateResultSchema,
+  collapseWebauthnFactors,
+  type AvailableMfaFactor,
 } from "./authenticate_result";
 
 describe("authenticateResultSchema (discriminated union)", () => {
@@ -128,5 +130,86 @@ describe("authenticateResultSchema (discriminated union)", () => {
       extra: "nope",
     };
     expect(authenticateResultSchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe("collapseWebauthnFactors", () => {
+  const ID = {
+    totpA: "22222222-2222-4222-8222-222222222222",
+    totpB: "33333333-3333-4333-8333-333333333333",
+    pkA: "44444444-4444-4444-8444-444444444444",
+    pkB: "55555555-5555-4555-8555-555555555555",
+    pkC: "66666666-6666-4666-8666-666666666666",
+  };
+  const totp = (
+    factor_id: string,
+    last_used_at: number | null = null,
+  ): AvailableMfaFactor => ({ factor_id, factor_type: "totp", last_used_at });
+  const webauthn = (
+    factor_id: string,
+    last_used_at: number | null = null,
+  ): AvailableMfaFactor => ({
+    factor_id,
+    factor_type: "webauthn",
+    last_used_at,
+  });
+
+  test("folds multiple passkeys into a single representative row", () => {
+    const result = collapseWebauthnFactors([
+      webauthn(ID.pkA, 300),
+      webauthn(ID.pkB, 200),
+      webauthn(ID.pkC, 100),
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.factor_id).toBe(ID.pkA);
+    expect(result[0]?.factor_type).toBe("webauthn");
+  });
+
+  test("keeps the first (most-recently-used) passkey as the representative", () => {
+    // Input is sorted last_used_at DESC NULLS LAST, so the survivor must be
+    // the head of the passkey run, not a later one.
+    const result = collapseWebauthnFactors([
+      webauthn(ID.pkB, 500),
+      webauthn(ID.pkA, 10),
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.factor_id).toBe(ID.pkB);
+  });
+
+  test("leaves non-webauthn factors untouched and preserves order", () => {
+    const result = collapseWebauthnFactors([
+      totp(ID.totpA, 400),
+      webauthn(ID.pkA, 300),
+      webauthn(ID.pkB, 200),
+      totp(ID.totpB, 100),
+    ]);
+    expect(result.map((f) => f.factor_id)).toEqual([
+      ID.totpA,
+      ID.pkA,
+      ID.totpB,
+    ]);
+  });
+
+  test("preserves multiple distinct totp factors (only passkeys collapse)", () => {
+    const result = collapseWebauthnFactors([
+      totp(ID.totpA, 400),
+      totp(ID.totpB, 300),
+    ]);
+    expect(result.map((f) => f.factor_id)).toEqual([ID.totpA, ID.totpB]);
+  });
+
+  test("returns a single webauthn factor unchanged", () => {
+    const input = [webauthn(ID.pkA, 100)];
+    expect(collapseWebauthnFactors(input)).toEqual(input);
+  });
+
+  test("returns an empty list for an empty input", () => {
+    expect(collapseWebauthnFactors([])).toEqual([]);
+  });
+
+  test("does not mutate the input array", () => {
+    const input = [webauthn(ID.pkA, 200), webauthn(ID.pkB, 100)];
+    collapseWebauthnFactors(input);
+    expect(input.map((f) => f.factor_id)).toEqual([ID.pkA, ID.pkB]);
   });
 });

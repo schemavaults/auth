@@ -11,6 +11,37 @@ export const availableMfaFactorSchema = z
 
 export type AvailableMfaFactor = z.infer<typeof availableMfaFactorSchema>;
 
+// Collapse a user's verified factors for the login factor picker: every
+// passkey folds into a single representative `webauthn` entry while all other
+// factor types pass through unchanged.
+//
+// Why: at login the WebAuthn assertion lists *all* of a user's enrolled
+// passkeys in `allowCredentials`, and the platform/browser sheet is what lets
+// them pick between those passkeys — so rendering one picker row per passkey
+// is redundant and undifferentiated (the same "Passkey / Security key" label
+// repeated). For a webauthn proof the selected factor_id is advisory:
+// evaluateMfaProof resolves the credential the authenticator actually signed
+// with, so any enrolled passkey still verifies against the single row.
+//
+// Order is preserved and the *first* passkey encountered is kept as the
+// representative. Callers pass a list already sorted last_used_at DESC NULLS
+// LAST, so the survivor is the most-recently-used passkey — keeping the
+// picker's "default to most-recently-used factor" behaviour intact.
+export function collapseWebauthnFactors(
+  factors: AvailableMfaFactor[],
+): AvailableMfaFactor[] {
+  const collapsed: AvailableMfaFactor[] = [];
+  let keptWebauthn = false;
+  for (const factor of factors) {
+    if (factor.factor_type === "webauthn") {
+      if (keptWebauthn) continue;
+      keptWebauthn = true;
+    }
+    collapsed.push(factor);
+  }
+  return collapsed;
+}
+
 export const authenticatedAuthenticateResultSchema = z
   .object({
     kind: z.literal("authenticated"),

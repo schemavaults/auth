@@ -29,6 +29,7 @@ export {
   authenticateFailureResultSchema,
   challengeExpiredAuthenticateResultSchema,
   availableMfaFactorSchema,
+  collapseWebauthnFactors,
   type AuthenticateResult,
   type AuthenticatedAuthenticateResult,
   type MfaRequiredAuthenticateResult,
