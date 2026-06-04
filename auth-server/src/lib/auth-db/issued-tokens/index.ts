@@ -5,6 +5,8 @@ export { countTokensCreatedByUser } from "./count-tokens-created-by-user";
 export type { CreatedTokenCounts } from "./count-tokens-created-by-user";
 export { countTokensIssuedSinceGroupedByUid } from "./count-tokens-issued-since-grouped-by-uid";
 export type { IssuedTokenCounts } from "./count-tokens-issued-since-grouped-by-uid";
+export { countTokensIssuedSinceGroupedByColumn } from "./count-tokens-issued-since-grouped-by-column";
+export type { GroupableTokenColumn } from "./count-tokens-issued-since-grouped-by-column";
 export { listIssuedTokensForUser } from "./list-issued-tokens-for-user";
 export type { ListIssuedTokensForUserOptions } from "./list-issued-tokens-for-user";
 export type * from "./issued-tokens-table";
