@@ -16,10 +16,37 @@ import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
 import decodeJWTsWithKeyManager from "@/decode-jwts-with-key-manager";
 
+/**
+ * Constructor options for {@link RouteGuardFactory}.
+ */
 export interface RouteGuardFactoryInitOptions {
+  /**
+   * The deployment environment (e.g. `development`, `staging`, `production`)
+   * the factory is operating in. Used to validate the `iss`/audience of
+   * incoming JWTs against the expected auth server for that environment.
+   */
   environment: SchemaVaultsAppEnvironment;
+  /**
+   * The JWT key manager used to fetch the signing keys needed to verify
+   * tokens.
+   *
+   * - **Required** when {@link RouteGuardFactoryInitOptions.is_auth_server} is
+   *   `true` (the auth server must supply its own local key manager).
+   * - **Optional** for resource servers: when omitted, a
+   *   {@link RemoteJwtKeyManager} is created that loads keys remotely from the
+   *   auth server (resolved via `getSchemaVaultsAuthServerUri()`).
+   */
   jwt_keys_manager?: IJwtKeyManager;
+  /**
+   * Set to `true` only when this factory runs inside the auth server itself.
+   * When `true`, a {@link RouteGuardFactoryInitOptions.jwt_keys_manager} must
+   * be provided. Defaults to `false` (i.e. a remote resource server).
+   */
   is_auth_server?: boolean;
+  /**
+   * When `true`, the factory and the guards it creates emit verbose
+   * `console.log` diagnostics. Defaults to `false`.
+   */
   debug?: boolean;
 }
 
@@ -43,6 +70,24 @@ const GUARDS = {
   (opts: InitRouteGuardCheckOptions) => IRouteGuard
 >;
 
+/**
+ * Factory for constructing {@link IRouteGuard} instances that protect API
+ * routes and server components.
+ *
+ * A guard verifies the caller's identity (and, depending on the guard type,
+ * their privileges) before a protected handler runs. The factory exposes
+ * several entry points depending on what you already have in hand:
+ *
+ * - {@link RouteGuardFactory.createGuardFromOptions} — you already have a
+ *   decoded user (no token verification performed).
+ * - {@link RouteGuardFactory.createGuardFromTokenSources} — you have one or
+ *   more raw tokens to verify.
+ * - {@link RouteGuardFactory.createGuardFromAuthHeader} — you have a raw HTTP
+ *   `Authorization` header value to parse and verify.
+ *
+ * Guard types currently supported: `"authenticated"` (any signed-in user) and
+ * `"admin"` (signed-in users with admin privileges).
+ */
 export class RouteGuardFactory {
   private readonly jwt_keys_manager: IJwtKeyManager;
   private readonly environment: SchemaVaultsAppEnvironment;
@@ -90,6 +135,19 @@ export class RouteGuardFactory {
     return validGuardTypeSchema.safeParse(type).success;
   }
 
+  /**
+   * Construct a guard directly from an already-resolved user/options object,
+   * without performing any token verification.
+   *
+   * Prefer {@link RouteGuardFactory.createGuardFromTokenSources} or
+   * {@link RouteGuardFactory.createGuardFromAuthHeader} unless you have already
+   * decoded and trust the user yourself.
+   *
+   * @param type - Which guard to build: `"authenticated"` or `"admin"`.
+   * @param opts - The resolved check options (notably the decoded `user`).
+   * @returns The constructed {@link IRouteGuard}.
+   * @throws {Error} If `type` is not a recognized guard type.
+   */
   public static createGuardFromOptions(
     type: RouteGuardType,
     opts: InitRouteGuardCheckOptions,
@@ -105,6 +163,15 @@ export class RouteGuardFactory {
     return GUARD;
   }
 
+  /**
+   * Instance-level convenience wrapper around the static
+   * {@link RouteGuardFactory.createGuardFromOptions}.
+   *
+   * @param type - Which guard to build: `"authenticated"` or `"admin"`.
+   * @param opts - The resolved check options (notably the decoded `user`).
+   * @returns The constructed {@link IRouteGuard}.
+   * @throws {Error} If `type` is not a recognized guard type.
+   */
   public createGuardFromOptions(
     type: RouteGuardType,
     opts: InitRouteGuardCheckOptions,
@@ -112,6 +179,26 @@ export class RouteGuardFactory {
     return RouteGuardFactory.createGuardFromOptions(type, opts);
   }
 
+  /**
+   * Verify one or more raw tokens and, on success, construct the requested
+   * guard for the decoded user.
+   *
+   * Each entry in `token_sources` is a candidate token (e.g. an access token
+   * pulled from a header or cookie); they are decoded/verified via the
+   * configured JWT key manager and the first valid one resolves the user.
+   *
+   * @param type - Which guard to build: `"authenticated"` or `"admin"`.
+   * @param token_sources - Candidate tokens to verify. Pass the **raw token
+   *   strings only** — do not include a `"Bearer "` prefix here (see
+   *   {@link RouteGuardFactory.createGuardFromAuthHeader} if you have a full
+   *   `Authorization` header).
+   * @param jwt_audience - The expected JWT audience (`aud`), i.e. the
+   *   {@link ApiServerId} of the resource server the token must be scoped to.
+   * @returns The constructed {@link IRouteGuard}.
+   * @throws {TypeError} If `jwt_audience` is not a valid API server ID.
+   * @throws {Error} If no JWT key manager is available, or none of the tokens
+   *   verify successfully.
+   */
   public async createGuardFromTokenSources(
     type: RouteGuardType,
     token_sources: readonly PotentiallyValidTokenSource[],
@@ -159,6 +246,34 @@ export class RouteGuardFactory {
     return this.createGuardFromOptions(type, init_opts) satisfies IRouteGuard;
   }
 
+  /**
+   * Parse a raw HTTP `Authorization` header, verify the bearer token it
+   * carries, and construct the requested guard for the decoded user.
+   *
+   * @param type - Which guard to build: `"authenticated"` or `"admin"`.
+   * @param authHeader - The **full `Authorization` header value, including the
+   *   `"Bearer "` prefix** — e.g. `"Bearer eyJhbGci..."`, exactly as read from
+   *   `request.headers.get("authorization")`. The prefix is stripped
+   *   internally before the token is verified; passing a bare token (without
+   *   the prefix) will throw. `null` is accepted (and rejected) so callers can
+   *   forward a missing header directly.
+   * @param jwt_audience - The expected JWT audience (`aud`), i.e. the
+   *   {@link ApiServerId} of the resource server the token must be scoped to.
+   * @returns The constructed {@link IRouteGuard}.
+   * @throws {Error} If `authHeader` is missing/empty or does not start with the
+   *   `"Bearer "` prefix.
+   * @throws {Error} If the extracted token fails verification (propagated from
+   *   {@link RouteGuardFactory.createGuardFromTokenSources}).
+   *
+   * @example
+   * ```ts
+   * const guard = await factory.createGuardFromAuthHeader(
+   *   "authenticated",
+   *   request.headers.get("authorization"), // "Bearer eyJ..."
+   *   "my-api-server-id",
+   * );
+   * ```
+   */
   public async createGuardFromAuthHeader(
     type: RouteGuardType,
     authHeader: string | null,
