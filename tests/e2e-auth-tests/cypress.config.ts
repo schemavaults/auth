@@ -1,5 +1,10 @@
 import { defineConfig } from "cypress";
-import { createJwksAccessProofToken, importPKCS8 } from "@schemavaults/jwt";
+import {
+  createJwksAccessProofToken,
+  importPKCS8,
+  SignJWT,
+  type JWTPayload,
+} from "@schemavaults/jwt";
 import {
   NobleCryptoPlugin,
   ScureBase32Plugin,
@@ -42,6 +47,23 @@ export default defineConfig({
             api_server_id,
             private_key: privateKey,
           });
+        },
+        // Sign a JWKS access assertion with full control over the claim set
+        // so specs can exercise the auth server's hardened claim validation
+        // (missing exp, expired, mismatched aud/iss, ...). The production
+        // mint path (createJwksAccessProofToken) refuses to emit malformed
+        // assertions, so the bad claims have to be signed here directly.
+        async signCustomJwksAccessAssertion({
+          private_key_pem,
+          claims,
+        }: {
+          private_key_pem: string;
+          claims: Record<string, unknown>;
+        }): Promise<string> {
+          const privateKey = await importPKCS8(private_key_pem, "RS256");
+          return await new SignJWT(claims as JWTPayload)
+            .setProtectedHeader({ alg: "RS256" })
+            .sign(privateKey);
         },
         // otplib's HMAC implementation depends on Node's `crypto.createHmac`,
         // which doesn't exist inside Cypress's browser context. Compute the

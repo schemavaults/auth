@@ -6,6 +6,7 @@ import {
   SCHEMAVAULTS_AUTH_SERVER,
 } from "@schemavaults/app-definitions";
 import { SignJWT } from "jose";
+import { JWKS_ACCESS_PROOF_TOKEN_MAX_AGE } from "./constants";
 
 export interface ICreateJwksAccessProofToken {
   api_server_id: ApiServerId;
@@ -16,7 +17,7 @@ export async function createJwksAccessProofToken({
   api_server_id,
   private_key,
 }: ICreateJwksAccessProofToken): Promise<string> {
-  if (!apiServerIdSchema.safeParse(api_server_id)) {
+  if (!apiServerIdSchema.safeParse(api_server_id).success) {
     throw new TypeError("Invalid API server ID!");
   }
 
@@ -26,14 +27,18 @@ export async function createJwksAccessProofToken({
     );
   }
 
+  // The auth server requires exp, iat, jti, aud, and iss claims, and treats
+  // each jti as single-use, so mint a fresh assertion for every request.
   const token_builder = new SignJWT({
     api_server_id,
   })
     .setSubject(api_server_id)
     .setIssuer(api_server_id)
     .setAudience(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id)
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
     .setNotBefore(new Date(Date.now() - 1))
-    .setExpirationTime("2 min")
+    .setExpirationTime(JWKS_ACCESS_PROOF_TOKEN_MAX_AGE)
     .setProtectedHeader({
       alg: sign_verify_alg,
     });
