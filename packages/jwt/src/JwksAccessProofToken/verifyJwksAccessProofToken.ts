@@ -6,6 +6,10 @@ import {
 } from "@schemavaults/app-definitions";
 import { jwtVerify } from "jose";
 import signVerifyAlg, { sign_verify_alg } from "@/jwt/sign_verify_alg";
+import {
+  JWKS_ACCESS_PROOF_TOKEN_MAX_AGE,
+  JWKS_ACCESS_PROOF_TOKEN_REQUIRED_CLAIMS,
+} from "./constants";
 
 export interface IVerifyJwksAccessProofToken {
   token: string;
@@ -22,7 +26,7 @@ export async function verifyJwksAccessProofToken({
     throw new TypeError("Expected token to verify to be a string!");
   }
 
-  if (!apiServerIdSchema.safeParse(api_server_id)) {
+  if (!apiServerIdSchema.safeParse(api_server_id).success) {
     throw new TypeError("Invalid API server ID!");
   }
 
@@ -37,6 +41,8 @@ export async function verifyJwksAccessProofToken({
     issuer: api_server_id,
     subject: api_server_id,
     algorithms: [signVerifyAlg],
+    maxTokenAge: JWKS_ACCESS_PROOF_TOKEN_MAX_AGE,
+    requiredClaims: [...JWKS_ACCESS_PROOF_TOKEN_REQUIRED_CLAIMS],
   });
 
   if (payload.payload.aud !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
