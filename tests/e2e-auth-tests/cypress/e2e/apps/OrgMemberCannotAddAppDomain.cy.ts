@@ -57,6 +57,20 @@ interface AddAppDomainResponseBody {
 // do not collide with same-named interfaces in other spec files.
 export {};
 
+// crypto.randomUUID() is unavailable in the spec's browser context (the
+// auth server is not served from a secure context in CI; see
+// example_resource_server/ExternalJwksLoad.cy.ts for the same workaround).
+// Generate an RFC4122 v4 UUID with Math.random instead — both ids below feed
+// into `z.string().uuid()` validators on the auth-server, so the format must
+// be valid.
+function generateV4Uuid(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 describe("POST /api/apps/:app_id/domains for org-member (non-owner/admin) caller", () => {
   it("returns 403 when the caller's only org membership is role 'member'", () => {
     cy.generate_random_test_user_credentials().then((memberCredentials) => {
@@ -88,7 +102,7 @@ describe("POST /api/apps/:app_id/domains for org-member (non-owner/admin) caller
                   // 3. Create a PRIVATE app owned by this org. The
                   //    private+owner_organization_id combination is what
                   //    arms the POST-domains authorization gate.
-                  const app_id: string = crypto.randomUUID();
+                  const app_id: string = generateV4Uuid();
                   cy.request<CreateAppResponseBody>({
                     method: "POST",
                     url: "/api/apps",
@@ -170,7 +184,7 @@ describe("POST /api/apps/:app_id/domains for org-member (non-owner/admin) caller
                             url: `/api/apps/${app_id}/domains`,
                             failOnStatusCode: false,
                             body: {
-                              app_domain_ref_id: crypto.randomUUID(),
+                              app_domain_ref_id: generateV4Uuid(),
                               app_id,
                               domain: new_domain,
                               environment: "test",
