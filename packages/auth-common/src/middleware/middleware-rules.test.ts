@@ -230,9 +230,10 @@ test("logged-in non-admin users resolve admin routes to the 'admin' security lev
 
 function buildAdminPageMiddlewareOptions(
   authStatus: AuthenticationStatus,
+  path: string = "/admin",
 ): AuthMiddlewareOptions {
   return {
-    path: "/admin",
+    path,
     authStatus,
     rules: defaultAuthMiddlewareRules,
     authedOnUnauthedRouteRedirectTo: "/",
@@ -283,5 +284,71 @@ test("AuthMiddleware redirects a logged-out user away from /admin to login", () 
     redirect: true,
     remain: false,
     redirectTo: "/auth/login",
+  });
+});
+
+// The default rules declare admin: [["admin"]] only. comparePath does prefix
+// matching, so that single rule must cover every nested admin route
+// (/admin/example, /admin/users/create, ...) — there is no need to enumerate
+// each admin subpage. Classification is independent of the caller's admin
+// status; AuthMiddleware is what enforces the redirect.
+test("nested admin routes are identified as 'admin' regardless of auth status", () => {
+  const nestedAdminPaths = [
+    "/admin/example",
+    "/admin/users",
+    "/admin/users/create",
+    "/admin/settings/danger-zone",
+  ];
+  const authStatuses: AuthenticationStatus[] = [
+    { status: "logged-in", admin: true },
+    { status: "logged-in", admin: false },
+    { status: "logged-out" },
+  ];
+
+  for (const path of nestedAdminPaths) {
+    for (const authStatus of authStatuses) {
+      expect(
+        evaluateAuthMiddlewareRules(
+          parseNavigationPath(path),
+          authStatus,
+          defaultAuthMiddlewareRules,
+        )[2],
+      ).toEqual("admin");
+    }
+  }
+});
+
+test("AuthMiddleware redirects a logged-in non-admin away from a nested admin route", () => {
+  expect(
+    AuthMiddleware(
+      buildAdminPageMiddlewareOptions(
+        {
+          status: "logged-in",
+          admin: false,
+        },
+        "/admin/example",
+      ),
+    ),
+  ).toEqual({
+    redirect: true,
+    remain: false,
+    redirectTo: "/",
+  });
+});
+
+test("AuthMiddleware keeps a logged-in admin on a nested admin route", () => {
+  expect(
+    AuthMiddleware(
+      buildAdminPageMiddlewareOptions(
+        {
+          status: "logged-in",
+          admin: true,
+        },
+        "/admin/example",
+      ),
+    ),
+  ).toEqual({
+    redirect: false,
+    remain: true,
   });
 });
