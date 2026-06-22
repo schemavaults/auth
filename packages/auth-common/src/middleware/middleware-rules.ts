@@ -114,6 +114,20 @@ export function evaluateAuthMiddlewareRules(
       // Current path matches an unauthed route rule
       pageSecurityLevel = "unauthed";
     } else if (
+      rules.admin?.some((route: NavigationPath): boolean => {
+        const isMatch: boolean = comparePath(currentPath, route);
+        if (environment === "test" && isMatch) {
+          console.log(
+            `[AuthMiddleware] Current path "${currentPath.join("/")}" matches admin route: `,
+            route,
+          );
+        }
+        return isMatch;
+      })
+    ) {
+      // Current path matches an admin route rule
+      pageSecurityLevel = "admin";
+    } else if (
       rules.authed?.some((route: NavigationPath): boolean => {
         const isMatch: boolean = comparePath(currentPath, route);
         if (environment === "test" && isMatch) {
