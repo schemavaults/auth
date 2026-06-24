@@ -91,7 +91,7 @@ function ConfirmVerifyEmailView({ token }: { token: string }): ReactElement {
     >
       <CardHeader>
         <CardTitle>
-          Verify your <Wordmark /> email
+          Verify your email for <Wordmark />
         </CardTitle>
         <CardDescription>
           {status === "pending" && "Verifying your email address..."}
@@ -193,7 +193,7 @@ function RequestVerifyEmailForm(): ReactElement {
       <Form {...form}>
         <CardHeader>
           <CardTitle>
-            Verify your <Wordmark /> email
+            Verify your email for <Wordmark />
           </CardTitle>
           <CardDescription>
             Enter your email address and we&apos;ll send you a link to verify
