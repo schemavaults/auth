@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/example-nextjs-resource-server",
-  "version": "0.1.15",
+  "version": "0.1.17",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -15,8 +15,8 @@
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "@schemavaults/ui": "0.63.0",
-    "@schemavaults/theme": "0.25.9"
+    "@schemavaults/ui": "0.79.1",
+    "@schemavaults/theme": "0.26.1"
   },
   "devDependencies": {
     "typescript": "5.9.3",
