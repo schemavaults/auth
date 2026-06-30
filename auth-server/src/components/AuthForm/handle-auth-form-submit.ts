@@ -19,7 +19,7 @@ import {
 import type { useRouter } from "next/navigation";
 import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
 
 export interface PendingAuthorizationState {
@@ -195,7 +195,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   // (from the URL `?app_id=...` → `opts.app.app_id`); in the
   // account-page flow the caller is the auth server itself.
   const target_client_app_id =
-    opts.app?.app_id ?? SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    opts.app?.app_id ?? SCHEMAVAULTS_AUTH_APP_ID;
 
   // The `redirect_uri` is sent on the auth request body so the server
   // can refuse to mint a code for an unregistered URI and so the
@@ -203,7 +203,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   // compare. The third-party PKCE flow carries it on the URL we landed
   // on; the account-page flow has no third-party callback (null).
   const request_redirect_uri: string | null =
-    opts.app && opts.app.app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+    opts.app && opts.app.app_id !== SCHEMAVAULTS_AUTH_APP_ID
       ? searchParams.get("redirect_uri") ?? null
       : null;
 
@@ -301,7 +301,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   // Check if the app requires authorization before redirect
   if (
     opts.app &&
-    opts.app.app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id &&
+    opts.app.app_id !== SCHEMAVAULTS_AUTH_APP_ID &&
     onSuccessfulAuthenticate !== "account-page" &&
     opts.onAppAuthorizationNeeded
   ) {

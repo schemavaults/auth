@@ -18,7 +18,7 @@ export interface UseAuthClientInitializationOptions {
   successful_logout_redirect_uri: string;
   authorize_uri?: string | undefined;
   error_page_uri?: string | undefined;
-  auth_server_uri: string;
+  auth_server_url: string;
   app_id: string;
   debug?: boolean;
   default_audiences?: InitializeAuthClientOptions["default_audiences"];
@@ -40,7 +40,7 @@ export function useAuthClientInitialization(
 
   const {
     authClientRef,
-    auth_server_uri,
+    auth_server_url,
     app_id,
     default_audiences,
     environment,
@@ -79,7 +79,7 @@ export function useAuthClientInitialization(
           const factory = new AuthClientFactory({
             debug,
             default_audiences,
-            auth_server_uri,
+            auth_server_url,
             successful_authentication_redirect_uri,
             successful_logout_redirect_uri,
             authorize_uri,
@@ -130,7 +130,7 @@ export function useAuthClientInitialization(
       setReady,
       debug,
       app_id,
-      auth_server_uri,
+      auth_server_url,
       authorize_uri,
       error_page_uri,
       successful_authentication_redirect_uri,

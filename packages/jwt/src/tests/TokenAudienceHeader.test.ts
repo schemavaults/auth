@@ -1,14 +1,17 @@
 import { decodeJWT, generateNewJwtKeySet, getAudienceFromToken } from "@/jwt";
 import { generateJWT } from "@/jwt/generate";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-import { AccessToken } from "@schemavaults/auth-common";
+import { AccessToken, getAuthServerUrl } from "@schemavaults/auth-common";
 import { describe, expect, test } from "bun:test";
 import MockUser from "./MockUser";
+import { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+
+const env: SchemaVaultsAppEnvironment = "test";
+const auth_server_url = getAuthServerUrl(env);
 
 describe("Token 'aud' Header Claim", () => {
   test("", async () => {
-    const audience_id = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
-    const client_app_id = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    const audience_id = auth_server_url;
+    const client_app_id = auth_server_url;
 
     const jwt_keys = await generateNewJwtKeySet({
       audience_id,
@@ -20,6 +23,7 @@ describe("Token 'aud' Header Claim", () => {
       iat: Date.now(),
       user: new MockUser(),
       client_app_id,
+      auth_server_url,
       jwt_keys,
       env: "test",
     });
@@ -34,6 +38,6 @@ describe("Token 'aud' Header Claim", () => {
       type: "access",
     });
 
-    expect(decoded.aud).toBe(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id);
+    expect(decoded.aud).toBe(auth_server_url);
   });
 });

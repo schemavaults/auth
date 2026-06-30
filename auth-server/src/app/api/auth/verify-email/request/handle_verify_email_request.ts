@@ -9,7 +9,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
-import sendVerificationEmail from "@/lib/send-verification-email";
+import sendVerificationEmail from "@/lib/mail/send-verification-email";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/auth/verify-email/request";

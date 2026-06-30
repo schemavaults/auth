@@ -1,7 +1,9 @@
 import "server-only";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import sendEmailViaMailServer from "@/lib/send-email-via-mail-server";
+import sendEmailViaMailServer from "@/lib/mail/send-email-via-mail-server";
+import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import type { RedisCache } from "@/lib/redis";
 
 export type MfaSecurityAlertAction =
   | "enabled"
@@ -34,6 +36,8 @@ export async function sendMfaSecurityAlertEmail(args: {
   to: string;
   action: MfaSecurityAlertAction;
   db: Kysely<AuthDatabase>;
+  redis: RedisCache;
+  environment?: SchemaVaultsAppEnvironment
 }): Promise<void> {
   const subject = SUBJECT[args.action];
   const summary = SUMMARY[args.action];
@@ -51,6 +55,8 @@ export async function sendMfaSecurityAlertEmail(args: {
         },
       },
       args.db,
+      args.redis,
+      args.environment ?? getAppEnvironment()
     );
   } catch (e: unknown) {
     console.warn(

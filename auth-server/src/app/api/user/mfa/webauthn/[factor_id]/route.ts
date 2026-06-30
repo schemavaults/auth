@@ -32,7 +32,7 @@ const deleteBodySchema = z
   .strict();
 
 async function DELETE_webauthn_factor_handler(
-  { user, dbh, req, redis }: IProtectedAuthenticatedApiRouteProps,
+  { user, dbh, req, redis, environment }: IProtectedAuthenticatedApiRouteProps,
   factor_id: string,
 ): Promise<NextResponse> {
   let body: unknown;
@@ -103,6 +103,8 @@ async function DELETE_webauthn_factor_handler(
       to: user.email,
       action: "removed",
       db: dbh.db,
+      redis,
+      environment
     });
 
     return NextResponse.json({ success: true }, { status: 200 });

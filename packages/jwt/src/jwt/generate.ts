@@ -1,8 +1,8 @@
 import { EncryptJWT, type CryptoKey } from "jose";
 import type { I_JWT_Keys } from "./jwt_keys";
 import { alg, enc } from "./encrypt_decrypt_alg";
-import { issuer } from "./iss";
-import { REFRESH_TOKEN_AUDIENCE } from "./aud";
+import getIssuer from "./get_issuer";
+import getRefreshTokenAudience from "./get_refresh_token_audience";
 import { getExpiryDurationString, getExpiryTime } from "./expiry";
 import type { CustomJWTPayload } from "./payload_data";
 import {
@@ -15,7 +15,6 @@ import {
 import { signJWT } from "./sign";
 import {
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/utils/isValidUuid";
@@ -26,6 +25,7 @@ interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
   iat: number;
   client_app_id: string;
   audience: string;
+  auth_server_url: string;
   env: SchemaVaultsAppEnvironment;
 }
 
@@ -55,8 +55,16 @@ export type GenerateJWTOptions<T extends AuthTokenTypes> =
  * @returns A JWT (AccessToken or RefreshToken object). The .token property contains the actual token as a string.
  */
 export async function generateJWT<T extends AuthTokenTypes>(
-  { type, user, iat, client_app_id, audience, ...opts }: GenerateJWTOptions<T>,
-  refresh_token_audience = REFRESH_TOKEN_AUDIENCE,
+  {
+    type,
+    user,
+    iat,
+    client_app_id,
+    audience,
+    auth_server_url,
+    ...opts
+  }: GenerateJWTOptions<T>,
+  refresh_token_audience = getRefreshTokenAudience(opts.env),
 ): Promise<T extends "access" ? AccessToken : RefreshToken> {
   let keyset_id: string;
   try {
@@ -127,11 +135,10 @@ export async function generateJWT<T extends AuthTokenTypes>(
 
   const env: SchemaVaultsAppEnvironment = opts.env;
 
-  if (
-    type === "refresh" &&
-    audience !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
-  ) {
-    throw new Error("Invalid audience for refresh token");
+  if (type === "refresh" && audience !== auth_server_url) {
+    throw new Error("Invalid audience for refresh token", {
+      cause: `Only auth server URL audience ('${auth_server_url}') is valid for refresh tokens.`,
+    });
   }
 
   const jti: string = crypto.randomUUID();
@@ -235,7 +242,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
         aud: audience satisfies string,
       })
       .setIssuedAt(new Date(iat))
-      .setIssuer(issuer)
+      .setIssuer(auth_server_url)
       .setAudience(aud)
       .setExpirationTime(getExpiryDurationString(type))
       .setSubject(userData.uid)

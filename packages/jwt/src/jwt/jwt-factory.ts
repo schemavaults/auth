@@ -12,13 +12,12 @@ import {
 import {
   appIdSchema,
   type AppId,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
   schemaVaultsAppEnvironments,
+  getAuthServerUrl,
 } from "@schemavaults/app-definitions";
 import { type GenerateJWTOptions, generateJWT } from "./generate";
-import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import type { I_JWT_Keys } from "./jwt_keys";
 
 export interface IJWT_Factory_Init_Options {
@@ -39,9 +38,9 @@ export class JWT_Factory {
    */
   private readonly client_app_id: AppId;
   private readonly user: UserData;
-  private static readonly REFRESH_TOKEN_AUDIENCE = REFRESH_TOKEN_AUDIENCE;
-  private readonly jwt_keys: I_JWT_Keys;
   private readonly environment: SchemaVaultsAppEnvironment;
+  private readonly auth_server_url: string;
+  private readonly jwt_keys: I_JWT_Keys;
   private readonly user_organizations: readonly OrganizationID[];
 
   public constructor(opts: IJWT_Factory_Init_Options) {
@@ -85,6 +84,8 @@ export class JWT_Factory {
       );
     }
     this.user_organizations = opts.user_organizations;
+
+    this.auth_server_url = getAuthServerUrl(this.environment);
   }
 
   private get uid(): string {
@@ -123,16 +124,13 @@ export class JWT_Factory {
 
     if (type === "refresh") {
       // refresh tokens are always addressed to the auth server
-      if (
-        aud !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id ||
-        aud !== REFRESH_TOKEN_AUDIENCE
-      ) {
+      if (aud !== this.auth_server_url) {
         throw new Error(
-          "Refresh tokens must have an audience directed at the SchemaVaults Auth platform",
+          "Refresh tokens must have an audience directed at the SchemaVaults Auth Server URL",
         );
       }
-    } else if (aud === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
-      // Always allow audience to be the
+    } else if (type === "access" && aud === this.auth_server_url) {
+      // Always allow audience to be the auth server
     } else {
       const parsed_as_uuid_aud = await audienceRefSchema.safeParseAsync(aud);
       if (!parsed_as_uuid_aud.success) {
@@ -148,6 +146,7 @@ export class JWT_Factory {
       iat,
       audience: aud,
       client_app_id: this.client_app_id,
+      auth_server_url: this.auth_server_url,
       jwt_keys: this.jwt_keys satisfies I_JWT_Keys,
       env: this.environment satisfies SchemaVaultsAppEnvironment,
     };
@@ -158,8 +157,7 @@ export class JWT_Factory {
   }
 
   public async refresh(): Promise<RefreshToken> {
-    const REFRESH_TOKEN_AUDIENCE = JWT_Factory.REFRESH_TOKEN_AUDIENCE;
-    return await this.generate("refresh", REFRESH_TOKEN_AUDIENCE);
+    return await this.generate("refresh", this.auth_server_url);
   }
 
   public async access(audience: string): Promise<AccessToken> {

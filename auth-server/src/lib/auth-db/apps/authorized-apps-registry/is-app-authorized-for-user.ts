@@ -1,5 +1,5 @@
 import "server-only";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import getAppAuthorization from "./get-app-authorization";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
@@ -10,7 +10,7 @@ export async function isAppAuthorizedForUser(
   app_id: string,
   debug: boolean = false
 ): Promise<boolean> {
-  if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  if (app_id === SCHEMAVAULTS_AUTH_APP_ID) {
     return true;
   }
 

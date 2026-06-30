@@ -6,28 +6,28 @@ import {
 } from "@schemavaults/app-definitions";
 
 export interface ILoadRemoteJwksOpts {
-  auth_server_uri: string;
+  auth_server_url: string;
   api_server_id: ApiServerId;
   jwks_access_private_key: CryptoKey;
   debug?: boolean;
 }
 
 export async function loadRemoteJwks({
-  auth_server_uri,
+  auth_server_url,
   api_server_id,
   jwks_access_private_key,
   ...opts
 }: ILoadRemoteJwksOpts): Promise<JWKS> {
   const debug: boolean = typeof opts.debug === "boolean" ? opts.debug : false;
 
-  if (typeof auth_server_uri !== "string") {
-    throw new TypeError("Expected 'auth_server_uri' to be a string!");
+  if (typeof auth_server_url !== "string") {
+    throw new TypeError("Expected 'auth_server_url' to be a string!");
   } else if (
-    !auth_server_uri.startsWith("http://") &&
-    !auth_server_uri.startsWith("https://")
+    !auth_server_url.startsWith("http://") &&
+    !auth_server_url.startsWith("https://")
   ) {
     throw new TypeError(
-      "Expected 'auth_server_uri' to start with http:// or https://",
+      "Expected 'auth_server_url' to start with http:// or https://",
     );
   }
 
@@ -39,6 +39,7 @@ export async function loadRemoteJwks({
   try {
     jwks_access_proof_token = await createJwksAccessProofToken({
       api_server_id,
+      auth_server_url,
       private_key: jwks_access_private_key,
     });
   } catch (e: unknown) {
@@ -46,15 +47,16 @@ export async function loadRemoteJwks({
     throw new Error("Failed to create JWKS Access Proof Token!");
   }
 
-  const response: Response = await fetch(
-    `${auth_server_uri}${jwksEndpoint(api_server_id)}`,
-    {
-      method: "GET",
-      headers: new Headers({
-        Authorization: `Bearer ${jwks_access_proof_token}`,
-      }),
-    },
+  const endpoint: URL = new URL(
+    `${jwksEndpoint(api_server_id)}`,
+    auth_server_url,
   );
+  const response: Response = await fetch(endpoint, {
+    method: "GET",
+    headers: new Headers({
+      Authorization: `Bearer ${jwks_access_proof_token}`,
+    }),
+  });
   if (!response.ok || response.status !== 200) {
     throw new Error(
       `Failed to load jwks.json from auth server: ${response.status} ${response.statusText}`,

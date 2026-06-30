@@ -1,16 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import generateNewJwtKeySet from "./generate_new_jwt_keyset";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 
 const DEBUG: boolean = false;
 
 describe("Generate new JWT keyset", () => {
   test("should generate a new JWT keyset for auth server", async () => {
     const keyset = await generateNewJwtKeySet({
-      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      audience_id: SCHEMAVAULTS_AUTH_APP_ID,
     });
     expect(keyset).toBeDefined();
-    expect(keyset.audience_id).toBe(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id);
+    expect(keyset.audience_id).toBe(SCHEMAVAULTS_AUTH_APP_ID);
     const keys = keyset.listSerializedKeys();
     expect(keys).toBeArrayOfSize(4);
     if (DEBUG) {

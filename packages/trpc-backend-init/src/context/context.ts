@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import {
   type ApiServerId,
   getAppEnvironment,
-  getAuthServerUri,
+  getAuthServerUrl,
   schemaVaultsAppEnvironmentSchema,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -139,7 +139,7 @@ export async function createContext<
         org_id: OrganizationID,
       ): Promise<OrganizationMembershipRoleType | false> => {
         return await isUserInOrganization(
-          getAuthServerUri(environment),
+          getAuthServerUrl(environment),
           jwt_audience,
           jwks_access_private_key,
           user["uid"],

@@ -6,9 +6,8 @@ import {
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDomainRefSchema,
   type SchemaVaultsApiServerDomainRef,
-  HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS,
   type ApiServerId,
-  HARDCODED_CORE_SCHEMAVAULTS_API_SERVER_DOMAINS,
+  HARDCODED_SCHEMAVAULTS_APIS,
 } from "@schemavaults/app-definitions";
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
@@ -36,7 +35,7 @@ export class SchemaVaultsApiServerRegistry {
       console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}')`)
     }
 
-    const hardcoded_api_server: SchemaVaultsApiServerDefinition | undefined = HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS.find(hardcoded_api => {
+    const hardcoded_api_server: SchemaVaultsApiServerDefinition | undefined = HARDCODED_SCHEMAVAULTS_APIS.find(hardcoded_api => {
       return hardcoded_api.api_server_id === api_server_id
     })
     if (hardcoded_api_server) {
@@ -248,7 +247,7 @@ export class SchemaVaultsApiServerRegistry {
   }
 
   private listAllHardcodedApiServers(): readonly SchemaVaultsApiServerDefinition[] {
-    return HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS;
+    return HARDCODED_SCHEMAVAULTS_APIS;
   }
 
   public async listAllApiServers(): Promise<readonly SchemaVaultsApiServerDefinition[]> {

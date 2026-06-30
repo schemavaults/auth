@@ -1,6 +1,5 @@
 import "server-only";
 
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db";
 import {
   type AppId,
@@ -163,8 +162,7 @@ export async function GET_list_app_domains(
     },
   );
 
-  const response = await protected_route(req);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, req);
+  return await protected_route(req);
 }
 
 export default GET_list_app_domains;

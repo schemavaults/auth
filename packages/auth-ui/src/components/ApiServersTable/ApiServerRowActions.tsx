@@ -2,7 +2,6 @@
 
 import type { ReactElement } from "react";
 import { useState, useContext } from "react";
-import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import { cn, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import {
@@ -22,7 +21,8 @@ import {
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
 import {
-  SCHEMAVAULTS_AUTH_SERVER,
+  isHardcodedApiServerId,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type ApiServerId,
   type SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
@@ -50,8 +50,10 @@ export function ApiServerRowActions({
   const { showConnectAppToApi, isOrgOwner } = useContext(
     ApiServersTableConfigContext,
   );
-  const hardcoded = api.hardcoded && isHardcodedApiServerId(api_server_id);
-  const isDeleteDisabled = hardcoded || (!showConnectAppToApi && !isOrgOwner);
+  const isDeleteDisabled =
+    api.hardcoded ||
+    isHardcodedApiServerId(api_server_id) ||
+    (!showConnectAppToApi && !isOrgOwner);
 
   return (
     <>
@@ -102,7 +104,7 @@ export function ApiServerRowActions({
             <ClipboardCopy className={menuItemIconClassname} /> Copy API Server
             ID
           </DropdownMenuItem>
-          {api_server_id !== SCHEMAVAULTS_AUTH_SERVER.api_server_id && (
+          {api_server_id !== SCHEMAVAULTS_AUTH_APP_ID && (
             <Link
               href={`/apis/${api_server_id}/jwks-access-keys`}
               className="hover:cursor-pointer"

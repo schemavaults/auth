@@ -12,7 +12,7 @@ import {
   withAdminApiRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
-import sendVerificationEmail from "@/lib/send-verification-email";
+import sendVerificationEmail from "@/lib/mail/send-verification-email";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/admin/users/[uid]/resend-verification";

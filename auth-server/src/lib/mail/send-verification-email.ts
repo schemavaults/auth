@@ -1,5 +1,5 @@
 import "server-only";
-import { getAppEnvironment, getAuthServerUri, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { getAppEnvironment, getAuthServerUrl, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import sendEmailViaMailServer from "./send-email-via-mail-server";
@@ -23,7 +23,7 @@ export async function sendVerificationEmail({
   welcomeMessage,
 }: SendVerificationEmailOptions): Promise<void> {
   const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
-  const authServerUri: string = getAuthServerUri(appEnv);
+  const authServerUri: string = getAuthServerUrl(appEnv);
   const verifyUrl: string = `${authServerUri}/auth/verify-email?token=${rawToken}`;
 
   await sendEmailViaMailServer(

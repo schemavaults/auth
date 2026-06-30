@@ -25,20 +25,6 @@ export type * from "./list-registry-api-servers-query-params";
 export * from "./app_to_api_permission_def";
 export type * from "./app_to_api_permission_def";
 
-export * from "./hardcoded-core-schemavaults-apps";
-export type * from "./hardcoded-core-schemavaults-apps";
-export * from "./hardcoded-core-schemavaults-app-domains";
-export type * from "./hardcoded-core-schemavaults-app-domains";
-export { getHardcodedClientWebAppDomain } from "./get-hardcoded-client-web-app-domain";
-
-export * from "./hardcoded-core-schemavaults-api-servers";
-export type * from "./hardcoded-core-schemavaults-api-servers";
-export * from "./hardcoded-core-schemavaults-api-server-domains";
-export type * from "./hardcoded-core-schemavaults-api-server-domains";
-export { getHardcodedApiServerDomain } from "./get-hardcoded-api-server-domain";
-
-export { PRODUCTION_AUTH_SERVER_URL } from "./production-auth-server-url";
-
 export {
   schemaVaultsAppEnvironments,
   schemaVaultsAppEnvironmentSchema,
@@ -48,12 +34,28 @@ export type { SchemaVaultsAppEnvironment } from "./app-environments";
 
 export { getAppEnvironment } from "./get-app-environment";
 
-export { getAuthServerUri } from "./get-auth-server-uri";
+export { getAuthServerUrl } from "./get-auth-server-url";
 
 export { SCHEMAVAULTS_AUTH_APP_ID } from "./SCHEMAVAULTS_AUTH_APP_ID";
 
 export {
-  hasHardcodedAppToApiPermission,
-  getHardcodedApiServerIdsForHardcodedApp,
   getHardcodedAppIdsForHardcodedApiServer,
+  getHardcodedApiServerIdsAllowedForHardcodedApp,
+  hasHardcodedAppToApiPermission,
 } from "./hardcoded-app-to-api-permissions";
+
+export {
+  isHardcodedAppId,
+  getHardcodedApp,
+  getHardcodedAppDomains,
+  HARDCODED_SCHEMAVAULTS_APPS,
+} from "./hardcoded-apps";
+export type { HardcodedAppId } from "./hardcoded-apps";
+
+export {
+  isHardcodedApiServerId,
+  getHardcodedApiServer,
+  getHardcodedApiDomains,
+  HARDCODED_SCHEMAVAULTS_APIS,
+} from "./hardcoded-apis";
+export type { HardcodedApiServerId } from "./hardcoded-apis";

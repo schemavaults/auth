@@ -1,4 +1,4 @@
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import {
   type CodeChallengeWithDetails,
   PKCE_ProofKeyManager,
@@ -6,6 +6,8 @@ import {
 } from "@schemavaults/auth-common";
 
 const ROUTE = "/api/auth/register";
+
+const client_app_id = SCHEMAVAULTS_AUTH_APP_ID;
 
 /**
  * Faster equivalent of cy.register(): registers a new user by POSTing
@@ -34,14 +36,14 @@ export default function register_via_request(
   );
 
   return cy
-    .wrap<Promise<CodeChallengeWithDetails>, CodeChallengeWithDetails>(
-      PKCE_ProofKeyManager.createCodeChallenge(code_verifier_with_details),
-      { log: false },
-    )
+    .wrap<
+      Promise<CodeChallengeWithDetails>,
+      CodeChallengeWithDetails
+    >(PKCE_ProofKeyManager.createCodeChallenge(code_verifier_with_details), { log: false })
     .then((challenge: CodeChallengeWithDetails): Cypress.Chainable<number> => {
       const body: Record<string, unknown> = {
         credentials: { email, password },
-        client_app_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+        client_app_id,
         code_challenge: challenge.code_challenge,
         challenge_time: challenge.challenge_time,
       };
@@ -73,10 +75,7 @@ export default function register_via_request(
           // The auth-server's register response sets the refresh-token cookie
           // directly, so verify it exists before declaring success.
           return cy
-            .getCookie(
-              RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
-              { timeout: 5000 },
-            )
+            .getCookie(RefreshTokenCookieName(client_app_id), { timeout: 5000 })
             .should("exist")
             .then((): Cypress.Chainable<number> => {
               cy.is_authenticated().should(

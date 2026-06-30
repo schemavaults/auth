@@ -6,14 +6,15 @@ import {
   type ProtectedHeaderParameters,
 } from "jose";
 import type { I_JWT_Keys } from "./jwt_keys";
-import { REFRESH_TOKEN_AUDIENCE } from "./aud";
-import { issuer } from "./iss";
+import getRefreshTokenAudience from "./get_refresh_token_audience";
+import getIssuer from "./get_issuer";
 import { getExpiryDurationString } from "./expiry";
 import { type CustomJWTPayload, jwtPayloadSchema } from "./payload_data";
 import type { AuthTokenTypes, UserData } from "@schemavaults/auth-common";
 import {
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  getAppEnvironment,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
@@ -26,6 +27,7 @@ interface BaseDecodeJWTOptions<T extends AuthTokenTypes> {
   type: T;
   jwt: string;
   audience?: string;
+  auth_server_url?: string;
   env: SchemaVaultsAppEnvironment;
 }
 
@@ -51,7 +53,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
   type,
   jwt,
   audience = type === "refresh"
-    ? SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+    ? getAuthServerUrl(getAppEnvironment())
     : undefined,
   ...opts
 }: DecodeJWTOptions<T>): Promise<CustomJWTPayload> {
@@ -90,21 +92,23 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     throw new Error("Invalid JWT; expected string");
   }
 
-  if (
-    type === "refresh" &&
-    audience !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
-  ) {
+  const auth_server_url: string =
+    typeof opts.auth_server_url === "string"
+      ? opts.auth_server_url
+      : getAuthServerUrl(environment);
+
+  if (type === "refresh" && audience !== auth_server_url) {
     if (debug) {
       console.log("Invalid audience for refresh token: ", audience);
     }
-    throw new Error(
-      `Invalid audience for refresh token; only '${SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}' is valid.`,
-    );
+    throw new Error(`Invalid audience for refresh token!`, {
+      cause: `Only auth server URL ('${auth_server_url}') is valid.`,
+    });
   }
 
   let aud: string;
   if (type === "refresh") {
-    aud = REFRESH_TOKEN_AUDIENCE;
+    aud = getRefreshTokenAudience(environment);
   } else if (type === "access") {
     if (typeof audience !== "string") {
       throw new Error("Missing audience for JWT to decode with");
@@ -155,13 +159,10 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       throw new Error("Invalid audience in JWT header");
     }
 
-    if (
-      type === "refresh" &&
-      decoded_header.aud !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
-    ) {
-      throw new Error(
-        `Invalid audience in JWT header; only '${SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}' tokens are allowed here`,
-      );
+    if (type === "refresh" && decoded_header.aud !== auth_server_url) {
+      throw new Error(`Invalid audience in JWT header for refresh token`, {
+        cause: `Only server audience ('${auth_server_url}') tokens are allowed here`,
+      });
     }
 
     if (decoded_header.aud !== audience) {
@@ -200,6 +201,8 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       cause: e,
     });
   }
+
+  const issuer: string = getIssuer(environment);
 
   const decoded: JWTDecryptResult = await jwtDecrypt(jwt, decryption_key, {
     audience: aud,

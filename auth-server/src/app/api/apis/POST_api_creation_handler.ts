@@ -13,7 +13,6 @@ import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGua
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
 import { ConflictError } from "@/lib/error/ConflictError";
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apis";
@@ -165,6 +164,5 @@ export default async function POST_api_creation_handler(request: NextRequest): P
       }
     },
   );
-  const response = await protected_route(request);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, request);
+  return await protected_route(request);
 }

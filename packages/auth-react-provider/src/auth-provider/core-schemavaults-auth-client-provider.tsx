@@ -22,7 +22,7 @@ import useAuthClientInitialization, {
 import {
   type ApiServerId,
   type AppId,
-  getAuthServerUri,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "@/hooks/use-debug";
@@ -54,13 +54,13 @@ export default function CoreSchemaVaultsAuthClientProvider(
   }
 
   const authServerUri: string = useMemo(() => {
-    if (typeof props.auth_server_uri === "string") {
-      return props.auth_server_uri;
+    if (typeof props.auth_server_url === "string") {
+      return props.auth_server_url;
     } else {
       // default auth server uri
-      return getAuthServerUri(appEnvironment);
+      return getAuthServerUrl(appEnvironment);
     }
-  }, [props.auth_server_uri, appEnvironment]);
+  }, [props.auth_server_url, appEnvironment]);
 
   const debug: boolean = useDebugWithSpecifiedBooleanOrLookupDefault(
     appEnvironment,
@@ -85,7 +85,7 @@ export default function CoreSchemaVaultsAuthClientProvider(
 
   const useAuthClientInitializationOptions: UseAuthClientInitializationOptions =
     {
-      auth_server_uri: authServerUri,
+      auth_server_url: authServerUri,
       authClientRef,
       ready,
       setReady,

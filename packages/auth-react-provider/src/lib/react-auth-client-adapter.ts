@@ -3,7 +3,7 @@
 import {
   type AppId,
   appIdSchema,
-  getAuthServerUri,
+  getAuthServerUrl,
   SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -37,9 +37,7 @@ const enum AuthClientSdkAdapterLocalStorageKeys {
 }
 
 // Next.js/React.js to JS Client SDK Adapter
-export class ReactAuthClientSdkAdapter
-  implements ISchemaVaultsAuthClientAdapter
-{
+export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter {
   private readonly environment: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
   private readonly auth_server_uri: string;
@@ -78,7 +76,7 @@ export class ReactAuthClientSdkAdapter
     this._uuid_generator = uuid;
     this.auth_server_uri = opts.auth_server_uri
       ? opts.auth_server_uri
-      : getAuthServerUri();
+      : getAuthServerUrl(this.environment);
     if (!appIdSchema.safeParse(opts.client_app_id).success) {
       throw new TypeError(
         "Invalid 'client_app_id' to initialize ReactAuthClientSdkAdapter with!",

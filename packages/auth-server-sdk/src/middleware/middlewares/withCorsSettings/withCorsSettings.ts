@@ -24,17 +24,18 @@ export interface CorsSettings {
   debug?: boolean;
   policy: SchemaVaultsCORSEnforcementPolicy;
   audience: string;
+  auth_server_url: string;
 }
 
 interface CorsMiddlewareSettings
-  extends CorsSettings,
-    Omit<IBaseMiddlewareInitOptions, "name"> {
+  extends CorsSettings, Omit<IBaseMiddlewareInitOptions, "name"> {
   next: ISchemaVaultsMiddleware;
 }
 
 class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
   private readonly policy: SchemaVaultsCORSEnforcementPolicy;
   private readonly audience: string;
+  private readonly auth_server_url: string;
 
   public constructor(settings: CorsMiddlewareSettings) {
     super({
@@ -49,6 +50,7 @@ class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
     }
     this.policy = settings.policy satisfies SchemaVaultsCORSEnforcementPolicy;
     this.audience = settings.audience;
+    this.auth_server_url = settings.auth_server_url;
   }
 
   public async handle({
@@ -78,6 +80,7 @@ class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
       audience,
       debug: DEBUG,
       environment: this.environment,
+      auth_server_url: this.auth_server_url,
     });
     if (DEBUG) {
       console.log(

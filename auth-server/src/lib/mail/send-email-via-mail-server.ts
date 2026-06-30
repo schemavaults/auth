@@ -1,18 +1,16 @@
 import "server-only";
-import { getAppEnvironment, getHardcodedApiServerDomain, SCHEMAVAULTS_AUTH_APP_ID, SCHEMAVAULTS_MAIL_SERVER, type SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
+import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_ID, SchemaVaultsAppEnvironment, type SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
 import { createSendEmailRequestBodySchema, type SendEmailRequestBody } from "@schemavaults/send-email"
-import spoofSuperuserAccessToken from "./spoofSuperuserAccessToken";
+import spoofSuperuserAccessToken from "@/lib/spoofSuperuserAccessToken";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import type { AccessToken } from "@schemavaults/auth-common";
+import resolveMailServerUrl from "./resolve-mail-server-url";
+import type { RedisCache } from "@/lib/redis";
+import resolveMailServerId from "./resolve-mail-server-id";
 
 const sendEmailRequestBodySchema = createSendEmailRequestBodySchema(true);
-
-function getDefaultMailServerUrl(): string {
-  const hardcodedApiServerDomain: SchemaVaultsApiServerDomainRef = getHardcodedApiServerDomain(SCHEMAVAULTS_MAIL_SERVER.api_server_id, getAppEnvironment());
-  return hardcodedApiServerDomain.domain;
-}
 
 /**
  * @description Send a raw email plaintext/html message (or use a template ID from @schemavaults/mail-server).
@@ -24,12 +22,18 @@ function getDefaultMailServerUrl(): string {
  */
 export async function sendEmailViaMailServer(
   email_options: SendEmailRequestBody,
-  db: Kysely<AuthDatabase>
+  db: Kysely<AuthDatabase>,
+  redis: RedisCache,
+  environment: SchemaVaultsAppEnvironment = getAppEnvironment()
 ): Promise<void> {
-  const environment = getAppEnvironment();
   const debug: boolean = shouldEnableDebug(environment);
 
-  const mail_server_url: string = getDefaultMailServerUrl()
+  const mail_api_server_id: string = await resolveMailServerId(db, redis);
+  if (typeof mail_api_server_id !== 'string') {
+    throw new TypeError("Expected result of resolveMailServerId to be a string!")
+  }
+
+  const mail_server_url: string = await resolveMailServerUrl(db, mail_api_server_id, environment);
 
   const parsed_email_options = await sendEmailRequestBodySchema.safeParseAsync(email_options)
   if (!parsed_email_options.success) {
@@ -41,9 +45,9 @@ export async function sendEmailViaMailServer(
 
   const mail_server_access_token: AccessToken = await spoofSuperuserAccessToken({
     client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
-    audience_id: SCHEMAVAULTS_MAIL_SERVER.api_server_id,
+    audience_id: mail_api_server_id,
     db
-  })
+  });
 
   headers.set("Content-Type", 'application/json');
   headers.set(`Authorization`, `Bearer ${mail_server_access_token.token satisfies string}`)

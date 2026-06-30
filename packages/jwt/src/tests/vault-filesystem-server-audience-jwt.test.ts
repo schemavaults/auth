@@ -1,15 +1,14 @@
 import { decodeJWT, generateNewJwtKeySet, type JWT_Keys } from "@/jwt";
-import {
-  SCHEMAVAULTS_CLI,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
 import { describe, test, expect } from "bun:test";
 import { MockUser } from "@/tests/MockUser";
 import { generateJWT, type GenerateJWTOptions } from "@/jwt/generate";
 import { audienceRefSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/utils/isValidUuid";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import getAuthServerUri from "@schemavaults/app-definitions/get-auth-server-url";
 
 const env: SchemaVaultsAppEnvironment = "test";
+const auth_server_url: string = getAuthServerUri(env);
 
 async function isGenerateAndDecodeTokenForStorageRegionSuccess(
   region_id: string,
@@ -27,8 +26,9 @@ async function isGenerateAndDecodeTokenForStorageRegionSuccess(
     user,
     audience: region_id,
     iat: now,
-    client_app_id: SCHEMAVAULTS_CLI.app_id,
+    client_app_id: "schemavaults-cli",
     jwt_keys,
+    auth_server_url,
     env,
   };
 

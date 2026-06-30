@@ -49,7 +49,7 @@ export {
 export * from "./auth_acquire_tokens_grant_types";
 export type * from "./auth_acquire_tokens_grant_types";
 
-export { PRODUCTION_AUTH_SERVER_URL } from "@schemavaults/app-definitions";
+export { getAuthServerUrl } from "@schemavaults/app-definitions";
 export { appIdSchema } from "@schemavaults/app-definitions";
 
 export { audienceSchema, audienceRefSchema } from "./audience-schema";

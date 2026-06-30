@@ -11,7 +11,7 @@ import {
   type AppId,
   appIdSchema,
   getAppEnvironment,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
@@ -201,7 +201,7 @@ export async function POST(
       const keyset_id = getKeysetIdFromToken(refresh_token_value);
       const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
       const keyset = await jwt_keys_manager.getKeyset(
-        SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+        SCHEMAVAULTS_AUTH_APP_ID,
         keyset_id,
       );
       const decoded = await decodeJWT({

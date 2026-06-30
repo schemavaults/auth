@@ -1,4 +1,4 @@
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import {
   type CodeChallengeWithDetails,
   PKCE_ProofKeyManager,
@@ -37,10 +37,10 @@ export default function login_via_request(
   );
 
   return cy
-    .wrap<Promise<CodeChallengeWithDetails>, CodeChallengeWithDetails>(
-      PKCE_ProofKeyManager.createCodeChallenge(code_verifier_with_details),
-      { log: false },
-    )
+    .wrap<
+      Promise<CodeChallengeWithDetails>,
+      CodeChallengeWithDetails
+    >(PKCE_ProofKeyManager.createCodeChallenge(code_verifier_with_details), { log: false })
     .then((challenge: CodeChallengeWithDetails): Cypress.Chainable<boolean> => {
       return cy
         .request({
@@ -49,7 +49,7 @@ export default function login_via_request(
           failOnStatusCode: false,
           body: {
             credentials: { email, password },
-            client_app_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+            client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
             code_challenge: challenge.code_challenge,
             challenge_time: challenge.challenge_time,
           },
@@ -80,10 +80,9 @@ export default function login_via_request(
           // The auth-server's login response sets the refresh-token cookie
           // directly, so verify it exists before declaring success.
           return cy
-            .getCookie(
-              RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
-              { timeout: 5000 },
-            )
+            .getCookie(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID), {
+              timeout: 5000,
+            })
             .should("exist")
             .then((): Cypress.Chainable<boolean> => {
               cy.is_authenticated().should(

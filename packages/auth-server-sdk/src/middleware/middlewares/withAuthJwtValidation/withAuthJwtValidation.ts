@@ -18,7 +18,7 @@ import {
 } from "@schemavaults/jwt";
 import {
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type {
@@ -41,8 +41,7 @@ export interface AuthJwtValidationMiddlewareOptions {
   keys_manager: IJwtKeyManager;
 }
 
-interface IAuthJwtValidationMiddlewareOpts
-  extends AuthJwtValidationMiddlewareOptions {
+interface IAuthJwtValidationMiddlewareOpts extends AuthJwtValidationMiddlewareOptions {
   next: ISchemaVaultsMiddleware;
 }
 
@@ -126,9 +125,9 @@ class AuthJwtValidationMiddleware
     let access_token: string | undefined =
       req.cookies.get("access_token")?.value;
 
-    if (this.audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+    if (this.audience === SCHEMAVAULTS_AUTH_APP_ID) {
       const refresh_token: string | undefined = req.cookies.get(
-        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
       )?.value;
       if (typeof refresh_token === "string") {
         token_sources.push({
@@ -372,9 +371,7 @@ class AuthJwtValidationMiddleware
   }
 }
 
-export class AuthJwtValidationMiddlewareFactory
-  implements ISchemaVaultsMiddlewareFactory
-{
+export class AuthJwtValidationMiddlewareFactory implements ISchemaVaultsMiddlewareFactory {
   public readonly type = "middleware-factory" as const;
 
   private middlewareOpts: AuthJwtValidationMiddlewareOptions;

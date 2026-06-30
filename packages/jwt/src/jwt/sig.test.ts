@@ -3,16 +3,16 @@ import { signJWT } from "./sign";
 import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
 import { verifyJWTSignature } from "./verify_signature";
 import type { AuthTokenTypes } from "@schemavaults/auth-common";
-import {
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
 import { decodeProtectedHeader, type ProtectedHeaderParameters } from "jose";
 import signVerifyAlgorithm from "./sign_verify_alg";
+import {
+  getAuthServerUrl,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 
 const iat: number = Date.now();
 const type: AuthTokenTypes = "refresh";
-const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id satisfies string;
+const audience: string = getAuthServerUrl();
 const email = "jalexwhitman@gmail.com" as const satisfies string;
 const uid: string = crypto.randomUUID();
 const sub: string = uid;

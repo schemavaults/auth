@@ -3,8 +3,6 @@ import {
   type AppId,
   type SchemaVaultsAppDomainRef,
   appIdSchema,
-  isHardcodedAppId,
-  HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
   schemaVaultsAppDomainRefSchema,
 } from "@schemavaults/app-definitions";
 
@@ -23,16 +21,13 @@ export async function listClientApplicationDomains({
     throw new TypeError("Invalid app_id");
   }
 
-  if (isHardcodedAppId(app_id)) {
-    return HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS.filter(
-      (d): boolean => d.app_id === app_id,
-    );
-  }
-
-  const response = await adapter.fetch(`${auth_server_uri}/api/apps/${app_id}/domains`, {
-    method: "GET",
-    credentials: "include",
-  });
+  const response = await adapter.fetch(
+    new URL(`/api/apps/${app_id}/domains`, auth_server_uri).toString(),
+    {
+      method: "GET",
+      credentials: "include",
+    },
+  );
 
   if (!response.ok) {
     throw new Error(
@@ -45,7 +40,11 @@ export async function listClientApplicationDomains({
     throw new Error("Invalid response from list app domains endpoint");
   }
 
-  const result = body as { success: boolean; list?: unknown[]; message?: string };
+  const result = body as {
+    success: boolean;
+    list?: unknown[];
+    message?: string;
+  };
   if (!result.success) {
     throw new Error(
       result.message ?? "Failed to list client application domains",

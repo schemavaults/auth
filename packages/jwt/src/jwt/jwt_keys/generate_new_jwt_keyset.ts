@@ -68,12 +68,18 @@ export async function generateNewJwtKeySet(
 
   const audience_id: string = opts.audience_id;
   if (typeof audience_id !== "string") {
-    throw new TypeError(
-      `Invalid audience ID: '${audience_id}'. Should be a string.`,
-    );
-  } else if (!apiServerIdSchema.safeParse(audience_id).success) {
+    throw new TypeError(`Invalid audience ID: '${audience_id}'`, {
+      cause: `Audience ID is not a string. Received type '${typeof audience_id}'.`,
+    });
+  }
+
+  const parsedAudience = apiServerIdSchema.safeParse(audience_id);
+  if (!parsedAudience.success) {
     throw new TypeError(
       `Invalid audience ID: '${audience_id}'. Should be a valid API server ID.`,
+      {
+        cause: parsedAudience.error,
+      },
     );
   }
 

@@ -23,7 +23,6 @@ import {
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
 import { isUserInOrganization } from "@/lib/isUserInOrganization";
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import captureServerException from "@/lib/captureServerException";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
@@ -366,8 +365,7 @@ export async function GET_app_list_handler(
     },
   );
 
-  const response = await protected_route(req);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, req);
+  return await protected_route(req);
 }
 
 export const dynamic = "force-dynamic"; // defaults to auto

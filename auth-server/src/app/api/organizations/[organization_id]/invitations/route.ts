@@ -10,7 +10,7 @@ import {
   listOrganizationInvitations,
 } from "@/lib/auth-db/organizations";
 import { getUserByEmail, getUserByUID } from "@/lib/auth-db/users";
-import { sendTeamInvitationEmail } from "@/lib/send-team-invitation-emails";
+import { sendTeamInvitationEmail } from "@/lib/mail/send-team-invitation-emails";
 import {
   type OrganizationID,
   organizationIdSchema,

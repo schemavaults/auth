@@ -9,8 +9,7 @@ import {
   apiServerIdSchema,
   type AppId,
   appIdSchema,
-  isHardcodedAppId,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
 } from "@schemavaults/app-definitions";
 import { audienceRefSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/lib/is-valid-uuid";
@@ -37,16 +36,16 @@ async function validateOneAudience(
     throw new Error("Expected all arguments to be strings");
   }
   if (
-    client_app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id &&
-    audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+    client_app_id === SCHEMAVAULTS_AUTH_APP_ID &&
+    audience === SCHEMAVAULTS_AUTH_APP_ID
   ) {
     return "auth-server-only";
-  } else if (audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  } else if (audience === SCHEMAVAULTS_AUTH_APP_ID) {
     return "auth-server-only";
   }
 
   console.assert(
-    audience !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    audience !== SCHEMAVAULTS_AUTH_APP_ID,
     `Expected this to be a non-auth server API server if this point was reached`
   );
 
@@ -63,7 +62,7 @@ async function validateOneAudience(
 
   const aud: string = parsed_aud.data;
 
-  if (aud === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  if (aud === SCHEMAVAULTS_AUTH_APP_ID) {
     return "auth-server-only";
   } else if (apiServerIdSchema.safeParse(aud).success) {
     // pass
@@ -164,16 +163,12 @@ export async function validateAudience(
     return false;
   }
 
-  // Access tokens for the auth server itself may be requested by any
-  // hardcoded SchemaVaults app, not just the auth server app.
-  const isHardcodedSchemaVaultsApp: boolean = isHardcodedAppId(client_app_id);
-
   if (
     validationResults.some(function isValidationResultInvalid(
       result: ValidateAudienceOutput,
     ): boolean {
       return typeof result === "string"
-        ? result === "auth-server-only" && !isHardcodedSchemaVaultsApp
+        ? result === "auth-server-only" && client_app_id !== SCHEMAVAULTS_AUTH_APP_ID
         : false;
     })
   ) {

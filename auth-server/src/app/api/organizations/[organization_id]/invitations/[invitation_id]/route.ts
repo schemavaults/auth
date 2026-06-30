@@ -18,7 +18,7 @@ import {
   type OrganizationID,
   organizationIdSchema,
 } from "@schemavaults/auth-common";
-import { sendTeamInvitationAcceptedEmail } from "@/lib/send-team-invitation-emails";
+import { sendTeamInvitationAcceptedEmail } from "@/lib/mail/send-team-invitation-emails";
 import { z } from "zod";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";

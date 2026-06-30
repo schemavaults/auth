@@ -5,7 +5,7 @@ export interface IAuthClientConstructorOptions {
   adapter: ISchemaVaultsAuthClientAdapter;
 
   // The URL of the auth server
-  auth_server_uri: string;
+  auth_server_url: string;
 
   // The URI to redirect to after successful authentication
   successful_authentication_redirect_uri: string;

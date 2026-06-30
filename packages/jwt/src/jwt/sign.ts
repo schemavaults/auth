@@ -1,6 +1,6 @@
 import { type JWTPayload, type CryptoKey, SignJWT } from "jose";
 import JWT_Keys from "./jwt_keys";
-import { issuer } from "./iss";
+import getIssuer from "./get_issuer";
 import { getExpiryDurationString } from "./expiry";
 import type { AuthTokenTypes } from "@schemavaults/auth-common";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
@@ -96,7 +96,7 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
       })
       .setAudience(opts.audience)
       .setIssuedAt(opts.iat)
-      .setIssuer(issuer)
+      .setIssuer(getIssuer(env))
       .setExpirationTime(getExpiryDurationString(type))
       .sign(private_signing_key);
   } catch (e: unknown) {

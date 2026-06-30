@@ -3,15 +3,16 @@ import { describe, it, expect } from "bun:test";
 import { type GenerateJWTOptions, generateJWT } from "./generate";
 import { decodeJWT } from "./decode";
 import { type UserData } from "@schemavaults/auth-common";
-import { REFRESH_TOKEN_AUDIENCE } from "./aud";
+import getRefreshTokenAudience from "./get_refresh_token_audience";
 import {
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
 import MockUser from "@/tests/MockUser";
 
 const env: SchemaVaultsAppEnvironment = "test";
+const auth_server_url: string = getAuthServerUrl(env);
 
 describe("JWT Generation & Decoding", () => {
   it("should generate and decode a refresh token JWT", async () => {
@@ -19,16 +20,17 @@ describe("JWT Generation & Decoding", () => {
     const now = Date.now();
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      audience_id: auth_server_url,
     });
 
-    const audience = REFRESH_TOKEN_AUDIENCE;
+    const audience: string = getRefreshTokenAudience(env);
     const generateOptions: GenerateJWTOptions<"refresh"> = {
       type: "refresh",
       user,
       audience,
       iat: now,
-      client_app_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      client_app_id: auth_server_url,
+      auth_server_url,
       jwt_keys,
       env,
     };
@@ -49,8 +51,8 @@ describe("JWT Generation & Decoding", () => {
     const user = new MockUser();
     const now = Date.now();
 
-    const client_app_id = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
-    const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    const client_app_id = auth_server_url;
+    const audience: string = getAuthServerUrl(env);
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
       audience_id: audience,
@@ -62,6 +64,7 @@ describe("JWT Generation & Decoding", () => {
       audience,
       iat: now,
       client_app_id,
+      auth_server_url,
       jwt_keys,
       env,
     };
@@ -85,16 +88,17 @@ describe("JWT Generation & Decoding", () => {
     const now = Date.now();
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      audience_id: auth_server_url,
     });
 
-    const audience = REFRESH_TOKEN_AUDIENCE;
+    const audience: string = getRefreshTokenAudience(env);
     const generateOptions: GenerateJWTOptions<"refresh"> = {
       type: "refresh",
       user,
       audience,
       iat: now,
-      client_app_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      client_app_id: auth_server_url,
+      auth_server_url,
       jwt_keys,
       env,
     };
@@ -120,8 +124,8 @@ describe("JWT Generation & Decoding", () => {
     const user = new MockUser();
     const now = Date.now();
 
-    const client_app_id = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
-    const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    const client_app_id = auth_server_url;
+    const audience = getAuthServerUrl(env);
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
       audience_id: audience,
@@ -133,6 +137,7 @@ describe("JWT Generation & Decoding", () => {
       audience,
       iat: now,
       client_app_id,
+      auth_server_url,
       jwt_keys,
       env,
     };
@@ -157,7 +162,7 @@ describe("JWT Generation & Decoding", () => {
     const user: UserData = new MockUser();
     const now = Date.now();
 
-    const auth_app_id = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    const auth_app_id = auth_server_url;
 
     const jwt_keys_for_auth_app: JWT_Keys = await generateNewJwtKeySet({
       audience_id: auth_app_id,
@@ -171,6 +176,7 @@ describe("JWT Generation & Decoding", () => {
       user,
       audience: random_api_id,
       iat: now,
+      auth_server_url,
       client_app_id: random_app_id,
       jwt_keys: jwt_keys_for_auth_app, // intentionally mismatched keyset <=> audience to create error
       env,
@@ -207,6 +213,7 @@ describe("JWT Generation & Decoding", () => {
       iat: now,
       client_app_id: random_app_id,
       jwt_keys: jwt_keys_for_mismatched_audience,
+      auth_server_url,
       env,
     };
 
@@ -228,13 +235,13 @@ describe("JWT Generation & Decoding", () => {
     const now = Date.now();
 
     const jwt_keys_for_auth_server = await generateNewJwtKeySet({
-      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      audience_id: auth_server_url,
     });
 
     const random_app_id: string = crypto.randomUUID();
     const random_api_id: string = crypto.randomUUID();
 
-    expect(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id).not.toBe(random_api_id);
+    expect(auth_server_url).not.toBe(random_api_id);
 
     const generateOptions: GenerateJWTOptions<"access"> = {
       type: "access",
@@ -242,6 +249,7 @@ describe("JWT Generation & Decoding", () => {
       audience: random_api_id,
       iat: now,
       client_app_id: random_app_id,
+      auth_server_url,
       jwt_keys: jwt_keys_for_auth_server,
       env,
     };

@@ -54,9 +54,6 @@ import {
   type ApiServerId,
   type AppId,
   appIdSchema,
-  isHardcodedAppId,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  SCHEMAVAULTS_WEB,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
   type SchemaVaultsApp,
@@ -67,6 +64,7 @@ import {
   type ListAppsQueryType,
   type ListApiServersQueryResponse,
   type ListApiServersQueryType,
+  SCHEMAVAULTS_AUTH_APP_ID,
 } from "@schemavaults/app-definitions";
 import type { PaginationOptions } from "@schemavaults/auth-common";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
@@ -95,7 +93,7 @@ export class SchemaVaultsAuthClient
   private readonly environment: SchemaVaultsAppEnvironment;
 
   // URL of @schemavaults/auth-server
-  private readonly _authServerUri: string;
+  private readonly _auth_server_url: string;
 
   // Where to send user once they are logged in & have acquired a refresh token
   private readonly _successful_authentication_redirect_uri: string | undefined;
@@ -161,24 +159,24 @@ export class SchemaVaultsAuthClient
     this._adapter = opts.adapter;
 
     // Auth Server URI is a required prop
-    if (typeof opts.auth_server_uri !== "string" || !opts.auth_server_uri) {
+    if (typeof opts.auth_server_url !== "string" || !opts.auth_server_url) {
       throw new Error(
-        "`auth_server_uri` is a required option to initalize the SchemaVaultsAuthClient",
+        "`auth_server_url` is a required option to initalize the SchemaVaultsAuthClient",
       );
     }
 
     // Set up auth client options
-    this._authServerUri = opts.auth_server_uri satisfies string;
+    this._auth_server_url = opts.auth_server_url satisfies string;
     if (this.environment === "production" || this.environment === "staging") {
       // Ensure HTTPS
-      if (!opts.auth_server_uri.startsWith("https://")) {
+      if (!opts.auth_server_url.startsWith("https://")) {
         throw new Error("Auth Server URI must use HTTPS in production!");
       }
     }
 
     if (this.DEBUG) {
       console.log(
-        `[SchemaVaultsAuthClient] auth_server_uri: '${this._authServerUri}'`,
+        `[SchemaVaultsAuthClient] auth_server_url: '${this.auth_server_url}'`,
       );
     }
 
@@ -201,7 +199,7 @@ export class SchemaVaultsAuthClient
               ? ` (from current url: "${currentUrl}")`
               : ""
           } for auth server: `,
-          this._authServerUri,
+          this.auth_server_url,
         );
       }
     }
@@ -465,7 +463,7 @@ export class SchemaVaultsAuthClient
     return await authenticateWithRedirect({
       type,
       adapter: this.adapter,
-      auth_server_uri: this._authServerUri,
+      auth_server_url: this.auth_server_url,
       client_app_id: this._app_id,
       storeCodeVerifier: this.storeCodeVerifier.bind(this),
       storeOAuth2State: this.storeOAuth2State.bind(this),
@@ -564,7 +562,7 @@ export class SchemaVaultsAuthClient
    * (only the auth server can acquire access tokens for the auth server apis, as a security feature)
    */
   private get isClientForAuthServer(): boolean {
-    if (this.app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+    if (this.app_id === SCHEMAVAULTS_AUTH_APP_ID) {
       return true;
     }
     return false;
@@ -580,7 +578,7 @@ export class SchemaVaultsAuthClient
     let defaults: string[] = [];
 
     if (this.isClientForAuthServer) {
-      defaults.push(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id);
+      defaults.push(this.auth_server_url);
     }
 
     defaults.push(...this._default_audiences);
@@ -656,7 +654,7 @@ export class SchemaVaultsAuthClient
       redirect_uri,
       loadCodeVerifier: this.loadCodeVerifier.bind(this),
       loadOAuth2State: this.loadOAuth2State.bind(this),
-      auth_server_uri: this.auth_server_uri,
+      auth_server_url: this.auth_server_uri,
       client_app_id: this.app_id,
       adapter: this.adapter,
       storeUserData: this.storeUserData.bind(this),
@@ -709,12 +707,15 @@ export class SchemaVaultsAuthClient
     return false;
   } // hasHttpOnlyRefreshToken()
 
-  public get auth_server_uri(): string {
-    const host = this._authServerUri;
-    if (this.secure && !host.startsWith("https://")) {
-      throw new Error("Auth server host must use HTTPS");
+  public get auth_server_url(): string {
+    if (this.secure && !this._auth_server_url.startsWith("https://")) {
+      throw new Error("Auth server URL must use HTTPS in secure environments!");
     }
-    return host;
+    return this._auth_server_url;
+  }
+
+  public get auth_server_uri(): string {
+    return this.auth_server_url;
   }
 
   public get secure(): boolean {
@@ -921,14 +922,11 @@ export class SchemaVaultsAuthClient
   public async acquireAccessToken(
     opts: AcquireAccessTokenOptions,
   ): Promise<AccessToken> {
-    if (
-      opts.audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id &&
-      !isHardcodedAppId(this.app_id)
-    ) {
+    const auth_server_url: string = this.auth_server_url;
+    if (opts.audience === auth_server_url && !this._auth_server_url) {
       throw new Error(
         `Client application '${this.app_id}' cannot acquire ` +
-          `'${SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}' audience access tokens: ` +
-          `only hardcoded SchemaVaults apps may request auth-server access tokens.`,
+          `auth server URL ('${auth_server_url}') audience access tokens.`,
       );
     }
 
@@ -1055,6 +1053,7 @@ export class SchemaVaultsAuthClient
       app_environment: this.environment,
       invite_code_required: this._invite_code_required,
       redirect_uri,
+      auth_server_url: this.auth_server_url,
     });
   }
 
@@ -1323,10 +1322,13 @@ export class SchemaVaultsAuthClient
   }
 
   public async checkAppAuthorization(app_id: AppId): Promise<boolean> {
-    const checkAuth = await import("@/lib/check-app-authorization").then(
-      (mod) => mod.default,
-    );
-    return await checkAuth({ app_id, adapter: this.adapter });
+    const checkAppAuthorizationFn =
+      await import("@/lib/check-app-authorization").then((mod) => mod.default);
+    return await checkAppAuthorizationFn({
+      app_id,
+      adapter: this.adapter,
+      auth_server_url: this.auth_server_url,
+    });
   }
 
   /**
@@ -1334,8 +1336,7 @@ export class SchemaVaultsAuthClient
    * on app/API management endpoints.
    */
   private static readonly ADMIN_APP_IDS: ReadonlySet<string> = new Set([
-    SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-    SCHEMAVAULTS_WEB.app_id,
+    SCHEMAVAULTS_AUTH_APP_ID,
   ]);
 
   /**
@@ -1404,7 +1405,7 @@ export class SchemaVaultsAuthClient
     );
     return await fn({
       adapter: this.adapter,
-      auth_server_uri: this.auth_server_uri,
+      auth_server_url: this.auth_server_url,
       app_id,
     });
   }
@@ -1484,7 +1485,7 @@ export class SchemaVaultsAuthClient
     );
     return await fn({
       adapter: this.adapter,
-      auth_server_uri: this.auth_server_uri,
+      auth_server_url: this.auth_server_url,
       api_server_id,
     });
   }

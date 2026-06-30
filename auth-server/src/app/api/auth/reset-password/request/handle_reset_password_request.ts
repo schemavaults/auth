@@ -9,9 +9,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
-import { getAuthServerUri } from "@schemavaults/app-definitions";
-import sendEmailViaMailServer from "@/lib/send-email-via-mail-server";
+import { getAuthServerUrl } from "@schemavaults/app-definitions";
+import sendEmailViaMailServer from "@/lib/mail/send-email-via-mail-server";
 import captureServerException from "@/lib/captureServerException";
+import { RedisCache } from "@/lib/redis";
 
 const ROUTE = "/api/auth/reset-password/request";
 
@@ -48,6 +49,7 @@ export async function handleResetPasswordRequest({
   const { email } = parsed.data;
 
   await using dbh = ServerlessDatabase.createDBH();
+  await using redis = RedisCache.createConnection();
 
   const userRegistry = new UserRegistry(dbh.db, debug);
 
@@ -78,7 +80,7 @@ export async function handleResetPasswordRequest({
 
   try {
     const rawToken: string = await userRegistry.createPasswordResetToken(user.uid);
-    const authServerUri: string = getAuthServerUri(appEnv);
+    const authServerUri: string = getAuthServerUrl(appEnv);
     const resetLink: string = `${authServerUri}/auth/reset-password?token=${rawToken}`;
 
     await sendEmailViaMailServer(
@@ -102,6 +104,7 @@ export async function handleResetPasswordRequest({
         },
       },
       dbh.db,
+      redis
     );
 
     if (debug) {

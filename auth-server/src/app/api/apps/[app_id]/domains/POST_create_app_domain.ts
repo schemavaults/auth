@@ -1,6 +1,5 @@
 import "server-only";
 
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import {
   SchemaVaultsAppRegistry,
   type ResourceCreationResponse,
@@ -168,8 +167,7 @@ export async function POST_create_app_domain(
       }
     },
   );
-  const response = await protected_route(request);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, request);
+  return await protected_route(request);
 }
 
 export default POST_create_app_domain;

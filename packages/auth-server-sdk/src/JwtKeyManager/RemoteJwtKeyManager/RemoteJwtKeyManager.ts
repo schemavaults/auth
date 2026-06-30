@@ -4,9 +4,9 @@ import loadRemoteJwks from "./loadRemoteJwks";
 import {
   type ApiServerId,
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
 } from "@schemavaults/app-definitions";
-import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-url";
 import loadJwksAccessPrivateKey, {
   JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME,
 } from "@/env/loadJwksAccessPrivateKey";
@@ -19,22 +19,22 @@ interface IJwksCacheEntry {
 }
 
 export interface IRemoteJwtKeyManagerConstructorOpts {
-  auth_server_uri?: string;
+  auth_server_url?: string;
   debug?: boolean;
   cache_ttl_ms?: number;
 }
 
 export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
-  private readonly auth_server_uri: string;
+  private readonly auth_server_url: string;
   private readonly debug: boolean;
   private readonly cache_ttl_ms: number;
   private static readonly jwksCache: Map<string, IJwksCacheEntry> = new Map();
 
   public constructor({
-    auth_server_uri = getSchemaVaultsAuthServerUri(),
+    auth_server_url = getSchemaVaultsAuthServerUri(),
     ...opts
   }: IRemoteJwtKeyManagerConstructorOpts) {
-    this.auth_server_uri = auth_server_uri;
+    this.auth_server_url = auth_server_url;
     this.debug = typeof opts.debug === "boolean" ? opts.debug : false;
     this.cache_ttl_ms =
       typeof opts.cache_ttl_ms === "number" && opts.cache_ttl_ms > 0
@@ -43,7 +43,7 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
   }
 
   private cacheKey(audienceId: string): string {
-    return `${this.auth_server_uri}::${audienceId}`;
+    return `${this.auth_server_url}::${audienceId}`;
   }
 
   public invalidateJwksCache(audienceId: string): void {
@@ -76,7 +76,7 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
       );
     }
 
-    if (audienceId === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+    if (audienceId === SCHEMAVAULTS_AUTH_APP_ID) {
       throw new Error(
         `Auth server doesn't need to load remote JWKS; it already has the keys.`,
       );
@@ -103,7 +103,7 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
     }
 
     const jwks = await loadRemoteJwks({
-      auth_server_uri: this.auth_server_uri,
+      auth_server_url: this.auth_server_url,
       api_server_id: audienceId,
       jwks_access_private_key,
       debug: this.debug,

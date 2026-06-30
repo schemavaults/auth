@@ -14,7 +14,7 @@ export interface SchemaVaultsAuthProviderProps
   extends PropsWithChildren, IAuthProviderRedirectUrlConfiguration {
   // Use a hardcoded auth server URI
   // if not supplied, this can be loaded from @schemavaults/app-definitions based on the environment
-  auth_server_uri?: string;
+  auth_server_url?: string;
 
   app_id: AppId;
 

@@ -21,8 +21,8 @@
       "@/get-schemavaults-api-server-id": [
         "./src/env/get-schemavaults-api-server-id",
       ],
-      "@/get-schemavaults-auth-server-uri": [
-        "./src/env/get-schemavaults-auth-server-uri",
+      "@/get-schemavaults-auth-server-url": [
+        "./src/env/get-schemavaults-auth-server-url",
       ],
       "@/get-schemavaults-client-application-id": [
         "./src/env/get-schemavaults-client-application-id",

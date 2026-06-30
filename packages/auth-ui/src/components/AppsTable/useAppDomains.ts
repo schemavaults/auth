@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  isHardcodedAppId,
-  HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
-  type SchemaVaultsAppDomainRef,
-} from "@schemavaults/app-definitions";
+import { type SchemaVaultsAppDomainRef } from "@schemavaults/app-definitions";
 import type { SWRResponse } from "swr";
 import useSWR from "swr";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-react-provider";
@@ -29,14 +25,6 @@ export function useAppDomains(
   return useSWR(
     getUseAppDomainsListEndpoint(app_id),
     async (): Promise<SchemaVaultsAppDomainRef[]> => {
-      if (isHardcodedAppId(app_id)) {
-        const hardcoded: SchemaVaultsAppDomainRef[] =
-          HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS.filter(
-            (a): boolean => a.app_id === app_id,
-          );
-        return hardcoded;
-      }
-
       if (authClient) {
         return await authClient.listClientApplicationDomains(app_id);
       }

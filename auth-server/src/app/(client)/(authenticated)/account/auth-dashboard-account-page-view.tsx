@@ -29,11 +29,13 @@ import PageContainer from "@/components/PageContainer";
 import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface AuthAccountPageViewProps {
+  auth_server_url: string;
   preloaded_authorized_apps_data?: PreloadedAppsTableDataWithDomainRefs;
   preloaded_organization_memberships?: readonly OrganizationMembershipRoleDetails[];
 }
 
 export default function AccountPageView({
+  auth_server_url,
   preloaded_authorized_apps_data,
   preloaded_organization_memberships,
 }: AuthAccountPageViewProps): ReactElement {
@@ -47,6 +49,7 @@ export default function AccountPageView({
   return (
     <PageContainer>
       <AccountDetailsCard
+        auth_server_url={auth_server_url}
         Link={Link}
         redirect={async (url: string): Promise<void> => {
           if (url.startsWith("https://")) {

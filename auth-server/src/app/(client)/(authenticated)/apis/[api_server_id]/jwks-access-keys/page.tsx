@@ -6,7 +6,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import JwksAccessKeysPageView from "./jwks-access-keys-page-view";
-import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER, type SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
+import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_APP_ID, type SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
 import { OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
@@ -42,7 +42,7 @@ export default async function JwksAccessKeysPage(
       }
 
       // Block access to JWKS access keys page for schemavaults-auth - it is the JWKS provider
-      if (api_server_id === SCHEMAVAULTS_AUTH_SERVER.api_server_id) {
+      if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
         console.warn("[JwksAccessKeysPage] Blocking access - schemavaults-auth is the JWKS provider");
         redirectWithError(403, 'forbidden');
       }

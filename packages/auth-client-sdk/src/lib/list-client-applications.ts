@@ -47,9 +47,7 @@ export async function listClientApplications({
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to list client applications: ${response.status}`,
-    );
+    throw new Error(`Failed to list client applications: ${response.status}`);
   }
 
   const body: unknown = await response.json();
@@ -59,9 +57,7 @@ export async function listClientApplications({
 
   const result = body as ListAppsQueryResponse;
   if (!result.success) {
-    throw new Error(
-      result.message ?? "Failed to list client applications",
-    );
+    throw new Error(result.message ?? "Failed to list client applications");
   }
 
   return result;

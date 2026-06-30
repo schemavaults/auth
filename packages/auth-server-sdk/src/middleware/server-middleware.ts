@@ -10,8 +10,7 @@ import {
   type ApiServerId,
   apiServerIdSchema,
   getAppEnvironment,
-  getHardcodedClientWebAppDomain,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
@@ -32,6 +31,7 @@ import type { IJwtKeyManager } from "@/JwtKeyManager";
 import RemoteJwtKeyManager from "@/JwtKeyManager/RemoteJwtKeyManager";
 
 export interface IServerMiddlewareInitializationOptions {
+  auth_server_url: string;
   api_server_id?: string;
   auth_middleware_rules?: AuthMiddlewareRules;
   debug?: boolean;
@@ -87,7 +87,8 @@ export class SchemaVaultsServerMiddleware
       opts.environment ?? getAppEnvironment();
 
     const isAuthServer: boolean =
-      audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+      audience === opts.auth_server_url ||
+      audience === SCHEMAVAULTS_AUTH_APP_ID;
     let jwt_keys_manager: IJwtKeyManager;
     if (isAuthServer) {
       if (!opts.jwt_keys_manager) {
@@ -97,8 +98,8 @@ export class SchemaVaultsServerMiddleware
       }
       jwt_keys_manager = opts.jwt_keys_manager;
     } else {
-      if (audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
-        throw new Error(
+      if (audience === opts.auth_server_url) {
+        throw new TypeError(
           "Expected this to not be the auth server if this point was reached!",
         );
       }
@@ -106,10 +107,7 @@ export class SchemaVaultsServerMiddleware
         jwt_keys_manager = opts.jwt_keys_manager;
       } else {
         jwt_keys_manager = new RemoteJwtKeyManager({
-          auth_server_uri: getHardcodedClientWebAppDomain(
-            SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-            environment,
-          ),
+          auth_server_url: opts.auth_server_url,
         });
       }
     }
@@ -132,6 +130,7 @@ export class SchemaVaultsServerMiddleware
           debug: debug,
           audience,
           policy: cors_policy,
+          auth_server_url: opts.auth_server_url,
         }),
         new AuthJwtValidationMiddlewareFactory({
           audience,

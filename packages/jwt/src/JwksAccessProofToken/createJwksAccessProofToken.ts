@@ -2,28 +2,28 @@ import { sign_verify_alg } from "@/jwt";
 import {
   type ApiServerId,
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  SCHEMAVAULTS_AUTH_SERVER,
 } from "@schemavaults/app-definitions";
 import { SignJWT } from "jose";
 import { JWKS_ACCESS_PROOF_TOKEN_MAX_AGE } from "./constants";
 
 export interface ICreateJwksAccessProofToken {
   api_server_id: ApiServerId;
+  auth_server_url: string;
   private_key: CryptoKey;
 }
 
 export async function createJwksAccessProofToken({
   api_server_id,
+  auth_server_url,
   private_key,
 }: ICreateJwksAccessProofToken): Promise<string> {
   if (!apiServerIdSchema.safeParse(api_server_id).success) {
     throw new TypeError("Invalid API server ID!");
   }
 
-  if (api_server_id === SCHEMAVAULTS_AUTH_SERVER.api_server_id) {
+  if (api_server_id === auth_server_url) {
     throw new Error(
-      `'${SCHEMAVAULTS_AUTH_SERVER.api_server_id}' does not use JWKS access proof tokens`,
+      `'${auth_server_url}' does not use JWKS access proof tokens`,
     );
   }
 
@@ -34,7 +34,7 @@ export async function createJwksAccessProofToken({
   })
     .setSubject(api_server_id)
     .setIssuer(api_server_id)
-    .setAudience(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id)
+    .setAudience(auth_server_url)
     .setJti(crypto.randomUUID())
     .setIssuedAt()
     .setNotBefore(new Date(Date.now() - 1))

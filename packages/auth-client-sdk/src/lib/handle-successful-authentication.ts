@@ -38,7 +38,7 @@ export interface IHandleSuccessfulAuthenticationOpts {
   environment: SchemaVaultsAppEnvironment;
   adapter: ISchemaVaultsAuthClientAdapter;
   client_app_id: AppId;
-  auth_server_uri: string;
+  auth_server_url: string;
   defaultTokenAudiences: string | string[];
   // stores a refresh token locally (if http-only cookies not being used)
   storeRefreshToken: (refreshToken: RefreshToken) => void;
@@ -60,7 +60,7 @@ export async function handleSuccessfulAuthentication({
   debug,
   environment,
   adapter,
-  auth_server_uri,
+  auth_server_url,
   client_app_id,
   defaultTokenAudiences,
   storeRefreshToken,
@@ -235,8 +235,10 @@ export async function handleSuccessfulAuthentication({
 
   // Get the endpoint to exchange the authorization code for an access token
   // https://datatracker.ietf.org/doc/html/rfc7636#section-4.5
-  const authorization_code_token_endpoint =
-    `${auth_server_uri}/api/auth/token/authorization_code/${client_app_id}` as const;
+  const authorization_code_token_endpoint = new URL(
+    `/api/auth/token/authorization_code/${client_app_id}` as const,
+    auth_server_url,
+  ).toString();
   if (debug) {
     console.log(
       "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Token Endpoint: ",

@@ -18,7 +18,7 @@ export interface IAuthClientFactoryInitOpts {
   app_id: AppId;
   debug?: boolean;
   default_audiences?: readonly ApiServerId[];
-  auth_server_uri: string;
+  auth_server_url: string;
   successful_authentication_redirect_uri: string;
   successful_logout_redirect_uri: string;
   authorize_uri: string;
@@ -33,7 +33,7 @@ export class AuthClientFactory {
   private readonly app_id: string;
   private readonly debug: boolean;
   private readonly default_audiences: readonly ApiServerId[];
-  private readonly auth_server_uri: string;
+  private readonly auth_server_url: string;
   private readonly successful_authentication_redirect_uri: string;
   private readonly successful_logout_redirect_uri: string;
   private readonly authorize_uri: string;
@@ -69,7 +69,7 @@ export class AuthClientFactory {
           environment === "test" ||
           environment === "staging";
     this.default_audiences = opts.default_audiences ?? [];
-    this.auth_server_uri = opts.auth_server_uri;
+    this.auth_server_url = opts.auth_server_url;
     this.successful_authentication_redirect_uri =
       opts.successful_authentication_redirect_uri;
     this.successful_logout_redirect_uri = buildAbsoluteUri(
@@ -108,7 +108,7 @@ export class AuthClientFactory {
     return new ReactAuthClientSdkAdapter({
       uuid,
       environment: this.environment,
-      auth_server_uri: this.auth_server_uri,
+      auth_server_uri: this.auth_server_url,
       debug: this.debug,
       client_app_id: this.app_id,
       fetch: this.fetch,
@@ -126,7 +126,7 @@ export class AuthClientFactory {
       this.createReactAuthClientAdapter(uuid);
     const auth_client_options: InitializeAuthClientOptions = {
       adapter,
-      auth_server_uri: this.auth_server_uri,
+      auth_server_url: this.auth_server_url,
       successful_authentication_redirect_uri:
         this.successful_authentication_redirect_uri,
       successful_logout_redirect_uri:

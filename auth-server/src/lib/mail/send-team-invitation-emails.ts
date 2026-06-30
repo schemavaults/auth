@@ -1,7 +1,7 @@
 import "server-only";
 import {
   getAppEnvironment,
-  getAuthServerUri,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { Kysely } from "@schemavaults/dbh";
@@ -10,9 +10,11 @@ import { OrganizationsRegistry } from "@/lib/auth-db/organizations/organizations
 import { getUserByUID } from "@/lib/auth-db/users/get-user-by-uid";
 import type { OrganizationID } from "@schemavaults/auth-common";
 import sendEmailViaMailServer from "./send-email-via-mail-server";
+import type { RedisCache } from "@/lib/redis";
 
 interface SendTeamInvitationEmailOptions {
   db: Kysely<AuthDatabase>;
+  redis: RedisCache,
   organization_id: OrganizationID;
   inviter_uid: string;
   invitee_uid: string;
@@ -25,12 +27,13 @@ interface SendTeamInvitationEmailOptions {
  */
 export async function sendTeamInvitationEmail({
   db,
+  redis,
   organization_id,
   inviter_uid,
   invitee_uid,
 }: SendTeamInvitationEmailOptions): Promise<void> {
   const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
-  const authServerUri: string = getAuthServerUri(appEnv);
+  const authServerUri: string = getAuthServerUrl(appEnv);
   const acceptInviteUrl: string = `${authServerUri}/account`;
 
   const registry = new OrganizationsRegistry(db);
@@ -64,11 +67,13 @@ export async function sendTeamInvitationEmail({
       },
     },
     db,
+    redis
   );
 }
 
 interface SendTeamInvitationAcceptedEmailOptions {
   db: Kysely<AuthDatabase>;
+  redis: RedisCache;
   organization_id: OrganizationID;
   inviter_uid: string;
   accepter_uid: string;
@@ -80,12 +85,13 @@ interface SendTeamInvitationAcceptedEmailOptions {
  */
 export async function sendTeamInvitationAcceptedEmail({
   db,
+  redis,
   organization_id,
   inviter_uid,
   accepter_uid,
 }: SendTeamInvitationAcceptedEmailOptions): Promise<void> {
   const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
-  const authServerUri: string = getAuthServerUri(appEnv);
+  const authServerUri: string = getAuthServerUrl(appEnv);
   const teamUrl: string = `${authServerUri}/org/${organization_id}`;
 
   const registry = new OrganizationsRegistry(db);
@@ -120,5 +126,6 @@ export async function sendTeamInvitationAcceptedEmail({
       },
     },
     db,
+    redis
   );
 }

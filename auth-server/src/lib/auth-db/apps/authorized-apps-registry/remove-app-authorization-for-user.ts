@@ -1,6 +1,6 @@
 import "server-only";
 import isValidUuid from "@/lib/is-valid-uuid";
-import { appIdSchema, isHardcodedAppId, SCHEMAVAULTS_AUTH_APP_DEFINITION, type AppId } from "@schemavaults/app-definitions";
+import { appIdSchema, isHardcodedAppId, SCHEMAVAULTS_AUTH_APP_ID, type AppId } from "@schemavaults/app-definitions";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
@@ -10,7 +10,7 @@ export async function removeAppAuthorizationForUser(
   app_id: AppId,
   debug: boolean = false
 ): Promise<void> {
-  if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  if (app_id === SCHEMAVAULTS_AUTH_APP_ID) {
     throw new Error(
       `The auth app "${app_id}" is always authorized and cannot be de-authorized`,
     );

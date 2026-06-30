@@ -27,7 +27,7 @@ import type { z } from "zod";
 import validateAudience from "@/lib/validate-audience";
 import {
   getAppEnvironment,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
@@ -93,7 +93,7 @@ export async function handleRefreshTokenGrant(
       },
     );
   }
-  if (refresh_token_audience_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  if (refresh_token_audience_id !== SCHEMAVAULTS_AUTH_APP_ID) {
     return NextResponse.json(
       {
         success: false,
@@ -121,7 +121,7 @@ export async function handleRefreshTokenGrant(
   let refresh_token_keyset: I_JWT_Keys;
   try {
     refresh_token_keyset = await jwt_keys_manager.getKeyset(
-      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      SCHEMAVAULTS_AUTH_APP_ID,
       refresh_token_keyset_id,
     );
   } catch (e: unknown) {

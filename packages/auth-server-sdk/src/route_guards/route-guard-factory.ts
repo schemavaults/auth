@@ -13,7 +13,7 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
-import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-url";
 import decodeJWTsWithKeyManager from "@/decode-jwts-with-key-manager";
 
 /**
@@ -124,7 +124,7 @@ export class RouteGuardFactory {
         );
       }
       this.jwt_keys_manager = new RemoteJwtKeyManager({
-        auth_server_uri: getSchemaVaultsAuthServerUri(),
+        auth_server_url: getSchemaVaultsAuthServerUri(),
         debug: this.debug,
       });
     }

@@ -42,10 +42,6 @@ import {
 import { sendAuthorizeFrontendAppRequest } from "./send-authorize-app-request";
 import { useAppDomains } from "./useAppDomains";
 import { launchWebApp } from "./launchWebApp";
-import {
-  isHardcodedAppId,
-  HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
-} from "@schemavaults/app-definitions";
 import { CreateAppDomainDialogOpenDispatchContext } from "@/components/CreateAppDomainDialog";
 import { DeleteAppDialog } from "@/components/DeleteAppDialog";
 
@@ -66,17 +62,11 @@ export function FrontendApplicationActions({
   isOrgOwner,
 }: FrontendApplicationActionsProps): ReactElement {
   const app_id: AppId = app.app_id;
-  const hardcoded: boolean = app.hardcoded && isHardcodedAppId(app_id);
   const { toast } = useToast();
   const [authorizingApp, startAuthorizingApp] = useTransition();
   const authContext = useAuth();
 
   let preloadedAppDomains: SchemaVaultsAppDomainRef[] | undefined = undefined;
-  if (hardcoded) {
-    preloadedAppDomains = HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS.filter(
-      (a): boolean => a.app_id === app_id,
-    );
-  }
 
   const authClient = authContext.ready ? authContext.client.current : undefined;
   const appDomains = useAppDomains({
@@ -136,7 +126,7 @@ export function FrontendApplicationActions({
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
 
-  const isDeleteAppDisabled: boolean = hardcoded || (!admin && !isOrgOwner);
+  const isDeleteAppDisabled: boolean = app.hardcoded || (!admin && !isOrgOwner);
 
   const showAddAppDomain: boolean =
     (admin && queryType === "all") || (!!isOrgOwner && queryType === "org");

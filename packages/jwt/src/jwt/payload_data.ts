@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { REFRESH_TOKEN_AUDIENCE } from "./aud";
 import {
   appIdSchema,
   schemaVaultsAppEnvironmentSchema,
@@ -25,7 +24,7 @@ export const jwtPayloadSchema = z
       "Creation time must not be in the future",
     ),
     sig: z.string().min(32).max(4096),
-    iss: z.literal(REFRESH_TOKEN_AUDIENCE),
+    iss: z.string().url(),
     env: schemaVaultsAppEnvironmentSchema,
     jti: z.string().uuid().optional(),
     iat: z.number().nonnegative(), // unix seconds (jose's setIssuedAt output)
@@ -48,6 +47,14 @@ export const jwtPayloadSchema = z
   .strict()
   .refine((jwt_payload) => {
     return jwt_payload.sub === jwt_payload.uid;
-  }, "Token subject does not match user ID");
+  }, "Token subject does not match user ID")
+  .refine((jwt_payload) => {
+    if (jwt_payload.env === "production" || jwt_payload.env === "staging") {
+      if (!jwt_payload.iss.startsWith("https://")) {
+        return false;
+      }
+    }
+    return true;
+  }, "Issuer must use HTTPS in production or staging environments!");
 
 export type CustomJWTPayload = z.infer<typeof jwtPayloadSchema>;

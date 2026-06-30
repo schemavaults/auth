@@ -17,7 +17,6 @@ import {
   organizationIdSchema,
   type OrganizationID,
 } from "@schemavaults/auth-common";
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apis";
@@ -232,8 +231,7 @@ async function GET_api_list_handler(
     },
   );
 
-  const response = await protected_route(req);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, req);
+  return await protected_route(req);
 }
 
 export default GET_api_list_handler;

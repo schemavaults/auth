@@ -3,7 +3,7 @@
 // We assume that all validation has happened prior to this being called!
 
 import {
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type ApiServerId,
   type AppId,
   type SchemaVaultsAppEnvironment,
@@ -117,7 +117,7 @@ export default async function generateTokensForAuthenticatedUser({
           uid: user.uid,
           token_type: "refresh",
           client_app_id,
-          audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+          audience: SCHEMAVAULTS_AUTH_APP_ID,
           grant_type: tracking.grant_type,
           issued_at: refresh_token.iat,
           expires_at: refresh_token.exp,

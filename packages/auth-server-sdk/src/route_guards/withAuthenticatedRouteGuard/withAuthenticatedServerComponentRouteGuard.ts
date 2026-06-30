@@ -17,7 +17,7 @@ import type {
   OrganizationMembershipRoleType,
 } from "@schemavaults/auth-common/organizations";
 import isUserInOrganizationFromAuthServer from "@/isUserInOrganization";
-import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-url";
 import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey/loadJwksAccessPrivateKey";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
 import type { ReactElement } from "react";
