@@ -20,7 +20,7 @@ export type ListApiServerDomainsResponse =
   | {
       success: true;
       message: string;
-      list: SchemaVaultsApiServerDomainRef[];
+      list: readonly SchemaVaultsApiServerDomainRef[];
     }
   | {
       success: false;

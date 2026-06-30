@@ -29,7 +29,7 @@ import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-ema
 const ROUTE = "/api/user/mfa/webauthn/verify-enrollment";
 
 async function POST_webauthn_verify_enrollment_handler(
-  { user, dbh, req, redis }: IProtectedAuthenticatedApiRouteProps,
+  { user, dbh, req, redis, environment }: IProtectedAuthenticatedApiRouteProps,
 ): Promise<NextResponse> {
   // Throttle enrollment-verification attempts per uid (and per IP when
   // available); each call performs credential writes and factor flips.
@@ -132,6 +132,8 @@ async function POST_webauthn_verify_enrollment_handler(
       to: user.email,
       action: "enabled",
       db: dbh.db,
+      redis,
+      environment
     });
 
     return NextResponse.json(

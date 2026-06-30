@@ -21,7 +21,7 @@ import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-ema
 const ROUTE = "/api/user/mfa/totp/verify-enrollment";
 
 async function POST_verify_enrollment_handler(
-  { user, dbh, req }: IProtectedAuthenticatedApiRouteProps,
+  { user, dbh, redis, req, environment }: IProtectedAuthenticatedApiRouteProps,
 ): Promise<NextResponse> {
   let body: unknown;
   try {
@@ -98,10 +98,12 @@ async function POST_verify_enrollment_handler(
       await issueRecoveryCodesIfNeeded(dbh.db, user.uid);
 
     // Notify the user that MFA was enabled. Best-effort.
-    void sendMfaSecurityAlertEmail({
+    await sendMfaSecurityAlertEmail({
       to: user.email,
       action: "enabled",
       db: dbh.db,
+      redis,
+      environment
     });
 
     return NextResponse.json(

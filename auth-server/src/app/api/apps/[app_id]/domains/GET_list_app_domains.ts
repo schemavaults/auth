@@ -22,7 +22,7 @@ export type ListAppDomainsResponse =
   | {
       success: true;
       message: string;
-      list: SchemaVaultsAppDomainRef[];
+      list: readonly SchemaVaultsAppDomainRef[];
     }
   | {
       success: false;

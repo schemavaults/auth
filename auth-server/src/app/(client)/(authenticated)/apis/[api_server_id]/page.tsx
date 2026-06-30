@@ -74,7 +74,7 @@ export default async function ApiServerDetailPage(
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
       const connected_apps = await permissions_registry.listConnectedApps(api_server_id);
       const api_server_registry = new SchemaVaultsApiServerRegistry(dbh.db);
-      const connected_domains: SchemaVaultsApiServerDomainRef[] = await api_server_registry.getApiServerDomains(api_server_id);
+      const connected_domains: readonly SchemaVaultsApiServerDomainRef[] = await api_server_registry.getApiServerDomains(api_server_id);
 
       const orgRegistry = new OrganizationsRegistry(dbh.db)
       const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)

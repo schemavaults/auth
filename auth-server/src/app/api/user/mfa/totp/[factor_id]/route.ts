@@ -17,7 +17,7 @@ const ROUTE = "/api/user/mfa/totp/[factor_id]";
 const factorIdSchema = z.string().uuid();
 
 async function DELETE_factor_handler(
-  { user, dbh, req }: IProtectedAuthenticatedApiRouteProps,
+  { user, dbh, redis, req }: IProtectedAuthenticatedApiRouteProps,
   factor_id: string,
 ): Promise<NextResponse> {
   let body: unknown;
@@ -75,10 +75,11 @@ async function DELETE_factor_handler(
       await mfaRegistry.deleteFactor({ uid: user.uid, factor_id });
     }
 
-    void sendMfaSecurityAlertEmail({
+    await sendMfaSecurityAlertEmail({
       to: user.email,
       action: "removed",
       db: dbh.db,
+      redis
     });
 
     return NextResponse.json({ success: true }, { status: 200 });

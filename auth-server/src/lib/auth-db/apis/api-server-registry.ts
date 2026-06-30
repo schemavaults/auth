@@ -8,6 +8,7 @@ import {
   type SchemaVaultsApiServerDomainRef,
   type ApiServerId,
   HARDCODED_SCHEMAVAULTS_APIS,
+  getHardcodedApiDomains,
 } from "@schemavaults/app-definitions";
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
@@ -103,16 +104,14 @@ export class SchemaVaultsApiServerRegistry {
 
   public async getApiServerDomains(
     api_server_id: ApiServerId,
-  ): Promise<SchemaVaultsApiServerDomainRef[]> {
+  ): Promise<readonly SchemaVaultsApiServerDomainRef[]> {
 
     if (this.debug) {
       console.log(`[SchemaVaultsApiServerRegistry] getApiServerDomains('${api_server_id}')`)
     }
 
     if (isHardcodedApiServerId(api_server_id)) {
-      return HARDCODED_CORE_SCHEMAVAULTS_API_SERVER_DOMAINS.filter(
-        hardcoded_api_domain => hardcoded_api_domain.api_server_id === api_server_id
-      )
+      return getHardcodedApiDomains(api_server_id);
     }
 
     const queryApiServers = this.db
@@ -354,7 +353,7 @@ export class SchemaVaultsApiServerRegistry {
     }
 
     if (org_id === SCHEMAVAULTS_ORGANIZATION_ID) {
-      api_server_definitions.push(...HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS.filter(s => s.owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID))
+      api_server_definitions.push(...HARDCODED_SCHEMAVAULTS_APIS.filter(s => s.owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID))
     }
 
     return api_server_definitions;

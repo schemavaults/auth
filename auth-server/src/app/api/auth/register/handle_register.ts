@@ -26,6 +26,7 @@ import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCook
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import sendVerificationEmail from "@/lib/mail/send-verification-email";
 import captureServerException from "@/lib/captureServerException";
+import { RedisCache } from "@/lib/redis";
 
 const ROUTE = "/api/auth/register";
 
@@ -424,10 +425,12 @@ export async function handleRegister({
   // Wrapped in try/catch so registration never fails due to email-send errors.
   try {
     const rawToken: string = await userRegistry.createEmailVerificationToken(newUser.uid);
+    await using redis = RedisCache.createConnection();
     await sendVerificationEmail({
       email,
       rawToken,
       db: dbh.db,
+      redis
     });
     if (debug) {
       console.log(`[handleRegister] Verification email sent to: ${email}`);

@@ -21,7 +21,7 @@ export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function POST_resend_verification_handler(
-  { user, dbh }: IProtectedAdminApiRouteProps,
+  { user, dbh, redis }: IProtectedAdminApiRouteProps,
   target_uid: string,
 ): Promise<NextResponse> {
   if (!user.admin) {
@@ -83,6 +83,7 @@ async function POST_resend_verification_handler(
       email: targetUser.email,
       rawToken,
       db: dbh.db,
+      redis
     });
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

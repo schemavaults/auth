@@ -31,7 +31,7 @@ export async function getAppAllowedOriginsForEnvironment(
   dbh: ServerlessDatabase
 ): Promise<readonly string[]> {
   const appRegistry = new SchemaVaultsAppRegistry(dbh.db);
-  const allDomains: SchemaVaultsAppDomainRef[] =
+  const allDomains: readonly SchemaVaultsAppDomainRef[] =
     await appRegistry.getAppDomains(client_app_id);
   const domainsForEnv = allDomains.filter((d) => d.environment === environment);
   return domainsForEnv.map((d) => d.domain);

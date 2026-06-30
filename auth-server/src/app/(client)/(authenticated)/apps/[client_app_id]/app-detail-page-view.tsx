@@ -18,8 +18,8 @@ export interface ConnectedApiServer {
 
 export interface AppDetailPageViewProps {
   app: SchemaVaultsApp;
-  connected_api_servers: ConnectedApiServer[];
-  connected_domains: SchemaVaultsAppDomainRef[];
+  connected_api_servers: readonly ConnectedApiServer[];
+  connected_domains: readonly SchemaVaultsAppDomainRef[];
   hardcoded: boolean;
   isOrgOwner: boolean;
   current_environment: SchemaVaultsAppEnvironment;
@@ -86,7 +86,7 @@ export default function AppDetailPageView({
   current_environment,
 }: AppDetailPageViewProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [apiServers, setApiServers] = useState<ConnectedApiServer[]>(connected_api_servers);
+  const [apiServers, setApiServers] = useState<readonly ConnectedApiServer[]>(connected_api_servers);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApiServer | null>(null);
   const router = useRouter();
 

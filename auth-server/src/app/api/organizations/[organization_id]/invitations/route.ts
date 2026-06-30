@@ -46,7 +46,7 @@ const createInvitationRequestSchema = z.object({
 });
 
 async function POST_create_invitation_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
+  { user, dbh, redis }: IProtectedAuthenticatedApiRouteProps,
   context: RouteContext,
   req: NextRequest
 ): Promise<NextResponse> {
@@ -188,6 +188,7 @@ async function POST_create_invitation_handler(
     try {
       await sendTeamInvitationEmail({
         db: dbh.db,
+        redis,
         organization_id,
         inviter_uid: user.uid,
         invitee_uid,

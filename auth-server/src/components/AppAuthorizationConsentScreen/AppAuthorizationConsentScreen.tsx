@@ -140,9 +140,14 @@ export function AppAuthorizationConsentScreen({
         return;
       }
 
+      const endpoint = new URL(
+        "/api/auth/session/generate-authorization-code",
+        authClient.auth_server_url
+      );
+
       // Generate authorization code via session endpoint
       const response = await fetch(
-        `${authClient.auth_server_uri}/api/auth/session/generate-authorization-code`,
+        endpoint,
         {
           method: "POST",
           credentials: "include",

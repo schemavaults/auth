@@ -10,6 +10,8 @@ import {
   getAppEnvironment,
   isHardcodedAppId,
   HARDCODED_SCHEMAVAULTS_APPS,
+  getHardcodedAppDomains,
+  type AppId,
 } from "@schemavaults/app-definitions";
 import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import type { Kysely } from "@schemavaults/dbh";
@@ -62,19 +64,15 @@ export class SchemaVaultsAppRegistry {
   }
 
   public async getAppDomains(
-    app_id: string,
-  ): Promise<SchemaVaultsAppDomainRef[]> {
+    app_id: AppId,
+  ): Promise<readonly SchemaVaultsAppDomainRef[]> {
     const isValidAppId: boolean = (await appIdSchema.safeParseAsync(app_id))
       .success;
     if (!isValidAppId) {
       throw new Error("Invalid app ID to list domains for!");
     }
 
-    const isUuid: boolean = (await z.string().uuid().safeParseAsync(app_id))
-      .success;
-    const isHardcodedAppId: boolean = isValidAppId && !isUuid;
-
-    if (isHardcodedAppId) {
+    if (isHardcodedAppId(app_id)) {
       return getHardcodedAppDomains(app_id);
     }
 

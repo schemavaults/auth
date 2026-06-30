@@ -3,11 +3,13 @@ import { getAppEnvironment, getAuthServerUrl, type SchemaVaultsAppEnvironment } 
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import sendEmailViaMailServer from "./send-email-via-mail-server";
+import type { RedisCache } from "@/lib/redis";
 
 interface SendVerificationEmailOptions {
   email: string;
   rawToken: string;
   db: Kysely<AuthDatabase>;
+  redis: RedisCache;
   welcomeMessage?: string;
 }
 
@@ -20,11 +22,16 @@ export async function sendVerificationEmail({
   email,
   rawToken,
   db,
+  redis,
   welcomeMessage,
 }: SendVerificationEmailOptions): Promise<void> {
   const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
   const authServerUri: string = getAuthServerUrl(appEnv);
-  const verifyUrl: string = `${authServerUri}/auth/verify-email?token=${rawToken}`;
+
+  const verifyUrl = new URL(
+    `/auth/verify-email?token=${encodeURIComponent(rawToken)}`,
+    authServerUri
+  );
 
   await sendEmailViaMailServer(
     {
@@ -33,12 +40,13 @@ export async function sendVerificationEmail({
       message: {
         template_id: "verify-email",
         template_props: {
-          url: verifyUrl,
+          url: verifyUrl.toString(),
           ...(welcomeMessage ? { welcomeMessage } : {}),
         },
       },
     },
     db,
+    redis
   );
 }
 

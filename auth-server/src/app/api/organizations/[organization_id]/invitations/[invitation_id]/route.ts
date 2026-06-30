@@ -35,7 +35,7 @@ const respondToInvitationSchema = z.object({
 });
 
 async function PATCH_respond_to_invitation_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
+  { user, dbh, redis }: IProtectedAuthenticatedApiRouteProps,
   context: RouteContext<"/api/organizations/[organization_id]/invitations/[invitation_id]">,
   req: NextRequest
 ): Promise<NextResponse> {
@@ -153,6 +153,7 @@ async function PATCH_respond_to_invitation_handler(
           organization_id,
           inviter_uid: invitation.inviter_uid,
           accepter_uid: user.uid,
+          redis
         });
       } catch (emailError: unknown) {
         await captureServerException(dbh.db, emailError, {

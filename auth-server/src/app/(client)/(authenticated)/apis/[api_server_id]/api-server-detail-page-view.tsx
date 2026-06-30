@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
-import { isHardcodedAppId, type SchemaVaultsApiServerDefinition, type SchemaVaultsApiServerDomainRef, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  isHardcodedAppId,
+  type SchemaVaultsApiServerDefinition,
+  type SchemaVaultsApiServerDomainRef,
+  type SchemaVaultsAppEnvironment
+} from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
@@ -18,8 +23,8 @@ export interface ConnectedApp {
 
 export interface ApiServerDetailPageViewProps {
   api_server: SchemaVaultsApiServerDefinition;
-  connected_apps: ConnectedApp[];
-  connected_domains: SchemaVaultsApiServerDomainRef[];
+  connected_apps: readonly ConnectedApp[];
+  connected_domains: readonly SchemaVaultsApiServerDomainRef[];
   hardcoded: boolean;
   isOrgOwner: boolean;
   current_environment: SchemaVaultsAppEnvironment;
@@ -53,7 +58,7 @@ export default function ApiServerDetailPageView({
   current_environment,
 }: ApiServerDetailPageViewProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [apps, setApps] = useState<ConnectedApp[]>(connected_apps);
+  const [apps, setApps] = useState<readonly ConnectedApp[]>(connected_apps);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApp | null>(null);
   const router = useRouter();
 
