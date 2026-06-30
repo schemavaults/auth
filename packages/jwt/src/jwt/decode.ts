@@ -9,7 +9,7 @@ import type { I_JWT_Keys } from "./jwt_keys";
 import getRefreshTokenAudience from "./get_refresh_token_audience";
 import getIssuer from "./get_issuer";
 import { getExpiryDurationString } from "./expiry";
-import { type CustomJWTPayload, jwtPayloadSchema } from "./payload_data";
+import { type CustomJWTPayload, createJwtPayloadSchema } from "./payload_data";
 import type { AuthTokenTypes, UserData } from "@schemavaults/auth-common";
 import {
   apiServerIdSchema,
@@ -19,7 +19,7 @@ import {
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
 import { verifyJWTSignature } from "./verify_signature";
-import type { SafeParseReturnType } from "zod";
+import { z, type SafeParseReturnType } from "zod";
 import isValidUuid from "@/utils/isValidUuid";
 import encryptDecryptAlgorithm from "./encrypt_decrypt_alg";
 
@@ -233,6 +233,8 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     }
   > = { ...decoded.payload };
   delete withoutJWTspecific.exp;
+
+  const jwtPayloadSchema = createJwtPayloadSchema(z, environment);
 
   const parsedPayload =
     await jwtPayloadSchema.safeParseAsync(withoutJWTspecific);

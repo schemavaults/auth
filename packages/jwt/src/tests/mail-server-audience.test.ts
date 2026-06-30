@@ -17,6 +17,7 @@ async function isGenerateAndDecodeTokenForMailServerSuccess(
 
   const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
     audience_id,
+    environment: env,
   });
 
   const user = new MockUser();

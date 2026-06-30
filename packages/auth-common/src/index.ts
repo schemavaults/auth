@@ -52,7 +52,12 @@ export type * from "./auth_acquire_tokens_grant_types";
 export { getAuthServerUrl } from "@schemavaults/app-definitions";
 export { appIdSchema } from "@schemavaults/app-definitions";
 
-export { audienceSchema, audienceRefSchema } from "./audience-schema";
+export {
+  createAudienceSchema,
+  audienceSchema,
+  createAudienceListSchema,
+  audienceListSchema,
+} from "./audience-schema";
 
 export {
   inviteCodeFormatSchema,
@@ -128,3 +133,8 @@ export {
   OAuth2StateValidationError,
 } from "./oauth2-state-schema";
 export type { OAuth2State } from "./oauth2-state-schema";
+
+export {
+  createAuthorizationCodePOSTBodySchema,
+  createRefreshTokenPOSTBodySchema,
+} from "./auth_acquire_tokens_grant_types";

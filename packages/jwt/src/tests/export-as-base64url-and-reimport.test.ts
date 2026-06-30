@@ -1,5 +1,8 @@
 import { generateNewJwtKeySet, JWT_Keys } from "@/jwt";
 import { describe, test, expect } from "bun:test";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+
+const environment: SchemaVaultsAppEnvironment = "test";
 
 function expectString(val: string | null): val is string {
   expect(val).toBeString();
@@ -18,6 +21,7 @@ describe("JWT_Keys base64url export & import", () => {
     try {
       const keyset = await generateNewJwtKeySet({
         audience_id,
+        environment,
       });
       const keyset_id: string = keyset.keyset_id;
       const keys = keyset.exportKeys();

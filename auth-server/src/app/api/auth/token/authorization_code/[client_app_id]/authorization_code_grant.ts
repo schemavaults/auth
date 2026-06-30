@@ -5,9 +5,9 @@ import {
   type OrganizationID,
   type RequestTokensResult,
   type UserData,
-  type authorizationCodePOSTbody,
   MAXIMUM_USER_ORGANIZATIONS,
   ERROR_MESSAGE_CATALOG,
+  createAuthorizationCodePOSTBodySchema,
 } from "@schemavaults/auth-common";
 import {
   type ServerlessDatabase,
@@ -35,7 +35,7 @@ const ROUTE = "/api/auth/token/authorization_code/[client_app_id]";
 
 export async function handleAuthorizationCodeGrant(
   req: NextRequest,
-  body: z.infer<typeof authorizationCodePOSTbody>,
+  body: z.infer<ReturnType<typeof createAuthorizationCodePOSTBodySchema>>,
   userRegistry: UserRegistry,
   orgRegistry: OrganizationsRegistry,
   dbh: ServerlessDatabase,
@@ -180,6 +180,7 @@ export async function handleAuthorizationCodeGrant(
       body.client_app_id,
       audience,
       dbh,
+      environment,
       debug satisfies boolean,
     );
     if (!isValidAudience) {

@@ -11,7 +11,8 @@ import {
 import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
 import MockUser from "@/tests/MockUser";
 
-const env: SchemaVaultsAppEnvironment = "test";
+const env: "test" = "test" as const satisfies SchemaVaultsAppEnvironment;
+const environment = env;
 const auth_server_url: string = getAuthServerUrl(env);
 
 describe("JWT Generation & Decoding", () => {
@@ -21,6 +22,7 @@ describe("JWT Generation & Decoding", () => {
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
       audience_id: auth_server_url,
+      environment,
     });
 
     const audience: string = getRefreshTokenAudience(env);
@@ -56,6 +58,7 @@ describe("JWT Generation & Decoding", () => {
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
       audience_id: audience,
+      environment,
     });
 
     const generateOptions: GenerateJWTOptions<"access"> = {
@@ -89,6 +92,7 @@ describe("JWT Generation & Decoding", () => {
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
       audience_id: auth_server_url,
+      environment,
     });
 
     const audience: string = getRefreshTokenAudience(env);
@@ -129,6 +133,7 @@ describe("JWT Generation & Decoding", () => {
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
       audience_id: audience,
+      environment,
     });
 
     const generateOptions: GenerateJWTOptions<"access"> = {
@@ -166,6 +171,7 @@ describe("JWT Generation & Decoding", () => {
 
     const jwt_keys_for_auth_app: JWT_Keys = await generateNewJwtKeySet({
       audience_id: auth_app_id,
+      environment,
     });
 
     const random_app_id: string = crypto.randomUUID();
@@ -199,6 +205,7 @@ describe("JWT Generation & Decoding", () => {
     const jwt_keys_audience_id = crypto.randomUUID();
     const jwt_keys_for_mismatched_audience = await generateNewJwtKeySet({
       audience_id: jwt_keys_audience_id,
+      environment,
     });
 
     const random_app_id: string = crypto.randomUUID();
@@ -236,6 +243,7 @@ describe("JWT Generation & Decoding", () => {
 
     const jwt_keys_for_auth_server = await generateNewJwtKeySet({
       audience_id: auth_server_url,
+      environment,
     });
 
     const random_app_id: string = crypto.randomUUID();

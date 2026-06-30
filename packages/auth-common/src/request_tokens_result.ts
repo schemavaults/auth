@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { userDataSchema } from "./user_data";
 import { accessTokenDataSchema, refreshTokenDataSchema } from "./token-data";
-import { audienceRefSchema } from "./audience-schema";
+import { createAudienceSchema } from "./audience-schema";
 import { organizationIdSchema } from "./organizations";
 import { appIdSchema } from "@schemavaults/app-definitions";
 
@@ -10,7 +10,7 @@ export const successfullyGeneratedTokensRecordSchema = z
     access: z
       .record(
         // map of audience (app id, fs region, or auth server url) to token for that audience
-        audienceRefSchema,
+        createAudienceSchema(z),
         z.union([accessTokenDataSchema, z.literal("AS_HTTP_ONLY_COOKIE")]),
       )
       .optional(),

@@ -17,11 +17,13 @@ const email = "jalexwhitman@gmail.com" as const satisfies string;
 const uid: string = crypto.randomUUID();
 const sub: string = uid;
 const env: SchemaVaultsAppEnvironment = "test";
+const environment = env;
 
 describe("JWT Signature 'sig' field", async (): Promise<void> => {
   it("can sign a JWT", async () => {
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
       audience_id: audience,
+      environment,
     });
     const sig: string = await signJWT({
       jwt_keys,
@@ -39,6 +41,7 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
   it("can sign and validate a JWT", async () => {
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
       audience_id: audience,
+      environment,
     });
 
     const sig: string = await signJWT({
@@ -68,6 +71,7 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
   it("can sign a JWT with just the signing key", async () => {
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
       audience_id: audience,
+      environment,
     });
     const keyset_id: string = jwt_keys.keyset_id;
     const signing_key_promise: Promise<CryptoKey> | null = jwt_keys.signing_key;

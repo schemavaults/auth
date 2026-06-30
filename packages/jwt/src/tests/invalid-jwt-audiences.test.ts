@@ -2,13 +2,16 @@ import { decodeJWT, generateNewJwtKeySet, type JWT_Keys } from "@/jwt";
 import { describe, test, expect } from "bun:test";
 import { MockUser } from "@/tests/MockUser";
 import { generateJWT, type GenerateJWTOptions } from "@/jwt/generate";
-import { audienceRefSchema } from "@schemavaults/auth-common";
+import { createAudienceSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/utils/isValidUuid";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import getAuthServerUri from "@schemavaults/app-definitions/get-auth-server-url";
+import { z } from "zod";
 
 const env: SchemaVaultsAppEnvironment = "test";
+const environment = env;
 const auth_server_url: string = getAuthServerUri(env);
+const audienceSchema = createAudienceSchema(z, env);
 
 async function isGenerateAndDecodeTokenForStorageRegionSuccess(
   region_id: string,
@@ -19,6 +22,7 @@ async function isGenerateAndDecodeTokenForStorageRegionSuccess(
 
   const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
     audience_id: region_id,
+    environment,
   });
 
   const generateOptions: GenerateJWTOptions<"access"> = {
@@ -50,48 +54,23 @@ async function isGenerateAndDecodeTokenForStorageRegionSuccess(
   return true;
 }
 
-describe("JWTs for Vault FileSystem", () => {
-  test("Access JWT with a fs server audience can be generated and decoded", async () => {
-    const region_ids = [
-      crypto.randomUUID(),
-      crypto.randomUUID(),
-      crypto.randomUUID(),
-      crypto.randomUUID(),
-    ] as const satisfies readonly string[];
-
-    for (const region_id of region_ids) {
-      expect(
-        audienceRefSchema.safeParse(region_id).success,
-        `Expected every example storage region IDs to be valid, but "${region_id}" is not valid.`,
-      ).toBeTrue();
-    }
-
-    const results: boolean[] = await Promise.all(
-      region_ids.map(async (region_id: string): Promise<boolean> => {
-        return await isGenerateAndDecodeTokenForStorageRegionSuccess(region_id);
-      }),
-    );
-
-    expect(results.every((result) => !!result)).toBeTrue();
-  });
-
-  test("error thrown generating a token for an invalid FS server audience", async () => {
+describe("Invalid JWT Audiences", () => {
+  test("error thrown generating a token for an invalid audience", async () => {
     const invalid_region_ids: string[] = [
       "",
-      "us-east1", // region id should just be a uuid
       "us-east1!", // invalid char
-      "my-invalid-region_", // invalid char
+      "my-invalid-region_", // no underscores at end
       // @ts-expect-error Passing an invalid type on purpose for this test case
       69, // bad type
-      "01e0eagd-434c-4dc7-bff4-ddz488b62528", // almost a uuid but with invalid chars
     ];
 
-    expect(
-      invalid_region_ids.every((region_id): boolean => {
-        return !audienceRefSchema.safeParse(region_id).success;
-      }),
-      "Expected every example storage region ID to be invalid",
-    ).toBeTrue();
+    for (const invalid_region_id of invalid_region_ids) {
+      const parsed = audienceSchema.safeParse(invalid_region_id);
+      expect(
+        parsed.success,
+        `Region ID '${invalid_region_id}' was interpreted as valid, when it should be invalid!`,
+      ).toBeFalse();
+    }
 
     const results: boolean[] = await Promise.all(
       invalid_region_ids.map(async (region_id: string): Promise<boolean> => {

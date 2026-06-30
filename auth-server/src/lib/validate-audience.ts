@@ -10,11 +10,13 @@ import {
   type AppId,
   appIdSchema,
   SCHEMAVAULTS_AUTH_APP_ID,
+  SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { audienceRefSchema } from "@schemavaults/auth-common";
+import { createAudienceSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/lib/is-valid-uuid";
 import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
 import AppNotConnectedToApiServerError from "@/lib/error/AppNotConnectedToApiServerError";
+import { z } from "zod";
 
 export type ValidateAudienceOutput =
   | "auth-server-only"
@@ -26,15 +28,19 @@ async function validateOneAudience(
   client_app_id: string,
   audience: string,
   dbh: ServerlessDatabase,
+  environment: SchemaVaultsAppEnvironment,
   debug: boolean = false,
 ): Promise<ValidateAudienceOutput> {
+  const audienceSchema = createAudienceSchema(z, environment);
+
   if (
     typeof uid !== "string" ||
     typeof client_app_id !== "string" ||
     typeof audience !== "string"
   ) {
-    throw new Error("Expected all arguments to be strings");
+    throw new TypeError("Expected 'uid', 'client_app_id', and 'audience' arguments to be strings");
   }
+
   if (
     client_app_id === SCHEMAVAULTS_AUTH_APP_ID &&
     audience === SCHEMAVAULTS_AUTH_APP_ID
@@ -49,7 +55,9 @@ async function validateOneAudience(
     `Expected this to be a non-auth server API server if this point was reached`
   );
 
-  const parsed_aud = await audienceRefSchema.safeParseAsync(audience);
+
+
+  const parsed_aud = await audienceSchema.safeParseAsync(audience);
   const isSemanticallyValidAudience = parsed_aud.success satisfies boolean;
   if (!isSemanticallyValidAudience || !parsed_aud.data) {
     console.error(
@@ -113,6 +121,7 @@ export async function validateAudience(
   client_app_id: AppId,
   audience: string | readonly string[],
   dbh: ServerlessDatabase,
+  environment: SchemaVaultsAppEnvironment,
   debug: boolean = shouldEnableDebug(),
 ): Promise<boolean> {
   if (!isValidUuid(uid)) {
@@ -152,9 +161,9 @@ export async function validateAudience(
     throw new ClientApplicationNotAuthorizedByUser(`Client application '${client_app_id}' is not authorized by user '${uid}'`)
   }
 
-  const validateOneAudiencePromises = audiences.map(
+  const validateOneAudiencePromises: readonly Promise<ValidateAudienceOutput>[] = audiences.map(
     (audience: string): Promise<ValidateAudienceOutput> =>
-      validateOneAudience(uid, client_app_id, audience, dbh, debug),
+      validateOneAudience(uid, client_app_id, audience, dbh, environment, debug),
   );
   const validationResults = await Promise.all(validateOneAudiencePromises);
 

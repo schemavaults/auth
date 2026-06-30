@@ -1,13 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import generateNewJwtKeySet from "./generate_new_jwt_keyset";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import {
+  SCHEMAVAULTS_AUTH_APP_ID,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 
 const DEBUG: boolean = false;
+
+const environment: SchemaVaultsAppEnvironment = "test";
 
 describe("Generate new JWT keyset", () => {
   test("should generate a new JWT keyset for auth server", async () => {
     const keyset = await generateNewJwtKeySet({
       audience_id: SCHEMAVAULTS_AUTH_APP_ID,
+      environment,
     });
     expect(keyset).toBeDefined();
     expect(keyset.audience_id).toBe(SCHEMAVAULTS_AUTH_APP_ID);
@@ -23,6 +29,7 @@ describe("Generate new JWT keyset", () => {
 
     const keyset = await generateNewJwtKeySet({
       audience_id: api_server_id,
+      environment,
     });
     expect(keyset).toBeDefined();
     expect(keyset.audience_id).toBe(api_server_id);

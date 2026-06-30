@@ -1,19 +1,23 @@
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import type { AppId } from "@schemavaults/app-definitions";
+import type {
+  AppId,
+  SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import {
   type RefreshToken,
-  refreshTokenPOSTbody,
-  RequestTokensResult,
+  createRefreshTokenPOSTBodySchema,
+  type RequestTokensResult,
   requestTokensResultSchema,
   type SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
-import type { z } from "zod";
+import { z } from "zod";
 
 export interface IExchangeAuthTokensOpts {
   refreshToken: RefreshToken | "AS_HTTP_ONLY_COOKIE";
   audience: string | string[];
   replaceRefreshToo?: boolean;
   auth_server_uri: string;
+  environment: SchemaVaultsAppEnvironment;
   debug: boolean;
   client_app_id: AppId;
   adapter: ISchemaVaultsAuthClientAdapter;
@@ -28,6 +32,7 @@ export async function exchangeAuthTokens({
   audience,
   replaceRefreshToo,
   debug,
+  environment,
   auth_server_uri,
   client_app_id,
   adapter,
@@ -40,22 +45,29 @@ export async function exchangeAuthTokens({
     );
   }
 
-  const exchange_refresh_token_endpoint =
-    `${auth_server_uri}/api/auth/token/refresh_token/${client_app_id}` as const;
+  const exchange_refresh_token_endpoint = new URL(
+    `/api/auth/token/refresh_token/${client_app_id}` as const,
+    auth_server_uri,
+  );
 
   if (!audience && !replaceRefreshToo) {
     throw new Error("Type of token to acquire not specified");
   }
 
+  const refreshTokenPOSTBodySchema = createRefreshTokenPOSTBodySchema(
+    z,
+    environment,
+  );
+
   // Exchange the authorization code for an access token
-  let request_body: z.infer<typeof refreshTokenPOSTbody>;
+  let request_body: z.infer<typeof refreshTokenPOSTBodySchema>;
   try {
-    const parsed = await refreshTokenPOSTbody.safeParseAsync({
+    const parsed = await refreshTokenPOSTBodySchema.safeParseAsync({
       grant_type: "refresh_token" as const,
       client_app_id,
       audience: audience,
       replaceRefreshToo: replaceRefreshToo ?? false,
-    } satisfies z.infer<typeof refreshTokenPOSTbody>);
+    } satisfies z.infer<typeof refreshTokenPOSTBodySchema>);
     if (!parsed.success) {
       console.error(parsed.error);
       throw new Error(
@@ -118,7 +130,7 @@ export async function exchangeAuthTokens({
   if (debug) {
     console.log(
       "[SchemaVaultsAuthClient::exchangeAuthTokens()] " +
-        `Sending POST request to "${exchange_refresh_token_endpoint}" with body & headers:`,
+        `Sending POST request to "${exchange_refresh_token_endpoint.toString()}" with body & headers:`,
       request_body,
       exchangeAuthTokensReqHeaders,
     );
@@ -130,7 +142,7 @@ export async function exchangeAuthTokens({
       console.log(`POST => ${exchange_refresh_token_endpoint}`);
     }
     const response: Response = await adapter.fetch(
-      exchange_refresh_token_endpoint,
+      exchange_refresh_token_endpoint.toString(),
       {
         body: JSON.stringify(request_body),
         method: "POST",

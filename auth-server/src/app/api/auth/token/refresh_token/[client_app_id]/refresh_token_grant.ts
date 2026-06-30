@@ -18,9 +18,9 @@ import {
   type OrganizationID,
   type RequestTokensResult,
   type UserData,
-  type refreshTokenPOSTbody,
   MAXIMUM_USER_ORGANIZATIONS,
   ERROR_MESSAGE_CATALOG,
+  createRefreshTokenPOSTBodySchema,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
@@ -45,7 +45,7 @@ const ROUTE = "/api/auth/token/refresh_token/[client_app_id]";
 export async function handleRefreshTokenGrant(
   req: NextRequest,
   refresh_token: string,
-  body: z.infer<typeof refreshTokenPOSTbody>,
+  body: z.infer<ReturnType<typeof createRefreshTokenPOSTBodySchema>>,
   usersRegistry: UserRegistry,
   orgRegistry: OrganizationsRegistry,
   dbh: ServerlessDatabase,
@@ -303,6 +303,7 @@ export async function handleRefreshTokenGrant(
       body.client_app_id,
       audience,
       dbh,
+      environment,
       debug satisfies boolean,
     );
     if (!isValidAudience) {

@@ -2,11 +2,15 @@ import { describe, it, expect } from "bun:test";
 import generateNewJwtKeySet from "./generate_new_jwt_keyset";
 import to_public_jwks from "./to_public_jwks";
 import isValidUuid from "@/utils/isValidUuid";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+
+const environment: SchemaVaultsAppEnvironment = "test";
 
 describe("JWT Key Set to Public JWKS", () => {
   it("only contains decryption/verification keys", async () => {
     const keyset = await generateNewJwtKeySet({
       audience_id: crypto.randomUUID(),
+      environment,
     });
     const keyset_id: string = keyset.keyset_id;
     expect(isValidUuid(keyset_id)).toBeTrue();
@@ -24,12 +28,15 @@ describe("JWT Key Set to Public JWKS", () => {
     const api_server_id: string = crypto.randomUUID();
     const keyset1 = await generateNewJwtKeySet({
       audience_id: api_server_id,
+      environment,
     });
     const keyset2 = await generateNewJwtKeySet({
       audience_id: api_server_id,
+      environment,
     });
     const keyset3 = await generateNewJwtKeySet({
       audience_id: api_server_id,
+      environment,
     });
     expect(keyset1.keyset_id).toBeString();
     expect(keyset2.keyset_id).toBeString();
@@ -50,12 +57,15 @@ describe("JWT Key Set to Public JWKS", () => {
     const api_server_id: string = crypto.randomUUID();
     const keyset1 = await generateNewJwtKeySet({
       audience_id: api_server_id,
+      environment,
     });
     const keyset2 = await generateNewJwtKeySet({
       audience_id: api_server_id,
+      environment,
     });
     const keyset3 = await generateNewJwtKeySet({
       audience_id: api_server_id,
+      environment,
     });
     const jwks = await to_public_jwks([keyset1, keyset2, keyset3]);
     expect(

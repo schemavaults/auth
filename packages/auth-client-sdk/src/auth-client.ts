@@ -1187,12 +1187,14 @@ export class SchemaVaultsAuthClient
     audience?: string | string[],
     replaceRefreshToo?: boolean,
   ): Promise<SuccessfullyGeneratedTokensRecord> {
+    const environment: SchemaVaultsAppEnvironment = this.environment;
     return await exchangeAuthTokens({
       refreshToken,
       replaceRefreshToo,
       audience: audience ?? this.defaultTokenAudiences,
       logout: this.logout.bind(this),
       debug: this.DEBUG,
+      environment,
       handleSuccessfulExchangeAuthTokensResponse:
         this.handleSuccessfulExchangeAuthTokensResponse.bind(this),
       client_app_id: this.app_id,

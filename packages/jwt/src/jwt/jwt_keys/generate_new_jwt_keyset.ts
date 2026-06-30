@@ -1,8 +1,10 @@
-import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import ContentEncryptionKeyPairFactory from "./ContentEncryptionKeyPairFactory";
 import JWT_Keys from "./jwt_keys";
 import SigningKeyPairFactory from "./SigningKeyPairFactory";
 import isValidUuid from "@/utils/isValidUuid";
+import { createAudienceSchema } from "@schemavaults/auth-common";
+import { z } from "zod";
 
 /**
  * @name generateJwtSigningKeyPair
@@ -48,6 +50,7 @@ export async function generateJwtContentEncryptionKeyPair(
 
 export interface IGenerateNewJwtKeySetOpts {
   audience_id: string;
+  environment: SchemaVaultsAppEnvironment;
   keyset_id?: string;
   keyset_expiry?: number;
   debug?: boolean;
@@ -73,10 +76,14 @@ export async function generateNewJwtKeySet(
     });
   }
 
-  const parsedAudience = apiServerIdSchema.safeParse(audience_id);
+  const audienceSchema = createAudienceSchema(z, opts.environment);
+
+  const parsedAudience = await audienceSchema.safeParseAsync(audience_id);
   if (!parsedAudience.success) {
     throw new TypeError(
-      `Invalid audience ID: '${audience_id}'. Should be a valid API server ID.`,
+      `Invalid audience ID: '${audience_id}'.` +
+        " " +
+        `Should be a valid API server ID.`,
       {
         cause: parsedAudience.error,
       },

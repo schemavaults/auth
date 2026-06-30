@@ -3,7 +3,7 @@ import { generateJWT } from "@/jwt/generate";
 import { AccessToken, getAuthServerUrl } from "@schemavaults/auth-common";
 import { describe, expect, test } from "bun:test";
 import MockUser from "./MockUser";
-import { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
 const env: SchemaVaultsAppEnvironment = "test";
 const auth_server_url = getAuthServerUrl(env);
@@ -15,6 +15,7 @@ describe("Token 'aud' Header Claim", () => {
 
     const jwt_keys = await generateNewJwtKeySet({
       audience_id,
+      environment: env,
     });
 
     const jwt: AccessToken = await generateJWT({

@@ -1,6 +1,6 @@
 import {
   type AccessToken,
-  authorizationCodePOSTbody,
+  createAuthorizationCodePOSTBodySchema,
   PKCE_ProofKeyManager,
   type RefreshToken,
   requestTokensResultSchema,
@@ -14,7 +14,7 @@ import type {
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import type { z } from "zod";
+import { z } from "zod";
 import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "./assert-http-only-refresh-token-has-accompanying-expiry-marker";
 import { timingSafeStringEqual } from "@schemavaults/auth-common";
 
@@ -260,10 +260,15 @@ export async function handleSuccessfulAuthentication({
     audience = [];
   }
 
+  const authorizationCodePOSTBodySchema = createAuthorizationCodePOSTBodySchema(
+    z,
+    environment,
+  );
+
   // Exchange the authorization code for an access token
-  let request_body: z.infer<typeof authorizationCodePOSTbody>;
+  let request_body: z.infer<typeof authorizationCodePOSTBodySchema>;
   try {
-    const parsed = await authorizationCodePOSTbody.safeParseAsync({
+    const parsed = await authorizationCodePOSTBodySchema.safeParseAsync({
       grant_type: "authorization_code" as const,
       code: authorization_code,
       code_verifier: cached_code_verifier,
@@ -271,7 +276,7 @@ export async function handleSuccessfulAuthentication({
       audience,
       challenge_time,
       redirect_uri,
-    } satisfies z.infer<typeof authorizationCodePOSTbody>);
+    } satisfies z.infer<typeof authorizationCodePOSTBodySchema>);
     if (!parsed.success) {
       throw parsed.error;
     }
