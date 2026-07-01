@@ -39,6 +39,11 @@ export { getAuthServerUrl } from "./get-auth-server-url";
 export { SCHEMAVAULTS_AUTH_APP_ID } from "./SCHEMAVAULTS_AUTH_APP_ID";
 
 export {
+  getTokenAudienceForApiServerId,
+  getApiServerIdForTokenAudience,
+} from "./audience-translation";
+
+export {
   getHardcodedAppIdsForHardcodedApiServer,
   getHardcodedApiServerIdsAllowedForHardcodedApp,
   hasHardcodedAppToApiPermission,
