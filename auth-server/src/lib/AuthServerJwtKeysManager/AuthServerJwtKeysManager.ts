@@ -13,6 +13,7 @@ import {
 import {
   type ApiServerId,
   apiServerIdSchema,
+  getAppEnvironment,
 } from "@schemavaults/app-definitions";
 import isValidUuid from "@/lib/is-valid-uuid";
 
@@ -51,6 +52,7 @@ export class AuthServerJwtKeysManager
       keyset_expiry:
         Date.now() + AuthServerJwtKeysManager.keyset_valid_duration_ms,
       audience_id,
+      environment: getAppEnvironment(),
     });
 
     if (!this.isValidKeysetId(newKeySet.keyset_id)) {

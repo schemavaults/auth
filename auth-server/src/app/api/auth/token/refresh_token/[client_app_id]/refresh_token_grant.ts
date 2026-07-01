@@ -26,6 +26,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 import validateAudience from "@/lib/validate-audience";
 import {
+  getApiServerIdForTokenAudience,
   getAppEnvironment,
   SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
@@ -93,7 +94,12 @@ export async function handleRefreshTokenGrant(
       },
     );
   }
-  if (refresh_token_audience_id !== SCHEMAVAULTS_AUTH_APP_ID) {
+  // The token `aud` claim is the auth server URL; translate it back to the
+  // stable app id before validating it identifies the auth server.
+  if (
+    getApiServerIdForTokenAudience(refresh_token_audience_id, environment) !==
+    SCHEMAVAULTS_AUTH_APP_ID
+  ) {
     return NextResponse.json(
       {
         success: false,

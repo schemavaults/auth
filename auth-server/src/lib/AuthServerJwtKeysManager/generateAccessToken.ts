@@ -4,6 +4,7 @@ import {
   appIdSchema,
   type ApiServerId,
   apiServerIdSchema,
+  getTokenAudienceForApiServerId,
 } from "@schemavaults/app-definitions";
 import type AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import { type I_JWT_Keys, JWT_Factory } from "@schemavaults/jwt";
@@ -34,6 +35,9 @@ export default async function generateAccessToken({
     throw new TypeError("Invalid audience ID");
   }
 
+  // Keysets are stored/looked-up by the stable api server id, but the token
+  // `aud` claim uses the token audience form (the auth server URL for the auth
+  // app; the api server id verbatim for resource servers).
   const appropriate_jwt_keys: I_JWT_Keys =
     await auth_jwt_manager.getFreshEnoughKeysetOrCreateNew(audience_id);
   const jwt_factory = new JWT_Factory({
@@ -43,6 +47,8 @@ export default async function generateAccessToken({
     environment,
     jwt_keys: appropriate_jwt_keys,
   });
-  const token: AccessToken = await jwt_factory.access(audience_id);
+  const token: AccessToken = await jwt_factory.access(
+    getTokenAudienceForApiServerId(audience_id, environment),
+  );
   return token;
 }

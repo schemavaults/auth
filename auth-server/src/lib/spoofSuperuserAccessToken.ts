@@ -1,6 +1,6 @@
 import "server-only";
 
-import { type ApiServerId, type AppId, getAppEnvironment } from "@schemavaults/app-definitions";
+import { type ApiServerId, type AppId, getAppEnvironment, getTokenAudienceForApiServerId } from "@schemavaults/app-definitions";
 import { JWT_Factory } from "@schemavaults/jwt";
 import { AuthServerJwtKeysManager } from "@/lib/AuthServerJwtKeysManager";
 import type { Kysely } from "@schemavaults/dbh";
@@ -36,7 +36,9 @@ export default async function spoofSuperuserAccessToken(
     user_organizations: [SCHEMAVAULTS_ORGANIZATION_ID]
   });
 
-  const new_spoofed_access_token: AccessToken = await jwt_factory.access(audience_id);
+  const new_spoofed_access_token: AccessToken = await jwt_factory.access(
+    getTokenAudienceForApiServerId(audience_id, getAppEnvironment()),
+  );
 
   return new_spoofed_access_token;
 }
