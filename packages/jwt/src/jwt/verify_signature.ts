@@ -7,9 +7,11 @@ import {
   ProtectedHeaderParameters,
 } from "jose";
 import { JWT_Keys } from "./jwt_keys";
-import getIssuer from "./get_issuer";
 import type { AuthTokenTypes } from "@schemavaults/auth-common";
-import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  getAuthServerUrl,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import isValidUuid from "@/utils/isValidUuid";
 import signVerifyAlg from "./sign_verify_alg";
 
@@ -21,6 +23,7 @@ interface BaseVerifyJWTSignatureInputOptions<TokenType extends AuthTokenTypes> {
   sub: string;
   uid: string;
   env: SchemaVaultsAppEnvironment;
+  auth_server_url?: string;
   jti?: string;
 }
 
@@ -43,6 +46,8 @@ export type VerifyJWTSignatureInputOptions<TokenType extends AuthTokenTypes> =
 
 export async function verifyJWTSignature<TokenType extends AuthTokenTypes>({
   jwt,
+  env,
+  auth_server_url = getAuthServerUrl(env),
   ...opts
 }: VerifyJWTSignatureInputOptions<TokenType>): Promise<boolean> {
   if (typeof opts.aud !== "string") {
@@ -116,7 +121,11 @@ export async function verifyJWTSignature<TokenType extends AuthTokenTypes>({
     );
   }
 
-  const issuer: string = getIssuer(opts.env);
+  if (typeof auth_server_url !== "string" || auth_server_url.length === 0) {
+    throw new TypeError(
+      "Missing 'auth_server_url' to use as 'iss' claim verifier!",
+    );
+  }
 
   try {
     const verify_result: JWTVerifyResult<JWTPayload> = await jwtVerify(
@@ -124,7 +133,7 @@ export async function verifyJWTSignature<TokenType extends AuthTokenTypes>({
       verification_key,
       {
         audience: opts.aud,
-        issuer,
+        issuer: auth_server_url,
         subject: opts.sub,
         algorithms: [signVerifyAlg],
       },
@@ -134,11 +143,11 @@ export async function verifyJWTSignature<TokenType extends AuthTokenTypes>({
       throw new Error("Decoded payload does not match input audience!");
     }
 
-    if (verify_result.payload.iss !== issuer) {
+    if (verify_result.payload.iss !== auth_server_url) {
       throw new Error("Unexpected 'iss' claim in signature token!");
     }
 
-    if (verify_result.payload.env !== opts.env) {
+    if (verify_result.payload.env !== env) {
       throw new Error("App environment mismatch!");
     }
 

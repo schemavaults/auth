@@ -7,17 +7,16 @@ import {
 } from "jose";
 import type { I_JWT_Keys } from "./jwt_keys";
 import getRefreshTokenAudience from "./get_refresh_token_audience";
-import getIssuer from "./get_issuer";
 import { getExpiryDurationString } from "./expiry";
 import { type CustomJWTPayload, createJwtPayloadSchema } from "./payload_data";
 import type { AuthTokenTypes, UserData } from "@schemavaults/auth-common";
 import {
-  apiServerIdSchema,
   getAppEnvironment,
   getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
+import { createAudienceSchema } from "@schemavaults/auth-common";
 import { verifyJWTSignature } from "./verify_signature";
 import { z, type SafeParseReturnType } from "zod";
 import isValidUuid from "@/utils/isValidUuid";
@@ -154,7 +153,8 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     if (
       !decoded_header.aud ||
       typeof decoded_header.aud !== "string" ||
-      !apiServerIdSchema.safeParse(decoded_header.aud).success
+      !createAudienceSchema(z, environment).safeParse(decoded_header.aud)
+        .success
     ) {
       throw new Error("Invalid audience in JWT header");
     }
@@ -202,11 +202,9 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     });
   }
 
-  const issuer: string = getIssuer(environment);
-
   const decoded: JWTDecryptResult = await jwtDecrypt(jwt, decryption_key, {
     audience: aud,
-    issuer,
+    issuer: auth_server_url,
     maxTokenAge,
     currentDate: decodeTime,
   });
@@ -319,6 +317,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       sub,
       uid,
       env: environment,
+      auth_server_url,
       ...(payload.jti ? { jti: payload.jti } : {}),
     });
     if (!isValidSig) {

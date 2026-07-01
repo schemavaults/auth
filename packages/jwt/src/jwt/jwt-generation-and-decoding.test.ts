@@ -6,6 +6,7 @@ import { type UserData } from "@schemavaults/auth-common";
 import getRefreshTokenAudience from "./get_refresh_token_audience";
 import {
   getAuthServerUrl,
+  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
@@ -21,7 +22,7 @@ describe("JWT Generation & Decoding", () => {
     const now = Date.now();
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: auth_server_url,
+      audience_id: SCHEMAVAULTS_AUTH_APP_ID,
       environment,
     });
 
@@ -31,7 +32,7 @@ describe("JWT Generation & Decoding", () => {
       user,
       audience,
       iat: now,
-      client_app_id: auth_server_url,
+      client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
       auth_server_url,
       jwt_keys,
       env,
@@ -53,11 +54,11 @@ describe("JWT Generation & Decoding", () => {
     const user = new MockUser();
     const now = Date.now();
 
-    const client_app_id = auth_server_url;
+    const client_app_id = SCHEMAVAULTS_AUTH_APP_ID;
     const audience: string = getAuthServerUrl(env);
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: audience,
+      audience_id: SCHEMAVAULTS_AUTH_APP_ID,
       environment,
     });
 
@@ -91,7 +92,7 @@ describe("JWT Generation & Decoding", () => {
     const now = Date.now();
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: auth_server_url,
+      audience_id: SCHEMAVAULTS_AUTH_APP_ID,
       environment,
     });
 
@@ -101,7 +102,7 @@ describe("JWT Generation & Decoding", () => {
       user,
       audience,
       iat: now,
-      client_app_id: auth_server_url,
+      client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
       auth_server_url,
       jwt_keys,
       env,
@@ -128,11 +129,11 @@ describe("JWT Generation & Decoding", () => {
     const user = new MockUser();
     const now = Date.now();
 
-    const client_app_id = auth_server_url;
+    const client_app_id = SCHEMAVAULTS_AUTH_APP_ID;
     const audience = getAuthServerUrl(env);
 
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: audience,
+      audience_id: SCHEMAVAULTS_AUTH_APP_ID,
       environment,
     });
 
@@ -167,7 +168,7 @@ describe("JWT Generation & Decoding", () => {
     const user: UserData = new MockUser();
     const now = Date.now();
 
-    const auth_app_id = auth_server_url;
+    const auth_app_id = SCHEMAVAULTS_AUTH_APP_ID;
 
     const jwt_keys_for_auth_app: JWT_Keys = await generateNewJwtKeySet({
       audience_id: auth_app_id,
@@ -242,7 +243,7 @@ describe("JWT Generation & Decoding", () => {
     const now = Date.now();
 
     const jwt_keys_for_auth_server = await generateNewJwtKeySet({
-      audience_id: auth_server_url,
+      audience_id: SCHEMAVAULTS_AUTH_APP_ID,
       environment,
     });
 

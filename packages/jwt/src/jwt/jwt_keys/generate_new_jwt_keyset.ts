@@ -1,10 +1,11 @@
-import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  apiServerIdSchema,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import ContentEncryptionKeyPairFactory from "./ContentEncryptionKeyPairFactory";
 import JWT_Keys from "./jwt_keys";
 import SigningKeyPairFactory from "./SigningKeyPairFactory";
 import isValidUuid from "@/utils/isValidUuid";
-import { createAudienceSchema } from "@schemavaults/auth-common";
-import { z } from "zod";
 
 /**
  * @name generateJwtSigningKeyPair
@@ -76,9 +77,10 @@ export async function generateNewJwtKeySet(
     });
   }
 
-  const audienceSchema = createAudienceSchema(z, opts.environment);
-
-  const parsedAudience = await audienceSchema.safeParseAsync(audience_id);
+  // Keysets are stored and looked up by the stable api server id (e.g. the auth
+  // app id "schemavaults-auth", or a resource API server UUID).
+  // The URL only appears in token `aud` claims, derived from this id via getTokenAudienceForApiServerId().
+  const parsedAudience = apiServerIdSchema.safeParse(audience_id);
   if (!parsedAudience.success) {
     throw new TypeError(
       `Invalid audience ID: '${audience_id}'.` +

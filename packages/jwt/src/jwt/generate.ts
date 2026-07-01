@@ -1,7 +1,6 @@
 import { EncryptJWT, type CryptoKey } from "jose";
 import type { I_JWT_Keys } from "./jwt_keys";
 import { alg, enc } from "./encrypt_decrypt_alg";
-import getIssuer from "./get_issuer";
 import getRefreshTokenAudience from "./get_refresh_token_audience";
 import { getExpiryDurationString, getExpiryTime } from "./expiry";
 import type { CustomJWTPayload } from "./payload_data";
@@ -15,8 +14,11 @@ import {
 import { signJWT } from "./sign";
 import {
   apiServerIdSchema,
+  getTokenAudienceForApiServerId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import { createAudienceSchema } from "@schemavaults/auth-common";
+import { z } from "zod";
 import isValidUuid from "@/utils/isValidUuid";
 
 interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
@@ -99,9 +101,9 @@ export async function generateJWT<T extends AuthTokenTypes>(
       throw new TypeError("An audience must be supplied for access tokens");
     }
 
-    if (!apiServerIdSchema.safeParse(audience).success) {
+    if (!createAudienceSchema(z, opts.env).safeParse(audience).success) {
       throw new TypeError(
-        "Invalid audience provided; not a valid API server ID!",
+        "Invalid audience provided; not a valid token audience!",
       );
     }
 
@@ -123,9 +125,16 @@ export async function generateJWT<T extends AuthTokenTypes>(
       );
     }
 
-    if (keyset_audience_id !== aud) {
+    // The keyset is stored/looked-up by the stable api server id (e.g. the auth
+    // app id "schemavaults-auth"), but the token `aud` claim uses the token
+    // audience form (the auth server URL). Translate before comparing.
+    const keyset_token_audience: string = getTokenAudienceForApiServerId(
+      keyset_audience_id,
+      opts.env,
+    );
+    if (keyset_token_audience !== aud) {
       throw new Error(
-        `JWT keyset audience ID '${keyset_audience_id}' does not match requested token audience ID '${aud}'`,
+        `JWT keyset audience ID '${keyset_audience_id}' (token audience '${keyset_token_audience}') does not match requested token audience '${aud}'`,
       );
     }
   }
@@ -180,6 +189,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
       email,
       type,
       env,
+      auth_server_url,
       jti,
     });
   } catch (e: unknown) {
