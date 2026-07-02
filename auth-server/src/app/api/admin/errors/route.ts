@@ -2,7 +2,7 @@ import "server-only";
 
 import { type ResourceCreationResponse } from "@/lib/auth-db";
 import { deleteErrorsBefore } from "@/lib/auth-db/errors";
-import { type NextRequest, NextResponse } from "next/server";
+import { connection, type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
   type IProtectedAdminApiRouteProps,
@@ -110,6 +110,7 @@ async function DELETE_errors_before_handler(
 }
 
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
+  await connection();
   const protected_route = await withAdminApiRouteGuard(
     async (opts: IProtectedAdminApiRouteProps): Promise<NextResponse> =>
       await DELETE_errors_before_handler(opts, req),
