@@ -1,5 +1,5 @@
 import "server-only";
-import { type NextRequest, NextResponse } from "next/server";
+import { connection, type NextRequest, NextResponse } from "next/server";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
@@ -16,6 +16,7 @@ export async function GET(
   request: NextRequest,
   props: { params: Promise<{ organization_id: string; uid: string }> }
 ): Promise<NextResponse> {
+  await connection();
   const { organization_id: raw_org_id, uid } = await props.params;
 
   // Validate organization_id
@@ -136,3 +137,5 @@ export async function GET(
     );
   }
 }
+
+export const dynamic = "force-dynamic";
