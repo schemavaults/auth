@@ -1,12 +1,13 @@
 import "server-only";
 
-import { type NextRequest, NextResponse } from "next/server";
+import { connection, type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import { OrganizationsRegistry } from "@/lib/auth-db";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import captureServerException from "@/lib/captureServerException";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  await connection();
   const protected_route = await withAuthenticatedApiRouteGuard(async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps) => {
     const organizationsRegistry = new OrganizationsRegistry(dbh.db);
 
@@ -39,3 +40,5 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   });
   return await protected_route(req);
 }
+
+export const dynamic = "force-dynamic";
