@@ -36,7 +36,8 @@ describe("Token Revocation on Logout", () => {
             url: `/api/auth/token/refresh_token/${APP_ID}`,
             body: {
               grant_type: "refresh_token",
-              audience: APP_ID,
+              // token audiences use the auth server URL, not the app id
+              audience: Cypress.env("AUTH_SERVER_URL"),
               client_app_id: APP_ID,
             },
             headers: {
