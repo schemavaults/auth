@@ -76,7 +76,10 @@ export async function handleRefreshTokenGrant(
 
   let refresh_token_audience_id: string;
   try {
-    refresh_token_audience_id = getAudienceFromToken(refresh_token);
+    refresh_token_audience_id = getAudienceFromToken(
+      refresh_token,
+      environment,
+    );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
       op_name: "handleRefreshTokenGrant.getAudienceFromToken",

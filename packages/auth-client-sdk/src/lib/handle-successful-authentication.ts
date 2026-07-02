@@ -3,7 +3,7 @@ import {
   createAuthorizationCodePOSTBodySchema,
   PKCE_ProofKeyManager,
   type RefreshToken,
-  requestTokensResultSchema,
+  createRequestTokensResultSchema,
   type UserData,
 } from "@schemavaults/auth-common";
 import debugPrintTokensAsTable from "./debugPrintTokensAsTable";
@@ -340,9 +340,10 @@ export async function handleSuccessfulAuthentication({
   let refresh_token_expiry: number | undefined;
   let user: UserData;
   try {
-    const tokens_data = await requestTokensResultSchema.safeParseAsync(
-      await response.json(),
-    );
+    const tokens_data = await createRequestTokensResultSchema(
+      z,
+      environment,
+    ).safeParseAsync(await response.json());
     if (!tokens_data.success) {
       console.error(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] " +

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   type AccessToken,
   type AuthTokenTypes,
@@ -5,7 +6,7 @@ import {
   type UserData,
   type AuthToken,
   type RequestTokensResult,
-  audienceSchema,
+  createAudienceSchema,
   type OrganizationID,
   organizationIdSchema,
 } from "@schemavaults/auth-common";
@@ -132,7 +133,10 @@ export class JWT_Factory {
     } else if (type === "access" && aud === this.auth_server_url) {
       // Always allow audience to be the auth server
     } else {
-      const parsed_as_uuid_aud = await audienceSchema.safeParseAsync(aud);
+      const parsed_as_uuid_aud = await createAudienceSchema(
+        z,
+        this.environment,
+      ).safeParseAsync(aud);
       if (!parsed_as_uuid_aud.success) {
         throw new Error(
           "Expected audience to reference a valid app, API, or FS server!",

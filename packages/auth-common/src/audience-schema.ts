@@ -5,7 +5,12 @@ import {
   SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { z as zod } from "zod";
+import type { z as zod } from "zod";
+
+// NOTE: Do not add module-scope `createAudienceSchema(...)` results here. The
+// factories below read SCHEMAVAULTS_APP_ENVIRONMENT (via getAppEnvironment())
+// and the auth-server URL, which are runtime concerns; eager module-scope
+// initialization breaks `next build` in Docker where those env vars are unset.
 
 export function createAudienceSchema(
   z: typeof zod,
@@ -30,8 +35,6 @@ export function createAudienceSchema(
   return z.union([authServerUrlSchema, apiServerIdWithoutAuthServerIdSchema]);
 }
 
-export const audienceSchema = createAudienceSchema(zod);
-
 const MAX_APPS_IN_AUDIENCE_LIST = 10 as const satisfies number;
 
 export function createAudienceListSchema(
@@ -46,5 +49,3 @@ export function createAudienceListSchema(
       `Audience list may not contain more than ${MAX_APPS_IN_AUDIENCE_LIST} audience references.`,
     );
 }
-
-export const audienceListSchema = createAudienceListSchema(zod);

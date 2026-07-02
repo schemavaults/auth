@@ -9,10 +9,11 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
+import { z } from "zod";
 import {
   type AccessToken,
   type RefreshToken,
-  requestTokensResultSchema,
+  createRequestTokensResultSchema,
   type RequestTokensResult,
   type UserData,
   organizationIdSchema,
@@ -88,7 +89,10 @@ export default async function generateTokensForAuthenticatedUser({
     });
   }
 
-  const parsed_tokens_result = requestTokensResultSchema.safeParse({
+  const parsed_tokens_result = createRequestTokensResultSchema(
+    z,
+    environment,
+  ).safeParse({
     message: `Generated token(s) for user '${user.uid}'`,
     success: true,
     error: false,
