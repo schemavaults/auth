@@ -22,10 +22,10 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  Wordmark,
   useForm,
   ThemedPageBackground,
 } from "@schemavaults/ui";
+import { Wordmark } from "@/components/Wordmark";
 import Link from "next/link";
 
 const requestVerifyEmailSchema = z.object({

@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import "@schemavaults/theme/globals.css";
 
 import { inter } from "./fonts/Inter";
+import { AuthServerFriendlyNameProvider } from "@/components/Wordmark";
+import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 
 export const metadata: Metadata = {
   title: "SchemaVaults Auth",
@@ -34,7 +36,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           "no-scrollbar"
         ].join(" ")}
       >
-        {children}
+        <AuthServerFriendlyNameProvider
+          friendly_name={getAuthServerFriendlyName()}
+        >
+          {children}
+        </AuthServerFriendlyNameProvider>
       </body>
     </html>
   );

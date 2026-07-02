@@ -30,7 +30,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@schemavaults/ui";
-import { Wordmark, useForm } from "@schemavaults/ui";
+import { useForm } from "@schemavaults/ui";
+import { Wordmark } from "@/components/Wordmark";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";

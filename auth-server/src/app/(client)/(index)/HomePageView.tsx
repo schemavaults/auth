@@ -10,8 +10,8 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-  Wordmark,
 } from "@schemavaults/ui";
+import { Wordmark } from "@/components/Wordmark";
 import { HelpCircle } from "lucide-react";
 import Link from "next/link";
 import type { ReactElement } from "react";
