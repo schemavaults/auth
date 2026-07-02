@@ -91,7 +91,7 @@ jobs:
 
       - name: Run Tests with Docker Compose
         run: |
-          bun run cli e2e ${{ inputs.test-suite-name }}${{ runner.debug == '1' && ' --verbose' || '' }}${{ inputs.skip-docker-build && ' --skip-build' || '' }}
+          bun run cli e2e ${{ inputs.test-suite-name }} --verbose${{ inputs.skip-docker-build && ' --skip-build' || '' }}
         working-directory: tests/e2e-auth-tests
 
       - name: Check if screenshots directory exists
