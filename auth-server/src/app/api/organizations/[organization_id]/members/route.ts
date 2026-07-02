@@ -1,5 +1,5 @@
 import "server-only";
-import { NextResponse, type NextRequest } from "next/server";
+import { connection, NextResponse, type NextRequest } from "next/server";
 import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
@@ -79,7 +79,12 @@ async function GET_organization_members_handler(
 }
 
 export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return (await withAuthenticatedApiRouteGuard(
+  await connection();
+  const handler = await withAuthenticatedApiRouteGuard(
     (props) => GET_organization_members_handler(props, context),
-  ))(req);
+  );
+
+  return await handler(req);
 }
+
+export const dynamic = "force-dynamic"; // defaults to auto

@@ -1,5 +1,5 @@
 import "server-only";
-import { NextResponse, type NextRequest } from "next/server";
+import { connection, NextResponse, type NextRequest } from "next/server";
 import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
@@ -17,16 +17,20 @@ interface UpdateRoleRequestBody {
 }
 
 export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return (await withAuthenticatedApiRouteGuard(
+  await connection();
+  const handler = await withAuthenticatedApiRouteGuard(
     async (props: IProtectedAuthenticatedApiRouteProps) => {
       const { organization_id, uid } = await context.params;
       return await GET_member_role_handler(props, organization_id, uid);
     },
-  ))(req);
+  )
+
+  return await handler(req);
 }
 
 export async function PATCH(req: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return (await withAuthenticatedApiRouteGuard(
+  await connection();
+  const handler = await withAuthenticatedApiRouteGuard(
     async (props: IProtectedAuthenticatedApiRouteProps) => {
       let body: UpdateRoleRequestBody;
       try {
@@ -48,5 +52,9 @@ export async function PATCH(req: NextRequest, context: RouteContext): Promise<Ne
 
       return await PATCH_member_role_handler(props, organization_id, uid, body.role);
     },
-  ))(req);
+  )
+
+  return await handler(req);
 }
+
+export const dynamic = "force-dynamic"; // defaults to auto
