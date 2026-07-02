@@ -2,7 +2,7 @@ import "server-only";
 import { withAuthenticatedApiRouteGuard } from "@schemavaults/auth-server-sdk";
 import { connection, type NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   await connection();
   const protected_route = withAuthenticatedApiRouteGuard(async () => {
     return NextResponse.json(
