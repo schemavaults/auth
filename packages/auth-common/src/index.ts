@@ -40,9 +40,9 @@ export {
 
 export * from "./mfa";
 export {
-  requestTokensResultSchema,
+  createRequestTokensResultSchema,
   type RequestTokensResult,
-  successfullyGeneratedTokensRecordSchema,
+  createSuccessfullyGeneratedTokensRecordSchema,
   type SuccessfullyGeneratedTokensRecord,
 } from "./request_tokens_result";
 
@@ -54,9 +54,7 @@ export { appIdSchema } from "@schemavaults/app-definitions";
 
 export {
   createAudienceSchema,
-  audienceSchema,
   createAudienceListSchema,
-  audienceListSchema,
 } from "./audience-schema";
 
 export {

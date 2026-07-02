@@ -1,4 +1,5 @@
 import type { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   AuthMiddleware,
   type AuthMiddlewareResult,
@@ -7,7 +8,7 @@ import {
   determineAuthStatus,
   type AuthMiddlewareRules,
   type PotentiallyValidTokenSource,
-  audienceSchema,
+  createAudienceSchema,
   type DecodeTokenFn,
   type AuthMiddlewareError,
 } from "@schemavaults/auth-common";
@@ -172,8 +173,10 @@ class AuthJwtValidationMiddleware
     }
 
     const jwt_audience = this.audience;
-    const parsed_jwt_audience =
-      await audienceSchema.safeParseAsync(jwt_audience);
+    const parsed_jwt_audience = await createAudienceSchema(
+      z,
+      this.environment,
+    ).safeParseAsync(jwt_audience);
     if (!parsed_jwt_audience.success) {
       console.error(parsed_jwt_audience.error);
       throw new Error(

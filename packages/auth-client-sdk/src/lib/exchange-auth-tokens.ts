@@ -7,7 +7,7 @@ import {
   type RefreshToken,
   createRefreshTokenPOSTBodySchema,
   type RequestTokensResult,
-  requestTokensResultSchema,
+  createRequestTokensResultSchema,
   type SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
 import { z } from "zod";
@@ -186,9 +186,10 @@ export async function exchangeAuthTokens({
       );
     }
 
-    const parsed_tokens_result = await requestTokensResultSchema.safeParseAsync(
-      await response.json(),
-    );
+    const parsed_tokens_result = await createRequestTokensResultSchema(
+      z,
+      environment,
+    ).safeParseAsync(await response.json());
     if (!parsed_tokens_result.success) {
       console.error(
         "Failed to parse tokens response from server: ",

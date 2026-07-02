@@ -18,7 +18,7 @@ export function createJwtPayloadSchema(
       sub: z.string().uuid(),
       email: z.string().email(),
       email_verified: z.boolean(),
-      aud: createAudienceSchema(z), // Backend resource API UUID, either auth server url or a registered api server's unique UUID
+      aud: createAudienceSchema(z, environment), // Backend resource API UUID, either auth server url or a registered api server's unique UUID
       app: appIdSchema, // Frontend client app UUID, either auth server url or a registered app's unique UUID
       admin: z.boolean(),
       disabled: z.boolean(),

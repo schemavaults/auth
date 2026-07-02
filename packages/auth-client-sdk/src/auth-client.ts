@@ -1,6 +1,7 @@
 // auth-client.ts
 // @schemavaults/auth-client-sdk
 
+import { z } from "zod";
 import {
   PKCE_ProofKeyManager,
   type CodeVerifierWithDetails,
@@ -8,7 +9,8 @@ import {
   type UserData,
   type AccessToken,
   type RefreshToken,
-  audienceSchema,
+  createAudienceSchema,
+  createAudienceListSchema,
   type SuccessfullyGeneratedTokensRecord,
   type AuthenticateResult,
   type MfaFactorType,
@@ -590,7 +592,13 @@ export class SchemaVaultsAuthClient
       return [];
     }
 
-    const parsed = audienceSchema.safeParse(
+    // Created lazily (not at module scope) so that the app environment and
+    // auth-server URL are resolved at call time from this client's config.
+    const defaultTokenAudiencesSchema = z.union([
+      createAudienceSchema(z, this.environment),
+      createAudienceListSchema(z, this.environment),
+    ]);
+    const parsed = defaultTokenAudiencesSchema.safeParse(
       defaults.length === 1 ? defaults[0] : defaults,
     );
     if (!parsed.success) {
@@ -1179,6 +1187,7 @@ export class SchemaVaultsAuthClient
       storeMultipleAccessTokens: this.storeMultipleAccessTokens.bind(this),
       adapter: this.adapter,
       debug: this.debug,
+      environment: this.environment,
     });
   }
 
