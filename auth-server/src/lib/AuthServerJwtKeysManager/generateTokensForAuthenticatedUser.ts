@@ -4,6 +4,8 @@
 
 import {
   SCHEMAVAULTS_AUTH_APP_ID,
+  getApiServerIdForTokenAudience,
+  getTokenAudienceForApiServerId,
   type ApiServerId,
   type AppId,
   type SchemaVaultsAppEnvironment,
@@ -37,7 +39,8 @@ export interface ITokenIssuanceTracking {
 export interface IGenerateTokensForAuthenticatedUserOpts {
   auth_jwt_manager: AuthServerJwtKeysManager;
   client_app_id: AppId;
-  audiences: readonly ApiServerId[];
+  /** Requested audiences in token-audience form (auth server URL, or api server id) */
+  audiences: readonly string[];
   user: UserData;
   user_organizations: readonly string[];
   environment: SchemaVaultsAppEnvironment;
@@ -77,9 +80,21 @@ export default async function generateTokensForAuthenticatedUser({
     });
   }
 
+  // Requested audiences arrive in token-audience form (the auth server URL,
+  // or an api server id verbatim). Keyset lookups need the stable api server
+  // id, while the response record is keyed by the canonical token audience —
+  // that's the key clients use to look up the token they requested.
   const access_tokens: Record<string, AccessToken> = {};
-  for (const audience_id of audiences) {
-    access_tokens[audience_id] = await generateAccessToken({
+  for (const audience of audiences) {
+    const audience_id: ApiServerId = getApiServerIdForTokenAudience(
+      audience,
+      environment,
+    );
+    const token_audience: string = getTokenAudienceForApiServerId(
+      audience_id,
+      environment,
+    );
+    access_tokens[token_audience] = await generateAccessToken({
       client_app_id,
       auth_jwt_manager,
       user,
@@ -127,14 +142,15 @@ export default async function generateTokensForAuthenticatedUser({
           expires_at: refresh_token.exp,
         });
       }
-      for (const [audience_id, access] of Object.entries(access_tokens)) {
+      for (const [token_audience, access] of Object.entries(access_tokens)) {
         if (!access.jti) continue;
         rows.push({
           jti: access.jti,
           uid: user.uid,
           token_type: "access",
           client_app_id,
-          audience: audience_id,
+          // issued-token rows are tracked by the stable api server id
+          audience: getApiServerIdForTokenAudience(token_audience, environment),
           grant_type: tracking.grant_type,
           issued_at: access.iat,
           expires_at: access.exp,
