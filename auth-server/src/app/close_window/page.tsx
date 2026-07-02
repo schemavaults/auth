@@ -1,6 +1,7 @@
 "use client";
 
-import { Separator, Wordmark } from "@schemavaults/ui";
+import { Separator } from "@schemavaults/ui";
+import { Wordmark } from "@/components/Wordmark";
 import { useEffect, type ReactElement } from "react";
 
 function CloseWindowNowPage(): ReactElement {

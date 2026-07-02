@@ -4,8 +4,8 @@ import Logo from "@/components/Logo";
 import {
   DashboardLayout,
   type DashboardSidebarItemsAndGroupsDefinitions,
-  Wordmark,
 } from "@schemavaults/ui";
+import { Wordmark } from "@/components/Wordmark";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, type PropsWithChildren, type ReactElement } from "react";

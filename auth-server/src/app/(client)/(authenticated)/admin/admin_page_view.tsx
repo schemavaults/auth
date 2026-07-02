@@ -7,11 +7,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Wordmark,
   useToast,
   type DashboardSidebarItemDefinition,
   type DashboardSidebarItemGroupDefinition,
 } from "@schemavaults/ui";
+import { Wordmark } from "@/components/Wordmark";
 import { Send } from "lucide-react";
 import Link from "next/link";
 import { type ReactElement, useCallback, useTransition } from "react";
