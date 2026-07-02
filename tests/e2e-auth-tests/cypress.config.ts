@@ -5,6 +5,7 @@ import {
   SignJWT,
   type JWTPayload,
 } from "@schemavaults/jwt";
+import { getAuthServerUrl } from "@schemavaults/app-definitions";
 import {
   NobleCryptoPlugin,
   ScureBase32Plugin,
@@ -30,6 +31,19 @@ const totpTestGuardrails = createGuardrails({ MIN_SECRET_BYTES: 10 });
 
 const devAuthServer: string = "http://localhost:6767";
 
+// The auth server URL is the token audience/issuer for auth-server tokens and
+// the `aud` claim of JWKS access proof tokens. Resolved here (Node context)
+// because getAppEnvironment() throws in the specs' browser context; specs read
+// it via Cypress.env("AUTH_SERVER_URL"). Falls back to the local dev server
+// when no SCHEMAVAULTS_APP_ENVIRONMENT/NODE_ENV is configured (bun run open).
+function resolveAuthServerUrl(): string {
+  try {
+    return getAuthServerUrl();
+  } catch {
+    return devAuthServer;
+  }
+}
+
 export default defineConfig({
   e2e: {
     baseUrl: devAuthServer,
@@ -45,6 +59,7 @@ export default defineConfig({
           const privateKey = await importPKCS8(private_key_pem, "RS256");
           return createJwksAccessProofToken({
             api_server_id,
+            auth_server_url: resolveAuthServerUrl(),
             private_key: privateKey,
           });
         },
@@ -149,6 +164,7 @@ export default defineConfig({
     PRIVATE_SUPERUSER_INVITE_CODE: "superuser",
     PRIVATE_SUPERUSER_EMAIL: "admin@schemavaults.com",
     PRIVATE_SUPERUSER_PASSWORD: "Password123!",
+    AUTH_SERVER_URL: resolveAuthServerUrl(),
     SCHEMAVAULTS_APP_ENVIRONMENT:
       process.env.SCHEMAVAULTS_APP_ENVIRONMENT ?? "development",
     TEST_SUITE_NAME: process.env.TEST_SUITE_NAME ?? "",

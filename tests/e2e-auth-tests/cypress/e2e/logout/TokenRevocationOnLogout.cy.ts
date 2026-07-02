@@ -1,9 +1,9 @@
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import {
   RefreshTokenCookieName,
 } from "@schemavaults/auth-common";
 
-const APP_ID = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+const APP_ID = SCHEMAVAULTS_AUTH_APP_ID;
 const REFRESH_TOKEN_COOKIE = RefreshTokenCookieName(APP_ID);
 
 describe("Token Revocation on Logout", () => {
