@@ -6,11 +6,12 @@ import "@schemavaults/theme/globals.css";
 import { inter } from "./fonts/Inter";
 import { AuthServerFriendlyNameProvider } from "@/components/Wordmark";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
+import getAuthServerDescription from "@/lib/config/auth-server-description";
 
 export function generateMetadata(): Metadata {
   return {
     title: getAuthServerFriendlyName(),
-    description: "Authentication and authorization for SchemaVaults",
+    description: getAuthServerDescription(),
   };
 }
 
