@@ -1,4 +1,5 @@
-import type { Metadata, ServerRuntime } from "next";
+import "server-only";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import "@schemavaults/theme/globals.css";
@@ -46,5 +47,3 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     </html>
   );
 }
-
-export const runtime: ServerRuntime = "edge";
