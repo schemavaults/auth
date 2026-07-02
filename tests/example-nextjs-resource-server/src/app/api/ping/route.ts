@@ -1,7 +1,9 @@
+import "server-only";
 import { withAuthenticatedApiRouteGuard } from "@schemavaults/auth-server-sdk";
-import { type NextRequest, NextResponse } from "next/server";
+import { connection, type NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
+  await connection();
   const protected_route = withAuthenticatedApiRouteGuard(async () => {
     return NextResponse.json(
       {
@@ -13,3 +15,5 @@ export async function POST(req: NextRequest) {
   }, {});
   return await protected_route(req);
 }
+
+export const dynamic = "force-dynamic";

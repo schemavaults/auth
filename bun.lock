@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.28.0",
+      "version": "0.28.3",
       "dependencies": {
         "@hookform/resolvers": "3.9.0",
         "@schemavaults/app-definitions": "workspace:*",
@@ -61,7 +61,7 @@
     },
     "packages/app-definitions": {
       "name": "@schemavaults/app-definitions",
-      "version": "0.8.0",
+      "version": "0.8.1",
       "dependencies": {
         "zod": "3.25.8",
       },
@@ -79,7 +79,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.12.0",
+      "version": "0.12.1",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -98,7 +98,7 @@
     },
     "packages/auth-common": {
       "name": "@schemavaults/auth-common",
-      "version": "0.14.0",
+      "version": "0.14.1",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "crypto-js": "4.2.0",
@@ -312,6 +312,7 @@
         "next": "16.2.6",
         "react": "19.2.6",
         "react-dom": "19.2.6",
+        "server-only": "0.0.1",
       },
       "devDependencies": {
         "@types/node": "24.4.0",
