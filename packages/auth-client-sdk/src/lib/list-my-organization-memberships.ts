@@ -5,7 +5,6 @@ import {
   type AccessToken,
   type OrganizationMembershipRoleDetails,
 } from "@schemavaults/auth-common";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import { z } from "zod";
 
 export interface IListMyOrganizationMembershipsOpts {
@@ -51,8 +50,9 @@ export async function listMyOrganizationMemberships({
     requestInit.credentials = "include";
   } else {
     // On an external app the auth-server's cookies are not available
-    // cross-origin; authenticate with a 'schemavaults-auth' access token.
-    const audience: "schemavaults-auth" = SCHEMAVAULTS_AUTH_APP_ID;
+    // cross-origin; authenticate with an access token addressed to the auth
+    // server. Its token audience is the auth server URL (not the app id).
+    const audience: string = auth_server_uri;
     let accessToken: AccessToken;
     try {
       accessToken = await acquireAccessToken({

@@ -9,6 +9,7 @@ import {
   apiServerIdSchema,
   type AppId,
   appIdSchema,
+  getApiServerIdForTokenAudience,
   SCHEMAVAULTS_AUTH_APP_ID,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -41,12 +42,14 @@ async function validateOneAudience(
     throw new TypeError("Expected 'uid', 'client_app_id', and 'audience' arguments to be strings");
   }
 
+  // Tokens for the auth server carry the (white-labellable) auth server URL
+  // as their audience; translate back to the stable app id before comparing.
+  // The bare app id form is also accepted for backwards compatibility.
   if (
-    client_app_id === SCHEMAVAULTS_AUTH_APP_ID &&
-    audience === SCHEMAVAULTS_AUTH_APP_ID
+    audience === SCHEMAVAULTS_AUTH_APP_ID ||
+    getApiServerIdForTokenAudience(audience, environment) ===
+      SCHEMAVAULTS_AUTH_APP_ID
   ) {
-    return "auth-server-only";
-  } else if (audience === SCHEMAVAULTS_AUTH_APP_ID) {
     return "auth-server-only";
   }
 
@@ -134,10 +137,17 @@ export async function validateAudience(
     throw new Error("Did not receive an audience to validate!");
   }
 
-  const audiences: ApiServerId[] = Array.isArray(audience) ? audience : [audience];
+  const audiences: string[] = Array.isArray(audience) ? [...audience] : [audience];
 
-  if (!(await apiServerIdSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
-    throw new TypeError("Invalid API server ID(s) in audiences array!")
+  // Audiences arrive in token-audience form (the auth server URL, or an api
+  // server id verbatim); the bare auth app id is also tolerated for backwards
+  // compatibility.
+  const singleAudienceSchema = z.union([
+    createAudienceSchema(z, environment),
+    z.literal(SCHEMAVAULTS_AUTH_APP_ID),
+  ]);
+  if (!(await singleAudienceSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
+    throw new TypeError("Invalid token audience(s) in audiences array!")
   }
 
   if (debug) {

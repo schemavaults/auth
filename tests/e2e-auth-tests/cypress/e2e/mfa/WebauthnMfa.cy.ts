@@ -1,4 +1,4 @@
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import { RefreshTokenCookieName } from "@schemavaults/auth-common";
 
 // Navigate to /auth/login, type credentials, submit. Mirrors the helper in
@@ -107,7 +107,7 @@ describeWebauthn("WebAuthn passkey MFA", () => {
 
         cy.url({ timeout: 15_000 }).should("include", "/account");
         cy.getCookie(
-          RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+          RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
         ).should("exist");
         cy.wait_for_page_hydration();
         cy.is_authenticated().should("be.true");

@@ -13,6 +13,7 @@ import {
 } from "@/JwtKeyManager";
 import {
   apiServerIdSchema,
+  getTokenAudienceForApiServerId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import getSchemavaultsApiServerId from "@/env/get-schemavaults-api-server-id";
@@ -51,6 +52,14 @@ export async function decodeJWTsWithKeyManager(
     );
   }
 
+  // `jwt_audience` is the stable api server id (used below for keyset
+  // lookups), but the token `aud` claim carries the token-audience form (the
+  // auth server URL for the auth app; the api server id verbatim otherwise).
+  const token_audience: string = getTokenAudienceForApiServerId(
+    jwt_audience,
+    environment,
+  );
+
   if (!keys_manager) {
     throw new TypeError(
       "Failed to resolve reference to JWT keys manager to load keys to perform decode!",
@@ -62,7 +71,7 @@ export async function decodeJWTsWithKeyManager(
     const user: UserData = await decodeJWTs(
       {
         token_sources,
-        jwt_audience,
+        jwt_audience: token_audience,
         decodeJWT: async (opts): Promise<UserData> => {
           const sourceHintLabel: string =
             typeof opts.sourceHint === "string" && opts.sourceHint.length > 0
