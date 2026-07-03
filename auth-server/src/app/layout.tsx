@@ -5,8 +5,10 @@ import "@schemavaults/theme/globals.css";
 
 import { inter } from "./fonts/Inter";
 import { AuthServerFriendlyNameProvider } from "@/components/Wordmark";
+import { AuthServerThemeColorsProvider } from "@/components/ThemeColors";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import getAuthServerDescription from "@/lib/config/auth-server-description";
+import getAuthServerThemeColors from "@/lib/config/auth-server-theme-colors";
 
 export function generateMetadata(): Metadata {
   return {
@@ -42,7 +44,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AuthServerFriendlyNameProvider
           friendly_name={getAuthServerFriendlyName()}
         >
-          {children}
+          <AuthServerThemeColorsProvider
+            theme_colors={getAuthServerThemeColors()}
+          >
+            {children}
+          </AuthServerThemeColorsProvider>
         </AuthServerFriendlyNameProvider>
       </body>
     </html>

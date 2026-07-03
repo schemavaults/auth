@@ -9,10 +9,10 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  ThemedPageBackground,
   cn,
   useToast,
 } from "@schemavaults/ui";
+import { ThemedPageBackground } from "@/components/ThemedPageBackground";
 import { useAuth, useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
