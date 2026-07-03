@@ -1,5 +1,6 @@
 import type { Metadata, ServerRuntime } from "next";
 import type { ReactNode } from "react";
+import { connection } from "next/server";
 
 import "@schemavaults/theme/globals.css";
 
@@ -19,7 +20,15 @@ export function generateMetadata(): Metadata {
   };
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  // Defer request-time env reads (getAuthServerUrl() resolves the app
+  // environment, which throws when SCHEMAVAULTS_APP_ENVIRONMENT is unset) out
+  // of static prerendering, matching the example resource server's root layout.
+  await connection();
   return (
     <html
       lang="en"
