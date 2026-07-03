@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.28.16",
+  "version": "0.28.17",
   "private": true,
   "repository": {
     "type": "git",
