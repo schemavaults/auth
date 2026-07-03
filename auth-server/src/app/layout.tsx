@@ -3,9 +3,11 @@ import type { ReactNode } from "react";
 
 import "@schemavaults/theme/globals.css";
 
+import { getAuthServerUrl } from "@schemavaults/app-definitions";
 import { inter } from "./fonts/Inter";
 import { AuthServerFriendlyNameProvider } from "@/components/Wordmark";
 import { AuthServerThemeColorsProvider } from "@/components/ThemeColors";
+import { AuthServerUrlProvider } from "@/components/AuthServerUrl";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import getAuthServerDescription from "@/lib/config/auth-server-description";
 import getAuthServerThemeColors from "@/lib/config/auth-server-theme-colors";
@@ -47,7 +49,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <AuthServerThemeColorsProvider
             theme_colors={getAuthServerThemeColors()}
           >
-            {children}
+            <AuthServerUrlProvider auth_server_url={getAuthServerUrl()}>
+              {children}
+            </AuthServerUrlProvider>
           </AuthServerThemeColorsProvider>
         </AuthServerFriendlyNameProvider>
       </body>
