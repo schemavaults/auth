@@ -1,11 +1,14 @@
 import type { Metadata, ServerRuntime } from "next";
 import type { ReactNode } from "react";
+import { connection } from "next/server";
 
 import "@schemavaults/theme/globals.css";
 
+import { getAuthServerUrl } from "@schemavaults/app-definitions";
 import { inter } from "./fonts/Inter";
 import { AuthServerFriendlyNameProvider } from "@/components/Wordmark";
 import { AuthServerThemeColorsProvider } from "@/components/ThemeColors";
+import { AuthServerUrlProvider } from "@/components/AuthServerUrl";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import getAuthServerDescription from "@/lib/config/auth-server-description";
 import getAuthServerThemeColors from "@/lib/config/auth-server-theme-colors";
@@ -17,7 +20,15 @@ export function generateMetadata(): Metadata {
   };
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  // Defer request-time env reads (getAuthServerUrl() resolves the app
+  // environment, which throws when SCHEMAVAULTS_APP_ENVIRONMENT is unset) out
+  // of static prerendering, matching the example resource server's root layout.
+  await connection();
   return (
     <html
       lang="en"
@@ -47,7 +58,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <AuthServerThemeColorsProvider
             theme_colors={getAuthServerThemeColors()}
           >
-            {children}
+            <AuthServerUrlProvider auth_server_url={getAuthServerUrl()}>
+              {children}
+            </AuthServerUrlProvider>
           </AuthServerThemeColorsProvider>
         </AuthServerFriendlyNameProvider>
       </body>
