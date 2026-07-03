@@ -23,9 +23,9 @@ import {
   CardHeader,
   CardTitle,
   useForm,
-  ThemedPageBackground,
 } from "@schemavaults/ui";
 import { Wordmark } from "@/components/Wordmark";
+import { ThemedPageBackground } from "@/components/ThemedPageBackground";
 import Link from "next/link";
 
 const requestVerifyEmailSchema = z.object({

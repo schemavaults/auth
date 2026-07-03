@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from "react";
 import {
-  ThemedPageBackground,
   Card,
   CardHeader,
   CardTitle,
@@ -22,6 +21,7 @@ import {
   Input,
   cn,
 } from "@schemavaults/ui";
+import { ThemedPageBackground } from "@/components/ThemedPageBackground";
 import { HelpCircle, Search } from "lucide-react";
 import Link from "next/link";
 import { AuthActionButtons } from "@schemavaults/auth-ui";

@@ -25,9 +25,9 @@ import {
   CardHeader,
   CardTitle,
   useForm,
-  ThemedPageBackground,
 } from "@schemavaults/ui";
 import { Wordmark } from "@/components/Wordmark";
+import { ThemedPageBackground } from "@/components/ThemedPageBackground";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
