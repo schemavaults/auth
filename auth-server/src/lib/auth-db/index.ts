@@ -23,6 +23,10 @@ export type * from "./issued-tokens";
 // For server-side functions, import directly from "@/lib/auth-db/server-settings"
 export type * from "./server-settings/types";
 
+// Only export types from branding to avoid pulling in server-only code
+// For server-side functions, import directly from "@/lib/auth-db/branding"
+export type * from "./branding/types";
+
 export type * from "./server-traces";
 
 export type * from "./errors";

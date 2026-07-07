@@ -12,11 +12,52 @@ import { AuthServerUrlProvider } from "@/components/AuthServerUrl";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import getAuthServerDescription from "@/lib/config/auth-server-description";
 import getAuthServerThemeColors from "@/lib/config/auth-server-theme-colors";
+import {
+  GENERATED_OPENGRAPH_IMAGE_WIDTH,
+  GENERATED_OPENGRAPH_IMAGE_HEIGHT,
+} from "@/lib/branding/generated-og-image";
+import { resolveBrandingMetadata } from "@/lib/branding/branding-metadata";
 
-export function generateMetadata(): Metadata {
+export async function generateMetadata(): Promise<Metadata> {
+  const title: string = getAuthServerFriendlyName();
+  const description: string = getAuthServerDescription();
+
+  // Branding images (favicon, app icon, opengraph image) are served by the
+  // /branding/[asset] route: administrator-uploaded assets from the database
+  // when present, bundled/generated white-label defaults otherwise. The URLs
+  // carry a ?v= content-hash version so browser/CDN caches bust on rebrand.
+  const branding = await resolveBrandingMetadata();
+
   return {
-    title: getAuthServerFriendlyName(),
-    description: getAuthServerDescription(),
+    title,
+    description,
+    ...(branding.metadataBase !== null
+      ? { metadataBase: branding.metadataBase }
+      : {}),
+    icons: {
+      icon: [{ url: branding.faviconUrl }, { url: branding.iconUrl }],
+      apple: [{ url: branding.iconUrl }],
+    },
+    openGraph: {
+      title,
+      description,
+      siteName: title,
+      images: [
+        branding.opengraphImageIsGenerated
+          ? {
+              url: branding.opengraphImageUrl,
+              width: GENERATED_OPENGRAPH_IMAGE_WIDTH,
+              height: GENERATED_OPENGRAPH_IMAGE_HEIGHT,
+            }
+          : { url: branding.opengraphImageUrl },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [branding.opengraphImageUrl],
+    },
   };
 }
 

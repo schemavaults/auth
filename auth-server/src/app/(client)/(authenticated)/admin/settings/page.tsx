@@ -9,6 +9,8 @@ import {
 import type { ServerRuntime } from "next";
 import { ServerSettingsRegistry } from "@/lib/auth-db/server-settings";
 import type { ServerSettingRecord } from "@/lib/auth-db/server-settings";
+import { BrandingAssetsRegistry } from "@/lib/auth-db/branding";
+import type { BrandingAssetMetadataRecord } from "@/lib/auth-db/branding";
 import { connection } from "next/server";
 
 async function PreloadedAdminSettingsPage({
@@ -24,7 +26,16 @@ async function PreloadedAdminSettingsPage({
   const registry = new ServerSettingsRegistry(dbh.db);
   const settings: ServerSettingRecord[] = await registry.listAllSettings();
 
-  return <AdminSettingsPageView preloaded={settings} />;
+  const brandingRegistry = new BrandingAssetsRegistry(dbh.db);
+  const brandingAssets: BrandingAssetMetadataRecord[] =
+    await brandingRegistry.listAssetMetadata();
+
+  return (
+    <AdminSettingsPageView
+      preloaded={settings}
+      preloadedBrandingAssets={brandingAssets}
+    />
+  );
 }
 
 export default async function AdminSettingsServerComponent(): Promise<ReactElement> {

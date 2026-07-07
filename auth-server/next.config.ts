@@ -75,6 +75,16 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingRoot: monorepoRoot,
   productionBrowserSourceMaps,
+  async rewrites() {
+    return [
+      // Browsers and crawlers that ignore the <link rel="icon"> tag request
+      // /favicon.ico directly; serve the white-label branding favicon there.
+      {
+        source: "/favicon.ico",
+        destination: "/branding/favicon",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
