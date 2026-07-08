@@ -28,9 +28,9 @@ export const ERROR_MESSAGE_CATALOG: Record<SchemaVaultsAuthErrorId, string> = {
     "Oops! You don't have permission to do that action! Get in touch with support if you believe this is a mistake!",
   account_disabled: "Your account has been disabled!",
   load_user_data_failure:
-    "There was an error loading data associated with your SchemaVaults account!",
+    "There was an error loading data associated with your account!",
   internal_server_error:
-    "There was a problem in the SchemaVaults backend logic and something caused a crash!",
+    "There was a problem in the backend logic and something caused a crash!",
   load_server_config_failure:
     "There was a problem loading server configuration settings.",
   server_misconfiguration:
