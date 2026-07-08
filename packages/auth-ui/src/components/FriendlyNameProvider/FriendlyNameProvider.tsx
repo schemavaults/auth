@@ -8,7 +8,7 @@ import type { PropsWithChildren, ReactElement } from "react";
  * no <AuthUiFriendlyNameProvider /> is mounted (e.g. resource servers that
  * embed these components without white-label configuration).
  */
-export const DEFAULT_AUTH_UI_FRIENDLY_NAME = "SchemaVaults";
+export const DEFAULT_AUTH_UI_FRIENDLY_NAME = "SchemaVaults Auth";
 
 const AuthUiFriendlyNameContext = createContext<string>(
   DEFAULT_AUTH_UI_FRIENDLY_NAME,
