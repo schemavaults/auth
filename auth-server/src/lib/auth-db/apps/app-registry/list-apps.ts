@@ -1,5 +1,5 @@
 import "server-only";
-import { HARDCODED_SCHEMAVAULTS_APPS, type ListAppsQueryType, listAppsQueryTypeSchema, type SchemaVaultsApp, schemaVaultsAppDefinitionSchema } from "@schemavaults/app-definitions";
+import { getHardcodedSchemaVaultsApps, type ListAppsQueryType, listAppsQueryTypeSchema, type SchemaVaultsApp, schemaVaultsAppDefinitionSchema } from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
@@ -49,13 +49,13 @@ export default async function listApps(
   const transformed_output: SchemaVaultsApp[] = [...query_result];
 
   // Add hardcoded apps to query result
+  const hardcodedApps: readonly SchemaVaultsApp[] = getHardcodedSchemaVaultsApps();
   if (type === "all") {
-    transformed_output.push(...HARDCODED_SCHEMAVAULTS_APPS);
+    transformed_output.push(...hardcodedApps);
   } else if (type === "public") {
-    const hardcodedAppsLength: number =
-      HARDCODED_SCHEMAVAULTS_APPS.length;
+    const hardcodedAppsLength: number = hardcodedApps.length;
     transformed_output.push(
-      ...HARDCODED_SCHEMAVAULTS_APPS.filter((a) => a.public),
+      ...hardcodedApps.filter((a) => a.public),
     );
     if (debug) {
       console.log(

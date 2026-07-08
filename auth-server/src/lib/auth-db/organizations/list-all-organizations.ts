@@ -1,11 +1,9 @@
 import "server-only";
 
-import { hardcodedOrgs, organizationDefinitionSchema, type OrganizationID, type OrganizationDefinition } from "@schemavaults/auth-common";
+import { getHardcodedOrgs, organizationDefinitionSchema, type OrganizationID, type OrganizationDefinition } from "@schemavaults/auth-common";
 import type { OrganizationRow } from "./organizations-table";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-
-const hardcodedOrgIds: Set<OrganizationID> = new Set(hardcodedOrgs.map(o => o.organization_id))
 
 export async function listAllOrganizations(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
@@ -15,6 +13,9 @@ export async function listAllOrganizations(
   if (debug) {
     console.log(`[OrganizationsRegistry] listAllOrganizations()`);
   }
+
+  const hardcodedOrgs: readonly OrganizationDefinition[] = getHardcodedOrgs();
+  const hardcodedOrgIds: Set<OrganizationID> = new Set(hardcodedOrgs.map(o => o.organization_id));
 
   const query = db
     .selectFrom("organizations")

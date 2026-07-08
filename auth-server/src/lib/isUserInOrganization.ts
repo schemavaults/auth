@@ -3,7 +3,8 @@ import "server-only";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "./auth-db/auth-database-types";
 import { type OrganizationMembershipRoleDefinition, type OrganizationMembershipRoleType, organizationMembershipRoleTypeSchema, OrganizationsRegistry } from "./auth-db/organizations";
-import { isValidOrganizationID, organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, userDataSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
+import { isValidOrganizationID, organizationIdSchema, userDataSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 
 /**
  * Check if a user is a member of an organization
@@ -26,11 +27,13 @@ export async function isUserInOrganization(
 
   const { uid, admin } = user;
 
-  if (organization_id === SCHEMAVAULTS_ORGANIZATION_ID && !admin) {
+  const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
+
+  if (organization_id === ownerOrganizationId && !admin) {
     return false;
   }
 
-  if (organization_id === SCHEMAVAULTS_ORGANIZATION_ID && typeof admin === 'boolean' && admin) {
+  if (organization_id === ownerOrganizationId && typeof admin === 'boolean' && admin) {
     return 'admin' satisfies OrganizationMembershipRoleType;
   }
 
@@ -70,7 +73,7 @@ export async function isUserInOrganizationWithRole(
 
   const { uid, admin } = user;
 
-  if (organization_id === SCHEMAVAULTS_ORGANIZATION_ID) {
+  if (organization_id === getAuthServerOwnerOrganizationId()) {
     if (!admin) {
       return false;
     }

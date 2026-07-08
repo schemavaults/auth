@@ -14,9 +14,14 @@ export {
 } from "./organization_name";
 export type { OrganizationName } from "./organization_name";
 
-export { SCHEMAVAULTS_ORGANIZATION_ID } from "./schemavaults_org_id";
+export {
+  getAuthServerOwnerOrganizationId,
+  DEFAULT_AUTH_SERVER_OWNER_ORGANIZATION_ID,
+  getAuthServerOwnerOrganizationName,
+  DEFAULT_AUTH_SERVER_OWNER_ORGANIZATION_NAME,
+} from "@schemavaults/app-definitions";
 
-export { hardcodedOrgs } from "./hardcoded_orgs";
+export { getHardcodedOrgs } from "./hardcoded_orgs";
 
 export {
   MAXIMUM_USER_ORGANIZATIONS,

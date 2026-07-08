@@ -8,6 +8,12 @@ export {
 } from "./FriendlyNameProvider";
 export type { AuthUiFriendlyNameProviderProps } from "./FriendlyNameProvider";
 
+export {
+  AuthUiOwnerOrganizationProvider,
+  useAuthUiOwnerOrganizationId,
+} from "./OwnerOrganizationProvider";
+export type { AuthUiOwnerOrganizationProviderProps } from "./OwnerOrganizationProvider";
+
 export * from "./SignOutButton";
 export type * from "./SignOutButton";
 

@@ -19,7 +19,7 @@ import {
 import CreateApiServerDialog, {
   CreateApiServerDialogOpenDispatchContext,
 } from "@/components/CreateApiServerDialog";
-import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 import ConnectAppToApiDialog, {
   ConnectAppToApiDialogOpenDispatchContext,
 } from "@/components/ConnectAppToApiDialog";
@@ -37,6 +37,7 @@ export interface ApiServersCardProps {
 }
 
 export function ApiServersCard(props: ApiServersCardProps): ReactElement {
+  const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
   const cardTitle = props.cardTitle ?? "API Servers";
   const cardDescription =
     props.cardDescription ??
@@ -77,7 +78,7 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
           clearApiServersCache={clearUseApiServersCache}
           owner_organization_id={
             props.queryType === "all"
-              ? SCHEMAVAULTS_ORGANIZATION_ID
+              ? ownerOrganizationId
               : props.organization_id
           }
           open={createApiServerDialogOpen}

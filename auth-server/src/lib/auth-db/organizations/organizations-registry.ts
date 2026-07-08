@@ -10,11 +10,11 @@ import {
   organizationDefinitionSchema,
   type OrganizationID,
   organizationIdSchema,
-  SCHEMAVAULTS_ORGANIZATION_ID,
-  hardcodedOrgs,
+  getHardcodedOrgs,
   MAXIMUM_USER_ORGANIZATIONS,
   UserData,
 } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import type { OrganizationRow } from "./organizations-table";
 import isValidUuid from "@/lib/is-valid-uuid";
 import {
@@ -33,7 +33,13 @@ import { listUserOrganizationMemberships } from './list-user-organization-member
 export class OrganizationsRegistry
   implements IOrganizationsRegistry
 {
-  private readonly hardcodedOrganizations: Map<string, OrganizationDefinition> = new Map(hardcodedOrgs.map(hardcodedOrg => [hardcodedOrg.organization_id, hardcodedOrg]))
+  /**
+   * Built per call (not at construction) so the env-var-driven owner
+   * organization ID/name are resolved at request time.
+   */
+  private getHardcodedOrganizations(): Map<string, OrganizationDefinition> {
+    return new Map(getHardcodedOrgs().map(hardcodedOrg => [hardcodedOrg.organization_id, hardcodedOrg]));
+  }
 
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
@@ -89,10 +95,11 @@ export class OrganizationsRegistry
     }
 
     const getHardcodedOrg = (): OrganizationDefinition | null => {
-      if (!this.hardcodedOrganizations.has(organization_id)) {
+      const hardcodedOrganizations = this.getHardcodedOrganizations();
+      if (!hardcodedOrganizations.has(organization_id)) {
         return null;
       }
-      const hardcodedOrganization = this.hardcodedOrganizations.get(organization_id);
+      const hardcodedOrganization = hardcodedOrganizations.get(organization_id);
       return hardcodedOrganization ?? null;
     }
     const hardcodedOrg: OrganizationDefinition | null = getHardcodedOrg();
@@ -235,8 +242,9 @@ export class OrganizationsRegistry
         disabled: row.disabled ?? undefined,
       }));
 
-      // Add virtual memberships for admin users in the schemavaults organization
-      if (organization_id === SCHEMAVAULTS_ORGANIZATION_ID) {
+      // Add virtual memberships for admin users in the owner organization
+      const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
+      if (organization_id === ownerOrganizationId) {
         const adminUsersQuery = this.db
           .selectFrom("users")
           .where("admin", "=", true)
@@ -248,7 +256,7 @@ export class OrganizationsRegistry
         const existingMemberUids = new Set(members.map(m => m.uid));
 
         // Get the hardcoded org creation date for virtual memberships
-        const hardcodedOrg = this.hardcodedOrganizations.get(SCHEMAVAULTS_ORGANIZATION_ID);
+        const hardcodedOrg = this.getHardcodedOrganizations().get(ownerOrganizationId);
         const virtualMembershipCreatedAt = hardcodedOrg?.created_at ?? Date.now();
 
         // Add virtual memberships for admin users not already in list
@@ -256,7 +264,7 @@ export class OrganizationsRegistry
           if (!existingMemberUids.has(adminUser.uid)) {
             members.push({
               membership_declaration_id: `admin-virtual-${adminUser.uid}`,
-              organization_id: SCHEMAVAULTS_ORGANIZATION_ID,
+              organization_id: ownerOrganizationId,
               uid: adminUser.uid,
               role: "admin" as OrganizationMembershipRoleType,
               membership_created_at: virtualMembershipCreatedAt,
@@ -320,8 +328,8 @@ export class OrganizationsRegistry
       );
     }
 
-    // Cannot update roles in hardcoded organizations (like schemavaults)
-    if (this.hardcodedOrganizations.has(organization_id)) {
+    // Cannot update roles in hardcoded organizations (like the owner organization)
+    if (this.getHardcodedOrganizations().has(organization_id)) {
       throw new Error(
         "Cannot update member roles in hardcoded organizations!",
       );
@@ -403,7 +411,7 @@ export class OrganizationsRegistry
     const organization_id: OrganizationID = parsed_org_id.data;
 
     // Block deletion of hardcoded organizations
-    if (this.hardcodedOrganizations.has(organization_id)) {
+    if (this.getHardcodedOrganizations().has(organization_id)) {
       return {
         success: false,
         message: "Cannot delete a hardcoded organization!",

@@ -9,11 +9,12 @@ import {
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
   isHardcodedAppId,
-  HARDCODED_SCHEMAVAULTS_APPS,
+  getHardcodedSchemaVaultsApps,
   getHardcodedAppDomains,
   type AppId,
 } from "@schemavaults/app-definitions";
-import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
+import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { ConflictError } from "@/lib/error/ConflictError";
@@ -120,7 +121,7 @@ export class SchemaVaultsAppRegistry {
       app_description,
       created_at: Date.now(),
       public: publicly_listed ?? false,
-      owner_organization_id: owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID ? null : owner_organization_id,
+      owner_organization_id: owner_organization_id === getAuthServerOwnerOrganizationId() ? null : owner_organization_id,
       hardcoded: false,
       web,
     } satisfies SchemaVaultsApp);
@@ -172,13 +173,14 @@ export class SchemaVaultsAppRegistry {
     }
 
     const MAX_PAGE_SIZE: number = 50;
+    const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
 
     let result: SchemaVaultsApp[];
     try {
       result = await this.db
         .selectFrom("apps")
         .where((eb) =>
-          org_id === SCHEMAVAULTS_ORGANIZATION_ID
+          org_id === ownerOrganizationId
             ? eb.or([
                 eb("owner_organization_id", "=", org_id),
                 eb("owner_organization_id", "is", null),
@@ -219,9 +221,9 @@ export class SchemaVaultsAppRegistry {
       );
     }
 
-    if (org_id === SCHEMAVAULTS_ORGANIZATION_ID) {
-      app_definitions.push(...HARDCODED_SCHEMAVAULTS_APPS.filter(
-        s => s.owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID
+    if (org_id === ownerOrganizationId) {
+      app_definitions.push(...getHardcodedSchemaVaultsApps().filter(
+        s => s.owner_organization_id === ownerOrganizationId
       ));
     }
 

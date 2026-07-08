@@ -5,7 +5,7 @@ import { useContext, type ReactElement } from "react";
 
 import { Dialog, DialogContent } from "@schemavaults/ui";
 import { useSWRConfig } from "swr";
-import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 import { AppWindow } from "lucide-react";
 import CreateAppForm from "./CreateAppForm";
 import CreateAppDialogOpenDispatchContext from "./CreateAppDialogOpenDispatchContext";
@@ -25,6 +25,7 @@ export function CreateAppDialog({
   owner_organization_id,
   ...props
 }: CreateFrontendAppDialogProps): ReactElement {
+  const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
@@ -32,9 +33,7 @@ export function CreateAppDialog({
         className="sm:max-w-[425px]"
       >
         <CreateAppForm
-          owner_organization_id={
-            owner_organization_id ?? SCHEMAVAULTS_ORGANIZATION_ID
-          }
+          owner_organization_id={owner_organization_id ?? ownerOrganizationId}
           clearFrontendAppsCache={clearFrontendAppsCache}
           onSuccess={() => props.onOpenChange(false)}
           uuid={props.uuid}

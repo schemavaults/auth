@@ -36,7 +36,40 @@ export { getAppEnvironment } from "./get-app-environment";
 
 export { getAuthServerUrl } from "./get-auth-server-url";
 
+export {
+  MINIMUM_ORGANIZATION_ID_LENGTH,
+  MAXIMUM_ORGANIZATION_ID_LENGTH,
+  RESERVED_ORGANIZATION_IDS,
+  organizationIdSchema,
+  isValidOrganizationID,
+} from "./organization-id";
+export type { OrganizationID } from "./organization-id";
+
+export {
+  getAuthServerOwnerOrganizationId,
+  DEFAULT_AUTH_SERVER_OWNER_ORGANIZATION_ID,
+} from "./get-auth-server-owner-organization-id";
+
+export {
+  getAuthServerOwnerOrganizationName,
+  DEFAULT_AUTH_SERVER_OWNER_ORGANIZATION_NAME,
+} from "./get-auth-server-owner-organization-name";
+
+export {
+  getAuthServerFriendlyName,
+  DEFAULT_AUTH_SERVER_FRIENDLY_NAME,
+} from "./get-auth-server-friendly-name";
+
+export {
+  getAuthServerDescription,
+  DEFAULT_AUTH_SERVER_DESCRIPTION,
+} from "./get-auth-server-description";
+
 export { SCHEMAVAULTS_AUTH_APP_ID } from "./SCHEMAVAULTS_AUTH_APP_ID";
+
+export { getSchemaVaultsAuthAppDefinition } from "./get-schemavaults-auth-app-definition";
+
+export { getSchemaVaultsAuthApiDefinition } from "./get-schemavaults-auth-api-definition";
 
 export {
   getTokenAudienceForApiServerId,
@@ -53,7 +86,8 @@ export {
   isHardcodedAppId,
   getHardcodedApp,
   getHardcodedAppDomains,
-  HARDCODED_SCHEMAVAULTS_APPS,
+  getHardcodedSchemaVaultsApps,
+  HARDCODED_APP_IDS,
 } from "./hardcoded-apps";
 export type { HardcodedAppId } from "./hardcoded-apps";
 
@@ -61,6 +95,7 @@ export {
   isHardcodedApiServerId,
   getHardcodedApiServer,
   getHardcodedApiDomains,
-  HARDCODED_SCHEMAVAULTS_APIS,
+  getHardcodedSchemaVaultsApis,
+  HARDCODED_API_SERVER_IDS,
 } from "./hardcoded-apis";
 export type { HardcodedApiServerId } from "./hardcoded-apis";

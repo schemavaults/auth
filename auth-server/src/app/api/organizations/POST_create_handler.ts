@@ -8,7 +8,7 @@ import {
   hasUserExceededMaximumOrgMemberships,
 } from "@/lib/auth-db/organizations";
 import {
-  hardcodedOrgs,
+  getHardcodedOrgs,
   type OrganizationDefinition,
   organizationDefinitionSchema,
 } from "@schemavaults/auth-common";
@@ -89,7 +89,7 @@ async function POST_create_organization_handler({
   newOrganization['created_by'] = user.uid;
 
   // Ensure new organization definition is not a reserved organization ID
-  if (hardcodedOrgs.some(hardcodedOrganization => hardcodedOrganization.organization_id === newOrganization.organization_id)) {
+  if (getHardcodedOrgs().some(hardcodedOrganization => hardcodedOrganization.organization_id === newOrganization.organization_id)) {
     return NextResponse.json(
       {
         success: false,

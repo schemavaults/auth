@@ -5,12 +5,14 @@ import { connection } from "next/server";
 import "@schemavaults/theme/globals.css";
 
 import { getAuthServerUrl } from "@schemavaults/app-definitions";
+import { AuthUiOwnerOrganizationProvider } from "@schemavaults/auth-ui";
 import { inter } from "./fonts/Inter";
 import { AuthServerFriendlyNameProvider } from "@/components/Wordmark";
 import { AuthServerThemeColorsProvider } from "@/components/ThemeColors";
 import { AuthServerUrlProvider } from "@/components/AuthServerUrl";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import getAuthServerDescription from "@/lib/config/auth-server-description";
+import getAuthServerOwnerOrganizationId from "@/lib/config/auth-server-owner-organization";
 import getAuthServerThemeColors from "@/lib/config/auth-server-theme-colors";
 import {
   GENERATED_OPENGRAPH_IMAGE_WIDTH,
@@ -96,13 +98,17 @@ export default async function RootLayout({
         <AuthServerFriendlyNameProvider
           friendly_name={getAuthServerFriendlyName()}
         >
-          <AuthServerThemeColorsProvider
-            theme_colors={getAuthServerThemeColors()}
+          <AuthUiOwnerOrganizationProvider
+            owner_organization_id={getAuthServerOwnerOrganizationId()}
           >
-            <AuthServerUrlProvider auth_server_url={getAuthServerUrl()}>
-              {children}
-            </AuthServerUrlProvider>
-          </AuthServerThemeColorsProvider>
+            <AuthServerThemeColorsProvider
+              theme_colors={getAuthServerThemeColors()}
+            >
+              <AuthServerUrlProvider auth_server_url={getAuthServerUrl()}>
+                {children}
+              </AuthServerUrlProvider>
+            </AuthServerThemeColorsProvider>
+          </AuthUiOwnerOrganizationProvider>
         </AuthServerFriendlyNameProvider>
       </body>
     </html>

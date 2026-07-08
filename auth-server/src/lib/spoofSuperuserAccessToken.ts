@@ -5,7 +5,8 @@ import { JWT_Factory } from "@schemavaults/jwt";
 import { AuthServerJwtKeysManager } from "@/lib/AuthServerJwtKeysManager";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { type AccessToken, SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { type AccessToken } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 
 export interface ISpoofSuperuserTokenOpts {
   client_app_id: AppId;
@@ -33,7 +34,7 @@ export default async function spoofSuperuserAccessToken(
       created_at: Date.now(),
       disabled: false,
     },
-    user_organizations: [SCHEMAVAULTS_ORGANIZATION_ID]
+    user_organizations: [getAuthServerOwnerOrganizationId()]
   });
 
   const new_spoofed_access_token: AccessToken = await jwt_factory.access(

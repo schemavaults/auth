@@ -1,6 +1,7 @@
 import "server-only";
 
-import { hardcodedOrgs, type OrganizationDefinition, organizationDefinitionSchema, SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { getHardcodedOrgs, type OrganizationDefinition, organizationDefinitionSchema } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
@@ -23,11 +24,11 @@ export async function createOrganization(
   const organization_definition: OrganizationDefinition = parsedOrgDef.data;
 
   function isReservedId() {
-    if (organization_definition.organization_id === SCHEMAVAULTS_ORGANIZATION_ID) {
+    if (organization_definition.organization_id === getAuthServerOwnerOrganizationId()) {
       return true;
     }
 
-    if (hardcodedOrgs.some(
+    if (getHardcodedOrgs().some(
       (hardcodedOrganization): boolean => (
         hardcodedOrganization.organization_id === organization_definition.organization_id
       )

@@ -1,6 +1,6 @@
 import "server-only";
 import { type SchemaVaultsApp, schemaVaultsAppDefinitionSchema } from "@schemavaults/app-definitions";
-import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 
 export default function parseAppDefinitionDatabaseRow(row: unknown): SchemaVaultsApp {
   if (typeof row !== "object" || !row)
@@ -18,7 +18,7 @@ export default function parseAppDefinitionDatabaseRow(row: unknown): SchemaVault
 
   const owner_organization_id: string | undefined = (
     "owner_organization_id" in row && typeof row['owner_organization_id'] === 'string'
-  ) ? (row.owner_organization_id) : SCHEMAVAULTS_ORGANIZATION_ID
+  ) ? (row.owner_organization_id) : getAuthServerOwnerOrganizationId()
 
   const parsed = schemaVaultsAppDefinitionSchema.safeParse({
     ...row,

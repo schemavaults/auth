@@ -27,8 +27,8 @@ import AuthorizeClientApplicationDialog, {
   AuthorizeClientApplicationDialogOpenDispatchContext,
 } from "@/components/AuthorizeClientApplicationDialog";
 
-import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
+import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 
 export interface AppsCardProps {
   cardTitle?: string;
@@ -43,6 +43,7 @@ export interface AppsCardProps {
 
 export function AppsCard(props: AppsCardProps): ReactElement {
   const friendlyName: string = useAuthUiFriendlyName();
+  const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
   const cardTitle = props.cardTitle ?? "Applications";
   const cardDescription =
     props.cardDescription ??
@@ -92,7 +93,7 @@ export function AppsCard(props: AppsCardProps): ReactElement {
                   clearFrontendAppsCache={clearUseAppsListCache}
                   owner_organization_id={
                     props.queryType === "all"
-                      ? SCHEMAVAULTS_ORGANIZATION_ID
+                      ? ownerOrganizationId
                       : props.organization_id
                   }
                   open={createAppDialogOpen}
