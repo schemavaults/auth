@@ -96,7 +96,7 @@ async function PATCH_update_setting(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ key: string }> }
+  { params }: RouteContext<"/api/admin/settings/[key]">
 ): Promise<NextResponse> {
   const protected_route = await withAdminApiRouteGuard(async (props) => {
     const { key } = await params;

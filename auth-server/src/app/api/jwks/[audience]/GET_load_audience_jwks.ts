@@ -8,7 +8,7 @@ import captureServerException from "@/lib/captureServerException";
 
 export async function GET(
   request: NextRequest,
-  props: { params: Promise<{ audience: string }> }
+  props: RouteContext<"/api/jwks/[audience]">
 ) {
   const { audience } = await props.params;
 

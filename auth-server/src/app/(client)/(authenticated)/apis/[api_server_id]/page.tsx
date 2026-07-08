@@ -16,12 +16,8 @@ import isUserInOrganization from "@/lib/isUserInOrganization";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next/types";
 
-interface PageParams {
-  params: Promise<{ api_server_id: string }>;
-}
-
 export default async function ApiServerDetailPage(
-  pageParams: PageParams
+  pageParams: PageProps<"/apis/[api_server_id]">
 ): Promise<ReactElement> {
   await connection();
 

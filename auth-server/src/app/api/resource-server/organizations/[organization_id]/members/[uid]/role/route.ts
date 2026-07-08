@@ -14,7 +14,7 @@ const ROUTE = "/api/resource-server/organizations/[organization_id]/members/[uid
 
 export async function GET(
   request: NextRequest,
-  props: { params: Promise<{ organization_id: string; uid: string }> }
+  props: RouteContext<"/api/resource-server/organizations/[organization_id]/members/[uid]/role">
 ): Promise<NextResponse> {
   await connection();
   const { organization_id: raw_org_id, uid } = await props.params;

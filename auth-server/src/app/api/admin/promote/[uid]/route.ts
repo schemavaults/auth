@@ -79,7 +79,7 @@ async function POST_admin_promotion_handler(
 
 export async function POST(
   req: NextRequest,
-  props: { params: Promise<{ uid: string }> },
+  props: RouteContext<"/api/admin/promote/[uid]">,
 ) {
   const params = await props.params;
 

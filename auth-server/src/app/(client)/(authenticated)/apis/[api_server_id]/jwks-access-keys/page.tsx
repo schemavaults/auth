@@ -16,12 +16,8 @@ import { JwksAccessKeysRegistry, type JwksAccessKeyStatusQueryResponse } from "@
 import { connection } from "next/server";
 import type { ServerRuntime } from "next/types";
 
-interface PageParams {
-  params: Promise<{ api_server_id: string }>;
-}
-
 export default async function JwksAccessKeysPage(
-  pageParams: PageParams
+  pageParams: PageProps<"/apis/[api_server_id]/jwks-access-keys">
 ): Promise<ReactElement> {
   await connection();
   return await withAuthenticatedServerComponentRouteGuard(

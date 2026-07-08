@@ -27,10 +27,10 @@ const ROUTE = "/api/resource-server/apis/[api_server_id]/allowed-origins";
  */
 export async function GET(
   request: NextRequest,
-  props: { params: Promise<{ api_server_id: string }> },
+  context: RouteContext<"/api/resource-server/apis/[api_server_id]/allowed-origins">,
 ): Promise<NextResponse> {
   await connection();
-  const { api_server_id: raw_api_server_id } = await props.params;
+  const { api_server_id: raw_api_server_id } = await context.params;
 
   const parsed_api_server_id = apiServerIdSchema.safeParse(raw_api_server_id);
   if (!parsed_api_server_id.success) {

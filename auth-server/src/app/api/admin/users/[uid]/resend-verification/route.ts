@@ -110,7 +110,7 @@ async function POST_resend_verification_handler(
 
 export async function POST(
   req: NextRequest,
-  props: { params: Promise<{ uid: string }> },
+  props: RouteContext<"/api/admin/users/[uid]/resend-verification">,
 ): Promise<NextResponse> {
   const params = await props.params;
 
