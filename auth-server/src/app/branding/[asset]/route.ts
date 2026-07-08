@@ -135,7 +135,20 @@ export async function GET(
 
   // The opengraph-image slot has no bundled default: it is generated from
   // the deployment's white-label branding config (friendly name, description,
-  // theme colors).
+  // theme colors). Hard-check the key so a future asset slot added without a
+  // bundled default fails loudly here instead of serving the wrong image.
+  if (asset !== "opengraph-image") {
+    console.error(
+      `[/branding/${asset}] No default asset configured for this branding asset key!`,
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        message: `No default asset configured for branding asset: ${asset}`,
+      },
+      { status: 500 },
+    );
+  }
   return serveGeneratedOpenGraphImage(req);
 }
 
