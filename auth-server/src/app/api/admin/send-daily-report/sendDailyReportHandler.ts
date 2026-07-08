@@ -18,6 +18,7 @@ import sendEmailViaMailServer from "@/lib/mail/send-email-via-mail-server";
 import captureServerException from "@/lib/captureServerException";
 import { buildDailyAdminReport } from "./buildReportHtml";
 import type { RedisCache } from "@/lib/redis";
+import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 const ADMIN_MAILING_LIST_ID = "00000000-0000-0000-0000-000000000000";
@@ -57,9 +58,11 @@ export async function sendDailyReportHandler({
 
     const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
     const authServerUri: string = getAuthServerUrl(appEnv);
+    const friendlyName: string = getAuthServerFriendlyName();
 
     const { text, html } = buildDailyAdminReport({
       authServerUri,
+      friendlyName,
       windowStart,
       windowEnd,
       newUsers,
@@ -75,7 +78,7 @@ export async function sendDailyReportHandler({
     await sendEmailViaMailServer(
       {
         to: ADMIN_MAILING_LIST_ID,
-        subject: `SchemaVaults Daily Admin Report — ${dateLabel}`,
+        subject: `${friendlyName} Daily Admin Report — ${dateLabel}`,
         message: { text, html },
       },
       dbh.db,

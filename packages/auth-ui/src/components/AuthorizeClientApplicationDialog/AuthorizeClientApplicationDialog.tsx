@@ -29,6 +29,7 @@ import { AppWindow } from "lucide-react";
 import { sendAuthorizeFrontendAppRequest } from "@/components/AppsTable/send-authorize-app-request";
 import { clearUseAppsListCache } from "@/components/AppsTable/useAppsList";
 import AuthorizeClientApplicationDialogOpenDispatchContext from "./AuthorizeClientApplicationDialogOpenDispatchContext";
+import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 
 interface AuthorizeAppFormValues {
   app_id: AppId;
@@ -54,6 +55,7 @@ export function AuthorizeClientApplicationDialog({
   const authContext = useAuth();
   const { mutate } = useSWRConfig();
   const [submitting, startSubmitting] = useTransition();
+  const friendlyName: string = useAuthUiFriendlyName();
 
   async function onSubmit(values: AuthorizeAppFormValues): Promise<void> {
     startSubmitting(async () => {
@@ -102,7 +104,7 @@ export function AuthorizeClientApplicationDialog({
             <DialogHeader>
               <DialogTitle>Authorize an application</DialogTitle>
               <DialogDescription>
-                Authorize a client application to access SchemaVaults APIs on
+                Authorize a client application to access {friendlyName} APIs on
                 your behalf by entering its app ID.
               </DialogDescription>
             </DialogHeader>

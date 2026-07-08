@@ -36,6 +36,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AppWindow } from "lucide-react";
+import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 
 export interface CreateAppFormProps {
   owner_organization_id: OrganizationID;
@@ -52,6 +53,7 @@ export default function CreateAppForm({
   onSuccess,
   uuid,
 }: CreateAppFormProps): ReactElement {
+  const friendlyName: string = useAuthUiFriendlyName();
   const defaultValues: Partial<SchemaVaultsApp> = useMemo(() => {
     return {
       app_name: "",
@@ -167,8 +169,8 @@ export default function CreateAppForm({
         <DialogHeader>
           <DialogTitle>Create a new application</DialogTitle>
           <DialogDescription>
-            Create a new frontend/client application which can access
-            SchemaVaults APIs.
+            Create a new frontend/client application which can access{" "}
+            {friendlyName} APIs.
           </DialogDescription>
         </DialogHeader>
         <FormField

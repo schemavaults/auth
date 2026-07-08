@@ -11,6 +11,7 @@ import { getUserByUID } from "@/lib/auth-db/users/get-user-by-uid";
 import type { OrganizationID } from "@schemavaults/auth-common";
 import sendEmailViaMailServer from "./send-email-via-mail-server";
 import type { RedisCache } from "@/lib/redis";
+import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 
 interface SendTeamInvitationEmailOptions {
   db: Kysely<AuthDatabase>;
@@ -50,10 +51,12 @@ export async function sendTeamInvitationEmail({
     throw new Error(`Invitee ${invitee_uid} not found`);
   }
 
+  const friendlyName: string = getAuthServerFriendlyName();
+
   await sendEmailViaMailServer(
     {
       to: invitee.email,
-      subject: `You've been invited to join ${org.name} on SchemaVaults`,
+      subject: `You've been invited to join ${org.name} on ${friendlyName}`,
       message: {
         template_id: "team-invitation",
         template_props: {
@@ -62,7 +65,7 @@ export async function sendTeamInvitationEmail({
           inviteeName: invitee.email,
           teamName: org.name,
           acceptInviteUrl,
-          productName: "SchemaVaults",
+          productName: friendlyName,
         },
       },
     },
@@ -121,7 +124,7 @@ export async function sendTeamInvitationAcceptedEmail({
           teamName: org.name,
           teamUrl,
           acceptedAt: new Date().toISOString(),
-          productName: "SchemaVaults",
+          productName: getAuthServerFriendlyName(),
         },
       },
     },

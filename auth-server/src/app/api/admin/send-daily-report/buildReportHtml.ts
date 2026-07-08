@@ -8,6 +8,8 @@ import type { TopMostPopularApiRow } from "@/lib/auth-db/apis";
 
 interface BuildReportOpts {
   authServerUri: string;
+  /** White-label deployment name rendered in the report heading. */
+  friendlyName: string;
   windowStart: Date;
   windowEnd: Date;
   newUsers: readonly UserDocument[];
@@ -44,6 +46,7 @@ function formatTimestamp(ms: number): string {
 
 export function buildDailyAdminReport({
   authServerUri,
+  friendlyName,
   windowStart,
   windowEnd,
   newUsers,
@@ -146,7 +149,7 @@ export function buildDailyAdminReport({
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:720px;margin:0 auto;background:#ffffff;border-radius:8px;border:1px solid ${BORDER_COLOR};">
     <tr>
       <td style="padding:24px 32px;border-bottom:4px solid ${BRAND_BLUE};">
-        <h1 style="margin:0;font-size:22px;color:${BRAND_BLUE};">SchemaVaults Daily Admin Report</h1>
+        <h1 style="margin:0;font-size:22px;color:${BRAND_BLUE};">${escapeHtml(friendlyName)} Daily Admin Report</h1>
         <p style="margin:6px 0 0;color:${MUTED_COLOR};font-size:13px;">${escapeHtml(windowLabel)}</p>
       </td>
     </tr>
@@ -265,7 +268,7 @@ ${errorsRows}
 </html>`;
 
   const textLines: string[] = [];
-  textLines.push("SchemaVaults Daily Admin Report");
+  textLines.push(`${friendlyName} Daily Admin Report`);
   textLines.push(windowLabel);
   textLines.push("");
   textLines.push(`New sign-ups (${newUsers.length}):`);

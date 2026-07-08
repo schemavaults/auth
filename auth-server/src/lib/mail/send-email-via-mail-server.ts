@@ -9,6 +9,7 @@ import type { AccessToken } from "@schemavaults/auth-common";
 import resolveMailServerUrl from "./resolve-mail-server-url";
 import type { RedisCache } from "@/lib/redis";
 import resolveMailServerId from "./resolve-mail-server-id";
+import getAuthServerEmailFromAddress from "@/lib/config/email-from-address";
 
 const sendEmailRequestBodySchema = createSendEmailRequestBodySchema(true);
 
@@ -34,6 +35,16 @@ export async function sendEmailViaMailServer(
   }
 
   const mail_server_url: string = await resolveMailServerUrl(db, mail_api_server_id, environment);
+
+  // White-label sender identity: default the "from" address to the
+  // configured SCHEMAVAULTS_AUTH_SERVER_EMAIL_FROM_ADDRESS when the caller
+  // didn't specify one. Left unset, the mail-server applies its own default.
+  if (typeof email_options.from !== 'string' || email_options.from.length === 0) {
+    const configured_from_address: string | undefined = getAuthServerEmailFromAddress();
+    if (typeof configured_from_address === 'string') {
+      email_options = { ...email_options, from: configured_from_address };
+    }
+  }
 
   const parsed_email_options = await sendEmailRequestBodySchema.safeParseAsync(email_options)
   if (!parsed_email_options.success) {
