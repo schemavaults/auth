@@ -123,7 +123,7 @@ export async function GET(
     );
   }
 
-  const default_asset = getDefaultBrandingAsset(asset);
+  const default_asset = await getDefaultBrandingAsset(asset);
   if (default_asset) {
     return serveAssetBytes(
       req,

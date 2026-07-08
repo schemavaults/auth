@@ -26,6 +26,24 @@ export interface ResolvedBrandingMetadata {
 }
 
 /**
+ * Version hash of a bundled default asset, for cache-busting metadata URLs.
+ * Page metadata must never crash on a missing/unreadable default file, so
+ * failures degrade to a bare (unversioned, short-TTL cached) asset URL.
+ */
+async function safeDefaultAssetHash(key: string): Promise<string | null> {
+  try {
+    const default_asset = await getDefaultBrandingAsset(key);
+    return default_asset?.contentHash ?? null;
+  } catch (e: unknown) {
+    console.error(
+      `[resolveBrandingMetadata] Failed to load default branding asset "${key}":`,
+      e,
+    );
+    return null;
+  }
+}
+
+/**
  * Resolve the branding asset URLs for page metadata. Loads the current asset
  * content hashes (Redis-cached, ~1 lookup per TTL) so URLs are cache-busted
  * whenever an administrator uploads new branding. Degrades gracefully when
@@ -62,9 +80,9 @@ export async function resolveBrandingMetadata(): Promise<ResolvedBrandingMetadat
   }
 
   const faviconHash: string | null =
-    versions.favicon ?? getDefaultBrandingAsset("favicon")?.contentHash ?? null;
+    versions.favicon ?? (await safeDefaultAssetHash("favicon"));
   const iconHash: string | null =
-    versions.icon ?? getDefaultBrandingAsset("icon")?.contentHash ?? null;
+    versions.icon ?? (await safeDefaultAssetHash("icon"));
   const opengraphImageIsGenerated: boolean =
     typeof versions["opengraph-image"] !== "string";
   const opengraphImageHash: string =

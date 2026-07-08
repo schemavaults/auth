@@ -74,6 +74,14 @@ const nextConfig: NextConfig = {
     root: monorepoRoot,
   },
   outputFileTracingRoot: monorepoRoot,
+  // The /branding/[asset] route and every page's generateMetadata (root
+  // layout) read the bundled default branding assets from
+  // public/branding-defaults/ at serve time. Force them into serverless
+  // route traces ("/*" is matched with picomatch contains:true, i.e. all
+  // routes); the standalone Docker image copies public/ explicitly.
+  outputFileTracingIncludes: {
+    "/*": ["./public/branding-defaults/**/*"],
+  },
   productionBrowserSourceMaps,
   async rewrites() {
     return [

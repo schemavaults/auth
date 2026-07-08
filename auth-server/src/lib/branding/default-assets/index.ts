@@ -1,14 +1,8 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import {
-  DEFAULT_FAVICON_BASE64,
-  DEFAULT_FAVICON_CONTENT_TYPE,
-} from "./default-favicon";
-import {
-  DEFAULT_ICON_BASE64,
-  DEFAULT_ICON_CONTENT_TYPE,
-} from "./default-icon";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 /**
  * A bundled default branding asset, served when an administrator has not
@@ -21,22 +15,32 @@ export interface DefaultBrandingAsset {
   contentHash: string;
 }
 
-function decodeDefaultAsset(
-  base64: string,
-  contentType: string,
-): DefaultBrandingAsset {
-  const bytes = Buffer.from(base64, "base64");
-  const contentHash = createHash("sha256").update(bytes).digest("hex");
-  return { bytes, contentType, contentHash };
+const DEFAULT_ASSET_FILES = {
+  favicon: { filename: "favicon.ico", contentType: "image/x-icon" },
+  icon: { filename: "icon.png", contentType: "image/png" },
+} as const;
+
+type DefaultAssetKey = keyof typeof DEFAULT_ASSET_FILES;
+
+function isDefaultAssetKey(key: string): key is DefaultAssetKey {
+  return key in DEFAULT_ASSET_FILES;
 }
 
-const DEFAULT_ASSETS = {
-  favicon: decodeDefaultAsset(
-    DEFAULT_FAVICON_BASE64,
-    DEFAULT_FAVICON_CONTENT_TYPE,
-  ),
-  icon: decodeDefaultAsset(DEFAULT_ICON_BASE64, DEFAULT_ICON_CONTENT_TYPE),
-} as const;
+// The default assets are immutable within a deployment, so each file is read
+// and hashed at most once per process.
+const loaded = new Map<DefaultAssetKey, DefaultBrandingAsset>();
+
+/**
+ * public/branding-defaults/ resolves against the working directory in every
+ * deployment mode: `next dev`/`next start` run from the auth-server package
+ * dir, and the standalone server chdirs to .next/standalone/auth-server,
+ * where the Dockerfile copies public/. For serverless deployments the files
+ * are force-included in route traces via outputFileTracingIncludes in
+ * next.config.ts.
+ */
+function resolveDefaultAssetPath(filename: string): string {
+  return join(process.cwd(), "public", "branding-defaults", filename);
+}
 
 /**
  * Resolve the bundled default asset for a branding slot, if one exists.
@@ -44,11 +48,22 @@ const DEFAULT_ASSETS = {
  * time from the deployment's friendly name, description, and theme colors
  * (see /branding/[asset]).
  */
-export function getDefaultBrandingAsset(
+export async function getDefaultBrandingAsset(
   key: string,
-): DefaultBrandingAsset | null {
-  if (key === "favicon" || key === "icon") {
-    return DEFAULT_ASSETS[key];
+): Promise<DefaultBrandingAsset | null> {
+  if (!isDefaultAssetKey(key)) {
+    return null;
   }
-  return null;
+
+  const cached = loaded.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const { filename, contentType } = DEFAULT_ASSET_FILES[key];
+  const bytes = await readFile(resolveDefaultAssetPath(filename));
+  const contentHash = createHash("sha256").update(bytes).digest("hex");
+  const asset: DefaultBrandingAsset = { bytes, contentType, contentHash };
+  loaded.set(key, asset);
+  return asset;
 }
