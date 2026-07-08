@@ -124,6 +124,8 @@ export type { PaginationOptions } from "./pagination";
 
 export { timingSafeStringEqual } from "./timing-safe-string-equal";
 
+export { isOriginInAllowedList } from "./cors";
+
 export {
   oauth2StateSchema,
   OAUTH2_STATE_VSCHAR_REGEX,

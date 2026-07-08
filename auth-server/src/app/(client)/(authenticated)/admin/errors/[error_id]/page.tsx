@@ -12,15 +12,11 @@ import type { ErrorRow } from "@/lib/auth-db/errors";
 import { z } from "zod";
 import { connection } from "next/server";
 
-interface PageParams {
-  params: Promise<{ error_id: string }>;
-}
-
 const errorIdSchema = z.string().uuid();
 
 async function PreloadedAdminErrorDetailPage(
   { user, dbh }: IProtectedAdminServerComponentPageProps,
-  pageParams: PageParams,
+  pageParams: PageProps<"/admin/errors/[error_id]">,
 ): Promise<ReactElement> {
   if (!user.admin) {
     throw new Error(
@@ -58,7 +54,7 @@ async function PreloadedAdminErrorDetailPage(
 }
 
 export default async function AdminErrorDetailPage(
-  pageParams: PageParams,
+  pageParams: PageProps<"/admin/errors/[error_id]">,
 ): Promise<ReactElement> {
   await connection();
   return await withAdminServerComponentRouteGuard((props) =>

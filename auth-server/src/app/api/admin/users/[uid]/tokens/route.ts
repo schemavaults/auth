@@ -69,7 +69,7 @@ async function GET_list_user_tokens_handler(
 
 export async function GET(
   req: NextRequest,
-  props: { params: Promise<{ uid: string }> },
+  props: RouteContext<"/api/admin/users/[uid]/tokens">,
 ): Promise<NextResponse> {
   const params = await props.params;
 

@@ -17,12 +17,8 @@ import isUserInOrganization from "@/lib/isUserInOrganization";
 import type { ServerRuntime } from "next/types";
 import { connection } from "next/server";
 
-interface PageParams {
-  params: Promise<{ client_app_id: string }>;
-}
-
 export default async function AppDetailPage(
-  pageParams: PageParams
+  pageParams: PageProps<"/apps/[client_app_id]">
 ): Promise<ReactElement> {
   await connection();
   return await withAuthenticatedServerComponentRouteGuard(

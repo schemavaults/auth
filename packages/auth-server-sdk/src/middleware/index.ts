@@ -4,3 +4,9 @@ export type { ISchemaVaultsMiddleware } from "./middleware_types";
 
 export type { SchemaVaultsCORSEnforcementPolicy } from "./middlewares/withCorsSettings";
 export { SchemaVaultsCORSEnforcementPolicies } from "./middlewares/withCorsSettings";
+
+export { RemoteAllowedOriginsResolver } from "./middlewares/withCorsSettings";
+export type {
+  IAllowedOriginsResolver,
+  IRemoteAllowedOriginsResolverConstructorOpts,
+} from "./middlewares/withCorsSettings";

@@ -63,7 +63,7 @@ async function DELETE_error_by_id_handler(
 }
 
 async function parseErrorId(
-  props: { params: Promise<{ error_id: string }> },
+  props: RouteContext<"/api/admin/errors/[error_id]">,
 ): Promise<
   { ok: true; error_id: string } | { ok: false; response: NextResponse }
 > {
@@ -101,7 +101,7 @@ async function parseErrorId(
 
 export async function DELETE(
   req: NextRequest,
-  props: { params: Promise<{ error_id: string }> },
+  props: RouteContext<"/api/admin/errors/[error_id]">,
 ): Promise<NextResponse> {
   await connection();
   const protected_route = await withAdminApiRouteGuard(

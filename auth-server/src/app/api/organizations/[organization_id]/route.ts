@@ -18,13 +18,9 @@ const ROUTE = "/api/organizations/[organization_id]";
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface RouteContext {
-  params: Promise<{ organization_id: string }>;
-}
-
 async function DELETE_organization_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps,
-  context: RouteContext
+  context: RouteContext<"/api/organizations/[organization_id]">
 ): Promise<NextResponse> {
   const { organization_id: org_id_param } = await context.params;
 
@@ -151,7 +147,7 @@ async function DELETE_organization_handler(
 
 export async function DELETE(
   req: NextRequest,
-  context: RouteContext
+  context: RouteContext<"/api/organizations/[organization_id]">
 ): Promise<NextResponse> {
   return (
     await withAuthenticatedApiRouteGuard((props) =>
