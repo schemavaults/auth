@@ -17,6 +17,7 @@ import {
 /** Middlewares Imports */
 import AuthJwtValidationMiddlewareFactory from "@/middlewares/withAuthJwtValidation";
 import CorsMiddlewareFactory, {
+  type IAllowedOriginsResolver,
   type SchemaVaultsCORSEnforcementPolicy,
   SchemaVaultsCORSEnforcementPolicies as cors_policies,
 } from "@/middlewares/withCorsSettings";
@@ -38,6 +39,7 @@ export interface IServerMiddlewareInitializationOptions {
   cors_policy?: SchemaVaultsCORSEnforcementPolicy;
   environment?: SchemaVaultsAppEnvironment;
   jwt_keys_manager?: IJwtKeyManager;
+  allowed_origins_resolver?: IAllowedOriginsResolver;
 }
 
 export class SchemaVaultsServerMiddleware
@@ -131,6 +133,8 @@ export class SchemaVaultsServerMiddleware
           audience,
           policy: cors_policy,
           auth_server_url: opts.auth_server_url,
+          environment,
+          allowed_origins_resolver: opts.allowed_origins_resolver,
         }),
         new AuthJwtValidationMiddlewareFactory({
           audience,
