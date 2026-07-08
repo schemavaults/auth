@@ -22,6 +22,7 @@ import type {
 } from "./users";
 import type { JwksAccessKeysForHardcodedTable, JwksAccessKeysTable } from "./jwks-access-keys";
 import type { ServerSettingsTable } from "./server-settings";
+import type { ServerBrandingAssetsTable } from "./branding";
 import type { TokenRevocationsTable } from "./token-revocations";
 import type { IssuedTokensTable } from "./issued-tokens";
 import type { ServerTracesTable } from "./server-traces";
@@ -56,6 +57,7 @@ export type AuthDatabase = {
   token_revocations: TokenRevocationsTable;
   issued_tokens: IssuedTokensTable;
   server_settings: ServerSettingsTable;
+  server_branding_assets: ServerBrandingAssetsTable;
   server_traces: ServerTracesTable;
   errors: ErrorsTable;
   user_mfa_factors: UserMfaFactorsTable;
