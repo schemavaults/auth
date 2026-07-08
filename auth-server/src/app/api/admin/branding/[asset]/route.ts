@@ -135,10 +135,10 @@ async function DELETE_remove_branding_asset(
  */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ asset: string }> },
+  context: RouteContext<"/api/admin/branding/[asset]">,
 ): Promise<NextResponse> {
   const protected_route = await withAdminApiRouteGuard(async (props) => {
-    const { asset } = await params;
+    const { asset } = await context.params;
     if (!isValidBrandingAssetKey(asset)) {
       return NextResponse.json(
         {
@@ -203,10 +203,10 @@ export async function PUT(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ asset: string }> },
+  context: RouteContext<"/api/admin/branding/[asset]">,
 ): Promise<NextResponse> {
   const protected_route = await withAdminApiRouteGuard(async (props) => {
-    const { asset } = await params;
+    const { asset } = await context.params;
     if (!isValidBrandingAssetKey(asset)) {
       return NextResponse.json(
         {

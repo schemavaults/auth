@@ -82,9 +82,9 @@ function serveGeneratedOpenGraphImage(req: NextRequest): Response {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ asset: string }> },
+  context: RouteContext<"/branding/[asset]">,
 ): Promise<Response> {
-  const { asset } = await params;
+  const { asset } = await context.params;
   if (!isValidBrandingAssetKey(asset)) {
     return NextResponse.json(
       {
