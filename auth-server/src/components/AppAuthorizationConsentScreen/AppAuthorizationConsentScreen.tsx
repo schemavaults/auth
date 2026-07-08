@@ -13,6 +13,7 @@ import {
   useToast,
 } from "@schemavaults/ui";
 import { ThemedPageBackground } from "@/components/ThemedPageBackground";
+import { useAuthServerFriendlyName } from "@/components/Wordmark";
 import { useAuth, useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
@@ -52,6 +53,7 @@ export function AppAuthorizationConsentScreen({
   const router = useRouter();
   const searchParams = useSearchParams();
   const appEnv = useAppEnvironment();
+  const friendly_name: string = useAuthServerFriendlyName();
   const [submitting, startSubmitting] = useTransition();
 
   function handleDeny(): void {
@@ -250,7 +252,7 @@ export function AppAuthorizationConsentScreen({
       <CardHeader>
         <CardTitle>Authorize Application</CardTitle>
         <CardDescription>
-          <strong>{app_name}</strong> wants to access your SchemaVaults
+          <strong>{app_name}</strong> wants to access your {friendly_name}{" "}
           account.
         </CardDescription>
       </CardHeader>

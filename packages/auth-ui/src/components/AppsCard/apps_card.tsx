@@ -28,6 +28,7 @@ import AuthorizeClientApplicationDialog, {
 } from "@/components/AuthorizeClientApplicationDialog";
 
 import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 
 export interface AppsCardProps {
   cardTitle?: string;
@@ -41,10 +42,11 @@ export interface AppsCardProps {
 }
 
 export function AppsCard(props: AppsCardProps): ReactElement {
+  const friendlyName: string = useAuthUiFriendlyName();
   const cardTitle = props.cardTitle ?? "Applications";
   const cardDescription =
     props.cardDescription ??
-    "View and manage which applications are allowed to access SchemaVaults APIs on your behalf.";
+    `View and manage which applications are allowed to access ${friendlyName} APIs on your behalf.`;
 
   const cardClassName: string = cn("w-full", props.cardClassName);
   const [createAppDialogOpen, setCreateAppDialogOpen] =

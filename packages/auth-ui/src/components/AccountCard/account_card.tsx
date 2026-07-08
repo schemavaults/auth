@@ -22,6 +22,7 @@ import {
   type OrganizationMembershipRoleDetails,
 } from "@schemavaults/auth-common";
 import SignOutButton from "@/components/SignOutButton";
+import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 import ViewFullUserProfileButton from "./view_full_user_profile";
 import ViewAdminDashboardButton from "./view_admin_page_link";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
@@ -50,6 +51,7 @@ export function AccountDetailsCard(
 ): ReactElement {
   const currentUser = props.user;
   const Link: FC<PropsWithChildren<{ href: string }>> = props.Link;
+  const friendlyName: string = useAuthUiFriendlyName();
 
   const cardClassName: string = cn("w-full", props.cardClassName);
 
@@ -76,7 +78,7 @@ export function AccountDetailsCard(
       <CardHeader>
         <CardTitle>Account Details</CardTitle>
         <CardDescription>
-          View and manage your SchemaVaults account.
+          View and manage your {friendlyName} account.
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -4,6 +4,7 @@ import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import sendEmailViaMailServer from "./send-email-via-mail-server";
 import type { RedisCache } from "@/lib/redis";
+import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 
 interface SendVerificationEmailOptions {
   email: string;
@@ -36,7 +37,7 @@ export async function sendVerificationEmail({
   await sendEmailViaMailServer(
     {
       to: email,
-      subject: "Verify your SchemaVaults email",
+      subject: `Verify your ${getAuthServerFriendlyName()} email`,
       message: {
         template_id: "verify-email",
         template_props: {

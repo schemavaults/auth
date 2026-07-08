@@ -31,7 +31,7 @@ import {
   CardTitle,
 } from "@schemavaults/ui";
 import { useForm } from "@schemavaults/ui";
-import { Wordmark } from "@/components/Wordmark";
+import { Wordmark, useAuthServerFriendlyName } from "@/components/Wordmark";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -123,6 +123,7 @@ export function AuthForm<T extends "login" | "register">({
   const [submitting, startSubmitting] = useTransition();
 
   const auth = useAuth();
+  const friendly_name: string = useAuthServerFriendlyName();
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -198,6 +199,7 @@ export function AuthForm<T extends "login" | "register">({
         searchParams,
         router,
         env: appEnv,
+        friendly_name,
         debug,
         app: props.app,
         onAppAuthorizationNeeded: (state: PendingAuthorizationState): void => {

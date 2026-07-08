@@ -31,6 +31,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlugZap } from "lucide-react";
+import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 
 export interface ConnectAppToApiDialogProps {
   open: boolean;
@@ -44,6 +45,7 @@ export function ConnectAppToApiDialog({
   preselectedApiServerId,
 }: ConnectAppToApiDialogProps): ReactElement {
   const { toast } = useToast();
+  const friendlyName: string = useAuthUiFriendlyName();
   const defaultValues = useMemo(
     () => ({
       api_server_id: preselectedApiServerId ?? "",
@@ -131,7 +133,8 @@ export function ConnectAppToApiDialog({
             <DialogHeader>
               <DialogTitle>Connect an app to an API server</DialogTitle>
               <DialogDescription>
-                Allow a frontend/client application to access SchemaVaults APIs.
+                Allow a frontend/client application to access {friendlyName}{" "}
+                APIs.
               </DialogDescription>
             </DialogHeader>
 

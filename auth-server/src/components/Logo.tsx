@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { ReactElement } from "react";
+import { useAuthServerFriendlyName } from "@/components/Wordmark";
 
 export interface LogoProps {
   height: number;
@@ -9,10 +10,11 @@ export interface LogoProps {
 }
 
 export function Logo({ width, height }: LogoProps): ReactElement {
+  const friendly_name: string = useAuthServerFriendlyName();
   return (
     <Image
       src="/icon.png"
-      alt="SchemaVaults Logo"
+      alt={`${friendly_name} Logo`}
       width={width}
       height={height}
     />

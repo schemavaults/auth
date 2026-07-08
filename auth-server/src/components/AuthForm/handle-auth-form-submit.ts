@@ -43,6 +43,11 @@ interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
   searchParams: URLSearchParams;
   router: ReturnType<typeof useRouter>;
   env: SchemaVaultsAppEnvironment;
+  /**
+   * Deployment's white-label friendly name (from useAuthServerFriendlyName()),
+   * interpolated into user-facing copy like the registration welcome toast.
+   */
+  friendly_name: string;
   debug?: boolean;
   app?: PartialAppInfo | null;
   onAppAuthorizationNeeded?: (state: PendingAuthorizationState) => void;
@@ -333,8 +338,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   const toast_title: string =
     type === "login" ? "Successfully logged in!" : "Successfully registered!";
 
-  const register_description: string =
-    "Welcome to SchemaVaults! Please verify your email address to continue.";
+  const register_description: string = `Welcome to ${opts.friendly_name}! Please verify your email address to continue.`;
   let toast_description: string | undefined = undefined;
 
   if (type === "login") {
