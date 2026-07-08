@@ -3,7 +3,7 @@
 import {
   useCallback,
   useRef,
-  useState,
+  useTransition,
   type ChangeEvent,
   type ReactElement,
 } from "react";
@@ -50,18 +50,24 @@ function previewUrl(asset: BrandingAssetMetadataRecord): string {
 
 interface BrandingAssetRowProps {
   asset: BrandingAssetMetadataRecord;
-  busy: boolean;
-  onUploadFile: (asset: BrandingAssetMetadataRecord, file: File) => void;
-  onRemove: (asset: BrandingAssetMetadataRecord) => void;
+  onUploadFile: (
+    asset: BrandingAssetMetadataRecord,
+    file: File,
+  ) => Promise<void>;
+  onRemove: (asset: BrandingAssetMetadataRecord) => Promise<void>;
 }
 
 function BrandingAssetRow({
   asset,
-  busy,
   onUploadFile,
   onRemove,
 }: BrandingAssetRowProps): ReactElement {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Async transition per row: isPending stays true until the upload/remove
+  // action settles, disabling only this row's buttons, and clears itself —
+  // no manual busy-state bookkeeping, and concurrent operations on other
+  // rows are unaffected.
+  const [isPending, startTransition] = useTransition();
 
   const handleFileChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>): void => {
@@ -69,11 +75,19 @@ function BrandingAssetRow({
       // Reset so selecting the same file again still triggers onChange
       e.target.value = "";
       if (file) {
-        onUploadFile(asset, file);
+        startTransition(async () => {
+          await onUploadFile(asset, file);
+        });
       }
     },
     [asset, onUploadFile],
   );
+
+  const handleRemoveClick = useCallback((): void => {
+    startTransition(async () => {
+      await onRemove(asset);
+    });
+  }, [asset, onRemove]);
 
   const isWide: boolean = asset.key === "opengraph-image";
 
@@ -116,19 +130,19 @@ function BrandingAssetRow({
         <Button
           variant="outline"
           size="sm"
-          disabled={busy}
+          disabled={isPending}
           onClick={() => fileInputRef.current?.click()}
           data-testid={`branding-asset-upload-${asset.key}`}
         >
           <Upload className="mr-2 h-4 w-4" />
-          {busy ? "Working..." : "Upload"}
+          {isPending ? "Working..." : "Upload"}
         </Button>
         {asset.hasCustomAsset ? (
           <Button
             variant="outline"
             size="sm"
-            disabled={busy}
-            onClick={() => onRemove(asset)}
+            disabled={isPending}
+            onClick={handleRemoveClick}
             data-testid={`branding-asset-remove-${asset.key}`}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -158,7 +172,6 @@ export function BrandingAssetsCard(
   const { data: assets, error } = useBrandingAssets({
     initialData: props.preloaded,
   });
-  const [busyAssetKey, setBusyAssetKey] = useState<string | null>(null);
 
   const handleUploadFile = useCallback(
     async (asset: BrandingAssetMetadataRecord, file: File): Promise<void> => {
@@ -179,7 +192,6 @@ export function BrandingAssetsCard(
         return;
       }
 
-      setBusyAssetKey(asset.key);
       try {
         const response = await fetch(`/api/admin/branding/${asset.key}`, {
           method: "PUT",
@@ -208,8 +220,6 @@ export function BrandingAssetsCard(
           description:
             e instanceof Error ? e.message : "An unknown error occurred",
         });
-      } finally {
-        setBusyAssetKey(null);
       }
     },
     [toast],
@@ -217,7 +227,6 @@ export function BrandingAssetsCard(
 
   const handleRemove = useCallback(
     async (asset: BrandingAssetMetadataRecord): Promise<void> => {
-      setBusyAssetKey(asset.key);
       try {
         const response = await fetch(`/api/admin/branding/${asset.key}`, {
           method: "DELETE",
@@ -242,8 +251,6 @@ export function BrandingAssetsCard(
           description:
             e instanceof Error ? e.message : "An unknown error occurred",
         });
-      } finally {
-        setBusyAssetKey(null);
       }
     },
     [toast],
@@ -266,7 +273,6 @@ export function BrandingAssetsCard(
             {index > 0 ? <Separator /> : null}
             <BrandingAssetRow
               asset={asset}
-              busy={busyAssetKey === asset.key}
               onUploadFile={handleUploadFile}
               onRemove={handleRemove}
             />
