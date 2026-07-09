@@ -5,7 +5,7 @@
 // authenticated-but-non-admin 403 case, which is the security boundary that
 // would allow self-promotion to admin if it ever regressed.
 
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 
 describe("Regular User Cannot Promote To Admin", () => {
   it("POST /api/admin/promote/:uid returns 403 when the caller is a regular user attempting self-promotion", () => {
@@ -26,7 +26,7 @@ describe("Regular User Cannot Promote To Admin", () => {
 
           cy.request({
             method: "GET",
-            url: `/api/auth/whoami/${SCHEMAVAULTS_AUTH_APP_ID}`,
+            url: `/api/auth/whoami/${DEFAULT_AUTH_SERVER_APP_ID}`,
           }).then((whoamiResponse) => {
             expect(whoamiResponse.status).to.eq(200);
             const uid: unknown = whoamiResponse.body?.user?.uid;

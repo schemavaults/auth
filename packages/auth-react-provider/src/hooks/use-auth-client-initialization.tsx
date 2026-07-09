@@ -20,6 +20,8 @@ export interface UseAuthClientInitializationOptions {
   error_page_uri?: string | undefined;
   auth_server_url: string;
   app_id: string;
+  /** The auth server deployment's own app id; defaults to "schemavaults-auth" */
+  auth_server_app_id?: string;
   debug?: boolean;
   default_audiences?: InitializeAuthClientOptions["default_audiences"];
   environment: SchemaVaultsAppEnvironment;
@@ -42,6 +44,7 @@ export function useAuthClientInitialization(
     authClientRef,
     auth_server_url,
     app_id,
+    auth_server_app_id,
     default_audiences,
     environment,
   } = opts;
@@ -86,6 +89,7 @@ export function useAuthClientInitialization(
             error_page_uri,
             environment,
             app_id,
+            auth_server_app_id,
             invite_code_required,
             fetch: httpFetch,
           });
@@ -130,6 +134,7 @@ export function useAuthClientInitialization(
       setReady,
       debug,
       app_id,
+      auth_server_app_id,
       auth_server_url,
       authorize_uri,
       error_page_uri,

@@ -10,7 +10,7 @@ import {
   type ApiServerId,
   apiServerIdSchema,
   getAppEnvironment,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  getAuthServerAppId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
@@ -90,7 +90,7 @@ export class SchemaVaultsServerMiddleware
 
     const isAuthServer: boolean =
       audience === opts.auth_server_url ||
-      audience === SCHEMAVAULTS_AUTH_APP_ID;
+      audience === getAuthServerAppId();
     let jwt_keys_manager: IJwtKeyManager;
     if (isAuthServer) {
       if (!opts.jwt_keys_manager) {

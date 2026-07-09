@@ -1,4 +1,4 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import {
   type CodeChallengeWithDetails,
   PKCE_ProofKeyManager,
@@ -7,7 +7,7 @@ import {
 
 const ROUTE = "/api/auth/register";
 
-const client_app_id = SCHEMAVAULTS_AUTH_APP_ID;
+const client_app_id = DEFAULT_AUTH_SERVER_APP_ID;
 
 /**
  * Faster equivalent of cy.register(): registers a new user by POSTing

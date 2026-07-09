@@ -2,7 +2,8 @@ import "server-only";
 import type { ResourceCreationResponse } from "@/lib/auth-db/resource-creation-response";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import { type AppId, appIdSchema, SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { type AppId, appIdSchema } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import AuthorizedAppsRegistry from "@/lib/auth-db/apps/authorized-apps-registry";
 import { z } from "zod";
 import { oauth2StateSchema } from "@schemavaults/auth-common";
@@ -57,7 +58,7 @@ export async function POST_authorize_client_application(
         );
       }
 
-      if (app_id === SCHEMAVAULTS_AUTH_APP_ID) {
+      if (app_id === getAuthServerAppId()) {
         return NextResponse.json(
           {
             success: false,

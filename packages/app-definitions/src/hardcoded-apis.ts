@@ -8,21 +8,24 @@ import blankUuid from "./blank-uuid";
 import defaultHardcodedAppCreationTime from "./default-hardcoded-app-creation-time";
 import getAppEnvironment from "./get-app-environment";
 import getAuthServerUrl from "./get-auth-server-url";
+import getAuthServerAppId from "./get-auth-server-app-id";
 import getSchemaVaultsAuthApiDefinition from "./get-schemavaults-auth-api-definition";
-import SCHEMAVAULTS_AUTH_APP_ID from "./SCHEMAVAULTS_AUTH_APP_ID";
 
-export const HARDCODED_API_SERVER_IDS = [
-  SCHEMAVAULTS_AUTH_APP_ID,
-] as const satisfies readonly ApiServerId[];
+export type HardcodedApiServerId = ApiServerId;
 
-export type HardcodedApiServerId = (typeof HARDCODED_API_SERVER_IDS)[number];
-
-const HARDCODED_API_SERVER_ID_SET = new Set<string>(HARDCODED_API_SERVER_IDS);
+/**
+ * @description Resolves the IDs of the hardcoded API server definitions fresh
+ * on each call so the env-var-driven auth server app id is resolved at call
+ * time rather than module load.
+ */
+export function getHardcodedApiServerIds(): readonly HardcodedApiServerId[] {
+  return [getAuthServerAppId()];
+}
 
 /**
  * @description Builds the hardcoded API server definitions fresh on each call
- * so env-var-driven fields (owner organization, name, description) are
- * resolved at call time rather than module load.
+ * so env-var-driven fields (API server id, owner organization, name,
+ * description) are resolved at call time rather than module load.
  */
 export function getHardcodedSchemaVaultsApis(): readonly SchemaVaultsApiServerDefinition[] {
   return [getSchemaVaultsAuthApiDefinition()];
@@ -34,7 +37,7 @@ export function isHardcodedApiServerId(
   if (!isValidApiServerId(api_server_id)) {
     throw new TypeError("Invalid API server ID to check if it is hardcoded!");
   }
-  return HARDCODED_API_SERVER_ID_SET.has(api_server_id);
+  return getHardcodedApiServerIds().includes(api_server_id);
 }
 
 export function getHardcodedApiServer(
@@ -66,9 +69,10 @@ export function getHardcodedApiDomains(
 
   const output: SchemaVaultsApiServerDomainRef[] = [];
 
-  if (hardcoded_app_id === SCHEMAVAULTS_AUTH_APP_ID) {
+  const auth_server_app_id = getAuthServerAppId();
+  if (hardcoded_app_id === auth_server_app_id) {
     output.push({
-      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      api_server_id: auth_server_app_id,
       environment,
       api_server_domain_ref_id: blankUuid,
       hardcoded: true,

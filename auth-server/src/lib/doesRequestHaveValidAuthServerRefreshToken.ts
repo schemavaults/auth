@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { ServerlessDatabase } from "./auth-db";
 import { RefreshTokenExpiryCookieName, RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
 import { cookies } from "next/headers";
 
@@ -14,13 +14,14 @@ type NextjsCookiesGetterResult = Awaited<ReturnType<typeof cookies>>;
 async function doesCookiesStoreHaveValidRefreshToken(
   cookies: RequestCookies | NextjsCookiesGetterResult
 ): Promise<UserData | false> {
-  if (!cookies.has(RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_ID))) {
+  const auth_server_app_id = getAuthServerAppId();
+  if (!cookies.has(RefreshTokenExpiryCookieName(auth_server_app_id))) {
     return false;
-  } else if (!cookies.has(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID))) {
+  } else if (!cookies.has(RefreshTokenCookieName(auth_server_app_id))) {
     return false;
   }
 
-  const refresh_token: string | undefined = cookies.get(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID))?.value;
+  const refresh_token: string | undefined = cookies.get(RefreshTokenCookieName(auth_server_app_id))?.value;
   if (!refresh_token) {
     return false;
   }
@@ -34,9 +35,9 @@ async function doesCookiesStoreHaveValidRefreshToken(
       [{
         type: 'refresh',
         token: refresh_token,
-        sourceHint: `From cookie with key '${RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)}'`
+        sourceHint: `From cookie with key '${RefreshTokenCookieName(auth_server_app_id)}'`
       }],
-      SCHEMAVAULTS_AUTH_APP_ID,
+      auth_server_app_id,
     );
 
     if (!route_guard.isAccessAllowed() || !route_guard.user) {

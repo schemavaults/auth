@@ -1,4 +1,4 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import {
   type CodeChallengeWithDetails,
   PKCE_ProofKeyManager,
@@ -49,7 +49,7 @@ export default function login_via_request(
           failOnStatusCode: false,
           body: {
             credentials: { email, password },
-            client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
+            client_app_id: DEFAULT_AUTH_SERVER_APP_ID,
             code_challenge: challenge.code_challenge,
             challenge_time: challenge.challenge_time,
           },
@@ -80,7 +80,7 @@ export default function login_via_request(
           // The auth-server's login response sets the refresh-token cookie
           // directly, so verify it exists before declaring success.
           return cy
-            .getCookie(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID), {
+            .getCookie(RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID), {
               timeout: 5000,
             })
             .should("exist")

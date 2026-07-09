@@ -3,7 +3,8 @@ import "server-only";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
-import { apiServerIdSchema, SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
 import captureServerException from "@/lib/captureServerException";
 
@@ -33,10 +34,11 @@ export async function PUT_regenerate_jwks_access_key(req: NextRequest, context: 
         );
       }
 
-      // Block JWKS access key management for schemavaults-auth - it is the JWKS provider
-      if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
+      // Block JWKS access key management for the auth server's own API - it is the JWKS provider
+      const auth_server_app_id = getAuthServerAppId();
+      if (api_server_id === auth_server_app_id) {
         return NextResponse.json(
-          { success: false, message: "JWKS access keys cannot be managed for the schemavaults-auth API server" },
+          { success: false, message: `JWKS access keys cannot be managed for the '${auth_server_app_id}' API server` },
           { status: 403 }
         );
       }

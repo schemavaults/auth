@@ -3,7 +3,7 @@ import SchemaVaultsServerMiddleware from "./server-middleware";
 import { DatabaseConnectedJwtKeyManager } from "@/JwtKeyManager";
 import MockJwtKeySetsStore from "@/JwtKeyManager/JsonWebKeySetsStore/MockJwtKeySetsStore";
 import {
-  SCHEMAVAULTS_AUTH_APP_ID,
+  DEFAULT_AUTH_SERVER_APP_ID,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import getAuthServerUrl from "@schemavaults/app-definitions/get-auth-server-url";
@@ -27,7 +27,7 @@ describe("SchemaVaultsServerMiddleware Initialization", () => {
     try {
       const middleware = new SchemaVaultsServerMiddleware({
         debug: true,
-        api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+        api_server_id: DEFAULT_AUTH_SERVER_APP_ID,
         auth_server_url,
         jwt_keys_manager: new MockJwtKeyManager(),
       });

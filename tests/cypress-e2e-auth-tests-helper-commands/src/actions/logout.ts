@@ -1,4 +1,4 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
@@ -14,14 +14,14 @@ export default function logout() {
     "User should be authenticated before logout",
   );
   cy.url().should("include", "/account").should("not.include", "/auth/login");
-  cy.getCookie(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)).should(
+  cy.getCookie(RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID)).should(
     "exist",
   );
 
   // Perform logout actions
   cy.intercept({
     method: "POST",
-    url: `**/api/auth/logout/${SCHEMAVAULTS_AUTH_APP_ID}`,
+    url: `**/api/auth/logout/${DEFAULT_AUTH_SERVER_APP_ID}`,
     times: 1,
   }).as("logoutRequest");
   cy.get("button#sign-out-button").click();
@@ -42,11 +42,11 @@ export default function logout() {
       cy.wait(1000);
 
       // refresh token should have been cleared by logout request
-      cy.getCookie(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID)).should(
+      cy.getCookie(RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID)).should(
         "not.exist",
       );
       cy.getCookie(
-        RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+        RefreshTokenExpiryCookieName(DEFAULT_AUTH_SERVER_APP_ID),
       ).should("not.exist");
       cy.log(
         "Logout request appears to have successfully cleared refresh token cookies!",

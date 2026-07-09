@@ -11,7 +11,6 @@ import {
   getAppEnvironment,
   type AppId,
   type ApiServerId,
-  SCHEMAVAULTS_AUTH_APP_ID,
   isHardcodedApiServerId,
   getHardcodedAppIdsForHardcodedApiServer,
   getHardcodedApp,
@@ -22,6 +21,7 @@ import {
   getHardcodedApiServer,
   type SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { ConflictError } from "@/lib/error/ConflictError";
 import { AppNotConnectedToApiServerError } from "@/lib/error/AppNotConnectedToApiServerError";
@@ -83,14 +83,15 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
       throw new Error("Invalid API server ID received!");
     }
 
-    if (client_app_id === SCHEMAVAULTS_AUTH_APP_ID && api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
+    const auth_server_app_id = getAuthServerAppId();
+    if (client_app_id === auth_server_app_id && api_server_id === auth_server_app_id) {
       return this.createHardcodedAppToApiAuthorization(
         client_app_id,
         api_server_id,
       ) satisfies AppToApiPermission;
     }
 
-    if (client_app_id === SCHEMAVAULTS_AUTH_APP_ID && api_server_id !== SCHEMAVAULTS_AUTH_APP_ID) {
+    if (client_app_id === auth_server_app_id && api_server_id !== auth_server_app_id) {
       // hardcoded apps
       console.warn("Auth server app may only have auth server as audience");
       return null;

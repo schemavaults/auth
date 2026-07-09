@@ -10,9 +10,9 @@ import {
   type AppId,
   appIdSchema,
   getApiServerIdForTokenAudience,
-  SCHEMAVAULTS_AUTH_APP_ID,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { createAudienceSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/lib/is-valid-uuid";
 import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
@@ -33,6 +33,7 @@ async function validateOneAudience(
   debug: boolean = false,
 ): Promise<ValidateAudienceOutput> {
   const audienceSchema = createAudienceSchema(z, environment);
+  const auth_server_app_id = getAuthServerAppId();
 
   if (
     typeof uid !== "string" ||
@@ -46,15 +47,15 @@ async function validateOneAudience(
   // as their audience; translate back to the stable app id before comparing.
   // The bare app id form is also accepted for backwards compatibility.
   if (
-    audience === SCHEMAVAULTS_AUTH_APP_ID ||
+    audience === auth_server_app_id ||
     getApiServerIdForTokenAudience(audience, environment) ===
-      SCHEMAVAULTS_AUTH_APP_ID
+      auth_server_app_id
   ) {
     return "auth-server-only";
   }
 
   console.assert(
-    audience !== SCHEMAVAULTS_AUTH_APP_ID,
+    audience !== auth_server_app_id,
     `Expected this to be a non-auth server API server if this point was reached`
   );
 
@@ -73,7 +74,7 @@ async function validateOneAudience(
 
   const aud: string = parsed_aud.data;
 
-  if (aud === SCHEMAVAULTS_AUTH_APP_ID) {
+  if (aud === auth_server_app_id) {
     return "auth-server-only";
   } else if (apiServerIdSchema.safeParse(aud).success) {
     // pass
@@ -144,7 +145,7 @@ export async function validateAudience(
   // compatibility.
   const singleAudienceSchema = z.union([
     createAudienceSchema(z, environment),
-    z.literal(SCHEMAVAULTS_AUTH_APP_ID),
+    z.literal(getAuthServerAppId()),
   ]);
   if (!(await singleAudienceSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
     throw new TypeError("Invalid token audience(s) in audiences array!")
@@ -187,7 +188,7 @@ export async function validateAudience(
       result: ValidateAudienceOutput,
     ): boolean {
       return typeof result === "string"
-        ? result === "auth-server-only" && client_app_id !== SCHEMAVAULTS_AUTH_APP_ID
+        ? result === "auth-server-only" && client_app_id !== getAuthServerAppId()
         : false;
     })
   ) {

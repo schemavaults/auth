@@ -1,4 +1,4 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import { RefreshTokenCookieName } from "@schemavaults/auth-common";
 
 // Reusable: navigate to /auth/login, type the credentials, and submit.
@@ -49,7 +49,7 @@ describe("MFA (TOTP + recovery codes)", () => {
         if (!ok) throw new Error("Failed to register/login regular user");
         cy.url().should("include", "/account");
         cy.getCookie(
-          RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+          RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID),
         ).should("exist");
       });
     });
@@ -75,7 +75,7 @@ describe("MFA (TOTP + recovery codes)", () => {
               .click();
             cy.url({ timeout: 15_000 }).should("include", "/account");
             cy.getCookie(
-              RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+              RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID),
             ).should("exist");
 
             // Guard against a regression of the bug this fix addresses:

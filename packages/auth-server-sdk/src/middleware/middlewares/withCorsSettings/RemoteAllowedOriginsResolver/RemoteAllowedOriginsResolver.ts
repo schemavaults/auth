@@ -3,7 +3,7 @@ import loadRemoteAllowedOrigins from "./loadRemoteAllowedOrigins";
 import {
   type ApiServerId,
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  getAuthServerAppId,
 } from "@schemavaults/app-definitions";
 import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-url";
 import loadJwksAccessPrivateKey, {
@@ -97,7 +97,7 @@ export class RemoteAllowedOriginsResolver implements IAllowedOriginsResolver {
       );
     }
 
-    if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
+    if (api_server_id === getAuthServerAppId()) {
       throw new Error(
         `Auth server doesn't load allowed origins remotely; it already has database access.`,
       );

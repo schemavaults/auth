@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import { isAllowedOrigin } from "./isAllowedOrigin";
 import type { IAllowedOriginsResolver } from "./RemoteAllowedOriginsResolver";
 import { SchemaVaultsCORSEnforcementPolicies as policies } from "./cors-policies";
@@ -68,7 +68,7 @@ describe("isAllowedOrigin", () => {
       expect(
         await checkOrigin({
           origin: AUTH_SERVER_URL,
-          audience: SCHEMAVAULTS_AUTH_APP_ID,
+          audience: DEFAULT_AUTH_SERVER_APP_ID,
           allowed_origins_resolver: resolver,
         }),
       ).toBeTrue();
@@ -79,7 +79,7 @@ describe("isAllowedOrigin", () => {
       expect(
         await checkOrigin({
           origin: `${AUTH_SERVER_URL}/`,
-          audience: SCHEMAVAULTS_AUTH_APP_ID,
+          audience: DEFAULT_AUTH_SERVER_APP_ID,
         }),
       ).toBeTrue();
     });
@@ -91,7 +91,7 @@ describe("isAllowedOrigin", () => {
       expect(
         await checkOrigin({
           origin: "https://app.example.com",
-          audience: SCHEMAVAULTS_AUTH_APP_ID,
+          audience: DEFAULT_AUTH_SERVER_APP_ID,
           allowed_origins_resolver: resolver,
         }),
       ).toBeFalse();

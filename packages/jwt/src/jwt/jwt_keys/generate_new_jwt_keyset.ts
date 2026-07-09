@@ -77,8 +77,8 @@ export async function generateNewJwtKeySet(
     });
   }
 
-  // Keysets are stored and looked up by the stable api server id (e.g. the auth
-  // app id "schemavaults-auth", or a resource API server UUID).
+  // Keysets are stored and looked up by the stable api server id (e.g. the
+  // auth server's own app id, or a resource API server UUID).
   // The URL only appears in token `aud` claims, derived from this id via getTokenAudienceForApiServerId().
   const parsedAudience = apiServerIdSchema.safeParse(audience_id);
   if (!parsedAudience.success) {

@@ -1,5 +1,5 @@
 import {
-  SCHEMAVAULTS_AUTH_APP_ID,
+  getAuthServerAppId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { isOriginInAllowedList } from "@schemavaults/auth-common";
@@ -29,7 +29,7 @@ async function enforceValidAppIfOriginApplied(
   }
   origin satisfies string;
 
-  const auth_app_id = SCHEMAVAULTS_AUTH_APP_ID;
+  const auth_app_id = getAuthServerAppId();
   const auth_server_url: string = opts.auth_server_url;
 
   if (

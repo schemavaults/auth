@@ -3,13 +3,13 @@
 // We assume that all validation has happened prior to this being called!
 
 import {
-  SCHEMAVAULTS_AUTH_APP_ID,
   getApiServerIdForTokenAudience,
   getTokenAudienceForApiServerId,
   type ApiServerId,
   type AppId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import { z } from "zod";
 import {
@@ -136,7 +136,7 @@ export default async function generateTokensForAuthenticatedUser({
           uid: user.uid,
           token_type: "refresh",
           client_app_id,
-          audience: SCHEMAVAULTS_AUTH_APP_ID,
+          audience: getAuthServerAppId(),
           grant_type: tracking.grant_type,
           issued_at: refresh_token.iat,
           expires_at: refresh_token.exp,

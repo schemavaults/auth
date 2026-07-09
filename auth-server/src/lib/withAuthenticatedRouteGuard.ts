@@ -10,7 +10,7 @@ import {
 } from "@schemavaults/auth-server-sdk/route_guards";
 import { ServerlessDatabase } from "./auth-db";
 import { RedisCache } from "./redis";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import isUserInOrganization from "./isUserInOrganization";
@@ -36,7 +36,7 @@ export async function withAuthenticatedServerComponentRouteGuard(
     {
       route_guard_type: 'authenticated',
       jwt_keys_manager,
-      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      api_server_id: getAuthServerAppId(),
       error_page_url: '/error',
       custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
     })
@@ -75,7 +75,7 @@ export async function withAuthenticatedApiRouteGuard(
       {
         route_guard_type: 'authenticated',
         jwt_keys_manager,
-        api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+        api_server_id: getAuthServerAppId(),
         custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
         custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
         additional_token_sources: wrapper_opts?.additional_token_sources,

@@ -1,7 +1,7 @@
 import {
   type ApiServerId,
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  getAuthServerAppId,
 } from "@schemavaults/app-definitions";
 
 export default function jwksEndpoint<T extends ApiServerId>(
@@ -13,7 +13,7 @@ export default function jwksEndpoint<T extends ApiServerId>(
     );
   }
 
-  if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
+  if (api_server_id === getAuthServerAppId()) {
     throw new TypeError(
       "The auth server does not need to load JWKS via remote connection!",
     );

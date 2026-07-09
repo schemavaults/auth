@@ -1,4 +1,4 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
@@ -26,10 +26,10 @@ describe("Login", () => {
       }
 
       cy.getCookie(
-        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+        RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID),
       ).should("exist");
       cy.getCookie(
-        RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+        RefreshTokenExpiryCookieName(DEFAULT_AUTH_SERVER_APP_ID),
       ).should("exist");
 
       cy.visit("/auth/login");
@@ -48,11 +48,11 @@ describe("Login", () => {
           cy.log(`Logged in as regular user: ${credentials.email}`);
 
           cy.getCookie(
-            RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+            RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID),
           ).should("exist");
           cy.getCookie(
             RefreshTokenExpiryCookieName(
-              SCHEMAVAULTS_AUTH_APP_ID,
+              DEFAULT_AUTH_SERVER_APP_ID,
             ),
           ).should("exist");
           cy.url().should("include", "/account");

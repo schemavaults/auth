@@ -1,7 +1,7 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import { RefreshTokenCookieName } from "@schemavaults/auth-common";
 
-const APP_ID = SCHEMAVAULTS_AUTH_APP_ID;
+const APP_ID = DEFAULT_AUTH_SERVER_APP_ID;
 const REFRESH_TOKEN_COOKIE = RefreshTokenCookieName(APP_ID);
 
 describe("Password Reset Revokes Refresh Tokens", () => {

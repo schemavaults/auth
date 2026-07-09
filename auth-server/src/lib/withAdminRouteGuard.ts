@@ -11,7 +11,7 @@ import {
 } from "@schemavaults/auth-server-sdk/route_guards";
 import ServerlessDatabase from "./auth-db/serverless-database";
 import { RedisCache } from "./redis";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import isUserInOrganization from "./isUserInOrganization";
 
@@ -33,7 +33,7 @@ export async function withAdminServerComponentRouteGuard(
       route_guard_type: "admin",
       custom_is_authorized_check: async (props): Promise<boolean> => props.user.admin === true,
       jwt_keys_manager,
-      api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+      api_server_id: getAuthServerAppId(),
       custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
     }
   )
@@ -62,7 +62,7 @@ export async function withAdminApiRouteGuard(
       { dbh, redis },
       {
         custom_is_authorized_check: async (props) => props.user.admin === true,
-        api_server_id: SCHEMAVAULTS_AUTH_APP_ID,
+        api_server_id: getAuthServerAppId(),
         jwt_keys_manager,
         custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
       }

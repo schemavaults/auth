@@ -19,7 +19,7 @@ import {
 } from "@schemavaults/jwt";
 import {
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  getAuthServerAppId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type {
@@ -126,9 +126,10 @@ class AuthJwtValidationMiddleware
     let access_token: string | undefined =
       req.cookies.get("access_token")?.value;
 
-    if (this.audience === SCHEMAVAULTS_AUTH_APP_ID) {
+    const auth_server_app_id = getAuthServerAppId();
+    if (this.audience === auth_server_app_id) {
       const refresh_token: string | undefined = req.cookies.get(
-        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+        RefreshTokenCookieName(auth_server_app_id),
       )?.value;
       if (typeof refresh_token === "string") {
         token_sources.push({

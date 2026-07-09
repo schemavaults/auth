@@ -1,8 +1,8 @@
 "use client";
 
-import {
-  SCHEMAVAULTS_AUTH_APP_ID,
-  type SchemaVaultsAppEnvironment,
+import type {
+  AppId,
+  SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { defaultAuthMiddlewareRules } from "@schemavaults/auth-common";
 import AuthProvider from "@schemavaults/auth-react-provider";
@@ -13,6 +13,13 @@ import { useSWRConfig } from "swr";
 export interface ClientAuthProviderProps {
   children: ReactNode | ReactElement;
   environment: SchemaVaultsAppEnvironment;
+  /**
+   * The auth server's own app id, resolved server-side from the
+   * SCHEMAVAULTS_AUTH_SERVER_APP_ID environment variable. The auth server's
+   * frontend runs as its own client app, so this is used as both the client
+   * app_id and the auth_server_app_id of the AuthProvider.
+   */
+  auth_server_app_id: AppId;
   debug?: boolean;
   invite_code_required?: boolean;
 }
@@ -20,6 +27,7 @@ export interface ClientAuthProviderProps {
 export function ClientAuthProvider({
   children,
   environment,
+  auth_server_app_id,
   ...props
 }: ClientAuthProviderProps): ReactElement {
   const router = useRouter();
@@ -49,7 +57,8 @@ export function ClientAuthProvider({
       successful_logout_redirect_uri="/"
       successful_authentication_redirect_uri="/account"
       authMiddlewareRules={defaultAuthMiddlewareRules}
-      app_id={SCHEMAVAULTS_AUTH_APP_ID}
+      app_id={auth_server_app_id}
+      auth_server_app_id={auth_server_app_id}
       environment={environment}
       debug={typeof props.debug === 'boolean' ? props.debug : false}
       invite_code_required={typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true}
