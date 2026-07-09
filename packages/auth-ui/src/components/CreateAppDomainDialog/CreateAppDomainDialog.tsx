@@ -167,16 +167,16 @@ export function CreateAppDomainDialog({
               name="domain"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Domain Name</FormLabel>
+                  <FormLabel>Base URL</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={"https://schemavaults.com"}
+                      placeholder={"https://app.example.com"}
                       {...field}
                       disabled={submitting}
                     />
                   </FormControl>
                   <FormDescription>
-                    What URL can this app be reached at?
+                    What is the base URL that this app may be reached at?
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
