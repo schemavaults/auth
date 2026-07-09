@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import { RemoteAllowedOriginsResolver } from "./RemoteAllowedOriginsResolver";
 
 const AUTH_SERVER_URL = "https://auth.example.com";
@@ -120,7 +120,7 @@ describe("RemoteAllowedOriginsResolver", () => {
   test("rejects the auth server app id", async () => {
     const resolver = new TestableRemoteAllowedOriginsResolver([]);
     await expect(
-      resolver.loadAllowedOrigins(SCHEMAVAULTS_AUTH_APP_ID),
+      resolver.loadAllowedOrigins(DEFAULT_AUTH_SERVER_APP_ID),
     ).rejects.toThrow();
   });
 

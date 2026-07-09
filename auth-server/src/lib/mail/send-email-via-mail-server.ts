@@ -1,5 +1,10 @@
 import "server-only";
-import { getAppEnvironment, SCHEMAVAULTS_AUTH_APP_ID, SchemaVaultsAppEnvironment, type SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
+import {
+  getAppEnvironment,
+  SchemaVaultsAppEnvironment,
+  type SchemaVaultsApiServerDomainRef,
+} from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { createSendEmailRequestBodySchema, type SendEmailRequestBody } from "@schemavaults/send-email"
 import spoofSuperuserAccessToken from "@/lib/spoofSuperuserAccessToken";
 import type { Kysely } from "@schemavaults/dbh";
@@ -55,7 +60,7 @@ export async function sendEmailViaMailServer(
   const headers = new Headers();
 
   const mail_server_access_token: AccessToken = await spoofSuperuserAccessToken({
-    client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
+    client_app_id: getAuthServerAppId(),
     audience_id: mail_api_server_id,
     db
   });

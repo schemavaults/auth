@@ -4,10 +4,10 @@ import { ServerlessDatabase } from "@/lib/auth-db";
 import {
   apiServerIdSchema,
   getAppEnvironment,
-  SCHEMAVAULTS_AUTH_APP_ID,
   type ApiServerId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import verifyJwksAccessAssertion from "@/app/api/jwks/[audience]/verifyJwksAccessAssertion";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis/app-to-api-permissions-registry";
 import { getAppAllowedOriginsForEnvironment } from "@/lib/cors/cors-for-client-app";
@@ -41,7 +41,7 @@ export async function GET(
   }
   const api_server_id: ApiServerId = parsed_api_server_id.data;
 
-  if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
+  if (api_server_id === getAuthServerAppId()) {
     return NextResponse.json(
       {
         success: false,

@@ -125,8 +125,8 @@ export async function generateJWT<T extends AuthTokenTypes>(
       );
     }
 
-    // The keyset is stored/looked-up by the stable api server id (e.g. the auth
-    // app id "schemavaults-auth"), but the token `aud` claim uses the token
+    // The keyset is stored/looked-up by the stable api server id (e.g. the
+    // auth server's own app id), but the token `aud` claim uses the token
     // audience form (the auth server URL). Translate before comparing.
     const keyset_token_audience: string = getTokenAudienceForApiServerId(
       keyset_audience_id,

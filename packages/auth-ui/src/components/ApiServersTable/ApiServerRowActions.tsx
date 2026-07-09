@@ -20,11 +20,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@schemavaults/ui";
-import {
-  isHardcodedApiServerId,
-  SCHEMAVAULTS_AUTH_APP_ID,
-  type ApiServerId,
-  type SchemaVaultsApiServerDefinition,
+import type {
+  ApiServerId,
+  SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
 import Link from "next/link";
 import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
@@ -50,10 +48,11 @@ export function ApiServerRowActions({
   const { showConnectAppToApi, isOrgOwner } = useContext(
     ApiServersTableConfigContext,
   );
+  // The row's own 'hardcoded' flag identifies the auth server's built-in API
+  // definition; comparing ids against a client-bundled constant would be
+  // blind to the env-var-driven app id in white-label deployments.
   const isDeleteDisabled =
-    api.hardcoded ||
-    isHardcodedApiServerId(api_server_id) ||
-    (!showConnectAppToApi && !isOrgOwner);
+    api.hardcoded || (!showConnectAppToApi && !isOrgOwner);
 
   return (
     <>
@@ -104,7 +103,7 @@ export function ApiServerRowActions({
             <ClipboardCopy className={menuItemIconClassname} /> Copy API Server
             ID
           </DropdownMenuItem>
-          {api_server_id !== SCHEMAVAULTS_AUTH_APP_ID && (
+          {!api.hardcoded && (
             <Link
               href={`/apis/${api_server_id}/jwks-access-keys`}
               className="hover:cursor-pointer"

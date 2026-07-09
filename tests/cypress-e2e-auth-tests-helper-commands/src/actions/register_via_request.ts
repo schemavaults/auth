@@ -1,13 +1,11 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import {
   type CodeChallengeWithDetails,
   PKCE_ProofKeyManager,
   RefreshTokenCookieName,
 } from "@schemavaults/auth-common";
+import getAuthServerAppIdFromCypressEnv from "../get-auth-server-app-id-from-cypress-env";
 
 const ROUTE = "/api/auth/register";
-
-const client_app_id = SCHEMAVAULTS_AUTH_APP_ID;
 
 /**
  * Faster equivalent of cy.register(): registers a new user by POSTing
@@ -19,6 +17,8 @@ export default function register_via_request(
   password: string,
   invite_code?: string,
 ): Cypress.Chainable<number> {
+  const client_app_id = getAuthServerAppIdFromCypressEnv();
+
   cy.is_authenticated().should(
     "be.false",
     "User should not be authenticated before registration",

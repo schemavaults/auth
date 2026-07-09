@@ -20,7 +20,12 @@ import {
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import shouldCreateAsSuperuser from "./shouldCreateAsSuperuser";
 import lookupInviteCode from "@/lib/auth-db/users/lookup-invite-code";
-import { appIdSchema, getAppEnvironment, SCHEMAVAULTS_AUTH_APP_ID, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  appIdSchema,
+  getAppEnvironment,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
@@ -141,7 +146,7 @@ export async function handleRegister({
           { status: 400 },
         );
       }
-    } else if (client_app_id !== SCHEMAVAULTS_AUTH_APP_ID) {
+    } else if (client_app_id !== getAuthServerAppId()) {
       return NextResponse.json(
         {
           kind: "failure",

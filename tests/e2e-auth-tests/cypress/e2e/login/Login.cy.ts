@@ -1,8 +1,10 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
 } from "@schemavaults/auth-common";
+
+const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
 
 describe("Login", () => {
   it("can load the login page", () => {
@@ -26,10 +28,10 @@ describe("Login", () => {
       }
 
       cy.getCookie(
-        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+        RefreshTokenCookieName(AUTH_APP_ID),
       ).should("exist");
       cy.getCookie(
-        RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+        RefreshTokenExpiryCookieName(AUTH_APP_ID),
       ).should("exist");
 
       cy.visit("/auth/login");
@@ -48,11 +50,11 @@ describe("Login", () => {
           cy.log(`Logged in as regular user: ${credentials.email}`);
 
           cy.getCookie(
-            RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+            RefreshTokenCookieName(AUTH_APP_ID),
           ).should("exist");
           cy.getCookie(
             RefreshTokenExpiryCookieName(
-              SCHEMAVAULTS_AUTH_APP_ID,
+              AUTH_APP_ID,
             ),
           ).should("exist");
           cy.url().should("include", "/account");

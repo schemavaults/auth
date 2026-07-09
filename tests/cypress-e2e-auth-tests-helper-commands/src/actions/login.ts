@@ -1,13 +1,15 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
 import {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
 } from "@schemavaults/auth-common";
+import getAuthServerAppIdFromCypressEnv from "../get-auth-server-app-id-from-cypress-env";
 
 export default function login(
   email: string,
   password: string,
 ): Cypress.Chainable<boolean> {
+  const auth_app_id = getAuthServerAppIdFromCypressEnv();
+
   cy.is_authenticated().then((authenticated: boolean) => {
     if (authenticated) {
       throw new Error(
@@ -29,7 +31,7 @@ export default function login(
   }).as("loginRequest");
   cy.intercept({
     method: "POST",
-    url: `**/api/auth/token/authorization_code/${SCHEMAVAULTS_AUTH_APP_ID}`,
+    url: `**/api/auth/token/authorization_code/${auth_app_id}`,
     times: 1,
   }).as("exchangeTokenRequest");
   cy.intercept({
@@ -89,11 +91,11 @@ export default function login(
             );
             if (interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
-              cy.getCookie(RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID), {
+              cy.getCookie(RefreshTokenCookieName(auth_app_id), {
                 timeout: 10000,
               }).should("exist");
               cy.getCookie(
-                RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+                RefreshTokenExpiryCookieName(auth_app_id),
                 { timeout: 10000 },
               ).should("exist");
               return cy

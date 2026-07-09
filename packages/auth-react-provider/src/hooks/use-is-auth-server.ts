@@ -1,14 +1,16 @@
 "use client";
 import { useMemo } from "react";
 import useAppId from "./use-app-id";
-import {
-  type AppId,
-  SCHEMAVAULTS_AUTH_APP_ID,
-} from "@schemavaults/app-definitions";
+import useAuthServerAppId from "./use-auth-server-app-id";
+import type { AppId } from "@schemavaults/app-definitions";
 
 export function useIsAuthServer(): boolean {
   const appId: AppId = useAppId();
-  return useMemo(() => appId === SCHEMAVAULTS_AUTH_APP_ID, [appId]);
+  const authServerAppId: AppId = useAuthServerAppId();
+  return useMemo(
+    () => appId === authServerAppId,
+    [appId, authServerAppId],
+  );
 }
 
 export default useIsAuthServer;

@@ -1,7 +1,7 @@
 import {
   type ApiServerId,
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  getAuthServerAppId,
 } from "@schemavaults/app-definitions";
 
 export default function allowedOriginsEndpoint<T extends ApiServerId>(
@@ -13,7 +13,7 @@ export default function allowedOriginsEndpoint<T extends ApiServerId>(
     );
   }
 
-  if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
+  if (api_server_id === getAuthServerAppId()) {
     throw new TypeError(
       "The auth server does not load allowed origins via remote connection!",
     );

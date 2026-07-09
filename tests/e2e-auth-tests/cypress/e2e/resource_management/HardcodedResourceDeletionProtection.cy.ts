@@ -11,13 +11,17 @@
 // Equivalent to SystemOrganizationProtection.cy.ts but for the hardcoded app /
 // API server resources.
 
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
+
 describe("Hardcoded Resource Deletion Protection", () => {
   // Pick one representative ID per resource category. Each test asserts on a
   // single ID so a failure pinpoints exactly which protection regressed.
   // The auth app/API is the only hardcoded resource since the whitelabel
-  // refactor trimmed the hardcoded app/API definitions down to it.
-  const HARDCODED_APP_ID = "schemavaults-auth";
-  const HARDCODED_API_SERVER_ID = "schemavaults-auth";
+  // refactor trimmed the hardcoded app/API definitions down to it; its id is
+  // env-var driven (SCHEMAVAULTS_AUTH_SERVER_APP_ID), so resolve it from the
+  // Cypress env rather than hardcoding "schemavaults-auth".
+  const HARDCODED_APP_ID = getAuthServerAppIdFromCypressEnv();
+  const HARDCODED_API_SERVER_ID = getAuthServerAppIdFromCypressEnv();
 
   it("DELETE /api/apps/:hardcoded_app_id returns 403 for the superuser admin", () => {
     cy.create_and_login_as_superuser_via_request().then((success: boolean) => {

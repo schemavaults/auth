@@ -65,7 +65,10 @@ export {
   DEFAULT_AUTH_SERVER_DESCRIPTION,
 } from "./get-auth-server-description";
 
-export { SCHEMAVAULTS_AUTH_APP_ID } from "./SCHEMAVAULTS_AUTH_APP_ID";
+export {
+  getAuthServerAppId,
+  DEFAULT_AUTH_SERVER_APP_ID,
+} from "./get-auth-server-app-id";
 
 export { getSchemaVaultsAuthAppDefinition } from "./get-schemavaults-auth-app-definition";
 
@@ -87,7 +90,7 @@ export {
   getHardcodedApp,
   getHardcodedAppDomains,
   getHardcodedSchemaVaultsApps,
-  HARDCODED_APP_IDS,
+  getHardcodedAppIds,
 } from "./hardcoded-apps";
 export type { HardcodedAppId } from "./hardcoded-apps";
 
@@ -96,6 +99,6 @@ export {
   getHardcodedApiServer,
   getHardcodedApiDomains,
   getHardcodedSchemaVaultsApis,
-  HARDCODED_API_SERVER_IDS,
+  getHardcodedApiServerIds,
 } from "./hardcoded-apis";
 export type { HardcodedApiServerId } from "./hardcoded-apis";

@@ -1,5 +1,7 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import { RefreshTokenCookieName } from "@schemavaults/auth-common";
+
+const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
 
 // Reusable: navigate to /auth/login, type the credentials, and submit.
 // Adds the same hydration + visibility guards used by the existing
@@ -49,7 +51,7 @@ describe("MFA (TOTP + recovery codes)", () => {
         if (!ok) throw new Error("Failed to register/login regular user");
         cy.url().should("include", "/account");
         cy.getCookie(
-          RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+          RefreshTokenCookieName(AUTH_APP_ID),
         ).should("exist");
       });
     });
@@ -75,7 +77,7 @@ describe("MFA (TOTP + recovery codes)", () => {
               .click();
             cy.url({ timeout: 15_000 }).should("include", "/account");
             cy.getCookie(
-              RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+              RefreshTokenCookieName(AUTH_APP_ID),
             ).should("exist");
 
             // Guard against a regression of the bug this fix addresses:

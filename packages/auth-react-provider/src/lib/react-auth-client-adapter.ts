@@ -3,8 +3,8 @@
 import {
   type AppId,
   appIdSchema,
+  DEFAULT_AUTH_SERVER_APP_ID,
   getAuthServerUrl,
-  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
@@ -42,6 +42,9 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
   private readonly debug: boolean;
   private readonly auth_server_uri: string;
   private readonly client_app_id: AppId;
+  // The auth server deployment's own app id (white-label deployments override
+  // the default via the 'auth_server_app_id' init option)
+  private readonly auth_server_app_id: AppId;
 
   private readonly _fetch: (
     url: string,
@@ -83,6 +86,19 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
       );
     }
     this.client_app_id = opts.client_app_id;
+    if (
+      typeof opts.auth_server_app_id === "string" &&
+      opts.auth_server_app_id.length > 0
+    ) {
+      if (!appIdSchema.safeParse(opts.auth_server_app_id).success) {
+        throw new TypeError(
+          "Invalid 'auth_server_app_id' to initialize ReactAuthClientSdkAdapter with!",
+        );
+      }
+      this.auth_server_app_id = opts.auth_server_app_id;
+    } else {
+      this.auth_server_app_id = DEFAULT_AUTH_SERVER_APP_ID;
+    }
     this._fetch = opts.fetch.bind(window);
   }
 
@@ -661,7 +677,7 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     if (typeof client_app_id !== "string") {
       throw new TypeError("Expected 'client_app_id' to be a string!");
     }
-    const isAuthServer: boolean = client_app_id === SCHEMAVAULTS_AUTH_APP_ID;
+    const isAuthServer: boolean = client_app_id === this.auth_server_app_id;
     if (isAuthServer) {
       return true;
     }

@@ -4,7 +4,7 @@ import loadRemoteJwks from "./loadRemoteJwks";
 import {
   type ApiServerId,
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  getAuthServerAppId,
 } from "@schemavaults/app-definitions";
 import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-url";
 import loadJwksAccessPrivateKey, {
@@ -76,7 +76,7 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
       );
     }
 
-    if (audienceId === SCHEMAVAULTS_AUTH_APP_ID) {
+    if (audienceId === getAuthServerAppId()) {
       throw new Error(
         `Auth server doesn't need to load remote JWKS; it already has the keys.`,
       );

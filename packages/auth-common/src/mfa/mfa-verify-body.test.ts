@@ -1,9 +1,10 @@
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import { describe, test, expect } from "bun:test";
 import { mfaVerifyBodySchema } from "./mfa-verify-body";
 
 const CHALLENGE_ID = "11111111-1111-4111-8111-111111111111";
 const FACTOR_ID = "22222222-2222-4222-8222-222222222222";
-const CLIENT_APP_ID = "schemavaults-auth";
+const CLIENT_APP_ID = DEFAULT_AUTH_SERVER_APP_ID;
 
 describe("mfaVerifyBodySchema", () => {
   test("accepts a TOTP proof with factor_id", () => {

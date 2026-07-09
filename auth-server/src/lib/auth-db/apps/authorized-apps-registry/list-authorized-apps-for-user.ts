@@ -3,7 +3,7 @@ import isValidUuid from "@/lib/is-valid-uuid";
 import { AuthorizedAppDeclaration, authorizedAppDeclarationSchema } from "./authorized-app-declaration-schema";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 
 export async function listAuthorizedAppsForUser(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
@@ -93,7 +93,7 @@ export async function listAuthorizedAppsForUser(
 
     // The auth app is always authorized (fake authorization)
     const auth_app_fake_authorization: AuthorizedAppDeclaration = {
-      app_id: SCHEMAVAULTS_AUTH_APP_ID,
+      app_id: getAuthServerAppId(),
       authorized_at: Date.now(),
       uid,
       user_app_authorization_id: crypto.randomUUID(),

@@ -16,6 +16,8 @@ import buildAbsoluteUri from "@/lib/buildAbsoluteUri";
 export interface IAuthClientFactoryInitOpts {
   environment: SchemaVaultsAppEnvironment;
   app_id: AppId;
+  /** The auth server deployment's own app id; defaults to "schemavaults-auth" */
+  auth_server_app_id?: AppId;
   debug?: boolean;
   default_audiences?: readonly ApiServerId[];
   auth_server_url: string;
@@ -31,6 +33,7 @@ export class AuthClientFactory {
   private readonly environment: SchemaVaultsAppEnvironment;
   private readonly secure: boolean;
   private readonly app_id: string;
+  private readonly auth_server_app_id: AppId | undefined;
   private readonly debug: boolean;
   private readonly default_audiences: readonly ApiServerId[];
   private readonly auth_server_url: string;
@@ -48,6 +51,7 @@ export class AuthClientFactory {
     const environment: SchemaVaultsAppEnvironment = opts.environment;
     this.environment = environment;
     this.app_id = opts.app_id;
+    this.auth_server_app_id = opts.auth_server_app_id;
     const isInsecureHTTPContext: boolean = (window.location.protocol.startsWith(
       "http:",
     ) && !window.location.hostname.includes("localhost")) satisfies boolean;
@@ -111,6 +115,7 @@ export class AuthClientFactory {
       auth_server_uri: this.auth_server_url,
       debug: this.debug,
       client_app_id: this.app_id,
+      auth_server_app_id: this.auth_server_app_id,
       fetch: this.fetch,
     });
   }
@@ -134,6 +139,7 @@ export class AuthClientFactory {
       authorize_uri: this.authorize_uri,
       error_page_uri: this.error_page_uri,
       app_id: this.app_id,
+      auth_server_app_id: this.auth_server_app_id,
       default_audiences: this.default_audiences,
       debug: this.debug,
       app_env: environment,

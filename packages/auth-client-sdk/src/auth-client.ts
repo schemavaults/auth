@@ -66,7 +66,7 @@ import {
   type ListAppsQueryType,
   type ListApiServersQueryResponse,
   type ListApiServersQueryType,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  DEFAULT_AUTH_SERVER_APP_ID,
 } from "@schemavaults/app-definitions";
 import type { PaginationOptions } from "@schemavaults/auth-common";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
@@ -107,6 +107,10 @@ export class SchemaVaultsAuthClient
   private readonly _error_page_uri: string;
 
   private readonly _app_id: string; // Undefined on the auth-server, set from 3rd party client
+
+  // The auth server deployment's own app id (white-label deployments override
+  // the default via the 'auth_server_app_id' constructor option)
+  private readonly _auth_server_app_id: string;
 
   private listeners: Map<string, OnAuthStateChangedListenerRef> = new Map();
 
@@ -218,6 +222,24 @@ export class SchemaVaultsAuthClient
       typeof this._app_id === "string",
       "App ID that this auth client is running for should be a string after being parsed!",
     );
+
+    // Get the auth server deployment's own app ID (defaults to "schemavaults-auth")
+    if (
+      typeof opts.auth_server_app_id === "string" &&
+      opts.auth_server_app_id.length > 0
+    ) {
+      const parsed_auth_server_app_id = appIdSchema.safeParse(
+        opts.auth_server_app_id,
+      );
+      if (!parsed_auth_server_app_id.success) {
+        throw new Error(
+          "Invalid 'auth_server_app_id' received for @schemavaults/auth-client-sdk initialization",
+        );
+      }
+      this._auth_server_app_id = parsed_auth_server_app_id.data;
+    } else {
+      this._auth_server_app_id = DEFAULT_AUTH_SERVER_APP_ID;
+    }
 
     // Get redirect URLS (optional, non-web clients will not be redirected if not provided)
     this._successful_authentication_redirect_uri =
@@ -564,7 +586,7 @@ export class SchemaVaultsAuthClient
    * (only the auth server can acquire access tokens for the auth server apis, as a security feature)
    */
   private get isClientForAuthServer(): boolean {
-    if (this.app_id === SCHEMAVAULTS_AUTH_APP_ID) {
+    if (this.app_id === this._auth_server_app_id) {
       return true;
     }
     return false;
@@ -1343,21 +1365,15 @@ export class SchemaVaultsAuthClient
   }
 
   /**
-   * App IDs that are allowed to perform write operations (create, update, connect)
-   * on app/API management endpoints.
-   */
-  private static readonly ADMIN_APP_IDS: ReadonlySet<string> = new Set([
-    SCHEMAVAULTS_AUTH_APP_ID,
-  ]);
-
-  /**
    * Throws an error if the current app is not authorized to perform write operations
-   * on app/API management endpoints.
+   * on app/API management endpoints. Only the auth server's own frontend may do so.
+   * This is a client-side convenience guard; the server-side route guards remain
+   * authoritative regardless of the 'auth_server_app_id' this client was given.
    */
   private assertAppAndApiManagementWriteAccess(method_name: string): void {
-    if (!SchemaVaultsAuthClient.ADMIN_APP_IDS.has(this._app_id)) {
+    if (this._app_id !== this._auth_server_app_id) {
       throw new Error(
-        `[SchemaVaultsAuthClient] ${method_name}() is restricted to SchemaVaults internal apps. ` +
+        `[SchemaVaultsAuthClient] ${method_name}() is restricted to the auth server's own app. ` +
           `Current app_id "${this._app_id}" is not authorized to perform this operation.`,
       );
     }

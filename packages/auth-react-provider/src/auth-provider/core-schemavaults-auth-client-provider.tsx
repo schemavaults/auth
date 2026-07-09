@@ -27,6 +27,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "@/hooks/use-debug";
 import useAppId from "@/hooks/use-app-id";
+import useAuthServerAppId from "@/hooks/use-auth-server-app-id";
 import useDefaultAccessTokenAudiences from "@/hooks/use-default-access-token-audiences";
 import AuthProviderSideEffects from "./auth-provider-side-effects";
 import assertHttpsInProduction from "@/lib/assert-https-in-production";
@@ -48,6 +49,7 @@ export default function CoreSchemaVaultsAuthClientProvider(
   assertHttpsInProduction(appEnvironment);
 
   const app_id: AppId = useAppId();
+  const auth_server_app_id: AppId = useAuthServerAppId();
 
   if (typeof props.fetch !== "function") {
     throw new TypeError("Expected 'fetch' to be a function!");
@@ -92,6 +94,7 @@ export default function CoreSchemaVaultsAuthClientProvider(
       successful_authentication_redirect_uri,
       successful_logout_redirect_uri,
       app_id,
+      auth_server_app_id,
       default_audiences,
       debug,
       authorize_uri,

@@ -33,6 +33,8 @@ export type * from "./use-start-register-oauth-pkce-flow";
 
 export { useAppId } from "./use-app-id";
 
+export { useAuthServerAppId } from "./use-auth-server-app-id";
+
 export { useIsAuthServer } from "./use-is-auth-server";
 
 export { useDefaultAccessTokenAudiences } from "./use-default-access-token-audiences";

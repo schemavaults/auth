@@ -8,21 +8,24 @@ import type {
 import defaultHardcodedAppCreationTime from "./default-hardcoded-app-creation-time";
 import getAppEnvironment from "./get-app-environment";
 import getAuthServerUrl from "./get-auth-server-url";
+import getAuthServerAppId from "./get-auth-server-app-id";
 import getSchemaVaultsAuthAppDefinition from "./get-schemavaults-auth-app-definition";
-import SCHEMAVAULTS_AUTH_APP_ID from "./SCHEMAVAULTS_AUTH_APP_ID";
 
-export const HARDCODED_APP_IDS = [
-  SCHEMAVAULTS_AUTH_APP_ID,
-] as const satisfies readonly AppId[];
+export type HardcodedAppId = AppId;
 
-export type HardcodedAppId = (typeof HARDCODED_APP_IDS)[number];
-
-const HARDCODED_APP_ID_SET = new Set<string>(HARDCODED_APP_IDS);
+/**
+ * @description Resolves the IDs of the hardcoded app definitions fresh on
+ * each call so the env-var-driven auth server app id is resolved at call time
+ * rather than module load.
+ */
+export function getHardcodedAppIds(): readonly HardcodedAppId[] {
+  return [getAuthServerAppId()];
+}
 
 /**
  * @description Builds the hardcoded app definitions fresh on each call so
- * env-var-driven fields (owner organization, name, description) are resolved
- * at call time rather than module load.
+ * env-var-driven fields (app id, owner organization, name, description) are
+ * resolved at call time rather than module load.
  */
 export function getHardcodedSchemaVaultsApps(): readonly SchemaVaultsApp[] {
   return [getSchemaVaultsAuthAppDefinition()];
@@ -32,7 +35,7 @@ export function isHardcodedAppId(app_id: AppId): app_id is HardcodedAppId {
   if (!isValidAppId(app_id)) {
     throw new TypeError("Invalid app ID to check if it is hardcoded!");
   }
-  return HARDCODED_APP_ID_SET.has(app_id);
+  return getHardcodedAppIds().includes(app_id);
 }
 
 export function getHardcodedApp(
@@ -62,9 +65,10 @@ export function getHardcodedAppDomains(
 
   const output: SchemaVaultsAppDomainRef[] = [];
 
-  if (hardcoded_app_id === SCHEMAVAULTS_AUTH_APP_ID) {
+  const auth_server_app_id = getAuthServerAppId();
+  if (hardcoded_app_id === auth_server_app_id) {
     output.push({
-      app_id: SCHEMAVAULTS_AUTH_APP_ID,
+      app_id: auth_server_app_id,
       environment,
       app_domain_ref_id: blankUuid,
       hardcoded: true,

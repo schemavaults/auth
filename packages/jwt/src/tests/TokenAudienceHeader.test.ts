@@ -4,7 +4,7 @@ import { AccessToken, getAuthServerUrl } from "@schemavaults/auth-common";
 import { describe, expect, test } from "bun:test";
 import MockUser from "./MockUser";
 import {
-  SCHEMAVAULTS_AUTH_APP_ID,
+  DEFAULT_AUTH_SERVER_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
@@ -14,9 +14,9 @@ const auth_server_url = getAuthServerUrl(env);
 describe("Token 'aud' Header Claim", () => {
   test("", async () => {
     // Keyset is stored/looked-up by the stable app id; the token `aud` is the URL.
-    const audience_id = SCHEMAVAULTS_AUTH_APP_ID;
+    const audience_id = DEFAULT_AUTH_SERVER_APP_ID;
     const token_audience = auth_server_url;
-    const client_app_id = SCHEMAVAULTS_AUTH_APP_ID;
+    const client_app_id = DEFAULT_AUTH_SERVER_APP_ID;
 
     const jwt_keys = await generateNewJwtKeySet({
       audience_id,

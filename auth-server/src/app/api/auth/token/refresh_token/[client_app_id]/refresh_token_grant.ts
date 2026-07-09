@@ -28,9 +28,9 @@ import validateAudience from "@/lib/validate-audience";
 import {
   getApiServerIdForTokenAudience,
   getAppEnvironment,
-  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import AuthServerJwtKeysManager, {
   generateTokensForAuthenticatedUser,
@@ -53,6 +53,8 @@ export async function handleRefreshTokenGrant(
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
   debug: boolean = shouldEnableDebug(environment),
 ): Promise<NextResponse> {
+  const auth_app_id = getAuthServerAppId();
+
   let refresh_token_keyset_id: string;
   try {
     refresh_token_keyset_id = getKeysetIdFromToken(refresh_token);
@@ -101,7 +103,7 @@ export async function handleRefreshTokenGrant(
   // stable app id before validating it identifies the auth server.
   if (
     getApiServerIdForTokenAudience(refresh_token_audience_id, environment) !==
-    SCHEMAVAULTS_AUTH_APP_ID
+    auth_app_id
   ) {
     return NextResponse.json(
       {
@@ -130,7 +132,7 @@ export async function handleRefreshTokenGrant(
   let refresh_token_keyset: I_JWT_Keys;
   try {
     refresh_token_keyset = await jwt_keys_manager.getKeyset(
-      SCHEMAVAULTS_AUTH_APP_ID,
+      auth_app_id,
       refresh_token_keyset_id,
     );
   } catch (e: unknown) {

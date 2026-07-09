@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import {
   getTokenAudienceForApiServerId,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  DEFAULT_AUTH_SERVER_APP_ID,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
@@ -44,7 +44,7 @@ async function createKeysAndManager(): Promise<{
   keys_manager: MockJwtKeyManager;
 }> {
   const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-    audience_id: SCHEMAVAULTS_AUTH_APP_ID,
+    audience_id: DEFAULT_AUTH_SERVER_APP_ID,
     environment,
   });
   const store = new MockJwtKeySetsStore();
@@ -63,7 +63,7 @@ describe("decodeJWTsWithKeyManager", () => {
 
     const factory = new JWT_Factory({
       user,
-      client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
+      client_app_id: DEFAULT_AUTH_SERVER_APP_ID,
       jwt_keys,
       environment,
       user_organizations: [],
@@ -79,7 +79,7 @@ describe("decodeJWTsWithKeyManager", () => {
           token: refresh_token.token,
         },
       ],
-      SCHEMAVAULTS_AUTH_APP_ID,
+      DEFAULT_AUTH_SERVER_APP_ID,
       environment,
     );
 
@@ -94,13 +94,13 @@ describe("decodeJWTsWithKeyManager", () => {
 
     const factory = new JWT_Factory({
       user,
-      client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
+      client_app_id: DEFAULT_AUTH_SERVER_APP_ID,
       jwt_keys,
       environment,
       user_organizations: [],
     });
     const access_token = await factory.access(
-      getTokenAudienceForApiServerId(SCHEMAVAULTS_AUTH_APP_ID, environment),
+      getTokenAudienceForApiServerId(DEFAULT_AUTH_SERVER_APP_ID, environment),
     );
 
     const { user: decoded_user } = await decodeJWTsWithKeyManager(
@@ -112,7 +112,7 @@ describe("decodeJWTsWithKeyManager", () => {
           token: access_token.token,
         },
       ],
-      SCHEMAVAULTS_AUTH_APP_ID,
+      DEFAULT_AUTH_SERVER_APP_ID,
       environment,
     );
 

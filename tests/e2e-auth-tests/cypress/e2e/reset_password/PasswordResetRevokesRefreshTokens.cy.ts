@@ -1,7 +1,7 @@
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import { RefreshTokenCookieName } from "@schemavaults/auth-common";
 
-const APP_ID = SCHEMAVAULTS_AUTH_APP_ID;
+const APP_ID = getAuthServerAppIdFromCypressEnv();
 const REFRESH_TOKEN_COOKIE = RefreshTokenCookieName(APP_ID);
 
 describe("Password Reset Revokes Refresh Tokens", () => {
