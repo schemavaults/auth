@@ -3,7 +3,7 @@ import { ApiServerId, apiServerIdSchema, getAppEnvironment } from "@schemavaults
 import { NextRequest, NextResponse } from "next/server";
 import { SchemaVaultsApiServerRegistry, SchemaVaultsAppRegistry, SchemaVaultsAppToApiPermissionsRegistry, ServerlessDatabase } from "@/lib/auth-db";
 import { z } from "zod";
-import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import type { ServerRuntime } from "next/types";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { sign_verify_alg } from "@schemavaults/jwt";
@@ -65,7 +65,7 @@ export async function POST(
       "Example Frontend App",
       "App created in seeding for test",
       false,
-      SCHEMAVAULTS_ORGANIZATION_ID,
+      getAuthServerOwnerOrganizationId(),
       true
     );
     await appRegistry.addAppDomain(api_server_id, {
@@ -81,7 +81,7 @@ export async function POST(
       "Example Backend API",
       "API created in seeding for test",
       false,
-      SCHEMAVAULTS_ORGANIZATION_ID
+      getAuthServerOwnerOrganizationId()
     );
     await apiServerRegistry.addApiServerDomain(api_server_id, {
       api_server_id,

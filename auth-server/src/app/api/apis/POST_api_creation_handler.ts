@@ -11,7 +11,8 @@ import {
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
-import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { type OrganizationID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { ConflictError } from "@/lib/error/ConflictError";
 import captureServerException from "@/lib/captureServerException";
 
@@ -97,8 +98,8 @@ export default async function POST_api_creation_handler(request: NextRequest): P
             },
           );
         } else {
-          // User is an admin, and no owner_organization_id has been set-- default to 'schemavaults' org
-          owner_organization_id = SCHEMAVAULTS_ORGANIZATION_ID;
+          // User is an admin, and no owner_organization_id has been set-- default to the configured owner org
+          owner_organization_id = getAuthServerOwnerOrganizationId();
         }
       }
 

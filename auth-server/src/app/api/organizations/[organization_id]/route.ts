@@ -8,7 +8,7 @@ import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import {
   type OrganizationID,
   organizationIdSchema,
-  hardcodedOrgs,
+  getHardcodedOrgs,
 } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
@@ -37,7 +37,7 @@ async function DELETE_organization_handler(
   const organization_id: OrganizationID = parsed_org_id.data;
 
   // Block deletion of hardcoded organizations
-  const isHardcoded = hardcodedOrgs.some(
+  const isHardcoded = getHardcodedOrgs().some(
     (org) => org.organization_id === organization_id
   );
   if (isHardcoded) {

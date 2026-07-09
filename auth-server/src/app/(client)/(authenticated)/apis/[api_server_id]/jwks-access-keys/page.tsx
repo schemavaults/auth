@@ -9,7 +9,8 @@ import JwksAccessKeysPageView from "./jwks-access-keys-page-view";
 import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_APP_ID, type SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
-import { OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { OrganizationMembershipRoleType, type OrganizationID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { JwksAccessKeysRegistry, type JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
@@ -57,8 +58,8 @@ export default async function JwksAccessKeysPage(
         redirectWithError(500, "internal_server_error");
       }
 
-      if (owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID && !user.admin) {
-        console.warn("Blocking request to view JWKS access keys page for SchemaVaults-owned API server for non-admin user!")
+      if (owner_organization_id === getAuthServerOwnerOrganizationId() && !user.admin) {
+        console.warn("Blocking request to view JWKS access keys page for a platform-owned API server for non-admin user!")
         redirectWithError(403, 'forbidden');
       }
 

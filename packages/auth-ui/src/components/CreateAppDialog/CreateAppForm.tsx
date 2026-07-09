@@ -25,10 +25,7 @@ import {
 } from "@schemavaults/ui";
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
-import {
-  type OrganizationID,
-  SCHEMAVAULTS_ORGANIZATION_ID,
-} from "@schemavaults/auth-common";
+import { type OrganizationID } from "@schemavaults/auth-common";
 import {
   type SchemaVaultsApp,
   schemaVaultsAppDefinitionSchema,
@@ -37,6 +34,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AppWindow } from "lucide-react";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
+import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 
 export interface CreateAppFormProps {
   owner_organization_id: OrganizationID;
@@ -54,6 +52,7 @@ export default function CreateAppForm({
   uuid,
 }: CreateAppFormProps): ReactElement {
   const friendlyName: string = useAuthUiFriendlyName();
+  const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
   const defaultValues: Partial<SchemaVaultsApp> = useMemo(() => {
     return {
       app_name: "",
@@ -98,8 +97,7 @@ export default function CreateAppForm({
       if (typeof owner_organization_id === "string") {
         createAppRequestBody["owner_organization_id"] = owner_organization_id;
       } else if (!owner_organization_id && authClient?.currentUser?.admin) {
-        createAppRequestBody["owner_organization_id"] =
-          SCHEMAVAULTS_ORGANIZATION_ID;
+        createAppRequestBody["owner_organization_id"] = ownerOrganizationId;
       }
 
       // if we're creating it from this form then it must be non-hardcoded/dynamic...

@@ -7,7 +7,7 @@ import { Dialog, DialogContent } from "@schemavaults/ui";
 import { useSWRConfig } from "swr";
 import { Server } from "lucide-react";
 import CreateApiServerForm from "./CreateApiServerForm";
-import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 
 interface CreateApiServerDialogProps {
   clearApiServersCache: (
@@ -26,6 +26,7 @@ export function CreateApiServerDialog({
   onOpenChange,
   uuid,
 }: CreateApiServerDialogProps): ReactElement {
+  const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -35,9 +36,7 @@ export function CreateApiServerDialog({
         <CreateApiServerForm
           clearApiServersCache={clearApiServersCache}
           owner_organization_id={
-            owner_organization_id
-              ? owner_organization_id
-              : SCHEMAVAULTS_ORGANIZATION_ID
+            owner_organization_id ? owner_organization_id : ownerOrganizationId
           }
           onSuccess={() => onOpenChange(false)}
           uuid={uuid}

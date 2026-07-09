@@ -11,7 +11,8 @@ import {
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
-import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { type OrganizationID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { ConflictError } from "@/lib/error/ConflictError";
 import captureServerException from "@/lib/captureServerException";
@@ -102,8 +103,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           },
         );
       } else {
-        // User is an admin, default to 'schemavaults' org if none set
-        owner_organization_id = SCHEMAVAULTS_ORGANIZATION_ID;
+        // User is an admin, default to the configured owner org if none set
+        owner_organization_id = getAuthServerOwnerOrganizationId();
       }
     }
 

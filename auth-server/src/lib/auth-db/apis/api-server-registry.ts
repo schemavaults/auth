@@ -1,15 +1,16 @@
 import "server-only";
 
-import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
+import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import {
   schemaVaultsApiServerDefinitionSchema,
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDomainRefSchema,
   type SchemaVaultsApiServerDomainRef,
   type ApiServerId,
-  HARDCODED_SCHEMAVAULTS_APIS,
+  getHardcodedSchemaVaultsApis,
   getHardcodedApiDomains,
 } from "@schemavaults/app-definitions";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
@@ -36,11 +37,11 @@ export class SchemaVaultsApiServerRegistry {
       console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}')`)
     }
 
-    const hardcoded_api_server: SchemaVaultsApiServerDefinition | undefined = HARDCODED_SCHEMAVAULTS_APIS.find(hardcoded_api => {
+    const hardcoded_api_server: SchemaVaultsApiServerDefinition | undefined = getHardcodedSchemaVaultsApis().find(hardcoded_api => {
       return hardcoded_api.api_server_id === api_server_id
     })
     if (hardcoded_api_server) {
-      if (hardcoded_api_server.owner_organization_id !== SCHEMAVAULTS_ORGANIZATION_ID) {
+      if (hardcoded_api_server.owner_organization_id !== getAuthServerOwnerOrganizationId()) {
         throw new Error("Expected hardcoded API servers to be owned by the hardcoded SchemaVaults organization!")
       }
       if (this.debug) {
@@ -81,7 +82,7 @@ export class SchemaVaultsApiServerRegistry {
 
     const owner_organization_id: OrganizationID = (
       "owner_organization_id" in first_row && typeof first_row['owner_organization_id'] === 'string'
-    ) ? first_row['owner_organization_id'] : SCHEMAVAULTS_ORGANIZATION_ID;
+    ) ? first_row['owner_organization_id'] : getAuthServerOwnerOrganizationId();
 
     const parsed_api_server =
       await schemaVaultsApiServerDefinitionSchema.safeParseAsync({
@@ -171,7 +172,7 @@ export class SchemaVaultsApiServerRegistry {
         created_at: Date.now(),
         public: publicly_listed ?? false,
         hardcoded: false,
-        owner_organization_id: owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID ? null : owner_organization_id,
+        owner_organization_id: owner_organization_id === getAuthServerOwnerOrganizationId() ? null : owner_organization_id,
       } satisfies SchemaVaultsApiServerDefinition);
     if (!parsed_app.success) {
       console.error(parsed_app.error.errors);
@@ -191,6 +192,7 @@ export class SchemaVaultsApiServerRegistry {
   }
 
   private async parseApiServerDefinitionsFromDbRows(rows: unknown[]): Promise<readonly SchemaVaultsApiServerDefinition[]> {
+    const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
     const parsed = await schemaVaultsApiServerDefinitionSchema
       .array()
       .safeParseAsync(
@@ -209,7 +211,7 @@ export class SchemaVaultsApiServerRegistry {
 
           const owner_organization_id: OrganizationID = (
             "owner_organization_id" in row && typeof row['owner_organization_id'] === 'string'
-          ) ? row['owner_organization_id'] : SCHEMAVAULTS_ORGANIZATION_ID;
+          ) ? row['owner_organization_id'] : ownerOrganizationId;
 
           return {
             ...row,
@@ -246,7 +248,7 @@ export class SchemaVaultsApiServerRegistry {
   }
 
   private listAllHardcodedApiServers(): readonly SchemaVaultsApiServerDefinition[] {
-    return HARDCODED_SCHEMAVAULTS_APIS;
+    return getHardcodedSchemaVaultsApis();
   }
 
   public async listAllApiServers(): Promise<readonly SchemaVaultsApiServerDefinition[]> {
@@ -317,13 +319,15 @@ export class SchemaVaultsApiServerRegistry {
     }
 
 
+    const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
+
     const loadOrgApiServerDefinitionsFromDb = async (organization_id: OrganizationID): Promise<readonly SchemaVaultsApiServerDefinition[]> => {
       let rows: unknown[];
       try {
         rows = await this.db
           .selectFrom("api_servers")
           .where((eb) =>
-            organization_id === SCHEMAVAULTS_ORGANIZATION_ID
+            organization_id === ownerOrganizationId
               ? eb.or([
                   eb("owner_organization_id", "=", organization_id),
                   eb("owner_organization_id", "is", null),
@@ -352,8 +356,8 @@ export class SchemaVaultsApiServerRegistry {
       );
     }
 
-    if (org_id === SCHEMAVAULTS_ORGANIZATION_ID) {
-      api_server_definitions.push(...HARDCODED_SCHEMAVAULTS_APIS.filter(s => s.owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID))
+    if (org_id === ownerOrganizationId) {
+      api_server_definitions.push(...getHardcodedSchemaVaultsApis().filter(s => s.owner_organization_id === ownerOrganizationId))
     }
 
     return api_server_definitions;

@@ -11,7 +11,8 @@ import { isHardcodedAppId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
-import { OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { OrganizationMembershipRoleType, type OrganizationID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import OrganizationsRegistry from "@/lib/auth-db/organizations";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import type { ServerRuntime } from "next/types";
@@ -55,8 +56,8 @@ export default async function AppDetailPage(
         redirectWithError(500, "internal_server_error");
       }
 
-      if (owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID && !user.admin) {
-        console.warn("Blocking request to view app detail page for SchemaVaults-owned app for non-admin user!")
+      if (owner_organization_id === getAuthServerOwnerOrganizationId() && !user.admin) {
+        console.warn("Blocking request to view app detail page for a platform-owned app for non-admin user!")
         redirectWithError(403, 'forbidden');
       }
 

@@ -12,15 +12,8 @@ import {
 } from "@schemavaults/ui";
 import { Trash2 } from "lucide-react";
 import { DeleteOrganizationDialog } from "./DeleteOrganizationDialog";
-import { type OrganizationID, hardcodedOrgs } from "@schemavaults/auth-common";
-
-const hardcodedOrgIds: Set<OrganizationID> = new Set(
-  hardcodedOrgs.map((o) => o.organization_id),
-);
-
-function isHardcodedOrgId(org_id: OrganizationID): boolean {
-  return hardcodedOrgIds.has(org_id);
-}
+import { type OrganizationID } from "@schemavaults/auth-common";
+import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 
 export interface OrganizationSettingsCardProps {
   organization_id: OrganizationID;
@@ -36,6 +29,7 @@ export function OrganizationSettingsCard({
   cardClassName,
 }: OrganizationSettingsCardProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const ownerOrganizationId = useAuthUiOwnerOrganizationId();
 
   return (
     <>
@@ -73,7 +67,7 @@ export function OrganizationSettingsCard({
                     setDeleteDialogOpen(true);
                   }}
                   data-testid="open-delete-organization-dialog-button"
-                  disabled={isHardcodedOrgId(organization_id)}
+                  disabled={organization_id === ownerOrganizationId}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete

@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { isValidOrganizationID } from "./organization_id";
+import { isValidOrganizationID } from "./organization-id";
 
 describe("Organization IDs", () => {
   test("Organization IDs must be lowercase", () => {
