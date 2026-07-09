@@ -286,3 +286,15 @@ jobs:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: admin
       skip-docker-build: true
+
+  Run-White-Label-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: white_label
+      skip-docker-build: true

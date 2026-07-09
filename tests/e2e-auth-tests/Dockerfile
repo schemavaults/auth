@@ -72,5 +72,6 @@ COPY tests/e2e-auth-tests/cypress.config.ts cypress.config.ts
 COPY tests/e2e-auth-tests/tsconfig.json tsconfig.json
 COPY tests/e2e-auth-tests/cypress/e2e/ cypress/e2e/
 COPY tests/e2e-auth-tests/cypress/support/ cypress/support/
+COPY tests/e2e-auth-tests/cypress/fixtures/ cypress/fixtures/
 
 CMD [ "bun", "run", "e2e" ]

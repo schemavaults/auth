@@ -179,9 +179,23 @@ export default defineConfig({
     // variable (also overridable via CYPRESS_SCHEMAVAULTS_AUTH_SERVER_APP_ID).
     // Specs/commands read it via getAuthServerAppIdFromCypressEnv() from
     // @schemavaults/cypress-e2e-auth-tests-helper-commands.
+    // `||` (not `??`) so an empty-string env value (e.g. from docker-compose
+    // `${VAR:-}` interpolation) also falls back to the default app id.
     SCHEMAVAULTS_AUTH_SERVER_APP_ID:
-      process.env.SCHEMAVAULTS_AUTH_SERVER_APP_ID ??
+      process.env.SCHEMAVAULTS_AUTH_SERVER_APP_ID ||
       DEFAULT_AUTH_SERVER_APP_ID,
+    // Expected white-label branding values for the white_label suite, so
+    // specs assert against the same values injected into the auth server
+    // container (single source of truth: e2e-auth-tests-cli.ts). Empty when
+    // the deployment under test runs stock branding.
+    SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME ?? "",
+    SCHEMAVAULTS_AUTH_SERVER_DESCRIPTION:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_DESCRIPTION ?? "",
+    SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1 ?? "",
+    SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2 ?? "",
     SCHEMAVAULTS_APP_ENVIRONMENT:
       process.env.SCHEMAVAULTS_APP_ENVIRONMENT ?? "development",
     TEST_SUITE_NAME: process.env.TEST_SUITE_NAME ?? "",

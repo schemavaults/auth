@@ -100,6 +100,8 @@ Custom commands come from the `@schemavaults/cypress-e2e-auth-tests-helper-comma
 2. Add test files (`*.cy.ts`) to it
 3. Add a job in `.github/workflows/run-e2e-tests.yml` that calls `run-e2e-test-suite.yml` with `test-suite-name: <new_suite_name>`
 4. If the suite needs special setup (like `example_resource_server`), add conditional logic in `cypress.config.ts`'s `before:run` hook keyed on `TEST_SUITE_NAME`
+5. If the suite needs custom environment variables on the auth-server or test-runner containers (like `white_label`, which runs the server with a non-default `SCHEMAVAULTS_AUTH_SERVER_APP_ID` and custom branding env), add a per-suite branch in `e2e-auth-tests-cli.ts`'s `launchDockerComposeTests()` that sets them in the child process env, and reference them from `docker-compose.yml` with `${VAR:-default}` interpolation so every other suite keeps the default behavior
+6. Binary upload fixtures (e.g. the `white_label` suite's PNG branding images) live in `tests/e2e-auth-tests/cypress/fixtures/` (copied into the test-runner image by the Dockerfile)
 
 ## Key files
 
