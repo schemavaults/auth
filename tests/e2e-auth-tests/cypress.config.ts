@@ -5,7 +5,10 @@ import {
   SignJWT,
   type JWTPayload,
 } from "@schemavaults/jwt";
-import { getAuthServerUrl } from "@schemavaults/app-definitions";
+import {
+  DEFAULT_AUTH_SERVER_APP_ID,
+  getAuthServerUrl,
+} from "@schemavaults/app-definitions";
 import {
   NobleCryptoPlugin,
   ScureBase32Plugin,
@@ -122,12 +125,17 @@ export default defineConfig({
           // register-then-409-then-login dance and go straight to login.
           const testSuiteName = config.env["TEST_SUITE_NAME"];
           if (testSuiteName !== "superuser") {
-            await preRegisterSuperuser(auth_server_url, testSuiteName, {
-              email: config.env["PRIVATE_SUPERUSER_EMAIL"],
-              password: config.env["PRIVATE_SUPERUSER_PASSWORD"],
-              confirm: config.env["PRIVATE_SUPERUSER_PASSWORD"],
-              invite_code: config.env["PRIVATE_SUPERUSER_INVITE_CODE"],
-            });
+            await preRegisterSuperuser(
+              auth_server_url,
+              testSuiteName,
+              {
+                email: config.env["PRIVATE_SUPERUSER_EMAIL"],
+                password: config.env["PRIVATE_SUPERUSER_PASSWORD"],
+                confirm: config.env["PRIVATE_SUPERUSER_PASSWORD"],
+                invite_code: config.env["PRIVATE_SUPERUSER_INVITE_CODE"],
+              },
+              config.env["SCHEMAVAULTS_AUTH_SERVER_APP_ID"],
+            );
             config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
           }
 
@@ -165,6 +173,15 @@ export default defineConfig({
     PRIVATE_SUPERUSER_EMAIL: "admin@schemavaults.com",
     PRIVATE_SUPERUSER_PASSWORD: "Password123!",
     AUTH_SERVER_URL: resolveAuthServerUrl(),
+    // The auth server deployment's own app id, for running the suite against
+    // a white-label deployment (e.g. "acme-corp-auth"). Set it to the same
+    // value as the auth server's SCHEMAVAULTS_AUTH_SERVER_APP_ID environment
+    // variable (also overridable via CYPRESS_SCHEMAVAULTS_AUTH_SERVER_APP_ID).
+    // Specs/commands read it via getAuthServerAppIdFromCypressEnv() from
+    // @schemavaults/cypress-e2e-auth-tests-helper-commands.
+    SCHEMAVAULTS_AUTH_SERVER_APP_ID:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_APP_ID ??
+      DEFAULT_AUTH_SERVER_APP_ID,
     SCHEMAVAULTS_APP_ENVIRONMENT:
       process.env.SCHEMAVAULTS_APP_ENVIRONMENT ?? "development",
     TEST_SUITE_NAME: process.env.TEST_SUITE_NAME ?? "",

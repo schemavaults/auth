@@ -1,9 +1,9 @@
-import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import {
   RefreshTokenCookieName,
 } from "@schemavaults/auth-common";
 
-const APP_ID = DEFAULT_AUTH_SERVER_APP_ID;
+const APP_ID = getAuthServerAppIdFromCypressEnv();
 const REFRESH_TOKEN_COOKIE = RefreshTokenCookieName(APP_ID);
 
 describe("Token Revocation on Logout", () => {

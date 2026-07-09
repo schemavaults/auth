@@ -1,11 +1,11 @@
-import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
+import getAuthServerAppIdFromCypressEnv from "../get-auth-server-app-id-from-cypress-env";
 
 export default function is_admin(): Cypress.Chainable<boolean> {
   cy.log(`[cy.is_admin()] Checking if authenticated as an admin...`);
   return cy
     .request({
       method: "GET",
-      url: `/api/auth/whoami/${DEFAULT_AUTH_SERVER_APP_ID}`,
+      url: `/api/auth/whoami/${getAuthServerAppIdFromCypressEnv()}`,
       failOnStatusCode: false,
     })
     .then((response): boolean => {

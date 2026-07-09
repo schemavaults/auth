@@ -2,12 +2,15 @@ import {
   PKCE_ProofKeyManager,
   EmailRegistrationCredentials,
 } from "@schemavaults/auth-common";
-import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 
+// Runs in the Cypress Node context (setupNodeEvents "before:run"), where the
+// Cypress global is unavailable — the caller resolves the auth server app id
+// from config.env["SCHEMAVAULTS_AUTH_SERVER_APP_ID"] and passes it in.
 async function preRegisterSuperuser(
   auth_server_url: string,
   test_suite_name: string,
   credentials: EmailRegistrationCredentials,
+  auth_server_app_id: string,
 ): Promise<void> {
   const endpoint = `${auth_server_url}/api/auth/register`;
   console.log(
@@ -28,7 +31,7 @@ async function preRegisterSuperuser(
         password: credentials["password"],
       },
       invite_code: credentials["invite_code"],
-      client_app_id: DEFAULT_AUTH_SERVER_APP_ID,
+      client_app_id: auth_server_app_id,
       code_challenge: codeChallenge.code_challenge,
       challenge_time,
     }),

@@ -1,10 +1,12 @@
-import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
 } from "@schemavaults/auth-common";
+import getAuthServerAppIdFromCypressEnv from "../get-auth-server-app-id-from-cypress-env";
 
 export default function logout() {
+  const auth_app_id = getAuthServerAppIdFromCypressEnv();
+
   // Go to the account page
   cy.visit("/account");
 
@@ -14,14 +16,14 @@ export default function logout() {
     "User should be authenticated before logout",
   );
   cy.url().should("include", "/account").should("not.include", "/auth/login");
-  cy.getCookie(RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID)).should(
+  cy.getCookie(RefreshTokenCookieName(auth_app_id)).should(
     "exist",
   );
 
   // Perform logout actions
   cy.intercept({
     method: "POST",
-    url: `**/api/auth/logout/${DEFAULT_AUTH_SERVER_APP_ID}`,
+    url: `**/api/auth/logout/${auth_app_id}`,
     times: 1,
   }).as("logoutRequest");
   cy.get("button#sign-out-button").click();
@@ -42,11 +44,11 @@ export default function logout() {
       cy.wait(1000);
 
       // refresh token should have been cleared by logout request
-      cy.getCookie(RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID)).should(
+      cy.getCookie(RefreshTokenCookieName(auth_app_id)).should(
         "not.exist",
       );
       cy.getCookie(
-        RefreshTokenExpiryCookieName(DEFAULT_AUTH_SERVER_APP_ID),
+        RefreshTokenExpiryCookieName(auth_app_id),
       ).should("not.exist");
       cy.log(
         "Logout request appears to have successfully cleared refresh token cookies!",

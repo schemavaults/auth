@@ -1,14 +1,16 @@
-import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 import {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
 } from "@schemavaults/auth-common";
+import getAuthServerAppIdFromCypressEnv from "../get-auth-server-app-id-from-cypress-env";
 
 export default function register(
   email: string,
   password: string,
   invite_code?: string,
 ): Cypress.Chainable<number> {
+  const auth_app_id = getAuthServerAppIdFromCypressEnv();
+
   cy.is_authenticated().should(
     "be.false",
     "User should not be authenticated before registration",
@@ -25,7 +27,7 @@ export default function register(
   }).as("registerRequest");
   cy.intercept({
     method: "POST",
-    url: `**/api/auth/token/authorization_code/${DEFAULT_AUTH_SERVER_APP_ID}`,
+    url: `**/api/auth/token/authorization_code/${auth_app_id}`,
     times: 1,
   }).as("exchangeTokenRequest");
   cy.intercept({
@@ -90,11 +92,11 @@ export default function register(
           .then((exchange_tokens_interception) => {
             if (exchange_tokens_interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
-              cy.getCookie(RefreshTokenCookieName(DEFAULT_AUTH_SERVER_APP_ID), {
+              cy.getCookie(RefreshTokenCookieName(auth_app_id), {
                 timeout: 10000,
               }).should("exist");
               cy.getCookie(
-                RefreshTokenExpiryCookieName(DEFAULT_AUTH_SERVER_APP_ID),
+                RefreshTokenExpiryCookieName(auth_app_id),
                 { timeout: 10000 },
               ).should("exist");
               return cy

@@ -165,6 +165,8 @@ The `tests/e2e-auth-tests` directory contains Cypress E2E test suite for testing
 
 The actual E2E tests live within the `tests/e2e-auth-tests/cypress/e2e/` directory.
 
+Specs and helper commands never hardcode the auth server's own app id: they resolve it with `getAuthServerAppIdFromCypressEnv()` from `@schemavaults/cypress-e2e-auth-tests-helper-commands`, which reads the `SCHEMAVAULTS_AUTH_SERVER_APP_ID` Cypress env var (defaulted in `cypress.config.ts` from the same-named process env var, overridable via `CYPRESS_SCHEMAVAULTS_AUTH_SERVER_APP_ID`; falls back to `schemavaults-auth`). Set it to the deployment's `SCHEMAVAULTS_AUTH_SERVER_APP_ID` to run the suite against a white-label auth server with a custom app id. Node-context config code (`setupNodeEvents`, e.g. `pre-register-superuser.ts`) receives the value via `config.env` instead, since the `Cypress` global doesn't exist there.
+
 ## NextJS Documentation
 
 Your training data is likely outdated; documentation on the current version of NextJS is available at: `./auth-server/node_modules/next/dist/docs/`.
