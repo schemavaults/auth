@@ -31,9 +31,9 @@ async function validateOneAudience(
   dbh: ServerlessDatabase,
   environment: SchemaVaultsAppEnvironment,
   debug: boolean = false,
+  auth_app_id: string = getAuthServerAppId(),
 ): Promise<ValidateAudienceOutput> {
   const audienceSchema = createAudienceSchema(z, environment);
-  const auth_server_app_id = getAuthServerAppId();
 
   if (
     typeof uid !== "string" ||
@@ -47,15 +47,15 @@ async function validateOneAudience(
   // as their audience; translate back to the stable app id before comparing.
   // The bare app id form is also accepted for backwards compatibility.
   if (
-    audience === auth_server_app_id ||
+    audience === auth_app_id ||
     getApiServerIdForTokenAudience(audience, environment) ===
-      auth_server_app_id
+      auth_app_id
   ) {
     return "auth-server-only";
   }
 
   console.assert(
-    audience !== auth_server_app_id,
+    audience !== auth_app_id,
     `Expected this to be a non-auth server API server if this point was reached`
   );
 
@@ -74,7 +74,7 @@ async function validateOneAudience(
 
   const aud: string = parsed_aud.data;
 
-  if (aud === auth_server_app_id) {
+  if (aud === auth_app_id) {
     return "auth-server-only";
   } else if (apiServerIdSchema.safeParse(aud).success) {
     // pass
@@ -128,6 +128,8 @@ export async function validateAudience(
   environment: SchemaVaultsAppEnvironment,
   debug: boolean = shouldEnableDebug(),
 ): Promise<boolean> {
+  const auth_app_id = getAuthServerAppId();
+
   if (!isValidUuid(uid)) {
     throw new TypeError("Expected 'uid' to be a valid UUID!");
   } else if (!(await appIdSchema.safeParseAsync(client_app_id)).success) {
@@ -145,7 +147,7 @@ export async function validateAudience(
   // compatibility.
   const singleAudienceSchema = z.union([
     createAudienceSchema(z, environment),
-    z.literal(getAuthServerAppId()),
+    z.literal(auth_app_id),
   ]);
   if (!(await singleAudienceSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
     throw new TypeError("Invalid token audience(s) in audiences array!")
@@ -174,7 +176,7 @@ export async function validateAudience(
 
   const validateOneAudiencePromises: readonly Promise<ValidateAudienceOutput>[] = audiences.map(
     (audience: string): Promise<ValidateAudienceOutput> =>
-      validateOneAudience(uid, client_app_id, audience, dbh, environment, debug),
+      validateOneAudience(uid, client_app_id, audience, dbh, environment, debug, auth_app_id),
   );
   const validationResults = await Promise.all(validateOneAudiencePromises);
 
@@ -188,7 +190,7 @@ export async function validateAudience(
       result: ValidateAudienceOutput,
     ): boolean {
       return typeof result === "string"
-        ? result === "auth-server-only" && client_app_id !== getAuthServerAppId()
+        ? result === "auth-server-only" && client_app_id !== auth_app_id
         : false;
     })
   ) {
