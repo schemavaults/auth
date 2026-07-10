@@ -62,7 +62,8 @@ export async function sendEmailViaMailServer(
   const mail_server_access_token: AccessToken = await spoofSuperuserAccessToken({
     client_app_id: getAuthServerAppId(),
     audience_id: mail_api_server_id,
-    db
+    db,
+    redis: redis.client,
   });
 
   headers.set("Content-Type", 'application/json');

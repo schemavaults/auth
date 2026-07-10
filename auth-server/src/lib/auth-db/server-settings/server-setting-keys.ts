@@ -37,6 +37,13 @@ export const SERVER_SETTING_DEFINITIONS = {
     defaultValue: "schemavaults-mail",
     schema: apiServerIdSchema,
     description: "API server ID of a @schemavaults/mail-server instance for sending mail."
+  },
+  spoofed_superuser_email: {
+    valueType: "string" as const,
+    defaultValue: "admin@schemavaults.com",
+    schema: z.string().email(),
+    description:
+      "Email address embedded as the identity claim in internally-minted (spoofed) superuser access tokens, e.g. the token the auth server uses to authorize with the mail-server.",
   }
 } as const satisfies Record<
   string,
