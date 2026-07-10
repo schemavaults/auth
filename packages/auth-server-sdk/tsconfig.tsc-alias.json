@@ -1,0 +1,59 @@
+// Companion config consumed ONLY by tsc-alias (not tsc).
+// TypeScript 7 removed baseUrl, but tsc-alias still needs it to map path aliases
+// from src/ into the compiled output layout. Keep in sync with tsconfig.json.
+{
+  "compilerOptions": {
+    "strict": true,
+    "declaration": true,
+    "moduleResolution": "Bundler",
+    "target": "esnext",
+    "module": "ESNext",
+    "outDir": "dist",
+    "lib": [
+      "ESNext"
+    ],
+    "skipLibCheck": true,
+    "noEmit": false,
+    "allowJs": false,
+    "strictNullChecks": true,
+    "sourceMap": true,
+    "types": [
+      "bun-types"
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@/middlewares/*": [
+        "./src/middleware/middlewares/*"
+      ],
+      "@/middleware_chain": [
+        "./src/middleware/middleware_chain"
+      ],
+      "@/middleware_types": [
+        "./src/middleware/middleware_types"
+      ],
+      "@/get-schemavaults-api-server-id": [
+        "./src/env/get-schemavaults-api-server-id"
+      ],
+      "@/get-schemavaults-auth-server-url": [
+        "./src/env/get-schemavaults-auth-server-url"
+      ],
+      "@/get-schemavaults-client-application-id": [
+        "./src/env/get-schemavaults-client-application-id"
+      ],
+      "@/get-app-environment": [
+        "./src/env/get-app-environment"
+      ]
+    },
+    "rootDir": "./src",
+    "baseUrl": "."
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

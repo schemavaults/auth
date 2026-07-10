@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-client-sdk",
   "description": "TypeScript SDK for interacting with SchemaVaults Auth server or protected resources",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -19,7 +19,7 @@
   },
   "scripts": {
     "generate-version": "bash generate-version.sh",
-    "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",
+    "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.tsc-alias.json",
     "postbuild": "bun run cleanup",
     "test": "NODE_ENV=test bun test",
     "cleanup:compiled_tests_in_dist_directory": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
@@ -28,7 +28,7 @@
     "typecheck": "bun run generate-version && tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "bun-types": "1.3.14",
     "tsc-alias": "1.8.16",
     "eslint": "9.39.1",

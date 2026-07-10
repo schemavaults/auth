@@ -1,3 +1,6 @@
+// Must run before any @typescript-eslint module is loaded (see file for details):
+require("../eslint.typescript-compat.cjs");
+
 const js = require("@eslint/js");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");

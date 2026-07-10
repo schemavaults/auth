@@ -16,18 +16,22 @@
     "cypress": "15.12.0"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
-    "@types/node": "24.4.0",
+    "typescript": "7.0.2",
+    "@types/node": "24.13.3",
     "tsc-alias": "1.8.16"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",
+    "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.tsc-alias.json",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./Chainable": {
+      "types": "./dist/Chainable.d.ts",
+      "import": "./dist/Chainable.js"
     },
     "./*": {
       "types": "./dist/*",

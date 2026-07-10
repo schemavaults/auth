@@ -16,8 +16,8 @@
     "@schemavaults/cypress-e2e-auth-tests-helper-commands": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
-    "@types/node": "24.4.0"
+    "typescript": "7.0.2",
+    "@types/node": "24.13.3"
   },
   "scripts": {
     "open": "bun run cy:open",

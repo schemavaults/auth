@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/app-definitions",
   "description": "Define frontend or API server applications",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -18,7 +18,7 @@
   },
   "scripts": {
     "build": "bun run typecheck && bun run build:types && bun run build:esm && bun run build:cjs",
-    "build:esm": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",
+    "build:esm": "tsc --project tsconfig.json && tsc-alias --project tsconfig.tsc-alias.json",
     "build:cjs_default_export": "esbuild --bundle src/index.ts --format=cjs --outfile=dist/index.cjs --platform=node",
     "build:cjs_get_app_environment_entrypoint": "esbuild --bundle src/get-app-environment/index.ts --format=cjs --outfile=dist/get-app-environment.cjs --platform=node",
     "build:cjs_get_auth_server_url_entrypoint": "esbuild --bundle src/get-auth-server-url.ts --format=cjs --outfile=dist/get-auth-server-url.cjs --platform=node",
@@ -32,7 +32,7 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "tsc-alias": "1.8.16",
     "esbuild": "0.24.0",
     "bun-types": "1.3.14",

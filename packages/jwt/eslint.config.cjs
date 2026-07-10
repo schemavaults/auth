@@ -1,3 +1,6 @@
+// Must run before any @typescript-eslint module is loaded (see file for details):
+require("../../eslint.typescript-compat.cjs");
+
 // @schemavaults/jwt - eslint.config.cjs
 
 const js = require("@eslint/js");

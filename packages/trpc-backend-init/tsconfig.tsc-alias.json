@@ -1,6 +1,11 @@
+// Companion config consumed ONLY by tsc-alias (not tsc).
+// TypeScript 7 removed baseUrl, but tsc-alias still needs it to map path aliases
+// from src/ into the compiled output layout. Keep in sync with tsconfig.json.
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "module": "ESNext",
     "target": "ESNext",
     "moduleResolution": "Bundler",
@@ -14,15 +19,24 @@
     "rootDir": "./src",
     "sourceMap": true,
     "declaration": true,
-    "types": ["bun-types"],
+    "types": [
+      "bun-types"
+    ],
     "emitDeclarationOnly": false,
     "noImplicitAny": true,
     "noImplicitThis": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     },
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "baseUrl": "."
   },
-  "include": ["./src/**/*"],
-  "exclude": ["node_modules"]
+  "include": [
+    "./src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
