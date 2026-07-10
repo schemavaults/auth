@@ -2,7 +2,6 @@ import "server-only";
 import isValidUuid from "@/lib/is-valid-uuid";
 import {
   appIdSchema,
-  isHardcodedAppId,
   type AppId,
 } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
@@ -40,17 +39,10 @@ export async function removeAppAuthorizationForUser(
   }
 
   try {
-    if (isHardcodedAppId(app_id)) {
-      await db.deleteFrom('authorized_hardcoded_apps')
-        .where('uid', '=', uid)
-        .where('app_id', '=', app_id)
-        .executeTakeFirstOrThrow();
-    } else {
-      await db.deleteFrom('authorized_apps')
-        .where('uid', '=', uid)
-        .where('app_id', '=', app_id)
-        .executeTakeFirstOrThrow();
-    }
+    await db.deleteFrom('authorized_apps')
+      .where('uid', '=', uid)
+      .where('app_id', '=', app_id)
+      .executeTakeFirstOrThrow();
   } catch (e: unknown) {
     console.error("[removeAppAuthorizationForUser] Failed to delete app authorization: ", e);
     throw new Error("Failed to delete app authorization!");

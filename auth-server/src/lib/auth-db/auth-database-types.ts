@@ -5,7 +5,6 @@ import type {
   AppsToHardcodedApisPermissionsTable,
 } from "./apis";
 import type { AppDomainsTable, AppsTable, AuthorizedAppsTable } from "./apps";
-import type { AuthorizedHardcodedAppsTable } from "./apps/authorized-apps-registry/authorized-hardcoded-apps-table";
 import type { JwtKeysTable } from "./jwt_keys";
 import type {
   OrganizationMembershipRolesTable,
@@ -39,7 +38,6 @@ export type AuthDatabase = {
   api_servers: ApiServersTable;
   api_server_domains: ApiServerDomainsTable;
   authorized_apps: AuthorizedAppsTable;
-  authorized_hardcoded_apps: AuthorizedHardcodedAppsTable;
   apps_to_apis_permissions: AppsToApisPermissionsTable;
   apps_to_hardcoded_apis_permissions: AppsToHardcodedApisPermissionsTable;
   users: UsersTable;

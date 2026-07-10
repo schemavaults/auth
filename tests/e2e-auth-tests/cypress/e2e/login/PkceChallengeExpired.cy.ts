@@ -53,10 +53,9 @@ describe("POST /api/auth/session/generate-authorization-code expired PKCE challe
             url: "/api/auth/session/generate-authorization-code",
             failOnStatusCode: false,
             body: {
-              // `schemavaults-web` is a hardcoded app id (see
-              // packages/app-definitions/src/hardcoded-core-schemavaults-apps.ts)
-              // and therefore satisfies appIdSchema without needing a
-              // dynamically-created app in the test DB.
+              // Any appIdSchema-valid id works here: the expiry check
+              // rejects the request before the app id is ever looked up,
+              // so no app row is needed in the test DB.
               client_app_id: "schemavaults-web",
               code_challenge,
               code_challenge_method: "S256",

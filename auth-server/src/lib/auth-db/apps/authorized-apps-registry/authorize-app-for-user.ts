@@ -1,5 +1,5 @@
 import "server-only";
-import { appIdSchema, isHardcodedAppId } from "@schemavaults/app-definitions";
+import { appIdSchema } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
@@ -33,28 +33,15 @@ export async function authorizeAppForUser(
 
   try {
     const now = Date.now();
-    if (isHardcodedAppId(app_id)) {
-      // Hardcoded apps (other than auth) go into the separate table
-      await db
-        .insertInto("authorized_hardcoded_apps")
-        .values({
-          app_id: parsed_app_id.data,
-          uid,
-          authorized_at: now,
-        })
-        .onConflict((oc) => oc.columns(["app_id", "uid"]).doNothing())
-        .execute();
-    } else {
-      await db
-        .insertInto("authorized_apps")
-        .values({
-          app_id: parsed_app_id.data,
-          uid,
-          authorized_at: now,
-        })
-        .onConflict((oc) => oc.columns(["app_id", "uid"]).doNothing())
-        .execute();
-    }
+    await db
+      .insertInto("authorized_apps")
+      .values({
+        app_id: parsed_app_id.data,
+        uid,
+        authorized_at: now,
+      })
+      .onConflict((oc) => oc.columns(["app_id", "uid"]).doNothing())
+      .execute();
   } catch (e: unknown) {
     console.error(
       "Failed to insert authorized app record into database: ",

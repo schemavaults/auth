@@ -22,7 +22,6 @@ import {
   type SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
-import isValidUuid from "@/lib/is-valid-uuid";
 import { ConflictError } from "@/lib/error/ConflictError";
 import { AppNotConnectedToApiServerError } from "@/lib/error/AppNotConnectedToApiServerError";
 import { appToHardcodedApiPermissionSchema } from "./apps-to-hardcoded-apis-permissions-table";
@@ -126,13 +125,6 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
         created_at: createdAt,
         created_by: row.created_by ?? null,
       } satisfies AppToApiPermission;
-    }
-
-    if (!isValidUuid(api_server_id)) {
-      console.error(
-        "Expected API server ID to be a valid UUID if this point was reached! Is handling missing for a hardcoded endpoint?",
-      );
-      throw new TypeError("Expected API server ID to be a UUID!");
     }
 
     // dynamically defined app-to-api permissions if this point reached
@@ -320,10 +312,6 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
         throw new AppNotConnectedToApiServerError(client_app_id, api_server_id);
       }
       return;
-    }
-
-    if (!isValidUuid(api_server_id)) {
-      throw new TypeError("Expected API server ID to be a UUID!");
     }
 
     const result = await this.db
