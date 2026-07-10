@@ -1,5 +1,5 @@
 import "server-only";
-import { appIdSchema, isHardcodedAppId } from "@schemavaults/app-definitions";
+import { appIdSchema } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { type AuthorizedAppDeclaration, authorizedAppDeclarationSchema } from "./authorized-app-declaration-schema";
 import isValidUuid from "@/lib/is-valid-uuid";
@@ -18,31 +18,6 @@ export async function getAppAuthorization(
       user_app_authorization_id: crypto.randomUUID(),
       app_id,
       authorized_at: Date.now() - 1,
-    } satisfies AuthorizedAppDeclaration;
-  }
-
-  // Other hardcoded apps require explicit authorization in the authorized_hardcoded_apps table
-  if (isHardcodedAppId(app_id)) {
-    let rows: unknown[];
-    try {
-      rows = await db
-        .selectFrom("authorized_hardcoded_apps")
-        .where("uid", "=", uid)
-        .where("app_id", "=", app_id)
-        .limit(1)
-        .selectAll()
-        .execute();
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to query authorized hardcoded apps by uid");
-    }
-    if (rows.length === 0) return null;
-    const row = rows[0] as { user_hardcoded_app_authorization_id: string; app_id: string; uid: string; authorized_at: string };
-    return {
-      user_app_authorization_id: row.user_hardcoded_app_authorization_id,
-      app_id: row.app_id,
-      uid: row.uid,
-      authorized_at: Number.parseInt(row.authorized_at),
     } satisfies AuthorizedAppDeclaration;
   }
 

@@ -72,25 +72,6 @@ export async function listAuthorizedAppsForUser(
     if (!parsed.success) throw parsed.error;
     const authorized_apps: readonly AuthorizedAppDeclaration[] = parsed.data;
 
-    // Query authorized hardcoded apps from the separate table
-    let authorized_hardcoded_apps: AuthorizedAppDeclaration[] = [];
-    try {
-      const hardcodedRows = await db
-        .selectFrom("authorized_hardcoded_apps")
-        .where("uid", "=", uid)
-        .limit(50)
-        .selectAll()
-        .execute();
-      authorized_hardcoded_apps = hardcodedRows.map((row) => ({
-        app_id: row.app_id,
-        authorized_at: Number.parseInt(String(row.authorized_at)),
-        uid: row.uid,
-        user_app_authorization_id: row.user_hardcoded_app_authorization_id,
-      }));
-    } catch (e: unknown) {
-      console.error("Failed to query authorized hardcoded apps: ", e);
-    }
-
     // The auth app is always authorized (fake authorization)
     const auth_app_fake_authorization: AuthorizedAppDeclaration = {
       app_id: getAuthServerAppId(),
@@ -101,7 +82,6 @@ export async function listAuthorizedAppsForUser(
 
     return [
       ...authorized_apps,
-      ...authorized_hardcoded_apps,
       auth_app_fake_authorization,
     ] as const satisfies AuthorizedAppDeclaration[];
   } catch (e: unknown) {
