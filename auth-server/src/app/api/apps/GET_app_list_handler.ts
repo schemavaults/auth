@@ -87,7 +87,7 @@ async function listAuthorizedAppsForUser(
   return NextResponse.json(
     {
       success: true,
-      message: "Successfully listed SchemaVaults apps that you have authorized",
+      message: "Successfully listed apps that you have authorized",
       list: authorized_apps_details,
     } satisfies ListAppsQueryResponse,
     {
@@ -186,7 +186,7 @@ export async function GET_app_list_handler(
               return NextResponse.json(
                 {
                   success: false,
-                  message: "You must be an admin to list all SchemaVaults apps",
+                  message: "You must be an admin to list all apps",
                 } satisfies ListAppsQueryResponse,
                 {
                   status: 403,
@@ -197,7 +197,7 @@ export async function GET_app_list_handler(
               return NextResponse.json(
                 {
                   success: true,
-                  message: "Successfully listed all SchemaVaults apps",
+                  message: "Successfully listed all apps",
                   list: await appsRegistry.listApps("all", user),
                 } satisfies ListAppsQueryResponse,
                 {
@@ -227,7 +227,7 @@ export async function GET_app_list_handler(
                 {
                   success: true,
                   message:
-                    "Successfully listed all publicly-available SchemaVaults apps",
+                    "Successfully listed all publicly-available apps",
                   list: await appsRegistry.listApps("public", user),
                 } satisfies ListAppsQueryResponse,
                 {
@@ -305,7 +305,7 @@ export async function GET_app_list_handler(
               return NextResponse.json(
                 {
                   success: true,
-                  message: "Successfully listed all SchemaVaults apps for organization",
+                  message: "Successfully listed all apps for organization",
                   list: await appsRegistry.listOrganizationApps(
                     organization_id,
                     user,
@@ -355,7 +355,7 @@ export async function GET_app_list_handler(
         return NextResponse.json(
           {
             success: false,
-            message: "Failed to list SchemaVaults apps",
+            message: "Failed to list apps",
           } satisfies ListAppsQueryResponse,
           {
             status: 500,

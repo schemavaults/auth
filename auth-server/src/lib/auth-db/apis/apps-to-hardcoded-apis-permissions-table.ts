@@ -9,7 +9,7 @@ export type AppToHardcodedApiPermission = AppToApiPermission & {
 
 export const appToHardcodedApiPermissionSchema = appToApiPermissionSchema.refine((values): values is AppToHardcodedApiPermission => {
   return isHardcodedApiServerId(values.api_server_id);
-}, "Expected 'api_server_id' to be in list of hardcoded SchemaVaults API servers!")
+}, "Expected 'api_server_id' to be in list of hardcoded API servers!")
 
 
 export type AppsToHardcodedApisPermissionsTable = AppToHardcodedApiPermission;

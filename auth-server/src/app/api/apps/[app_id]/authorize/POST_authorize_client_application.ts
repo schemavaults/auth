@@ -128,7 +128,7 @@ export async function POST_authorize_client_application(
         return NextResponse.json(
           {
             success: false,
-            message: "Failed to authorize SchemaVaults frontend application",
+            message: "Failed to authorize frontend application",
           } satisfies ResourceCreationResponse,
           {
             status: 500,

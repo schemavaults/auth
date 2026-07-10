@@ -256,7 +256,7 @@ export async function handleRegister({
   try {
     if (debug) {
       console.log(
-        "[handleRegister] Loading SchemaVaults user registry database interface...",
+        "[handleRegister] Loading user registry database interface...",
       );
     }
     userRegistry = new UserRegistry(dbh.db, debug);

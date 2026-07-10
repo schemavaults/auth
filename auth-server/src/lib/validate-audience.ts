@@ -195,7 +195,7 @@ export async function validateAudience(
     })
   ) {
     console.error(
-      "Some of the audiences for access tokens can only be requested from a hardcoded SchemaVaults app",
+      "Some of the audiences for access tokens can only be requested from a hardcoded first-party app",
     );
     return false;
   }

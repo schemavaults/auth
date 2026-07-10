@@ -118,7 +118,7 @@ export async function POST_create_app_domain(
         }
       } catch (e: unknown) {
         const errorMessage =
-          "Failed to parse new SchemaVaults frontend app details from request body";
+          "Failed to parse new frontend app details from request body";
         console.error(e);
         return NextResponse.json(
           {

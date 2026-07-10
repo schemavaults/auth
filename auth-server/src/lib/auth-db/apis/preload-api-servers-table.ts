@@ -32,7 +32,7 @@ export async function preloadApiServersTable(
         throw new Error("Unsupported API servers query type");
     }
   } catch (e: unknown) {
-    console.error("Failed to list SchemaVaults API servers: ", e);
-    throw new Error("Failed to list SchemaVaults API servers");
+    console.error("Failed to list API servers: ", e);
+    throw new Error("Failed to list API servers");
   }
 }

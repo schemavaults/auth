@@ -13,10 +13,10 @@ export default async function listApps(
 ): Promise<SchemaVaultsApp[]> {
 
   if (!user) {
-    throw new Error("You must be logged in to list SchemaVaults apps");
+    throw new Error("You must be logged in to list apps");
   }
   if (type === "all" && !user.admin) {
-    throw new Error("You must be an admin to list all SchemaVaults apps");
+    throw new Error("You must be an admin to list all apps");
   }
   if (!(await listAppsQueryTypeSchema.safeParseAsync(type)).success) {
     throw new Error("Invalid apps query type");
