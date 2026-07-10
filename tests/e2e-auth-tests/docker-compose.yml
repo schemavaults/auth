@@ -18,6 +18,15 @@ services:
       TEST_SUITE_NAME: ${TEST_SUITE_NAME:?error}
       EXAMPLE_NEXTJS_RESOURCE_SERVER_URL: http://example-nextjs-resource-server
       EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY: ${EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY:-null}
+      # White-label values (set by e2e-auth-tests-cli for the white_label
+      # suite); must match the schemavaults-auth service's values so helper
+      # commands and specs build app-id-scoped URLs, cookie names, and
+      # branding assertions against the deployment under test.
+      SCHEMAVAULTS_AUTH_SERVER_APP_ID: ${SCHEMAVAULTS_AUTH_SERVER_APP_ID:-schemavaults-auth}
+      SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME: ${SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME:-}
+      SCHEMAVAULTS_AUTH_SERVER_DESCRIPTION: ${SCHEMAVAULTS_AUTH_SERVER_DESCRIPTION:-}
+      SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1: ${SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1:-}
+      SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2: ${SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2:-}
     profiles:
       - e2e
       - e2e_with_resource_server
@@ -86,6 +95,17 @@ services:
       PRIVATE_MFA_SECRET_KEK: GsQ9z/exSHSgYkJh1+7/Y7h+CKy/u5T5b+tCPGuRu6k=
       PRIVATE_MFA_RECOVERY_PEPPER: nlDsk6vFAVtk7EGAe3HvgLdlZDCc+GX6lb6DD3byfTk=
       NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS: yes
+      # White-label overrides (set by e2e-auth-tests-cli for the white_label
+      # suite; the defaults keep every other suite on stock branding). All of
+      # these are runtime process.env reads on the server -- no rebuild needed.
+      SCHEMAVAULTS_AUTH_SERVER_APP_ID: ${SCHEMAVAULTS_AUTH_SERVER_APP_ID:-schemavaults-auth}
+      # White-label deployments must set the API server id to the same value
+      # as the auth server's own app id.
+      SCHEMAVAULTS_API_SERVER_ID: ${SCHEMAVAULTS_AUTH_SERVER_APP_ID:-schemavaults-auth}
+      SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME: ${SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME:-}
+      SCHEMAVAULTS_AUTH_SERVER_DESCRIPTION: ${SCHEMAVAULTS_AUTH_SERVER_DESCRIPTION:-}
+      SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1: ${SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1:-}
+      SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2: ${SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2:-}
     expose:
       - 80
     ports:

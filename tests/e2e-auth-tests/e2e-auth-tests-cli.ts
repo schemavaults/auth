@@ -92,6 +92,19 @@ async function launchDockerComposeTests(
     ] = base64UrlPrivateKey;
   }
 
+  if (test_suite_name === "white_label") {
+    // Run the auth server (and the Cypress runner's expectations) as a
+    // white-label deployment: non-default app id + custom branding env.
+    // docker-compose.yml interpolates these into both containers.
+    environmentVariables["SCHEMAVAULTS_AUTH_SERVER_APP_ID"] = "acme-sso-e2e";
+    environmentVariables["SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME"] =
+      "Acme SSO";
+    environmentVariables["SCHEMAVAULTS_AUTH_SERVER_DESCRIPTION"] =
+      "Single sign-on for Acme Corporation (E2E white-label test)";
+    environmentVariables["SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1"] = "#123456";
+    environmentVariables["SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2"] = "#654321";
+  }
+
   const result = spawnSync(
     dockerComposeCommand[0],
     dockerComposeCommand.slice(1),
