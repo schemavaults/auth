@@ -4,7 +4,9 @@ import { useState, useCallback, useTransition, useMemo } from "react";
 import PageContainer from "@/components/PageContainer";
 import useSWR, { SWRResponse } from "swr";
 import type { ReactElement } from "react";
-import { type ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
+import { type ApiServerId, type AppId, apiServerIdSchema } from "@schemavaults/app-definitions";
+import { useAuthServerAppId } from "@schemavaults/auth-react-provider";
+import { useAuthServerUrl } from "@/components/AuthServerUrl";
 import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn, useToast } from "@schemavaults/ui";
 import { CheckCircle, ClipboardCopy, ExternalLink } from "lucide-react";
 import JwksAccessKeysUsageInstructions from "./jwks-access-keys-usage-instructions";
@@ -33,7 +35,9 @@ type PrivateKeyDisplayFormat = "pem" | "base64url" | "env";
 function getFormattedPrivateKey(
   pemKey: string,
   format: PrivateKeyDisplayFormat,
-  apiServerId: ApiServerId
+  apiServerId: ApiServerId,
+  authServerUrl: string,
+  authServerAppId: AppId
 ): string {
   switch (format) {
     case "pem":
@@ -45,7 +49,12 @@ function getFormattedPrivateKey(
     case "env": {
       const parsed = PEMFormat.parsePem(pemKey, "PRIVATE");
       const base64urlKey = parsed.toBase64Url();
-      return `SCHEMAVAULTS_API_SERVER_ID="${apiServerId}"\nSCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY="${base64urlKey}"`;
+      return [
+        `SCHEMAVAULTS_API_SERVER_ID="${apiServerId}"`,
+        `SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY="${base64urlKey}"`,
+        `SCHEMAVAULTS_AUTH_SERVER_URL="${authServerUrl}"`,
+        `SCHEMAVAULTS_AUTH_SERVER_APP_ID="${authServerAppId}"`,
+      ].join("\n");
     }
   }
 }
@@ -62,10 +71,12 @@ function DisplayGeneratedPrivateKeyForOneTimeCopy({
   const { toast } = useToast();
   const [copied, setCopied] = useState<boolean>(false);
   const [displayFormat, setDisplayFormat] = useState<PrivateKeyDisplayFormat>("env");
+  const auth_server_url: string = useAuthServerUrl();
+  const auth_server_app_id: AppId = useAuthServerAppId();
 
   const formattedContent = useMemo(
-    () => getFormattedPrivateKey(generatedPrivateKey, displayFormat, api_server_id),
-    [generatedPrivateKey, displayFormat, api_server_id]
+    () => getFormattedPrivateKey(generatedPrivateKey, displayFormat, api_server_id, auth_server_url, auth_server_app_id),
+    [generatedPrivateKey, displayFormat, api_server_id, auth_server_url, auth_server_app_id]
   );
 
   const handleCopyKey = useCallback(async () => {
