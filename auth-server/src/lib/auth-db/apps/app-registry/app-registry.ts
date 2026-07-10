@@ -163,7 +163,7 @@ export class SchemaVaultsAppRegistry {
     }
 
     if (!user) {
-      throw new Error("You must be logged in to list SchemaVaults apps");
+      throw new Error("You must be logged in to list apps");
     }
 
     if (this.debug) {

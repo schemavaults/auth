@@ -43,7 +43,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       newResource = parsed.data;
     } catch (e: unknown) {
       const genericBadRequestErrMsg: string =
-        "Failed to parse new SchemaVaults frontend app details from request body";
+        "Failed to parse new frontend app details from request body";
       console.error(`${genericBadRequestErrMsg}: `, e);
       return NextResponse.json(
         {
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           {
             success: false,
             message:
-              "You must be an admin to create a new SchemaVaults frontend application without an organization",
+              "You must be an admin to create a new frontend application without an organization",
           } satisfies ResourceCreationResponse,
           {
             status: 403,
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       return NextResponse.json({
         success: true,
-        message: "Successfully created new SchemaVaults frontend app",
+        message: "Successfully created new frontend app",
         resource_id: newResource.app_id,
       } satisfies ResourceCreationResponse);
     } catch (e: unknown) {
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json(
         {
           success: false,
-          message: "Failed to create new SchemaVaults frontend app",
+          message: "Failed to create new frontend app",
         } satisfies ResourceCreationResponse,
         {
           status: 500,

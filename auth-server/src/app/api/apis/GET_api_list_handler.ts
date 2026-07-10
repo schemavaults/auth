@@ -109,7 +109,7 @@ async function GET_api_list_handler(
                 {
                   success: false,
                   message:
-                    "You must be an admin to list all SchemaVaults API servers",
+                    "You must be an admin to list all API servers",
                 } satisfies ListApiServersQueryResponse,
                 {
                   status: 403,
@@ -120,7 +120,7 @@ async function GET_api_list_handler(
               return NextResponse.json(
                 {
                   success: true,
-                  message: "Successfully listed all SchemaVaults API servers",
+                  message: "Successfully listed all API servers",
                   list: (await apiServerRegistry.listAllApiServers()) satisfies readonly SchemaVaultsApiServerDefinition[],
                 } satisfies ListApiServersQueryResponse,
                 {
@@ -171,7 +171,7 @@ async function GET_api_list_handler(
               return NextResponse.json(
                 {
                   success: true,
-                  message: "Successfully listed all SchemaVaults API servers",
+                  message: "Successfully listed all API servers",
                   list: (await apiServerRegistry.listOrganizationApiServers(
                     organization_id,
                     user,
@@ -221,7 +221,7 @@ async function GET_api_list_handler(
         return NextResponse.json(
           {
             success: false,
-            message: "Failed to list SchemaVaults API servers",
+            message: "Failed to list API servers",
           } satisfies ListApiServersQueryResponse,
           {
             status: 500,

@@ -101,7 +101,7 @@ export async function GET_list_app_domains(
         return NextResponse.json(
           {
             success: false,
-            message: "Failed to load SchemaVaults app with given 'app_id'",
+            message: "Failed to load app with given 'app_id'",
           } satisfies ListAppDomainsResponse,
           {
             status: 404,
@@ -152,7 +152,7 @@ export async function GET_list_app_domains(
         return NextResponse.json(
           {
             success: false,
-            message: "Failed to list domains for SchemaVaults app",
+            message: "Failed to list domains for app",
           } satisfies ListAppDomainsResponse,
           {
             status: 500,

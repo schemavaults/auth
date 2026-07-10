@@ -42,7 +42,7 @@ export class SchemaVaultsApiServerRegistry {
     })
     if (hardcoded_api_server) {
       if (hardcoded_api_server.owner_organization_id !== getAuthServerOwnerOrganizationId()) {
-        throw new Error("Expected hardcoded API servers to be owned by the hardcoded SchemaVaults organization!")
+        throw new Error("Expected hardcoded API servers to be owned by the configured owner organization!")
       }
       if (this.debug) {
         console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}') -> Found hardcoded API: `, hardcoded_api_server)
@@ -315,7 +315,7 @@ export class SchemaVaultsApiServerRegistry {
     }
 
     if (!user) {
-      throw new Error("You must be logged in to list SchemaVaults API servers");
+      throw new Error("You must be logged in to list API servers");
     }
 
 
