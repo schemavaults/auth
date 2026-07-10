@@ -3,25 +3,30 @@ import { signJWT } from "./sign";
 import { generateNewJwtKeySet, type JWT_Keys } from "./jwt_keys";
 import { verifyJWTSignature } from "./verify_signature";
 import type { AuthTokenTypes } from "@schemavaults/auth-common";
-import {
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
 import { decodeProtectedHeader, type ProtectedHeaderParameters } from "jose";
 import signVerifyAlgorithm from "./sign_verify_alg";
+import {
+  getAuthServerUrl,
+  DEFAULT_AUTH_SERVER_APP_ID,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 
 const iat: number = Date.now();
 const type: AuthTokenTypes = "refresh";
-const audience = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id satisfies string;
+// Keysets are stored/looked-up by the stable app id; the token `aud` uses the URL.
+const keyset_audience_id: string = DEFAULT_AUTH_SERVER_APP_ID;
+const audience: string = getAuthServerUrl();
 const email = "jalexwhitman@gmail.com" as const satisfies string;
 const uid: string = crypto.randomUUID();
 const sub: string = uid;
 const env: SchemaVaultsAppEnvironment = "test";
+const environment = env;
 
 describe("JWT Signature 'sig' field", async (): Promise<void> => {
   it("can sign a JWT", async () => {
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: audience,
+      audience_id: keyset_audience_id,
+      environment,
     });
     const sig: string = await signJWT({
       jwt_keys,
@@ -38,7 +43,8 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
 
   it("can sign and validate a JWT", async () => {
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: audience,
+      audience_id: keyset_audience_id,
+      environment,
     });
 
     const sig: string = await signJWT({
@@ -67,7 +73,8 @@ describe("JWT Signature 'sig' field", async (): Promise<void> => {
 
   it("can sign a JWT with just the signing key", async () => {
     const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
-      audience_id: audience,
+      audience_id: keyset_audience_id,
+      environment,
     });
     const keyset_id: string = jwt_keys.keyset_id;
     const signing_key_promise: Promise<CryptoKey> | null = jwt_keys.signing_key;

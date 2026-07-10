@@ -1,18 +1,23 @@
 // handle-successful-exchange-auth-tokens-response.ts
 
+import { z } from "zod";
 import {
   type AccessToken,
   type RequestTokensResult,
-  requestTokensResultSchema,
+  createRequestTokensResultSchema,
   type SuccessfullyGeneratedTokensRecord,
 } from "@schemavaults/auth-common";
 import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "@/lib/assert-http-only-refresh-token-has-accompanying-expiry-marker";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import type { ApiServerId } from "@schemavaults/app-definitions";
+import type {
+  ApiServerId,
+  SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 
 export interface IHandleSuccessfulExchangeAuthTokensResponseOpts {
   tokens_response: unknown;
   debug: boolean;
+  environment: SchemaVaultsAppEnvironment;
   adapter: ISchemaVaultsAuthClientAdapter;
   storeMultipleAccessTokens: (
     access_tokens: Record<ApiServerId, AccessToken | "AS_HTTP_ONLY_COOKIE">,
@@ -22,11 +27,14 @@ export interface IHandleSuccessfulExchangeAuthTokensResponseOpts {
 export default async function handleSuccessfulExchangeAuthTokensResponse({
   tokens_response,
   debug,
+  environment,
   storeMultipleAccessTokens,
   adapter,
 }: IHandleSuccessfulExchangeAuthTokensResponseOpts): Promise<SuccessfullyGeneratedTokensRecord> {
-  const parsed_tokens_data =
-    await requestTokensResultSchema.safeParseAsync(tokens_response);
+  const parsed_tokens_data = await createRequestTokensResultSchema(
+    z,
+    environment,
+  ).safeParseAsync(tokens_response);
   if (!parsed_tokens_data.success) {
     if (debug) {
       console.error(

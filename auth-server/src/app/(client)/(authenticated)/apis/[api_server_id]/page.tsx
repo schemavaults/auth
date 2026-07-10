@@ -10,18 +10,15 @@ import { type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefiniti
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
-import { type OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { type OrganizationMembershipRoleType, type OrganizationID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { OrganizationsRegistry } from "@/lib/auth-db";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next/types";
 
-interface PageParams {
-  params: Promise<{ api_server_id: string }>;
-}
-
 export default async function ApiServerDetailPage(
-  pageParams: PageParams
+  pageParams: PageProps<"/apis/[api_server_id]">
 ): Promise<ReactElement> {
   await connection();
 
@@ -54,8 +51,8 @@ export default async function ApiServerDetailPage(
         redirectWithError(500, "internal_server_error");
       }
 
-      if (owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID && !user.admin) {
-        console.warn("Blocking request to view API server detail page for SchemaVaults-owned API server for non-admin user!")
+      if (owner_organization_id === getAuthServerOwnerOrganizationId() && !user.admin) {
+        console.warn("Blocking request to view API server detail page for a platform-owned API server for non-admin user!")
         redirectWithError(403, 'forbidden');
       }
 
@@ -74,7 +71,7 @@ export default async function ApiServerDetailPage(
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
       const connected_apps = await permissions_registry.listConnectedApps(api_server_id);
       const api_server_registry = new SchemaVaultsApiServerRegistry(dbh.db);
-      const connected_domains: SchemaVaultsApiServerDomainRef[] = await api_server_registry.getApiServerDomains(api_server_id);
+      const connected_domains: readonly SchemaVaultsApiServerDomainRef[] = await api_server_registry.getApiServerDomains(api_server_id);
 
       const orgRegistry = new OrganizationsRegistry(dbh.db)
       const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)

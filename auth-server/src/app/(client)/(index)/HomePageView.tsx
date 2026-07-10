@@ -3,15 +3,15 @@
 import { useAuth, useCurrentUser } from "@schemavaults/auth-react-provider";
 import {
   cn,
-  ThemedPageBackground,
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
   CardFooter,
-  Wordmark,
 } from "@schemavaults/ui";
+import { Wordmark } from "@/components/Wordmark";
+import { ThemedPageBackground } from "@/components/ThemedPageBackground";
 import { HelpCircle } from "lucide-react";
 import Link from "next/link";
 import type { ReactElement } from "react";

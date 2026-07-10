@@ -15,7 +15,11 @@ export async function checkAppToApiPermission({
   client_app_id,
 }: ICheckAppToApiPermissionOpts): Promise<boolean> {
   const response = await adapter.fetch(
-    `${auth_server_uri}/api/apis/${api_server_id}/connect_app/${client_app_id}`,
+    new URL(
+      `/api/apis/${api_server_id}/connect_app/${client_app_id}`,
+      auth_server_uri,
+    ).toString(),
+
     {
       method: "GET",
       credentials: "include",
@@ -32,12 +36,19 @@ export async function checkAppToApiPermission({
   if (
     typeof body !== "object" ||
     !body ||
-    !(body as { success: boolean }).success
+    !("success" in body) ||
+    !body.success
   ) {
     throw new Error("Check app-to-api permission response indicated failure");
   }
 
-  return (body as { is_allowed: boolean }).is_allowed;
+  if (!("is_allowed" in body) || typeof body.is_allowed !== "boolean") {
+    throw new TypeError(
+      "Expected a boolean 'is_allowed' property on response object!",
+    );
+  }
+
+  return body.is_allowed;
 }
 
 export default checkAppToApiPermission;

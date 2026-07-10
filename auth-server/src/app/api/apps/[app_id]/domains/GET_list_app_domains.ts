@@ -1,6 +1,5 @@
 import "server-only";
 
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db";
 import {
   type AppId,
@@ -23,7 +22,7 @@ export type ListAppDomainsResponse =
   | {
       success: true;
       message: string;
-      list: SchemaVaultsAppDomainRef[];
+      list: readonly SchemaVaultsAppDomainRef[];
     }
   | {
       success: false;
@@ -102,7 +101,7 @@ export async function GET_list_app_domains(
         return NextResponse.json(
           {
             success: false,
-            message: "Failed to load SchemaVaults app with given 'app_id'",
+            message: "Failed to load app with given 'app_id'",
           } satisfies ListAppDomainsResponse,
           {
             status: 404,
@@ -153,7 +152,7 @@ export async function GET_list_app_domains(
         return NextResponse.json(
           {
             success: false,
-            message: "Failed to list domains for SchemaVaults app",
+            message: "Failed to list domains for app",
           } satisfies ListAppDomainsResponse,
           {
             status: 500,
@@ -163,8 +162,7 @@ export async function GET_list_app_domains(
     },
   );
 
-  const response = await protected_route(req);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, req);
+  return await protected_route(req);
 }
 
 export default GET_list_app_domains;

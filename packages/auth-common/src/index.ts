@@ -40,19 +40,22 @@ export {
 
 export * from "./mfa";
 export {
-  requestTokensResultSchema,
+  createRequestTokensResultSchema,
   type RequestTokensResult,
-  successfullyGeneratedTokensRecordSchema,
+  createSuccessfullyGeneratedTokensRecordSchema,
   type SuccessfullyGeneratedTokensRecord,
 } from "./request_tokens_result";
 
 export * from "./auth_acquire_tokens_grant_types";
 export type * from "./auth_acquire_tokens_grant_types";
 
-export { PRODUCTION_AUTH_SERVER_URL } from "@schemavaults/app-definitions";
+export { getAuthServerUrl } from "@schemavaults/app-definitions";
 export { appIdSchema } from "@schemavaults/app-definitions";
 
-export { audienceSchema, audienceRefSchema } from "./audience-schema";
+export {
+  createAudienceSchema,
+  createAudienceListSchema,
+} from "./audience-schema";
 
 export {
   inviteCodeFormatSchema,
@@ -65,8 +68,11 @@ export {
   isValidOrganizationID,
   RESERVED_ORGANIZATION_IDS,
   organizationDefinitionSchema,
-  hardcodedOrgs,
-  SCHEMAVAULTS_ORGANIZATION_ID,
+  getHardcodedOrgs,
+  getAuthServerOwnerOrganizationId,
+  DEFAULT_AUTH_SERVER_OWNER_ORGANIZATION_ID,
+  getAuthServerOwnerOrganizationName,
+  DEFAULT_AUTH_SERVER_OWNER_ORGANIZATION_NAME,
   MAXIMUM_USER_ORGANIZATIONS,
   MINIMUM_ORGANIZATION_ID_LENGTH,
   MAXIMUM_ORGANIZATION_ID_LENGTH,
@@ -121,6 +127,8 @@ export type { PaginationOptions } from "./pagination";
 
 export { timingSafeStringEqual } from "./timing-safe-string-equal";
 
+export { isOriginInAllowedList } from "./cors";
+
 export {
   oauth2StateSchema,
   OAUTH2_STATE_VSCHAR_REGEX,
@@ -128,3 +136,8 @@ export {
   OAuth2StateValidationError,
 } from "./oauth2-state-schema";
 export type { OAuth2State } from "./oauth2-state-schema";
+
+export {
+  createAuthorizationCodePOSTBodySchema,
+  createRefreshTokenPOSTBodySchema,
+} from "./auth_acquire_tokens_grant_types";

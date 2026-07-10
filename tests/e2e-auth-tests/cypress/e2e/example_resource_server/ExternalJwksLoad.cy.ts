@@ -1,5 +1,3 @@
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
-
 // crypto.randomUUID() is unavailable in the spec's browser context (the
 // auth server is not served from a secure context in CI), so derive test
 // jtis from the clock + Math.random instead.
@@ -8,7 +6,9 @@ function freshJti(): string {
 }
 
 // Complete claim set matching what createJwksAccessProofToken emits; the
-// hardened-validation tests remove or corrupt one claim at a time.
+// hardened-validation tests remove or corrupt one claim at a time. The `aud`
+// claim carries the auth server URL (resolved in cypress.config.ts, since
+// getAuthServerUrl() cannot run in the browser context).
 function baselineAssertionClaims(
   api_server_id: string,
 ): Record<string, unknown> {
@@ -17,7 +17,7 @@ function baselineAssertionClaims(
     api_server_id,
     sub: api_server_id,
     iss: api_server_id,
-    aud: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    aud: Cypress.env("AUTH_SERVER_URL"),
     iat: now,
     nbf: now - 1,
     exp: now + 60,

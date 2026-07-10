@@ -32,7 +32,7 @@ export default async function checkIfAuthenticatedWithServer({
   let userData: UserData;
   try {
     const response = await adapter.fetch(
-      `${auth_server_uri}/api/auth/whoami/${client_app_id}`,
+      new URL(`/api/auth/whoami/${client_app_id}`, auth_server_uri).toString(),
       {
         method: "GET",
         credentials: "include",

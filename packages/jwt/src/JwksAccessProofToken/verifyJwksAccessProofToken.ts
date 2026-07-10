@@ -1,8 +1,6 @@
 import {
   type ApiServerId,
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  SCHEMAVAULTS_AUTH_SERVER,
 } from "@schemavaults/app-definitions";
 import { jwtVerify } from "jose";
 import signVerifyAlg, { sign_verify_alg } from "@/jwt/sign_verify_alg";
@@ -14,12 +12,14 @@ import {
 export interface IVerifyJwksAccessProofToken {
   token: string;
   api_server_id: ApiServerId;
+  auth_server_url: string;
   public_key: CryptoKey;
 }
 
 export async function verifyJwksAccessProofToken({
   token,
   api_server_id,
+  auth_server_url,
   public_key,
 }: IVerifyJwksAccessProofToken): Promise<boolean> {
   if (typeof token !== "string") {
@@ -30,14 +30,14 @@ export async function verifyJwksAccessProofToken({
     throw new TypeError("Invalid API server ID!");
   }
 
-  if (api_server_id === SCHEMAVAULTS_AUTH_SERVER.api_server_id) {
+  if (api_server_id === auth_server_url) {
     throw new Error(
-      `'${SCHEMAVAULTS_AUTH_SERVER.api_server_id}' does not use JWKS access proof tokens`,
+      `'${auth_server_url}' does not use JWKS access proof tokens`,
     );
   }
 
   const payload = await jwtVerify(token, public_key, {
-    audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    audience: auth_server_url,
     issuer: api_server_id,
     subject: api_server_id,
     algorithms: [signVerifyAlg],
@@ -45,7 +45,7 @@ export async function verifyJwksAccessProofToken({
     requiredClaims: [...JWKS_ACCESS_PROOF_TOKEN_REQUIRED_CLAIMS],
   });
 
-  if (payload.payload.aud !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  if (payload.payload.aud !== auth_server_url) {
     return false;
   }
 

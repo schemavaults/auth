@@ -25,7 +25,7 @@ export interface AuthenticateOptions {
   app_id: string;
 
   // URL of the SchemaVaults auth server instance to authenticate against
-  auth_server_uri: string;
+  auth_server_url: string;
 
   app_env: SchemaVaultsAppEnvironment;
 
@@ -70,9 +70,9 @@ export class AuthenticateURLEncoder {
     }
   }
 
-  public static encode(opts: AuthenticateOptions) {
+  public static encode(opts: AuthenticateOptions): string {
     const environment = opts.app_env;
-    const auth_server = opts.auth_server_uri;
+    const auth_server_url = opts.auth_server_url;
 
     const server_page = `/auth/${opts.type}` as const;
 
@@ -120,8 +120,10 @@ export class AuthenticateURLEncoder {
     }
     queryParams.set("state", opts.state);
 
-    const authenticate_url =
-      `${auth_server}${server_page}?${queryParams.toString()}` as const;
+    const authenticate_url = new URL(
+      `${server_page}?${queryParams.toString()}`,
+      auth_server_url,
+    );
 
     if (environment !== "production") {
       console.log(
@@ -130,7 +132,7 @@ export class AuthenticateURLEncoder {
       );
     }
 
-    return authenticate_url;
+    return authenticate_url.toString();
   }
 }
 

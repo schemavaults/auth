@@ -1,9 +1,9 @@
 import {
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
   type AppId,
   appIdSchema,
 } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import { type I_JWT_Keys, JWT_Factory } from "@schemavaults/jwt";
 import type { RefreshToken, UserData } from "@schemavaults/auth-common";
@@ -29,7 +29,7 @@ export default async function generateRefreshToken({
 
   const auth_server_jwt_keys: I_JWT_Keys =
     await auth_jwt_manager.getFreshEnoughKeysetOrCreateNew(
-      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      getAuthServerAppId(),
     );
   const jwt_factory = new JWT_Factory({
     client_app_id,

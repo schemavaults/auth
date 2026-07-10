@@ -22,11 +22,12 @@ import useAuthClientInitialization, {
 import {
   type ApiServerId,
   type AppId,
-  getAuthServerUri,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "@/hooks/use-debug";
 import useAppId from "@/hooks/use-app-id";
+import useAuthServerAppId from "@/hooks/use-auth-server-app-id";
 import useDefaultAccessTokenAudiences from "@/hooks/use-default-access-token-audiences";
 import AuthProviderSideEffects from "./auth-provider-side-effects";
 import assertHttpsInProduction from "@/lib/assert-https-in-production";
@@ -48,19 +49,20 @@ export default function CoreSchemaVaultsAuthClientProvider(
   assertHttpsInProduction(appEnvironment);
 
   const app_id: AppId = useAppId();
+  const auth_server_app_id: AppId = useAuthServerAppId();
 
   if (typeof props.fetch !== "function") {
     throw new TypeError("Expected 'fetch' to be a function!");
   }
 
   const authServerUri: string = useMemo(() => {
-    if (typeof props.auth_server_uri === "string") {
-      return props.auth_server_uri;
+    if (typeof props.auth_server_url === "string") {
+      return props.auth_server_url;
     } else {
       // default auth server uri
-      return getAuthServerUri(appEnvironment);
+      return getAuthServerUrl(appEnvironment);
     }
-  }, [props.auth_server_uri, appEnvironment]);
+  }, [props.auth_server_url, appEnvironment]);
 
   const debug: boolean = useDebugWithSpecifiedBooleanOrLookupDefault(
     appEnvironment,
@@ -85,13 +87,14 @@ export default function CoreSchemaVaultsAuthClientProvider(
 
   const useAuthClientInitializationOptions: UseAuthClientInitializationOptions =
     {
-      auth_server_uri: authServerUri,
+      auth_server_url: authServerUri,
       authClientRef,
       ready,
       setReady,
       successful_authentication_redirect_uri,
       successful_logout_redirect_uri,
       app_id,
+      auth_server_app_id,
       default_audiences,
       debug,
       authorize_uri,

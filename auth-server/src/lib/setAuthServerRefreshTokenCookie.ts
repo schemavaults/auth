@@ -2,10 +2,8 @@ import "server-only";
 import type { NextRequest, NextResponse } from "next/server";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import {
-  type SchemaVaultsAppEnvironment,
-  SCHEMAVAULTS_AUTH_APP_ID,
-} from "@schemavaults/app-definitions";
+import { type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { UserRegistry } from "@/lib/auth-db";
 import { OrganizationsRegistry } from "@/lib/auth-db";
 import { loadUserData } from "@/lib/auth-db/users/load-user-by-uid";
@@ -31,6 +29,7 @@ export default async function setAuthServerRefreshTokenCookie({
   environment,
   debug = false,
 }: SetAuthServerRefreshTokenCookieOpts): Promise<void> {
+  const auth_app_id = getAuthServerAppId();
   const userRegistry = new UserRegistry(db, debug);
   const orgRegistry = new OrganizationsRegistry(db, debug);
 
@@ -40,7 +39,7 @@ export default async function setAuthServerRefreshTokenCookie({
   const auth_jwt_manager = new AuthServerJwtKeysManager(db);
   const refresh_token = await generateRefreshToken({
     auth_jwt_manager,
-    client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
+    client_app_id: auth_app_id,
     user: userData,
     user_organizations: userOrgs,
     environment,
@@ -51,7 +50,7 @@ export default async function setAuthServerRefreshTokenCookie({
 
   await setRefreshTokenCookieOnResponse({
     refresh_token,
-    client_app_id: SCHEMAVAULTS_AUTH_APP_ID,
+    client_app_id: auth_app_id,
     req,
     res,
     secure,

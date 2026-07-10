@@ -12,7 +12,7 @@ import {
   withAdminApiRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
-import sendVerificationEmail from "@/lib/send-verification-email";
+import sendVerificationEmail from "@/lib/mail/send-verification-email";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/admin/users/[uid]/resend-verification";
@@ -21,7 +21,7 @@ export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function POST_resend_verification_handler(
-  { user, dbh }: IProtectedAdminApiRouteProps,
+  { user, dbh, redis }: IProtectedAdminApiRouteProps,
   target_uid: string,
 ): Promise<NextResponse> {
   if (!user.admin) {
@@ -83,6 +83,7 @@ async function POST_resend_verification_handler(
       email: targetUser.email,
       rawToken,
       db: dbh.db,
+      redis
     });
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
@@ -109,7 +110,7 @@ async function POST_resend_verification_handler(
 
 export async function POST(
   req: NextRequest,
-  props: { params: Promise<{ uid: string }> },
+  props: RouteContext<"/api/admin/users/[uid]/resend-verification">,
 ): Promise<NextResponse> {
   const params = await props.params;
 

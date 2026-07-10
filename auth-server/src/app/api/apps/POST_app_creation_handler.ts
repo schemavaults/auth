@@ -11,10 +11,10 @@ import {
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
-import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { type OrganizationID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { ConflictError } from "@/lib/error/ConflictError";
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apps";
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       newResource = parsed.data;
     } catch (e: unknown) {
       const genericBadRequestErrMsg: string =
-        "Failed to parse new SchemaVaults frontend app details from request body";
+        "Failed to parse new frontend app details from request body";
       console.error(`${genericBadRequestErrMsg}: `, e);
       return NextResponse.json(
         {
@@ -96,15 +96,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           {
             success: false,
             message:
-              "You must be an admin to create a new SchemaVaults frontend application without an organization",
+              "You must be an admin to create a new frontend application without an organization",
           } satisfies ResourceCreationResponse,
           {
             status: 403,
           },
         );
       } else {
-        // User is an admin, default to 'schemavaults' org if none set
-        owner_organization_id = SCHEMAVAULTS_ORGANIZATION_ID;
+        // User is an admin, default to the configured owner org if none set
+        owner_organization_id = getAuthServerOwnerOrganizationId();
       }
     }
 
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       return NextResponse.json({
         success: true,
-        message: "Successfully created new SchemaVaults frontend app",
+        message: "Successfully created new frontend app",
         resource_id: newResource.app_id,
       } satisfies ResourceCreationResponse);
     } catch (e: unknown) {
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json(
         {
           success: false,
-          message: "Failed to create new SchemaVaults frontend app",
+          message: "Failed to create new frontend app",
         } satisfies ResourceCreationResponse,
         {
           status: 500,
@@ -184,8 +184,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   },
   );
-  const response = await protected_route(request);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, request);
+  return await protected_route(request);
 }
 
 export const dynamic = "force-dynamic"; // defaults to auto

@@ -1,7 +1,7 @@
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { RedisCache } from "@/lib/redis";
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { getAuthServerUrl } from "@schemavaults/app-definitions";
 import type { Kysely } from "@schemavaults/dbh";
 import {
   jwtVerify,
@@ -32,7 +32,9 @@ export default async function verifyJwksAccessAssertion(
     const publicKey = await importSPKI(activeKey.public_key, "RS256");
     const { payload } = await jwtVerify(assertion, publicKey, {
       algorithms: ["RS256"],
-      audience: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      // createJwksAccessProofToken mints assertions with the (white-labellable)
+      // auth server URL as the `aud` claim, not the auth app id.
+      audience: getAuthServerUrl(),
       issuer: audience,
       maxTokenAge: JWKS_ACCESS_PROOF_TOKEN_MAX_AGE,
       requiredClaims: [...JWKS_ACCESS_PROOF_TOKEN_REQUIRED_CLAIMS],

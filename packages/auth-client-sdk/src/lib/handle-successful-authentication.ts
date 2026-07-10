@@ -1,9 +1,9 @@
 import {
   type AccessToken,
-  authorizationCodePOSTbody,
+  createAuthorizationCodePOSTBodySchema,
   PKCE_ProofKeyManager,
   type RefreshToken,
-  requestTokensResultSchema,
+  createRequestTokensResultSchema,
   type UserData,
 } from "@schemavaults/auth-common";
 import debugPrintTokensAsTable from "./debugPrintTokensAsTable";
@@ -14,7 +14,7 @@ import type {
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import type { z } from "zod";
+import { z } from "zod";
 import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "./assert-http-only-refresh-token-has-accompanying-expiry-marker";
 import { timingSafeStringEqual } from "@schemavaults/auth-common";
 
@@ -38,7 +38,7 @@ export interface IHandleSuccessfulAuthenticationOpts {
   environment: SchemaVaultsAppEnvironment;
   adapter: ISchemaVaultsAuthClientAdapter;
   client_app_id: AppId;
-  auth_server_uri: string;
+  auth_server_url: string;
   defaultTokenAudiences: string | string[];
   // stores a refresh token locally (if http-only cookies not being used)
   storeRefreshToken: (refreshToken: RefreshToken) => void;
@@ -60,7 +60,7 @@ export async function handleSuccessfulAuthentication({
   debug,
   environment,
   adapter,
-  auth_server_uri,
+  auth_server_url,
   client_app_id,
   defaultTokenAudiences,
   storeRefreshToken,
@@ -235,8 +235,10 @@ export async function handleSuccessfulAuthentication({
 
   // Get the endpoint to exchange the authorization code for an access token
   // https://datatracker.ietf.org/doc/html/rfc7636#section-4.5
-  const authorization_code_token_endpoint =
-    `${auth_server_uri}/api/auth/token/authorization_code/${client_app_id}` as const;
+  const authorization_code_token_endpoint = new URL(
+    `/api/auth/token/authorization_code/${client_app_id}` as const,
+    auth_server_url,
+  ).toString();
   if (debug) {
     console.log(
       "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Token Endpoint: ",
@@ -258,10 +260,15 @@ export async function handleSuccessfulAuthentication({
     audience = [];
   }
 
+  const authorizationCodePOSTBodySchema = createAuthorizationCodePOSTBodySchema(
+    z,
+    environment,
+  );
+
   // Exchange the authorization code for an access token
-  let request_body: z.infer<typeof authorizationCodePOSTbody>;
+  let request_body: z.infer<typeof authorizationCodePOSTBodySchema>;
   try {
-    const parsed = await authorizationCodePOSTbody.safeParseAsync({
+    const parsed = await authorizationCodePOSTBodySchema.safeParseAsync({
       grant_type: "authorization_code" as const,
       code: authorization_code,
       code_verifier: cached_code_verifier,
@@ -269,7 +276,7 @@ export async function handleSuccessfulAuthentication({
       audience,
       challenge_time,
       redirect_uri,
-    } satisfies z.infer<typeof authorizationCodePOSTbody>);
+    } satisfies z.infer<typeof authorizationCodePOSTBodySchema>);
     if (!parsed.success) {
       throw parsed.error;
     }
@@ -333,9 +340,10 @@ export async function handleSuccessfulAuthentication({
   let refresh_token_expiry: number | undefined;
   let user: UserData;
   try {
-    const tokens_data = await requestTokensResultSchema.safeParseAsync(
-      await response.json(),
-    );
+    const tokens_data = await createRequestTokensResultSchema(
+      z,
+      environment,
+    ).safeParseAsync(await response.json());
     if (!tokens_data.success) {
       console.error(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] " +

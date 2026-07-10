@@ -1,5 +1,6 @@
 import "server-only";
-import { appIdSchema, isHardcodedAppId, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { appIdSchema, isHardcodedAppId } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { type AuthorizedAppDeclaration, authorizedAppDeclarationSchema } from "./authorized-app-declaration-schema";
 import isValidUuid from "@/lib/is-valid-uuid";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
@@ -11,7 +12,7 @@ export async function getAppAuthorization(
   app_id: string
 ): Promise<AuthorizedAppDeclaration | null> {
   // The auth app is always authorized
-  if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  if (app_id === getAuthServerAppId()) {
     return {
       uid,
       user_app_authorization_id: crypto.randomUUID(),

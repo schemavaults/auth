@@ -9,17 +9,19 @@ import {
   apiServerIdSchema,
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
+  type AppId,
+  type ApiServerId,
   isHardcodedApiServerId,
-  isHardcodedAppId,
-  HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS_MAP,
-  HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP,
-  hasHardcodedAppToApiPermission,
-  getHardcodedApiServerIdsForHardcodedApp,
   getHardcodedAppIdsForHardcodedApiServer,
-  AppId,
-  ApiServerId,
-  HardcodedApiServerId,
+  getHardcodedApp,
+  type HardcodedAppId,
+  isHardcodedAppId,
+  getHardcodedApiServerIdsAllowedForHardcodedApp,
+  type HardcodedApiServerId,
+  getHardcodedApiServer,
+  type SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { ConflictError } from "@/lib/error/ConflictError";
 import { AppNotConnectedToApiServerError } from "@/lib/error/AppNotConnectedToApiServerError";
@@ -81,19 +83,17 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
       throw new Error("Invalid API server ID received!");
     }
 
-    if (isHardcodedAppId(client_app_id) && isHardcodedApiServerId(api_server_id)) {
-      if (hasHardcodedAppToApiPermission(client_app_id, api_server_id)) {
-        return this.createHardcodedAppToApiAuthorization(
-          client_app_id,
-          api_server_id,
-        ) satisfies AppToApiPermission;
-      } else {
-        // no hardcoded permission between this app and registry
-        return null;
-      }
-    } else if (isHardcodedAppId(client_app_id)) {
+    const auth_server_app_id = getAuthServerAppId();
+    if (client_app_id === auth_server_app_id && api_server_id === auth_server_app_id) {
+      return this.createHardcodedAppToApiAuthorization(
+        client_app_id,
+        api_server_id,
+      ) satisfies AppToApiPermission;
+    }
+
+    if (client_app_id === auth_server_app_id && api_server_id !== auth_server_app_id) {
       // hardcoded apps
-      console.warn("Hardcoded apps may only have hardcoded APIs");
+      console.warn("Auth server app may only have auth server as audience");
       return null;
     }
 
@@ -352,9 +352,9 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
 
     if (isHardcodedApiServerId(api_server_id)) {
       // Get hardcoded apps that implicitly have permission
-      const hardcodedAppIds = getHardcodedAppIdsForHardcodedApiServer(api_server_id);
+      const hardcodedAppIds: readonly HardcodedAppId[] = getHardcodedAppIdsForHardcodedApiServer(api_server_id);
       const hardcodedApps = hardcodedAppIds.map((appId) => {
-        const definition = HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP.get(appId);
+        const definition = getHardcodedApp(appId);
         return {
           client_app_id: appId,
           app_name: definition?.app_name ?? appId,
@@ -414,12 +414,12 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
     client_app_id: string,
   ): Promise<{ api_server_id: string; api_server_name: string; created_at: number }[]> {
     if (isHardcodedAppId(client_app_id)) {
-      const apiServerIds: HardcodedApiServerId[] = getHardcodedApiServerIdsForHardcodedApp(client_app_id);
-      return apiServerIds.map((id) => {
-        const definition = HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS_MAP.get(id);
+      const allowedHardcodedApiServerIds: readonly HardcodedApiServerId[] = getHardcodedApiServerIdsAllowedForHardcodedApp(client_app_id);
+      return allowedHardcodedApiServerIds.map((api_server_id: HardcodedApiServerId) => {
+        const api_definition = getHardcodedApiServer(api_server_id);
         return {
-          api_server_id: id,
-          api_server_name: definition?.api_server_name ?? id,
+          api_server_id,
+          api_server_name: api_definition.api_server_name,
           created_at: Date.now(),
         };
       });
@@ -455,7 +455,7 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
     }));
 
     const hardcodedResults = hardcodedRows.map((row) => {
-      const definition = HARDCODED_CORE_SCHEMAVAULTS_API_SERVERS_MAP.get(row.api_server_id);
+      const definition: SchemaVaultsApiServerDefinition = getHardcodedApiServer(row.api_server_id);
       return {
         api_server_id: row.api_server_id,
         api_server_name: definition?.api_server_name ?? row.api_server_id,

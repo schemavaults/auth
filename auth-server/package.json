@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.27.21",
+  "version": "0.33.1",
   "private": true,
   "repository": {
     "type": "git",
@@ -18,7 +18,7 @@
     "@schemavaults/auth-ui": "workspace:*",
     "@schemavaults/dbh": "0.8.7",
     "@schemavaults/jwt": "workspace:*",
-    "@schemavaults/send-email": "latest",
+    "@schemavaults/send-email": "0.1.0",
     "@schemavaults/theme": "0.26.1",
     "@schemavaults/ui": "0.79.3",
     "@simplewebauthn/browser": "13.3.0",
@@ -50,7 +50,7 @@
     "eslint": "9.39.1",
     "eslint-config-next": "16.2.4",
     "globals": "16.5.0",
-    "postcss": "8.5.3",
+    "postcss": "8.5.12",
     "tailwindcss": "3.4.17",
     "typescript": "5.9.3"
   },

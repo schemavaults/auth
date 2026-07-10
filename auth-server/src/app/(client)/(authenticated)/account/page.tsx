@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 
 import AccountPageView from "./auth-dashboard-account-page-view";
 import {
+  getAuthServerUrl,
   organizationMembershipRoleDetailsSchema,
   type OrganizationMembershipRoleDetails,
   type UserData,
@@ -104,8 +105,9 @@ async function attemptToPreloadUserOrganizationMemberships(
 }
 
 async function AuthServerAccountDashboardPageServerComponent(
-  { user, dbh }: IProtectedAuthenticatedServerComponentPageProps
+  { user, dbh, environment }: IProtectedAuthenticatedServerComponentPageProps
 ): Promise<ReactElement> {
+  const auth_server_url: string = getAuthServerUrl(environment);
 
   if (!user) {
     // allow typescript to see that user data is set
@@ -142,6 +144,7 @@ async function AuthServerAccountDashboardPageServerComponent(
 
   return (
     <AccountPageView
+      auth_server_url={auth_server_url}
       preloaded_authorized_apps_data={preloaded_authorized_apps}
       preloaded_organization_memberships={preloaded_organization_memberships}
     />

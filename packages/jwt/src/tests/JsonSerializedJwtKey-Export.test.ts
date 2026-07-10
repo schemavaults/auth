@@ -5,9 +5,12 @@ import {
 } from "@/jwt/jwt_keys";
 import {
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  DEFAULT_AUTH_SERVER_APP_ID,
 } from "@schemavaults/app-definitions";
 import { describe, expect, test } from "bun:test";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+
+const environment: SchemaVaultsAppEnvironment = "test";
 
 function isValidJsonSerializedJwtKey(
   val: unknown,
@@ -22,7 +25,8 @@ function isValidJsonSerializedJwtKey(
 describe("JsonSerializedJwtKey-Export", () => {
   test("can export JsonSerializedJwtKey from a JWT_Keys instance; all keys are parsed as valid by schema for JsonSerializedJwtKey", async () => {
     const jwt_keys = await generateNewJwtKeySet({
-      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      audience_id: DEFAULT_AUTH_SERVER_APP_ID,
+      environment,
     });
 
     const verification = jwt_keys.verification_key_json;
@@ -42,7 +46,8 @@ describe("JsonSerializedJwtKey-Export", () => {
 
   test("decryption key is exported as a private key", async () => {
     const jwt_keys = await generateNewJwtKeySet({
-      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      audience_id: DEFAULT_AUTH_SERVER_APP_ID,
+      environment,
     });
     const decryption: JsonSerializedJwtKey = jwt_keys.decryption_key_json;
     expect(decryption.privacy_level).toBe("private");
@@ -50,7 +55,8 @@ describe("JsonSerializedJwtKey-Export", () => {
 
   test("encryption key is exported as a public key", async () => {
     const jwt_keys = await generateNewJwtKeySet({
-      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      audience_id: DEFAULT_AUTH_SERVER_APP_ID,
+      environment,
     });
     const encryption: JsonSerializedJwtKey | null =
       jwt_keys.encryption_key_json;
@@ -62,7 +68,8 @@ describe("JsonSerializedJwtKey-Export", () => {
 
   test("signing key is exported as a private key", async () => {
     const jwt_keys = await generateNewJwtKeySet({
-      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      audience_id: DEFAULT_AUTH_SERVER_APP_ID,
+      environment,
     });
     const signing: JsonSerializedJwtKey | null = jwt_keys.signing_key_json;
     if (!signing) {
@@ -73,7 +80,8 @@ describe("JsonSerializedJwtKey-Export", () => {
 
   test("verification key is exported as a public key", async () => {
     const jwt_keys = await generateNewJwtKeySet({
-      audience_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      audience_id: DEFAULT_AUTH_SERVER_APP_ID,
+      environment,
     });
     const verification: JsonSerializedJwtKey | null =
       jwt_keys.verification_key_json;
@@ -84,11 +92,12 @@ describe("JsonSerializedJwtKey-Export", () => {
   });
 
   test("all keys have the same audience ID", async () => {
-    const audience_id: string = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+    const audience_id: string = DEFAULT_AUTH_SERVER_APP_ID;
     expect(audience_id).toBeString();
     expect(apiServerIdSchema.safeParse(audience_id).success).toBe(true);
     const jwt_keys = await generateNewJwtKeySet({
       audience_id,
+      environment,
     });
     const encryption: JsonSerializedJwtKey | null =
       jwt_keys.encryption_key_json;

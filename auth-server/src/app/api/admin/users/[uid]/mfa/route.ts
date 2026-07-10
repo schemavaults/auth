@@ -15,7 +15,7 @@ const ROUTE = "/api/admin/users/[uid]/mfa";
 const uidSchema = z.string().uuid();
 
 async function DELETE_admin_reset_handler(
-  { dbh }: IProtectedAdminApiRouteProps,
+  { dbh, redis, environment }: IProtectedAdminApiRouteProps,
   target_uid: string,
 ): Promise<NextResponse> {
   try {
@@ -31,10 +31,12 @@ async function DELETE_admin_reset_handler(
     const mfaRegistry = new MfaRegistry(dbh.db);
     await mfaRegistry.deleteAllFactorsForUser(target_uid);
 
-    void sendMfaSecurityAlertEmail({
+    await sendMfaSecurityAlertEmail({
       to: target.email,
       action: "admin_reset",
       db: dbh.db,
+      redis,
+      environment
     });
 
     return NextResponse.json({ success: true }, { status: 200 });

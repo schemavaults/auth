@@ -12,7 +12,7 @@ export type AuthContext = Awaited<ReturnType<typeof decodeJWTsWithKeyManager>>;
 import {
   type ApiServerId,
   getAppEnvironment,
-  getAuthServerUri,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
@@ -50,8 +50,10 @@ export async function loadAuthContext(
       "Environment variable 'SCHEMAVAULTS_API_SERVER_ID' not set or passed to auth context loader",
     );
 
+  const auth_server_url: string = getAuthServerUrl(environment);
+
   const remote_jwt_key_manager: IJwtKeyManager = new RemoteJwtKeyManager({
-    auth_server_uri: getAuthServerUri(),
+    auth_server_url,
     debug: environment === "development",
   });
 

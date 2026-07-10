@@ -2,7 +2,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import {
   getAppEnvironment,
-  getAuthServerUri,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
@@ -14,9 +14,11 @@ import { listErrorsCreatedSince } from "@/lib/auth-db/errors";
 import { listOrganizationsCreatedSince } from "@/lib/auth-db/organizations";
 import { listTopMostPopularAppsSince } from "@/lib/auth-db/apps";
 import { listTopMostPopularApisSince } from "@/lib/auth-db/apis";
-import sendEmailViaMailServer from "@/lib/send-email-via-mail-server";
+import sendEmailViaMailServer from "@/lib/mail/send-email-via-mail-server";
 import captureServerException from "@/lib/captureServerException";
 import { buildDailyAdminReport } from "./buildReportHtml";
+import type { RedisCache } from "@/lib/redis";
+import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 const ADMIN_MAILING_LIST_ID = "00000000-0000-0000-0000-000000000000";
@@ -25,11 +27,13 @@ const ROUTE = "/api/admin/send-daily-report";
 
 interface SendDailyReportDeps {
   dbh: ServerlessDatabase;
+  redis: RedisCache;
   uid?: string;
 }
 
 export async function sendDailyReportHandler({
   dbh,
+  redis,
   uid,
 }: SendDailyReportDeps): Promise<NextResponse> {
   try {
@@ -53,10 +57,12 @@ export async function sendDailyReportHandler({
     ]);
 
     const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
-    const authServerUri: string = getAuthServerUri(appEnv);
+    const authServerUri: string = getAuthServerUrl(appEnv);
+    const friendlyName: string = getAuthServerFriendlyName();
 
     const { text, html } = buildDailyAdminReport({
       authServerUri,
+      friendlyName,
       windowStart,
       windowEnd,
       newUsers,
@@ -72,10 +78,11 @@ export async function sendDailyReportHandler({
     await sendEmailViaMailServer(
       {
         to: ADMIN_MAILING_LIST_ID,
-        subject: `SchemaVaults Daily Admin Report — ${dateLabel}`,
+        subject: `${friendlyName} Daily Admin Report — ${dateLabel}`,
         message: { text, html },
       },
       dbh.db,
+      redis,
     );
 
     return NextResponse.json({

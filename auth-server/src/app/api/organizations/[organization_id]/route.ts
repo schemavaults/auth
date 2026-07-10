@@ -8,7 +8,7 @@ import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import {
   type OrganizationID,
   organizationIdSchema,
-  hardcodedOrgs,
+  getHardcodedOrgs,
 } from "@schemavaults/auth-common";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
@@ -18,13 +18,9 @@ const ROUTE = "/api/organizations/[organization_id]";
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface RouteContext {
-  params: Promise<{ organization_id: string }>;
-}
-
 async function DELETE_organization_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps,
-  context: RouteContext
+  context: RouteContext<"/api/organizations/[organization_id]">
 ): Promise<NextResponse> {
   const { organization_id: org_id_param } = await context.params;
 
@@ -41,7 +37,7 @@ async function DELETE_organization_handler(
   const organization_id: OrganizationID = parsed_org_id.data;
 
   // Block deletion of hardcoded organizations
-  const isHardcoded = hardcodedOrgs.some(
+  const isHardcoded = getHardcodedOrgs().some(
     (org) => org.organization_id === organization_id
   );
   if (isHardcoded) {
@@ -151,7 +147,7 @@ async function DELETE_organization_handler(
 
 export async function DELETE(
   req: NextRequest,
-  context: RouteContext
+  context: RouteContext<"/api/organizations/[organization_id]">
 ): Promise<NextResponse> {
   return (
     await withAuthenticatedApiRouteGuard((props) =>

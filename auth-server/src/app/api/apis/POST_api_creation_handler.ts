@@ -11,9 +11,9 @@ import {
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
-import { SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { type OrganizationID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { ConflictError } from "@/lib/error/ConflictError";
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apis";
@@ -40,7 +40,7 @@ export default async function POST_api_creation_handler(request: NextRequest): P
         newResource = parsed.data;
       } catch (e: unknown) {
         const errorMessage =
-          "Failed to parse new SchemaVaults API server details from request body";
+          "Failed to parse new API server details from request body";
         console.error(e);
         return NextResponse.json(
           {
@@ -91,15 +91,15 @@ export default async function POST_api_creation_handler(request: NextRequest): P
             {
               success: false,
               message:
-                "You must be an admin to create a new SchemaVaults API server without an organization",
+                "You must be an admin to create a new API server without an organization",
             } satisfies ResourceCreationResponse,
             {
               status: 403,
             },
           );
         } else {
-          // User is an admin, and no owner_organization_id has been set-- default to 'schemavaults' org
-          owner_organization_id = SCHEMAVAULTS_ORGANIZATION_ID;
+          // User is an admin, and no owner_organization_id has been set-- default to the configured owner org
+          owner_organization_id = getAuthServerOwnerOrganizationId();
         }
       }
 
@@ -134,7 +134,7 @@ export default async function POST_api_creation_handler(request: NextRequest): P
 
         return NextResponse.json({
           success: true,
-          message: "Successfully created new SchemaVaults API server",
+          message: "Successfully created new API server",
           resource_id: newResource.api_server_id,
         } satisfies ResourceCreationResponse);
       } catch (e: unknown) {
@@ -156,7 +156,7 @@ export default async function POST_api_creation_handler(request: NextRequest): P
         return NextResponse.json(
           {
             success: false,
-            message: "Failed to create new SchemaVaults API server",
+            message: "Failed to create new API server",
           } satisfies ResourceCreationResponse,
           {
             status: 500,
@@ -165,6 +165,5 @@ export default async function POST_api_creation_handler(request: NextRequest): P
       }
     },
   );
-  const response = await protected_route(request);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, request);
+  return await protected_route(request);
 }

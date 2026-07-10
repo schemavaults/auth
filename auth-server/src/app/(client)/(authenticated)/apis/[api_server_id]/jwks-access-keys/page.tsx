@@ -6,22 +6,24 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import JwksAccessKeysPageView from "./jwks-access-keys-page-view";
-import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER, type SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
+import {
+  type ApiServerId,
+  apiServerIdSchema,
+  type SchemaVaultsApiServerDefinition,
+} from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
-import { OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { OrganizationMembershipRoleType, type OrganizationID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import { JwksAccessKeysRegistry, type JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next/types";
 
-interface PageParams {
-  params: Promise<{ api_server_id: string }>;
-}
-
 export default async function JwksAccessKeysPage(
-  pageParams: PageParams
+  pageParams: PageProps<"/apis/[api_server_id]/jwks-access-keys">
 ): Promise<ReactElement> {
   await connection();
   return await withAuthenticatedServerComponentRouteGuard(
@@ -41,9 +43,9 @@ export default async function JwksAccessKeysPage(
         redirectWithError(400, "bad_request");
       }
 
-      // Block access to JWKS access keys page for schemavaults-auth - it is the JWKS provider
-      if (api_server_id === SCHEMAVAULTS_AUTH_SERVER.api_server_id) {
-        console.warn("[JwksAccessKeysPage] Blocking access - schemavaults-auth is the JWKS provider");
+      // Block access to JWKS access keys page for the auth server's own API - it is the JWKS provider
+      if (api_server_id === getAuthServerAppId()) {
+        console.warn("[JwksAccessKeysPage] Blocking access - the auth server is the JWKS provider");
         redirectWithError(403, 'forbidden');
       }
 
@@ -61,8 +63,8 @@ export default async function JwksAccessKeysPage(
         redirectWithError(500, "internal_server_error");
       }
 
-      if (owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID && !user.admin) {
-        console.warn("Blocking request to view JWKS access keys page for SchemaVaults-owned API server for non-admin user!")
+      if (owner_organization_id === getAuthServerOwnerOrganizationId() && !user.admin) {
+        console.warn("Blocking request to view JWKS access keys page for a platform-owned API server for non-admin user!")
         redirectWithError(403, 'forbidden');
       }
 

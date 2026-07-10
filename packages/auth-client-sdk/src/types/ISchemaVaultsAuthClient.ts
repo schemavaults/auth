@@ -37,7 +37,7 @@ import type {
 export interface ISchemaVaultsAuthClient {
   version: string;
   app_id: AppId;
-  auth_server_uri: string;
+  auth_server_url: string;
 
   // Authenticate the user
   login: () => Promise<void>;
@@ -161,10 +161,7 @@ export interface ISchemaVaultsAuthClient {
    * Remove a passkey by id. Requires step-up proof: a TOTP code, a fresh
    * passkey assertion (from getWebauthnStepUpOptions), or a recovery code.
    */
-  removeWebauthnFactor: (
-    factor_id: string,
-    proof: MfaProof,
-  ) => Promise<void>;
+  removeWebauthnFactor: (factor_id: string, proof: MfaProof) => Promise<void>;
 
   /**
    * Request a WebAuthn assertion challenge to authorize a sensitive action

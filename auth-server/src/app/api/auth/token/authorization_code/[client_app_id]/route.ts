@@ -1,7 +1,7 @@
 import "server-only";
 import {
   type RequestTokensResult,
-  authorizationCodePOSTbody,
+  createAuthorizationCodePOSTBodySchema,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -115,7 +115,7 @@ export async function POST(
   const withCors = <R extends NextResponse>(response: R): R =>
     applyCorsHeadersFromResult(response, corsResult);
 
-  const schema = authorizationCodePOSTbody;
+  const schema = createAuthorizationCodePOSTBodySchema(z, environment);
 
   // Ensure body is valid JSON
   let body: z.infer<typeof schema>;

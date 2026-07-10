@@ -1,4 +1,4 @@
-import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUrl from "@/env/get-schemavaults-auth-server-url";
 import type { IJwtKeyManager } from "@/JwtKeyManager/IJwtKeyManager";
 import RemoteJwtKeyManager from "@/JwtKeyManager/RemoteJwtKeyManager";
 
@@ -6,11 +6,11 @@ import RemoteJwtKeyManager from "@/JwtKeyManager/RemoteJwtKeyManager";
 export function initDefaultJwtKeyManagerForAuthenticatedRouteGuard(
   debug: boolean = process.env.NODE_ENV === "development",
 ): IJwtKeyManager {
-  let auth_server_uri: string;
+  let auth_server_url: string;
   try {
-    auth_server_uri = getSchemaVaultsAuthServerUri();
+    auth_server_url = getSchemaVaultsAuthServerUrl();
   } catch (e: unknown) {
-    // getSchemaVaultsAuthServerUri() throws when SCHEMAVAULTS_AUTH_SERVER_URI
+    // getSchemaVaultsAuthServerUrl() throws when SCHEMAVAULTS_AUTH_SERVER_URI
     // is set to an invalid value (wrong protocol, or http:// in
     // production/staging). Surface this in the logs before letting the
     // exception propagate up to the route guard.
@@ -21,7 +21,7 @@ export function initDefaultJwtKeyManagerForAuthenticatedRouteGuard(
     throw e;
   }
   return new RemoteJwtKeyManager({
-    auth_server_uri,
+    auth_server_url,
     debug,
   });
 }

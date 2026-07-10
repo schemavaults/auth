@@ -18,18 +18,19 @@ import {
   type OrganizationID,
   type RequestTokensResult,
   type UserData,
-  type refreshTokenPOSTbody,
   MAXIMUM_USER_ORGANIZATIONS,
   ERROR_MESSAGE_CATALOG,
+  createRefreshTokenPOSTBodySchema,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 import validateAudience from "@/lib/validate-audience";
 import {
+  getApiServerIdForTokenAudience,
   getAppEnvironment,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import AuthServerJwtKeysManager, {
   generateTokensForAuthenticatedUser,
@@ -45,13 +46,15 @@ const ROUTE = "/api/auth/token/refresh_token/[client_app_id]";
 export async function handleRefreshTokenGrant(
   req: NextRequest,
   refresh_token: string,
-  body: z.infer<typeof refreshTokenPOSTbody>,
+  body: z.infer<ReturnType<typeof createRefreshTokenPOSTBodySchema>>,
   usersRegistry: UserRegistry,
   orgRegistry: OrganizationsRegistry,
   dbh: ServerlessDatabase,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
   debug: boolean = shouldEnableDebug(environment),
 ): Promise<NextResponse> {
+  const auth_app_id = getAuthServerAppId();
+
   let refresh_token_keyset_id: string;
   try {
     refresh_token_keyset_id = getKeysetIdFromToken(refresh_token);
@@ -75,7 +78,10 @@ export async function handleRefreshTokenGrant(
 
   let refresh_token_audience_id: string;
   try {
-    refresh_token_audience_id = getAudienceFromToken(refresh_token);
+    refresh_token_audience_id = getAudienceFromToken(
+      refresh_token,
+      environment,
+    );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
       op_name: "handleRefreshTokenGrant.getAudienceFromToken",
@@ -93,7 +99,12 @@ export async function handleRefreshTokenGrant(
       },
     );
   }
-  if (refresh_token_audience_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  // The token `aud` claim is the auth server URL; translate it back to the
+  // stable app id before validating it identifies the auth server.
+  if (
+    getApiServerIdForTokenAudience(refresh_token_audience_id, environment) !==
+    auth_app_id
+  ) {
     return NextResponse.json(
       {
         success: false,
@@ -121,7 +132,7 @@ export async function handleRefreshTokenGrant(
   let refresh_token_keyset: I_JWT_Keys;
   try {
     refresh_token_keyset = await jwt_keys_manager.getKeyset(
-      SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+      auth_app_id,
       refresh_token_keyset_id,
     );
   } catch (e: unknown) {
@@ -303,6 +314,7 @@ export async function handleRefreshTokenGrant(
       body.client_app_id,
       audience,
       dbh,
+      environment,
       debug satisfies boolean,
     );
     if (!isValidAudience) {

@@ -6,7 +6,8 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import { generateAuthorizationCode } from "@/lib/auth-db/users/generate-authorization-code";
 import { z } from "zod";
-import { appIdSchema, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { appIdSchema } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
@@ -94,7 +95,7 @@ export async function POST_generate_authorization_code(
             { status: 400 },
           );
         }
-      } else if (body.client_app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+      } else if (body.client_app_id !== getAuthServerAppId()) {
         return NextResponse.json(
           {
             success: false,

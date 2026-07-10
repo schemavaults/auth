@@ -141,7 +141,7 @@ export async function preloadAppsTable(
     switch (opts.list_apps_query_type) {
       case "all":
         if (typeof userData.admin !== "boolean" || !userData.admin) {
-          throw new Error("You must be an admin to list all SchemaVaults apps");
+          throw new Error("You must be an admin to list all apps");
         }
 
         return await returnAppsWithDomains(
@@ -184,7 +184,7 @@ export async function preloadAppsTable(
         throw new Error("Unsupported apps query type");
     }
   } catch (e: unknown) {
-    console.error("Failed to list SchemaVaults apps: ", e);
-    throw new Error("Failed to list SchemaVaults apps");
+    console.error("Failed to list apps: ", e);
+    throw new Error("Failed to list apps");
   }
 }

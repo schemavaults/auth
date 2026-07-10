@@ -1,14 +1,19 @@
-import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import { createAudienceSchema } from "@schemavaults/auth-common";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { decodeProtectedHeader } from "jose";
+import { z } from "zod";
 
-export default function getAudienceFromToken(token: string): string {
+export default function getAudienceFromToken(
+  token: string,
+  environment?: SchemaVaultsAppEnvironment,
+): string {
   const headers = decodeProtectedHeader(token);
   if ("aud" in headers) {
     if (typeof headers.aud === "string" && headers.aud.length > 0) {
       const aud: string = headers.aud;
-      if (!apiServerIdSchema.safeParse(aud).success) {
+      if (!createAudienceSchema(z, environment).safeParse(aud).success) {
         throw new Error(
-          "Invalid token; 'aud' claim must be a valid API server ID",
+          "Invalid token; 'aud' claim must be a valid token audience",
         );
       }
       return aud;

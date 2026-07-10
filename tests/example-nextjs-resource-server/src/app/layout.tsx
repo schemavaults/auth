@@ -1,5 +1,7 @@
-import type { Metadata, ServerRuntime } from "next";
+import "server-only";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { connection } from "next/server";
 
 import "@schemavaults/theme/globals.css";
 import {
@@ -15,7 +17,12 @@ export const metadata: Metadata = {
     "A demo app that provides login functionality using @schemavaults/auth-server",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  await connection();
   return (
     <html
       lang="en"
@@ -46,5 +53,3 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     </html>
   );
 }
-
-export const runtime: ServerRuntime = "edge";

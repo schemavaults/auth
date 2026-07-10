@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ServerSettingValueType } from "./server-settings-table";
+import { apiServerIdSchema } from "@schemavaults/app-definitions";
 
 /**
  * Registry of all known server setting keys with their types and defaults.
@@ -25,6 +26,25 @@ export const SERVER_SETTING_DEFINITIONS = {
     description:
       "Whether only admins can create new organizations. When false, any non-disabled user can create organizations.",
   },
+  mail_server_configured: {
+    valueType: "boolean" as const,
+    defaultValue: false,
+    schema: z.boolean(),
+    description: "Whether a @schemavaults/mail-server has been configured for sending mail."
+  },
+  mail_server_api_id: {
+    valueType: "string" as const,
+    defaultValue: "schemavaults-mail",
+    schema: apiServerIdSchema,
+    description: "API server ID of a @schemavaults/mail-server instance for sending mail."
+  },
+  spoofed_superuser_email: {
+    valueType: "string" as const,
+    defaultValue: "admin@schemavaults.com",
+    schema: z.string().email(),
+    description:
+      "Email address embedded as the identity claim in internally-minted (spoofed) superuser access tokens, e.g. the token the auth server uses to authorize with the mail-server.",
+  }
 } as const satisfies Record<
   string,
   {
@@ -64,10 +84,8 @@ export function getDefaultValue<K extends ServerSettingKey>(
  */
 export function getSettingSchema<K extends ServerSettingKey>(
   key: K
-): z.ZodType<ServerSettingValueTypes[K]> {
-  return SERVER_SETTING_DEFINITIONS[key].schema as z.ZodType<
-    ServerSettingValueTypes[K]
-  >;
+) {
+  return SERVER_SETTING_DEFINITIONS[key].schema;
 }
 
 /**

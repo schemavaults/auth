@@ -10,7 +10,7 @@ import {
   listOrganizationInvitations,
 } from "@/lib/auth-db/organizations";
 import { getUserByEmail, getUserByUID } from "@/lib/auth-db/users";
-import { sendTeamInvitationEmail } from "@/lib/send-team-invitation-emails";
+import { sendTeamInvitationEmail } from "@/lib/mail/send-team-invitation-emails";
 import {
   type OrganizationID,
   organizationIdSchema,
@@ -24,10 +24,6 @@ const ROUTE = "/api/organizations/[organization_id]/invitations";
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
-
-interface RouteContext {
-  params: Promise<{ organization_id: string }>;
-}
 
 // Schema for invitation request body (organization_id comes from URL)
 const createInvitationRequestSchema = z.object({
@@ -46,8 +42,8 @@ const createInvitationRequestSchema = z.object({
 });
 
 async function POST_create_invitation_handler(
-  { user, dbh }: IProtectedAuthenticatedApiRouteProps,
-  context: RouteContext,
+  { user, dbh, redis }: IProtectedAuthenticatedApiRouteProps,
+  context: RouteContext<"/api/organizations/[organization_id]/invitations">,
   req: NextRequest
 ): Promise<NextResponse> {
   const { organization_id: org_id_param } = await context.params;
@@ -188,6 +184,7 @@ async function POST_create_invitation_handler(
     try {
       await sendTeamInvitationEmail({
         db: dbh.db,
+        redis,
         organization_id,
         inviter_uid: user.uid,
         invitee_uid,
@@ -230,7 +227,7 @@ async function POST_create_invitation_handler(
 
 async function GET_list_invitations_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps,
-  context: RouteContext
+  context: RouteContext<"/api/organizations/[organization_id]/invitations">
 ): Promise<NextResponse> {
   const { organization_id: org_id_param } = await context.params;
 
@@ -292,13 +289,13 @@ async function GET_list_invitations_handler(
   }
 }
 
-export async function POST(req: NextRequest, context: RouteContext): Promise<NextResponse> {
+export async function POST(req: NextRequest, context: RouteContext<"/api/organizations/[organization_id]/invitations">): Promise<NextResponse> {
   return (await withAuthenticatedApiRouteGuard(
     (props) => POST_create_invitation_handler(props, context, req)
   ))(req);
 }
 
-export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
+export async function GET(req: NextRequest, context: RouteContext<"/api/organizations/[organization_id]/invitations">): Promise<NextResponse> {
   return (await withAuthenticatedApiRouteGuard(
     (props) => GET_list_invitations_handler(props, context)
   ))(req);

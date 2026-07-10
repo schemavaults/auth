@@ -19,7 +19,12 @@ import type {
   AuthenticateResult,
   AvailableMfaFactor,
 } from "@schemavaults/auth-common";
-import { appIdSchema, getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  appIdSchema,
+  getAppEnvironment,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
@@ -103,7 +108,7 @@ export async function handleLogin({
         { status: 400 },
       );
     }
-  } else if (client_app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  } else if (client_app_id !== getAuthServerAppId()) {
     return NextResponse.json(
       {
         kind: "failure",

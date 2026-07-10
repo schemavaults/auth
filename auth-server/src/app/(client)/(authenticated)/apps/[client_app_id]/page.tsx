@@ -11,18 +11,15 @@ import { isHardcodedAppId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
-import { OrganizationMembershipRoleType, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID } from "@schemavaults/auth-common";
+import { OrganizationMembershipRoleType, type OrganizationID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import OrganizationsRegistry from "@/lib/auth-db/organizations";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import type { ServerRuntime } from "next/types";
 import { connection } from "next/server";
 
-interface PageParams {
-  params: Promise<{ client_app_id: string }>;
-}
-
 export default async function AppDetailPage(
-  pageParams: PageParams
+  pageParams: PageProps<"/apps/[client_app_id]">
 ): Promise<ReactElement> {
   await connection();
   return await withAuthenticatedServerComponentRouteGuard(
@@ -59,8 +56,8 @@ export default async function AppDetailPage(
         redirectWithError(500, "internal_server_error");
       }
 
-      if (owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID && !user.admin) {
-        console.warn("Blocking request to view app detail page for SchemaVaults-owned app for non-admin user!")
+      if (owner_organization_id === getAuthServerOwnerOrganizationId() && !user.admin) {
+        console.warn("Blocking request to view app detail page for a platform-owned app for non-admin user!")
         redirectWithError(403, 'forbidden');
       }
 
@@ -77,7 +74,7 @@ export default async function AppDetailPage(
 
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
       const connected_api_servers = await permissions_registry.listConnectedApiServers(client_app_id);
-      const connected_domains: SchemaVaultsAppDomainRef[] = await app_registry.getAppDomains(client_app_id);
+      const connected_domains: readonly SchemaVaultsAppDomainRef[] = await app_registry.getAppDomains(client_app_id);
 
       const orgRegistry = new OrganizationsRegistry(dbh.db)
       const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)

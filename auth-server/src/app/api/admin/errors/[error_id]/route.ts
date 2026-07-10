@@ -2,7 +2,7 @@ import "server-only";
 
 import { type ResourceCreationResponse } from "@/lib/auth-db";
 import { deleteErrorById } from "@/lib/auth-db/errors";
-import { type NextRequest, NextResponse } from "next/server";
+import { connection, type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
   type IProtectedAdminApiRouteProps,
@@ -63,7 +63,7 @@ async function DELETE_error_by_id_handler(
 }
 
 async function parseErrorId(
-  props: { params: Promise<{ error_id: string }> },
+  props: RouteContext<"/api/admin/errors/[error_id]">,
 ): Promise<
   { ok: true; error_id: string } | { ok: false; response: NextResponse }
 > {
@@ -101,15 +101,17 @@ async function parseErrorId(
 
 export async function DELETE(
   req: NextRequest,
-  props: { params: Promise<{ error_id: string }> },
+  props: RouteContext<"/api/admin/errors/[error_id]">,
 ): Promise<NextResponse> {
-  const parsed = await parseErrorId(props);
-  if (!parsed.ok) return parsed.response;
-  const error_id = parsed.error_id;
-
+  await connection();
   const protected_route = await withAdminApiRouteGuard(
     async (opts: IProtectedAdminApiRouteProps): Promise<NextResponse> =>
-      await DELETE_error_by_id_handler(opts, error_id),
+    {
+      const parsed = await parseErrorId(props);
+      if (!parsed.ok) return parsed.response;
+      const error_id = parsed.error_id;
+      return await DELETE_error_by_id_handler(opts, error_id)
+    },
   );
   return await protected_route(req);
 }

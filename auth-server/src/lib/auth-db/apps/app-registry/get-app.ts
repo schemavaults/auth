@@ -2,7 +2,7 @@ import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { type AppId, appIdSchema, getHardcodedApp, isHardcodedAppId, type SchemaVaultsApp, schemaVaultsAppDefinitionSchema } from "@schemavaults/app-definitions";
-import { SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 
 export async function getApp(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
@@ -97,7 +97,7 @@ export async function getApp(
 
   const owner_organization_id: string = (
     "owner_organization_id" in first_row && typeof first_row['owner_organization_id'] === 'string'
-  ) ? (first_row as { owner_organization_id: string }).owner_organization_id : SCHEMAVAULTS_ORGANIZATION_ID;
+  ) ? (first_row as { owner_organization_id: string }).owner_organization_id : getAuthServerOwnerOrganizationId();
 
   const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
     ...first_row,

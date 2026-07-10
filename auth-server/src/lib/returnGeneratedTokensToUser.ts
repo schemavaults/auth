@@ -5,7 +5,7 @@ import {
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import type { AppId } from "@schemavaults/app-definitions";
-import { SCHEMAVAULTS_AUTH_APP_ID } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import setRefreshTokenCookieOnResponse from "@/lib/setRefreshTokenCookieOnResponse";
 
 export interface IReturnGeneratedTokensToUserOpts {
@@ -22,7 +22,7 @@ function determineReturnRefreshTokenStrategy(
   secure: boolean
 ): 'AS_HTTP_ONLY_COOKIE' | 'inlined' {
   // always use http-only cookies for auth-server
-  if (client_app_id === SCHEMAVAULTS_AUTH_APP_ID) {
+  if (client_app_id === getAuthServerAppId()) {
     return 'AS_HTTP_ONLY_COOKIE';
   } else if (secure) {
     return 'AS_HTTP_ONLY_COOKIE';

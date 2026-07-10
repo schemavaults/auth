@@ -55,6 +55,8 @@ function generateEnvContent(
   lines.push(`NODE_ENV="development"`);
   lines.push(`SCHEMAVAULTS_APP_ENVIRONMENT="development"`);
   lines.push(`NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT="development"`);
+  // Must match the auth server's own app id (SCHEMAVAULTS_AUTH_SERVER_APP_ID,
+  // default "schemavaults-auth"); dev uses the default white-label config.
   lines.push(`SCHEMAVAULTS_API_SERVER_ID="schemavaults-auth"`);
   lines.push("");
 

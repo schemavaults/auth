@@ -20,12 +20,18 @@ import {
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import shouldCreateAsSuperuser from "./shouldCreateAsSuperuser";
 import lookupInviteCode from "@/lib/auth-db/users/lookup-invite-code";
-import { appIdSchema, getAppEnvironment, SCHEMAVAULTS_AUTH_APP_DEFINITION, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  appIdSchema,
+  getAppEnvironment,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
-import sendVerificationEmail from "@/lib/send-verification-email";
+import sendVerificationEmail from "@/lib/mail/send-verification-email";
 import captureServerException from "@/lib/captureServerException";
+import { RedisCache } from "@/lib/redis";
 
 const ROUTE = "/api/auth/register";
 
@@ -140,7 +146,7 @@ export async function handleRegister({
           { status: 400 },
         );
       }
-    } else if (client_app_id !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+    } else if (client_app_id !== getAuthServerAppId()) {
       return NextResponse.json(
         {
           kind: "failure",
@@ -250,7 +256,7 @@ export async function handleRegister({
   try {
     if (debug) {
       console.log(
-        "[handleRegister] Loading SchemaVaults user registry database interface...",
+        "[handleRegister] Loading user registry database interface...",
       );
     }
     userRegistry = new UserRegistry(dbh.db, debug);
@@ -424,10 +430,12 @@ export async function handleRegister({
   // Wrapped in try/catch so registration never fails due to email-send errors.
   try {
     const rawToken: string = await userRegistry.createEmailVerificationToken(newUser.uid);
+    await using redis = RedisCache.createConnection();
     await sendVerificationEmail({
       email,
       rawToken,
       db: dbh.db,
+      redis
     });
     if (debug) {
       console.log(`[handleRegister] Verification email sent to: ${email}`);

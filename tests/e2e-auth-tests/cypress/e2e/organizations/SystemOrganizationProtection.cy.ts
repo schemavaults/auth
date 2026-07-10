@@ -1,6 +1,6 @@
 // Verifies the auth-server protects the hardcoded 'schemavaults' system
 // organization from being recreated or deleted via the organizations API.
-// See `hardcodedOrgs` in @schemavaults/auth-common and the handlers in
+// See `getHardcodedOrgs` in @schemavaults/auth-common and the handlers in
 // auth-server/src/app/api/organizations/.
 
 describe("System Organization Protection", () => {

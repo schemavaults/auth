@@ -1,9 +1,9 @@
 import {
   type ApiServerId,
-  SCHEMAVAULTS_AUTH_APP_ID,
   type SchemaVaultsAppEnvironment,
   apiServerIdSchema,
   getAppEnvironment,
+  getAuthServerAppId,
 } from "@schemavaults/app-definitions";
 import {
   isValidOrganizationID,
@@ -17,7 +17,7 @@ import type {
   OrganizationMembershipRoleType,
 } from "@schemavaults/auth-common/organizations";
 import isUserInOrganizationFromAuthServer from "@/isUserInOrganization";
-import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-uri";
+import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-url";
 import loadJwksAccessPrivateKey from "@/env/loadJwksAccessPrivateKey/loadJwksAccessPrivateKey";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
 import type { ReactElement } from "react";
@@ -251,10 +251,12 @@ export async function withAuthenticatedServerComponentRouteGuard<
 
   const token_sources: PotentiallyValidTokenSource[] = [];
 
+  const auth_server_app_id = getAuthServerAppId();
+
   // Load Refresh Token for Auth Server
-  if (api_server_id === SCHEMAVAULTS_AUTH_APP_ID) {
+  if (api_server_id === auth_server_app_id) {
     const refresh_token_cookie = cookies.get(
-      RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_ID),
+      RefreshTokenCookieName(auth_server_app_id),
     );
     if (typeof refresh_token_cookie?.value === "string") {
       token_sources.push({
@@ -303,7 +305,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
 
   const route_guard_factory = new RouteGuardFactory({
     environment,
-    is_auth_server: api_server_id === SCHEMAVAULTS_AUTH_APP_ID,
+    is_auth_server: api_server_id === auth_server_app_id,
     jwt_keys_manager,
   });
   const route_guard: IRouteGuard =
@@ -361,7 +363,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     const custom_is_user_in_organization = opts?.custom_is_user_in_organization;
 
     if (
-      api_server_id === SCHEMAVAULTS_AUTH_APP_ID &&
+      api_server_id === auth_server_app_id &&
       typeof custom_is_user_in_organization !== "function"
     ) {
       throw new TypeError(

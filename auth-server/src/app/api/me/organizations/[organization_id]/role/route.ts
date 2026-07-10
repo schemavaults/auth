@@ -12,11 +12,9 @@ import captureServerException from "@/lib/captureServerException";
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type RouteContext = { params: Promise<{ organization_id: string }> };
-
 async function GET_my_organization_role_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps,
-  context: RouteContext,
+  context: RouteContext<"/api/me/organizations/[organization_id]/role">,
 ): Promise<NextResponse> {
   try {
     const { organization_id: raw_org_id } = await context.params;
@@ -64,7 +62,7 @@ async function GET_my_organization_role_handler(
   }
 }
 
-export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
+export async function GET(req: NextRequest, context: RouteContext<"/api/me/organizations/[organization_id]/role">): Promise<NextResponse> {
   return await (
     await withAuthenticatedApiRouteGuard(
       (inputs: IProtectedAuthenticatedApiRouteProps) =>

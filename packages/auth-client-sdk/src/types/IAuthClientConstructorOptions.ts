@@ -5,7 +5,7 @@ export interface IAuthClientConstructorOptions {
   adapter: ISchemaVaultsAuthClientAdapter;
 
   // The URL of the auth server
-  auth_server_uri: string;
+  auth_server_url: string;
 
   // The URI to redirect to after successful authentication
   successful_authentication_redirect_uri: string;
@@ -27,6 +27,12 @@ export interface IAuthClientConstructorOptions {
   //    A.) the UUID of the frontend client application
   //    B.) the URL of the authentication server
   app_id: string;
+
+  // The auth server deployment's own app ID (env-var driven for white-label
+  // deployments, e.g. "acme-corp-auth"). Pass this on the auth server's own
+  // frontend so the client can recognize itself as the auth server; external
+  // resource servers can omit it. Defaults to "schemavaults-auth".
+  auth_server_app_id?: string;
 
   // A list of API server IDs for which access tokens should be "preloaded" for
   default_audiences?: readonly string[];

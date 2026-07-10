@@ -6,6 +6,10 @@ import {
   type JWTPayload,
 } from "@schemavaults/jwt";
 import {
+  DEFAULT_AUTH_SERVER_APP_ID,
+  getAuthServerUrl,
+} from "@schemavaults/app-definitions";
+import {
   NobleCryptoPlugin,
   ScureBase32Plugin,
   createGuardrails,
@@ -30,6 +34,19 @@ const totpTestGuardrails = createGuardrails({ MIN_SECRET_BYTES: 10 });
 
 const devAuthServer: string = "http://localhost:6767";
 
+// The auth server URL is the token audience/issuer for auth-server tokens and
+// the `aud` claim of JWKS access proof tokens. Resolved here (Node context)
+// because getAppEnvironment() throws in the specs' browser context; specs read
+// it via Cypress.env("AUTH_SERVER_URL"). Falls back to the local dev server
+// when no SCHEMAVAULTS_APP_ENVIRONMENT/NODE_ENV is configured (bun run open).
+function resolveAuthServerUrl(): string {
+  try {
+    return getAuthServerUrl();
+  } catch {
+    return devAuthServer;
+  }
+}
+
 export default defineConfig({
   e2e: {
     baseUrl: devAuthServer,
@@ -45,6 +62,7 @@ export default defineConfig({
           const privateKey = await importPKCS8(private_key_pem, "RS256");
           return createJwksAccessProofToken({
             api_server_id,
+            auth_server_url: resolveAuthServerUrl(),
             private_key: privateKey,
           });
         },
@@ -107,12 +125,17 @@ export default defineConfig({
           // register-then-409-then-login dance and go straight to login.
           const testSuiteName = config.env["TEST_SUITE_NAME"];
           if (testSuiteName !== "superuser") {
-            await preRegisterSuperuser(auth_server_url, testSuiteName, {
-              email: config.env["PRIVATE_SUPERUSER_EMAIL"],
-              password: config.env["PRIVATE_SUPERUSER_PASSWORD"],
-              confirm: config.env["PRIVATE_SUPERUSER_PASSWORD"],
-              invite_code: config.env["PRIVATE_SUPERUSER_INVITE_CODE"],
-            });
+            await preRegisterSuperuser(
+              auth_server_url,
+              testSuiteName,
+              {
+                email: config.env["PRIVATE_SUPERUSER_EMAIL"],
+                password: config.env["PRIVATE_SUPERUSER_PASSWORD"],
+                confirm: config.env["PRIVATE_SUPERUSER_PASSWORD"],
+                invite_code: config.env["PRIVATE_SUPERUSER_INVITE_CODE"],
+              },
+              config.env["SCHEMAVAULTS_AUTH_SERVER_APP_ID"],
+            );
             config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
           }
 
@@ -149,6 +172,30 @@ export default defineConfig({
     PRIVATE_SUPERUSER_INVITE_CODE: "superuser",
     PRIVATE_SUPERUSER_EMAIL: "admin@schemavaults.com",
     PRIVATE_SUPERUSER_PASSWORD: "Password123!",
+    AUTH_SERVER_URL: resolveAuthServerUrl(),
+    // The auth server deployment's own app id, for running the suite against
+    // a white-label deployment (e.g. "acme-corp-auth"). Set it to the same
+    // value as the auth server's SCHEMAVAULTS_AUTH_SERVER_APP_ID environment
+    // variable (also overridable via CYPRESS_SCHEMAVAULTS_AUTH_SERVER_APP_ID).
+    // Specs/commands read it via getAuthServerAppIdFromCypressEnv() from
+    // @schemavaults/cypress-e2e-auth-tests-helper-commands.
+    // `||` (not `??`) so an empty-string env value (e.g. from docker-compose
+    // `${VAR:-}` interpolation) also falls back to the default app id.
+    SCHEMAVAULTS_AUTH_SERVER_APP_ID:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_APP_ID ||
+      DEFAULT_AUTH_SERVER_APP_ID,
+    // Expected white-label branding values for the white_label suite, so
+    // specs assert against the same values injected into the auth server
+    // container (single source of truth: e2e-auth-tests-cli.ts). Empty when
+    // the deployment under test runs stock branding.
+    SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME ?? "",
+    SCHEMAVAULTS_AUTH_SERVER_DESCRIPTION:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_DESCRIPTION ?? "",
+    SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1 ?? "",
+    SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2:
+      process.env.SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2 ?? "",
     SCHEMAVAULTS_APP_ENVIRONMENT:
       process.env.SCHEMAVAULTS_APP_ENVIRONMENT ?? "development",
     TEST_SUITE_NAME: process.env.TEST_SUITE_NAME ?? "",

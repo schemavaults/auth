@@ -9,5 +9,7 @@ export interface IReactAuthClientSdkAdapterInitOptions {
   auth_server_uri?: string;
   debug?: boolean;
   client_app_id: AppId;
+  /** The auth server deployment's own app id; defaults to "schemavaults-auth" */
+  auth_server_app_id?: AppId;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }

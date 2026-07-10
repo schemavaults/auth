@@ -1,4 +1,5 @@
 import type { NextResponse } from "next/server";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { type AuthenticateResult } from "@schemavaults/auth-common";
 import { applyCorsHeaders } from "./applyCorsHeaders";
 import {
@@ -7,6 +8,10 @@ import {
   SchemaVaultsCORSEnforcementPolicies as policies,
 } from "./cors-policies";
 import { isAllowedOrigin } from "./isAllowedOrigin";
+import {
+  type IAllowedOriginsResolver,
+  RemoteAllowedOriginsResolver,
+} from "./RemoteAllowedOriginsResolver";
 import type {
   ISchemaVaultsMiddleware,
   ISchemaVaultsMiddlewareFactory,
@@ -24,17 +29,21 @@ export interface CorsSettings {
   debug?: boolean;
   policy: SchemaVaultsCORSEnforcementPolicy;
   audience: string;
+  auth_server_url: string;
+  environment?: SchemaVaultsAppEnvironment;
+  allowed_origins_resolver?: IAllowedOriginsResolver;
 }
 
 interface CorsMiddlewareSettings
-  extends CorsSettings,
-    Omit<IBaseMiddlewareInitOptions, "name"> {
+  extends CorsSettings, Omit<IBaseMiddlewareInitOptions, "name"> {
   next: ISchemaVaultsMiddleware;
 }
 
 class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
   private readonly policy: SchemaVaultsCORSEnforcementPolicy;
   private readonly audience: string;
+  private readonly auth_server_url: string;
+  private readonly allowed_origins_resolver: IAllowedOriginsResolver;
 
   public constructor(settings: CorsMiddlewareSettings) {
     super({
@@ -49,6 +58,13 @@ class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
     }
     this.policy = settings.policy satisfies SchemaVaultsCORSEnforcementPolicy;
     this.audience = settings.audience;
+    this.auth_server_url = settings.auth_server_url;
+    this.allowed_origins_resolver =
+      settings.allowed_origins_resolver ??
+      new RemoteAllowedOriginsResolver({
+        auth_server_url: settings.auth_server_url,
+        debug: settings.debug,
+      });
   }
 
   public async handle({
@@ -78,6 +94,8 @@ class CorsMiddleware extends BaseMiddleware implements ISchemaVaultsMiddleware {
       audience,
       debug: DEBUG,
       environment: this.environment,
+      auth_server_url: this.auth_server_url,
+      allowed_origins_resolver: this.allowed_origins_resolver,
     });
     if (DEBUG) {
       console.log(

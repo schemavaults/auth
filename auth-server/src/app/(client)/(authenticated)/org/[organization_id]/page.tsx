@@ -31,10 +31,6 @@ import {
 import redirectWithError from "@/lib/redirect-with-error";
 import { connection } from "next/server";
 
-interface PageParams {
-  params: Promise<{ organization_id: string }>;
-}
-
 function memberToTableData(
   member: OrganizationMemberWithUserData,
 ): OrganizationMemberTableData {
@@ -53,7 +49,7 @@ function memberToTableData(
 
 async function PreloadedOrgPage(
   { user, dbh }: IProtectedAuthenticatedServerComponentPageProps,
-  pageParams: PageParams,
+  pageParams: PageProps<"/org/[organization_id]">,
 ): Promise<ReactElement> {
   const { organization_id: org_id_param } = await pageParams.params;
 
@@ -131,7 +127,7 @@ async function PreloadedOrgPage(
 }
 
 export default async function ViewOrganizationPage(
-  pageParams: PageParams,
+  pageParams: PageProps<"/org/[organization_id]">,
 ): Promise<ReactElement> {
   await connection();
   return await withAuthenticatedServerComponentRouteGuard((props) =>

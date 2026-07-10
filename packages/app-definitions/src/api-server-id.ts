@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { hardcodedApiServerIdSchema } from "./hardcoded-core-schemavaults-api-servers";
+import createBaseIdSchema from "./base-id";
 
-export const apiServerIdSchema = z.union([
-  z.string().uuid(), // dynamically defined api server
-  hardcodedApiServerIdSchema,
-]);
+export const apiServerIdSchema = createBaseIdSchema(z);
 
 export type ApiServerId = z.infer<typeof apiServerIdSchema>;
+
+export function isValidApiServerId(val: unknown): val is ApiServerId {
+  return typeof val === "string" && apiServerIdSchema.safeParse(val).success;
+}

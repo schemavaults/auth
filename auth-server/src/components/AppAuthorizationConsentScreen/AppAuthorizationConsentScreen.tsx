@@ -9,10 +9,11 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  ThemedPageBackground,
   cn,
   useToast,
 } from "@schemavaults/ui";
+import { ThemedPageBackground } from "@/components/ThemedPageBackground";
+import { useAuthServerFriendlyName } from "@/components/Wordmark";
 import { useAuth, useAppEnvironment } from "@schemavaults/auth-react-provider";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
@@ -52,6 +53,7 @@ export function AppAuthorizationConsentScreen({
   const router = useRouter();
   const searchParams = useSearchParams();
   const appEnv = useAppEnvironment();
+  const friendly_name: string = useAuthServerFriendlyName();
   const [submitting, startSubmitting] = useTransition();
 
   function handleDeny(): void {
@@ -140,9 +142,14 @@ export function AppAuthorizationConsentScreen({
         return;
       }
 
+      const endpoint = new URL(
+        "/api/auth/session/generate-authorization-code",
+        authClient.auth_server_url
+      );
+
       // Generate authorization code via session endpoint
       const response = await fetch(
-        `${authClient.auth_server_uri}/api/auth/session/generate-authorization-code`,
+        endpoint,
         {
           method: "POST",
           credentials: "include",
@@ -245,7 +252,7 @@ export function AppAuthorizationConsentScreen({
       <CardHeader>
         <CardTitle>Authorize Application</CardTitle>
         <CardDescription>
-          <strong>{app_name}</strong> wants to access your SchemaVaults
+          <strong>{app_name}</strong> wants to access your {friendly_name}{" "}
           account.
         </CardDescription>
       </CardHeader>

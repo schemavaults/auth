@@ -1,5 +1,6 @@
 import "server-only";
-import { appIdSchema, isHardcodedAppId, SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { appIdSchema, isHardcodedAppId } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isValidUuid from "@/lib/is-valid-uuid";
@@ -10,7 +11,7 @@ export async function authorizeAppForUser(
   app_id: string,
   debug: boolean = false
 ): Promise<void> {
-  if (app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  if (app_id === getAuthServerAppId()) {
     throw new Error(
       `The auth app "${app_id}" is always authorized and cannot be explicitly authorized`,
     );

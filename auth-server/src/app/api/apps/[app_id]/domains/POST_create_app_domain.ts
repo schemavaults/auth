@@ -1,6 +1,5 @@
 import "server-only";
 
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import {
   SchemaVaultsAppRegistry,
   type ResourceCreationResponse,
@@ -119,7 +118,7 @@ export async function POST_create_app_domain(
         }
       } catch (e: unknown) {
         const errorMessage =
-          "Failed to parse new SchemaVaults frontend app details from request body";
+          "Failed to parse new frontend app details from request body";
         console.error(e);
         return NextResponse.json(
           {
@@ -168,8 +167,7 @@ export async function POST_create_app_domain(
       }
     },
   );
-  const response = await protected_route(request);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, request);
+  return await protected_route(request);
 }
 
 export default POST_create_app_domain;

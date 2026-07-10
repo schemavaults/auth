@@ -1,5 +1,5 @@
 import "server-only";
-import { NextResponse, type NextRequest } from "next/server";
+import { connection, NextResponse, type NextRequest } from "next/server";
 import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
@@ -8,25 +8,25 @@ import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common";
 import PATCH_member_role_handler from "./PATCH_member_role_handler";
 import GET_member_role_handler from "./GET_member_role_handler";
 
-interface RouteContext {
-  params: Promise<{ organization_id: string; uid: string }>;
-}
-
 interface UpdateRoleRequestBody {
   role: OrganizationMembershipRoleType;
 }
 
-export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return (await withAuthenticatedApiRouteGuard(
+export async function GET(req: NextRequest, context: RouteContext<"/api/organizations/[organization_id]/members/[uid]/role">): Promise<NextResponse> {
+  await connection();
+  const handler = await withAuthenticatedApiRouteGuard(
     async (props: IProtectedAuthenticatedApiRouteProps) => {
       const { organization_id, uid } = await context.params;
       return await GET_member_role_handler(props, organization_id, uid);
     },
-  ))(req);
+  )
+
+  return await handler(req);
 }
 
-export async function PATCH(req: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return (await withAuthenticatedApiRouteGuard(
+export async function PATCH(req: NextRequest, context: RouteContext<"/api/organizations/[organization_id]/members/[uid]/role">): Promise<NextResponse> {
+  await connection();
+  const handler = await withAuthenticatedApiRouteGuard(
     async (props: IProtectedAuthenticatedApiRouteProps) => {
       let body: UpdateRoleRequestBody;
       try {
@@ -48,5 +48,9 @@ export async function PATCH(req: NextRequest, context: RouteContext): Promise<Ne
 
       return await PATCH_member_role_handler(props, organization_id, uid, body.role);
     },
-  ))(req);
+  )
+
+  return await handler(req);
 }
+
+export const dynamic = "force-dynamic"; // defaults to auto

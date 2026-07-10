@@ -1,9 +1,11 @@
 import { type JWTPayload, type CryptoKey, SignJWT } from "jose";
 import JWT_Keys from "./jwt_keys";
-import { issuer } from "./iss";
 import { getExpiryDurationString } from "./expiry";
 import type { AuthTokenTypes } from "@schemavaults/auth-common";
-import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  getAuthServerUrl,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import signAndVerifyAlg from "./sign_verify_alg";
 import isValidUuid from "@/utils/isValidUuid";
 
@@ -14,6 +16,7 @@ interface BaseSignJSONWebTokenInputOptions<TokenType extends AuthTokenTypes> {
   audience: string;
   type: TokenType;
   env: SchemaVaultsAppEnvironment;
+  auth_server_url?: string;
   jti?: string;
 }
 
@@ -34,18 +37,18 @@ export type SignJSONWebTokenInputOptions<TokenType extends AuthTokenTypes> =
   | SignJSONWebTokenInputWithAllKeysOptions<TokenType>
   | SignJSONWebTokenInputWithSigningCryptoKeyOptions<TokenType>;
 
-export async function signJWT<TokenType extends AuthTokenTypes>(
-  opts: SignJSONWebTokenInputOptions<TokenType>,
-): Promise<string> {
-  const type: TokenType = opts.type;
-  const uid: string = opts.uid;
+export async function signJWT<TokenType extends AuthTokenTypes>({
+  type,
+  uid,
+  env,
+  auth_server_url = getAuthServerUrl(env),
+  ...opts
+}: SignJSONWebTokenInputOptions<TokenType>): Promise<string> {
   const sub: string = uid;
 
   if (typeof uid !== "string" || typeof sub !== "string" || uid !== sub) {
     throw new Error("uid and sub must be defined and equal strings");
   }
-
-  const env = opts.env;
 
   let private_signing_key: CryptoKey;
   let keyset_id: string;
@@ -75,8 +78,20 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
     );
   }
 
-  if (!isValidUuid(keyset_id)) {
-    throw new Error("Invalid keyset ID provided!");
+  if (typeof keyset_id !== "string") {
+    throw new TypeError("Invalid keyset ID provided!", {
+      cause: `'keyset_id' is not a string! Received type '${typeof keyset_id}'.`,
+    });
+  } else if (!isValidUuid(keyset_id)) {
+    throw new TypeError("Invalid keyset ID provided!", {
+      cause: `'keyset_id' is not a valid UUID!`,
+    });
+  }
+
+  if (typeof auth_server_url !== "string" || auth_server_url.length === 0) {
+    throw new TypeError(
+      "Failed to resolve auth server URL to be used as 'iss' claim!",
+    );
   }
 
   const signaturePayload: JWTPayload = {
@@ -96,7 +111,7 @@ export async function signJWT<TokenType extends AuthTokenTypes>(
       })
       .setAudience(opts.audience)
       .setIssuedAt(opts.iat)
-      .setIssuer(issuer)
+      .setIssuer(auth_server_url)
       .setExpirationTime(getExpiryDurationString(type))
       .sign(private_signing_key);
   } catch (e: unknown) {

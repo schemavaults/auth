@@ -1,6 +1,5 @@
 import "server-only";
 
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import {
   SchemaVaultsAppToApiPermissionsRegistry,
 } from "@/lib/auth-db";
@@ -211,8 +210,7 @@ export async function GET_app_to_api_permission_handler(
     },
   );
 
-  const response = await protected_route(req);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, req);
+  return await protected_route(req);
 }
 
 export default GET_app_to_api_permission_handler;

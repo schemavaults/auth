@@ -19,6 +19,7 @@ import {
 } from "@/lib/rate-limit";
 import type { ServerRuntime } from "next";
 import captureServerException from "@/lib/captureServerException";
+import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 
 const ROUTE = "/api/user/mfa/totp/enroll";
 
@@ -50,9 +51,12 @@ async function POST_enroll_totp_handler(
       uid: user.uid,
       secret,
     });
+    // White-label issuer: authenticator apps display this next to the
+    // account label for new enrollments.
     const otpauth_url = buildOtpAuthUrl({
       account_label: user.email ?? user.uid,
       secret,
+      issuer: getAuthServerFriendlyName(),
     });
     const qr_code_data_url = await renderQrPngDataUrl(otpauth_url);
 

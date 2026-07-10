@@ -14,9 +14,18 @@ export interface SchemaVaultsAuthProviderProps
   extends PropsWithChildren, IAuthProviderRedirectUrlConfiguration {
   // Use a hardcoded auth server URI
   // if not supplied, this can be loaded from @schemavaults/app-definitions based on the environment
-  auth_server_uri?: string;
+  auth_server_url?: string;
 
   app_id: AppId;
+
+  /**
+   * The auth server deployment's own app id (env-var driven for white-label
+   * deployments, e.g. "acme-corp-auth"). Pass the value resolved server-side
+   * by getAuthServerAppId() when mounting this provider on the auth server's
+   * own frontend; external resource servers can omit it.
+   * @default "schemavaults-auth"
+   */
+  auth_server_app_id?: AppId;
 
   router: ReturnType<typeof useRouter>;
   path: string;

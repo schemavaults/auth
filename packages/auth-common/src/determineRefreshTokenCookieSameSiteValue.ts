@@ -1,6 +1,6 @@
 import {
   type AppId,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  getAuthServerAppId,
 } from "@schemavaults/app-definitions";
 
 // SameSite=none | send cookie in all contexts
@@ -10,7 +10,7 @@ export function determineRefreshTokenCookieSameSiteValue(
   client_app_id: AppId,
   secure: boolean,
 ): "none" | "lax" | "strict" {
-  const isAuthServer: boolean = SCHEMAVAULTS_AUTH_APP_ID === client_app_id;
+  const isAuthServer: boolean = getAuthServerAppId() === client_app_id;
   if (isAuthServer) {
     return secure ? "strict" : "lax";
   } else {

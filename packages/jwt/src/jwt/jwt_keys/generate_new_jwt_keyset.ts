@@ -1,4 +1,7 @@
-import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import {
+  apiServerIdSchema,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import ContentEncryptionKeyPairFactory from "./ContentEncryptionKeyPairFactory";
 import JWT_Keys from "./jwt_keys";
 import SigningKeyPairFactory from "./SigningKeyPairFactory";
@@ -48,6 +51,7 @@ export async function generateJwtContentEncryptionKeyPair(
 
 export interface IGenerateNewJwtKeySetOpts {
   audience_id: string;
+  environment: SchemaVaultsAppEnvironment;
   keyset_id?: string;
   keyset_expiry?: number;
   debug?: boolean;
@@ -68,12 +72,23 @@ export async function generateNewJwtKeySet(
 
   const audience_id: string = opts.audience_id;
   if (typeof audience_id !== "string") {
+    throw new TypeError(`Invalid audience ID: '${audience_id}'`, {
+      cause: `Audience ID is not a string. Received type '${typeof audience_id}'.`,
+    });
+  }
+
+  // Keysets are stored and looked up by the stable api server id (e.g. the
+  // auth server's own app id, or a resource API server UUID).
+  // The URL only appears in token `aud` claims, derived from this id via getTokenAudienceForApiServerId().
+  const parsedAudience = apiServerIdSchema.safeParse(audience_id);
+  if (!parsedAudience.success) {
     throw new TypeError(
-      `Invalid audience ID: '${audience_id}'. Should be a string.`,
-    );
-  } else if (!apiServerIdSchema.safeParse(audience_id).success) {
-    throw new TypeError(
-      `Invalid audience ID: '${audience_id}'. Should be a valid API server ID.`,
+      `Invalid audience ID: '${audience_id}'.` +
+        " " +
+        `Should be a valid API server ID.`,
+      {
+        cause: parsedAudience.error,
+      },
     );
   }
 

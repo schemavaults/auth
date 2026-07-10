@@ -4,17 +4,19 @@ import { AppsCard, type PreloadedAppsTableDataWithDomainRefs } from "@schemavaul
 import type { ReactElement } from "react";
 import PageContainer from "@/components/PageContainer";
 import uuidSync from "@/lib/uuid/uuidSync";
+import { useAuthServerFriendlyName } from "@/components/Wordmark";
 
 export interface AdminAppsPageViewProps {
   preloaded: PreloadedAppsTableDataWithDomainRefs;
 }
 
 function AdminAppsPageView({ preloaded }: AdminAppsPageViewProps): ReactElement {
+  const friendlyName: string = useAuthServerFriendlyName();
   return (
     <PageContainer>
       <AppsCard
         cardTitle="All Applications"
-        cardDescription="View and manage available SchemaVaults client applications."
+        cardDescription={`View and manage available ${friendlyName} client applications.`}
         queryType="all"
         cardClassName={"w-full"}
         preloaded={preloaded}

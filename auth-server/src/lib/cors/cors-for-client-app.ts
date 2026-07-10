@@ -12,6 +12,7 @@ import {
   type SchemaVaultsAppDomainRef,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import { isOriginInAllowedList } from "@schemavaults/auth-common";
 import type { ServerlessDatabase } from "@/lib/auth-db";
 import { getApp, SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 
@@ -31,7 +32,7 @@ export async function getAppAllowedOriginsForEnvironment(
   dbh: ServerlessDatabase
 ): Promise<readonly string[]> {
   const appRegistry = new SchemaVaultsAppRegistry(dbh.db);
-  const allDomains: SchemaVaultsAppDomainRef[] =
+  const allDomains: readonly SchemaVaultsAppDomainRef[] =
     await appRegistry.getAppDomains(client_app_id);
   const domainsForEnv = allDomains.filter((d) => d.environment === environment);
   return domainsForEnv.map((d) => d.domain);
@@ -44,14 +45,7 @@ export function isOriginAllowedForClientApp(
   origin: string,
   allowedOrigins: readonly string[]
 ): boolean {
-  return allowedOrigins.some((allowed) => {
-    // Direct match
-    if (origin === allowed) return true;
-    // Origin may or may not have trailing slash
-    if (origin === allowed.replace(/\/$/, "")) return true;
-    if (origin.replace(/\/$/, "") === allowed) return true;
-    return false;
-  });
+  return isOriginInAllowedList(origin, allowedOrigins);
 }
 
 /**

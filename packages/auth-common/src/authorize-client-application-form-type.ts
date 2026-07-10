@@ -1,4 +1,4 @@
-import { appIdSchema, isHardcodedAppId } from "@schemavaults/app-definitions";
+import { appIdSchema } from "@schemavaults/app-definitions";
 import { z } from "zod";
 
 export const authorizeClientApplicationFormType = z
@@ -8,13 +8,6 @@ export const authorizeClientApplicationFormType = z
   .required({
     app_id: true,
   })
-  .strict()
-  .refine((values): boolean => {
-    if (isHardcodedAppId(values.app_id)) {
-      return false;
-    } else {
-      return true;
-    }
-  }, "Hardcoded client applications are automatically pre-authorized!");
+  .strict();
 
 export default authorizeClientApplicationFormType;

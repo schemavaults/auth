@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ invite_code: string }> },
+  { params }: RouteContext<"/api/admin/invite-codes/[invite_code]/usages">,
 ): Promise<NextResponse> {
   const { invite_code } = await params;
   const protected_route = await withAdminApiRouteGuard(async (props) => {

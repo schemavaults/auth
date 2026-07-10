@@ -1,5 +1,8 @@
 import { generateNewJwtKeySet, JWT_Keys } from "@/jwt";
 import { describe, test, expect } from "bun:test";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+
+const environment: SchemaVaultsAppEnvironment = "test";
 
 describe("JWT_Keys instance initialization w/o auth-server-only keys", () => {
   test("can reinitialize a JWT_Keys instance w/o encryption or signing key", async () => {
@@ -10,6 +13,7 @@ describe("JWT_Keys instance initialization w/o auth-server-only keys", () => {
     try {
       const keys: JWT_Keys = await generateNewJwtKeySet({
         audience_id,
+        environment,
       });
       const keyset_id: string = keys.keyset_id;
       const decryption: string = keys.raw_keys.decryption;

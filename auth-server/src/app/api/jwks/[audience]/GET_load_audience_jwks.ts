@@ -2,18 +2,14 @@ import "server-only";
 import { type NextRequest, NextResponse } from "next/server";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import { ServerlessDatabase } from "@/lib/auth-db";
-import { type ApiServerId, apiServerIdSchema, SCHEMAVAULTS_AUTH_SERVER } from "@schemavaults/app-definitions";
+import { isValidApiServerId } from "@schemavaults/app-definitions";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import verifyJwksAccessAssertion from "./verifyJwksAccessAssertion";
 import captureServerException from "@/lib/captureServerException";
 
-
-function isValidApiServerId(val: unknown): val is ApiServerId {
-  return typeof val === "string" && apiServerIdSchema.safeParse(val).success
-}
-
 export async function GET(
   request: NextRequest,
-  props: { params: Promise<{ audience: string }> }
+  props: RouteContext<"/api/jwks/[audience]">
 ) {
   const { audience } = await props.params;
 
@@ -21,7 +17,7 @@ export async function GET(
     return NextResponse.json({ error: "Invalid audience" }, { status: 400 });
   }
 
-  if (audience === SCHEMAVAULTS_AUTH_SERVER.api_server_id) {
+  if (audience === getAuthServerAppId()) {
     return NextResponse.json({ error: "The auth server does not export its JWKS." }, { status: 400 });
   }
 

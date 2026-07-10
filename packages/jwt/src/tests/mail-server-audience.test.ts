@@ -1,7 +1,6 @@
 import { decodeJWT, generateNewJwtKeySet, type JWT_Keys } from "@/jwt";
 import {
-  SCHEMAVAULTS_MAIL_APP_DEFINITION,
-  SCHEMAVAULTS_WEB,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { describe, test, expect } from "bun:test";
@@ -11,13 +10,14 @@ import { generateJWT, type GenerateJWTOptions } from "@/jwt/generate";
 const env: SchemaVaultsAppEnvironment = "test";
 
 async function isGenerateAndDecodeTokenForMailServerSuccess(
-  client_app_id: string = SCHEMAVAULTS_MAIL_APP_DEFINITION.app_id,
+  client_app_id: string = "schemavaults-mail",
 ): Promise<boolean> {
-  const audience = SCHEMAVAULTS_MAIL_APP_DEFINITION.app_id;
+  const audience = "schemavaults-mail";
   const audience_id: string = audience;
 
   const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
     audience_id,
+    environment: env,
   });
 
   const user = new MockUser();
@@ -29,6 +29,7 @@ async function isGenerateAndDecodeTokenForMailServerSuccess(
     audience,
     iat: now,
     client_app_id,
+    auth_server_url: getAuthServerUrl(env),
     jwt_keys,
     env,
   };
@@ -60,9 +61,8 @@ describe("JWTs for SchemaVaults Mail Server", () => {
   });
 
   test("Access JWT with a mail server audience and core web app ID can be generated and decoded", async () => {
-    const success: boolean = await isGenerateAndDecodeTokenForMailServerSuccess(
-      SCHEMAVAULTS_WEB.app_id,
-    );
+    const success: boolean =
+      await isGenerateAndDecodeTokenForMailServerSuccess("schemavaults-web");
 
     expect(success).toBeTrue();
   });

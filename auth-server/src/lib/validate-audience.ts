@@ -9,13 +9,15 @@ import {
   apiServerIdSchema,
   type AppId,
   appIdSchema,
-  isHardcodedAppId,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  getApiServerIdForTokenAudience,
+  SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { audienceRefSchema } from "@schemavaults/auth-common";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
+import { createAudienceSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/lib/is-valid-uuid";
 import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
 import AppNotConnectedToApiServerError from "@/lib/error/AppNotConnectedToApiServerError";
+import { z } from "zod";
 
 export type ValidateAudienceOutput =
   | "auth-server-only"
@@ -27,30 +29,39 @@ async function validateOneAudience(
   client_app_id: string,
   audience: string,
   dbh: ServerlessDatabase,
+  environment: SchemaVaultsAppEnvironment,
   debug: boolean = false,
+  auth_app_id: string = getAuthServerAppId(),
 ): Promise<ValidateAudienceOutput> {
+  const audienceSchema = createAudienceSchema(z, environment);
+
   if (
     typeof uid !== "string" ||
     typeof client_app_id !== "string" ||
     typeof audience !== "string"
   ) {
-    throw new Error("Expected all arguments to be strings");
+    throw new TypeError("Expected 'uid', 'client_app_id', and 'audience' arguments to be strings");
   }
+
+  // Tokens for the auth server carry the (white-labellable) auth server URL
+  // as their audience; translate back to the stable app id before comparing.
+  // The bare app id form is also accepted for backwards compatibility.
   if (
-    client_app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id &&
-    audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id
+    audience === auth_app_id ||
+    getApiServerIdForTokenAudience(audience, environment) ===
+      auth_app_id
   ) {
-    return "auth-server-only";
-  } else if (audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
     return "auth-server-only";
   }
 
   console.assert(
-    audience !== SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    audience !== auth_app_id,
     `Expected this to be a non-auth server API server if this point was reached`
   );
 
-  const parsed_aud = await audienceRefSchema.safeParseAsync(audience);
+
+
+  const parsed_aud = await audienceSchema.safeParseAsync(audience);
   const isSemanticallyValidAudience = parsed_aud.success satisfies boolean;
   if (!isSemanticallyValidAudience || !parsed_aud.data) {
     console.error(
@@ -63,7 +74,7 @@ async function validateOneAudience(
 
   const aud: string = parsed_aud.data;
 
-  if (aud === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  if (aud === auth_app_id) {
     return "auth-server-only";
   } else if (apiServerIdSchema.safeParse(aud).success) {
     // pass
@@ -114,8 +125,11 @@ export async function validateAudience(
   client_app_id: AppId,
   audience: string | readonly string[],
   dbh: ServerlessDatabase,
+  environment: SchemaVaultsAppEnvironment,
   debug: boolean = shouldEnableDebug(),
 ): Promise<boolean> {
+  const auth_app_id = getAuthServerAppId();
+
   if (!isValidUuid(uid)) {
     throw new TypeError("Expected 'uid' to be a valid UUID!");
   } else if (!(await appIdSchema.safeParseAsync(client_app_id)).success) {
@@ -126,10 +140,17 @@ export async function validateAudience(
     throw new Error("Did not receive an audience to validate!");
   }
 
-  const audiences: ApiServerId[] = Array.isArray(audience) ? audience : [audience];
+  const audiences: string[] = Array.isArray(audience) ? [...audience] : [audience];
 
-  if (!(await apiServerIdSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
-    throw new TypeError("Invalid API server ID(s) in audiences array!")
+  // Audiences arrive in token-audience form (the auth server URL, or an api
+  // server id verbatim); the bare auth app id is also tolerated for backwards
+  // compatibility.
+  const singleAudienceSchema = z.union([
+    createAudienceSchema(z, environment),
+    z.literal(auth_app_id),
+  ]);
+  if (!(await singleAudienceSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
+    throw new TypeError("Invalid token audience(s) in audiences array!")
   }
 
   if (debug) {
@@ -153,9 +174,9 @@ export async function validateAudience(
     throw new ClientApplicationNotAuthorizedByUser(`Client application '${client_app_id}' is not authorized by user '${uid}'`)
   }
 
-  const validateOneAudiencePromises = audiences.map(
+  const validateOneAudiencePromises: readonly Promise<ValidateAudienceOutput>[] = audiences.map(
     (audience: string): Promise<ValidateAudienceOutput> =>
-      validateOneAudience(uid, client_app_id, audience, dbh, debug),
+      validateOneAudience(uid, client_app_id, audience, dbh, environment, debug, auth_app_id),
   );
   const validationResults = await Promise.all(validateOneAudiencePromises);
 
@@ -164,21 +185,17 @@ export async function validateAudience(
     return false;
   }
 
-  // Access tokens for the auth server itself may be requested by any
-  // hardcoded SchemaVaults app, not just the auth server app.
-  const isHardcodedSchemaVaultsApp: boolean = isHardcodedAppId(client_app_id);
-
   if (
     validationResults.some(function isValidationResultInvalid(
       result: ValidateAudienceOutput,
     ): boolean {
       return typeof result === "string"
-        ? result === "auth-server-only" && !isHardcodedSchemaVaultsApp
+        ? result === "auth-server-only" && client_app_id !== auth_app_id
         : false;
     })
   ) {
     console.error(
-      "Some of the audiences for access tokens can only be requested from a hardcoded SchemaVaults app",
+      "Some of the audiences for access tokens can only be requested from a hardcoded first-party app",
     );
     return false;
   }

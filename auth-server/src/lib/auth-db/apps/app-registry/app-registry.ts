@@ -1,23 +1,26 @@
 import "server-only";
 import {
   type SchemaVaultsApp,
-  listAppsQueryTypeSchema,
   type ListAppsQueryType,
   type SchemaVaultsAppDomainRef,
   schemaVaultsAppDefinitionSchema,
   schemaVaultsAppDomainRefSchema,
-  HARDCODED_CORE_SCHEMAVAULTS_APPS,
-  HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP,
   appIdSchema,
-  HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS,
   type SchemaVaultsAppEnvironment,
   getAppEnvironment,
+  isHardcodedAppId,
+  getHardcodedSchemaVaultsApps,
+  getHardcodedAppDomains,
+  type AppId,
 } from "@schemavaults/app-definitions";
-import { organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID, type OrganizationID, type UserData } from "@schemavaults/auth-common";
+import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { ConflictError } from "@/lib/error/ConflictError";
 import { z } from "zod";
+import listApps from "./list-apps";
+import parseAppDefinitionDatabaseRow from "./parse-app-definition-database-row";
 
 /**
  * @name SchemaVaultsAppRegistry
@@ -28,8 +31,6 @@ import { z } from "zod";
 export class SchemaVaultsAppRegistry {
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
-
-  private hardcodedApps: Map<string, SchemaVaultsApp>;
 
   public async getApp(app_id: string): Promise<SchemaVaultsApp | null> {
     const getApp = await import("./get-app").then(mod => mod.default)
@@ -63,39 +64,17 @@ export class SchemaVaultsAppRegistry {
     return parsed_app_domain.data satisfies SchemaVaultsAppDomainRef;
   }
 
-  private static getHardcodedAppDomains(
-    hardcoded_app_id: string,
-  ): SchemaVaultsAppDomainRef[] {
-    if (
-      !HARDCODED_CORE_SCHEMAVAULTS_APPS.some(
-        (app) => app.app_id === hardcoded_app_id,
-      )
-    ) {
-      throw new Error(
-        "Failed to find hardcoded SchemaVault app definition for specified app ID",
-      );
-    }
-
-    return HARDCODED_CORE_SCHEMAVAULTS_APP_DOMAINS.filter(
-      (domain) => domain.app_id === hardcoded_app_id,
-    );
-  }
-
   public async getAppDomains(
-    app_id: string,
-  ): Promise<SchemaVaultsAppDomainRef[]> {
+    app_id: AppId,
+  ): Promise<readonly SchemaVaultsAppDomainRef[]> {
     const isValidAppId: boolean = (await appIdSchema.safeParseAsync(app_id))
       .success;
     if (!isValidAppId) {
       throw new Error("Invalid app ID to list domains for!");
     }
 
-    const isUuid: boolean = (await z.string().uuid().safeParseAsync(app_id))
-      .success;
-    const isHardcodedAppId: boolean = isValidAppId && !isUuid;
-
-    if (isHardcodedAppId) {
-      return SchemaVaultsAppRegistry.getHardcodedAppDomains(app_id);
+    if (isHardcodedAppId(app_id)) {
+      return getHardcodedAppDomains(app_id);
     }
 
     const query = this.db
@@ -142,7 +121,7 @@ export class SchemaVaultsAppRegistry {
       app_description,
       created_at: Date.now(),
       public: publicly_listed ?? false,
-      owner_organization_id: owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID ? null : owner_organization_id,
+      owner_organization_id: owner_organization_id === getAuthServerOwnerOrganizationId() ? null : owner_organization_id,
       hardcoded: false,
       web,
     } satisfies SchemaVaultsApp);
@@ -164,117 +143,14 @@ export class SchemaVaultsAppRegistry {
   }
 
   private parseAppDefinitionDatabaseRow(row: unknown): SchemaVaultsApp {
-    if (typeof row !== "object" || !row)
-      throw new Error("Expected row to be an object");
-    if (!Object.hasOwn(row, "created_at") || !("created_at" in row)) {
-      throw new Error("Missing app creation timestamp");
-    }
-    const created_at: number =
-      typeof row.created_at === "string"
-        ? parseInt(row.created_at)
-        : Number(row.created_at);
-    if (isNaN(created_at)) {
-      throw new Error("Failed to parse created_at from database");
-    }
-
-    const owner_organization_id: string | undefined = (
-      "owner_organization_id" in row && typeof row['owner_organization_id'] === 'string'
-    ) ? (row.owner_organization_id) : SCHEMAVAULTS_ORGANIZATION_ID
-
-    const parsed = schemaVaultsAppDefinitionSchema.safeParse({
-      ...row,
-      created_at,
-      owner_organization_id
-    });
-
-    if (!parsed.success) {
-      throw parsed.data;
-    }
-
-    return parsed.data;
+    return parseAppDefinitionDatabaseRow(row);
   } // end of parseAppDefinitionDatabaseRow()
 
   public async listApps(
     type: Exclude<ListAppsQueryType, "authorized">,
     user: UserData,
   ): Promise<SchemaVaultsApp[]> {
-
-    if (!user) {
-      throw new Error("You must be logged in to list SchemaVaults apps");
-    }
-    if (type === "all" && !user.admin) {
-      throw new Error("You must be an admin to list all SchemaVaults apps");
-    }
-    if (!(await listAppsQueryTypeSchema.safeParseAsync(type)).success) {
-      throw new Error("Invalid apps query type");
-    }
-    if (type !== "all" && type !== "public") {
-      throw new Error("Invalid apps query type for listing available apps");
-    }
-
-    if (this.debug) {
-      console.log("[SchemaVaultsAppRegistry] Attempting to list apps...");
-    }
-
-    const MAX_PAGE_SIZE: number = 50;
-
-    let query = this.db.selectFrom("apps");
-
-    if (type === "public") {
-      query = query.where("public", "=", true);
-    }
-
-    query = query.limit(MAX_PAGE_SIZE);
-
-    const query_result: readonly SchemaVaultsApp[] = await query.selectAll().execute();
-
-    if (!Array.isArray(query_result)) {
-      throw new Error("Expected database query result to be an array of rows");
-    }
-
-    // result => transformed_output => transform => (actually) transformed_output
-    const transformed_output: SchemaVaultsApp[] = [...query_result];
-
-    // Add hardcoded apps to query result
-    if (type === "all") {
-      transformed_output.push(...HARDCODED_CORE_SCHEMAVAULTS_APPS);
-    } else if (type === "public") {
-      const hardcodedAppsLength: number =
-        HARDCODED_CORE_SCHEMAVAULTS_APPS.length;
-      transformed_output.push(
-        ...HARDCODED_CORE_SCHEMAVAULTS_APPS.filter((a) => a.public),
-      );
-      if (this.debug) {
-        console.log(
-          `[SchemaVaultsAppRegistry] Number of public apps from database: ${query_result.length}`,
-        );
-        console.log(
-          `[SchemaVaultsAppRegistry] Number of public hardcoded apps: ${hardcodedAppsLength}`,
-        );
-        console.log(
-          `[SchemaVaultsAppRegistry] Number of apps after adding hardcoded apps : ${hardcodedAppsLength}`,
-        );
-      }
-    } else {
-      if (this.debug) {
-        console.log("[SchemaVaultsAppRegistry] query type", type);
-      }
-    }
-
-    try {
-      const parsed = await schemaVaultsAppDefinitionSchema
-        .array()
-        .safeParseAsync(
-          transformed_output.map(
-            this.parseAppDefinitionDatabaseRow
-          ),
-        ); // end parsing app definitions array
-      if (!parsed.success) throw parsed.error;
-      return parsed.data;
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to parse the apps data received from database");
-    }
+    return await listApps(this.db, type, user, this.debug);
   }
 
   public async listOrganizationApps(
@@ -287,7 +163,7 @@ export class SchemaVaultsAppRegistry {
     }
 
     if (!user) {
-      throw new Error("You must be logged in to list SchemaVaults apps");
+      throw new Error("You must be logged in to list apps");
     }
 
     if (this.debug) {
@@ -297,13 +173,14 @@ export class SchemaVaultsAppRegistry {
     }
 
     const MAX_PAGE_SIZE: number = 50;
+    const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
 
     let result: SchemaVaultsApp[];
     try {
       result = await this.db
         .selectFrom("apps")
         .where((eb) =>
-          org_id === SCHEMAVAULTS_ORGANIZATION_ID
+          org_id === ownerOrganizationId
             ? eb.or([
                 eb("owner_organization_id", "=", org_id),
                 eb("owner_organization_id", "is", null),
@@ -344,8 +221,10 @@ export class SchemaVaultsAppRegistry {
       );
     }
 
-    if (org_id === SCHEMAVAULTS_ORGANIZATION_ID) {
-      app_definitions.push(...HARDCODED_CORE_SCHEMAVAULTS_APPS.filter(s => s.owner_organization_id === SCHEMAVAULTS_ORGANIZATION_ID))
+    if (org_id === ownerOrganizationId) {
+      app_definitions.push(...getHardcodedSchemaVaultsApps().filter(
+        s => s.owner_organization_id === ownerOrganizationId
+      ));
     }
 
     return app_definitions
@@ -357,14 +236,6 @@ export class SchemaVaultsAppRegistry {
       this.env === "development" ||
       this.env === "staging" ||
       this.env === "test";
-
-    this.hardcodedApps = HARDCODED_CORE_SCHEMAVAULTS_APPS_MAP;
-    if (this.debug) {
-      console.log(
-        "[SchemaVaultsAppRegistry] Initialize hardcoded apps:",
-        this.hardcodedApps,
-      );
-    }
   }
 
   public async deleteApp(app_id: string) {

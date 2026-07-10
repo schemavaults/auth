@@ -1,8 +1,10 @@
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
 } from "@schemavaults/auth-common";
+
+const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
 
 describe("Logout", () => {
   it("is redirected from the logout page to the login page (or home page) when not logged in", () => {
@@ -44,19 +46,19 @@ describe("Logout", () => {
 
       // We should now be logged in (as superuser) on the account page
       cy.getCookie(
-        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+        RefreshTokenCookieName(AUTH_APP_ID),
       ).should("exist");
       cy.getCookie(
-        RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+        RefreshTokenExpiryCookieName(AUTH_APP_ID),
       ).should("exist");
 
       // Perform logout
       cy.logout().then(() => {
         cy.getCookie(
-          RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+          RefreshTokenCookieName(AUTH_APP_ID),
         ).should("not.exist");
         cy.getCookie(
-          RefreshTokenExpiryCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+          RefreshTokenExpiryCookieName(AUTH_APP_ID),
         ).should("not.exist");
       });
     });

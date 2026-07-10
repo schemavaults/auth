@@ -2,7 +2,6 @@ import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthCl
 import {
   type SchemaVaultsAppEnvironment,
   type AppId,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
 } from "@schemavaults/app-definitions";
 import {
   type CodeChallengeWithDetails,
@@ -16,7 +15,7 @@ export interface IAuthenticateWithRedirectOpts {
   type: "login" | "register";
   debug: boolean;
   client_app_id: AppId;
-  auth_server_uri: string;
+  auth_server_url: string;
   adapter: ISchemaVaultsAuthClientAdapter;
   environment: SchemaVaultsAppEnvironment;
   authorize_uri: string;
@@ -28,7 +27,7 @@ export default async function authenticateWithRedirect({
   type,
   debug,
   client_app_id,
-  auth_server_uri,
+  auth_server_url,
   adapter,
   environment,
   authorize_uri,
@@ -41,7 +40,7 @@ export default async function authenticateWithRedirect({
     );
   }
 
-  if (client_app_id === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+  if (client_app_id === auth_server_url) {
     throw new Error(
       "Authenticating via redirect is for external apps, not the auth server!",
     );
@@ -173,7 +172,7 @@ export default async function authenticateWithRedirect({
       code_challenge: code_challenge,
       redirect_uri,
       app_id: client_app_id,
-      auth_server_uri,
+      auth_server_url,
       app_env: environment,
       state,
     });

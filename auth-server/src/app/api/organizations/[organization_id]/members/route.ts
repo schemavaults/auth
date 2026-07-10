@@ -1,5 +1,5 @@
 import "server-only";
-import { NextResponse, type NextRequest } from "next/server";
+import { connection, NextResponse, type NextRequest } from "next/server";
 import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
@@ -8,13 +8,9 @@ import { OrganizationsRegistry, type OrganizationMemberWithUserData } from "@/li
 import { type OrganizationID, organizationIdSchema } from "@schemavaults/auth-common";
 import captureServerException from "@/lib/captureServerException";
 
-interface RouteContext {
-  params: Promise<{ organization_id: string }>;
-}
-
 async function GET_organization_members_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps,
-  context: RouteContext,
+  context: RouteContext<"/api/organizations/[organization_id]/members">,
 ): Promise<NextResponse> {
   const { organization_id: org_id_param } = await context.params;
 
@@ -78,8 +74,13 @@ async function GET_organization_members_handler(
   );
 }
 
-export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return (await withAuthenticatedApiRouteGuard(
+export async function GET(req: NextRequest, context: RouteContext<"/api/organizations/[organization_id]/members">): Promise<NextResponse> {
+  await connection();
+  const handler = await withAuthenticatedApiRouteGuard(
     (props) => GET_organization_members_handler(props, context),
-  ))(req);
+  );
+
+  return await handler(req);
 }
+
+export const dynamic = "force-dynamic"; // defaults to auto

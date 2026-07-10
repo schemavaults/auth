@@ -1,7 +1,7 @@
 import "server-only";
 import {
   type RequestTokensResult,
-  refreshTokenPOSTbody,
+  createRefreshTokenPOSTBodySchema,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -192,7 +192,7 @@ export async function POST(
     }
   }
 
-  const schema = refreshTokenPOSTbody;
+  const schema = createRefreshTokenPOSTBodySchema(z, environment);
 
   // Ensure body is valid JSON
   let body: z.infer<typeof schema>;

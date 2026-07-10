@@ -33,6 +33,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Server } from "lucide-react";
 import type { OrganizationID } from "@schemavaults/auth-common";
+import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 
 interface CreateApiServerFormProps {
   clearApiServersCache: (
@@ -50,6 +51,7 @@ export function CreateApiServerForm({
   onSuccess,
 }: CreateApiServerFormProps): ReactElement {
   const { toast } = useToast();
+  const friendlyName: string = useAuthUiFriendlyName();
 
   const defaultValues: Partial<SchemaVaultsApiServerDefinition> =
     useMemo(() => {
@@ -121,8 +123,8 @@ export function CreateApiServerForm({
         <DialogHeader>
           <DialogTitle>Create a new API server</DialogTitle>
           <DialogDescription>
-            Create a new frontend/client application which can access
-            SchemaVaults APIs.
+            Create a new backend API server which {friendlyName} client
+            applications can be authorized to access.
           </DialogDescription>
         </DialogHeader>
         <FormField

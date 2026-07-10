@@ -3,8 +3,8 @@
 import {
   type AppId,
   appIdSchema,
-  getAuthServerUri,
-  SCHEMAVAULTS_AUTH_APP_ID,
+  DEFAULT_AUTH_SERVER_APP_ID,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
@@ -37,13 +37,14 @@ const enum AuthClientSdkAdapterLocalStorageKeys {
 }
 
 // Next.js/React.js to JS Client SDK Adapter
-export class ReactAuthClientSdkAdapter
-  implements ISchemaVaultsAuthClientAdapter
-{
+export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter {
   private readonly environment: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
   private readonly auth_server_uri: string;
   private readonly client_app_id: AppId;
+  // The auth server deployment's own app id (white-label deployments override
+  // the default via the 'auth_server_app_id' init option)
+  private readonly auth_server_app_id: AppId;
 
   private readonly _fetch: (
     url: string,
@@ -78,13 +79,26 @@ export class ReactAuthClientSdkAdapter
     this._uuid_generator = uuid;
     this.auth_server_uri = opts.auth_server_uri
       ? opts.auth_server_uri
-      : getAuthServerUri();
+      : getAuthServerUrl(this.environment);
     if (!appIdSchema.safeParse(opts.client_app_id).success) {
       throw new TypeError(
         "Invalid 'client_app_id' to initialize ReactAuthClientSdkAdapter with!",
       );
     }
     this.client_app_id = opts.client_app_id;
+    if (
+      typeof opts.auth_server_app_id === "string" &&
+      opts.auth_server_app_id.length > 0
+    ) {
+      if (!appIdSchema.safeParse(opts.auth_server_app_id).success) {
+        throw new TypeError(
+          "Invalid 'auth_server_app_id' to initialize ReactAuthClientSdkAdapter with!",
+        );
+      }
+      this.auth_server_app_id = opts.auth_server_app_id;
+    } else {
+      this.auth_server_app_id = DEFAULT_AUTH_SERVER_APP_ID;
+    }
     this._fetch = opts.fetch.bind(window);
   }
 
@@ -663,7 +677,7 @@ export class ReactAuthClientSdkAdapter
     if (typeof client_app_id !== "string") {
       throw new TypeError("Expected 'client_app_id' to be a string!");
     }
-    const isAuthServer: boolean = client_app_id === SCHEMAVAULTS_AUTH_APP_ID;
+    const isAuthServer: boolean = client_app_id === this.auth_server_app_id;
     if (isAuthServer) {
       return true;
     }

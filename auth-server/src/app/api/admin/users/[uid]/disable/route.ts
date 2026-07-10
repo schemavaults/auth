@@ -78,7 +78,7 @@ async function setDisabledHandler(
 }
 
 async function parseTargetUid(
-  props: { params: Promise<{ uid: string }> },
+  props: RouteContext<"/api/admin/users/[uid]/disable">,
 ): Promise<{ ok: true; uid: string } | { ok: false; response: NextResponse }> {
   const params = await props.params;
   try {
@@ -112,7 +112,7 @@ async function parseTargetUid(
 
 export async function POST(
   req: NextRequest,
-  props: { params: Promise<{ uid: string }> },
+  props: RouteContext<"/api/admin/users/[uid]/disable">,
 ): Promise<NextResponse> {
   const parsed = await parseTargetUid(props);
   if (!parsed.ok) return parsed.response;
@@ -127,7 +127,7 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  props: { params: Promise<{ uid: string }> },
+  props: RouteContext<"/api/admin/users/[uid]/disable">,
 ): Promise<NextResponse> {
   const parsed = await parseTargetUid(props);
   if (!parsed.ok) return parsed.response;

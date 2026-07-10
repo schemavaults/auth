@@ -4,8 +4,9 @@ import Logo from "@/components/Logo";
 import {
   DashboardLayout,
   type DashboardSidebarItemsAndGroupsDefinitions,
-  Wordmark,
 } from "@schemavaults/ui";
+import { Wordmark, useAuthServerFriendlyName } from "@/components/Wordmark";
+import { useAuthServerUrl } from "@/components/AuthServerUrl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, type PropsWithChildren, type ReactElement } from "react";
@@ -16,6 +17,8 @@ export default function AuthenticatedAuthServerLayout({
   children,
 }: PropsWithChildren): ReactElement {
   const isAdmin: boolean = useAdmin();
+  const friendlyName: string = useAuthServerFriendlyName();
+  const authServerUrl: string = useAuthServerUrl();
   const links: DashboardSidebarItemsAndGroupsDefinitions = useMemo(
     () => getAuthenticatedUserDashboardLinks(isAdmin),
     [isAdmin],
@@ -31,9 +34,9 @@ export default function AuthenticatedAuthServerLayout({
           </Link>
         );
       }}
-      brandHref="https://schemavaults.com"
+      brandHref={authServerUrl}
       logo={<Logo width={40} height={40} />}
-      topBarTitle={"@schemavaults/auth-server"}
+      topBarTitle={friendlyName}
       sidebarItems={links}
       usePathname={usePathname}
     >

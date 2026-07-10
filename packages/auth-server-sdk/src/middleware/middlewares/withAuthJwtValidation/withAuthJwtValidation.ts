@@ -1,4 +1,5 @@
 import type { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   AuthMiddleware,
   type AuthMiddlewareResult,
@@ -7,7 +8,7 @@ import {
   determineAuthStatus,
   type AuthMiddlewareRules,
   type PotentiallyValidTokenSource,
-  audienceSchema,
+  createAudienceSchema,
   type DecodeTokenFn,
   type AuthMiddlewareError,
 } from "@schemavaults/auth-common";
@@ -18,7 +19,7 @@ import {
 } from "@schemavaults/jwt";
 import {
   apiServerIdSchema,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
+  getAuthServerAppId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type {
@@ -41,8 +42,7 @@ export interface AuthJwtValidationMiddlewareOptions {
   keys_manager: IJwtKeyManager;
 }
 
-interface IAuthJwtValidationMiddlewareOpts
-  extends AuthJwtValidationMiddlewareOptions {
+interface IAuthJwtValidationMiddlewareOpts extends AuthJwtValidationMiddlewareOptions {
   next: ISchemaVaultsMiddleware;
 }
 
@@ -126,9 +126,10 @@ class AuthJwtValidationMiddleware
     let access_token: string | undefined =
       req.cookies.get("access_token")?.value;
 
-    if (this.audience === SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id) {
+    const auth_server_app_id = getAuthServerAppId();
+    if (this.audience === auth_server_app_id) {
       const refresh_token: string | undefined = req.cookies.get(
-        RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+        RefreshTokenCookieName(auth_server_app_id),
       )?.value;
       if (typeof refresh_token === "string") {
         token_sources.push({
@@ -173,8 +174,10 @@ class AuthJwtValidationMiddleware
     }
 
     const jwt_audience = this.audience;
-    const parsed_jwt_audience =
-      await audienceSchema.safeParseAsync(jwt_audience);
+    const parsed_jwt_audience = await createAudienceSchema(
+      z,
+      this.environment,
+    ).safeParseAsync(jwt_audience);
     if (!parsed_jwt_audience.success) {
       console.error(parsed_jwt_audience.error);
       throw new Error(
@@ -372,9 +375,7 @@ class AuthJwtValidationMiddleware
   }
 }
 
-export class AuthJwtValidationMiddlewareFactory
-  implements ISchemaVaultsMiddlewareFactory
-{
+export class AuthJwtValidationMiddlewareFactory implements ISchemaVaultsMiddlewareFactory {
   public readonly type = "middleware-factory" as const;
 
   private middlewareOpts: AuthJwtValidationMiddlewareOptions;

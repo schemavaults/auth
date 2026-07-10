@@ -41,14 +41,18 @@ export async function isUserInOrganization(
     throw new TypeError("Invalid user ID!");
   }
 
-  const assertion = await createJwksAccessProofToken({
+  const assertion: string = await createJwksAccessProofToken({
     api_server_id,
+    auth_server_url,
     private_key: jwks_access_private_key,
   });
 
-  const url = `${auth_server_url}/api/resource-server/organizations/${encodeURIComponent(organization_id)}/members/${encodeURIComponent(uid)}/role`;
+  const url = new URL(
+    `/api/resource-server/organizations/${encodeURIComponent(organization_id)}/members/${encodeURIComponent(uid)}/role`,
+    auth_server_url,
+  );
 
-  const response = await fetch(url, {
+  const response = await fetch(url.toString(), {
     method: "GET",
     headers: new Headers({
       Authorization: `Bearer ${assertion}`,

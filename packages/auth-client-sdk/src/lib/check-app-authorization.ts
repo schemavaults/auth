@@ -1,32 +1,32 @@
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import {
-  appIdSchema,
-  isHardcodedAppId,
-  type AppId,
-} from "@schemavaults/app-definitions";
+import { appIdSchema, type AppId } from "@schemavaults/app-definitions";
 
 export interface ICheckAppAuthorizationOpts {
   app_id: AppId;
+  auth_server_url: string;
   adapter: ISchemaVaultsAuthClientAdapter;
 }
 
 export async function checkAppAuthorization({
   adapter,
   app_id,
+  auth_server_url,
 }: ICheckAppAuthorizationOpts): Promise<boolean> {
   if (typeof app_id !== "string") {
-    throw new TypeError("Expected app_id to be a string");
-  } else if (!(await appIdSchema.safeParseAsync(app_id)).success) {
+    throw new TypeError("Expected 'app_id' to be a string!", {
+      cause: `Received '${typeof app_id}'`,
+    });
+  }
+
+  if (!(await appIdSchema.safeParseAsync(app_id)).success) {
     throw new TypeError("Invalid client 'app_id' to check authorization for!");
   }
 
-  // all hardcoded schemavaults apps are authorized
-  if (isHardcodedAppId(app_id)) {
-    return true;
-  }
-
   const response = await adapter.fetch(
-    `/api/apps/${app_id}/check-authorization`,
+    new URL(
+      `/api/apps/${app_id}/check-authorization`,
+      auth_server_url,
+    ).toString(),
     {
       method: "GET",
       credentials: "include",

@@ -1,7 +1,7 @@
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import { RefreshTokenCookieName } from "@schemavaults/auth-common";
 
-const APP_ID = SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id;
+const APP_ID = getAuthServerAppIdFromCypressEnv();
 const REFRESH_TOKEN_COOKIE = RefreshTokenCookieName(APP_ID);
 
 describe("Password Reset Revokes Refresh Tokens", () => {
@@ -31,7 +31,8 @@ describe("Password Reset Revokes Refresh Tokens", () => {
               url: `/api/auth/token/refresh_token/${APP_ID}`,
               body: {
                 grant_type: "refresh_token",
-                audience: APP_ID,
+                // token audiences use the auth server URL, not the app id
+                audience: Cypress.env("AUTH_SERVER_URL"),
                 client_app_id: APP_ID,
               },
               headers: {
@@ -77,7 +78,8 @@ describe("Password Reset Revokes Refresh Tokens", () => {
                   url: `/api/auth/token/refresh_token/${APP_ID}`,
                   body: {
                     grant_type: "refresh_token",
-                    audience: APP_ID,
+                    // token audiences use the auth server URL, not the app id
+                    audience: Cypress.env("AUTH_SERVER_URL"),
                     client_app_id: APP_ID,
                   },
                   headers: {

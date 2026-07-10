@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from "react";
 import {
-  ThemedPageBackground,
   Card,
   CardHeader,
   CardTitle,
@@ -22,6 +21,8 @@ import {
   Input,
   cn,
 } from "@schemavaults/ui";
+import { ThemedPageBackground } from "@/components/ThemedPageBackground";
+import { useAuthServerFriendlyName } from "@/components/Wordmark";
 import { HelpCircle, Search } from "lucide-react";
 import Link from "next/link";
 import { AuthActionButtons } from "@schemavaults/auth-ui";
@@ -40,6 +41,7 @@ interface HelpPageViewProps {
 export default function HelpPageView({
   invite_code_required,
 }: HelpPageViewProps): ReactElement {
+  const friendlyName: string = useAuthServerFriendlyName();
   const faqItems: FaqItem[] = useMemo(() => {
     const createAccountAnswer =
       "Navigate to the registration page and fill in your email address and password. Your password must be at least 10 characters long and include uppercase letters, lowercase letters, numbers, and special characters.";
@@ -49,9 +51,8 @@ export default function HelpPageView({
     return [
       {
         id: "what-is-schemavaults",
-        question: "What is SchemaVaults Auth?",
-        answer:
-          "SchemaVaults Auth is an authentication and authorization platform that provides secure user management, OAuth2 PKCE-based login flows, and API access control for your applications.",
+        question: `What is ${friendlyName}?`,
+        answer: `${friendlyName} is an authentication and authorization platform that provides secure user management, OAuth2 PKCE-based login flows, and API access control for your applications.`,
       },
       {
         id: "create-account",
@@ -87,19 +88,18 @@ export default function HelpPageView({
       },
       {
         id: "connect-app",
-        question: "How do I connect my application to SchemaVaults?",
-        answer:
-          "SchemaVaults uses the OAuth2 Authorization Code flow with PKCE for secure application integration. Register your application in the admin dashboard to receive a client app ID, then configure your application to use the SchemaVaults authorization endpoints with the @schemavaults/auth-client-sdk.",
+        question: `How do I connect my application to ${friendlyName}?`,
+        answer: `${friendlyName} uses the OAuth2 Authorization Code flow with PKCE for secure application integration. Register your application in the admin dashboard to receive a client app ID, then configure your application to use the ${friendlyName} authorization endpoints with the @schemavaults/auth-client-sdk.`,
       },
       {
         id: "open-source",
         question: "Is this open source?",
-        answer:
-          "Yes, SchemaVaults Auth is open source. The source code is available on GitHub at https://github.com/schemavaults/auth.",
+        answer: `Yes, ${friendlyName} is an instance of @schemavaults/auth-server, which is open source. The source code is available on GitHub at https://github.com/schemavaults/auth.`,
         answerComponent: (
           <span>
-            Yes, SchemaVaults Auth is open source. The source code is available
-            on{" "}
+            Yes, {friendlyName} is an instance of{" "}
+            <code>@schemavaults/auth-server</code>, which is open source. The
+            source code is available on{" "}
             <a
               href="https://github.com/schemavaults/auth"
               target="_blank"
@@ -161,7 +161,7 @@ export default function HelpPageView({
           "Open your organization's page from the organizations list on your account page. In the members section, use the invite form to add a user by email address or user ID. The invited user will see the invitation on their own account page and can accept or decline it. Only organization owners and administrators can send invitations.",
       },
     ];
-  }, [invite_code_required]);
+  }, [invite_code_required, friendlyName]);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
   const deferredQuery = useDeferredValue(searchQuery);

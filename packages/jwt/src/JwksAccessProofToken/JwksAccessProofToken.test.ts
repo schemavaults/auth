@@ -1,17 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import createJwksAccessProofToken from "./createJwksAccessProofToken";
 import {
-  ApiServerId,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  SCHEMAVAULTS_AUTH_SERVER,
-  SCHEMAVAULTS_MAIL_SERVER,
-  SCHEMAVAULTS_REGISTRY_SERVER,
+  getAuthServerUrl,
+  type SchemaVaultsAppEnvironment,
+  type ApiServerId,
 } from "@schemavaults/app-definitions";
 import { PEMFormat, SigningKeyPairFactory } from "@/jwt/jwt_keys";
 import { decodeJwt, importPKCS8, importSPKI, SignJWT } from "jose";
 import type { JWTPayload } from "jose";
 import { sign_verify_alg } from "@/jwt/sign_verify_alg";
 import verifyJwksAccessProofToken from "./verifyJwksAccessProofToken";
+
+const env: SchemaVaultsAppEnvironment = "test";
+const auth_server_url: string = getAuthServerUrl(env);
 
 const DEBUG: boolean = false;
 
@@ -46,12 +47,14 @@ async function testCreateAndVerifyForApiServerId(
 
   const token = await createJwksAccessProofToken({
     api_server_id,
+    auth_server_url,
     private_key: privateKey,
   });
   expect(token).toBeString();
 
   const result = await verifyJwksAccessProofToken({
     api_server_id,
+    auth_server_url,
     public_key: publicKey,
     token,
   });
@@ -66,7 +69,7 @@ function baselineClaims(api_server_id: ApiServerId): JWTPayload {
     api_server_id,
     sub: api_server_id,
     iss: api_server_id,
-    aud: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+    aud: auth_server_url,
     iat: now,
     nbf: now - 1,
     exp: now + 60,
@@ -93,6 +96,7 @@ async function expectVerificationToReject(
     const verified = await verifyJwksAccessProofToken({
       token,
       api_server_id,
+      auth_server_url,
       public_key: publicKey,
     });
     rejected = verified !== true;
@@ -105,20 +109,14 @@ async function expectVerificationToReject(
 
 describe("JwksAccessProofToken", async () => {
   test("can create and verify a Jwks Access Proof Token for hardcoded API servers", async () => {
-    await testCreateAndVerifyForApiServerId(
-      SCHEMAVAULTS_REGISTRY_SERVER.api_server_id,
-    );
-    await testCreateAndVerifyForApiServerId(
-      SCHEMAVAULTS_MAIL_SERVER.api_server_id,
-    );
+    await testCreateAndVerifyForApiServerId("schemavaults-registry");
+    await testCreateAndVerifyForApiServerId("schemavaults-mail");
   });
 
   test("cannot create nor verify a Jwks Access Proof Token for @schemavaults/auth-server", async () => {
     let errorThrown: boolean = false;
     try {
-      await testCreateAndVerifyForApiServerId(
-        SCHEMAVAULTS_AUTH_SERVER.api_server_id,
-      );
+      await testCreateAndVerifyForApiServerId(auth_server_url);
     } catch (e: unknown) {
       void e;
       errorThrown = true;
@@ -139,12 +137,13 @@ describe("JwksAccessProofToken", async () => {
     const before = Math.floor(Date.now() / 1000);
     const token = await createJwksAccessProofToken({
       api_server_id,
+      auth_server_url,
       private_key: privateKey,
     });
     const after = Math.ceil(Date.now() / 1000);
 
     const claims = decodeJwt(token);
-    expect(claims.aud).toBe(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id);
+    expect(claims.aud).toBe(auth_server_url);
     expect(claims.iss).toBe(api_server_id);
     expect(claims.sub).toBe(api_server_id);
     expect(claims.jti).toBeString();
@@ -163,12 +162,14 @@ describe("JwksAccessProofToken", async () => {
     const first = decodeJwt(
       await createJwksAccessProofToken({
         api_server_id,
+        auth_server_url,
         private_key: privateKey,
       }),
     );
     const second = decodeJwt(
       await createJwksAccessProofToken({
         api_server_id,
+        auth_server_url,
         private_key: privateKey,
       }),
     );
@@ -187,6 +188,7 @@ describe("JwksAccessProofToken", async () => {
       const verified = await verifyJwksAccessProofToken({
         token,
         api_server_id,
+        auth_server_url,
         public_key: publicKey,
       });
       expect(verified).toBeTrue();

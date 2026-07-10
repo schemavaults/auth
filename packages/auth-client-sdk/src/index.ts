@@ -23,18 +23,6 @@ export {
   RefreshTokenExpiryCookieName,
 } from "@schemavaults/auth-common/RefreshTokenCookieNames";
 
-// Hardcoded Apps
-export {
-  getHardcodedApp,
-  getHardcodedClientWebAppDomain,
-} from "@schemavaults/app-definitions";
-
-// Hardcoded API Server Domains
-export {
-  getHardcodedApiServer,
-  getHardcodedApiServerDomain,
-} from "@schemavaults/app-definitions";
-
 // Auth-Common Error Catalog
 export {
   isValidErrorId,

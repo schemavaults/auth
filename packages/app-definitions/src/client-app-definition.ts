@@ -2,11 +2,9 @@ import { z } from "zod";
 import { appIdSchema } from "./app-id";
 import { schemaVaultsAppEnvironmentSchema } from "./app-environments";
 
-// THIS SHOULD NOT BE USED OUTSIDE OF @schemavaults/app-definitions
-// schemaVaultsAppDefinitionSchema restricts the scope of app_id after applying hardcoded app ids
-const baseSchemaVaultsAppDefinitionSchema = z
+export const schemaVaultsAppDefinitionSchema = z
   .object({
-    app_id: z.string(),
+    app_id: appIdSchema.describe("Client Application ID"),
     app_name: z.string().max(64),
     app_description: z.string().max(512),
     created_at: z.number().nonnegative(),
@@ -25,15 +23,7 @@ const baseSchemaVaultsAppDefinitionSchema = z
   })
   .strict();
 
-export type SchemaVaultsApp = z.infer<
-  typeof baseSchemaVaultsAppDefinitionSchema
->;
-
-export const schemaVaultsAppDefinitionSchema =
-  baseSchemaVaultsAppDefinitionSchema.refine(
-    (values) => appIdSchema.safeParse(values.app_id).success,
-    "Invalid client application ID",
-  );
+export type SchemaVaultsApp = z.infer<typeof schemaVaultsAppDefinitionSchema>;
 
 export const schemaVaultsAppDomainRefSchema = z
   .object({

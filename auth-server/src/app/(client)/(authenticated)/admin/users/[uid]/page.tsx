@@ -13,15 +13,11 @@ import { z } from "zod";
 import type { UserData } from "@schemavaults/auth-common";
 import { connection } from "next/server";
 
-interface PageParams {
-  params: Promise<{ uid: string }>;
-}
-
 const uidSchema = z.string().uuid();
 
 async function PreloadedAdminUserDetailPage(
   { user, dbh }: IProtectedAdminServerComponentPageProps,
-  pageParams: PageParams,
+  pageParams: PageProps<"/admin/users/[uid]">,
 ): Promise<ReactElement> {
   if (!user.admin) {
     throw new Error(
@@ -52,7 +48,7 @@ async function PreloadedAdminUserDetailPage(
 }
 
 export default async function AdminUserDetailPage(
-  pageParams: PageParams,
+  pageParams: PageProps<"/admin/users/[uid]">,
 ): Promise<ReactElement> {
   await connection();
   return await withAdminServerComponentRouteGuard((props) =>

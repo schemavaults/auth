@@ -1,11 +1,15 @@
 import { test, describe, expect } from "bun:test";
-import {
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  SCHEMAVAULTS_MAIL_APP_DEFINITION,
-} from "@schemavaults/app-definitions";
 import SchemaVaultsServerMiddleware from "./server-middleware";
 import { DatabaseConnectedJwtKeyManager } from "@/JwtKeyManager";
 import MockJwtKeySetsStore from "@/JwtKeyManager/JsonWebKeySetsStore/MockJwtKeySetsStore";
+import {
+  DEFAULT_AUTH_SERVER_APP_ID,
+  SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
+import getAuthServerUrl from "@schemavaults/app-definitions/get-auth-server-url";
+
+const env: SchemaVaultsAppEnvironment = "test";
+const auth_server_url: string = getAuthServerUrl(env);
 
 class MockJwtKeyManager extends DatabaseConnectedJwtKeyManager {
   public constructor() {
@@ -23,7 +27,8 @@ describe("SchemaVaultsServerMiddleware Initialization", () => {
     try {
       const middleware = new SchemaVaultsServerMiddleware({
         debug: true,
-        api_server_id: SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
+        api_server_id: DEFAULT_AUTH_SERVER_APP_ID,
+        auth_server_url,
         jwt_keys_manager: new MockJwtKeyManager(),
       });
       console.log(
@@ -42,7 +47,8 @@ describe("SchemaVaultsServerMiddleware Initialization", () => {
     try {
       const middleware = new SchemaVaultsServerMiddleware({
         debug: true,
-        api_server_id: SCHEMAVAULTS_MAIL_APP_DEFINITION.app_id,
+        auth_server_url,
+        api_server_id: "schemavaults-mail",
       });
       console.log(
         "SchemaVaultsServerMiddleware Flow String: ",
@@ -65,6 +71,7 @@ describe("SchemaVaultsServerMiddleware Initialization", () => {
     try {
       const middleware = new SchemaVaultsServerMiddleware({
         debug: true,
+        auth_server_url,
         api_server_id,
       });
       console.log(

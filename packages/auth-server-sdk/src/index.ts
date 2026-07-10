@@ -25,18 +25,12 @@ export { MaximumBrowserCookieSize };
 // API Server IDs
 export { getSchemavaultsApiServerId } from "./env/get-schemavaults-api-server-id";
 export type { ApiServerId } from "@schemavaults/app-definitions";
-export {
-  apiServerIdSchema,
-  hardcodedApiServerIdSchema,
-} from "@schemavaults/app-definitions";
+export { apiServerIdSchema } from "@schemavaults/app-definitions";
 
 // Client Application IDs
 export { getSchemavaultsClientApplicationId } from "./env/get-schemavaults-client-application-id";
 export type { AppId } from "@schemavaults/app-definitions";
-export {
-  appIdSchema,
-  hardcodedAppIdSchema,
-} from "@schemavaults/app-definitions";
+export { appIdSchema } from "@schemavaults/app-definitions";
 
 // Cookie Names
 export {
@@ -70,7 +64,8 @@ export {
   organizationIdSchema,
   organizationDefinitionSchema,
   isValidOrganizationID,
-  SCHEMAVAULTS_ORGANIZATION_ID,
+  getAuthServerOwnerOrganizationId,
+  DEFAULT_AUTH_SERVER_OWNER_ORGANIZATION_ID,
   isValidOrganizationMembershipRoleType,
   organizationMembershipRoleTypes,
   organizationMembershipRoleTypeSchema,
@@ -94,12 +89,6 @@ export type {
 } from "@schemavaults/app-definitions";
 
 // Loading hardcoded apps/apis
-export {
-  getHardcodedApp,
-  getHardcodedClientWebAppDomain,
-  getHardcodedApiServer,
-  getHardcodedApiServerDomain,
-  getAuthServerUri,
-} from "@schemavaults/app-definitions";
+export { getAuthServerUrl } from "@schemavaults/app-definitions";
 
 export { loadJwksAccessPrivateKey } from "@/env/loadJwksAccessPrivateKey";

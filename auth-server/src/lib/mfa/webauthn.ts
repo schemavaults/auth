@@ -14,7 +14,7 @@ import type {
   AuthenticatorTransportFuture,
 } from "@simplewebauthn/server";
 import { getAuthServerUri } from "@/lib/auth_server_uri";
-import { TOTP_ISSUER } from "./totp";
+import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import { base64UrlToBytes, bytesToBase64Url } from "@/lib/base64url";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { isValidBase64Url } from "@/lib/base64url";
@@ -38,8 +38,9 @@ export function getExpectedOrigin(): string {
 export function getRpName(): string {
   const override = process.env.PRIVATE_WEBAUTHN_RP_NAME;
   if (typeof override === "string" && override.length > 0) return override;
-  // Reuse the same issuer string surfaced for TOTP ("SchemaVaults").
-  return TOTP_ISSUER;
+  // Display-only: fall back to the deployment's white-label friendly name,
+  // matching the issuer surfaced for TOTP enrollments.
+  return getAuthServerFriendlyName();
 }
 
 function serializeTransports(

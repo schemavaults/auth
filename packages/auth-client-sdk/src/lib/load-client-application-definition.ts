@@ -3,34 +3,30 @@ import {
   type AppId,
   type SchemaVaultsApp,
   appIdSchema,
-  isHardcodedAppId,
-  getHardcodedApp,
 } from "@schemavaults/app-definitions";
 
 export interface ILoadClientApplicationDefinitionOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
-  auth_server_uri: string;
+  auth_server_url: string;
   app_id: AppId;
 }
 
 export async function loadClientApplicationDefinition({
   adapter,
-  auth_server_uri,
+  auth_server_url,
   app_id,
 }: ILoadClientApplicationDefinitionOpts): Promise<SchemaVaultsApp> {
   if (!(await appIdSchema.safeParseAsync(app_id)).success) {
     throw new TypeError("Invalid app_id");
   }
 
-  if (isHardcodedAppId(app_id)) {
-    const hardcoded = getHardcodedApp(app_id);
-    if (hardcoded) return hardcoded;
-  }
-
-  const response = await adapter.fetch(`${auth_server_uri}/api/apps/${app_id}`, {
-    method: "GET",
-    credentials: "include",
-  });
+  const response = await adapter.fetch(
+    new URL(`/api/apps/${app_id}`, auth_server_url).toString(),
+    {
+      method: "GET",
+      credentials: "include",
+    },
+  );
 
   if (!response.ok) {
     throw new Error(
@@ -43,7 +39,11 @@ export async function loadClientApplicationDefinition({
     throw new Error("Invalid response from load app endpoint");
   }
 
-  const result = body as { success: boolean; app?: SchemaVaultsApp; message?: string };
+  const result = body as {
+    success: boolean;
+    app?: SchemaVaultsApp;
+    message?: string;
+  };
   if (!result.success || !result.app) {
     throw new Error(
       result.message ?? "Failed to load client application definition",

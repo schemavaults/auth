@@ -1,6 +1,5 @@
 import "server-only";
 
-import { applyCorsHeadersForSchemaVaultsRegistry } from "@/lib/cors/cors-for-schemavaults-registry";
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import {
   type ApiServerId,
@@ -21,7 +20,7 @@ export type ListApiServerDomainsResponse =
   | {
       success: true;
       message: string;
-      list: SchemaVaultsApiServerDomainRef[];
+      list: readonly SchemaVaultsApiServerDomainRef[];
     }
   | {
       success: false;
@@ -153,8 +152,7 @@ export async function GET_list_api_server_domains(
     },
   );
 
-  const response = await protected_route(req);
-  return applyCorsHeadersForSchemaVaultsRegistry(response, req);
+  return await protected_route(req);
 }
 
 export default GET_list_api_server_domains;

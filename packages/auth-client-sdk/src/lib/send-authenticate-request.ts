@@ -28,6 +28,7 @@ export async function sendAuthenticateRequest(
   const adapter: ISchemaVaultsAuthClientAdapter = opts.adapter;
   const env = opts.app_environment;
   const redirect_uri: string | null = opts.redirect_uri;
+  const auth_server_url: string = opts.auth_server_url;
 
   if (env === "development") {
     console.log(
@@ -104,7 +105,7 @@ export async function sendAuthenticateRequest(
       console.log("[sendAuthenticateRequest] Sending POST request via adapter");
     }
     const authentication_request_response: Response = await adapter.fetch(
-      `/api/auth/${authentication_type}`,
+      new URL(`/api/auth/${authentication_type}`, auth_server_url).toString(),
       {
         body: JSON.stringify(auth_request_body),
         method: "POST",
@@ -171,7 +172,8 @@ export async function sendAuthenticateRequest(
       ) {
         throw new Error("Conflict; user already exists!");
       } else if (response.status === 403) {
-        let errorMessage = "Action not allowed while signed in as another user. Please log out first.";
+        let errorMessage =
+          "Action not allowed while signed in as another user. Please log out first.";
         try {
           const body: unknown = await response.json();
           if (
@@ -182,7 +184,9 @@ export async function sendAuthenticateRequest(
           ) {
             errorMessage = (body as Record<string, unknown>).message as string;
           }
-        } catch { /* use default message */ }
+        } catch {
+          /* use default message */
+        }
         throw new Error(errorMessage);
       }
       throw new Error(

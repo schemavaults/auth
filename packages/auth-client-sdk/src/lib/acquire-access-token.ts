@@ -8,10 +8,12 @@ import {
   type RefreshToken,
 } from "@schemavaults/auth-common";
 import isValidRefreshToken from "@/lib/isValidRefreshToken";
-import {
-  type ApiServerId,
-  apiServerIdSchema,
-} from "@schemavaults/app-definitions";
+import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import { z } from "zod";
+
+// Token audiences are either an api server id, or the (white-labellable)
+// auth server URL for tokens addressed to the auth server itself.
+const tokenAudienceSchema = z.union([apiServerIdSchema, z.string().url()]);
 
 export interface IAcquireAccessTokenFnOptions {
   opts: AcquireAccessTokenOptions;
@@ -43,9 +45,9 @@ export default async function acquireAccessToken({
   }
 
   // where is this access token for? (e.g. auth server? registry? some other API server?)
-  let audience: ApiServerId;
+  let audience: string;
   try {
-    const parsed_audience = apiServerIdSchema.safeParse(opts.audience);
+    const parsed_audience = tokenAudienceSchema.safeParse(opts.audience);
     if (!parsed_audience.success) {
       console.error(
         "Failed to parse desired audience for access token load request: ",

@@ -9,8 +9,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
-import sendVerificationEmail from "@/lib/send-verification-email";
+import sendVerificationEmail from "@/lib/mail/send-verification-email";
 import captureServerException from "@/lib/captureServerException";
+import { RedisCache } from "@/lib/redis";
 
 const ROUTE = "/api/auth/verify-email/request";
 
@@ -88,10 +89,12 @@ export async function handleVerifyEmailRequest({
 
   try {
     const rawToken: string = await userRegistry.createEmailVerificationToken(user.uid);
+    await using redis = RedisCache.createConnection();
     await sendVerificationEmail({
       email,
       rawToken,
       db: dbh.db,
+      redis
     });
 
     if (debug) {

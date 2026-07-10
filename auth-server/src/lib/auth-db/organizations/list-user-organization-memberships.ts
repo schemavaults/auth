@@ -3,12 +3,9 @@ import isValidUuid from "@/lib/is-valid-uuid";
 import type { OrganizationMembershipRoleDefinition } from "./organization-membership-role-definition";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { hardcodedOrgs, type OrganizationDefinition, type OrganizationID, organizationIdSchema, SCHEMAVAULTS_ORGANIZATION_ID } from "@schemavaults/auth-common";
+import { getHardcodedOrgs, type OrganizationDefinition, type OrganizationID, organizationIdSchema } from "@schemavaults/auth-common";
 import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
-
-const hardcodedOrganizations = new Map<OrganizationID, OrganizationDefinition>(
-  hardcodedOrgs.map(hardcodedOrg => [hardcodedOrg.organization_id, hardcodedOrg])
-)
+import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 
 export async function listUserOrganizationMemberships(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
@@ -62,19 +59,24 @@ export async function listUserOrganizationMemberships(
     return all_memberships;
   }
 
+  const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
+  const hardcodedOrganizations = new Map<OrganizationID, OrganizationDefinition>(
+    getHardcodedOrgs().map(hardcodedOrg => [hardcodedOrg.organization_id, hardcodedOrg])
+  );
+
   // Initialize list of memberships to store.
   // First load from hardcoded set, then load from db.
   const memberships: OrganizationMembershipRoleDefinition[] = []
 
-  // Add virtual membership for admin users in the schemavaults organization
+  // Add virtual membership for admin users in the owner organization
   if (admin) {
-    const hardcodedOrg = hardcodedOrganizations.get(SCHEMAVAULTS_ORGANIZATION_ID);
+    const hardcodedOrg = hardcodedOrganizations.get(ownerOrganizationId);
     if (!hardcodedOrg) {
-      throw new Error("Expected there to be a hardcoded organization with ID: \"" + SCHEMAVAULTS_ORGANIZATION_ID + "\"")
+      throw new Error("Expected there to be a hardcoded organization with ID: \"" + ownerOrganizationId + "\"")
     }
     memberships.push({
       membership_declaration_id: `admin-virtual-${uid}`,
-      organization_id: SCHEMAVAULTS_ORGANIZATION_ID,
+      organization_id: ownerOrganizationId,
       uid,
       created_at: hardcodedOrg.created_at,
       role: "admin",

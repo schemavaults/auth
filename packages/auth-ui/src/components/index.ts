@@ -1,6 +1,19 @@
 export * from "./AccountCard";
 export type * from "./AccountCard";
 
+export {
+  AuthUiFriendlyNameProvider,
+  useAuthUiFriendlyName,
+  DEFAULT_AUTH_UI_FRIENDLY_NAME,
+} from "./FriendlyNameProvider";
+export type { AuthUiFriendlyNameProviderProps } from "./FriendlyNameProvider";
+
+export {
+  AuthUiOwnerOrganizationProvider,
+  useAuthUiOwnerOrganizationId,
+} from "./OwnerOrganizationProvider";
+export type { AuthUiOwnerOrganizationProviderProps } from "./OwnerOrganizationProvider";
+
 export * from "./SignOutButton";
 export type * from "./SignOutButton";
 

@@ -19,11 +19,14 @@
 // If this test fails, the auth server's JWKS provider self-protection has
 // regressed and the admin bypass is now reachable on `schemavaults-auth`.
 
-describe("JWKS Access Key Management Blocked for schemavaults-auth", () => {
-  // The hardcoded API server ID for the auth server itself. Defined as
-  // SCHEMAVAULTS_AUTH_SERVER.api_server_id in
-  // packages/app-definitions/src/hardcoded-core-schemavaults-api-servers.ts.
-  const SCHEMAVAULTS_AUTH_API_SERVER_ID = "schemavaults-auth";
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
+
+describe("JWKS Access Key Management Blocked for the auth server's own API", () => {
+  // The hardcoded API server ID for the auth server itself (env-var driven
+  // via SCHEMAVAULTS_AUTH_SERVER_APP_ID for white-label deployments; defaults
+  // to "schemavaults-auth"). Resolved by getAuthServerAppId() in
+  // @schemavaults/app-definitions on the server side.
+  const SCHEMAVAULTS_AUTH_API_SERVER_ID = getAuthServerAppIdFromCypressEnv();
 
   beforeEach(() => {
     // Log in as the superuser admin so that the only authorization gate that
@@ -46,7 +49,7 @@ describe("JWKS Access Key Management Blocked for schemavaults-auth", () => {
       expect(response.status).to.eq(403);
       expect(response.body).to.have.property("success", false);
       expect(String(response.body.message).toLowerCase()).to.include(
-        "schemavaults-auth",
+        SCHEMAVAULTS_AUTH_API_SERVER_ID,
       );
       // Make sure the block actually short-circuited: a successful POST
       // would carry a `key_id`/`private_key`, neither of which must ever
@@ -65,7 +68,7 @@ describe("JWKS Access Key Management Blocked for schemavaults-auth", () => {
       expect(response.status).to.eq(403);
       expect(response.body).to.have.property("success", false);
       expect(String(response.body.message).toLowerCase()).to.include(
-        "schemavaults-auth",
+        SCHEMAVAULTS_AUTH_API_SERVER_ID,
       );
       expect(response.body).to.not.have.property("key_id");
       expect(response.body).to.not.have.property("private_key");
@@ -81,7 +84,7 @@ describe("JWKS Access Key Management Blocked for schemavaults-auth", () => {
       expect(response.status).to.eq(403);
       expect(response.body).to.have.property("success", false);
       expect(String(response.body.message).toLowerCase()).to.include(
-        "schemavaults-auth",
+        SCHEMAVAULTS_AUTH_API_SERVER_ID,
       );
       // The metadata response shape on success is `{ success: true,
       // key_metadata: ... }`. Asserting the absence of `key_metadata` here

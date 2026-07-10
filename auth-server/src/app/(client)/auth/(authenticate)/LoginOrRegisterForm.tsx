@@ -6,7 +6,7 @@ import {
   isValidAuthenticationOutcomeType,
   type OnSuccessfulAuthenticateAction,
 } from "@/lib/authentication_outcome_type";
-import { ThemedPageBackground } from "@schemavaults/ui";
+import { ThemedPageBackground } from "@/components/ThemedPageBackground";
 import type { ReactElement } from "react";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";

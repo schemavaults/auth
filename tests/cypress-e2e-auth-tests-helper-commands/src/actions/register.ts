@@ -1,15 +1,20 @@
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
 import {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
 } from "@schemavaults/auth-common";
+import getAuthServerAppIdFromCypressEnv from "../get-auth-server-app-id-from-cypress-env";
 
 export default function register(
   email: string,
   password: string,
   invite_code?: string,
 ): Cypress.Chainable<number> {
-  cy.is_authenticated().should("be.false", "User should not be authenticated before registration");
+  const auth_app_id = getAuthServerAppIdFromCypressEnv();
+
+  cy.is_authenticated().should(
+    "be.false",
+    "User should not be authenticated before registration",
+  );
 
   // Clear Redis rate-limit counters so repeated register calls across tests
   // don't hit 429 responses.
@@ -22,7 +27,7 @@ export default function register(
   }).as("registerRequest");
   cy.intercept({
     method: "POST",
-    url: `**/api/auth/token/authorization_code/${SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id}`,
+    url: `**/api/auth/token/authorization_code/${auth_app_id}`,
     times: 1,
   }).as("exchangeTokenRequest");
   cy.intercept({
@@ -87,14 +92,11 @@ export default function register(
           .then((exchange_tokens_interception) => {
             if (exchange_tokens_interception.response?.statusCode === 200) {
               cy.log("Exchange token request succeeded");
+              cy.getCookie(RefreshTokenCookieName(auth_app_id), {
+                timeout: 10000,
+              }).should("exist");
               cy.getCookie(
-                RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
-                { timeout: 10000 },
-              ).should("exist");
-              cy.getCookie(
-                RefreshTokenExpiryCookieName(
-                  SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-                ),
+                RefreshTokenExpiryCookieName(auth_app_id),
                 { timeout: 10000 },
               ).should("exist");
               return cy

@@ -22,13 +22,10 @@ import {
   type OrganizationMembershipRoleDetails,
 } from "@schemavaults/auth-common";
 import SignOutButton from "@/components/SignOutButton";
+import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 import ViewFullUserProfileButton from "./view_full_user_profile";
 import ViewAdminDashboardButton from "./view_admin_page_link";
-import {
-  getHardcodedClientWebAppDomain,
-  SCHEMAVAULTS_AUTH_APP_DEFINITION,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
+import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { Building2, Plus } from "lucide-react";
 
 export interface AccountDetailsCardProps {
@@ -38,6 +35,7 @@ export interface AccountDetailsCardProps {
   Link: ({ href, children }: PropsWithChildren<{ href: string }>) => ReactNode;
   isAdmin: boolean;
   appEnvironment: SchemaVaultsAppEnvironment;
+  auth_server_url: string;
   user: UserData | null;
   /**
    * Optional SSR-preloaded organization memberships for the current user.
@@ -53,11 +51,7 @@ export function AccountDetailsCard(
 ): ReactElement {
   const currentUser = props.user;
   const Link: FC<PropsWithChildren<{ href: string }>> = props.Link;
-
-  const auth_server_uri: string = getHardcodedClientWebAppDomain(
-    SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id,
-    props.appEnvironment,
-  );
+  const friendlyName: string = useAuthUiFriendlyName();
 
   const cardClassName: string = cn("w-full", props.cardClassName);
 
@@ -84,7 +78,7 @@ export function AccountDetailsCard(
       <CardHeader>
         <CardTitle>Account Details</CardTitle>
         <CardDescription>
-          View and manage your SchemaVaults account.
+          View and manage your {friendlyName} account.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -124,7 +118,8 @@ export function AccountDetailsCard(
                   No organizations
                 </p>
               )}
-              {(!memberships || memberships.length < MAXIMUM_USER_ORGANIZATIONS) && (
+              {(!memberships ||
+                memberships.length < MAXIMUM_USER_ORGANIZATIONS) && (
                 <Link href="/org/new">
                   <Button
                     variant="outline"
@@ -146,16 +141,21 @@ export function AccountDetailsCard(
           {showLinkToAuthServerAccountPage && (
             <ViewFullUserProfileButton
               navigate={async () => {
-                const accountUrl =
-                  `${auth_server_uri}/account` as const satisfies string;
+                const accountUrl: string = new URL(
+                  "/account",
+                  props.auth_server_url,
+                ).toString();
                 await props.redirect(accountUrl);
               }}
             />
           )}
           <ViewAdminDashboardButton
             navigate={async () => {
-              const accountUrl = `${auth_server_uri}/admin` as const;
-              await props.redirect(accountUrl);
+              const adminUrl: string = new URL(
+                "/admin",
+                props.auth_server_url,
+              ).toString();
+              await props.redirect(adminUrl);
             }}
             admin={props.isAdmin}
           />

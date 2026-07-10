@@ -1,5 +1,7 @@
-import { SCHEMAVAULTS_AUTH_APP_DEFINITION } from "@schemavaults/app-definitions";
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import { RefreshTokenCookieName } from "@schemavaults/auth-common";
+
+const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
 
 // Navigate to /auth/login, type credentials, submit. Mirrors the helper in
 // Mfa.cy.ts (with the same hydration/visibility guards).
@@ -107,7 +109,7 @@ describeWebauthn("WebAuthn passkey MFA", () => {
 
         cy.url({ timeout: 15_000 }).should("include", "/account");
         cy.getCookie(
-          RefreshTokenCookieName(SCHEMAVAULTS_AUTH_APP_DEFINITION.app_id),
+          RefreshTokenCookieName(AUTH_APP_ID),
         ).should("exist");
         cy.wait_for_page_hydration();
         cy.is_authenticated().should("be.true");
