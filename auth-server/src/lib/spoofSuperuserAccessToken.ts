@@ -7,11 +7,14 @@ import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { type AccessToken } from "@schemavaults/auth-common";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
+import spoofedSuperuserEmail from "@/lib/config/spoofed-superuser-email";
+import type Redis from "ioredis";
 
 export interface ISpoofSuperuserTokenOpts {
   client_app_id: AppId;
   audience_id: ApiServerId;
   db: Kysely<AuthDatabase>;
+  redis?: Redis;
   environment?: SchemaVaultsAppEnvironment;
 }
 
@@ -22,6 +25,7 @@ export default async function spoofSuperuserAccessToken(
     client_app_id,
     audience_id,
     db,
+    redis,
     environment = getAppEnvironment()
  }: ISpoofSuperuserTokenOpts
 ): Promise<AccessToken> {
@@ -30,12 +34,14 @@ export default async function spoofSuperuserAccessToken(
     audience_id
   );
 
+  const spoofed_email: string = await spoofedSuperuserEmail(db, redis);
+
   const jwt_factory = new JWT_Factory({
     client_app_id,
     environment,
     jwt_keys,
     user: {
-      email: "admin@schemavaults.com",
+      email: spoofed_email,
       email_verified: false,
       sub: fakeSuperuserUid,
       uid: fakeSuperuserUid,
