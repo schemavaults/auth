@@ -8,12 +8,11 @@ import type {
 } from "./jwks-access-keys-table";
 import { generateJwtSigningKeyPair, sign_verify_alg } from "@schemavaults/jwt";
 import { JwksAccessKeyStatusQueryResponse } from "./JwksAccessKeyStatusQueryResponse";
-import { ApiServerId } from "@schemavaults/app-definitions";
+import { ApiServerId, apiServerIdSchema } from "@schemavaults/app-definitions";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 
 const DEFAULT_KEY_ALGORITHM = sign_verify_alg;
 
-import isValidUuid from "@/lib/is-valid-uuid";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 
 export class JwksAccessKeysRegistry {
@@ -84,8 +83,8 @@ export class JwksAccessKeysRegistry {
     if (isHardcodedApiServerId(api_server_id)) {
       return await this.getActiveKeyForAudienceFromDatabase(api_server_id, 'jwks_access_keys_for_hardcoded')
     }
-    if (!isValidUuid(api_server_id)) {
-      throw new TypeError("Expected API server ID to be a valid UUID if not determined to be a hardcoded app ID!");
+    if (!apiServerIdSchema.safeParse(api_server_id).success) {
+      throw new TypeError("Invalid API server ID to look up an active JWKS access key for!");
     }
     return await this.getActiveKeyForAudienceFromDatabase(api_server_id, 'jwks_access_keys');
   }
@@ -101,8 +100,8 @@ export class JwksAccessKeysRegistry {
       await this.db.insertInto("jwks_access_keys_for_hardcoded").values(record).execute();
       return;
     }
-    if (!isValidUuid(record.api_server_id)) {
-      throw new TypeError("Expected API server ID to be a valid UUID if not determined to be a hardcoded app ID!");
+    if (!apiServerIdSchema.safeParse(record.api_server_id).success) {
+      throw new TypeError("Invalid API server ID to store a new JWKS access key for!");
     }
     await this.db.insertInto("jwks_access_keys").values(record).execute();
     return;
@@ -125,8 +124,8 @@ export class JwksAccessKeysRegistry {
         .execute();
       return;
     } else {
-      if (!isValidUuid(api_server_id)) {
-        throw new TypeError("Expected API server ID to be a valid UUID if not determined to be a hardcoded app ID!");
+      if (!apiServerIdSchema.safeParse(api_server_id).success) {
+        throw new TypeError("Invalid API server ID to deactivate JWKS access keys for!");
       }
       await this.db
         .updateTable("jwks_access_keys")
