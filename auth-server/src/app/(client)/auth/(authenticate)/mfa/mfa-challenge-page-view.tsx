@@ -25,6 +25,10 @@ export interface MfaChallengePageViewProps {
   // callback URL after a successful MFA challenge so the client can
   // verify its stored CSRF nonce. Validated upstream in `page.tsx`.
   state: string | null;
+  // OIDC mode: the flow entered through GET /api/oidc/authorize, so the
+  // post-MFA callback carries `code`/`state`/`iss` instead of the
+  // custom-surface parameter names.
+  oidc?: boolean;
 }
 
 export default function MfaChallengePageView({
@@ -36,6 +40,7 @@ export default function MfaChallengePageView({
   challenge_time,
   code_challenge_method,
   state,
+  oidc,
 }: MfaChallengePageViewProps): ReactElement {
   const router = useRouter();
   const env = useAppEnvironment();
@@ -68,6 +73,7 @@ export default function MfaChallengePageView({
         code_challenge_method === "S256"
       ) {
         try {
+          const authClientForIssuer = auth.ready ? auth.client.current : null;
           successRedirect({
             redirect_uri,
             authorization_code,
@@ -78,6 +84,8 @@ export default function MfaChallengePageView({
             },
             app_environment: env,
             state,
+            oidc: oidc ?? false,
+            issuer: authClientForIssuer?.auth_server_url ?? null,
           });
           return;
         } catch (e: unknown) {
@@ -196,6 +204,7 @@ export default function MfaChallengePageView({
       challenge_time,
       code_challenge_method,
       state,
+      oidc,
       env,
       router,
       auth,

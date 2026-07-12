@@ -1069,6 +1069,7 @@ export class SchemaVaultsAuthClient
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
     redirect_uri: string | null,
+    oidc: { nonce: string | null; scope: string } | null = null,
   ): Promise<AuthenticateResult> {
     if (this.DEBUG)
       console.log(
@@ -1084,6 +1085,7 @@ export class SchemaVaultsAuthClient
       invite_code_required: this._invite_code_required,
       redirect_uri,
       auth_server_url: this.auth_server_url,
+      oidc,
     });
   }
 

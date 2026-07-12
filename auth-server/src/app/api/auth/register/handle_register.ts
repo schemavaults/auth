@@ -11,6 +11,8 @@ import {
   emailCredentialsSchema,
   inviteCodeFormatSchema,
   PKCE_ProofKeyManager,
+  oidcNonceSchema,
+  parseAndGrantScopes,
 } from "@schemavaults/auth-common";
 import {
   ServerlessDatabase,
@@ -52,6 +54,11 @@ const registerBodySchema = z
     // Required for third-party app flows; null/absent only for the auth
     // server's own /account flow (client_app_id === auth-server's own).
     redirect_uri: z.string().url().nullable().optional(),
+    // OIDC surface context (set only when the flow entered through
+    // GET /api/oidc/authorize); see handle_login.ts.
+    oidc: z.literal(true).optional(),
+    nonce: oidcNonceSchema.nullable().optional(),
+    scope: z.string().max(256).nullable().optional(),
   })
   .required({
     credentials: true,
@@ -59,7 +66,15 @@ const registerBodySchema = z
     code_challenge: true,
     challenge_time: true,
   })
-  .strict();
+  .strict()
+  .refine(
+    (body) =>
+      !body.oidc ||
+      (typeof body.redirect_uri === "string" &&
+        typeof body.scope === "string" &&
+        parseAndGrantScopes(body.scope).hasOpenid),
+    "OIDC registrations require a third-party redirect_uri and a scope including 'openid'",
+  );
 
 function wasInviteCodeSupplied(
   invite_code: InviteCode | undefined,
@@ -119,6 +134,15 @@ export async function handleRegister({
   const challenge_time: number = registrationData.challenge_time;
   const invite_code: string | undefined = registrationData.invite_code;
   const redirect_uri: string | null = registrationData.redirect_uri ?? null;
+  // Granted scopes are re-derived server-side (never trusted verbatim);
+  // the schema refinement above already guaranteed `openid` is present.
+  const oidc_context: { nonce: string | null; scope: string } | null =
+    registrationData.oidc
+      ? {
+          nonce: registrationData.nonce ?? null,
+          scope: parseAndGrantScopes(registrationData.scope).granted.join(" "),
+        }
+      : null;
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
@@ -458,6 +482,7 @@ export async function handleRegister({
       "S256",
       challenge_time,
       redirect_uri,
+      oidc_context,
     );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

@@ -124,6 +124,11 @@ export function AppAuthorizationConsentScreen({
       // read survives code-refactor reordering. Throws on malformed;
       // the outer try/catch surfaces a destructive toast.
       const state = parseOAuth2State(searchParams.get("state"));
+      // OIDC bridge params (set by GET /api/oidc/authorize): mint the
+      // code as OIDC-only and emit the spec callback parameter names.
+      const is_oidc_flow: boolean = searchParams.get("oidc") === "1";
+      const oidc_nonce: string | null = searchParams.get("nonce");
+      const oidc_scope: string = searchParams.get("scope") ?? "";
 
       if (!code_challenge) {
         throw new Error("Missing code_challenge parameter");
@@ -147,7 +152,9 @@ export function AppAuthorizationConsentScreen({
         authClient.auth_server_url
       );
 
-      // Generate authorization code via session endpoint
+      // Generate authorization code via session endpoint. The
+      // `redirect_uri` must be sent so the server can bind the code to
+      // it (the endpoint refuses third-party mints without one).
       const response = await fetch(
         endpoint,
         {
@@ -159,6 +166,10 @@ export function AppAuthorizationConsentScreen({
             code_challenge,
             code_challenge_method: "S256",
             challenge_time,
+            ...(redirect_uri ? { redirect_uri } : {}),
+            ...(is_oidc_flow
+              ? { oidc: true, nonce: oidc_nonce, scope: oidc_scope }
+              : {}),
           }),
         },
       );
@@ -196,6 +207,8 @@ export function AppAuthorizationConsentScreen({
           code_challenge: codeChallengeDetails,
           app_environment: appEnv,
           state,
+          oidc: is_oidc_flow,
+          issuer: authClient.auth_server_url,
         });
       } else if (
         onSuccessfulAuthenticate ===

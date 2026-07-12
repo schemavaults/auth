@@ -13,9 +13,13 @@ import NativeAppCodeDelivery from "@/components/NativeAppCodeDelivery";
 import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import {
   OAuth2StateValidationError,
+  OidcNonceValidationError,
+  parseAndGrantScopes,
   parseOAuth2State,
+  parseOidcNonce,
   type UserData,
 } from "@schemavaults/auth-common";
+import { getAuthServerUri } from "@/lib/auth_server_uri";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
@@ -33,6 +37,12 @@ export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   // OAuth2 `state` (RFC 6749 §10.12) — echoed back on the callback URL
   // so the client can verify its stored CSRF nonce.
   state: string | null;
+  // OIDC bridge params (set by GET /api/oidc/authorize): when `oidc` is
+  // "1", the minted code is flagged OIDC-only (with nonce/scope stored
+  // on the row) and the callback uses `code`/`state`/`iss` parameters.
+  oidc: string | null;
+  nonce: string | null;
+  scope: string | null;
 }
 
 export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
@@ -113,6 +123,35 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
   }
   const code_challenge_method: "S256" = opts.code_challenge_method;
 
+  // OIDC bridge validation: nonce must be well-formed and the scope must
+  // include `openid` (both were validated at /api/oidc/authorize; this
+  // re-check guards direct navigations that set `oidc=1` by hand).
+  const is_oidc_flow: boolean = opts.oidc === "1";
+  let oidc_context: { nonce: string | null; scope: string } | null = null;
+  if (is_oidc_flow) {
+    let oidc_nonce: string | null;
+    try {
+      oidc_nonce = parseOidcNonce(opts.nonce);
+    } catch (e: unknown) {
+      if (e instanceof OidcNonceValidationError) {
+        console.warn(
+          "[AlreadyAuthenticatedOnLoginOrRegisterPage] Rejecting invalid OIDC nonce:",
+          e.reasons,
+        );
+        redirectWithError(400, "bad_request");
+      }
+      throw e;
+    }
+    const { granted, hasOpenid } = parseAndGrantScopes(opts.scope ?? undefined);
+    if (!hasOpenid) {
+      console.warn(
+        "[AlreadyAuthenticatedOnLoginOrRegisterPage] OIDC flow missing 'openid' scope",
+      );
+      redirectWithError(400, "bad_request");
+    }
+    oidc_context = { nonce: oidc_nonce, scope: granted.join(" ") };
+  }
+
   if (!isAppAuthorized) {
     // App NOT authorized — show consent screen
     return (
@@ -136,6 +175,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     challenge_time,
     redirect_uri,
     opts.debug,
+    oidc_context,
   );
   if (typeof authorization_code !== 'string') {
     console.error("Expected generated authorization code to be a string!");
@@ -164,11 +204,20 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
       redirectWithError(400, "bad_request");
     }
     const queryParams = new URLSearchParams();
-    queryParams.set('challenge_time', challenge_time.toString());
-    queryParams.set('code_challenge_method', 'S256');
-    queryParams.set('authorization_code', authorization_code);
-    if (echoedState) {
-      queryParams.set('state', echoedState);
+    if (is_oidc_flow) {
+      // OIDC callback shape: `code` + `state` + `iss` (RFC 9207).
+      queryParams.set('code', authorization_code);
+      if (echoedState) {
+        queryParams.set('state', echoedState);
+      }
+      queryParams.set('iss', getAuthServerUri());
+    } else {
+      queryParams.set('challenge_time', challenge_time.toString());
+      queryParams.set('code_challenge_method', 'S256');
+      queryParams.set('authorization_code', authorization_code);
+      if (echoedState) {
+        queryParams.set('state', echoedState);
+      }
     }
     return redirect(`${redirect_uri}?${queryParams.toString()}`);
   } else if (on_successful_authenticate === "send-authorization-code-to-native-app-then-close") {

@@ -91,6 +91,22 @@ export async function handleAuthorizationCodeGrant(
         },
       );
     }
+    // Surface isolation: authorization codes minted by the OIDC surface
+    // (GET /api/oidc/authorize) are redeemable only at POST
+    // /api/oidc/token, never at this custom endpoint.
+    if (result.oidc) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: true,
+          message:
+            "This authorization code must be redeemed at the OIDC token endpoint",
+        } satisfies RequestTokensResult,
+        {
+          status: 400,
+        },
+      );
+    }
     uid = result.uid;
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

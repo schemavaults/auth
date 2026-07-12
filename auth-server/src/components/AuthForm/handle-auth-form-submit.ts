@@ -30,6 +30,9 @@ export interface PendingAuthorizationState {
   // consent-screen interstitial so the callback redirect can echo it
   // untouched (RFC 6749 §10.12).
   state: string | null;
+  // OIDC mode (flow entered through GET /api/oidc/authorize) — the
+  // post-consent callback must use the spec parameter names.
+  oidc: boolean;
 }
 
 interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
@@ -212,6 +215,19 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       ? searchParams.get("redirect_uri") ?? null
       : null;
 
+  // OIDC bridge parameters (set by GET /api/oidc/authorize). When
+  // present, the minted authorization code is flagged OIDC-only on the
+  // server, and the eventual callback uses the spec parameter names.
+  const is_oidc_flow: boolean =
+    searchParams.get("oidc") === "1" && request_redirect_uri !== null;
+  const oidc_request_context: { nonce: string | null; scope: string } | null =
+    is_oidc_flow
+      ? {
+          nonce: searchParams.get("nonce"),
+          scope: searchParams.get("scope") ?? "",
+        }
+      : null;
+
   // Exchange credentials for an authorization code, or be told that the
   // user must complete an MFA challenge first.
   let authorization_code: string;
@@ -222,6 +238,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       values,
       code_challenge,
       request_redirect_uri,
+      oidc_request_context,
     );
     if (result.kind === "mfa_required") {
       // The MFA challenge page lives at a different URL, so the
@@ -263,6 +280,13 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         "state",
         "challenge_time",
         "code_challenge_method",
+        // OIDC bridge params: the MFA page only needs the `oidc` flag to
+        // emit the spec callback (nonce/scope live server-side on the
+        // Redis challenge record), but forward all three so the page URL
+        // remains a faithful copy of the flow's entry parameters.
+        "oidc",
+        "nonce",
+        "scope",
       ] as const) {
         const value = searchParams.get(key);
         if (value) params.set(key, value);
@@ -330,6 +354,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         code_verifier,
         redirect_uri,
         state,
+        oidc: is_oidc_flow,
       });
       return;
     }
@@ -392,6 +417,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     code_verifier,
     redirect_uri,
     state,
+    oidc: is_oidc_flow,
     auth,
     router,
     toast,

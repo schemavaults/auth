@@ -148,6 +148,14 @@ export async function handleMfaVerify({
       "S256",
       challenge.challenge_time,
       challenge.redirect_uri ?? null,
+      // Restore the OIDC context (if any) captured when the login
+      // handler parked this flow behind the MFA gate.
+      challenge.oidc
+        ? {
+            nonce: challenge.nonce ?? null,
+            scope: challenge.scope ?? "",
+          }
+        : null,
     );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

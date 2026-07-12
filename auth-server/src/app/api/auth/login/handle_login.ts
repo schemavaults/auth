@@ -11,6 +11,8 @@ import {
   ERROR_MESSAGE_CATALOG,
   PKCE_ProofKeyManager,
   collapseWebauthnFactors,
+  oidcNonceSchema,
+  parseAndGrantScopes,
 } from "@schemavaults/auth-common";
 import type { UserData } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
@@ -58,6 +60,12 @@ const loginBodySchema = z
     // Required for third-party app flows; null/absent only for the auth
     // server's own /account flow (client_app_id === auth-server's own).
     redirect_uri: z.string().url().nullable().optional(),
+    // OIDC surface context (set only when the flow entered through
+    // GET /api/oidc/authorize): flags the minted code as OIDC-only and
+    // carries the nonce/scope to stamp on the code row.
+    oidc: z.literal(true).optional(),
+    nonce: oidcNonceSchema.nullable().optional(),
+    scope: z.string().max(256).nullable().optional(),
   })
   .required({
     credentials: true,
@@ -65,7 +73,15 @@ const loginBodySchema = z
     code_challenge: true,
     challenge_time: true,
   })
-  .strict();
+  .strict()
+  .refine(
+    (body) =>
+      !body.oidc ||
+      (typeof body.redirect_uri === "string" &&
+        typeof body.scope === "string" &&
+        parseAndGrantScopes(body.scope).hasOpenid),
+    "OIDC logins require a third-party redirect_uri and a scope including 'openid'",
+  );
 
 export async function handleLogin({
   body,
@@ -83,6 +99,17 @@ export async function handleLogin({
   const code_challenge: string = parse_login_body.data.code_challenge;
   const challenge_time: number = parse_login_body.data.challenge_time;
   const redirect_uri: string | null = parse_login_body.data.redirect_uri ?? null;
+  // Granted scopes are re-derived server-side (never trusted verbatim);
+  // the schema refinement above already guaranteed `openid` is present.
+  const oidc_context: { nonce: string | null; scope: string } | null =
+    parse_login_body.data.oidc
+      ? {
+          nonce: parse_login_body.data.nonce ?? null,
+          scope: parseAndGrantScopes(parse_login_body.data.scope).granted.join(
+            " ",
+          ),
+        }
+      : null;
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
@@ -344,6 +371,7 @@ export async function handleLogin({
         code_challenge,
         challenge_time,
         redirect_uri,
+        oidc: oidc_context,
       });
       return NextResponse.json(
         {
@@ -383,6 +411,7 @@ export async function handleLogin({
       "S256",
       challenge_time,
       redirect_uri,
+      oidc_context,
     );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

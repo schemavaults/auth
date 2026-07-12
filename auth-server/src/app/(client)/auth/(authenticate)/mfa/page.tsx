@@ -72,6 +72,12 @@ export default async function MfaChallengePage(props: {
     }
   }
 
+  // OIDC bridge flag (forwarded from the login page's query string):
+  // the post-MFA callback must use the spec parameter names. The
+  // nonce/scope themselves live server-side on the Redis challenge
+  // record, so only the flag is needed here.
+  const oidc: boolean = readString(searchParams, "oidc") === "1";
+
   return (
     <MfaChallengePageView
       challenge_id={challenge_id}
@@ -86,6 +92,7 @@ export default async function MfaChallengePage(props: {
       challenge_time={challenge_time}
       code_challenge_method={code_challenge_method}
       state={state}
+      oidc={oidc}
     />
   );
 }

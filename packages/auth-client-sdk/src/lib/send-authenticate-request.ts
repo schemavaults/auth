@@ -97,6 +97,16 @@ export async function sendAuthenticateRequest(
     code_challenge: code_challenge.code_challenge,
     challenge_time: code_challenge.challenge_time,
     redirect_uri,
+    // OIDC bridge context — the login/register handlers use this to
+    // stamp the minted authorization code as OIDC-only with the RP's
+    // nonce/scope (see the auth server's /api/oidc/authorize).
+    ...(opts.oidc
+      ? {
+          oidc: true as const,
+          nonce: opts.oidc.nonce,
+          scope: opts.oidc.scope,
+        }
+      : {}),
   };
 
   let response: Response;

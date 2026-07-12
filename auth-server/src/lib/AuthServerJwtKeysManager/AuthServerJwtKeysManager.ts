@@ -161,6 +161,21 @@ export class AuthServerJwtKeysManager
   }
 
   /**
+   * @description Lists the active (non-expired) keysets for an audience.
+   * Used by the public OIDC jwks_uri (/api/oidc/jwks) to export the
+   * verification PUBLIC keys of every keyset that may have signed a
+   * still-valid id_token (rotation keeps up to ~3 keysets active).
+   */
+  public async listActiveKeysets(
+    audience_id: ApiServerId,
+  ): Promise<readonly I_JWT_Keys[]> {
+    if (!this.isValidApiServerId(audience_id)) {
+      throw new TypeError("Invalid audience ID");
+    }
+    return await this.store.listActiveKeySets(audience_id);
+  }
+
+  /**
    * @name createAndSaveKeysetIfNoneExists
    * @description Initially created for the /api/jwks/{audience_api_server_id} endpoint.
    * Creates and saves a new keyset if no active keys exist for the audience.

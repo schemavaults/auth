@@ -14,7 +14,7 @@ import {
   type CodeVerifierWithDetails,
   codeVerifierWithDetailsSchema,
 } from "./code_verifier";
-import { sha256_digest } from "@/sha256_digest";
+import { sha256_digest, sha256_base64url } from "@/sha256_digest";
 
 /**
  * Signature compatible with node:crypto's `timingSafeEqual`. Callers of
@@ -224,23 +224,44 @@ export class PKCE_ProofKeyManager {
         challenge_time,
       });
 
-      const generated_challenge: CodeChallengeWithDetails =
+      const legacy_challenge: CodeChallengeWithDetails =
         await pkce_flow.getCodeChallenge();
 
-      // Timing-safe byte comparison using the caller-provided function.
+      // Standard RFC 7636 clients (OIDC RPs) send the strict base64url
+      // encoding of the digest; SchemaVaults SDK clients send the legacy
+      // encoding (see sha256_digest), where `+`, `/`, and the `=` padding
+      // are all replaced with `_`. Both are deterministic encodings of
+      // the same SHA-256 digest, so accepting either does not weaken the
+      // proof — the verifier still has to hash to the stored challenge.
+      const standard_challenge: string =
+        await sha256_base64url(input_code_verifier);
+
+      // Timing-safe comparison using the caller-provided function.
       // The caller is responsible for supplying a constant-time comparator;
       // accepting it as an argument keeps this module free of any runtime
       // dependency on node:crypto, so it can be bundled for browsers (for
       // createCodeVerifier/createCodeChallenge) without bundler errors.
-      const generatedBuf: Buffer = Buffer.from(
-        generated_challenge.code_challenge,
-        "base64",
+      //
+      // Challenges are compared as raw UTF-8 strings, NOT base64-decoded:
+      // the legacy encoding replaces the `=` padding with `_`, so decoding
+      // it is lossy and yields a different byte length than the digest.
+      const encoder = new TextEncoder();
+      const savedBytes: Uint8Array = encoder.encode(saved_code_challenge);
+      const matchesSavedChallenge = (candidate: string): boolean => {
+        const candidateBytes: Uint8Array = encoder.encode(candidate);
+        if (candidateBytes.length !== savedBytes.length) {
+          return false;
+        }
+        return timingSafeEqual(candidateBytes, savedBytes);
+      };
+
+      // Evaluate both encodings unconditionally (no short-circuit) so the
+      // comparison cost does not depend on which encoding matched.
+      const legacy_match: boolean = matchesSavedChallenge(
+        legacy_challenge.code_challenge,
       );
-      const savedBuf: Buffer = Buffer.from(saved_code_challenge, "base64");
-      if (generatedBuf.length !== savedBuf.length) {
-        return false;
-      }
-      return timingSafeEqual(generatedBuf, savedBuf);
+      const standard_match: boolean = matchesSavedChallenge(standard_challenge);
+      return legacy_match || standard_match;
     } catch (e: unknown) {
       console.error(e);
       return false;

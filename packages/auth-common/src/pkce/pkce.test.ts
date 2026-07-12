@@ -100,6 +100,65 @@ describe("PKCE_ProofKeyManager", () => {
     }
   });
 
+  it("doesVerifierMatchChallenge accepts a standard RFC 7636 base64url challenge (OIDC interop)", async () => {
+    // A spec-compliant RP computes BASE64URL-ENCODE(SHA256(verifier))
+    // itself — 43 chars, '+'→'-', '/'→'_', no '=' padding — instead of
+    // using the SDK's legacy encoding.
+    for (let i = 0; i < 40; i++) {
+      const code_verifier = PKCE_ProofKeyManager.createCodeVerifier(Date.now());
+      const hash_buffer = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(code_verifier.code_verifier),
+      );
+      const standard_challenge = Buffer.from(hash_buffer).toString("base64url");
+      expect(standard_challenge).toHaveLength(43);
+
+      const matches = await PKCE_ProofKeyManager.doesVerifierMatchChallenge({
+        input_code_verifier: code_verifier.code_verifier,
+        saved_code_challenge: standard_challenge,
+        challenge_time: code_verifier.challenge_time,
+        timingSafeEqual,
+      });
+      expect(matches).toBe(true);
+    }
+  });
+
+  it("doesVerifierMatchChallenge accepts the RFC 7636 Appendix B vector", async () => {
+    const matches = await PKCE_ProofKeyManager.doesVerifierMatchChallenge({
+      input_code_verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+      saved_code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+      challenge_time: Date.now(),
+      timingSafeEqual,
+    });
+    expect(matches).toBe(true);
+  });
+
+  it("doesVerifierMatchChallenge rejects a tampered verifier under either challenge encoding", async () => {
+    const code_verifier = PKCE_ProofKeyManager.createCodeVerifier(Date.now());
+    const legacy_challenge = await PKCE_ProofKeyManager.createCodeChallenge(code_verifier);
+    const hash_buffer = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(code_verifier.code_verifier),
+    );
+    const standard_challenge = Buffer.from(hash_buffer).toString("base64url");
+
+    const wrong_verifier = PKCE_ProofKeyManager.createCodeVerifier(Date.now());
+    expect(wrong_verifier.code_verifier).not.toBe(code_verifier.code_verifier);
+
+    for (const saved_code_challenge of [
+      legacy_challenge.code_challenge,
+      standard_challenge,
+    ]) {
+      const matches = await PKCE_ProofKeyManager.doesVerifierMatchChallenge({
+        input_code_verifier: wrong_verifier.code_verifier,
+        saved_code_challenge,
+        challenge_time: code_verifier.challenge_time,
+        timingSafeEqual,
+      });
+      expect(matches).toBe(false);
+    }
+  });
+
   it("can generate a valid code challenge from a code verifier", async () => {
     for (let i = 0; i < 40; i++) {
       const now = Date.now();

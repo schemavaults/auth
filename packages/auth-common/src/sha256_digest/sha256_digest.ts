@@ -2,7 +2,13 @@ import isCryptoApiAvailable from "@/is_crypto_api_available";
 
 export const digest_algorithm = "SHA-256" as const;
 
-export async function sha256_digest(code_verifier: string): Promise<string> {
+/**
+ * Computes the SHA-256 digest of the input and returns it as a
+ * standard base64 string (RFC 4648 §4, with `+`, `/`, and `=` padding).
+ * Picks the WebCrypto implementation in secure contexts and falls back
+ * to crypto-js in insecure HTTP contexts (both return standard base64).
+ */
+async function sha256_standard_base64(code_verifier: string): Promise<string> {
   let sha256: (code_verifier: string) => Promise<string>;
   try {
     if (isCryptoApiAvailable()) {
@@ -27,8 +33,31 @@ export async function sha256_digest(code_verifier: string): Promise<string> {
     throw new TypeError("Expected output to be a string!");
   }
 
-  // url_encode
+  return output;
+}
+
+/**
+ * Legacy SchemaVaults challenge encoding. NOT RFC 7636 base64url: every
+ * character outside the base64url alphabet — `+`, `/`, AND the trailing
+ * `=` padding — is replaced with `_`, yielding a 44-char string where a
+ * spec-compliant client produces 43 chars. Kept byte-for-byte stable
+ * because deployed SDK clients generate challenges with this exact
+ * function; server-side verification accepts this encoding alongside
+ * the standard one (see PKCE_ProofKeyManager.doesVerifierMatchChallenge).
+ */
+export async function sha256_digest(code_verifier: string): Promise<string> {
+  const output: string = await sha256_standard_base64(code_verifier);
   return output.replace(/[^A-Za-z0-9_-]/g, "_");
+}
+
+/**
+ * Strict RFC 7636 §4.2 / RFC 4648 §5 base64url (no padding) encoding of
+ * the SHA-256 digest — the encoding standard OAuth2/OIDC clients send as
+ * their `code_challenge`.
+ */
+export async function sha256_base64url(code_verifier: string): Promise<string> {
+  const output: string = await sha256_standard_base64(code_verifier);
+  return output.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 export default sha256_digest;

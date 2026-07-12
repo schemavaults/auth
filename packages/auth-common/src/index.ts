@@ -22,6 +22,11 @@ export type * from "./middleware";
 export * from "./pkce";
 export type * from "./pkce";
 
+export * from "./oidc";
+export type * from "./oidc";
+
+export { sha256_digest, sha256_base64url } from "./sha256_digest";
+
 export {
   authenticateResultSchema,
   authenticatedAuthenticateResultSchema,

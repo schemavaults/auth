@@ -2,7 +2,10 @@ import "server-only";
 import { type NextRequest, NextResponse } from "next/server";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import { ServerlessDatabase } from "@/lib/auth-db";
-import { isValidApiServerId } from "@schemavaults/app-definitions";
+import {
+  OIDC_USERINFO_AUDIENCE_ID,
+  isValidApiServerId,
+} from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import verifyJwksAccessAssertion from "./verifyJwksAccessAssertion";
 import captureServerException from "@/lib/captureServerException";
@@ -19,6 +22,15 @@ export async function GET(
 
   if (audience === getAuthServerAppId()) {
     return NextResponse.json({ error: "The auth server does not export its JWKS." }, { status: 400 });
+  }
+
+  // The reserved OIDC audience is likewise never exportable here: this
+  // endpoint ships the PRIVATE JWE decryption key to trusted resource
+  // servers, and the `oidc-userinfo` decryption key guards the tokens
+  // redeemed at /api/oidc/userinfo. The public verification keys are
+  // served (unauthenticated) at /api/oidc/jwks instead.
+  if (audience === OIDC_USERINFO_AUDIENCE_ID) {
+    return NextResponse.json({ error: "The auth server does not export the OIDC userinfo JWKS." }, { status: 400 });
   }
 
   await using dbh = ServerlessDatabase.createDBH();

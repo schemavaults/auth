@@ -73,12 +73,17 @@ export interface ISchemaVaultsAuthClient {
   // verified at the token-exchange step. Pass the same value the SDK
   // sent to `/auth/login?redirect_uri=…`. Use `null` only for the auth
   // server's own /account flow (no third-party callback).
+  //
+  // `oidc` carries the OIDC bridge context (nonce + requested scope)
+  // when the flow entered through the auth server's GET
+  // /api/oidc/authorize endpoint; omit / pass null everywhere else.
   sendAuthenticateRequest: (
     authentication_type: AuthenticationOutcomeType,
     client_app_id: AppId,
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
     redirect_uri: string | null,
+    oidc?: { nonce: string | null; scope: string } | null,
   ) => Promise<AuthenticateResult>;
 
   /**

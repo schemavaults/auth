@@ -17,6 +17,12 @@ export interface IGenerateAccessTokenOpts {
   user: UserData;
   user_organizations: readonly string[];
   environment: SchemaVaultsAppEnvironment;
+  /**
+   * Space-delimited granted OIDC scopes to embed as the token's optional
+   * `scope` claim. Only the OIDC surface sets this (audience
+   * `oidc-userinfo`), where /api/oidc/userinfo filters claims by it.
+   */
+  scope?: string;
 }
 
 export default async function generateAccessToken({
@@ -26,6 +32,7 @@ export default async function generateAccessToken({
   user,
   user_organizations,
   environment,
+  scope,
 }: IGenerateAccessTokenOpts): Promise<AccessToken> {
   if (!appIdSchema.safeParse(client_app_id).success) {
     throw new TypeError("Invalid client app ID");
@@ -49,6 +56,7 @@ export default async function generateAccessToken({
   });
   const token: AccessToken = await jwt_factory.access(
     getTokenAudienceForApiServerId(audience_id, environment),
+    scope ? { scope } : undefined,
   );
   return token;
 }

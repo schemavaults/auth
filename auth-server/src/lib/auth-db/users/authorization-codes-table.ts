@@ -20,6 +20,18 @@ export const authorizationCodeRecordSchema = z
     // cannot reach the DB even if a server-side caller skips its own
     // body-schema check.
     redirect_uri: z.string().url().max(2048).nullable().optional(),
+    // OIDC replay nonce (OIDC Core §3.1.2.1) bound at issuance; echoed as
+    // an id_token claim at redemption. Null for non-OIDC flows and OIDC
+    // requests that omitted it. Printable-ASCII bound mirrors
+    // oidcNonceSchema in @schemavaults/auth-common.
+    nonce: z.string().min(1).max(512).nullable().optional(),
+    // Granted OIDC scopes (space-delimited, RFC 6749 §3.3), e.g.
+    // "openid email". Null for non-OIDC flows.
+    scope: z.string().max(256).nullable().optional(),
+    // Which surface minted the code: OIDC codes are redeemable only at
+    // /api/oidc/token, custom-surface codes only at the legacy token
+    // routes. Defaults false in the DB (migration 00029).
+    oidc: z.boolean().nullable().optional(),
   })
   .required({
     authorization_code: true,

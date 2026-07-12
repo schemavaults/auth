@@ -275,4 +275,51 @@ describe("JWT Generation & Decoding", () => {
       "Expected an error to be thrown, but one was not!",
     ).toBeTrue();
   });
+
+  it("round-trips the optional OIDC scope claim on access tokens", async () => {
+    const user: UserData = new MockUser();
+    const now = Date.now();
+    const oidc_audience = "oidc-userinfo";
+
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: oidc_audience,
+      environment,
+    });
+
+    const generateOptions: GenerateJWTOptions<"access"> = {
+      type: "access",
+      user,
+      audience: oidc_audience,
+      iat: now,
+      client_app_id: crypto.randomUUID(),
+      auth_server_url,
+      jwt_keys,
+      env,
+      scope: "openid email",
+    };
+
+    const jwt = await generateJWT(generateOptions);
+    const decoded = await decodeJWT({
+      jwt: jwt.token,
+      type: "access",
+      audience: oidc_audience,
+      jwt_keys,
+      env,
+    });
+    expect(decoded.aud).toBe(oidc_audience);
+    expect(decoded.scope).toBe("openid email");
+
+    // Tokens minted without a scope stay scope-free (strict schema)
+    const { scope: _unused, ...withoutScope } = generateOptions;
+    void _unused;
+    const plain_jwt = await generateJWT(withoutScope);
+    const plain_decoded = await decodeJWT({
+      jwt: plain_jwt.token,
+      type: "access",
+      audience: oidc_audience,
+      jwt_keys,
+      env,
+    });
+    expect(plain_decoded.scope).toBeUndefined();
+  });
 });

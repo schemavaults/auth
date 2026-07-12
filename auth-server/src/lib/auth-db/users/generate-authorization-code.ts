@@ -8,6 +8,17 @@ import {
 } from "@schemavaults/auth-common";
 import { type AuthorizationCodeRecord } from "./authorization-codes-table";
 
+/**
+ * OIDC issuance context (only set by the parallel OIDC surface). When
+ * present, the code row is flagged `oidc: true` so it can only be
+ * redeemed at POST /api/oidc/token, and the nonce/scope are stored for
+ * echo into the id_token at redemption.
+ */
+export interface OidcAuthorizationCodeContext {
+  nonce: string | null;
+  scope: string;
+}
+
 export async function generateAuthorizationCode(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   uid: string,
@@ -16,7 +27,8 @@ export async function generateAuthorizationCode(
   code_challenge_method: "S256",
   challenge_time: number,
   redirect_uri: string | null,
-  debug: boolean = false
+  debug: boolean = false,
+  oidc: OidcAuthorizationCodeContext | null = null,
 ): Promise<string> {
   if (debug) {
     console.log(
@@ -67,6 +79,9 @@ export async function generateAuthorizationCode(
       used_at: null,
       challenge_time,
       redirect_uri,
+      nonce: oidc ? oidc.nonce : null,
+      scope: oidc ? oidc.scope : null,
+      oidc: oidc !== null,
     };
 
     if (debug) {

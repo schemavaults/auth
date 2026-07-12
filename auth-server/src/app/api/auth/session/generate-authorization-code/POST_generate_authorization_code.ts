@@ -10,6 +10,10 @@ import { appIdSchema } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
+import {
+  oidcNonceSchema,
+  parseAndGrantScopes,
+} from "@schemavaults/auth-common";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 
 const requestBodySchema = z
@@ -23,6 +27,11 @@ const requestBodySchema = z
     // auth server itself is the requesting app (the /account flow has
     // no third-party callback to bind).
     redirect_uri: z.string().url().nullable().optional(),
+    // OIDC surface context (set only when the flow entered through
+    // GET /api/oidc/authorize); see handle_login.ts.
+    oidc: z.literal(true).optional(),
+    nonce: oidcNonceSchema.nullable().optional(),
+    scope: z.string().max(256).nullable().optional(),
   })
   .required({
     client_app_id: true,
@@ -30,7 +39,15 @@ const requestBodySchema = z
     code_challenge_method: true,
     challenge_time: true
   })
-  .strict();
+  .strict()
+  .refine(
+    (body) =>
+      !body.oidc ||
+      (typeof body.redirect_uri === "string" &&
+        typeof body.scope === "string" &&
+        parseAndGrantScopes(body.scope).hasOpenid),
+    "OIDC flows require a third-party redirect_uri and a scope including 'openid'",
+  );
 
 export async function POST_generate_authorization_code(
   request: NextRequest,
@@ -106,6 +123,16 @@ export async function POST_generate_authorization_code(
         );
       }
 
+      // Granted scopes are re-derived server-side (never trusted
+      // verbatim); the schema refinement guaranteed `openid` is present.
+      const oidc_context: { nonce: string | null; scope: string } | null =
+        body.oidc
+          ? {
+              nonce: body.nonce ?? null,
+              scope: parseAndGrantScopes(body.scope).granted.join(" "),
+            }
+          : null;
+
       try {
         const authorization_code = await generateAuthorizationCode(
           dbh.db,
@@ -116,6 +143,7 @@ export async function POST_generate_authorization_code(
           body.challenge_time,
           presentedRedirectUri,
           environment === "development",
+          oidc_context,
         );
 
         return NextResponse.json({

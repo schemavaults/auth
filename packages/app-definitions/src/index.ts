@@ -75,6 +75,13 @@ export { getSchemaVaultsAuthAppDefinition } from "./get-schemavaults-auth-app-de
 export { getSchemaVaultsAuthApiDefinition } from "./get-schemavaults-auth-api-definition";
 
 export {
+  OIDC_USERINFO_AUDIENCE_ID,
+  getOidcUserinfoAudienceId,
+} from "./oidc-userinfo-audience";
+
+export { getOidcUserinfoApiDefinition } from "./get-oidc-userinfo-api-definition";
+
+export {
   getTokenAudienceForApiServerId,
   getApiServerIdForTokenAudience,
 } from "./audience-translation";

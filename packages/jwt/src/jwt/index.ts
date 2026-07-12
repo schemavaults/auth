@@ -12,6 +12,7 @@ export {
   generateJwtSigningKeyPair,
   generateJwtContentEncryptionKeyPair,
   to_public_jwks,
+  to_public_verification_jwks,
   importAsymmetricJWK,
   jsonSerializedJwtKeySchema,
   PEMFormat,
@@ -19,6 +20,12 @@ export {
   SigningKeyPairFactory,
 } from "./jwt_keys";
 export type * from "./jwt_keys";
+
+export { generateIdToken, ID_TOKEN_EXPIRY } from "./generate_id_token";
+export type {
+  GenerateIdTokenOptions,
+  GeneratedIdToken,
+} from "./generate_id_token";
 
 export { getKeysetIdFromToken } from "./get_keyset_id_from_token";
 export { default as getAudienceFromToken } from "./get_audience_from_token";
