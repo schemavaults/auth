@@ -29,7 +29,6 @@
       ],
       "@/get-app-environment": ["./src/env/get-app-environment"],
     },
-    "baseUrl": ".",
     "rootDir": "./src",
   },
   "include": ["src"],

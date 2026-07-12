@@ -6,15 +6,8 @@
     "target": "ES2015",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "downlevelIteration": true,
     "sourceMap": true,
     "types": ["cypress", "node"],
-    "paths": {
-      "@/actions/*": [
-        "@schemavaults/cypress-e2e-auth-tests-helper-commands/actions/*",
-      ],
-    },
-    "baseUrl": ".",
   },
   "include": ["cypress/**/*.ts", "cypress.config.ts", "e2e-auth-tests-cli.ts"],
   "exclude": ["node_modules", "dist"],

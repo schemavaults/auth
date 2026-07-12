@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/trpc-backend-init",
   "description": "tRPC Server-side Router Factory",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "private": false,
   "license": "UNLICENSED",
   "repository": {
@@ -11,9 +11,9 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "bun-types": "1.3.14",
-    "tsc-alias": "1.8.16"
+    "tsc-alias": "1.9.0"
   },
   "peerDependencies": {
     "@trpc/server": "11.16.0",

@@ -6,6 +6,7 @@
     "target": "esnext",
     "module": "ESNext",
     "outDir": "dist",
+    "rootDir": "./src",
     "declarationDir": "dist",
     "lib": ["ESNext"],
     "skipLibCheck": true,
@@ -18,7 +19,6 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "baseUrl": ".",
     "composite": false
   },
   "include": ["src"],

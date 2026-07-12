@@ -7,7 +7,7 @@
     "directory": "tests/e2e-auth-tests"
   },
   "dependencies": {
-    "cypress": "15.12.0",
+    "cypress": "15.18.1",
     "commander": "14.0.3",
     "otplib": "13.4.0",
     "@schemavaults/jwt": "workspace:*",
@@ -16,8 +16,8 @@
     "@schemavaults/cypress-e2e-auth-tests-helper-commands": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
-    "@types/node": "24.4.0"
+    "typescript": "6.0.3",
+    "@types/node": "24.13.3"
   },
   "scripts": {
     "open": "bun run cy:open",

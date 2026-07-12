@@ -17,7 +17,6 @@
       "@/*": ["./src/*"],
     },
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "rootDir": "./src",
   },
   "include": ["src"],

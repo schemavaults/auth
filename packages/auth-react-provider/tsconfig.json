@@ -6,6 +6,7 @@
     "target": "esnext",
     "module": "ESNext",
     "outDir": "dist",
+    "rootDir": "./src",
     "declarationDir": "dist",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
@@ -22,7 +23,6 @@
       "@/subproviders/*": ["./src/subproviders/*"],
       "@/lib/*": ["./src/lib/*"]
     },
-    "baseUrl": ".",
     "composite": false,
     "jsx": "react-jsx",
     "noUncheckedIndexedAccess": true
