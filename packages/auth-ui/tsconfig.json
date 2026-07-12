@@ -6,6 +6,7 @@
     "target": "esnext",
     "module": "ESNext",
     "outDir": "dist",
+    "rootDir": "./src",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "allowJs": false,
