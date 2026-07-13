@@ -22,6 +22,7 @@ import type { useRouter } from "next/navigation";
 import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
+import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface PendingAuthorizationState {
   authorization_code: string;
@@ -223,10 +224,13 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   // flow has no entry params) a platform-synthesized fallback is used,
   // and the scope falls back to the platform default.
   const url_nonce = searchParams.get("nonce");
+  // uuidSync() (not crypto.randomUUID) so the fallback works in insecure
+  // browser contexts (non-localhost http://) where crypto.randomUUID is
+  // undefined — it falls back to uuid's v4() there.
   const flow_nonce: string =
     url_nonce && url_nonce.length > 0
       ? url_nonce
-      : `${SYNTHESIZED_NONCE_PREFIX}${crypto.randomUUID()}`;
+      : `${SYNTHESIZED_NONCE_PREFIX}${uuidSync()}`;
   const url_scope = searchParams.get("scope");
   const flow_scope: string =
     url_scope && url_scope.length > 0 ? url_scope : DEFAULT_AUTH_SCOPE;

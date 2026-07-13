@@ -28,6 +28,7 @@ import {
   SYNTHESIZED_NONCE_PREFIX,
   parseOAuth2State,
 } from "@schemavaults/auth-common";
+import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface AppAuthorizationConsentScreenProps {
   app_id: string;
@@ -130,10 +131,12 @@ export function AppAuthorizationConsentScreen({
       // flow supplied them; platform fallbacks otherwise (mirrors
       // handle-auth-form-submit.ts).
       const url_nonce = searchParams.get("nonce");
+      // uuidSync() (not crypto.randomUUID) for the insecure-browser-context
+      // fallback — see handle-auth-form-submit.ts.
       const flow_nonce: string =
         url_nonce && url_nonce.length > 0
           ? url_nonce
-          : `${SYNTHESIZED_NONCE_PREFIX}${crypto.randomUUID()}`;
+          : `${SYNTHESIZED_NONCE_PREFIX}${uuidSync()}`;
       const url_scope = searchParams.get("scope");
       const flow_scope: string =
         url_scope && url_scope.length > 0 ? url_scope : DEFAULT_AUTH_SCOPE;

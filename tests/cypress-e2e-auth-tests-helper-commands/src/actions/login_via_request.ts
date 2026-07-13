@@ -55,7 +55,9 @@ export default function login_via_request(
             code_challenge: challenge.code_challenge,
             challenge_time: challenge.challenge_time,
             // scope + nonce are required, first-class login parameters.
-            nonce: crypto.randomUUID(),
+            // crypto.randomUUID() is unavailable in the spec's browser
+            // context (insecure http:// in CI); use clock + Math.random.
+            nonce: `e2e-nonce-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             scope: "openid email profile",
           },
         })

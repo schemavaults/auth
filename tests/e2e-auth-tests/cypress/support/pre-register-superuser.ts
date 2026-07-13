@@ -35,7 +35,9 @@ async function preRegisterSuperuser(
       code_challenge: codeChallenge.code_challenge,
       challenge_time,
       // scope + nonce are required, first-class register parameters.
-      nonce: crypto.randomUUID(),
+      // Use clock + Math.random for the nonce rather than
+      // crypto.randomUUID() so this stays valid in every context.
+      nonce: `e2e-nonce-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       scope: "openid email profile",
     }),
   });

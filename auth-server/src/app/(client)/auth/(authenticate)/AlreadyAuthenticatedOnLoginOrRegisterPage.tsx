@@ -21,6 +21,7 @@ import {
   type UserData,
 } from "@schemavaults/auth-common";
 import { getAuthServerUri } from "@/lib/auth_server_uri";
+import uuidSync from "@/lib/uuid/uuidSync";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
@@ -148,7 +149,9 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     redirectWithError(400, "bad_request");
   }
   const grant_context = {
-    nonce: url_nonce ?? `${SYNTHESIZED_NONCE_PREFIX}${crypto.randomUUID()}`,
+    // uuidSync() rather than crypto.randomUUID for parity with the client
+    // fallback paths (this runs server-side where either works).
+    nonce: url_nonce ?? `${SYNTHESIZED_NONCE_PREFIX}${uuidSync()}`,
     scope: granted.join(" "),
   };
 
