@@ -54,6 +54,9 @@ export default function login_via_request(
             client_app_id: auth_app_id,
             code_challenge: challenge.code_challenge,
             challenge_time: challenge.challenge_time,
+            // scope + nonce are required, first-class login parameters.
+            nonce: crypto.randomUUID(),
+            scope: "openid email profile",
           },
         })
         .then((response): Cypress.Chainable<boolean> => {

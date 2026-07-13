@@ -9,14 +9,18 @@ import {
 import { type AuthorizationCodeRecord } from "./authorization-codes-table";
 
 /**
- * OIDC issuance context (only set by the parallel OIDC surface). When
- * present, the code row is flagged `oidc: true` so it can only be
- * redeemed at POST /api/oidc/token, and the nonce/scope are stored for
- * echo into the id_token at redemption.
+ * Grant context bound to every authorization code at issuance:
+ * - `nonce`: the login replay nonce, echoed back at redemption (as the
+ *   token-response `nonce` field on the custom surface; as the id_token
+ *   `nonce` claim on the OIDC surface, unless synthesized).
+ * - `scope`: the granted scopes (space-delimited), stamped on the
+ *   tokens minted at redemption.
+ * Nullable members exist only for defensive parsing of legacy rows —
+ * every new mint provides both.
  */
-export interface OidcAuthorizationCodeContext {
+export interface AuthorizationCodeGrantContext {
   nonce: string | null;
-  scope: string;
+  scope: string | null;
 }
 
 export async function generateAuthorizationCode(
@@ -28,7 +32,7 @@ export async function generateAuthorizationCode(
   challenge_time: number,
   redirect_uri: string | null,
   debug: boolean = false,
-  oidc: OidcAuthorizationCodeContext | null = null,
+  grant: AuthorizationCodeGrantContext,
 ): Promise<string> {
   if (debug) {
     console.log(
@@ -79,9 +83,8 @@ export async function generateAuthorizationCode(
       used_at: null,
       challenge_time,
       redirect_uri,
-      nonce: oidc ? oidc.nonce : null,
-      scope: oidc ? oidc.scope : null,
-      oidc: oidc !== null,
+      nonce: grant.nonce,
+      scope: grant.scope,
     };
 
     if (debug) {

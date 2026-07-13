@@ -14,6 +14,14 @@ export const OIDC_OPENID_SCOPE = "openid" as const;
 
 export const OIDC_SUPPORTED_SCOPES = ["openid", "email", "profile"] as const;
 
+/**
+ * Scope requested by default when a flow does not name one explicitly:
+ * the SDK's `authenticateWithRedirect`/`sendAuthenticateRequest`
+ * default, and the AuthForm's fallback for entry URLs without a
+ * `scope` parameter (e.g. the auth server's own /account flow).
+ */
+export const DEFAULT_AUTH_SCOPE = "openid email profile" as const;
+
 export type OidcSupportedScope = (typeof OIDC_SUPPORTED_SCOPES)[number];
 
 export interface ParsedOidcScopes {

@@ -65,3 +65,23 @@ export function parseOidcNonce(raw: unknown): string | null {
   }
   return parsed.data;
 }
+
+/**
+ * Prefix marking a nonce that was SYNTHESIZED by the auth platform
+ * itself (AuthForm / consent screen / already-authenticated page)
+ * because the flow's entry URL carried none — e.g. an OIDC relying
+ * party that legitimately omitted the optional `nonce` parameter, or a
+ * pre-upgrade SDK client. Synthesized nonces exist only to satisfy the
+ * login/register endpoints' hard `nonce` requirement uniformly.
+ *
+ * They are NEVER echoed into id_tokens: strict OIDC RP libraries
+ * (e.g. openid-client) reject an id_token that carries a `nonce` claim
+ * when the authorization request sent none.
+ */
+export const SYNTHESIZED_NONCE_PREFIX = "svsynth." as const;
+
+export function isSynthesizedNonce(nonce: string): boolean {
+  return (
+    typeof nonce === "string" && nonce.startsWith(SYNTHESIZED_NONCE_PREFIX)
+  );
+}

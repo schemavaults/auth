@@ -13,6 +13,7 @@ import {
   type UserData,
   userDataSchema,
 } from "@schemavaults/auth-common";
+import evaluateRequiredScopes from "./evaluate-required-scopes";
 import type {
   OrganizationID,
   OrganizationMembershipRoleType,
@@ -70,6 +71,15 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
     user: UserData,
     org_id: OrganizationID,
   ) => Promise<OrganizationMembershipRoleType | false>;
+  /**
+   * Scopes (from OIDC_SUPPORTED_SCOPES) that the presented token's
+   * `scope` claim must include, e.g. `["email"]`. A token without a
+   * scope claim (issued before scopes became first-class) grants NO
+   * scopes and is denied 403 whenever this list is non-empty. Unlike
+   * `required_organization`, there is no admin bypass: scopes describe
+   * what the TOKEN was granted, not who the user is.
+   */
+  required_scopes?: readonly string[];
   additional_token_sources?: PotentiallyValidTokenSource[];
   debug?: boolean;
 }
@@ -415,6 +425,40 @@ export function withAuthenticatedApiRouteGuard<
             success: false,
             error: true,
             message: "User is not a member of the required organization",
+          },
+          { status: 403 },
+        );
+      }
+    }
+
+    if (opts?.required_scopes && opts.required_scopes.length > 0) {
+      const scope_evaluation = evaluateRequiredScopes(
+        user.scope,
+        opts.required_scopes,
+      );
+      if (!scope_evaluation.ok) {
+        if (scope_evaluation.reason === "invalid_config") {
+          console.error(
+            "[withAuthenticatedApiRouteGuard] Invalid scope(s) in 'required_scopes':",
+            scope_evaluation.scopes,
+          );
+          return json(
+            {
+              success: false,
+              error: true,
+              message: "Server does not appear to be properly configured!",
+            },
+            { status: 500 },
+          );
+        }
+        console.warn(
+          `[withAuthenticatedApiRouteGuard] Token for user '${user.uid}' is missing required scope(s): ${scope_evaluation.scopes.join(", ")}`,
+        );
+        return json(
+          {
+            success: false,
+            error: true,
+            message: "Token is missing required scope(s)",
           },
           { status: 403 },
         );

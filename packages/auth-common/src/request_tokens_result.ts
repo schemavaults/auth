@@ -77,6 +77,12 @@ export function createRequestTokensResultSchema(
       ).optional(),
       userData: userDataSchema.optional(),
       userOrgs: organizationIdSchema.array().optional(),
+      // Echo of the login-time replay nonce bound to the redeemed
+      // authorization code — the custom surface's analogue of the OIDC
+      // id_token `nonce` claim; the SDK verifies it against the value it
+      // stored at redirect time. Absent on refresh grants and on codes
+      // minted before nonces became first-class.
+      nonce: z.string().min(1).max(512).optional(),
     })
     .required({
       success: true,

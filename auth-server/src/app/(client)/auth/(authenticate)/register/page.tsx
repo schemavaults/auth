@@ -11,7 +11,10 @@ import {
 import type { ServerRuntime } from "next/types";
 import {
   OAuth2StateValidationError,
+  OidcNonceValidationError,
+  parseAndGrantScopes,
   parseOAuth2State,
+  parseOidcNonce,
   type UserData,
 } from "@schemavaults/auth-common";
 import { doesSsrContextHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
@@ -85,6 +88,24 @@ export default async function RegisterPage(props: {
       );
       redirectWithError(400, "invalid_redirect_uri");
     }
+
+    // `scope` is a required entry parameter for third-party flows (the
+    // register POST hard-requires it); `nonce` is optional on the URL
+    // but validated when present. Mirrors login/page.tsx.
+    const raw_scope = typeof searchParams.scope === 'string' ? searchParams.scope : null;
+    if (!raw_scope || raw_scope.length > 256 || parseAndGrantScopes(raw_scope).granted.length === 0) {
+      console.warn("[RegisterPage] Third-party flow missing or invalid 'scope'");
+      redirectWithError(400, "bad_request");
+    }
+    try {
+      parseOidcNonce(searchParams.nonce);
+    } catch (e: unknown) {
+      if (e instanceof OidcNonceValidationError) {
+        console.warn("[RegisterPage] Rejecting invalid nonce:", e.reasons);
+        redirectWithError(400, "bad_request");
+      }
+      throw e;
+    }
   }
 
   // Validate OAuth2 `state` at the entry boundary. Malformed values
@@ -113,7 +134,6 @@ export default async function RegisterPage(props: {
       challenge_time_str: typeof searchParams.challenge_time === 'string' ? searchParams.challenge_time : null,
       redirect_uri: typeof searchParams.redirect_uri === 'string' ? searchParams.redirect_uri : null,
       state: parsedState,
-      oidc: typeof searchParams.oidc === 'string' ? searchParams.oidc : null,
       nonce: typeof searchParams.nonce === 'string' ? searchParams.nonce : null,
       scope: typeof searchParams.scope === 'string' ? searchParams.scope : null,
       debug

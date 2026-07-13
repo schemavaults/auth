@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { OidcNonceValidationError, parseOidcNonce } from "./nonce";
+import {
+  OidcNonceValidationError,
+  SYNTHESIZED_NONCE_PREFIX,
+  isSynthesizedNonce,
+  parseOidcNonce,
+} from "./nonce";
 
 describe("parseOidcNonce", () => {
   test("returns null for absent values", () => {
@@ -24,5 +29,21 @@ describe("parseOidcNonce", () => {
     expect(() => parseOidcNonce("line\nbreak")).toThrow(
       OidcNonceValidationError,
     );
+  });
+});
+
+describe("isSynthesizedNonce", () => {
+  test("recognizes platform-synthesized fallback nonces", () => {
+    const synthesized = `${SYNTHESIZED_NONCE_PREFIX}${crypto.randomUUID()}`;
+    expect(isSynthesizedNonce(synthesized)).toBe(true);
+    // A synthesized nonce must itself be a valid nonce (it is sent
+    // through the same required body field as RP-supplied values).
+    expect(parseOidcNonce(synthesized)).toBe(synthesized);
+  });
+
+  test("does not flag RP-supplied nonces", () => {
+    expect(isSynthesizedNonce(crypto.randomUUID())).toBe(false);
+    expect(isSynthesizedNonce("n-0S6_WzA2Mj")).toBe(false);
+    expect(isSynthesizedNonce("svsynthwithoutdot")).toBe(false);
   });
 });

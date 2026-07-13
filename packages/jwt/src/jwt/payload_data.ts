@@ -34,9 +34,11 @@ export function createJwtPayloadSchema(
       env: schemaVaultsAppEnvironmentSchema,
       jti: z.string().uuid().optional(),
       iat: z.number().nonnegative(), // unix seconds (jose's setIssuedAt output)
-      // Space-delimited granted OIDC scopes (RFC 6749 §3.3). Only set on
-      // access tokens minted by the OIDC surface (audience `oidc-userinfo`),
-      // where /api/oidc/userinfo uses it to filter the claims it returns.
+      // Space-delimited granted scopes (RFC 6749 §3.3). Set on every
+      // access/refresh token issued since scopes became first-class;
+      // kept optional so tokens issued before then remain decodable
+      // until they expire. /api/oidc/userinfo filters its claims by it
+      // and route guards enforce `required_scopes` against it.
       scope: z.string().max(256).optional(),
     })
     .required({

@@ -6,6 +6,7 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   accessTokenExpiry,
+  isSynthesizedNonce,
   type AccessToken,
   type RefreshToken,
   type RequestTokensResult,
@@ -126,10 +127,16 @@ export async function issueOidcTokens({
       await jwt_keys_manager.getFreshEnoughKeysetOrCreateNew(
         OIDC_USERINFO_AUDIENCE_ID,
       );
+    // Platform-synthesized fallback nonces (generated when the entry URL
+    // carried none) must NOT be echoed as an id_token claim: strict RP
+    // libraries reject an id_token with a nonce claim when their request
+    // sent none. RP-supplied nonces echo verbatim.
+    const id_token_nonce: string | null =
+      nonce && !isSynthesizedNonce(nonce) ? nonce : null;
     const { id_token } = await generateIdToken({
       user,
       client_id: client_app_id,
-      nonce,
+      nonce: id_token_nonce,
       scopes: scope.split(" "),
       jwt_keys: oidc_keyset,
       environment,

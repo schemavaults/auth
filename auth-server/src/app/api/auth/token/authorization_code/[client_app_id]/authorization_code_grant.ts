@@ -65,6 +65,8 @@ export async function handleAuthorizationCodeGrant(
   const challenge_time: number = body.challenge_time;
 
   let uid: string;
+  let consumed_nonce: string | null = null;
+  let consumed_scope: string | null = null;
   try {
     if (debug) {
       console.log(
@@ -91,23 +93,9 @@ export async function handleAuthorizationCodeGrant(
         },
       );
     }
-    // Surface isolation: authorization codes minted by the OIDC surface
-    // (GET /api/oidc/authorize) are redeemable only at POST
-    // /api/oidc/token, never at this custom endpoint.
-    if (result.oidc) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: true,
-          message:
-            "This authorization code must be redeemed at the OIDC token endpoint",
-        } satisfies RequestTokensResult,
-        {
-          status: 400,
-        },
-      );
-    }
     uid = result.uid;
+    consumed_nonce = result.nonce;
+    consumed_scope = result.scope;
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
       op_name: "handleAuthorizationCodeGrant.validateAndConsumeAuthorizationCode",
@@ -340,6 +328,9 @@ export async function handleAuthorizationCodeGrant(
         audiences: typeof audience === "string" ? [audience] : audience,
         generate_refresh,
         auth_jwt_manager: jwt_keys_manager,
+        // Carry-forward only: pre-upgrade code rows (≤10 min TTL) have
+        // no scope, and their tokens simply omit the claim.
+        scope: consumed_scope ?? undefined,
         tracking: {
           db: dbh.db,
           grant_type: "authorization_code",
@@ -367,6 +358,9 @@ export async function handleAuthorizationCodeGrant(
       tokenGenerationResult,
       secure: isHttpsOnly,
       hostname: getHostname(req),
+      // Echo the login-time replay nonce bound to the redeemed code so
+      // the SDK can verify the response belongs to this flow.
+      nonce: consumed_nonce,
       debug,
     })) satisfies NextResponse;
   } catch (e: unknown) {

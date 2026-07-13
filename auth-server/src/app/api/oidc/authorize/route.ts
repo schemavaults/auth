@@ -9,11 +9,10 @@ import validateOidcAuthorizeRequest from "@/lib/oidc/validate-authorize-request"
  * The OIDC authorization endpoint (RFC 6749 §3.1). Validates the
  * standard request parameters, then bridges into the platform's
  * existing login/consent/MFA UI by redirecting to /auth/login with the
- * custom-surface query parameters plus the OIDC extras (`oidc=1`,
- * `nonce`, `scope`). The login flow threads those through to the
- * authorization-code row, and in OIDC mode the callback emitters return
- * `?code=...&state=...&iss=...` to the RP instead of the custom
- * `authorization_code`/`challenge_time` parameters.
+ * platform query parameters (`scope`/`nonce` are first-class on every
+ * flow now — no discriminator needed). The login flow binds them to the
+ * authorization-code row, and every callback carries both the spec
+ * parameters (`code`/`state`/`iss`) and the legacy SDK parameters.
  *
  * `challenge_time` is an SDK-internal timestamp standard RPs don't
  * send; it is synthesized here (it does not enter the PKCE hash — it
@@ -42,7 +41,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (state) {
     bridge.searchParams.set("state", state);
   }
-  bridge.searchParams.set("oidc", "1");
   if (nonce) {
     bridge.searchParams.set("nonce", nonce);
   }

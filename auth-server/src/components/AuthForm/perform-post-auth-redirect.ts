@@ -24,10 +24,10 @@ export interface PerformPostAuthRedirectOptions {
   // OAuth2 `state` received from the client — echoed untouched on the
   // callback redirect for CSRF defence.
   state: string | null | undefined;
-  // OIDC mode: the flow entered through GET /api/oidc/authorize, so the
-  // callback must carry the spec parameter names (`code`/`state`/`iss`)
-  // instead of the custom-surface ones. See success-redirect.ts.
-  oidc?: boolean;
+  // Login replay nonce bound to the minted authorization code. Used by
+  // the account-page flow to verify the token-response echo; third-party
+  // flows verify in their own SDK context.
+  nonce: string;
   auth: ReturnType<typeof useAuth>;
   router: ReturnType<typeof useRouter>;
   toast: ReturnType<typeof useToast>["toast"];
@@ -45,6 +45,7 @@ export async function performPostAuthRedirect(
     code_verifier,
     redirect_uri,
     state,
+    nonce,
     auth,
     router,
     toast,
@@ -71,6 +72,8 @@ export async function performPostAuthRedirect(
         authorization_code,
         code_challenge.challenge_time,
         code_verifier.code_verifier,
+        undefined,
+        nonce,
       );
 
       router.push("/account");
@@ -92,7 +95,6 @@ export async function performPostAuthRedirect(
           code_challenge,
           app_environment: env,
           state,
-          oidc: opts.oidc ?? false,
           issuer: authClient?.auth_server_url ?? null,
         });
       } catch (e: unknown) {

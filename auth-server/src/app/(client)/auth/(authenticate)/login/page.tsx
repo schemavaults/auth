@@ -11,7 +11,10 @@ import determineOnSuccessfulAuthenticateAction from "../determineOnSuccessfulAut
 import type { ServerRuntime } from "next/types";
 import {
   OAuth2StateValidationError,
+  OidcNonceValidationError,
+  parseAndGrantScopes,
   parseOAuth2State,
+  parseOidcNonce,
   type UserData,
 } from "@schemavaults/auth-common";
 import { doesSsrContextHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
@@ -85,6 +88,26 @@ export default async function LoginPage(props: {
       );
       redirectWithError(400, "invalid_redirect_uri");
     }
+
+    // `scope` is a required entry parameter for third-party flows: the
+    // login POST hard-requires it, so reject up front rather than after
+    // the user has filled the form. Must grant at least one supported
+    // scope. `nonce` remains optional on the URL (OIDC RPs may omit it;
+    // the AuthForm synthesizes a fallback) but is validated when present.
+    const raw_scope = typeof searchParams.scope === 'string' ? searchParams.scope : null;
+    if (!raw_scope || raw_scope.length > 256 || parseAndGrantScopes(raw_scope).granted.length === 0) {
+      console.warn("[LoginPage] Third-party flow missing or invalid 'scope'");
+      redirectWithError(400, "bad_request");
+    }
+    try {
+      parseOidcNonce(searchParams.nonce);
+    } catch (e: unknown) {
+      if (e instanceof OidcNonceValidationError) {
+        console.warn("[LoginPage] Rejecting invalid nonce:", e.reasons);
+        redirectWithError(400, "bad_request");
+      }
+      throw e;
+    }
   }
 
   // Validate OAuth2 `state` at the entry boundary. Malformed values
@@ -113,7 +136,6 @@ export default async function LoginPage(props: {
       challenge_time_str: typeof searchParams.challenge_time === 'string' ? searchParams.challenge_time : null,
       redirect_uri: typeof searchParams.redirect_uri === 'string' ? searchParams.redirect_uri : null,
       state: parsedState,
-      oidc: typeof searchParams.oidc === 'string' ? searchParams.oidc : null,
       nonce: typeof searchParams.nonce === 'string' ? searchParams.nonce : null,
       scope: typeof searchParams.scope === 'string' ? searchParams.scope : null,
       debug

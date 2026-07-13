@@ -14,6 +14,7 @@ import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import {
   OAuth2StateValidationError,
   OidcNonceValidationError,
+  SYNTHESIZED_NONCE_PREFIX,
   parseAndGrantScopes,
   parseOAuth2State,
   parseOidcNonce,
@@ -37,10 +38,9 @@ export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   // OAuth2 `state` (RFC 6749 §10.12) — echoed back on the callback URL
   // so the client can verify its stored CSRF nonce.
   state: string | null;
-  // OIDC bridge params (set by GET /api/oidc/authorize): when `oidc` is
-  // "1", the minted code is flagged OIDC-only (with nonce/scope stored
-  // on the row) and the callback uses `code`/`state`/`iss` parameters.
-  oidc: string | null;
+  // Login replay nonce + requested scopes (first-class on every flow).
+  // A null nonce gets a platform-synthesized fallback; a null/invalid
+  // scope is rejected (the entry pages already gate this).
   nonce: string | null;
   scope: string | null;
 }
@@ -123,34 +123,34 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
   }
   const code_challenge_method: "S256" = opts.code_challenge_method;
 
-  // OIDC bridge validation: nonce must be well-formed and the scope must
-  // include `openid` (both were validated at /api/oidc/authorize; this
-  // re-check guards direct navigations that set `oidc=1` by hand).
-  const is_oidc_flow: boolean = opts.oidc === "1";
-  let oidc_context: { nonce: string | null; scope: string } | null = null;
-  if (is_oidc_flow) {
-    let oidc_nonce: string | null;
-    try {
-      oidc_nonce = parseOidcNonce(opts.nonce);
-    } catch (e: unknown) {
-      if (e instanceof OidcNonceValidationError) {
-        console.warn(
-          "[AlreadyAuthenticatedOnLoginOrRegisterPage] Rejecting invalid OIDC nonce:",
-          e.reasons,
-        );
-        redirectWithError(400, "bad_request");
-      }
-      throw e;
-    }
-    const { granted, hasOpenid } = parseAndGrantScopes(opts.scope ?? undefined);
-    if (!hasOpenid) {
+  // Grant-context validation (first-class on every flow): nonce must be
+  // well-formed when present (fallback synthesized when absent), and the
+  // scope must grant at least one supported scope. The entry pages
+  // already 400 on these; this re-check guards direct navigations.
+  let url_nonce: string | null;
+  try {
+    url_nonce = parseOidcNonce(opts.nonce);
+  } catch (e: unknown) {
+    if (e instanceof OidcNonceValidationError) {
       console.warn(
-        "[AlreadyAuthenticatedOnLoginOrRegisterPage] OIDC flow missing 'openid' scope",
+        "[AlreadyAuthenticatedOnLoginOrRegisterPage] Rejecting invalid nonce:",
+        e.reasons,
       );
       redirectWithError(400, "bad_request");
     }
-    oidc_context = { nonce: oidc_nonce, scope: granted.join(" ") };
+    throw e;
   }
+  const { granted } = parseAndGrantScopes(opts.scope ?? undefined);
+  if (granted.length === 0) {
+    console.warn(
+      "[AlreadyAuthenticatedOnLoginOrRegisterPage] Flow missing a supported scope",
+    );
+    redirectWithError(400, "bad_request");
+  }
+  const grant_context = {
+    nonce: url_nonce ?? `${SYNTHESIZED_NONCE_PREFIX}${crypto.randomUUID()}`,
+    scope: granted.join(" "),
+  };
 
   if (!isAppAuthorized) {
     // App NOT authorized — show consent screen
@@ -175,7 +175,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     challenge_time,
     redirect_uri,
     opts.debug,
-    oidc_context,
+    grant_context,
   );
   if (typeof authorization_code !== 'string') {
     console.error("Expected generated authorization code to be a string!");
@@ -203,21 +203,19 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     if (!redirect_uri) {
       redirectWithError(400, "bad_request");
     }
+    // One callback, both parameter shapes: the spec params (`code` +
+    // `iss`, RFC 9207) for standard OIDC relying parties AND the legacy
+    // SDK params (`authorization_code` + `challenge_time` +
+    // `code_challenge_method`) for deployed SchemaVaults SDK clients.
+    // `state` is echoed once for both.
     const queryParams = new URLSearchParams();
-    if (is_oidc_flow) {
-      // OIDC callback shape: `code` + `state` + `iss` (RFC 9207).
-      queryParams.set('code', authorization_code);
-      if (echoedState) {
-        queryParams.set('state', echoedState);
-      }
-      queryParams.set('iss', getAuthServerUri());
-    } else {
-      queryParams.set('challenge_time', challenge_time.toString());
-      queryParams.set('code_challenge_method', 'S256');
-      queryParams.set('authorization_code', authorization_code);
-      if (echoedState) {
-        queryParams.set('state', echoedState);
-      }
+    queryParams.set('code', authorization_code);
+    queryParams.set('iss', getAuthServerUri());
+    queryParams.set('authorization_code', authorization_code);
+    queryParams.set('challenge_time', challenge_time.toString());
+    queryParams.set('code_challenge_method', 'S256');
+    if (echoedState) {
+      queryParams.set('state', echoedState);
     }
     return redirect(`${redirect_uri}?${queryParams.toString()}`);
   } else if (on_successful_authenticate === "send-authorization-code-to-native-app-then-close") {

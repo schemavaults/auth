@@ -22,11 +22,14 @@ export interface ISendAuthenticateRequestOptions {
   // exact-string compare in `handleSuccessfulAuthentication` has a
   // value to match. Null only for the auth server's own /account flow.
   redirect_uri: string | null;
-  // OIDC surface context (set only when the flow entered through the
-  // auth server's GET /api/oidc/authorize bridge). Flags the minted
-  // authorization code as OIDC-only and carries the RP's nonce and the
-  // requested scope for the server to stamp on the code row.
-  oidc?: { nonce: string | null; scope: string } | null;
+  // Login replay nonce — REQUIRED on every flow. Bound server-side to
+  // the minted authorization code and echoed back in the token-exchange
+  // response (custom surface) / id_token claim (OIDC surface).
+  nonce: string;
+  // Space-delimited requested scopes (RFC 6749 §3.3) — REQUIRED on
+  // every flow; the server re-derives the granted subset and stamps it
+  // on the code row and issued tokens.
+  scope: string;
 }
 
 export type { ISendAuthenticateRequestOptions as SendAuthenticateRequestOptions };

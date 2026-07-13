@@ -20,17 +20,24 @@ export const authorizationCodeRecordSchema = z
     // cannot reach the DB even if a server-side caller skips its own
     // body-schema check.
     redirect_uri: z.string().url().max(2048).nullable().optional(),
-    // OIDC replay nonce (OIDC Core §3.1.2.1) bound at issuance; echoed as
-    // an id_token claim at redemption. Null for non-OIDC flows and OIDC
-    // requests that omitted it. Printable-ASCII bound mirrors
-    // oidcNonceSchema in @schemavaults/auth-common.
+    // Login replay nonce (OIDC Core §3.1.2.1 semantics, first-class on
+    // every flow) bound at issuance; echoed at redemption as the custom
+    // token-response `nonce` field / OIDC id_token claim. Every new row
+    // has one (possibly platform-synthesized, `svsynth.` prefix); kept
+    // nullable so pre-upgrade rows (≤10 min TTL) still parse.
+    // Printable-ASCII bound mirrors oidcNonceSchema in auth-common.
     nonce: z.string().min(1).max(512).nullable().optional(),
-    // Granted OIDC scopes (space-delimited, RFC 6749 §3.3), e.g.
-    // "openid email". Null for non-OIDC flows.
+    // Granted scopes (space-delimited, RFC 6749 §3.3), e.g.
+    // "openid email". Every new row has one; nullable for pre-upgrade
+    // rows only.
     scope: z.string().max(256).nullable().optional(),
-    // Which surface minted the code: OIDC codes are redeemable only at
-    // /api/oidc/token, custom-surface codes only at the legacy token
-    // routes. Defaults false in the DB (migration 00029).
+    /**
+     * @deprecated The surface-discriminator column was dropped in
+     * migration 00030 (codes are redeemable at either token endpoint
+     * now). The key is kept one release so `selectAll()` + `.strict()`
+     * row parses succeed regardless of whether the migration has run
+     * yet. Never written. Remove next release.
+     */
     oidc: z.boolean().nullable().optional(),
   })
   .required({

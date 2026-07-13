@@ -39,9 +39,10 @@ export interface ISchemaVaultsAuthClient {
   app_id: AppId;
   auth_server_url: string;
 
-  // Authenticate the user
-  login: () => Promise<void>;
-  register: () => Promise<void>;
+  // Authenticate the user. `scope` (space-delimited, RFC 6749 §3.3)
+  // defaults to DEFAULT_AUTH_SCOPE ("openid email profile").
+  login: (opts?: { scope?: string }) => Promise<void>;
+  register: (opts?: { scope?: string }) => Promise<void>;
 
   successful_logout_redirect_uri: string | undefined;
 
@@ -74,16 +75,17 @@ export interface ISchemaVaultsAuthClient {
   // sent to `/auth/login?redirect_uri=…`. Use `null` only for the auth
   // server's own /account flow (no third-party callback).
   //
-  // `oidc` carries the OIDC bridge context (nonce + requested scope)
-  // when the flow entered through the auth server's GET
-  // /api/oidc/authorize endpoint; omit / pass null everywhere else.
+  // `nonce` (REQUIRED) is the login replay nonce bound to the minted
+  // code and echoed back in the token-exchange response; `scope`
+  // (space-delimited) defaults to DEFAULT_AUTH_SCOPE when omitted.
   sendAuthenticateRequest: (
     authentication_type: AuthenticationOutcomeType,
     client_app_id: AppId,
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
     redirect_uri: string | null,
-    oidc?: { nonce: string | null; scope: string } | null,
+    nonce: string,
+    scope?: string,
   ) => Promise<AuthenticateResult>;
 
   /**
@@ -216,11 +218,16 @@ export interface ISchemaVaultsAuthClient {
   // observed on the callback URL. The SDK compares it to the value it
   // persisted before the authorize redirect and rejects any mismatch as
   // a CSRF / session-fixation attempt (RFC 6749 §10.12).
+  // `expected_nonce` is the login replay nonce for same-context flows
+  // (the auth server's own /account login); redirect flows load their
+  // stored nonce internally. The token response's `nonce` echo must
+  // match or the exchange is rejected as a possible replay.
   handleSuccessfulAuthentication: (
     authorization_code: string,
     challenge_time: number,
     code_verifier?: string,
     received_state?: string | null,
+    expected_nonce?: string | null,
   ) => Promise<void>;
 
   getAccessTokenFromCache: (token_id: string) => AccessToken | null;

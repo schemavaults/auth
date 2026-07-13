@@ -65,11 +65,12 @@ export async function OPTIONS(): Promise<NextResponse> {
 
 /**
  * The OIDC token endpoint (RFC 6749 §3.2, form-encoded): exchanges an
- * OIDC-minted authorization code (grant_type=authorization_code) or an
- * OIDC refresh token (grant_type=refresh_token) for the standard token
+ * authorization code (grant_type=authorization_code) or a scope-bearing
+ * refresh token (grant_type=refresh_token) for the standard token
  * response — with the refresh token inlined and an id_token on the code
- * grant. Codes and refresh tokens from the custom surface are rejected,
- * keeping the two surfaces isolated.
+ * grant. Scope/nonce are first-class on every login flow, so any code
+ * is redeemable here regardless of which surface initiated the login
+ * (PKCE + client + redirect_uri binding are the security boundary).
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
@@ -187,14 +188,6 @@ async function handleOidcAuthorizationCodeGrant(
     return oidcTokenErrorResponse(
       "invalid_grant",
       "Invalid, expired, or already-used authorization code (or PKCE/redirect_uri mismatch).",
-    );
-  }
-  // Surface isolation: codes minted by the custom (non-OIDC) flow are
-  // not redeemable here.
-  if (!consumed.oidc) {
-    return oidcTokenErrorResponse(
-      "invalid_grant",
-      "This authorization code was not issued by the OIDC authorization endpoint.",
     );
   }
 

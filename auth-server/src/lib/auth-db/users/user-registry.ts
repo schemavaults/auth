@@ -22,7 +22,7 @@ import {
 import { upgradePasswordHash as upgradePasswordHashFn } from "./upgrade-password-hash";
 import {
   generateAuthorizationCode as generateAuthorizationCodeFn,
-  type OidcAuthorizationCodeContext,
+  type AuthorizationCodeGrantContext,
 } from "./generate-authorization-code";
 import {
   validateAndConsumeAuthorizationCode as validateAndConsumeAuthorizationCodeFn,
@@ -105,7 +105,7 @@ export class UserRegistry {
     code_challenge_method: "S256",
     challenge_time: number,
     redirect_uri: string | null,
-    oidc: OidcAuthorizationCodeContext | null = null,
+    grant: AuthorizationCodeGrantContext,
   ): Promise<string> {
     return generateAuthorizationCodeFn(
       this.db,
@@ -116,7 +116,7 @@ export class UserRegistry {
       challenge_time,
       redirect_uri,
       this.debug,
-      oidc,
+      grant,
     );
   }
 

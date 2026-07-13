@@ -46,6 +46,9 @@ export default function register_via_request(
         client_app_id,
         code_challenge: challenge.code_challenge,
         challenge_time: challenge.challenge_time,
+        // scope + nonce are required, first-class register parameters.
+        nonce: crypto.randomUUID(),
+        scope: "openid email profile",
       };
       if (invite_code) {
         body.invite_code = invite_code;

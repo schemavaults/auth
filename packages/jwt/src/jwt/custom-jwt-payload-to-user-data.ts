@@ -12,5 +12,11 @@ export function customJwtPayloadToUserData(
     admin: payload.admin,
     disabled: payload.disabled,
     created_at: payload.created_at,
+    // Carry the token's granted scopes through so route guards can
+    // enforce `required_scopes`. Absent on tokens issued before scopes
+    // became first-class (userDataSchema keeps the field optional).
+    ...(typeof payload.scope === "string" && payload.scope.length > 0
+      ? { scope: payload.scope }
+      : {}),
   };
 }

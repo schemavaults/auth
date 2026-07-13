@@ -44,7 +44,6 @@ export interface ConsumedAuthorizationCode {
   uid: string;
   nonce: string | null;
   scope: string | null;
-  oidc: boolean;
 }
 
 export async function validateAndConsumeAuthorizationCode(
@@ -121,7 +120,6 @@ export async function validateAndConsumeAuthorizationCode(
       challenge_time: stored_challenge_time,
       nonce: stored_nonce,
       scope: stored_scope,
-      oidc: stored_oidc,
     } = parsed_authorization_code.data;
 
     // 3. Defense-in-depth: the code must be redeemed by the same client
@@ -263,7 +261,6 @@ export async function validateAndConsumeAuthorizationCode(
       uid,
       nonce: stored_nonce ?? null,
       scope: stored_scope ?? null,
-      oidc: stored_oidc ?? false,
     };
   });
 }

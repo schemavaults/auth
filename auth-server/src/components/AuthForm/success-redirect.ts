@@ -13,11 +13,6 @@ export interface SuccessRedirectInputOptions {
   // authorize request. Must be echoed untouched on the callback so the
   // client can validate its stored CSRF nonce against this value.
   state?: string | null,
-  // OIDC mode (flow entered through GET /api/oidc/authorize): the
-  // callback carries the spec parameter names — `code`, `state`, and
-  // `iss` (RFC 9207) — instead of the custom-surface
-  // `authorization_code`/`challenge_time`/`code_challenge_method`.
-  oidc?: boolean,
   // Issuer for the RFC 9207 `iss` callback parameter; pass the auth
   // client's configured auth_server_url. Falls back to the current
   // origin when unavailable.
@@ -25,7 +20,7 @@ export interface SuccessRedirectInputOptions {
 }
 
 export function successRedirect({
-  redirect_uri, authorization_code, code_challenge, app_environment, state, oidc, issuer
+  redirect_uri, authorization_code, code_challenge, app_environment, state, issuer
 }: SuccessRedirectInputOptions): void {
   if (app_environment !== 'production') {
     console.log('[successRedirect] Attempting redirect to: ', redirect_uri);
@@ -37,24 +32,22 @@ export function successRedirect({
     throw new Error('Redirect URI must use HTTPS in production');
   }
 
+  // One callback, both parameter shapes: spec params (`code` + `iss`,
+  // RFC 9207) for standard OIDC relying parties AND legacy SDK params
+  // (`authorization_code` + `challenge_time` + `code_challenge_method`)
+  // for deployed SchemaVaults SDK clients. `state` is echoed once.
   const queryParams = new URLSearchParams();
   // Defense-in-depth: re-validate at this echo boundary. `parseOAuth2State`
   // throws `OAuth2StateValidationError` on a malformed value, which
   // aborts the redirect — the caller then surfaces a destructive toast.
   const echoedState: string | null = parseOAuth2State(state);
-  if (oidc) {
-    queryParams.set('code', authorization_code);
-    if (echoedState) {
-      queryParams.set('state', echoedState);
-    }
-    queryParams.set('iss', issuer || window.location.origin);
-  } else {
-    queryParams.set('challenge_time', code_challenge.challenge_time.toString());
-    queryParams.set('code_challenge_method', code_challenge.code_challenge_method);
-    queryParams.set('authorization_code', authorization_code);
-    if (echoedState) {
-      queryParams.set('state', echoedState);
-    }
+  queryParams.set('code', authorization_code);
+  queryParams.set('iss', issuer || window.location.origin);
+  queryParams.set('authorization_code', authorization_code);
+  queryParams.set('challenge_time', code_challenge.challenge_time.toString());
+  queryParams.set('code_challenge_method', code_challenge.code_challenge_method);
+  if (echoedState) {
+    queryParams.set('state', echoedState);
   }
 
   try {

@@ -34,6 +34,9 @@ async function preRegisterSuperuser(
       client_app_id: auth_server_app_id,
       code_challenge: codeChallenge.code_challenge,
       challenge_time,
+      // scope + nonce are required, first-class register parameters.
+      nonce: crypto.randomUUID(),
+      scope: "openid email profile",
     }),
   });
 

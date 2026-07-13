@@ -25,10 +25,10 @@ export interface MfaChallengePageViewProps {
   // callback URL after a successful MFA challenge so the client can
   // verify its stored CSRF nonce. Validated upstream in `page.tsx`.
   state: string | null;
-  // OIDC mode: the flow entered through GET /api/oidc/authorize, so the
-  // post-MFA callback carries `code`/`state`/`iss` instead of the
-  // custom-surface parameter names.
-  oidc?: boolean;
+  // Login replay nonce, forwarded from the login form. The account-page
+  // flow passes it into the token exchange so the response's nonce echo
+  // can be verified.
+  nonce?: string | null;
 }
 
 export default function MfaChallengePageView({
@@ -40,7 +40,7 @@ export default function MfaChallengePageView({
   challenge_time,
   code_challenge_method,
   state,
-  oidc,
+  nonce,
 }: MfaChallengePageViewProps): ReactElement {
   const router = useRouter();
   const env = useAppEnvironment();
@@ -84,7 +84,6 @@ export default function MfaChallengePageView({
             },
             app_environment: env,
             state,
-            oidc: oidc ?? false,
             issuer: authClientForIssuer?.auth_server_url ?? null,
           });
           return;
@@ -172,12 +171,15 @@ export default function MfaChallengePageView({
       try {
         // Pass the verifier directly so the SDK does NOT take its
         // "redirect flow" branch (which would require a stored OAuth2
-        // `state` nonce — account-page logins never persist one).
+        // `state` nonce — account-page logins never persist one). The
+        // login nonce (forwarded on this page's URL) lets the exchange
+        // verify the token response's nonce echo.
         await authClient.handleSuccessfulAuthentication(
           authorization_code,
           challenge_time,
           verifier,
           null,
+          nonce ?? null,
         );
       } catch (e: unknown) {
         setSucceeded(false);
@@ -204,7 +206,7 @@ export default function MfaChallengePageView({
       challenge_time,
       code_challenge_method,
       state,
-      oidc,
+      nonce,
       env,
       router,
       auth,

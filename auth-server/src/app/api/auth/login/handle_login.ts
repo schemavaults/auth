@@ -14,6 +14,7 @@ import {
   oidcNonceSchema,
   parseAndGrantScopes,
 } from "@schemavaults/auth-common";
+import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
 import type { UserData } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -60,27 +61,27 @@ const loginBodySchema = z
     // Required for third-party app flows; null/absent only for the auth
     // server's own /account flow (client_app_id === auth-server's own).
     redirect_uri: z.string().url().nullable().optional(),
-    // OIDC surface context (set only when the flow entered through
-    // GET /api/oidc/authorize): flags the minted code as OIDC-only and
-    // carries the nonce/scope to stamp on the code row.
-    oidc: z.literal(true).optional(),
-    nonce: oidcNonceSchema.nullable().optional(),
-    scope: z.string().max(256).nullable().optional(),
+    // Login replay nonce — REQUIRED on every flow. Bound to the code
+    // row and echoed at redemption (token-response field / id_token
+    // claim). Clients without one send a platform-synthesized fallback
+    // (see SYNTHESIZED_NONCE_PREFIX in auth-common).
+    nonce: oidcNonceSchema,
+    // Requested scopes (space-delimited, RFC 6749 §3.3) — REQUIRED on
+    // every flow; the server re-derives the granted subset below.
+    scope: z.string().max(256),
   })
   .required({
     credentials: true,
     client_app_id: true,
     code_challenge: true,
     challenge_time: true,
+    nonce: true,
+    scope: true,
   })
   .strict()
   .refine(
-    (body) =>
-      !body.oidc ||
-      (typeof body.redirect_uri === "string" &&
-        typeof body.scope === "string" &&
-        parseAndGrantScopes(body.scope).hasOpenid),
-    "OIDC logins require a third-party redirect_uri and a scope including 'openid'",
+    (body) => parseAndGrantScopes(body.scope).granted.length > 0,
+    "scope must include at least one supported scope (openid, email, profile)",
   );
 
 export async function handleLogin({
@@ -100,16 +101,11 @@ export async function handleLogin({
   const challenge_time: number = parse_login_body.data.challenge_time;
   const redirect_uri: string | null = parse_login_body.data.redirect_uri ?? null;
   // Granted scopes are re-derived server-side (never trusted verbatim);
-  // the schema refinement above already guaranteed `openid` is present.
-  const oidc_context: { nonce: string | null; scope: string } | null =
-    parse_login_body.data.oidc
-      ? {
-          nonce: parse_login_body.data.nonce ?? null,
-          scope: parseAndGrantScopes(parse_login_body.data.scope).granted.join(
-            " ",
-          ),
-        }
-      : null;
+  // the schema refinement above guaranteed at least one is granted.
+  const grant_context: AuthorizationCodeGrantContext = {
+    nonce: parse_login_body.data.nonce,
+    scope: parseAndGrantScopes(parse_login_body.data.scope).granted.join(" "),
+  };
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
@@ -371,7 +367,8 @@ export async function handleLogin({
         code_challenge,
         challenge_time,
         redirect_uri,
-        oidc: oidc_context,
+        nonce: grant_context.nonce,
+        scope: grant_context.scope,
       });
       return NextResponse.json(
         {
@@ -411,7 +408,7 @@ export async function handleLogin({
       "S256",
       challenge_time,
       redirect_uri,
-      oidc_context,
+      grant_context,
     );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

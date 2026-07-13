@@ -432,6 +432,10 @@ export async function handleRefreshTokenGrant(
         user_organizations,
         generate_refresh: replaceRefreshToo,
         auth_jwt_manager: jwt_keys_manager,
+        // Carry the presented refresh token's granted scope forward onto
+        // the new tokens; legacy refresh tokens without the claim yield
+        // tokens without it (nothing invented).
+        scope: decoded.scope,
         tracking: {
           db: dbh.db,
           grant_type: "refresh_token",

@@ -27,14 +27,20 @@ const challengeStateSchema = z
     // when the user chooses to authenticate with a passkey. Absent until the
     // client requests passkey options for this challenge.
     webauthn_challenge: z.string().optional(),
-    // OIDC surface context carried across the MFA gate (mirrors
-    // redirect_uri above): whether the flow started at
-    // /api/oidc/authorize, plus the nonce/scope to stamp on the
-    // authorization-code row minted by /api/auth/mfa/verify. All
-    // optional for backwards-compatibility with in-flight challenges.
-    oidc: z.boolean().nullable().optional(),
+    // Login replay nonce + granted scopes carried across the MFA gate
+    // (mirroring redirect_uri above) so the authorization code minted by
+    // /api/auth/mfa/verify carries the same grant context the login
+    // began with. Nullable-optional so in-flight pre-upgrade challenges
+    // (≤5 min TTL) still parse.
     nonce: z.string().nullable().optional(),
     scope: z.string().nullable().optional(),
+    /**
+     * @deprecated Surface discriminator removed (codes redeem at either
+     * token endpoint now). Key kept one release so in-flight challenges
+     * written before the deploy still parse under `.strict()`. Never
+     * written. Remove next release.
+     */
+    oidc: z.boolean().nullable().optional(),
   })
   .strict();
 
@@ -53,8 +59,9 @@ export async function createChallenge(
     code_challenge: string;
     challenge_time: number;
     redirect_uri: string | null;
+    nonce: string | null;
+    scope: string | null;
     ttl_seconds?: number;
-    oidc?: { nonce: string | null; scope: string } | null;
   },
 ): Promise<{ expires_at: number }> {
   const ttl = args.ttl_seconds ?? MFA_CHALLENGE_TTL_SECONDS;
@@ -67,9 +74,8 @@ export async function createChallenge(
     attempts_remaining: MFA_CHALLENGE_MAX_ATTEMPTS,
     created_at: now,
     redirect_uri: args.redirect_uri,
-    oidc: args.oidc ? true : null,
-    nonce: args.oidc ? args.oidc.nonce : null,
-    scope: args.oidc ? args.oidc.scope : null,
+    nonce: args.nonce,
+    scope: args.scope,
   };
   await client.set(makeKey(args.challenge_id), JSON.stringify(state), "EX", ttl);
   return { expires_at: now + ttl * 1000 };

@@ -59,4 +59,22 @@ describe("customJwtPayloadToUserData", () => {
 
     expect(parsed.success).toBe(false);
   });
+
+  it("should carry the token's scope claim through to UserData", async () => {
+    const { userDataSchema } = await import("@schemavaults/auth-common");
+
+    const withScope = customJwtPayloadToUserData({
+      ...fullPayload,
+      scope: "openid email profile",
+    });
+    expect(withScope.scope).toBe("openid email profile");
+    expect((await userDataSchema.safeParseAsync(withScope)).success).toBe(
+      true,
+    );
+
+    // Tokens issued before scopes became first-class yield UserData
+    // without the field (not an empty string).
+    const withoutScope = customJwtPayloadToUserData(fullPayload);
+    expect(withoutScope).not.toHaveProperty("scope");
+  });
 });

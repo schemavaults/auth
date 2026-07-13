@@ -23,6 +23,17 @@ interface AuthClientOAuth2StateActions {
   clearOAuth2State: (challenge_time: number) => void;
 }
 
+// Login nonce (OIDC Core §3.1.2.1 semantics, used on every SchemaVaults
+// flow): generated before the authorize redirect, bound server-side to
+// the authorization code, and verified against the value echoed back in
+// the token-exchange response (custom surface) / id_token claim (OIDC).
+// Same challenge_time-keyed storage contract as `state`.
+interface AuthClientOidcNonceActions {
+  storeOidcNonce: (nonce: string, challenge_time: number) => void;
+  loadOidcNonce: (challenge_time: number) => string | null;
+  clearOidcNonce: (challenge_time: number) => void;
+}
+
 interface AuthClientUserDataActions {
   storeUserData: (userData: UserData) => void;
   getUserData: () => UserData | null;
@@ -94,6 +105,7 @@ interface AuthClientNetworkActions {
 export interface ISchemaVaultsAuthClientAdapter
   extends AuthClientCodeVerifierActions,
     AuthClientOAuth2StateActions,
+    AuthClientOidcNonceActions,
     AuthClientUserDataActions,
     AuthClientAuthTokensActions,
     AuthClientNetworkActions {
