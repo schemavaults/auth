@@ -47,6 +47,9 @@ export function generateOidcNonce(
   if (isWebCryptoAvailable()) {
     return secureGenerateOidcNonce(toBase64UrlFromBytes);
   } else {
+    console.warn(
+      "[generate-oidc-nonce] Falling back to insecureGenerateOidcNonce, as web crypto API does not seem to be available!",
+    );
     return insecureGenerateOidcNonce();
   }
 }
