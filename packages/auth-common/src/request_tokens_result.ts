@@ -3,6 +3,7 @@ import { userDataSchema } from "./user_data";
 import { accessTokenDataSchema, refreshTokenDataSchema } from "./token-data";
 import { createAudienceSchema } from "./audience-schema";
 import { organizationIdSchema } from "./organizations";
+import { oidcNonceSchema } from "./oidc/nonce";
 import {
   appIdSchema,
   getAppEnvironment,
@@ -81,8 +82,10 @@ export function createRequestTokensResultSchema(
       // authorization code — the custom surface's analogue of the OIDC
       // id_token `nonce` claim; the SDK verifies it against the value it
       // stored at redirect time. Absent on refresh grants and on codes
-      // minted before nonces became first-class.
-      nonce: z.string().min(1).max(512).optional(),
+      // minted before nonces became first-class. Validated with the shared
+      // `oidcNonceSchema` (the same schema that gated it at the login
+      // boundary) so the echo round-trip is symmetric.
+      nonce: oidcNonceSchema.optional(),
     })
     .required({
       success: true,
