@@ -111,17 +111,17 @@ describe("hardcoded app/API definitions", () => {
     expect(api.api_server_name).toBe("SchemaVaults Auth OIDC UserInfo");
   });
 
-  test("oidc-userinfo API name reflects (and clamps) the friendly-name override", () => {
+  test("oidc-userinfo API name reflects the friendly-name override when short enough", () => {
     process.env.SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME = "AcmeCorp Auth";
-    expect(getHardcodedApiServer(OIDC_USERINFO_AUDIENCE_ID).api_server_name).toBe(
-      "AcmeCorp Auth OIDC UserInfo",
-    );
+    expect(
+      getHardcodedApiServer(OIDC_USERINFO_AUDIENCE_ID).api_server_name,
+    ).toBe("AcmeCorp Auth OIDC UserInfo");
 
     process.env.SCHEMAVAULTS_AUTH_SERVER_FRIENDLY_NAME = "X".repeat(100);
-    const clamped = getHardcodedApiServer(
+    const oidcNameWithLongAuthServerName = getHardcodedApiServer(
       OIDC_USERINFO_AUDIENCE_ID,
     ).api_server_name;
-    expect(clamped).toHaveLength(64);
+    expect(oidcNameWithLongAuthServerName).toBe("OIDC UserInfo");
   });
 
   test("oidc-userinfo audience is served on the auth server's own domain", () => {

@@ -61,7 +61,7 @@
     },
     "packages/app-definitions": {
       "name": "@schemavaults/app-definitions",
-      "version": "0.11.2",
+      "version": "0.11.4",
       "dependencies": {
         "zod": "3.25.8",
       },
