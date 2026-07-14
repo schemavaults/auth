@@ -26,14 +26,6 @@ const _baseUserDataSchema = z
 
     // Invite code
     invite_code: inviteCodeFormatSchema.optional(),
-
-    // Space-delimited granted scopes carried on the access/refresh token
-    // this UserData was decoded from (see the `scope` claim in
-    // @schemavaults/jwt payload_data.ts). Absent for UserData loaded from
-    // the database and for tokens issued before scopes became
-    // first-class, so route guards treat a missing value as "no scopes
-    // granted".
-    scope: z.string().max(256).optional(),
   })
   .required({
     uid: true,

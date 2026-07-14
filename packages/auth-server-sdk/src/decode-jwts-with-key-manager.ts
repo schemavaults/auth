@@ -21,12 +21,22 @@ import {
   decodeJWT as decodeSchemavaultsJwt,
   getKeysetIdFromToken,
   customJwtPayloadToUserData,
+  getScopeFromCustomJwtPayload,
 } from "@schemavaults/jwt";
 import isValidUuid from "@/is-valid-uuid";
+
+// A decoded token: the user identity plus the granted `scope` carried
+// ALONGSIDE it (never folded into UserData). `scope` is null when the token
+// has no scope claim (issued before scopes became first-class).
+interface DecodedTokenWithScope {
+  user: UserData;
+  scope: string | null;
+}
 
 export type IDecodeJWTsWithKeyManagerOutput =
   | {
       user: UserData;
+      scope: string | null;
     }
   | {
       user: null;
@@ -66,13 +76,16 @@ export async function decodeJWTsWithKeyManager(
     );
   }
 
-  let decoded_user: UserData | null = null;
+  let decoded_result: DecodedTokenWithScope | null = null;
   try {
-    const user: UserData = await decodeJWTs(
+    const decoded: DecodedTokenWithScope = await decodeJWTs<DecodedTokenWithScope>(
       {
         token_sources,
         jwt_audience: token_audience,
-        decodeJWT: async (opts): Promise<UserData> => {
+        // The consistency check in decodeJWTs compares the user across
+        // token sources; pull the user out of the `{ user, scope }` record.
+        getUserData: (d: DecodedTokenWithScope): UserData => d.user,
+        decodeJWT: async (opts): Promise<DecodedTokenWithScope> => {
           const sourceHintLabel: string =
             typeof opts.sourceHint === "string" && opts.sourceHint.length > 0
               ? opts.sourceHint
@@ -143,7 +156,10 @@ export async function decodeJWTsWithKeyManager(
               keyset_id,
               env: environment,
             });
-            return customJwtPayloadToUserData(jwtPayload);
+            return {
+              user: customJwtPayloadToUserData(jwtPayload),
+              scope: getScopeFromCustomJwtPayload(jwtPayload),
+            };
           } catch (e: unknown) {
             console.error(
               `Failed to decode JSON web token (${sourceDescription}): `,
@@ -159,7 +175,7 @@ export async function decodeJWTsWithKeyManager(
       debug,
     );
 
-    decoded_user = user;
+    decoded_result = decoded;
   } catch (e: unknown) {
     if (e instanceof JwtDecodingKeysetNotFoundError) {
       console.warn(
@@ -174,8 +190,10 @@ export async function decodeJWTsWithKeyManager(
     }
   }
 
-  if (decoded_user) {
-    const parsed_user = await userDataSchema.safeParseAsync(decoded_user);
+  if (decoded_result) {
+    const parsed_user = await userDataSchema.safeParseAsync(
+      decoded_result.user,
+    );
     if (!parsed_user.success) {
       console.warn(
         "Received invalid user data from JWT decode operation: ",
@@ -188,8 +206,10 @@ export async function decodeJWTsWithKeyManager(
     }
     const user: UserData = parsed_user.data;
 
+    // Scope is threaded ALONGSIDE the user, not inside it.
     return {
       user,
+      scope: decoded_result.scope,
     };
   }
 

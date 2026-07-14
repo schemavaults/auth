@@ -1,5 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { customJwtPayloadToUserData } from "./custom-jwt-payload-to-user-data";
+import {
+  customJwtPayloadToUserData,
+  getScopeFromCustomJwtPayload,
+} from "./custom-jwt-payload-to-user-data";
 import type { CustomJWTPayload } from "./payload_data";
 
 describe("customJwtPayloadToUserData", () => {
@@ -60,21 +63,37 @@ describe("customJwtPayloadToUserData", () => {
     expect(parsed.success).toBe(false);
   });
 
-  it("should carry the token's scope claim through to UserData", async () => {
+  it("should NOT fold the token's scope claim into UserData", async () => {
     const { userDataSchema } = await import("@schemavaults/auth-common");
 
-    const withScope = customJwtPayloadToUserData({
+    // Scope is threaded alongside the user, never inside it — even when the
+    // token carries a scope claim, the mapped UserData omits it.
+    const userData = customJwtPayloadToUserData({
       ...fullPayload,
       scope: "openid email profile",
     });
-    expect(withScope.scope).toBe("openid email profile");
-    expect((await userDataSchema.safeParseAsync(withScope)).success).toBe(
-      true,
-    );
+    expect(userData).not.toHaveProperty("scope");
+    expect((await userDataSchema.safeParseAsync(userData)).success).toBe(true);
+  });
 
-    // Tokens issued before scopes became first-class yield UserData
-    // without the field (not an empty string).
-    const withoutScope = customJwtPayloadToUserData(fullPayload);
-    expect(withoutScope).not.toHaveProperty("scope");
+  describe("getScopeFromCustomJwtPayload", () => {
+    it("returns the token's granted scope claim", () => {
+      expect(
+        getScopeFromCustomJwtPayload({
+          ...fullPayload,
+          scope: "openid email profile",
+        }),
+      ).toBe("openid email profile");
+    });
+
+    it("returns null when the token has no scope claim", () => {
+      expect(getScopeFromCustomJwtPayload(fullPayload)).toBeNull();
+    });
+
+    it("returns null for an empty scope claim", () => {
+      expect(
+        getScopeFromCustomJwtPayload({ ...fullPayload, scope: "" }),
+      ).toBeNull();
+    });
   });
 });

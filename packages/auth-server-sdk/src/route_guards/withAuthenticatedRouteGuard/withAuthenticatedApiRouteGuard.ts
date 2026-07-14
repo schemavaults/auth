@@ -432,8 +432,10 @@ export function withAuthenticatedApiRouteGuard<
     }
 
     if (opts?.required_scopes && opts.required_scopes.length > 0) {
+      // The token's granted scope is carried alongside the user on the
+      // route guard (never folded into UserData).
       const scope_evaluation = evaluateRequiredScopes(
-        user.scope,
+        route_guard.scope ?? undefined,
         opts.required_scopes,
       );
       if (!scope_evaluation.ok) {

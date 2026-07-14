@@ -16,11 +16,11 @@ export type RequiredScopesEvaluation =
 
 /**
  * Pure evaluation of a route's `required_scopes` against the
- * space-delimited `scope` claim carried on the presented token (via
- * UserData.scope). A token without a scope claim — issued before scopes
- * became first-class — grants NO scopes. There is deliberately no admin
- * bypass: scope describes what the token was granted, not who the user
- * is.
+ * space-delimited `scope` claim carried on the presented token (threaded
+ * alongside the user as `IRouteGuard.scope`, never folded into UserData).
+ * A token without a scope claim — issued before scopes became
+ * first-class — grants NO scopes. There is deliberately no admin bypass:
+ * scope describes what the token was granted, not who the user is.
  */
 export function evaluateRequiredScopes(
   token_scope: string | undefined,
