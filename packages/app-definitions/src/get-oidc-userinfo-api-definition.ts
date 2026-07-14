@@ -1,4 +1,5 @@
 import type { SchemaVaultsApiServerDefinition } from "./api-server-definition";
+import { MAXIMUM_API_SERVER_ID_LENGTH } from "./api-server-id";
 import { defaultHardcodedAppCreationTime } from "./default-hardcoded-app-creation-time";
 import getAuthServerFriendlyName from "./get-auth-server-friendly-name";
 import getAuthServerOwnerOrganizationId from "./get-auth-server-owner-organization-id";
@@ -17,11 +18,20 @@ import { OIDC_USERINFO_AUDIENCE_ID } from "./oidc-userinfo-audience";
  * table at all.
  */
 export function getOidcUserinfoApiDefinition(): SchemaVaultsApiServerDefinition {
-  // schemaVaultsApiServerDefinitionSchema caps api_server_name at 64 chars;
-  // clamp so a long white-label friendly name can't produce an invalid
-  // hardcoded definition.
-  const api_server_name: string =
-    `${getAuthServerFriendlyName()} OIDC UserInfo`.slice(0, 64);
+  const oidcUserinfoSuffix = "OIDC UserInfo" as const;
+  const authServerFriendlyName: string = getAuthServerFriendlyName();
+
+  let api_server_name: string;
+  if (
+    authServerFriendlyName.length + 1 + oidcUserinfoSuffix.length <
+    MAXIMUM_API_SERVER_ID_LENGTH
+  ) {
+    api_server_name =
+      `${authServerFriendlyName} ${oidcUserinfoSuffix}` as const;
+  } else {
+    api_server_name = oidcUserinfoSuffix;
+  }
+
   return {
     api_server_id: OIDC_USERINFO_AUDIENCE_ID,
     api_server_name,
