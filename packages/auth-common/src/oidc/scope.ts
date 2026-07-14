@@ -10,6 +10,8 @@
  * hardcode e.g. "openid profile email address" still interoperate).
  */
 
+import { z } from "zod";
+
 export const OIDC_OPENID_SCOPE = "openid" as const;
 
 export const OIDC_SUPPORTED_SCOPES = ["openid", "email", "profile"] as const;
@@ -21,6 +23,40 @@ export const OIDC_SUPPORTED_SCOPES = ["openid", "email", "profile"] as const;
  * `scope` parameter (e.g. the auth server's own /account flow).
  */
 export const DEFAULT_AUTH_SCOPE = "openid email profile" as const;
+
+const MAX_OIDC_SCOPE_LENGTH = 256 as const;
+
+/**
+ * RFC 6749 §3.3 wire format for the `scope` parameter:
+ *   scope       = scope-token *( SP scope-token )
+ *   scope-token = 1*( %x21 / %x23-5B / %x5D-7E )
+ * i.e. one or more scope-tokens joined by a SINGLE space, where a
+ * scope-token is printable ASCII excluding SP (the delimiter), `"`
+ * (0x22) and `\` (0x5C), and all control chars. This rejects leading /
+ * trailing / repeated spaces and any control / CR-LF that could pollute
+ * logs or the token-response `scope` echo.
+ */
+export const OIDC_SCOPE_REGEX: RegExp =
+  /^[\x21\x23-\x5B\x5D-\x7E]+(?: [\x21\x23-\x5B\x5D-\x7E]+)*$/;
+
+/**
+ * Validates the FORMAT of a raw `scope` request parameter (RFC 6749
+ * §3.3, bounded length). Orthogonal to `parseAndGrantScopes`, which
+ * decides which of the (well-formed) tokens the platform grants — a
+ * value can be format-valid here yet grant nothing (all tokens
+ * unsupported). Auth flows apply this at the request boundary before
+ * deriving the granted set.
+ */
+export const oidcScopeSchema = z
+  .string()
+  .min(1)
+  .max(MAX_OIDC_SCOPE_LENGTH)
+  .regex(OIDC_SCOPE_REGEX, {
+    message:
+      "'scope' must be a space-delimited list of RFC 6749 §3.3 scope tokens",
+  });
+
+export type OidcScope = z.infer<typeof oidcScopeSchema>;
 
 export type OidcSupportedScope = (typeof OIDC_SUPPORTED_SCOPES)[number];
 

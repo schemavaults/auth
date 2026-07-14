@@ -12,6 +12,7 @@ import {
   inviteCodeFormatSchema,
   PKCE_ProofKeyManager,
   oidcNonceSchema,
+  oidcScopeSchema,
   parseAndGrantScopes,
 } from "@schemavaults/auth-common";
 import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
@@ -56,9 +57,9 @@ const registerBodySchema = z
     // server's own /account flow (client_app_id === auth-server's own).
     redirect_uri: z.string().url().nullable().optional(),
     // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
-    // scopes (REQUIRED); see handle_login.ts.
+    // scopes (REQUIRED, RFC 6749 §3.3 wire format); see handle_login.ts.
     nonce: oidcNonceSchema.nullable().optional(),
-    scope: z.string().max(256),
+    scope: oidcScopeSchema,
   })
   .required({
     credentials: true,

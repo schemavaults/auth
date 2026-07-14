@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+  DEFAULT_AUTH_SCOPE,
   OIDC_SUPPORTED_SCOPES,
+  oidcScopeSchema,
   parseAndGrantScopes,
   serializeOidcScopes,
 } from "./scope";
@@ -45,5 +47,49 @@ describe("parseAndGrantScopes", () => {
     expect(parseAndGrantScopes(wire).granted).toEqual([
       ...OIDC_SUPPORTED_SCOPES,
     ]);
+  });
+});
+
+describe("oidcScopeSchema (RFC 6749 §3.3 wire format)", () => {
+  test("accepts single- and multi-token space-delimited scopes", () => {
+    for (const valid of [
+      "openid",
+      "openid email",
+      "openid email profile",
+      DEFAULT_AUTH_SCOPE,
+      // Format-valid even though not all tokens are supported — grant
+      // filtering is parseAndGrantScopes's job, not the schema's.
+      "openid address offline_access",
+    ]) {
+      expect(oidcScopeSchema.safeParse(valid).success).toBe(true);
+    }
+  });
+
+  test("rejects irregular whitespace (leading / trailing / repeated)", () => {
+    for (const invalid of [
+      "",
+      " openid",
+      "openid ",
+      "openid  email",
+      "openid\temail",
+      "openid\nemail",
+    ]) {
+      expect(oidcScopeSchema.safeParse(invalid).success).toBe(false);
+    }
+  });
+
+  test("rejects control chars and the excluded '\"' / '\\' tokens", () => {
+    for (const invalid of [
+      "open\x00id",
+      "openid\r\nSet-Cookie: x",
+      'openid "email"',
+      "openid ema\\il",
+    ]) {
+      expect(oidcScopeSchema.safeParse(invalid).success).toBe(false);
+    }
+  });
+
+  test("rejects scopes longer than 256 chars", () => {
+    expect(oidcScopeSchema.safeParse("openid".repeat(50)).success).toBe(false);
   });
 });

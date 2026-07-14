@@ -1,5 +1,6 @@
 import type { Insertable, Selectable } from "@schemavaults/dbh";
 import { appIdSchema } from "@schemavaults/app-definitions";
+import { oidcScopeSchema } from "@schemavaults/auth-common";
 import { z } from "zod";
 
 export const authorizationCodeRecordSchema = z
@@ -28,9 +29,10 @@ export const authorizationCodeRecordSchema = z
     // mirrors oidcNonceSchema in auth-common.
     nonce: z.string().min(1).max(512).nullable().optional(),
     // Granted scopes (space-delimited, RFC 6749 §3.3), e.g.
-    // "openid email". Every new row has one; nullable for pre-upgrade
-    // rows only.
-    scope: z.string().max(256).nullable().optional(),
+    // "openid email". Validated with the shared oidcScopeSchema (the same
+    // wire-format check applied when the scope was received). Every new
+    // row has one; nullable for pre-upgrade rows only.
+    scope: oidcScopeSchema.nullable().optional(),
     /**
      * @deprecated The surface-discriminator column was dropped in
      * migration 00030 (codes are redeemable at either token endpoint

@@ -15,6 +15,7 @@ import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challen
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import {
   oidcNonceSchema,
+  oidcScopeSchema,
   parseAndGrantScopes,
 } from "@schemavaults/auth-common";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
@@ -31,9 +32,9 @@ const requestBodySchema = z
     // no third-party callback to bind).
     redirect_uri: z.string().url().nullable().optional(),
     // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
-    // scopes (REQUIRED); see handle_login.ts.
+    // scopes (REQUIRED, RFC 6749 §3.3 wire format); see handle_login.ts.
     nonce: oidcNonceSchema.nullable().optional(),
-    scope: z.string().max(256),
+    scope: oidcScopeSchema,
   })
   .required({
     client_app_id: true,

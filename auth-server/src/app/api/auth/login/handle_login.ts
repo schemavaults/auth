@@ -12,6 +12,7 @@ import {
   PKCE_ProofKeyManager,
   collapseWebauthnFactors,
   oidcNonceSchema,
+  oidcScopeSchema,
   parseAndGrantScopes,
 } from "@schemavaults/auth-common";
 import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
@@ -68,8 +69,9 @@ const loginBodySchema = z
     // absent the code carries null and nothing is echoed.
     nonce: oidcNonceSchema.nullable().optional(),
     // Requested scopes (space-delimited, RFC 6749 §3.3) — REQUIRED on
-    // every flow; the server re-derives the granted subset below.
-    scope: z.string().max(256),
+    // every flow; validated for wire format by oidcScopeSchema, then the
+    // server re-derives the granted subset below.
+    scope: oidcScopeSchema,
   })
   .required({
     credentials: true,
