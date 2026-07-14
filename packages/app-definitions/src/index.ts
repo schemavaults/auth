@@ -109,3 +109,5 @@ export {
   getHardcodedApiServerIds,
 } from "./hardcoded-apis";
 export type { HardcodedApiServerId } from "./hardcoded-apis";
+
+export { isBrowserRuntime } from "./is-browser-runtime";
