@@ -1,5 +1,6 @@
 import {
   type CodeChallengeWithDetails,
+  DEFAULT_AUTH_SCOPE,
   PKCE_ProofKeyManager,
   RefreshTokenCookieName,
 } from "@schemavaults/auth-common";
@@ -51,7 +52,7 @@ export default function register_via_request(
         // (the auth server is not served from a secure context in CI), so
         // derive the nonce from the clock + Math.random instead.
         nonce: `e2e-nonce-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        scope: "openid email profile",
+        scope: DEFAULT_AUTH_SCOPE,
       };
       if (invite_code) {
         body.invite_code = invite_code;

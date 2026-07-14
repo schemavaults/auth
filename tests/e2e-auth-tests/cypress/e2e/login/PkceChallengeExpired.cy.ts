@@ -17,6 +17,8 @@
 // indirectly by example_resource_server/ExampleResourceServer.cy.ts and
 // OAuth2State.cy.ts. The expiry-rejection branch had no E2E coverage.
 
+import { DEFAULT_AUTH_SCOPE } from "@schemavaults/auth-common";
+
 interface GenerateAuthorizationCodeFailureBody {
   success: boolean;
   message?: string;
@@ -66,7 +68,7 @@ describe("POST /api/auth/session/generate-authorization-code expired PKCE challe
               // assert on below. (nonce uses clock + Math.random since
               // crypto.randomUUID() is unavailable in the browser context.)
               nonce: `e2e-nonce-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              scope: "openid email profile",
+              scope: DEFAULT_AUTH_SCOPE,
             },
           }).then((response) => {
             expect(
