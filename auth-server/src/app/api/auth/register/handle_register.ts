@@ -55,9 +55,9 @@ const registerBodySchema = z
     // Required for third-party app flows; null/absent only for the auth
     // server's own /account flow (client_app_id === auth-server's own).
     redirect_uri: z.string().url().nullable().optional(),
-    // Login replay nonce + requested scopes — REQUIRED on every flow;
-    // see handle_login.ts.
-    nonce: oidcNonceSchema,
+    // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
+    // scopes (REQUIRED); see handle_login.ts.
+    nonce: oidcNonceSchema.nullable().optional(),
     scope: z.string().max(256),
   })
   .required({
@@ -65,7 +65,6 @@ const registerBodySchema = z
     client_app_id: true,
     code_challenge: true,
     challenge_time: true,
-    nonce: true,
     scope: true,
   })
   .strict()
@@ -135,7 +134,7 @@ export async function handleRegister({
   // Granted scopes are re-derived server-side (never trusted verbatim);
   // the schema refinement above guaranteed at least one is granted.
   const grant_context: AuthorizationCodeGrantContext = {
-    nonce: registrationData.nonce,
+    nonce: registrationData.nonce ?? null,
     scope: parseAndGrantScopes(registrationData.scope).granted.join(" "),
   };
 

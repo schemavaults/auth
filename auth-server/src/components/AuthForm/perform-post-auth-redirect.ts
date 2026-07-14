@@ -26,8 +26,9 @@ export interface PerformPostAuthRedirectOptions {
   state: string | null | undefined;
   // Login replay nonce bound to the minted authorization code. Used by
   // the account-page flow to verify the token-response echo; third-party
-  // flows verify in their own SDK context.
-  nonce: string;
+  // flows verify in their own SDK context. Null when the flow carried no
+  // nonce (an OIDC RP may omit it) — nothing is echoed/verified then.
+  nonce: string | null;
   auth: ReturnType<typeof useAuth>;
   router: ReturnType<typeof useRouter>;
   toast: ReturnType<typeof useToast>["toast"];

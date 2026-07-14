@@ -25,10 +25,8 @@ import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_c
 import {
   DEFAULT_AUTH_SCOPE,
   OAuth2StateValidationError,
-  SYNTHESIZED_NONCE_PREFIX,
   parseOAuth2State,
 } from "@schemavaults/auth-common";
-import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface AppAuthorizationConsentScreenProps {
   app_id: string;
@@ -127,16 +125,13 @@ export function AppAuthorizationConsentScreen({
       // read survives code-refactor reordering. Throws on malformed;
       // the outer try/catch surfaces a destructive toast.
       const state = parseOAuth2State(searchParams.get("state"));
-      // Grant context — first-class on every mint. URL values when the
-      // flow supplied them; platform fallbacks otherwise (mirrors
-      // handle-auth-form-submit.ts).
+      // Grant context. `nonce` is OPTIONAL (OIDC Core §3.1.2.1): use the
+      // URL value when the RP supplied one, else bind none (null → no
+      // id_token claim). `scope` always falls back to the platform
+      // default. Mirrors handle-auth-form-submit.ts.
       const url_nonce = searchParams.get("nonce");
-      // uuidSync() (not crypto.randomUUID) for the insecure-browser-context
-      // fallback — see handle-auth-form-submit.ts.
-      const flow_nonce: string =
-        url_nonce && url_nonce.length > 0
-          ? url_nonce
-          : `${SYNTHESIZED_NONCE_PREFIX}${uuidSync()}`;
+      const flow_nonce: string | null =
+        url_nonce && url_nonce.length > 0 ? url_nonce : null;
       const url_scope = searchParams.get("scope");
       const flow_scope: string =
         url_scope && url_scope.length > 0 ? url_scope : DEFAULT_AUTH_SCOPE;
@@ -178,7 +173,7 @@ export function AppAuthorizationConsentScreen({
             code_challenge_method: "S256",
             challenge_time,
             ...(redirect_uri ? { redirect_uri } : {}),
-            nonce: flow_nonce,
+            ...(flow_nonce ? { nonce: flow_nonce } : {}),
             scope: flow_scope,
           }),
         },

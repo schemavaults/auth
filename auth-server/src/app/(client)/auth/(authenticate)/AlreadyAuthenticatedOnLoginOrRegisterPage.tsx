@@ -14,14 +14,12 @@ import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import {
   OAuth2StateValidationError,
   OidcNonceValidationError,
-  SYNTHESIZED_NONCE_PREFIX,
   parseAndGrantScopes,
   parseOAuth2State,
   parseOidcNonce,
   type UserData,
 } from "@schemavaults/auth-common";
 import { getAuthServerUri } from "@/lib/auth_server_uri";
-import uuidSync from "@/lib/uuid/uuidSync";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
@@ -40,8 +38,9 @@ export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   // so the client can verify its stored CSRF nonce.
   state: string | null;
   // Login replay nonce + requested scopes (first-class on every flow).
-  // A null nonce gets a platform-synthesized fallback; a null/invalid
-  // scope is rejected (the entry pages already gate this).
+  // A null nonce is bound as-is (OIDC RPs may omit it, OIDC Core
+  // §3.1.2.1); a null/invalid scope is rejected (the entry pages already
+  // gate this).
   nonce: string | null;
   scope: string | null;
 }
@@ -125,9 +124,10 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
   const code_challenge_method: "S256" = opts.code_challenge_method;
 
   // Grant-context validation (first-class on every flow): nonce must be
-  // well-formed when present (fallback synthesized when absent), and the
-  // scope must grant at least one supported scope. The entry pages
-  // already 400 on these; this re-check guards direct navigations.
+  // well-formed when present (OPTIONAL per OIDC Core §3.1.2.1 — an RP may
+  // omit it, so absent is bound as null), and the scope must grant at
+  // least one supported scope. The entry pages already 400 on these;
+  // this re-check guards direct navigations.
   let url_nonce: string | null;
   try {
     url_nonce = parseOidcNonce(opts.nonce);
@@ -149,9 +149,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     redirectWithError(400, "bad_request");
   }
   const grant_context = {
-    // uuidSync() rather than crypto.randomUUID for parity with the client
-    // fallback paths (this runs server-side where either works).
-    nonce: url_nonce ?? `${SYNTHESIZED_NONCE_PREFIX}${uuidSync()}`,
+    nonce: url_nonce,
     scope: granted.join(" "),
   };
 

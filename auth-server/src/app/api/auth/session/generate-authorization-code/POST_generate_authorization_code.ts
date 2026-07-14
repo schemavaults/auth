@@ -30,9 +30,9 @@ const requestBodySchema = z
     // auth server itself is the requesting app (the /account flow has
     // no third-party callback to bind).
     redirect_uri: z.string().url().nullable().optional(),
-    // Login replay nonce + requested scopes — REQUIRED on every mint;
-    // see handle_login.ts.
-    nonce: oidcNonceSchema,
+    // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
+    // scopes (REQUIRED); see handle_login.ts.
+    nonce: oidcNonceSchema.nullable().optional(),
     scope: z.string().max(256),
   })
   .required({
@@ -40,7 +40,6 @@ const requestBodySchema = z
     code_challenge: true,
     code_challenge_method: true,
     challenge_time: true,
-    nonce: true,
     scope: true,
   })
   .strict()
@@ -126,7 +125,7 @@ export async function POST_generate_authorization_code(
       // Granted scopes are re-derived server-side (never trusted
       // verbatim); the schema refinement guaranteed at least one.
       const grant_context: AuthorizationCodeGrantContext = {
-        nonce: body.nonce,
+        nonce: body.nonce ?? null,
         scope: parseAndGrantScopes(body.scope).granted.join(" "),
       };
 

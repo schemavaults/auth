@@ -1105,7 +1105,8 @@ export class SchemaVaultsAuthClient
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
     redirect_uri: string | null,
-    nonce: string,
+    // Optional per OIDC Core §3.1.2.1 — null when the flow carried no nonce.
+    nonce: string | null,
     scope: string = DEFAULT_AUTH_SCOPE,
   ): Promise<AuthenticateResult> {
     if (this.DEBUG)

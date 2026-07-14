@@ -10,7 +10,6 @@ import {
   type CodeVerifierWithDetails,
   DEFAULT_AUTH_SCOPE,
   PKCE_ProofKeyManager,
-  SYNTHESIZED_NONCE_PREFIX,
   parseOAuth2State,
 } from "@schemavaults/auth-common";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
@@ -34,8 +33,10 @@ export interface PendingAuthorizationState {
   // untouched (RFC 6749 §10.12).
   state: string | null;
   // Login replay nonce bound to the minted code — threaded through so
-  // the account-page token exchange can verify the response echo.
-  nonce: string;
+  // the account-page token exchange can verify the response echo. Null
+  // when the flow carried no nonce (an OIDC RP may omit it, OIDC Core
+  // §3.1.2.1); nothing is echoed/verified in that case.
+  nonce: string | null;
 }
 
 interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
@@ -218,19 +219,23 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       ? searchParams.get("redirect_uri") ?? null
       : null;
 
-  // Grant context — first-class on every flow. The entry URL carries
-  // nonce/scope for third-party flows (the pages 400 malformed values);
-  // when the URL lacks a nonce (OIDC RPs may omit it; the account-page
-  // flow has no entry params) a platform-synthesized fallback is used,
-  // and the scope falls back to the platform default.
+  // Grant context. `nonce` is OPTIONAL (OIDC Core §3.1.2.1): third-party
+  // flows carry it on the entry URL when the RP/SDK supplied one (the
+  // pages 400 malformed values); an OIDC RP may legitimately omit it, in
+  // which case no nonce is bound (null → no id_token claim). The
+  // account-page flow has no entry URL, so it mints a plain nonce for its
+  // own custom-surface replay-echo check. `scope` always falls back to
+  // the platform default.
   const url_nonce = searchParams.get("nonce");
-  // uuidSync() (not crypto.randomUUID) so the fallback works in insecure
-  // browser contexts (non-localhost http://) where crypto.randomUUID is
-  // undefined — it falls back to uuid's v4() there.
-  const flow_nonce: string =
+  // uuidSync() (not crypto.randomUUID) so the account-page nonce works in
+  // insecure browser contexts (non-localhost http://) where
+  // crypto.randomUUID is undefined — it falls back to uuid's v4() there.
+  const flow_nonce: string | null =
     url_nonce && url_nonce.length > 0
       ? url_nonce
-      : `${SYNTHESIZED_NONCE_PREFIX}${uuidSync()}`;
+      : onSuccessfulAuthenticate === "account-page"
+        ? uuidSync()
+        : null;
   const url_scope = searchParams.get("scope");
   const flow_scope: string =
     url_scope && url_scope.length > 0 ? url_scope : DEFAULT_AUTH_SCOPE;
@@ -296,7 +301,8 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       // values): the MFA page needs `nonce` for the account-page token
       // exchange's echo verification, and keeping `scope` on the URL
       // preserves the flow's entry parameters across the navigation.
-      params.set("nonce", flow_nonce);
+      // A null nonce (RP omitted it) is simply not forwarded.
+      if (flow_nonce) params.set("nonce", flow_nonce);
       params.set("scope", flow_scope);
       // Account-page logins don't carry a `challenge_time` on the URL
       // (no third-party authorize handoff), but the MFA page needs it to

@@ -61,11 +61,12 @@ const loginBodySchema = z
     // Required for third-party app flows; null/absent only for the auth
     // server's own /account flow (client_app_id === auth-server's own).
     redirect_uri: z.string().url().nullable().optional(),
-    // Login replay nonce — REQUIRED on every flow. Bound to the code
-    // row and echoed at redemption (token-response field / id_token
-    // claim). Clients without one send a platform-synthesized fallback
-    // (see SYNTHESIZED_NONCE_PREFIX in auth-common).
-    nonce: oidcNonceSchema,
+    // Login replay nonce — OPTIONAL (OIDC Core §3.1.2.1: a relying
+    // party may omit `nonce`, and the /account flow has none). When
+    // present it is bound to the code row and echoed at redemption
+    // (custom-surface token-response field / OIDC id_token claim); when
+    // absent the code carries null and nothing is echoed.
+    nonce: oidcNonceSchema.nullable().optional(),
     // Requested scopes (space-delimited, RFC 6749 §3.3) — REQUIRED on
     // every flow; the server re-derives the granted subset below.
     scope: z.string().max(256),
@@ -75,7 +76,6 @@ const loginBodySchema = z
     client_app_id: true,
     code_challenge: true,
     challenge_time: true,
-    nonce: true,
     scope: true,
   })
   .strict()
@@ -103,7 +103,7 @@ export async function handleLogin({
   // Granted scopes are re-derived server-side (never trusted verbatim);
   // the schema refinement above guaranteed at least one is granted.
   const grant_context: AuthorizationCodeGrantContext = {
-    nonce: parse_login_body.data.nonce,
+    nonce: parse_login_body.data.nonce ?? null,
     scope: parseAndGrantScopes(parse_login_body.data.scope).granted.join(" "),
   };
 

@@ -12,11 +12,12 @@ import { type AuthorizationCodeRecord } from "./authorization-codes-table";
  * Grant context bound to every authorization code at issuance:
  * - `nonce`: the login replay nonce, echoed back at redemption (as the
  *   token-response `nonce` field on the custom surface; as the id_token
- *   `nonce` claim on the OIDC surface, unless synthesized).
+ *   `nonce` claim on the OIDC surface). Null when the flow carried no
+ *   nonce — OPTIONAL per OIDC Core §3.1.2.1, so an RP may omit it.
  * - `scope`: the granted scopes (space-delimited), stamped on the
  *   tokens minted at redemption.
- * Nullable members exist only for defensive parsing of legacy rows —
- * every new mint provides both.
+ * A null `nonce` is a first-class value (RP omitted it); a null `scope`
+ * only arises from defensive parsing of legacy rows.
  */
 export interface AuthorizationCodeGrantContext {
   nonce: string | null;

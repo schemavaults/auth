@@ -92,8 +92,8 @@ export default async function LoginPage(props: {
     // `scope` is a required entry parameter for third-party flows: the
     // login POST hard-requires it, so reject up front rather than after
     // the user has filled the form. Must grant at least one supported
-    // scope. `nonce` remains optional on the URL (OIDC RPs may omit it;
-    // the AuthForm synthesizes a fallback) but is validated when present.
+    // scope. `nonce` is optional on the URL (OIDC RPs may omit it, OIDC
+    // Core §3.1.2.1 — no nonce is bound then) but validated when present.
     const raw_scope = typeof searchParams.scope === 'string' ? searchParams.scope : null;
     if (!raw_scope || raw_scope.length > 256 || parseAndGrantScopes(raw_scope).granted.length === 0) {
       console.warn("[LoginPage] Third-party flow missing or invalid 'scope'");

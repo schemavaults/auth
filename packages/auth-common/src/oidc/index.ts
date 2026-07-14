@@ -12,7 +12,5 @@ export {
   OIDC_NONCE_VSCHAR_REGEX,
   parseOidcNonce,
   OidcNonceValidationError,
-  SYNTHESIZED_NONCE_PREFIX,
-  isSynthesizedNonce,
 } from "./nonce";
 export type { OidcNonce } from "./nonce";
