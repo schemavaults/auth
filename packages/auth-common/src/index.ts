@@ -25,7 +25,7 @@ export type * from "./pkce";
 export * from "./oidc";
 export type * from "./oidc";
 
-export { sha256_digest, sha256_base64url } from "./sha256_digest";
+export { sha256_base64url } from "./sha256_digest";
 
 export {
   authenticateResultSchema,

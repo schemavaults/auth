@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { sha256_base64url, sha256_digest } from "./sha256_digest";
+import { sha256_base64url } from "./sha256_digest";
 
 describe("sha256_base64url", () => {
   // RFC 7636 Appendix B reference vector
@@ -18,15 +18,4 @@ describe("sha256_base64url", () => {
     }
   });
 
-  test("legacy sha256_digest output is unchanged (44 chars, padding mangled to '_')", async () => {
-    const legacy = await sha256_digest(RFC7636_VERIFIER);
-    expect(legacy).toHaveLength(44);
-    expect(legacy.endsWith("_")).toBe(true);
-    // Same digest, differing only where the standard base64 alphabet
-    // characters '+' and '/' (and the '=' pad) were flattened to '_'.
-    const standard = await sha256_base64url(RFC7636_VERIFIER);
-    expect(legacy.slice(0, 43).replace(/_/g, "?")).toBe(
-      standard.replace(/[_-]/g, "?"),
-    );
-  });
 });

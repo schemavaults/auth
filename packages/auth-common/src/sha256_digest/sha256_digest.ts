@@ -37,27 +37,14 @@ async function sha256_standard_base64(code_verifier: string): Promise<string> {
 }
 
 /**
- * Legacy SchemaVaults challenge encoding. NOT RFC 7636 base64url: every
- * character outside the base64url alphabet — `+`, `/`, AND the trailing
- * `=` padding — is replaced with `_`, yielding a 44-char string where a
- * spec-compliant client produces 43 chars. Kept byte-for-byte stable
- * because deployed SDK clients generate challenges with this exact
- * function; server-side verification accepts this encoding alongside
- * the standard one (see PKCE_ProofKeyManager.doesVerifierMatchChallenge).
- */
-export async function sha256_digest(code_verifier: string): Promise<string> {
-  const output: string = await sha256_standard_base64(code_verifier);
-  return output.replace(/[^A-Za-z0-9_-]/g, "_");
-}
-
-/**
  * Strict RFC 7636 §4.2 / RFC 4648 §5 base64url (no padding) encoding of
- * the SHA-256 digest — the encoding standard OAuth2/OIDC clients send as
- * their `code_challenge`.
+ * the SHA-256 digest — the `code_challenge` encoding used by both the
+ * SchemaVaults SDK and standard OAuth2/OIDC clients. Produces a 43-char
+ * string.
  */
 export async function sha256_base64url(code_verifier: string): Promise<string> {
   const output: string = await sha256_standard_base64(code_verifier);
   return output.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-export default sha256_digest;
+export default sha256_base64url;
