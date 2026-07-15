@@ -98,7 +98,7 @@
     },
     "packages/auth-common": {
       "name": "@schemavaults/auth-common",
-      "version": "0.22.1",
+      "version": "0.22.2",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "crypto-js": "4.2.0",

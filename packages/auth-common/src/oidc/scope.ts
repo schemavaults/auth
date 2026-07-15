@@ -87,6 +87,10 @@ export function parseAndGrantScopes(raw: unknown): ParsedOidcScopes {
     return { granted: [], hasOpenid: false };
   }
 
+  if (!oidcScopeSchema.safeParse(raw).success) {
+    return { granted: [], hasOpenid: false };
+  }
+
   const granted: OidcSupportedScope[] = [];
   for (const token of raw.split(" ")) {
     if (!token) continue; // collapse repeated separators
