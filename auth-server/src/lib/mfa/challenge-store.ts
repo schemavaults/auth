@@ -34,13 +34,6 @@ const challengeStateSchema = z
     // (≤5 min TTL) still parse.
     nonce: z.string().nullable().optional(),
     scope: z.string().nullable().optional(),
-    /**
-     * @deprecated Surface discriminator removed (codes redeem at either
-     * token endpoint now). Key kept one release so in-flight challenges
-     * written before the deploy still parse under `.strict()`. Never
-     * written. Remove next release.
-     */
-    oidc: z.boolean().nullable().optional(),
   })
   .strict();
 

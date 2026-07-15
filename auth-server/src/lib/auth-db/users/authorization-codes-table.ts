@@ -33,14 +33,6 @@ export const authorizationCodeRecordSchema = z
     // wire-format check applied when the scope was received). Every new
     // row has one; nullable for pre-upgrade rows only.
     scope: oidcScopeSchema.nullable().optional(),
-    /**
-     * @deprecated The surface-discriminator column was dropped in
-     * migration 00030 (codes are redeemable at either token endpoint
-     * now). The key is kept one release so `selectAll()` + `.strict()`
-     * row parses succeed regardless of whether the migration has run
-     * yet. Never written. Remove next release.
-     */
-    oidc: z.boolean().nullable().optional(),
   })
   .required({
     authorization_code: true,
