@@ -162,6 +162,11 @@ export class SchemaVaultsApiServerRegistry {
     publicly_listed: boolean,
     owner_organization_id: OrganizationID,
   ): Promise<void> {
+    if (!isValidApiServerId(api_server_id)) {
+      throw new TypeError(
+        "Received invalid API server ID!",
+      );
+    }
 
     if (!organizationIdSchema.safeParse(owner_organization_id).success) {
       throw new TypeError("Received invalid organization ID to register API server to!")
@@ -170,9 +175,8 @@ export class SchemaVaultsApiServerRegistry {
     // Hardcoded API server ids (the auth server's own id, the reserved
     // OIDC userinfo audience) have no database row, so the insert's
     // uniqueness conflict cannot protect them — and a colliding row
-    // would make listAllApiServers() throw. Reject them here. (Malformed
-    // ids skip the check and fail the schema parse below instead.)
-    if (isValidApiServerId(api_server_id) && isHardcodedApiServerId(api_server_id)) {
+    // would make listAllApiServers() throw. Reject them here.
+    if (isHardcodedApiServerId(api_server_id)) {
       throw new ConflictError(
         `API server ID '${api_server_id}' is reserved by the platform`,
       );
