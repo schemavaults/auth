@@ -22,6 +22,7 @@ import {
   oidcAuthorizeDirectError,
   oidcAuthorizeErrorRedirect,
 } from "./oidc-errors";
+import isValidUrl from "@/lib/is-valid-url";
 
 export interface ValidatedOidcAuthorizeRequest {
   client_app_id: AppId;
@@ -111,6 +112,14 @@ export async function validateOidcAuthorizeRequest(
       response: oidcAuthorizeDirectError(
         "invalid_request",
         "Missing 'redirect_uri' parameter.",
+      ),
+    };
+  } else if (!isValidUrl(redirect_uri)) {
+    return {
+      kind: "response",
+      response: oidcAuthorizeDirectError(
+        "invalid_request",
+        "Invalid URL for 'redirect_uri' parameter.",
       ),
     };
   }
