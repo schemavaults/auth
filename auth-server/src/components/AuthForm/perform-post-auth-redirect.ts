@@ -73,6 +73,15 @@ export async function performPostAuthRedirect(
         authorization_code,
         code_challenge.challenge_time,
         code_verifier.code_verifier,
+        // `received_state` is intentionally undefined: OAuth2 `state`
+        // (RFC 6749 §10.12) authenticates a cross-origin redirect
+        // callback, and this same-context flow has none — the code never
+        // leaves the JS context that requested it. Passing the
+        // code_verifier directly puts the SDK in same-context mode,
+        // where it skips the state check (and no state was ever stored
+        // for this flow to compare against). `opts.state` serves the
+        // redirect / native-app branches below, which echo it to the
+        // third-party client for verification in ITS SDK context.
         undefined,
         nonce,
       );
