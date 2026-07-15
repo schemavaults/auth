@@ -28,9 +28,22 @@ describe("parseAndGrantScopes", () => {
     expect(hasOpenid).toBe(false);
   });
 
-  test("deduplicates and collapses repeated separators", () => {
-    const { granted } = parseAndGrantScopes("openid  openid   email openid");
-    expect(granted).toEqual(["openid", "email"]);
+  test("dedupes single-space repeats but rejects multiple spaces/delimiters", () => {
+    // Repeated tokens separated by a SINGLE space still dedupe to the
+    // granted set.
+    expect(parseAndGrantScopes("openid openid email openid").granted).toEqual([
+      "openid",
+      "email",
+    ]);
+
+    // Multiple spaces / delimiters are malformed per RFC 6749 §3.3, so
+    // parseAndGrantScopes (which now enforces oidcScopeSchema) grants
+    // nothing rather than collapsing the repeated separators.
+    const { granted, hasOpenid } = parseAndGrantScopes(
+      "openid  openid   email openid",
+    );
+    expect(granted).toEqual([]);
+    expect(hasOpenid).toBe(false);
   });
 
   test("grants nothing on non-string or empty input", () => {
