@@ -26,8 +26,27 @@ export function evaluateRequiredScopes(
   token_scope: string | undefined,
   required_scopes: readonly string[],
 ): RequiredScopesEvaluation {
+  if (typeof token_scope !== "string" && typeof token_scope !== "undefined") {
+    throw new TypeError("Expected 'token_scope' to be a string, if passed.", {
+      cause: `Received type ${typeof token_scope}`,
+    });
+  } else if (
+    !Array.isArray(required_scopes) ||
+    !required_scopes.every((scope) => typeof scope === "string")
+  ) {
+    throw new TypeError(
+      "Expected 'required_scopes' to be an array of strings.",
+      {
+        cause: `Received type ${typeof required_scopes}`,
+      },
+    );
+  }
+
   const invalid_configured_scopes: string[] = required_scopes.filter(
-    (scope) => !(OIDC_SUPPORTED_SCOPES as readonly string[]).includes(scope),
+    (scope: string) =>
+      !(
+        OIDC_SUPPORTED_SCOPES satisfies readonly string[] as readonly string[]
+      ).includes(scope),
   );
   if (invalid_configured_scopes.length > 0) {
     return {
@@ -37,7 +56,9 @@ export function evaluateRequiredScopes(
     };
   }
 
-  const granted_scopes = new Set((token_scope ?? "").split(" ").filter(Boolean));
+  const granted_scopes = new Set(
+    (token_scope ?? "").split(" ").filter(Boolean),
+  );
   const missing_scopes: string[] = required_scopes.filter(
     (scope) => !granted_scopes.has(scope),
   );
