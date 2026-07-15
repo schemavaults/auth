@@ -1,6 +1,6 @@
 import type { Insertable, Selectable } from "@schemavaults/dbh";
 import { appIdSchema } from "@schemavaults/app-definitions";
-import { oidcScopeSchema } from "@schemavaults/auth-common";
+import { oidcNonceSchema, oidcScopeSchema } from "@schemavaults/auth-common";
 import { z } from "zod";
 
 export const authorizationCodeRecordSchema = z
@@ -27,7 +27,7 @@ export const authorizationCodeRecordSchema = z
     // genuinely nullable (null → nothing echoed), which also lets
     // pre-upgrade rows (≤10 min TTL) parse. Printable-ASCII bound
     // mirrors oidcNonceSchema in auth-common.
-    nonce: z.string().min(1).max(512).nullable().optional(),
+    nonce: oidcNonceSchema.nullable().optional(),
     // Granted scopes (space-delimited, RFC 6749 §3.3), e.g.
     // "openid email". Validated with the shared oidcScopeSchema (the same
     // wire-format check applied when the scope was received). Every new
