@@ -71,6 +71,9 @@ export interface ParsedOidcScopes {
 }
 
 function isSupportedOidcScope(scope: string): scope is OidcSupportedScope {
+  if (typeof scope !== "string" || scope.length === 0) {
+    throw new TypeError("Expected 'scope' to be a non-empty string!");
+  }
   return (OIDC_SUPPORTED_SCOPES as readonly string[]).includes(scope);
 }
 
