@@ -27,7 +27,7 @@ import { authorizationCodeRecordSchema } from "./authorization-codes-table";
  *    values. This is safe because the authorization code itself is
  *    already a long random secret.
  *
- * Returns the consumed record's `{ uid, nonce, scope, oidc }` on
+ * Returns the consumed record's `{ uid, nonce, scope }` on
  * successful validation & consumption, `null` for every invalid-input
  * case (not found, expired, already consumed, bad verifier,
  * client_app_id mismatch, lost race). Throws only on infrastructure /
