@@ -31,6 +31,8 @@ export interface OidcDiscoveryDocument {
   code_challenge_methods_supported: readonly string[];
   claims_supported: readonly string[];
   authorization_response_iss_parameter_supported: boolean;
+  request_parameter_supported: boolean;
+  request_uri_parameter_supported: boolean;
 }
 
 export function buildOidcDiscoveryDocument(
@@ -64,6 +66,14 @@ export function buildOidcDiscoveryDocument(
       "email_verified",
     ],
     authorization_response_iss_parameter_supported: true,
+    // Request Objects (JAR, OIDC Core §6 / RFC 9101) are not implemented;
+    // the authorize endpoint rejects `request`/`request_uri` with
+    // request_not_supported / request_uri_not_supported (see
+    // validate-authorize-request.ts). Declared explicitly because OIDC
+    // Discovery §3 defaults request_uri_parameter_supported to TRUE when
+    // omitted — leaving it out would falsely advertise support.
+    request_parameter_supported: false,
+    request_uri_parameter_supported: false,
   };
 }
 
