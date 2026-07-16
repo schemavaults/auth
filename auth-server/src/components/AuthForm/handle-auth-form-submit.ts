@@ -8,6 +8,7 @@ import type { AuthFormData } from "./auth-form-data";
 import {
   type CodeChallengeWithDetails,
   type CodeVerifierWithDetails,
+  DEFAULT_AUTH_SCOPE,
   PKCE_ProofKeyManager,
   parseOAuth2State,
 } from "@schemavaults/auth-common";
@@ -20,6 +21,7 @@ import type { useRouter } from "next/navigation";
 import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
+import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface PendingAuthorizationState {
   authorization_code: string;
@@ -30,6 +32,11 @@ export interface PendingAuthorizationState {
   // consent-screen interstitial so the callback redirect can echo it
   // untouched (RFC 6749 §10.12).
   state: string | null;
+  // Login replay nonce bound to the minted code — threaded through so
+  // the account-page token exchange can verify the response echo. Null
+  // when the flow carried no nonce (an OIDC RP may omit it, OIDC Core
+  // §3.1.2.1); nothing is echoed/verified in that case.
+  nonce: string | null;
 }
 
 interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
@@ -212,6 +219,27 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       ? searchParams.get("redirect_uri") ?? null
       : null;
 
+  // Grant context. `nonce` is OPTIONAL (OIDC Core §3.1.2.1): third-party
+  // flows carry it on the entry URL when the RP/SDK supplied one (the
+  // pages 400 malformed values); an OIDC RP may legitimately omit it, in
+  // which case no nonce is bound (null → no id_token claim). The
+  // account-page flow has no entry URL, so it mints a plain nonce for its
+  // own custom-surface replay-echo check. `scope` always falls back to
+  // the platform default.
+  const url_nonce = searchParams.get("nonce");
+  // uuidSync() (not crypto.randomUUID) so the account-page nonce works in
+  // insecure browser contexts (non-localhost http://) where
+  // crypto.randomUUID is undefined — it falls back to uuid's v4() there.
+  const flow_nonce: string | null =
+    url_nonce && url_nonce.length > 0
+      ? url_nonce
+      : onSuccessfulAuthenticate === "account-page"
+        ? uuidSync()
+        : null;
+  const url_scope = searchParams.get("scope");
+  const flow_scope: string =
+    url_scope && url_scope.length > 0 ? url_scope : DEFAULT_AUTH_SCOPE;
+
   // Exchange credentials for an authorization code, or be told that the
   // user must complete an MFA challenge first.
   let authorization_code: string;
@@ -222,6 +250,8 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       values,
       code_challenge,
       request_redirect_uri,
+      flow_nonce,
+      flow_scope,
     );
     if (result.kind === "mfa_required") {
       // The MFA challenge page lives at a different URL, so the
@@ -267,6 +297,13 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         const value = searchParams.get(key);
         if (value) params.set(key, value);
       }
+      // Always forward the resolved grant context (not just the raw URL
+      // values): the MFA page needs `nonce` for the account-page token
+      // exchange's echo verification, and keeping `scope` on the URL
+      // preserves the flow's entry parameters across the navigation.
+      // A null nonce (RP omitted it) is simply not forwarded.
+      if (flow_nonce) params.set("nonce", flow_nonce);
+      params.set("scope", flow_scope);
       // Account-page logins don't carry a `challenge_time` on the URL
       // (no third-party authorize handoff), but the MFA page needs it to
       // look the verifier back up from storage after submission. The
@@ -330,6 +367,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         code_verifier,
         redirect_uri,
         state,
+        nonce: flow_nonce,
       });
       return;
     }
@@ -392,6 +430,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     code_verifier,
     redirect_uri,
     state,
+    nonce: flow_nonce,
     auth,
     router,
     toast,

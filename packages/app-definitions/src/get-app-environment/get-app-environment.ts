@@ -1,5 +1,5 @@
 import { type SchemaVaultsAppEnvironment } from "@/app-environments";
-import isBrowserRuntime from "./isBrowserRuntime";
+import isBrowserRuntime from "@/is-browser-runtime";
 import parseAppEnvironmentFromProcessDotEnv from "./parse-app-environment-from-processDotEnv";
 
 export function getAppEnvironment(

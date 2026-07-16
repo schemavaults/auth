@@ -91,6 +91,14 @@ const nextConfig: NextConfig = {
         source: "/favicon.ico",
         destination: "/branding/favicon",
       },
+      // OIDC Discovery 1.0 §4: relying parties resolve provider metadata
+      // at the spec-fixed well-known path. A rewrite (rather than an app
+      // route in a dotted `.well-known` directory) keeps the route
+      // handler in the ordinary /api/oidc tree.
+      {
+        source: "/.well-known/openid-configuration",
+        destination: "/api/oidc/openid-configuration",
+      },
     ];
   },
 };

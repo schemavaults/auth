@@ -23,6 +23,7 @@ import { Loader2, ShieldCheck, X } from "lucide-react";
 import type { PendingAuthorizationState } from "@/components/AuthForm/handle-auth-form-submit";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import {
+  DEFAULT_AUTH_SCOPE,
   OAuth2StateValidationError,
   parseOAuth2State,
 } from "@schemavaults/auth-common";
@@ -124,6 +125,16 @@ export function AppAuthorizationConsentScreen({
       // read survives code-refactor reordering. Throws on malformed;
       // the outer try/catch surfaces a destructive toast.
       const state = parseOAuth2State(searchParams.get("state"));
+      // Grant context. `nonce` is OPTIONAL (OIDC Core §3.1.2.1): use the
+      // URL value when the RP supplied one, else bind none (null → no
+      // id_token claim). `scope` always falls back to the platform
+      // default. Mirrors handle-auth-form-submit.ts.
+      const url_nonce = searchParams.get("nonce");
+      const flow_nonce: string | null =
+        url_nonce && url_nonce.length > 0 ? url_nonce : null;
+      const url_scope = searchParams.get("scope");
+      const flow_scope: string =
+        url_scope && url_scope.length > 0 ? url_scope : DEFAULT_AUTH_SCOPE;
 
       if (!code_challenge) {
         throw new Error("Missing code_challenge parameter");
@@ -147,7 +158,9 @@ export function AppAuthorizationConsentScreen({
         authClient.auth_server_url
       );
 
-      // Generate authorization code via session endpoint
+      // Generate authorization code via session endpoint. The
+      // `redirect_uri` must be sent so the server can bind the code to
+      // it (the endpoint refuses third-party mints without one).
       const response = await fetch(
         endpoint,
         {
@@ -159,6 +172,9 @@ export function AppAuthorizationConsentScreen({
             code_challenge,
             code_challenge_method: "S256",
             challenge_time,
+            ...(redirect_uri ? { redirect_uri } : {}),
+            ...(flow_nonce ? { nonce: flow_nonce } : {}),
+            scope: flow_scope,
           }),
         },
       );
@@ -196,6 +212,7 @@ export function AppAuthorizationConsentScreen({
           code_challenge: codeChallengeDetails,
           app_environment: appEnv,
           state,
+          issuer: authClient.auth_server_url,
         });
       } else if (
         onSuccessfulAuthenticate ===

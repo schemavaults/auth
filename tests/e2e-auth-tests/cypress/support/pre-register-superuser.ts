@@ -1,6 +1,7 @@
 import {
   PKCE_ProofKeyManager,
   EmailRegistrationCredentials,
+  DEFAULT_AUTH_SCOPE,
 } from "@schemavaults/auth-common";
 
 // Runs in the Cypress Node context (setupNodeEvents "before:run"), where the
@@ -34,6 +35,11 @@ async function preRegisterSuperuser(
       client_app_id: auth_server_app_id,
       code_challenge: codeChallenge.code_challenge,
       challenge_time,
+      // scope + nonce are required, first-class register parameters.
+      // Use clock + Math.random for the nonce rather than
+      // crypto.randomUUID() so this stays valid in every context.
+      nonce: `e2e-nonce-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      scope: DEFAULT_AUTH_SCOPE,
     }),
   });
 

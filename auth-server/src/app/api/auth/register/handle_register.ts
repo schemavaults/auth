@@ -11,7 +11,11 @@ import {
   emailCredentialsSchema,
   inviteCodeFormatSchema,
   PKCE_ProofKeyManager,
+  oidcNonceSchema,
+  oidcScopeSchema,
+  parseAndGrantScopes,
 } from "@schemavaults/auth-common";
+import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
 import {
   ServerlessDatabase,
   UserRegistry,
@@ -52,14 +56,23 @@ const registerBodySchema = z
     // Required for third-party app flows; null/absent only for the auth
     // server's own /account flow (client_app_id === auth-server's own).
     redirect_uri: z.string().url().nullable().optional(),
+    // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
+    // scopes (REQUIRED, RFC 6749 §3.3 wire format); see handle_login.ts.
+    nonce: oidcNonceSchema.nullable().optional(),
+    scope: oidcScopeSchema,
   })
   .required({
     credentials: true,
     client_app_id: true,
     code_challenge: true,
     challenge_time: true,
+    scope: true,
   })
-  .strict();
+  .strict()
+  .refine(
+    (body) => parseAndGrantScopes(body.scope).granted.length > 0,
+    "scope must include at least one supported scope (openid, email, profile)",
+  );
 
 function wasInviteCodeSupplied(
   invite_code: InviteCode | undefined,
@@ -119,6 +132,12 @@ export async function handleRegister({
   const challenge_time: number = registrationData.challenge_time;
   const invite_code: string | undefined = registrationData.invite_code;
   const redirect_uri: string | null = registrationData.redirect_uri ?? null;
+  // Granted scopes are re-derived server-side (never trusted verbatim);
+  // the schema refinement above guaranteed at least one is granted.
+  const grant_context: AuthorizationCodeGrantContext = {
+    nonce: registrationData.nonce ?? null,
+    scope: parseAndGrantScopes(registrationData.scope).granted.join(" "),
+  };
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
@@ -458,6 +477,7 @@ export async function handleRegister({
       "S256",
       challenge_time,
       redirect_uri,
+      grant_context,
     );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

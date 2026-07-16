@@ -3,16 +3,28 @@ import type { AuthTokenTypes } from "@/token-data";
 import type { DecodeTokenFn } from "./decode-token-type";
 import type { UserData } from "@/user_data";
 
-export interface IDecodeSeveralJwtsInputOptions {
+export interface IDecodeSeveralJwtsInputOptions<TDecoded = UserData> {
   token_sources: readonly PotentiallyValidTokenSource[];
-  decodeJWT: DecodeTokenFn;
+  decodeJWT: DecodeTokenFn<TDecoded>;
   jwt_audience: string;
+  // Extracts the canonical UserData from a decoded value for the
+  // cross-token consistency check below. Defaults to treating the decoded
+  // value as UserData (identity) so callers that decode straight to
+  // UserData need not supply it; callers that decode to a richer record
+  // (e.g. `{ user, scope }`) pass an accessor to pick out the user.
+  getUserData?: (decoded: TDecoded) => UserData;
 }
 
-export async function decodeJWTs(
-  { token_sources, decodeJWT, jwt_audience }: IDecodeSeveralJwtsInputOptions,
+export async function decodeJWTs<TDecoded = UserData>(
+  {
+    token_sources,
+    decodeJWT,
+    jwt_audience,
+    getUserData = (decoded: TDecoded): UserData =>
+      decoded as unknown as UserData,
+  }: IDecodeSeveralJwtsInputOptions<TDecoded>,
   debug: boolean = false,
-): Promise<UserData> {
+): Promise<TDecoded> {
   const n_token_sources: number = token_sources.length;
   if (!Array.isArray(token_sources) || n_token_sources === 0) {
     throw new Error("Did not receive a list of tokens to decode");
@@ -26,12 +38,12 @@ export async function decodeJWTs(
     throw new Error("JWT audience is not a string!");
   }
 
-  const decodeTokenPromises: Promise<UserData>[] = token_sources.map(function (
+  const decodeTokenPromises: Promise<TDecoded>[] = token_sources.map(function (
     token: PotentiallyValidTokenSource,
-  ): Promise<UserData> {
+  ): Promise<TDecoded> {
     const type: AuthTokenTypes = token.type;
 
-    const decode_promise: Promise<UserData> = decodeJWT({
+    const decode_promise: Promise<TDecoded> = decodeJWT({
       type,
       token: token.token,
       jwt_audience,
@@ -39,20 +51,20 @@ export async function decodeJWTs(
     return decode_promise;
   });
 
-  const decodeResults: PromiseSettledResult<UserData>[] =
+  const decodeResults: PromiseSettledResult<TDecoded>[] =
     await Promise.allSettled(decodeTokenPromises);
 
   const fulfilledDecodePromises = decodeResults.filter(
     function isFulfilledPromise(
-      result: PromiseSettledResult<UserData>,
-    ): result is PromiseFulfilledResult<UserData> {
+      result: PromiseSettledResult<TDecoded>,
+    ): result is PromiseFulfilledResult<TDecoded> {
       return result.status === "fulfilled";
     },
   );
 
-  const successfulDecodeResults: readonly UserData[] =
+  const successfulDecodeResults: readonly TDecoded[] =
     fulfilledDecodePromises.map(
-      (fulfilled_decode_result): UserData => fulfilled_decode_result.value,
+      (fulfilled_decode_result): TDecoded => fulfilled_decode_result.value,
     );
 
   const n_successful_decode_results: number = successfulDecodeResults.length;
@@ -115,12 +127,13 @@ export async function decodeJWTs(
     const emails_set: Set<string> = new Set();
 
     for (const decoded of successfulDecodeResults) {
-      uids_set.add(decoded.uid);
-      subs_set.add(decoded.sub);
-      if (decoded.uid !== decoded.sub) {
+      const user: UserData = getUserData(decoded);
+      uids_set.add(user.uid);
+      subs_set.add(user.sub);
+      if (user.uid !== user.sub) {
         throw new Error("uid not equal to sub");
       }
-      emails_set.add(decoded.email);
+      emails_set.add(user.email);
     }
     if (uids_set.size !== 1 || subs_set.size !== 1) {
       throw new Error("Token decoding produced different user IDs!");
@@ -135,7 +148,7 @@ export async function decodeJWTs(
     n_successful_decode_results >= 1,
     "Expected there to be at least one JWT to have been decoded successfully if this point was reached!",
   );
-  const firstSuccessfulResult: UserData = successfulDecodeResults[0];
+  const firstSuccessfulResult: TDecoded = successfulDecodeResults[0];
 
   return firstSuccessfulResult;
 }

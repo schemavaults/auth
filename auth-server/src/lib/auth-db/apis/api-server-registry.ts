@@ -15,7 +15,10 @@ import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { ConflictError } from "@/lib/error/ConflictError";
-import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
+import {
+  isHardcodedApiServerId,
+  isValidApiServerId,
+} from "@schemavaults/app-definitions";
 
 /**
  * @name SchemaVaultsApiServerRegistry
@@ -159,9 +162,24 @@ export class SchemaVaultsApiServerRegistry {
     publicly_listed: boolean,
     owner_organization_id: OrganizationID,
   ): Promise<void> {
+    if (!isValidApiServerId(api_server_id)) {
+      throw new TypeError(
+        "Received invalid API server ID!",
+      );
+    }
 
     if (!organizationIdSchema.safeParse(owner_organization_id).success) {
       throw new TypeError("Received invalid organization ID to register API server to!")
+    }
+
+    // Hardcoded API server ids (the auth server's own id, the reserved
+    // OIDC userinfo audience) have no database row, so the insert's
+    // uniqueness conflict cannot protect them — and a colliding row
+    // would make listAllApiServers() throw. Reject them here.
+    if (isHardcodedApiServerId(api_server_id)) {
+      throw new ConflictError(
+        `API server ID '${api_server_id}' is reserved by the platform`,
+      );
     }
 
     const parsed_app =

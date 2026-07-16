@@ -223,7 +223,7 @@ export class RouteGuardFactory {
       );
     }
 
-    const { user } = await decodeJWTsWithKeyManager(
+    const decoded = await decodeJWTsWithKeyManager(
       this.jwt_keys_manager,
       token_sources,
       jwt_audience,
@@ -232,7 +232,10 @@ export class RouteGuardFactory {
     );
 
     const init_opts: InitRouteGuardCheckOptions = {
-      user,
+      user: decoded.user,
+      // Thread the token's granted scope alongside the user (null when no
+      // user was resolved or the token carried no scope claim).
+      scope: decoded.user ? decoded.scope : null,
       environment: getAppEnvironment(),
     };
 

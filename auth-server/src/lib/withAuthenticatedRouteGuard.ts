@@ -51,6 +51,12 @@ export type { IAuthenticatedApiRouteGuardInputs as IProtectedAuthenticatedApiRou
 
 export interface IWithAuthenticatedApiRouteGuardWrapperOpts {
   additional_token_sources?: PotentiallyValidTokenSource[];
+  /**
+   * Scopes the presented token's `scope` claim must include (see
+   * `required_scopes` on the SDK guard). Tokens without a scope claim
+   * grant no scopes and are denied 403 when this is non-empty.
+   */
+  required_scopes?: readonly string[];
   debug?: boolean;
 }
 
@@ -79,6 +85,7 @@ export async function withAuthenticatedApiRouteGuard(
         custom_is_authorized_check: async (opts): Promise<boolean> => !opts.user.disabled,
         custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
         additional_token_sources: wrapper_opts?.additional_token_sources,
+        required_scopes: wrapper_opts?.required_scopes,
         debug: wrapper_opts?.debug
       }
     );

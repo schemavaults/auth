@@ -1,6 +1,12 @@
 export { withAuthenticatedApiRouteGuard } from "./withAuthenticatedApiRouteGuard";
-export type { TProtectedAuthenticatedApiRoute } from "./withAuthenticatedApiRouteGuard";
+export type {
+  TProtectedAuthenticatedApiRoute,
+  IWithAuthenticatedApiRouteGuardAdditionalOptions,
+} from "./withAuthenticatedApiRouteGuard";
 export type { IBaseProtectedAuthenticatedApiRouteInputs } from "./IBaseProtectedAuthenticatedApiRouteInputs";
+
+export { evaluateRequiredScopes } from "./evaluate-required-scopes";
+export type { RequiredScopesEvaluation } from "./evaluate-required-scopes";
 
 export { withAuthenticatedServerComponentRouteGuard } from "./withAuthenticatedServerComponentRouteGuard";
 export type { TProtectedAuthenticatedPageServerComponent } from "./withAuthenticatedServerComponentRouteGuard";

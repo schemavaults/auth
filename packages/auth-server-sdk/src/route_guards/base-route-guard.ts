@@ -8,13 +8,16 @@ export type { IRouteGuard } from "./IRouteGuard";
 
 export abstract class BaseRouteGuard implements IRouteGuard {
   protected readonly _user: UserData | null;
+  protected readonly _scope: string | null;
   private readonly environment: SchemaVaultsAppEnvironment;
 
   public constructor({
     user,
+    scope,
     environment,
   }: InitRouteGuardCheckOptions) {
     this._user = user;
+    this._scope = scope ?? null;
     this.environment = environment;
   }
 
@@ -38,5 +41,9 @@ export abstract class BaseRouteGuard implements IRouteGuard {
 
   public get user(): UserData | null {
     return this._user;
+  }
+
+  public get scope(): string | null {
+    return this._scope;
   }
 }

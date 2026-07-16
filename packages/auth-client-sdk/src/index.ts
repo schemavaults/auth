@@ -35,6 +35,10 @@ export type { SchemaVaultsAuthErrorId } from "@schemavaults/auth-common";
 // adapters or tests.
 export { generateOAuth2State } from "./lib/generate-oauth2-state";
 
+// Login replay-nonce generation (OIDC Core §3.1.2.1 semantics, used on
+// every SchemaVaults flow). Same shape/contract as generateOAuth2State.
+export { generateOidcNonce } from "./lib/generate-oidc-nonce";
+
 // Re-export the timing-safe string comparator from auth-common so
 // consumers who import this SDK don't need a separate auth-common dep
 // just to validate their own callback URLs.

@@ -8,6 +8,22 @@ import {
 } from "@schemavaults/auth-common";
 import { type AuthorizationCodeRecord } from "./authorization-codes-table";
 
+/**
+ * Grant context bound to every authorization code at issuance:
+ * - `nonce`: the login replay nonce, echoed back at redemption (as the
+ *   token-response `nonce` field on the custom surface; as the id_token
+ *   `nonce` claim on the OIDC surface). Null when the flow carried no
+ *   nonce — OPTIONAL per OIDC Core §3.1.2.1, so an RP may omit it.
+ * - `scope`: the granted scopes (space-delimited), stamped on the
+ *   tokens minted at redemption.
+ * A null `nonce` is a first-class value (RP omitted it); a null `scope`
+ * only arises from defensive parsing of legacy rows.
+ */
+export interface AuthorizationCodeGrantContext {
+  nonce: string | null;
+  scope: string | null;
+}
+
 export async function generateAuthorizationCode(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   uid: string,
@@ -16,7 +32,8 @@ export async function generateAuthorizationCode(
   code_challenge_method: "S256",
   challenge_time: number,
   redirect_uri: string | null,
-  debug: boolean = false
+  debug: boolean = false,
+  grant: AuthorizationCodeGrantContext,
 ): Promise<string> {
   if (debug) {
     console.log(
@@ -67,6 +84,8 @@ export async function generateAuthorizationCode(
       used_at: null,
       challenge_time,
       redirect_uri,
+      nonce: grant.nonce,
+      scope: grant.scope,
     };
 
     if (debug) {

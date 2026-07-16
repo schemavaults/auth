@@ -27,20 +27,34 @@ import { authorizationCodeRecordSchema } from "./authorization-codes-table";
  *    values. This is safe because the authorization code itself is
  *    already a long random secret.
  *
- * Returns `{ uid }` on successful validation & consumption, `null` for
- * every invalid-input case (not found, expired, already consumed, bad
- * verifier, client_app_id mismatch, lost race). Throws only on
- * infrastructure / parse errors.
+ * Returns the consumed record's `{ uid, nonce, scope }` on
+ * successful validation & consumption, `null` for every invalid-input
+ * case (not found, expired, already consumed, bad verifier,
+ * client_app_id mismatch, lost race). Throws only on infrastructure /
+ * parse errors.
+ *
+ * `challenge_time` may be `null`: standard OIDC relying parties never
+ * see the SDK-internal `challenge_time` value, so the OIDC token
+ * endpoint passes `null` and the value stored on the code row at
+ * issuance is used instead. This is sound because `challenge_time` is
+ * not an input to the PKCE hash — it only feeds the challenge-expiry
+ * window, and the stored value is the issuance-time one.
  */
+export interface ConsumedAuthorizationCode {
+  uid: string;
+  nonce: string | null;
+  scope: string | null;
+}
+
 export async function validateAndConsumeAuthorizationCode(
   db: Kysely<AuthDatabase>,
   authorization_code: string,
   client_app_id: AppId,
   code_verifier: string,
-  challenge_time: number,
+  challenge_time: number | null,
   redirect_uri: string | null,
   debug: boolean = false,
-): Promise<{ uid: string } | null> {
+): Promise<ConsumedAuthorizationCode | null> {
   if (debug) {
     console.log(
       "[validateAndConsumeAuthorizationCode] Validating authorization code...",
@@ -103,6 +117,9 @@ export async function validateAndConsumeAuthorizationCode(
       client_app_id: stored_client_app_id,
       expires_at,
       redirect_uri: stored_redirect_uri,
+      challenge_time: stored_challenge_time,
+      nonce: stored_nonce,
+      scope: stored_scope,
     } = parsed_authorization_code.data;
 
     // 3. Defense-in-depth: the code must be redeemed by the same client
@@ -185,13 +202,16 @@ export async function validateAndConsumeAuthorizationCode(
       return null;
     }
 
-    // 5. PKCE match (timing-safe).
+    // 5. PKCE match (timing-safe). When the caller passed no
+    // challenge_time (OIDC surface — the RP never knows this internal
+    // value), fall back to the one stored at issuance; it does not feed
+    // the hash, only the expiry window.
     let isValid: boolean = false;
     try {
       isValid = await PKCE_ProofKeyManager.doesVerifierMatchChallenge({
         input_code_verifier: unverified_user_code_verifier,
         saved_code_challenge: code_challenge_from_database,
-        challenge_time,
+        challenge_time: challenge_time ?? stored_challenge_time,
         timingSafeEqual,
       });
     } catch (e: unknown) {
@@ -237,7 +257,11 @@ export async function validateAndConsumeAuthorizationCode(
         "[validateAndConsumeAuthorizationCode] Authorization code validated and consumed",
       );
     }
-    return { uid };
+    return {
+      uid,
+      nonce: stored_nonce ?? null,
+      scope: stored_scope ?? null,
+    };
   });
 }
 

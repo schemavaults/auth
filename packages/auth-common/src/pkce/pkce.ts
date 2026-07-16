@@ -14,7 +14,7 @@ import {
   type CodeVerifierWithDetails,
   codeVerifierWithDetailsSchema,
 } from "./code_verifier";
-import { sha256_digest } from "@/sha256_digest";
+import { sha256_base64url } from "@/sha256_digest";
 
 /**
  * Signature compatible with node:crypto's `timingSafeEqual`. Callers of
@@ -54,7 +54,7 @@ export class PKCE_ProofKeyManager {
   ): Promise<CodeChallengeWithDetails> {
     const createCodeChallengeOptions: CreateCodeChallengeInputOptions = {
       code_verifier,
-      sha256_digest: sha256_digest,
+      sha256: sha256_base64url,
     };
     const code_challenge: CodeChallengeWithDetails =
       await create_code_challenge(createCodeChallengeOptions);
@@ -118,7 +118,7 @@ export class PKCE_ProofKeyManager {
         code_verifier: code_verifier.code_verifier,
         challenge_time: code_verifier.challenge_time,
       },
-      sha256_digest: sha256_digest,
+      sha256: sha256_base64url,
     };
     return await create_code_challenge(codeChallengeOptions);
   }
@@ -189,12 +189,10 @@ export class PKCE_ProofKeyManager {
   public static async doesVerifierMatchChallenge(
     opts: CheckWhetherVerifierMatchesChallengeInputOptions,
   ): Promise<boolean> {
-    const {
-      input_code_verifier,
-      saved_code_challenge,
-      challenge_time,
-      timingSafeEqual,
-    } = opts;
+    // `challenge_time` is accepted for caller convenience but is not used
+    // for matching (it does not feed the hash) — the proof is purely
+    // `BASE64URL-ENCODE(SHA256(verifier)) === saved_code_challenge`.
+    const { input_code_verifier, saved_code_challenge, timingSafeEqual } = opts;
 
     if (typeof input_code_verifier !== "string" || !input_code_verifier) {
       throw new Error("Input code verifier is not a string");
@@ -217,30 +215,25 @@ export class PKCE_ProofKeyManager {
     }
 
     try {
-      // Put the input code verifier through the same process
-      // that (should have) created the initial code_challenge
-      const pkce_flow = new PKCE_ProofKeyManager({
-        code_verifier: input_code_verifier,
-        challenge_time,
-      });
+      // RFC 7636 §4.6: recompute the S256 challenge from the presented
+      // verifier and compare it to the stored one. Both the SchemaVaults
+      // SDK and standard OIDC RPs now emit the strict base64url encoding
+      // (see sha256_base64url), so a single computation covers every client.
+      const expected_challenge: string =
+        await sha256_base64url(input_code_verifier);
 
-      const generated_challenge: CodeChallengeWithDetails =
-        await pkce_flow.getCodeChallenge();
-
-      // Timing-safe byte comparison using the caller-provided function.
-      // The caller is responsible for supplying a constant-time comparator;
-      // accepting it as an argument keeps this module free of any runtime
+      // Timing-safe comparison using the caller-provided function. Accepting
+      // the comparator as an argument keeps this module free of any runtime
       // dependency on node:crypto, so it can be bundled for browsers (for
       // createCodeVerifier/createCodeChallenge) without bundler errors.
-      const generatedBuf: Buffer = Buffer.from(
-        generated_challenge.code_challenge,
-        "base64",
-      );
-      const savedBuf: Buffer = Buffer.from(saved_code_challenge, "base64");
-      if (generatedBuf.length !== savedBuf.length) {
+      // Challenges are compared as raw UTF-8 bytes (length-checked first).
+      const encoder = new TextEncoder();
+      const savedBytes: Uint8Array = encoder.encode(saved_code_challenge);
+      const expectedBytes: Uint8Array = encoder.encode(expected_challenge);
+      if (expectedBytes.length !== savedBytes.length) {
         return false;
       }
-      return timingSafeEqual(generatedBuf, savedBuf);
+      return timingSafeEqual(expectedBytes, savedBytes);
     } catch (e: unknown) {
       console.error(e);
       return false;

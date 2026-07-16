@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/app-definitions",
   "description": "Define frontend or API server applications",
-  "version": "0.10.1",
+  "version": "0.11.4",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -22,7 +22,9 @@
     "build:cjs_default_export": "esbuild --bundle src/index.ts --format=cjs --outfile=dist/index.cjs --platform=node",
     "build:cjs_get_app_environment_entrypoint": "esbuild --bundle src/get-app-environment/index.ts --format=cjs --outfile=dist/get-app-environment.cjs --platform=node",
     "build:cjs_get_auth_server_url_entrypoint": "esbuild --bundle src/get-auth-server-url.ts --format=cjs --outfile=dist/get-auth-server-url.cjs --platform=node",
-    "build:cjs": "bun run build:cjs_default_export && bun run build:cjs_get_app_environment_entrypoint && bun run build:cjs_get_auth_server_url_entrypoint",
+    "build:cjs_is_browser_runtime_entrypoint": "esbuild --bundle src/is-browser-runtime.ts --format=cjs --outfile=dist/is-browser-runtime.cjs --platform=node",
+    "build:cjs_is_web_crypto_available_entrypoint": "esbuild --bundle src/is-web-crypto-available.ts --format=cjs --outfile=dist/is-web-crypto-available.cjs --platform=node",
+    "build:cjs": "bun run build:cjs_default_export && bun run build:cjs_get_app_environment_entrypoint && bun run build:cjs_get_auth_server_url_entrypoint && bun run build:cjs_is_browser_runtime_entrypoint && bun run build:cjs_is_web_crypto_available_entrypoint",
     "build:types": "tsc --project tsconfig.json --emitDeclarationOnly",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "bun test",
@@ -72,6 +74,16 @@
       "types": "./dist/get-auth-server-url.d.ts",
       "import": "./dist/get-auth-server-url.js",
       "require": "./dist/get-auth-server-url.cjs"
+    },
+    "./is-browser-runtime": {
+      "types": "./dist/is-browser-runtime.d.ts",
+      "import": "./dist/is-browser-runtime.js",
+      "require": "./dist/is-browser-runtime.cjs"
+    },
+    "./is-web-crypto-available": {
+      "types": "./dist/is-web-crypto-available.d.ts",
+      "import": "./dist/is-web-crypto-available.js",
+      "require": "./dist/is-web-crypto-available.cjs"
     }
   },
   "publishConfig": {

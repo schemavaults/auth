@@ -26,6 +26,11 @@ export interface IHandleSuccessfulAuthenticationOpts {
   // rejects the exchange if this does not match the value it persisted
   // before the authorize redirect.
   received_state: string | null | undefined;
+  // Expected login replay nonce for flows completed in the same JS
+  // context that initiated them (the auth server's own /account flow,
+  // where no adapter storage round-trip happens). Ignored in the
+  // redirect flow, which loads its stored nonce via `loadOidcNonce`.
+  expected_nonce: string | null | undefined;
   // OAuth2 `redirect_uri` that was sent at issuance. The token endpoint
   // verifies this matches the value persisted on the authorization
   // code's row by exact string equality — refusing to swap a code's
@@ -34,6 +39,7 @@ export interface IHandleSuccessfulAuthenticationOpts {
   redirect_uri: string | null;
   loadCodeVerifier: (challenge_time: number) => string | null;
   loadOAuth2State: (challenge_time: number) => string | null;
+  loadOidcNonce: (challenge_time: number) => string | null;
   debug: boolean;
   environment: SchemaVaultsAppEnvironment;
   adapter: ISchemaVaultsAuthClientAdapter;
@@ -54,9 +60,11 @@ export async function handleSuccessfulAuthentication({
   challenge_time,
   code_verifier,
   received_state,
+  expected_nonce,
   redirect_uri,
   loadCodeVerifier,
   loadOAuth2State,
+  loadOidcNonce,
   debug,
   environment,
   adapter,
@@ -160,6 +168,29 @@ export async function handleSuccessfulAuthentication({
     }
   }
 
+  // Load the stored login replay nonce (redirect flow) BEFORE the code
+  // is redeemed, so the echo in the token response can be verified. In
+  // the same-context flow the caller passes `expected_nonce` directly.
+  let nonce_to_verify: string | null = expected_nonce ?? null;
+  if (isRedirectFlow) {
+    let stored_nonce: string | null;
+    try {
+      stored_nonce = loadOidcNonce(challenge_time);
+    } catch (e: unknown) {
+      console.error(
+        "[SchemaVaultsAuthClient::handleSuccessfulAuthentication] Failed to load stored login nonce: ",
+        e,
+      );
+      throw new Error("Failed to load stored login nonce");
+    }
+    if (typeof stored_nonce !== "string" || stored_nonce.length === 0) {
+      throw new Error(
+        "Missing stored login nonce — cannot verify token response",
+      );
+    }
+    nonce_to_verify = stored_nonce;
+  }
+
   // The auth server will redirect the user back to the client
   // The client will have a code in the query parameters
   // The client will use the code to get an access token
@@ -210,8 +241,8 @@ export async function handleSuccessfulAuthentication({
       }
     }
 
-    // Clear the OAuth2 state nonce — it has done its job. Only applies
-    // in the redirect flow where state was actually persisted.
+    // Clear the OAuth2 state + login nonce — they have done their job.
+    // Only applies in the redirect flow where they were persisted.
     if (isRedirectFlow) {
       try {
         adapter.clearOAuth2State(challenge_time);
@@ -222,6 +253,17 @@ export async function handleSuccessfulAuthentication({
         );
         if (debug) {
           throw new Error("Failed to clear OAuth2 state");
+        }
+      }
+      try {
+        adapter.clearOidcNonce(challenge_time);
+      } catch (e: unknown) {
+        console.error(
+          "[SchemaVaultsAuthClient] Failed to clear login nonce: ",
+          e,
+        );
+        if (debug) {
+          throw new Error("Failed to clear login nonce");
         }
       }
     }
@@ -360,6 +402,26 @@ export async function handleSuccessfulAuthentication({
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Success response data: ",
         tokens_data.data,
       );
+    }
+
+    // Login replay-nonce verification: the server echoes the nonce that
+    // was bound to the redeemed authorization code at login time. A
+    // missing or mismatched echo means the token response was not
+    // produced for THIS flow's code — reject it.
+    if (nonce_to_verify) {
+      const echoed_nonce: string | undefined = tokens_data.data.nonce;
+      if (
+        typeof echoed_nonce !== "string" ||
+        !timingSafeStringEqual(nonce_to_verify, echoed_nonce)
+      ) {
+        console.error(
+          "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] " +
+            "Login nonce mismatch in token response",
+        );
+        throw new Error(
+          "Login nonce mismatch in token response — possible replay",
+        );
+      }
     }
 
     const { tokens, userData } = tokens_data.data;

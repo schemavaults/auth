@@ -4,7 +4,10 @@ export { getExpiryTime, getExpiryDurationString } from "./expiry";
 export { JWT_Factory } from "./jwt-factory";
 
 export type { CustomJWTPayload } from "./payload_data";
-export { customJwtPayloadToUserData } from "./custom-jwt-payload-to-user-data";
+export {
+  customJwtPayloadToUserData,
+  getScopeFromCustomJwtPayload,
+} from "./custom-jwt-payload-to-user-data";
 
 export {
   JWT_Keys,
@@ -12,6 +15,7 @@ export {
   generateJwtSigningKeyPair,
   generateJwtContentEncryptionKeyPair,
   to_public_jwks,
+  to_public_verification_jwks,
   importAsymmetricJWK,
   jsonSerializedJwtKeySchema,
   PEMFormat,
@@ -19,6 +23,12 @@ export {
   SigningKeyPairFactory,
 } from "./jwt_keys";
 export type * from "./jwt_keys";
+
+export { generateIdToken, ID_TOKEN_EXPIRY } from "./generate_id_token";
+export type {
+  GenerateIdTokenOptions,
+  GeneratedIdToken,
+} from "./generate_id_token";
 
 export { getKeysetIdFromToken } from "./get_keyset_id_from_token";
 export { default as getAudienceFromToken } from "./get_audience_from_token";

@@ -17,6 +17,8 @@
 // indirectly by example_resource_server/ExampleResourceServer.cy.ts and
 // OAuth2State.cy.ts. The expiry-rejection branch had no E2E coverage.
 
+import { DEFAULT_AUTH_SCOPE } from "@schemavaults/auth-common";
+
 interface GenerateAuthorizationCodeFailureBody {
   success: boolean;
   message?: string;
@@ -60,6 +62,13 @@ describe("POST /api/auth/session/generate-authorization-code expired PKCE challe
               code_challenge,
               code_challenge_method: "S256",
               challenge_time: expired_challenge_time,
+              // nonce + scope are required body fields; without them the
+              // strict schema 400s ("Invalid request body") BEFORE the
+              // expiry branch runs, which would drop the error_id we
+              // assert on below. (nonce uses clock + Math.random since
+              // crypto.randomUUID() is unavailable in the browser context.)
+              nonce: `e2e-nonce-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              scope: DEFAULT_AUTH_SCOPE,
             },
           }).then((response) => {
             expect(

@@ -14,6 +14,13 @@ export interface IReturnGeneratedTokensToUserOpts {
   tokenGenerationResult: RequestTokensResult;
   secure: boolean;
   hostname: string;
+  /**
+   * Login replay nonce bound to the redeemed authorization code —
+   * echoed as the response's top-level `nonce` field so the SDK can
+   * verify the token response belongs to its flow. Null/absent for
+   * refresh grants and pre-upgrade code rows.
+   */
+  nonce?: string | null;
   debug?: boolean;
 }
 
@@ -37,10 +44,15 @@ export default async function returnGeneratedTokensToUser({
   tokenGenerationResult,
   secure,
   hostname,
+  nonce,
   debug = false,
 }: IReturnGeneratedTokensToUserOpts): Promise<NextResponse> {
   if (!tokenGenerationResult.success || tokenGenerationResult.error || !tokenGenerationResult.tokens) {
     throw new Error(tokenGenerationResult.message);
+  }
+
+  if (typeof nonce === "string" && nonce.length > 0) {
+    tokenGenerationResult.nonce = nonce;
   }
 
   if (!tokenGenerationResult.client_app_id) {

@@ -26,6 +26,7 @@ import {
   type OrganizationMembershipRoleDetails,
   isValidErrorId,
   type SchemaVaultsAuthErrorId,
+  DEFAULT_AUTH_SCOPE,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { IAuthClientConstructorOptions } from "@/types/IAuthClientConstructorOptions";
@@ -407,6 +408,33 @@ export class SchemaVaultsAuthClient
     return this.adapter.loadOAuth2State(challenge_time);
   }
 
+  // Login replay-nonce storage wrappers. Lifecycle mirrors the OAuth2
+  // `state` wrappers above.
+  private storeOidcNonce(nonce: string, challenge_time: number): void {
+    const now = Date.now();
+    if (!challenge_time || typeof challenge_time !== "number") {
+      throw new Error("Invalid challenge_time; not a number");
+    } else if (challenge_time > now) {
+      throw new Error("Invalid challenge_time; in the future");
+    }
+    if (typeof nonce !== "string" || nonce.length === 0) {
+      throw new TypeError("Expected 'nonce' to be a non-empty string");
+    }
+    this.adapter.storeOidcNonce(nonce, challenge_time);
+  }
+
+  private loadOidcNonce(challenge_time: number): string | null {
+    const now = Date.now();
+    if (!challenge_time || typeof challenge_time !== "number") {
+      throw new Error("Invalid challenge_time; not a number");
+    } else if (challenge_time > now) {
+      throw new Error("Invalid challenge_time; in the future");
+    } else if (now - challenge_time > PKCE_ProofKeyManager.max_age) {
+      throw new Error("Login nonce has expired");
+    }
+    return this.adapter.loadOidcNonce(challenge_time);
+  }
+
   // Load the code verifier from a secure location
   public loadCodeVerifier(challenge_time: number): string | null {
     const now = Date.now();
@@ -476,7 +504,10 @@ export class SchemaVaultsAuthClient
     return code_challenge;
   }
 
-  private async authenticateWithRedirect(type: "login" | "register") {
+  private async authenticateWithRedirect(
+    type: "login" | "register",
+    opts?: { scope?: string },
+  ) {
     if (
       !this.authorize_uri ||
       typeof this.authorize_uri !== "string" ||
@@ -491,13 +522,15 @@ export class SchemaVaultsAuthClient
       client_app_id: this._app_id,
       storeCodeVerifier: this.storeCodeVerifier.bind(this),
       storeOAuth2State: this.storeOAuth2State.bind(this),
+      storeOidcNonce: this.storeOidcNonce.bind(this),
       environment: this.environment,
       authorize_uri: this.authorize_uri,
+      scope: opts?.scope,
       debug: this.debug,
     });
   }
 
-  public async login(): Promise<void> {
+  public async login(opts?: { scope?: string }): Promise<void> {
     if (this.isClientForAuthServer) {
       return await this.adapter.redirect("/auth/login");
     }
@@ -508,7 +541,7 @@ export class SchemaVaultsAuthClient
       );
     }
     try {
-      return await this.authenticateWithRedirect("login");
+      return await this.authenticateWithRedirect("login", opts);
     } catch (e: unknown) {
       console.error("Failed to authenticate with redirect to login: ", e);
       if (e instanceof Error) throw e;
@@ -516,7 +549,7 @@ export class SchemaVaultsAuthClient
     }
   } // login()
 
-  public async register(): Promise<void> {
+  public async register(opts?: { scope?: string }): Promise<void> {
     if (this.isClientForAuthServer) {
       return await this.adapter.redirect("/auth/register");
     }
@@ -527,7 +560,7 @@ export class SchemaVaultsAuthClient
       );
     }
     try {
-      return await this.authenticateWithRedirect("register");
+      return await this.authenticateWithRedirect("register", opts);
     } catch (e: unknown) {
       console.error("Failed to authenticate with redirect to register: ", e);
       if (e instanceof Error) throw e;
@@ -658,6 +691,7 @@ export class SchemaVaultsAuthClient
     challenge_time: number,
     code_verifier?: string,
     received_state?: string | null,
+    expected_nonce?: string | null,
   ): Promise<void> {
     // Recompute the `redirect_uri` we sent at issuance so the token
     // endpoint's exact-string binding check has a value to match. In the
@@ -681,9 +715,11 @@ export class SchemaVaultsAuthClient
       challenge_time,
       code_verifier,
       received_state: received_state ?? null,
+      expected_nonce: expected_nonce ?? null,
       redirect_uri,
       loadCodeVerifier: this.loadCodeVerifier.bind(this),
       loadOAuth2State: this.loadOAuth2State.bind(this),
+      loadOidcNonce: this.loadOidcNonce.bind(this),
       auth_server_url: this.auth_server_uri,
       client_app_id: this.app_id,
       adapter: this.adapter,
@@ -1069,6 +1105,9 @@ export class SchemaVaultsAuthClient
     credentials: Credentials,
     code_challenge: CodeChallengeWithDetails,
     redirect_uri: string | null,
+    // Optional per OIDC Core §3.1.2.1 — null when the flow carried no nonce.
+    nonce: string | null,
+    scope: string = DEFAULT_AUTH_SCOPE,
   ): Promise<AuthenticateResult> {
     if (this.DEBUG)
       console.log(
@@ -1084,6 +1123,8 @@ export class SchemaVaultsAuthClient
       invite_code_required: this._invite_code_required,
       redirect_uri,
       auth_server_url: this.auth_server_url,
+      nonce,
+      scope,
     });
   }
 

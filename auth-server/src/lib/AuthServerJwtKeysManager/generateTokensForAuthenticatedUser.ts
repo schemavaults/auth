@@ -46,6 +46,12 @@ export interface IGenerateTokensForAuthenticatedUserOpts {
   environment: SchemaVaultsAppEnvironment;
   generate_refresh: boolean;
   tracking?: ITokenIssuanceTracking;
+  /**
+   * Space-delimited granted OIDC scopes embedded in the generated ACCESS
+   * tokens' optional `scope` claim (refresh tokens never carry it).
+   * Set only by the OIDC surface.
+   */
+  scope?: string;
 }
 
 function isValidUserOrganizations(user_organizations: readonly string[]): boolean {
@@ -64,6 +70,7 @@ export default async function generateTokensForAuthenticatedUser({
   environment,
   generate_refresh,
   tracking,
+  scope,
 }: IGenerateTokensForAuthenticatedUserOpts): Promise<RequestTokensResult> {
   if (!isValidUserOrganizations(user_organizations)) {
     throw new Error("'user_organizations' must be an array of valid organization IDs");
@@ -77,6 +84,7 @@ export default async function generateTokensForAuthenticatedUser({
       user,
       environment,
       user_organizations,
+      scope,
     });
   }
 
@@ -101,6 +109,7 @@ export default async function generateTokensForAuthenticatedUser({
       audience_id,
       environment,
       user_organizations,
+      scope,
     });
   }
 

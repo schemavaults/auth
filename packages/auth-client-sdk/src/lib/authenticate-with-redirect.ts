@@ -6,10 +6,12 @@ import {
 import {
   type CodeChallengeWithDetails,
   type CodeVerifierWithDetails,
+  DEFAULT_AUTH_SCOPE,
   PKCE_ProofKeyManager,
 } from "@schemavaults/auth-common";
 import AuthenticateURLEncoder from "./authenticate-url-encoder";
 import { generateOAuth2State } from "./generate-oauth2-state";
+import { generateOidcNonce } from "./generate-oidc-nonce";
 
 export interface IAuthenticateWithRedirectOpts {
   type: "login" | "register";
@@ -19,8 +21,14 @@ export interface IAuthenticateWithRedirectOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
   environment: SchemaVaultsAppEnvironment;
   authorize_uri: string;
+  /**
+   * Space-delimited scopes to request (RFC 6749 §3.3). Defaults to
+   * DEFAULT_AUTH_SCOPE ("openid email profile").
+   */
+  scope?: string;
   storeCodeVerifier: (code_verifier: string, challenge_time: number) => void;
   storeOAuth2State: (state: string, challenge_time: number) => void;
+  storeOidcNonce: (nonce: string, challenge_time: number) => void;
 }
 
 export default async function authenticateWithRedirect({
@@ -31,8 +39,10 @@ export default async function authenticateWithRedirect({
   adapter,
   environment,
   authorize_uri,
+  scope,
   storeCodeVerifier,
   storeOAuth2State,
+  storeOidcNonce,
 }: IAuthenticateWithRedirectOpts): Promise<void> {
   if (debug) {
     console.log(
@@ -142,6 +152,26 @@ export default async function authenticateWithRedirect({
     throw new Error("Failed to store OAuth2 state!");
   }
 
+  // Generate and persist the login replay nonce — same storage contract
+  // as `state`. It is bound server-side to the issued authorization
+  // code and verified against the echo in the token-exchange response.
+  let nonce: string;
+  try {
+    nonce = generateOidcNonce(adapter.toBase64UrlFromBytes.bind(adapter));
+    if (typeof nonce !== "string" || nonce.length === 0) {
+      throw new Error("generateOidcNonce produced an empty value");
+    }
+  } catch (e: unknown) {
+    console.error("Failed to generate login nonce: ", e);
+    throw new Error("Failed to generate login nonce");
+  }
+  try {
+    storeOidcNonce(nonce, code_challenge.challenge_time) satisfies void;
+  } catch (e: unknown) {
+    console.error("Failed to store login nonce: ", e);
+    throw new Error("Failed to store login nonce!");
+  }
+
   if (!client_app_id) {
     console.error("App ID not set, but required for PKCE flow");
     throw new Error("App ID not set, but required for PKCE flow");
@@ -175,6 +205,8 @@ export default async function authenticateWithRedirect({
       auth_server_url,
       app_env: environment,
       state,
+      scope: scope ?? DEFAULT_AUTH_SCOPE,
+      nonce,
     });
   } catch (e: unknown) {
     console.error("Failed to build authenticate URL: ", e);

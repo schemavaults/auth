@@ -29,6 +29,11 @@ interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
   audience: string;
   auth_server_url: string;
   env: SchemaVaultsAppEnvironment;
+  /**
+   * Space-delimited granted OIDC scopes; set only by the OIDC surface
+   * (see payload_data.ts). Omitted on all other tokens.
+   */
+  scope?: string;
 }
 
 interface GenerateJWTWithAllKeysOptions<
@@ -241,6 +246,9 @@ export async function generateJWT<T extends AuthTokenTypes>(
       env,
       sig,
       jti,
+      ...(typeof opts.scope === "string" && opts.scope.length > 0
+        ? { scope: opts.scope }
+        : {}),
     };
 
     const jwt = await new EncryptJWT(additionalClaims)

@@ -25,6 +25,10 @@ export interface MfaChallengePageViewProps {
   // callback URL after a successful MFA challenge so the client can
   // verify its stored CSRF nonce. Validated upstream in `page.tsx`.
   state: string | null;
+  // Login replay nonce, forwarded from the login form. The account-page
+  // flow passes it into the token exchange so the response's nonce echo
+  // can be verified.
+  nonce?: string | null;
 }
 
 export default function MfaChallengePageView({
@@ -36,6 +40,7 @@ export default function MfaChallengePageView({
   challenge_time,
   code_challenge_method,
   state,
+  nonce,
 }: MfaChallengePageViewProps): ReactElement {
   const router = useRouter();
   const env = useAppEnvironment();
@@ -68,6 +73,7 @@ export default function MfaChallengePageView({
         code_challenge_method === "S256"
       ) {
         try {
+          const authClientForIssuer = auth.ready ? auth.client.current : null;
           successRedirect({
             redirect_uri,
             authorization_code,
@@ -78,6 +84,7 @@ export default function MfaChallengePageView({
             },
             app_environment: env,
             state,
+            issuer: authClientForIssuer?.auth_server_url ?? null,
           });
           return;
         } catch (e: unknown) {
@@ -164,12 +171,15 @@ export default function MfaChallengePageView({
       try {
         // Pass the verifier directly so the SDK does NOT take its
         // "redirect flow" branch (which would require a stored OAuth2
-        // `state` nonce — account-page logins never persist one).
+        // `state` nonce — account-page logins never persist one). The
+        // login nonce (forwarded on this page's URL) lets the exchange
+        // verify the token response's nonce echo.
         await authClient.handleSuccessfulAuthentication(
           authorization_code,
           challenge_time,
           verifier,
           null,
+          nonce ?? null,
         );
       } catch (e: unknown) {
         setSucceeded(false);
@@ -196,6 +206,7 @@ export default function MfaChallengePageView({
       challenge_time,
       code_challenge_method,
       state,
+      nonce,
       env,
       router,
       auth,

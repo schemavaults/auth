@@ -5,7 +5,9 @@ export const code_challenge_method = 'S256' as const;
 
 export interface CreateCodeChallengeInputOptions {
   code_verifier: Partial<CodeVerifierWithDetails> & { code_verifier: CodeVerifier, challenge_time: number };
-  sha256_digest: (code_verifier: string) => Promise<string>;
+  // Hashes the code_verifier into the RFC 7636 §4.2 `code_challenge`
+  // (BASE64URL-ENCODE(SHA256(verifier)), 43 chars, no padding).
+  sha256: (code_verifier: string) => Promise<string>;
 }
 
 // Create code challenge for Oauth2 PKCE
@@ -29,7 +31,7 @@ export async function create_code_challenge(
     throw new Error("Code verifier has invalid max_age");
   }
 
-  const base64url_encoded_hash = await verifier_opts.sha256_digest(code_verifier);
+  const base64url_encoded_hash = await verifier_opts.sha256(code_verifier);
 
   if (typeof challenge_time !== 'number') {
     throw new Error("'challenge_time' is a required field!");

@@ -1,5 +1,6 @@
 import type { Insertable, Selectable } from "@schemavaults/dbh";
 import { appIdSchema } from "@schemavaults/app-definitions";
+import { oidcNonceSchema, oidcScopeSchema } from "@schemavaults/auth-common";
 import { z } from "zod";
 
 export const authorizationCodeRecordSchema = z
@@ -20,6 +21,18 @@ export const authorizationCodeRecordSchema = z
     // cannot reach the DB even if a server-side caller skips its own
     // body-schema check.
     redirect_uri: z.string().url().max(2048).nullable().optional(),
+    // Login replay nonce (OIDC Core §3.1.2.1) bound at issuance; echoed
+    // at redemption as the custom token-response `nonce` field / OIDC
+    // id_token claim. OPTIONAL — an RP may omit it, so the column is
+    // genuinely nullable (null → nothing echoed), which also lets
+    // pre-upgrade rows (≤10 min TTL) parse. Printable-ASCII bound
+    // mirrors oidcNonceSchema in auth-common.
+    nonce: oidcNonceSchema.nullable().optional(),
+    // Granted scopes (space-delimited, RFC 6749 §3.3), e.g.
+    // "openid email". Validated with the shared oidcScopeSchema (the same
+    // wire-format check applied when the scope was received). Every new
+    // row has one; nullable for pre-upgrade rows only.
+    scope: oidcScopeSchema.nullable().optional(),
   })
   .required({
     authorization_code: true,

@@ -87,6 +87,18 @@ export async function sendAuthenticateRequest(
     }
   }
 
+  // `nonce` is optional (OIDC Core §3.1.2.1); a non-string / empty value
+  // is treated as absent and omitted from the body rather than rejected.
+  const nonce: string | null =
+    typeof opts.nonce === "string" && opts.nonce.length > 0
+      ? opts.nonce
+      : null;
+  if (typeof opts.scope !== "string" || opts.scope.length === 0) {
+    throw new TypeError(
+      "A non-empty 'scope' is required on every authenticate request",
+    );
+  }
+
   const auth_request_body = {
     credentials: {
       email: credentials.email,
@@ -97,6 +109,9 @@ export async function sendAuthenticateRequest(
     code_challenge: code_challenge.code_challenge,
     challenge_time: code_challenge.challenge_time,
     redirect_uri,
+    // Omit entirely when absent so the server's optional schema sees no key.
+    ...(nonce ? { nonce } : {}),
+    scope: opts.scope,
   };
 
   let response: Response;

@@ -20,8 +20,14 @@ import {
   type ComparePasswordResult,
 } from "./compare-password";
 import { upgradePasswordHash as upgradePasswordHashFn } from "./upgrade-password-hash";
-import { generateAuthorizationCode as generateAuthorizationCodeFn } from "./generate-authorization-code";
-import { validateAndConsumeAuthorizationCode as validateAndConsumeAuthorizationCodeFn } from "./validate-and-consume-authorization-code";
+import {
+  generateAuthorizationCode as generateAuthorizationCodeFn,
+  type AuthorizationCodeGrantContext,
+} from "./generate-authorization-code";
+import {
+  validateAndConsumeAuthorizationCode as validateAndConsumeAuthorizationCodeFn,
+  type ConsumedAuthorizationCode,
+} from "./validate-and-consume-authorization-code";
 import { createInviteCode as createInviteCodeFn } from "./create-invite-code";
 import { listAllInviteCodes as listAllInviteCodesFn } from "./list-all-invite-codes";
 import { countInviteCodeUsages as countInviteCodeUsagesFn } from "./count-invite-code-usages";
@@ -99,6 +105,7 @@ export class UserRegistry {
     code_challenge_method: "S256",
     challenge_time: number,
     redirect_uri: string | null,
+    grant: AuthorizationCodeGrantContext,
   ): Promise<string> {
     return generateAuthorizationCodeFn(
       this.db,
@@ -108,7 +115,8 @@ export class UserRegistry {
       code_challenge_method,
       challenge_time,
       redirect_uri,
-      this.debug
+      this.debug,
+      grant,
     );
   }
 
@@ -124,9 +132,9 @@ export class UserRegistry {
     authorization_code: string,
     client_app_id: AppId,
     code_verifier: string,
-    challenge_time: number,
+    challenge_time: number | null,
     redirect_uri: string | null,
-  ): Promise<{ uid: string } | null> {
+  ): Promise<ConsumedAuthorizationCode | null> {
     return validateAndConsumeAuthorizationCodeFn(
       this.db,
       authorization_code,

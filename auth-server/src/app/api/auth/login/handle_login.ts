@@ -11,7 +11,11 @@ import {
   ERROR_MESSAGE_CATALOG,
   PKCE_ProofKeyManager,
   collapseWebauthnFactors,
+  oidcNonceSchema,
+  oidcScopeSchema,
+  parseAndGrantScopes,
 } from "@schemavaults/auth-common";
+import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
 import type { UserData } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -58,14 +62,29 @@ const loginBodySchema = z
     // Required for third-party app flows; null/absent only for the auth
     // server's own /account flow (client_app_id === auth-server's own).
     redirect_uri: z.string().url().nullable().optional(),
+    // Login replay nonce — OPTIONAL (OIDC Core §3.1.2.1: a relying
+    // party may omit `nonce`, and the /account flow has none). When
+    // present it is bound to the code row and echoed at redemption
+    // (custom-surface token-response field / OIDC id_token claim); when
+    // absent the code carries null and nothing is echoed.
+    nonce: oidcNonceSchema.nullable().optional(),
+    // Requested scopes (space-delimited, RFC 6749 §3.3) — REQUIRED on
+    // every flow; validated for wire format by oidcScopeSchema, then the
+    // server re-derives the granted subset below.
+    scope: oidcScopeSchema,
   })
   .required({
     credentials: true,
     client_app_id: true,
     code_challenge: true,
     challenge_time: true,
+    scope: true,
   })
-  .strict();
+  .strict()
+  .refine(
+    (body) => parseAndGrantScopes(body.scope).granted.length > 0,
+    "scope must include at least one supported scope (openid, email, profile)",
+  );
 
 export async function handleLogin({
   body,
@@ -83,6 +102,12 @@ export async function handleLogin({
   const code_challenge: string = parse_login_body.data.code_challenge;
   const challenge_time: number = parse_login_body.data.challenge_time;
   const redirect_uri: string | null = parse_login_body.data.redirect_uri ?? null;
+  // Granted scopes are re-derived server-side (never trusted verbatim);
+  // the schema refinement above guaranteed at least one is granted.
+  const grant_context: AuthorizationCodeGrantContext = {
+    nonce: parse_login_body.data.nonce ?? null,
+    scope: parseAndGrantScopes(parse_login_body.data.scope).granted.join(" "),
+  };
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
@@ -344,6 +369,8 @@ export async function handleLogin({
         code_challenge,
         challenge_time,
         redirect_uri,
+        nonce: grant_context.nonce,
+        scope: grant_context.scope,
       });
       return NextResponse.json(
         {
@@ -383,6 +410,7 @@ export async function handleLogin({
       "S256",
       challenge_time,
       redirect_uri,
+      grant_context,
     );
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {

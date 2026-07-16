@@ -27,6 +27,13 @@ const challengeStateSchema = z
     // when the user chooses to authenticate with a passkey. Absent until the
     // client requests passkey options for this challenge.
     webauthn_challenge: z.string().optional(),
+    // Login replay nonce + granted scopes carried across the MFA gate
+    // (mirroring redirect_uri above) so the authorization code minted by
+    // /api/auth/mfa/verify carries the same grant context the login
+    // began with. Nullable-optional so in-flight pre-upgrade challenges
+    // (≤5 min TTL) still parse.
+    nonce: z.string().nullable().optional(),
+    scope: z.string().nullable().optional(),
   })
   .strict();
 
@@ -45,6 +52,8 @@ export async function createChallenge(
     code_challenge: string;
     challenge_time: number;
     redirect_uri: string | null;
+    nonce: string | null;
+    scope: string | null;
     ttl_seconds?: number;
   },
 ): Promise<{ expires_at: number }> {
@@ -58,6 +67,8 @@ export async function createChallenge(
     attempts_remaining: MFA_CHALLENGE_MAX_ATTEMPTS,
     created_at: now,
     redirect_uri: args.redirect_uri,
+    nonce: args.nonce,
+    scope: args.scope,
   };
   await client.set(makeKey(args.challenge_id), JSON.stringify(state), "EX", ttl);
   return { expires_at: now + ttl * 1000 };

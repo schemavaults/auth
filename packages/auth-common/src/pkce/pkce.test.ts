@@ -31,22 +31,22 @@ describe("PKCE_ProofKeyManager", () => {
     expect(code_challenge.code_challenge).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
-  it("getCodeChallenge should return a code_challenge string that is a base64 encoded SHA-256 hash of the code_verifier", async () => {
+  it("getCodeChallenge should return the RFC 7636 base64url SHA-256 hash of the code_verifier", async () => {
     const code_verifier = PKCE_ProofKeyManager.createCodeVerifier();
     const manager = new PKCE_ProofKeyManager(code_verifier);
     const code_challenge = await manager.getCodeChallenge();
 
-    // Hashes correctly?
+    // Hashes correctly? Strict RFC 7636 §4.2 base64url — 43 chars, no
+    // padding, '+'→'-', '/'→'_'.
     const encoder = new TextEncoder();
     const data: BufferSource = encoder.encode(code_verifier.code_verifier);
     const hash_buffer: ArrayBuffer = await crypto.subtle.digest("SHA-256", data);
-    const base64_encoded_hash: string = Buffer.from(hash_buffer).toString("base64");
-    const base64url_encoded_hash = base64_encoded_hash.replace(/[^A-Za-z0-9_-]/g, "_");
+    const base64url_encoded_hash = Buffer.from(hash_buffer).toString("base64url");
     expect(code_challenge.code_challenge).toBe(base64url_encoded_hash);
 
     // Object is the expected shape?
     expect(code_challenge.code_challenge_method).toBe("S256");
-    expect(code_challenge.code_challenge!.length).toBeGreaterThan(43);
+    expect(code_challenge.code_challenge!.length).toBe(43);
     expect(code_challenge.code_challenge!.length).toBeLessThanOrEqual(1024);
   });
 
@@ -98,6 +98,64 @@ describe("PKCE_ProofKeyManager", () => {
       const isValid: boolean = PKCE_ProofKeyManager.isValidCodeVerifierFormat(code_verifier);
       expect(isValid).toBe(true);
     }
+  });
+
+  it("doesVerifierMatchChallenge accepts a standard RFC 7636 base64url challenge (OIDC interop)", async () => {
+    // A spec-compliant RP computes BASE64URL-ENCODE(SHA256(verifier))
+    // itself — 43 chars, '+'→'-', '/'→'_', no '=' padding — instead of
+    // using the SDK's legacy encoding.
+    for (let i = 0; i < 40; i++) {
+      const code_verifier = PKCE_ProofKeyManager.createCodeVerifier(Date.now());
+      const hash_buffer = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(code_verifier.code_verifier),
+      );
+      const standard_challenge = Buffer.from(hash_buffer).toString("base64url");
+      expect(standard_challenge).toHaveLength(43);
+
+      const matches = await PKCE_ProofKeyManager.doesVerifierMatchChallenge({
+        input_code_verifier: code_verifier.code_verifier,
+        saved_code_challenge: standard_challenge,
+        challenge_time: code_verifier.challenge_time,
+        timingSafeEqual,
+      });
+      expect(matches).toBe(true);
+    }
+  });
+
+  it("doesVerifierMatchChallenge accepts the RFC 7636 Appendix B vector", async () => {
+    const matches = await PKCE_ProofKeyManager.doesVerifierMatchChallenge({
+      input_code_verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+      saved_code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+      challenge_time: Date.now(),
+      timingSafeEqual,
+    });
+    expect(matches).toBe(true);
+  });
+
+  it("createCodeChallenge emits strict base64url and doesVerifierMatchChallenge rejects a tampered verifier", async () => {
+    const code_verifier = PKCE_ProofKeyManager.createCodeVerifier(Date.now());
+    const challenge =
+      await PKCE_ProofKeyManager.createCodeChallenge(code_verifier);
+
+    // Generation is now RFC 7636-compliant: BASE64URL(SHA256(verifier)).
+    const hash_buffer = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(code_verifier.code_verifier),
+    );
+    const standard_challenge = Buffer.from(hash_buffer).toString("base64url");
+    expect(challenge.code_challenge).toBe(standard_challenge);
+
+    const wrong_verifier = PKCE_ProofKeyManager.createCodeVerifier(Date.now());
+    expect(wrong_verifier.code_verifier).not.toBe(code_verifier.code_verifier);
+
+    const matches = await PKCE_ProofKeyManager.doesVerifierMatchChallenge({
+      input_code_verifier: wrong_verifier.code_verifier,
+      saved_code_challenge: challenge.code_challenge,
+      challenge_time: code_verifier.challenge_time,
+      timingSafeEqual,
+    });
+    expect(matches).toBe(false);
   });
 
   it("can generate a valid code challenge from a code verifier", async () => {

@@ -17,6 +17,7 @@ export {
 } from "./generate_new_jwt_keyset";
 
 export { to_public_jwks } from "./to_public_jwks";
+export { to_public_verification_jwks } from "./to_public_verification_jwks";
 
 export type { JWK } from "./JWK";
 export type { JWKS } from "./JWKS";

@@ -1,1 +1,4 @@
-export { sha256_digest, sha256_digest as default } from "./sha256_digest";
+export {
+  sha256_base64url,
+  sha256_base64url as default,
+} from "./sha256_digest";

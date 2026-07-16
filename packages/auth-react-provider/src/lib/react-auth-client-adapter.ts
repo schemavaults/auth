@@ -33,6 +33,7 @@ import isClientRuntime from "@/lib/isClientRuntime";
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
   OAUTH2_STATES = "oauth2_states",
+  OIDC_NONCES = "oidc_nonces",
   USER_DATA = "user_data",
 }
 
@@ -319,6 +320,9 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
       window.localStorage.removeItem(
         AuthClientSdkAdapterLocalStorageKeys.OAUTH2_STATES,
       );
+      window.localStorage.removeItem(
+        AuthClientSdkAdapterLocalStorageKeys.OIDC_NONCES,
+      );
     } catch (e: unknown) {
       console.error(e);
       throw new Error("Failed to clear code verifiers from local storage");
@@ -421,6 +425,108 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     } catch (e: unknown) {
       console.error(e);
       throw new Error("Failed to clear OAuth2 state from local storage");
+    }
+  }
+
+  // Login replay-nonce storage — identical record shape and lifecycle
+  // to the OAuth2 `state` storage above (keyed by challenge_time,
+  // expiry-pruned on write, tombstoned on clear).
+  private loadOidcNonces(): Record<number, string> {
+    try {
+      const raw = window.localStorage.getItem(
+        AuthClientSdkAdapterLocalStorageKeys.OIDC_NONCES,
+      );
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") {
+        window.localStorage.removeItem(
+          AuthClientSdkAdapterLocalStorageKeys.OIDC_NONCES,
+        );
+        return {};
+      }
+      for (const [k, v] of Object.entries(parsed)) {
+        if (isNaN(Number(k)) || typeof v !== "string") {
+          window.localStorage.removeItem(
+            AuthClientSdkAdapterLocalStorageKeys.OIDC_NONCES,
+          );
+          return {};
+        }
+      }
+      return parsed as Record<number, string>;
+    } catch (e: unknown) {
+      console.error("Failed to load login nonces: ", e);
+      return {};
+    }
+  }
+
+  public storeOidcNonce(nonce: string, challenge_time: number): void {
+    if (typeof nonce !== "string" || nonce.length === 0) {
+      throw new TypeError(
+        "Expected 'nonce' to be a non-empty string for login-nonce storage!",
+      );
+    }
+    try {
+      const nonces = this.loadOidcNonces();
+
+      // Evict entries older than the PKCE challenge max-age so the
+      // bag doesn't grow unboundedly across abandoned flows.
+      const now = Date.now();
+      for (const key of Object.keys(nonces)) {
+        const t = parseInt(key);
+        if (isNaN(t) || now - t > PKCE_ProofKeyManager.max_age) {
+          delete nonces[t];
+        }
+      }
+
+      nonces[challenge_time] = nonce;
+      window.localStorage.setItem(
+        AuthClientSdkAdapterLocalStorageKeys.OIDC_NONCES,
+        JSON.stringify(nonces),
+      );
+      if (this.environment === "development") {
+        console.log(
+          `[ReactAuthClientSdkAdapter] Stored login nonce at t=${challenge_time}`,
+        );
+      }
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error(
+        `Failed to store login nonce for challenge_time ${challenge_time}`,
+      );
+    }
+  }
+
+  public loadOidcNonce(challenge_time: number): string | null {
+    try {
+      const nonces = this.loadOidcNonces();
+      const value = nonces[challenge_time];
+      if (typeof value !== "string" || value.length === 0) return null;
+      if (value.startsWith("deleted-at-")) {
+        throw new Error("Login nonce has already been used & deleted!");
+      }
+      return value;
+    } catch (e: unknown) {
+      console.error(
+        "[ReactAuthClientSdkAdapter] Failed to load login nonce: ",
+        e,
+      );
+      throw new Error("Failed to load login nonce from local storage");
+    }
+  }
+
+  public clearOidcNonce(challenge_time: number): void {
+    try {
+      const nonces = this.loadOidcNonces();
+      if (typeof nonces[challenge_time] === "string") {
+        nonces[challenge_time] = `deleted-at-${Date.now()}`;
+        window.localStorage.setItem(
+          AuthClientSdkAdapterLocalStorageKeys.OIDC_NONCES,
+          JSON.stringify(nonces),
+        );
+      }
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error("Failed to clear login nonce from local storage");
     }
   }
 

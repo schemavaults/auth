@@ -14,6 +14,13 @@ export interface IGenerateRefreshTokenOpts {
   user: UserData;
   user_organizations: readonly string[];
   environment: SchemaVaultsAppEnvironment;
+  /**
+   * Space-delimited granted OIDC scopes carried on the refresh token so
+   * the OIDC refresh grant can re-issue access tokens with the original
+   * grant's scope (and enforce that a narrowed re-request is a subset).
+   * Only the OIDC surface sets this.
+   */
+  scope?: string;
 }
 
 export default async function generateRefreshToken({
@@ -22,6 +29,7 @@ export default async function generateRefreshToken({
   user,
   user_organizations,
   environment,
+  scope,
 }: IGenerateRefreshTokenOpts): Promise<RefreshToken> {
   if (!appIdSchema.safeParse(client_app_id).success) {
     throw new Error("Invalid client app ID");
@@ -38,6 +46,8 @@ export default async function generateRefreshToken({
     environment,
     jwt_keys: auth_server_jwt_keys,
   });
-  const token: RefreshToken = await jwt_factory.refresh();
+  const token: RefreshToken = await jwt_factory.refresh(
+    scope ? { scope } : undefined,
+  );
   return token;
 }

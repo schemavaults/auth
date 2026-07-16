@@ -24,6 +24,11 @@ export interface PerformPostAuthRedirectOptions {
   // OAuth2 `state` received from the client — echoed untouched on the
   // callback redirect for CSRF defence.
   state: string | null | undefined;
+  // Login replay nonce bound to the minted authorization code. Used by
+  // the account-page flow to verify the token-response echo; third-party
+  // flows verify in their own SDK context. Null when the flow carried no
+  // nonce (an OIDC RP may omit it) — nothing is echoed/verified then.
+  nonce: string | null;
   auth: ReturnType<typeof useAuth>;
   router: ReturnType<typeof useRouter>;
   toast: ReturnType<typeof useToast>["toast"];
@@ -41,6 +46,7 @@ export async function performPostAuthRedirect(
     code_verifier,
     redirect_uri,
     state,
+    nonce,
     auth,
     router,
     toast,
@@ -67,6 +73,17 @@ export async function performPostAuthRedirect(
         authorization_code,
         code_challenge.challenge_time,
         code_verifier.code_verifier,
+        // `received_state` is intentionally undefined: OAuth2 `state`
+        // (RFC 6749 §10.12) authenticates a cross-origin redirect
+        // callback, and this same-context flow has none — the code never
+        // leaves the JS context that requested it. Passing the
+        // code_verifier directly puts the SDK in same-context mode,
+        // where it skips the state check (and no state was ever stored
+        // for this flow to compare against). `opts.state` serves the
+        // redirect / native-app branches below, which echo it to the
+        // third-party client for verification in ITS SDK context.
+        undefined,
+        nonce,
       );
 
       router.push("/account");
@@ -88,6 +105,7 @@ export async function performPostAuthRedirect(
           code_challenge,
           app_environment: env,
           state,
+          issuer: authClient?.auth_server_url ?? null,
         });
       } catch (e: unknown) {
         console.error(e);

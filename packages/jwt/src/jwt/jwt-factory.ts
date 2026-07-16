@@ -106,6 +106,7 @@ export class JWT_Factory {
   private async generate<T extends AuthTokenTypes>(
     type: T,
     aud: string,
+    opts?: { scope?: string },
   ): Promise<T extends "access" ? AccessToken : RefreshToken> {
     // Make sure the token type is valid
     if (type !== "refresh" && type !== "access") {
@@ -153,6 +154,7 @@ export class JWT_Factory {
       auth_server_url: this.auth_server_url,
       jwt_keys: this.jwt_keys satisfies I_JWT_Keys,
       env: this.environment satisfies SchemaVaultsAppEnvironment,
+      ...(opts?.scope ? { scope: opts.scope } : {}),
     };
 
     const jwt: AuthToken = await generateJWT(generateTokenOptions);
@@ -160,12 +162,15 @@ export class JWT_Factory {
     return jwt as T extends "access" ? AccessToken : RefreshToken;
   }
 
-  public async refresh(): Promise<RefreshToken> {
-    return await this.generate("refresh", this.auth_server_url);
+  public async refresh(opts?: { scope?: string }): Promise<RefreshToken> {
+    return await this.generate("refresh", this.auth_server_url, opts);
   }
 
-  public async access(audience: string): Promise<AccessToken> {
-    return await this.generate("access", audience);
+  public async access(
+    audience: string,
+    opts?: { scope?: string },
+  ): Promise<AccessToken> {
+    return await this.generate("access", audience, opts);
   }
 
   private async multipleAccessTokens(

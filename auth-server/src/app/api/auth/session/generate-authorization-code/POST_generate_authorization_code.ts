@@ -4,12 +4,20 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import { generateAuthorizationCode } from "@/lib/auth-db/users/generate-authorization-code";
+import {
+  generateAuthorizationCode,
+  type AuthorizationCodeGrantContext,
+} from "@/lib/auth-db/users/generate-authorization-code";
 import { z } from "zod";
 import { appIdSchema } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
+import {
+  oidcNonceSchema,
+  oidcScopeSchema,
+  parseAndGrantScopes,
+} from "@schemavaults/auth-common";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 
 const requestBodySchema = z
@@ -23,14 +31,23 @@ const requestBodySchema = z
     // auth server itself is the requesting app (the /account flow has
     // no third-party callback to bind).
     redirect_uri: z.string().url().nullable().optional(),
+    // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
+    // scopes (REQUIRED, RFC 6749 §3.3 wire format); see handle_login.ts.
+    nonce: oidcNonceSchema.nullable().optional(),
+    scope: oidcScopeSchema,
   })
   .required({
     client_app_id: true,
     code_challenge: true,
     code_challenge_method: true,
-    challenge_time: true
+    challenge_time: true,
+    scope: true,
   })
-  .strict();
+  .strict()
+  .refine(
+    (body) => parseAndGrantScopes(body.scope).granted.length > 0,
+    "scope must include at least one supported scope (openid, email, profile)",
+  );
 
 export async function POST_generate_authorization_code(
   request: NextRequest,
@@ -106,6 +123,13 @@ export async function POST_generate_authorization_code(
         );
       }
 
+      // Granted scopes are re-derived server-side (never trusted
+      // verbatim); the schema refinement guaranteed at least one.
+      const grant_context: AuthorizationCodeGrantContext = {
+        nonce: body.nonce ?? null,
+        scope: parseAndGrantScopes(body.scope).granted.join(" "),
+      };
+
       try {
         const authorization_code = await generateAuthorizationCode(
           dbh.db,
@@ -116,6 +140,7 @@ export async function POST_generate_authorization_code(
           body.challenge_time,
           presentedRedirectUri,
           environment === "development",
+          grant_context,
         );
 
         return NextResponse.json({
