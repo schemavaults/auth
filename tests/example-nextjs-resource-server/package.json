@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/example-nextjs-resource-server",
-  "version": "0.1.23",
+  "version": "0.2.0",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -13,6 +13,7 @@
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/auth-server-sdk": "workspace:*",
     "next": "16.2.6",
+    "openid-client": "6.8.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "@schemavaults/ui": "0.79.3",
