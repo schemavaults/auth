@@ -21,7 +21,7 @@ import {
 } from "@/lib/auth-db";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import SchemaVaultsPostgresNeonProxyAdapter from "@schemavaults/dbh";
+import { SchemaVaultsPostgresNeonProxyAdapter } from "@schemavaults/dbh";
 import { withServerTrace } from "@/lib/withServerTrace";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next";

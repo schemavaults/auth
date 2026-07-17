@@ -6,7 +6,8 @@ import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import SchemaVaultsPostgresNeonProxyAdapter, {
+import {
+  SchemaVaultsPostgresNeonProxyAdapter,
   type IGetPostgresNeonWsProxyUrlOpts,
 } from "@schemavaults/dbh";
 

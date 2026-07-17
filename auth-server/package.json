@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.36.11",
+  "version": "0.36.12",
   "private": true,
   "repository": {
     "type": "git",
@@ -16,7 +16,7 @@
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/auth-server-sdk": "workspace:*",
     "@schemavaults/auth-ui": "workspace:*",
-    "@schemavaults/dbh": "0.8.7",
+    "@schemavaults/dbh": "0.11.2",
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/send-email": "0.1.0",
     "@schemavaults/theme": "0.26.1",
