@@ -67,17 +67,19 @@ the compose file.
 
 The `dbh migrate` CLI behind the auth-server's `dev:migrate` / `prod:migrate`
 scripts connects through the Neon WebSocket proxy, which this stack does not
-run. Apply migrations with `auth-server/migrate-database-direct.ts` instead,
-which uses the same direct-TCP adapter as the server. The compose file
-publishes Postgres on `127.0.0.1:5432` (loopback only) for exactly this
-purpose.
+run. Instead, run `auth-server/src/lib/auth-db/migrate-to-latest.ts` as a
+script: it creates its connection through `ServerlessDatabase`, so the
+`SCHEMAVAULTS_DBH_ADAPTER=postgres` value in `deploy/.env` makes it use the
+same direct-TCP adapter as the server. The compose file publishes Postgres on
+`127.0.0.1:5432` (loopback only) for exactly this purpose.
 
 From a checkout of this repository on the VM:
 
 ```bash
 bun install
 (cd auth-server && bun run build:migrations)
-POSTGRES_HOST=127.0.0.1 bun --env-file=deploy/.env auth-server/migrate-database-direct.ts
+POSTGRES_HOST=127.0.0.1 MIGRATIONS_PATH=auth-server/dist/migrations \
+  bun --env-file=deploy/.env auth-server/src/lib/auth-db/migrate-to-latest.ts
 ```
 
 (`POSTGRES_HOST` is overridden because `deploy/.env` points at the compose
