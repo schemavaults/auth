@@ -2,7 +2,8 @@
 // This file sets up kysely to connect to the auth-server's Postgres database.
 //
 // Which @schemavaults/dbh adapter is used is selected at runtime by the
-// SCHEMAVAULTS_DBH_ADAPTER environment variable:
+// SCHEMAVAULTS_DBH_ADAPTER environment variable (read via dbh's own
+// getDbhAdapterTypeFromEnv, which throws on invalid values):
 //   - "postgres-neon-proxy" (default): connect through a Neon-compatible
 //     WebSocket proxy (serverless/edge-friendly; the historical behavior).
 //   - "postgres": direct TCP connection via a pg Pool. Used by the
@@ -15,47 +16,13 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
+  getDbhAdapterTypeFromEnv,
   SchemaVaultsPostgresAdapter,
   SchemaVaultsPostgresNeonProxyAdapter,
   type IGetPostgresNeonWsProxyUrlOpts,
   type Kysely,
+  type SchemaVaultsDbhAdapterType,
 } from "@schemavaults/dbh";
-
-export const AUTH_SERVER_DBH_ADAPTER_TYPES = [
-  "postgres",
-  "postgres-neon-proxy",
-] as const;
-
-export type AuthServerDbhAdapterType =
-  (typeof AUTH_SERVER_DBH_ADAPTER_TYPES)[number];
-
-export const DEFAULT_AUTH_SERVER_DBH_ADAPTER: AuthServerDbhAdapterType =
-  "postgres-neon-proxy";
-
-function isAuthServerDbhAdapterType(
-  value: string,
-): value is AuthServerDbhAdapterType {
-  return (AUTH_SERVER_DBH_ADAPTER_TYPES as readonly string[]).includes(value);
-}
-
-/**
- * Resolve which @schemavaults/dbh adapter this deployment connects to
- * Postgres with, from the SCHEMAVAULTS_DBH_ADAPTER environment variable.
- * Resolved at call time (never frozen at build time) so a single build works
- * across deployment modes. Throws if the variable is set but invalid.
- */
-export function getAuthServerDbhAdapterType(): AuthServerDbhAdapterType {
-  const raw: string | undefined = process.env.SCHEMAVAULTS_DBH_ADAPTER;
-  if (typeof raw !== "string" || raw.length === 0) {
-    return DEFAULT_AUTH_SERVER_DBH_ADAPTER;
-  }
-  if (!isAuthServerDbhAdapterType(raw)) {
-    throw new Error(
-      `Invalid SCHEMAVAULTS_DBH_ADAPTER: "${raw}" (expected one of: ${AUTH_SERVER_DBH_ADAPTER_TYPES.join(", ")})`,
-    );
-  }
-  return raw;
-}
 
 type AuthServerDbhAdapter =
   | SchemaVaultsPostgresAdapter<AuthDatabase>
@@ -84,7 +51,8 @@ export class ServerlessDatabase implements AsyncDisposable {
   private static createAdapter(): AuthServerDbhAdapter {
     const environment =
       getAppEnvironment() satisfies SchemaVaultsAppEnvironment;
-    const adapter_type: AuthServerDbhAdapterType = getAuthServerDbhAdapterType();
+    const adapter_type: SchemaVaultsDbhAdapterType =
+      getDbhAdapterTypeFromEnv() ?? "postgres-neon-proxy";
     if (adapter_type === "postgres") {
       return new SchemaVaultsPostgresAdapter<AuthDatabase>({ environment });
     }

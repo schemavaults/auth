@@ -65,25 +65,27 @@ the compose file.
 
 ### Migrations
 
-The `dbh migrate` CLI behind the auth-server's `dev:migrate` / `prod:migrate`
-scripts connects through the Neon WebSocket proxy, which this stack does not
-run. Instead, run `auth-server/src/lib/auth-db/migrate-to-latest.ts` as a
-script: it creates its connection through `ServerlessDatabase`, so the
-`SCHEMAVAULTS_DBH_ADAPTER=postgres` value in `deploy/.env` makes it use the
-same direct-TCP adapter as the server. The compose file publishes Postgres on
-`127.0.0.1:5432` (loopback only) for exactly this purpose.
+Migrations are applied with the standard `dbh migrate` CLI. Since
+`@schemavaults/dbh` 0.12.0 it selects its adapter from the
+`SCHEMAVAULTS_DBH_ADAPTER` environment variable (or an explicit
+`--adapter postgres` flag), so the `SCHEMAVAULTS_DBH_ADAPTER=postgres` value
+in `deploy/.env` makes it connect over direct TCP just like the server. The
+compose file publishes Postgres on `127.0.0.1:5432` (loopback only) for
+exactly this purpose.
 
 From a checkout of this repository on the VM:
 
 ```bash
 bun install
-(cd auth-server && bun run build:migrations)
-POSTGRES_HOST=127.0.0.1 MIGRATIONS_PATH=auth-server/dist/migrations \
-  bun --env-file=deploy/.env auth-server/src/lib/auth-db/migrate-to-latest.ts
+cd auth-server
+bun run build:migrations
+POSTGRES_HOST=127.0.0.1 npx @schemavaults/dbh migrate ./dist/migrations \
+  --environment production --env-file ../deploy/.env
 ```
 
 (`POSTGRES_HOST` is overridden because `deploy/.env` points at the compose
-network hostname `postgres-db`, which does not resolve on the VM itself.)
+network hostname `postgres-db`, which does not resolve on the VM itself;
+`--env-file` values never overwrite variables already set in the shell.)
 
 Re-run after every upgrade that ships new migrations.
 
