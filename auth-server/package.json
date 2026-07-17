@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.36.12",
+  "version": "0.36.13",
   "private": true,
   "repository": {
     "type": "git",
@@ -58,6 +58,7 @@
     "dev": "NEXT_TELEMETRY_DISABLED=1 next dev --port 6767",
     "dev:migrate": "bun run build:migrations && npx @schemavaults/dbh migrate ./dist/migrations --environment development --env-file ./.env.development",
     "prod:migrate": "bun run build:migrations && npx @schemavaults/dbh migrate ./dist/migrations --environment production --env-file ./.env.production",
+    "prod:migrate:direct": "bun run build:migrations && bun ./migrate-database-direct.ts",
     "build:migrations": "bunx @schemavaults/dbh build-db-migrations ./src/lib/auth-db/migrations --outdir ./dist/migrations --sql-module ./src/lib/auth-db/sql.ts --sql-outdir ./dist",
     "build": "NEXT_TELEMETRY_DISABLED=1 next build",
     "build:standalone": "NEXT_STANDALONE_DOCKER_BUILD=true NEXT_TELEMETRY_DISABLED=1 next build",

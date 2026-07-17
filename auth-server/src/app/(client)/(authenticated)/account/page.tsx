@@ -18,16 +18,15 @@ import {
   OrganizationsRegistry,
   preloadAppsTable,
   SchemaVaultsAppRegistry,
+  type ServerlessDatabase,
 } from "@/lib/auth-db";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { SchemaVaultsPostgresNeonProxyAdapter } from "@schemavaults/dbh";
 import { withServerTrace } from "@/lib/withServerTrace";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next";
 
 async function attemptToPreloadAppsAndDomains(
-  dbh: SchemaVaultsPostgresNeonProxyAdapter<AuthDatabase>,
+  dbh: ServerlessDatabase,
   userData: UserData,
 ): Promise<PreloadedAppsTableDataWithDomainRefs> {
   let appsRegistry: SchemaVaultsAppRegistry | undefined;
@@ -56,7 +55,7 @@ async function attemptToPreloadAppsAndDomains(
 }
 
 async function attemptToPreloadUserOrganizationMemberships(
-  dbh: SchemaVaultsPostgresNeonProxyAdapter<AuthDatabase>,
+  dbh: ServerlessDatabase,
   userData: UserData,
 ): Promise<readonly OrganizationMembershipRoleDetails[]> {
   const admin: boolean = userData.admin ?? false;

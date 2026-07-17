@@ -1,8 +1,9 @@
 # Single-VM Deployment (docker compose + nginx)
 
 Host an instance of the SchemaVaults auth-server on a single VM with
-`docker compose`, behind an nginx reverse proxy that serves the static
-assets.
+`docker compose`: nginx serves the static assets and reverse-proxies to the
+auth-server, which connects directly to the bundled Postgres (no WebSocket
+proxy) and Redis.
 
 ## Docker image targets
 
@@ -25,10 +26,16 @@ branding assets) and the `/_next/image` optimizer resolves public assets
 
 ```bash
 cd deploy
-cp auth-server.env.example auth-server.env
-# Fill in auth-server.env (database credentials, salts, MFA keys, URL)
+cp .env.example .env
+# Fill in .env (database credentials, salts, MFA keys, URL). docker compose
+# reads it both for ${...} interpolation (the Postgres service's credentials)
+# and as the auth-server container's env_file.
 
-SERVER_NAME=auth.example.com docker compose up --build -d
+docker compose up --build -d
+
+# First start only: apply the database migrations (see below), then restart
+# the auth-server so it starts against the migrated schema:
+docker compose restart schemavaults-auth
 ```
 
 The stack exposes plain HTTP on port 80 (override with `NGINX_HTTP_PORT`).
@@ -40,34 +47,43 @@ template -- see the TLS notes in
 
 ## Database
 
-Postgres is not part of this stack. With
-`SCHEMAVAULTS_APP_ENVIRONMENT=production` the server connects through the
-Neon serverless driver over secure WebSockets to
-`wss://${POSTGRES_HOST}/v2` (see
-`auth-server/src/lib/auth-db/serverless-database.ts`). Point the
-`POSTGRES_*` values in `auth-server.env` at a Neon-compatible hosted
-Postgres endpoint that satisfies that contract.
+The stack includes a `postgres-db` service, initialized on first start from
+the `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE` values in
+`deploy/.env` and persisted in the `postgres-data` volume. The auth-server
+connects to it directly over TCP: the stack sets
+`SCHEMAVAULTS_DBH_ADAPTER=postgres`, which selects `@schemavaults/dbh`'s
+`SchemaVaultsPostgresAdapter` (a plain `pg` Pool) instead of the default
+`postgres-neon-proxy` adapter (`SchemaVaultsPostgresNeonProxyAdapter`, which
+dials a Neon-compatible WebSocket proxy at `wss://${POSTGRES_HOST}/v2` in the
+production app environment).
 
-Running Postgres on the same VM is possible but not turnkey: you would run
-the `ghcr.io/schemavaults/dbh/postgres-ws-proxy` container in front of
-Postgres (the pattern used by `tests/e2e-auth-tests/docker-compose.yml`)
-and terminate TLS for it -- e.g. an additional nginx server block listening
-with TLS on port 5433 that proxies `location /v2 { ... }` (WebSocket upgrade
-headers included) to the ws-proxy's `/v1` endpoint, with
-`POSTGRES_HOST=<your-domain>:5433`. The ws-proxy speaks plain WebSockets at
-`/v1`, while the production driver dials `wss://.../v2`.
+To use an external Neon-compatible serverless Postgres instead of the bundled
+database, set `SCHEMAVAULTS_DBH_ADAPTER=postgres-neon-proxy` in `deploy/.env`,
+point the `POSTGRES_*` values at the hosted endpoint, and remove the
+`postgres-db` service (and the auth-server's `depends_on` entry for it) from
+the compose file.
 
 ### Migrations
 
-Run database migrations from a checkout of this repository against the same
-database (the compiled migrations also ship in the image under
-`/schemavaults/auth/auth-server/dist/migrations`):
+The `dbh migrate` CLI behind the auth-server's `dev:migrate` / `prod:migrate`
+scripts connects through the Neon WebSocket proxy, which this stack does not
+run. Apply migrations with `auth-server/migrate-database-direct.ts` instead,
+which uses the same direct-TCP adapter as the server. The compose file
+publishes Postgres on `127.0.0.1:5432` (loopback only) for exactly this
+purpose.
+
+From a checkout of this repository on the VM:
 
 ```bash
-cd auth-server
-# .env.production must contain the same POSTGRES_* values as auth-server.env
-bun run prod:migrate
+bun install
+(cd auth-server && bun run build:migrations)
+POSTGRES_HOST=127.0.0.1 bun --env-file=deploy/.env auth-server/migrate-database-direct.ts
 ```
+
+(`POSTGRES_HOST` is overridden because `deploy/.env` points at the compose
+network hostname `postgres-db`, which does not resolve on the VM itself.)
+
+Re-run after every upgrade that ships new migrations.
 
 ## Host-level nginx instead of the nginx container
 

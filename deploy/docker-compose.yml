@@ -3,13 +3,16 @@
 #
 #   nginx                 serves /_next/static/ + public/ assets from disk and
 #                         proxies everything else to the auth-server
-#   schemavaults-auth     slim `production` image (no .next/static)
+#   schemavaults-auth     slim `production` image (no .next/static), connects
+#                         to the bundled Postgres directly over TCP
+#                         (SCHEMAVAULTS_DBH_ADAPTER=postgres -- no WebSocket
+#                         proxy in this stack)
+#   postgres-db           Postgres, initialized from the POSTGRES_* values in
+#                         deploy/.env on first start
 #   schemavaults-auth-redis
 #
-# Postgres is NOT part of this stack: in the `production` app environment the
-# server connects to a Neon-compatible serverless Postgres endpoint over
-# secure WebSockets (wss://${POSTGRES_HOST}/v2). Point the POSTGRES_* values
-# in auth-server.env at your hosted database. See README.md.
+# Copy .env.example to .env first -- docker compose interpolates ${...} below
+# from it AND passes it to the auth-server container as its env_file.
 
 name: schemavaults-auth
 
@@ -55,18 +58,43 @@ services:
       target: production
     restart: unless-stopped
     depends_on:
-      - schemavaults-auth-redis
-    # Deployment secrets + configuration; copy auth-server.env.example to
-    # auth-server.env (gitignored) and fill it in.
+      postgres-db:
+        condition: service_healthy
+      schemavaults-auth-redis:
+        condition: service_healthy
+    # Deployment secrets + configuration; copy .env.example to .env
+    # (gitignored) and fill it in.
     env_file:
-      - ./auth-server.env
+      - ./.env
     environment:
       SCHEMAVAULTS_APP_ENVIRONMENT: production
       NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT: production
       NODE_ENV: production
+      # Direct TCP Postgres connection (no WebSocket proxy in this stack)
+      SCHEMAVAULTS_DBH_ADAPTER: ${SCHEMAVAULTS_DBH_ADAPTER:-postgres}
       REDIS_URL: ${REDIS_URL:-redis://schemavaults-auth-redis:6379}
     expose:
       - 80
+
+  postgres-db:
+    image: postgres:17.7
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in deploy/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: ${POSTGRES_DATABASE:?set POSTGRES_DATABASE in deploy/.env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # Published on loopback only, so database migrations can be run from the
+    # VM itself (see "Migrations" in deploy/README.md). Not reachable from
+    # outside the VM.
+    ports:
+      - "${POSTGRES_PUBLISH_ADDRESS:-127.0.0.1:5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 6s
+      timeout: 4s
+      retries: 8
 
   schemavaults-auth-redis:
     image: redis:7-alpine
@@ -82,4 +110,5 @@ services:
       retries: 8
 
 volumes:
+  postgres-data:
   redis-data:
