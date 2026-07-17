@@ -1,10 +1,30 @@
-# Dockerfile for @schemavaults/auth-server (production)
+# Dockerfile for @schemavaults/auth-server
+#
+# Runtime targets:
+#   staging     Self-contained server image: Next.js standalone server plus
+#               .next/static and public/. Runs stand-alone with no reverse
+#               proxy in front (the Node server serves its own assets).
+#   production  Slim server image for deployments behind an nginx reverse
+#               proxy: the Next.js standalone server WITHOUT .next/static
+#               (delegated to the `nginx` image / an external nginx site).
+#               public/ is still included -- the server reads
+#               public/branding-defaults/ with the fs module and the
+#               /_next/image optimizer resolves public assets from disk.
+#   nginx       Static-asset tier for the production image: nginx with
+#               .next/static + public/ baked in and a templated site config
+#               that reverse-proxies everything else to the server container.
+#               See deploy/ at the monorepo root for a docker compose stack
+#               wiring `production` + `nginx` together.
+#   test        Like staging, but built with the /api/test routes retained
+#               for the E2E suite.
 
 ARG BUN_VERSION
 ARG NODEJS_VERSION
+ARG NGINX_VERSION=1.29-alpine
 
 FROM oven/bun:${BUN_VERSION} AS bunbase
 FROM node:${NODEJS_VERSION} AS nodejsbase
+FROM nginx:${NGINX_VERSION} AS nginxbase
 
 FROM bunbase AS deps
 
@@ -156,54 +176,84 @@ RUN bun run build --filter @schemavaults/auth-server
 WORKDIR /schemavaults/auth/auth-server
 RUN bun run build:migrations
 
-FROM nodejsbase AS production
+### Shared Node.js runtime base for the server images ###
+FROM nodejsbase AS runtime
 
-WORKDIR /schemavaults/auth
+WORKDIR /schemavaults/auth/auth-server
 
-COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json auth-server/package.json
-COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ auth-server/.next/standalone/
-COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ auth-server/.next/standalone/auth-server/.next/static/
-COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/.next/standalone/auth-server/public/
+EXPOSE 80
+ENV PORT 80
+ENV HOSTNAME 0.0.0.0
+
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_STANDALONE_DOCKER_BUILD true
+
+# Set migrations path for runtime DB migrations
+ENV MIGRATIONS_PATH /schemavaults/auth/auth-server/dist/migrations
+
+CMD [ "node", "./.next/standalone/auth-server/server.js" ]
+
+### Staging: self-contained server image (Node serves .next/static + public) ###
+FROM runtime AS staging
+
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json package.json
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ .next/standalone/
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ .next/standalone/auth-server/.next/static/
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ .next/standalone/auth-server/public/
 
 # Copy compiled migrations for runtime DB migrations
-COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/sql.js auth-server/dist/sql.js
-COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ auth-server/dist/migrations/
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/sql.js dist/sql.js
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ dist/migrations/
 
-WORKDIR /schemavaults/auth/auth-server
+### Production: slim server image for use behind the nginx static tier ###
+# .next/static is intentionally NOT copied in: an nginx reverse proxy (see the
+# `nginx` target below and deploy/ at the monorepo root) serves /_next/static/.
+# Requests for /_next/static/ that reach this image directly will 404 -- use
+# the staging target for a self-contained image.
+FROM runtime AS production
 
-EXPOSE 80
-ENV PORT 80
-ENV HOSTNAME 0.0.0.0
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json package.json
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ .next/standalone/
+# public/ must remain in the server image even though nginx also serves it:
+# the server reads public/branding-defaults/ from disk (fs module) to serve
+# default branding assets, and the /_next/image optimizer resolves public
+# assets (e.g. /icon.png rendered via next/image) from the local public dir.
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ .next/standalone/auth-server/public/
 
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NEXT_STANDALONE_DOCKER_BUILD true
+# Copy compiled migrations for runtime DB migrations
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/sql.js dist/sql.js
+COPY --from=build-prod --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ dist/migrations/
 
-# Set migrations path for production
-ENV MIGRATIONS_PATH /schemavaults/auth/auth-server/dist/migrations
+### Test: self-contained server image with /api/test routes retained ###
+FROM runtime AS test
 
-CMD [ "node", "./.next/standalone/auth-server/server.js" ]
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json package.json
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ .next/standalone/
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ .next/standalone/auth-server/.next/static/
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ .next/standalone/auth-server/public/
 
-FROM nodejsbase AS test
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/sql.js dist/sql.js
+COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ dist/migrations/
 
-WORKDIR /schemavaults/auth
+### Nginx static-asset tier for the production image ###
+# Serves the content-hashed /_next/static/ build assets and public/ files from
+# disk, and reverse-proxies every other request to the server container. The
+# site config is rendered from deploy/nginx/templates/auth-server.conf.template
+# by the stock nginx image entrypoint (envsubst on /etc/nginx/templates/),
+# parameterized by the SERVER_NAME / AUTH_SERVER_UPSTREAM / STATIC_ROOT /
+# CLIENT_MAX_BODY_SIZE environment variables defaulted below.
+FROM nginxbase AS nginx
 
-COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/package.json auth-server/package.json
-COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/standalone/ auth-server/.next/standalone/
-COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/.next/static/ auth-server/.next/standalone/auth-server/.next/static/
-COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/public/ auth-server/.next/standalone/auth-server/public/
+# Content-hashed Next.js build assets, served at /_next/static/
+COPY --from=build-prod /schemavaults/auth/auth-server/.next/static/ /usr/share/nginx/html/_next/static/
+# Public assets, served from the site root (e.g. /icon.png)
+COPY --from=build-prod /schemavaults/auth/auth-server/public/ /usr/share/nginx/html/
 
-COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/sql.js auth-server/dist/sql.js
-COPY --from=build-test --chown=nodejs:nodejs /schemavaults/auth/auth-server/dist/migrations/ auth-server/dist/migrations/
+# Replace the stock default site with the auth-server site template
+RUN rm -f /etc/nginx/conf.d/default.conf
+COPY deploy/nginx/templates/auth-server.conf.template /etc/nginx/templates/auth-server.conf.template
 
-WORKDIR /schemavaults/auth/auth-server
-
-EXPOSE 80
-ENV PORT 80
-ENV HOSTNAME 0.0.0.0
-
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NEXT_STANDALONE_DOCKER_BUILD true
-
-ENV MIGRATIONS_PATH /schemavaults/auth/auth-server/dist/migrations
-
-CMD [ "node", "./.next/standalone/auth-server/server.js" ]
+ENV SERVER_NAME _
+ENV AUTH_SERVER_UPSTREAM schemavaults-auth:80
+ENV STATIC_ROOT /usr/share/nginx/html
+ENV CLIENT_MAX_BODY_SIZE 8m

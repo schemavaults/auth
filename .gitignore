@@ -27,3 +27,6 @@ PLAN.md
 
 package.json.tmp
 /tmp
+
+# Single-VM deployment secrets (see deploy/README.md)
+deploy/auth-server.env

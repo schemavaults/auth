@@ -1,0 +1,26 @@
+# Applies to every Docker build that uses the monorepo root as its build
+# context (auth-server/Dockerfile, tests/e2e-auth-tests/Dockerfile,
+# tests/example-nextjs-resource-server/Dockerfile, auth-postgres-db/Dockerfile).
+# Every Dockerfile COPYs explicit files/directories, so excluding local
+# dependency installs, build caches, and runtime artifacts only shrinks the
+# build context -- nothing below is ever copied into an image.
+
+.git
+
+**/node_modules
+**/.next
+**/.turbo
+**/tsconfig.tsbuildinfo
+
+# Local database state (mounted as a volume, never built into an image)
+**/postgres-data
+
+# Cypress runtime artifacts (mounted as volumes by the E2E compose file)
+**/cypress/videos
+**/cypress/screenshots
+
+# Local env files must never enter a build context
+**/.env
+**/.env.*
+!**/.env.example
+deploy/auth-server.env

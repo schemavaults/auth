@@ -158,6 +158,10 @@ The account-management UI lives in the auth-server `src/components/` (it is cons
 ## Continuous Integration & Continuous Delivery (C.I. & C.D. )
 The `.github/workflows` directory contains GitHub Actions workflows for automatically testing & publishing the `@schemavaults/auth` application/package suite.
 
+## Docker Deployment
+
+`auth-server/Dockerfile` has four runtime targets: `staging` (self-contained standalone server including `.next/static/` and `public/`), `production` (slim image WITHOUT `.next/static/`, for deployments where nginx serves the static assets; `public/` is retained because the server fs-reads `public/branding-defaults/` and the `/_next/image` optimizer resolves public assets like `/icon.png` from disk), `nginx` (static-asset tier: nginx with `.next/static/` + `public/` baked in, site config rendered from `deploy/nginx/templates/auth-server.conf.template` via the stock nginx image's envsubst entrypoint, parameterized by `SERVER_NAME`/`AUTH_SERVER_UPSTREAM`/`STATIC_ROOT`/`CLIENT_MAX_BODY_SIZE`), and `test` (like `staging` but with the `/api/test` routes retained; used by the E2E suite). The `deploy/` directory contains a single-VM docker compose stack (nginx + `production` auth-server + Redis; Postgres stays external because the production app environment dials `wss://${POSTGRES_HOST}/v2`) and `deploy/nginx/generate-nginx-site-config.sh`, a dependency-free generator that renders the same template for host-level nginx (sites-available) deployments — see `deploy/README.md`. All Docker builds use the monorepo root as build context; the root `.dockerignore` keeps `node_modules/`, build caches, and env files out of every build context.
+
 ## E2E Testing
 
 The `tests/e2e-auth-tests` directory contains Cypress E2E test suite for testing the auth server.
