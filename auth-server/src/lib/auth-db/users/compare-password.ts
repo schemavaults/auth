@@ -2,7 +2,7 @@ import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import {
-  LATEST_PASSWORD_HASH_VERSION,
+  doesStoredHashNeedUpgrade,
   verifyPassword,
 } from "@/lib/hash_password";
 import { getPasswordRecord } from "./get-password-hash";
@@ -39,7 +39,8 @@ export async function comparePassword(
       version: record.password_hash_version,
     });
     const needsUpgrade: boolean =
-      matches && record.password_hash_version < LATEST_PASSWORD_HASH_VERSION;
+      matches &&
+      doesStoredHashNeedUpgrade(record.password_hash_version, record.password);
 
     if (debug) {
       console.log(
