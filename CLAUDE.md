@@ -103,7 +103,7 @@ All user interfaces should be built using `@schemavaults/ui` and `@schemavaults/
 - `@schemavaults/auth-server/src/components` - React components for auth-server flows (login, register, etc.)
 
 ### Database
-Uses `@schemavaults/dbh` with Kysely for Postgres (Neon serverless compatible). Tables are managed via resource groups in `src/lib/auth-db/`.
+Uses `@schemavaults/dbh` with Kysely for Postgres (Neon serverless compatible). Tables are managed via resource groups in `src/lib/auth-db/`. The `SCHEMAVAULTS_DBH_ADAPTER` env var (resolved at call time by `ServerlessDatabase` in `src/lib/auth-db/serverless-database.ts`) selects how the server connects: `postgres-neon-proxy` (default; Neon-compatible WebSocket proxy) or `postgres` (direct TCP `pg` Pool, used by the single-VM `deploy/` stack).
 
 ##### Starting development database
 ```bash
@@ -157,6 +157,10 @@ The account-management UI lives in the auth-server `src/components/` (it is cons
 
 ## Continuous Integration & Continuous Delivery (C.I. & C.D. )
 The `.github/workflows` directory contains GitHub Actions workflows for automatically testing & publishing the `@schemavaults/auth` application/package suite.
+
+## Docker Deployment
+
+`auth-server/Dockerfile` has four runtime targets: `staging` (self-contained standalone server including `.next/static/` and `public/`), `production` (slim image WITHOUT `.next/static/`, for deployments where nginx serves the static assets; `public/` is retained because the server fs-reads `public/branding-defaults/` and the `/_next/image` optimizer resolves public assets like `/icon.png` from disk), `nginx` (static-asset tier: nginx with `.next/static/` + `public/` baked in, site config rendered from `deploy/nginx/templates/auth-server.conf.template` via the stock nginx image's envsubst entrypoint, parameterized by `SERVER_NAME`/`AUTH_SERVER_UPSTREAM`/`STATIC_ROOT`/`CLIENT_MAX_BODY_SIZE`), and `test` (like `staging` but with the `/api/test` routes retained; used by the E2E suite). The `deploy/` directory contains a single-VM docker compose stack (nginx + `production` auth-server + Postgres + Redis; the nginx tier sits behind the `nginx` compose profile — default-on via `COMPOSE_PROFILES=nginx` in `deploy/.env` — so host-level-nginx deployments can start just postgres/redis/auth-server; the stack sets `SCHEMAVAULTS_DBH_ADAPTER=postgres` so the server connects to the bundled Postgres directly over TCP, and migrations use the standard `dbh migrate` CLI, which honors `SCHEMAVAULTS_DBH_ADAPTER` / `--adapter` since dbh 0.12.0) and `deploy/nginx/generate-nginx-site-config.sh`, a dependency-free generator that renders the same template for host-level nginx (sites-available) deployments — see `deploy/README.md`. All Docker builds use the monorepo root as build context; the root `.dockerignore` keeps `node_modules/`, build caches, and env files out of every build context.
 
 ## E2E Testing
 

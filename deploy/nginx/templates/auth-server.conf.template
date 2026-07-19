@@ -1,0 +1,92 @@
+# nginx site config template for @schemavaults/auth-server.
+#
+# The auth-server `production` Docker image intentionally ships WITHOUT the
+# content-hashed /_next/static/ build assets; this site serves them (plus the
+# public/ files) straight from disk and reverse-proxies everything else to the
+# Next.js standalone server.
+#
+# Template placeholders (the only dollar-brace tokens in this file, written
+# without the dollar sign here so this comment survives rendering intact):
+#   {SERVER_NAME}           nginx server_name (e.g. auth.example.com, or _)
+#   {AUTH_SERVER_UPSTREAM}  host:port of the auth-server production container
+#   {STATIC_ROOT}           directory holding _next/static/ + public/ files
+#   {CLIENT_MAX_BODY_SIZE}  request body limit (branding uploads are ~2.7 MB)
+#
+# Rendered automatically by the `nginx` target of auth-server/Dockerfile (the
+# stock nginx image runs envsubst over /etc/nginx/templates/), or manually for
+# a host-level nginx via deploy/nginx/generate-nginx-site-config.sh.
+
+# Forward WebSocket upgrade requests; use normal keep-alive otherwise.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    "" "";
+}
+
+upstream schemavaults_auth_server {
+    server ${AUTH_SERVER_UPSTREAM};
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_NAME};
+
+    # --- TLS ---------------------------------------------------------------
+    # To terminate TLS in this server (e.g. with certbot-issued certificates),
+    # replace the `listen` directives above with:
+    #     listen 443 ssl;
+    #     listen [::]:443 ssl;
+    #     http2 on;
+    #     ssl_certificate     /etc/letsencrypt/live/<domain>/fullchain.pem;
+    #     ssl_certificate_key /etc/letsencrypt/live/<domain>/privkey.pem;
+    # and add a separate port-80 server block that redirects:
+    #     server {
+    #         listen 80;
+    #         listen [::]:80;
+    #         server_name <domain>;
+    #         return 301 https://$host$request_uri;
+    #     }
+    # -----------------------------------------------------------------------
+
+    # Directory containing _next/static/ and the auth-server public/ files.
+    root ${STATIC_ROOT};
+
+    # Branding asset uploads (PUT /api/admin/branding/[asset]) are base64 JSON
+    # payloads of up to ~2.7 MB.
+    client_max_body_size ${CLIENT_MAX_BODY_SIZE};
+
+    gzip on;
+    gzip_vary on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    # Content-hashed Next.js build assets: serve from disk, cache forever.
+    location /_next/static/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    # Serve public/ files from disk when present (e.g. /icon.png). Everything
+    # else -- pages, API routes, /_next/image, /branding/*, and /favicon.ico
+    # (which the app rewrites to /branding/favicon) -- goes to the Next.js
+    # server.
+    location / {
+        try_files $uri @auth_server;
+    }
+
+    location @auth_server {
+        proxy_pass http://schemavaults_auth_server;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        # Auth responses can carry several KB of Set-Cookie (JWT) headers.
+        proxy_buffer_size 16k;
+        proxy_buffers 8 16k;
+        proxy_busy_buffers_size 32k;
+        proxy_read_timeout 60s;
+    }
+}

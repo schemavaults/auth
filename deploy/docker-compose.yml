@@ -1,0 +1,128 @@
+# Single-VM deployment of the SchemaVaults auth-server behind an nginx
+# reverse proxy. See deploy/README.md for setup instructions.
+#
+#   nginx                 serves /_next/static/ + public/ assets from disk and
+#                         proxies everything else to the auth-server. Behind
+#                         the "nginx" compose profile (activated by
+#                         COMPOSE_PROFILES=nginx in deploy/.env, the
+#                         .env.example default) so deployments fronted by a
+#                         host-level nginx can run the stack without it --
+#                         see "Host-level nginx" in README.md.
+#   schemavaults-auth     slim `production` image (no .next/static), connects
+#                         to the bundled Postgres directly over TCP
+#                         (SCHEMAVAULTS_DBH_ADAPTER=postgres -- no WebSocket
+#                         proxy in this stack); published on 127.0.0.1:3000
+#                         as the upstream for host-level nginx setups
+#   postgres-db           Postgres, initialized from the POSTGRES_* values in
+#                         deploy/.env on first start
+#   schemavaults-auth-redis
+#
+# Copy .env.example to .env first -- docker compose interpolates ${...} below
+# from it AND passes it to the auth-server container as its env_file.
+
+name: schemavaults-auth
+
+services:
+  nginx:
+    profiles:
+      - nginx
+    image: schemavaults/auth-server-nginx:local
+    build:
+      context: ..
+      dockerfile: auth-server/Dockerfile
+      args:
+        BUN_VERSION: 1.3.14
+        NODEJS_VERSION: 24-alpine
+        NGINX_VERSION: 1.29-alpine
+      target: nginx
+    restart: unless-stopped
+    depends_on:
+      - schemavaults-auth
+    environment:
+      # server_name for the generated site config (see
+      # deploy/nginx/templates/auth-server.conf.template)
+      SERVER_NAME: ${SERVER_NAME:-_}
+      AUTH_SERVER_UPSTREAM: schemavaults-auth:80
+      CLIENT_MAX_BODY_SIZE: 8m
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+    # To terminate TLS here instead of in an external proxy/load balancer,
+    # publish 443, mount your certificates, and override the site template
+    # with a TLS-enabled copy (see the TLS notes inside the template):
+    #   ports:
+    #     - "443:443"
+    #   volumes:
+    #     - /etc/letsencrypt:/etc/letsencrypt:ro
+    #     - ./nginx/templates/auth-server.conf.template:/etc/nginx/templates/auth-server.conf.template:ro
+
+  schemavaults-auth:
+    image: schemavaults/auth-server:production-local
+    build:
+      context: ..
+      dockerfile: auth-server/Dockerfile
+      args:
+        BUN_VERSION: 1.3.14
+        NODEJS_VERSION: 24-alpine
+      target: production
+    restart: unless-stopped
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      schemavaults-auth-redis:
+        condition: service_healthy
+    # Deployment secrets + configuration; copy .env.example to .env
+    # (gitignored) and fill it in.
+    env_file:
+      - ./.env
+    environment:
+      SCHEMAVAULTS_APP_ENVIRONMENT: production
+      NEXT_PUBLIC_SCHEMAVAULTS_APP_ENVIRONMENT: production
+      NODE_ENV: production
+      # Direct TCP Postgres connection (no WebSocket proxy in this stack)
+      SCHEMAVAULTS_DBH_ADAPTER: ${SCHEMAVAULTS_DBH_ADAPTER:-postgres}
+      REDIS_URL: ${REDIS_URL:-redis://schemavaults-auth-redis:6379}
+    expose:
+      - 80
+    # Published on loopback only: the upstream for host-level nginx setups
+    # (matching generate-nginx-site-config.sh's default --upstream), and handy
+    # for bypassing the nginx container when debugging. Not reachable from
+    # outside the VM.
+    ports:
+      - "${AUTH_SERVER_PUBLISH_ADDRESS:-127.0.0.1:3000}:80"
+
+  postgres-db:
+    image: postgres:17.7
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in deploy/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: ${POSTGRES_DATABASE:?set POSTGRES_DATABASE in deploy/.env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # Published on loopback only, so database migrations can be run from the
+    # VM itself (see "Migrations" in deploy/README.md). Not reachable from
+    # outside the VM.
+    ports:
+      - "${POSTGRES_PUBLISH_ADDRESS:-127.0.0.1:5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 6s
+      timeout: 4s
+      retries: 8
+
+  schemavaults-auth-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    expose:
+      - 6379
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 6s
+      timeout: 4s
+      retries: 8
+
+volumes:
+  postgres-data:
+  redis-data:

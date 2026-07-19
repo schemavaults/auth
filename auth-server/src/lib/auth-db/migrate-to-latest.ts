@@ -1,4 +1,4 @@
-import { join } from "path";
+import { join, resolve } from "path";
 import type { Kysely } from "@schemavaults/dbh";
 import { existsSync, readdirSync } from "fs";
 import ServerlessDatabase from "./serverless-database";
@@ -16,6 +16,11 @@ export default async function migrateToLatest(db: Kysely<any>, migrationFolder: 
   if (typeof migrationFolder !== 'string') {
     throw new TypeError("Expected 'migrationFolder' to be a string!");
   }
+
+  // Kysely's FileMigrationProvider import()s each file relative to its own
+  // module, so a relative folder path (e.g. MIGRATIONS_PATH from a shell)
+  // would not resolve; make it absolute against the working directory.
+  migrationFolder = resolve(migrationFolder);
 
   if (!existsSync(migrationFolder)) {
     throw new Error(`Failed to resolve migrations directory from path: '${migrationFolder}'`)
