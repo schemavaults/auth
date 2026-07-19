@@ -195,6 +195,22 @@ export async function handleRefreshTokenGrant(
     );
   }
 
+  // The refresh token must have been issued to the client app requesting
+  // the refresh; a token minted for one client app must not be redeemable
+  // for tokens scoped to a different client app.
+  if (decoded.app !== body.client_app_id) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Refresh token was not issued to this client application",
+      } satisfies RequestTokensResult,
+      {
+        status: 401,
+      },
+    );
+  }
+
   // Check if the refresh token has been revoked
   if (decoded.jti) {
     try {
