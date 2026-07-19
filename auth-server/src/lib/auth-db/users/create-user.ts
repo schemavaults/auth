@@ -9,6 +9,7 @@ import {
 import { hashPasswordV2, LATEST_PASSWORD_HASH_VERSION } from "@/lib/hash_password";
 import isValidUuid from "@/lib/is-valid-uuid";
 import loadSuperuserInviteCode, { superuserInviteCodeEnvVarKey } from "@/lib/SuperuserInviteCode";
+import timingSafeEqualSecretString from "@/lib/timingSafeEqualSecretString";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import isValidEmail from "@/lib/is-valid-email";
 import type { ICreateUserOptions } from "./ICreateUserOptions";
@@ -59,10 +60,7 @@ export async function createUser(
   const SUPERUSER_INVITE_CODE: string | undefined = loadSuperuserInviteCode();
   const IS_SUPERUSER_INVITE_CODE_PROVIDED: boolean = (
     typeof SUPERUSER_INVITE_CODE === 'string' &&
-    SUPERUSER_INVITE_CODE.length > 0 &&
-    typeof invite_code === 'string' &&
-    invite_code.length > 0 &&
-    SUPERUSER_INVITE_CODE === invite_code
+    timingSafeEqualSecretString(SUPERUSER_INVITE_CODE, invite_code)
   );
   const create_as_admin = IS_SUPERUSER_INVITE_CODE_PROVIDED;
   if (typeof create_as_admin !== "boolean") {
