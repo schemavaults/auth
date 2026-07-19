@@ -45,6 +45,12 @@ template -- see the TLS notes in
 `nginx/templates/auth-server.conf.template` and the commented block in
 `docker-compose.yml`).
 
+The nginx container sits behind the `nginx` compose profile, activated by
+`COMPOSE_PROFILES=nginx` in `.env` (the `.env.example` default) -- so the
+full stack starts with a plain `docker compose up`. Set `COMPOSE_PROFILES=`
+(empty) to run only postgres/redis/auth-server, e.g. behind a host-level
+nginx (next section).
+
 ## Database
 
 The stack includes a `postgres-db` service, initialized on first start from
@@ -94,9 +100,13 @@ Re-run after every upgrade that ships new migrations.
 To use an nginx installed on the VM itself (e.g. managed by certbot) instead
 of the `nginx` service:
 
-1. Remove the `nginx` service and publish the auth-server port instead,
-   e.g. `127.0.0.1:3000:80`.
-2. Extract the static assets from the built `nginx` target image:
+1. Set `COMPOSE_PROFILES=` (empty) in `deploy/.env` so the nginx container
+   stays out of the stack. The auth-server is published on `127.0.0.1:3000`
+   (configurable via `AUTH_SERVER_PUBLISH_ADDRESS`), which is exactly the
+   generator script's default `--upstream`.
+2. Extract the static assets from the built `nginx` target image (explicitly
+   naming the service activates its profile, so this works with
+   `COMPOSE_PROFILES=` unset or empty):
 
    ```bash
    docker compose build nginx

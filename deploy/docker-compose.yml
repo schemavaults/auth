@@ -2,11 +2,17 @@
 # reverse proxy. See deploy/README.md for setup instructions.
 #
 #   nginx                 serves /_next/static/ + public/ assets from disk and
-#                         proxies everything else to the auth-server
+#                         proxies everything else to the auth-server. Behind
+#                         the "nginx" compose profile (activated by
+#                         COMPOSE_PROFILES=nginx in deploy/.env, the
+#                         .env.example default) so deployments fronted by a
+#                         host-level nginx can run the stack without it --
+#                         see "Host-level nginx" in README.md.
 #   schemavaults-auth     slim `production` image (no .next/static), connects
 #                         to the bundled Postgres directly over TCP
 #                         (SCHEMAVAULTS_DBH_ADAPTER=postgres -- no WebSocket
-#                         proxy in this stack)
+#                         proxy in this stack); published on 127.0.0.1:3000
+#                         as the upstream for host-level nginx setups
 #   postgres-db           Postgres, initialized from the POSTGRES_* values in
 #                         deploy/.env on first start
 #   schemavaults-auth-redis
@@ -18,6 +24,8 @@ name: schemavaults-auth
 
 services:
   nginx:
+    profiles:
+      - nginx
     image: schemavaults/auth-server-nginx:local
     build:
       context: ..
@@ -75,6 +83,12 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://schemavaults-auth-redis:6379}
     expose:
       - 80
+    # Published on loopback only: the upstream for host-level nginx setups
+    # (matching generate-nginx-site-config.sh's default --upstream), and handy
+    # for bypassing the nginx container when debugging. Not reachable from
+    # outside the VM.
+    ports:
+      - "${AUTH_SERVER_PUBLISH_ADDRESS:-127.0.0.1:3000}:80"
 
   postgres-db:
     image: postgres:17.7
