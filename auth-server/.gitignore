@@ -4,10 +4,9 @@ out/
 .turbo/
 **/.DS_Store
 node_modules/
-.env.local
-.env.development
-.env.production
 .env
+.env.*
+!.env.example
 
 next-env.d.ts
 
