@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.36.18",
+  "version": "0.36.21",
   "private": true,
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/send-email": "0.1.0",
     "@schemavaults/theme": "0.26.1",
-    "@schemavaults/ui": "0.79.3",
+    "@schemavaults/ui": "0.87.0",
     "@simplewebauthn/browser": "13.3.0",
     "@simplewebauthn/server": "13.3.1",
     "cookies-next": "6.1.1",
