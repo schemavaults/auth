@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
+import { LoadingPage } from "@schemavaults/ui";
 import { ErrorPage } from "@/components/ErrorPage";
 import { DEFAULT_AUTH_SERVER_FRIENDLY_NAME } from "@/lib/config/default-auth-server-friendly-name";
 import {
@@ -12,6 +13,18 @@ interface AuthServerBrandingConfig {
   friendly_name: string;
   theme_colors: AuthServerThemeColors;
 }
+
+const DEFAULT_BRANDING_CONFIG: AuthServerBrandingConfig = {
+  friendly_name: DEFAULT_AUTH_SERVER_FRIENDLY_NAME,
+  theme_colors: DEFAULT_AUTH_SERVER_THEME_COLORS,
+};
+
+/**
+ * @description Give up on loading the white-label branding config after this
+ * long and render the default-branded error page — the branding must never
+ * keep the actual error hidden behind the loading spinner indefinitely.
+ */
+const BRANDING_CONFIG_FETCH_TIMEOUT_MS = 5_000;
 
 function isAuthServerBrandingConfig(
   value: unknown,
@@ -41,9 +54,11 @@ function isAuthServerBrandingConfig(
  * @description The global error page replaces the root layout entirely, so the
  * friendly-name/theme-colors context providers mounted there are unavailable
  * and the white-label branding must be loaded client-side at error time from
- * the env-only GET /api/config/branding endpoint. Until that load resolves —
- * or when it fails, which is likely when the server is broken enough to reach
- * this page — the default "SchemaVaults" branding is rendered instead.
+ * the env-only GET /api/config/branding endpoint. A loading spinner is shown
+ * until that load settles (so the default branding never flashes before the
+ * custom branding resolves); the default "SchemaVaults" branding is rendered
+ * only when the load fails or times out — which is likely when the server is
+ * broken enough to reach this page.
  */
 export default function GlobalError({
   error,
@@ -52,17 +67,22 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }): ReactElement {
-  const [branding, setBranding] = useState<AuthServerBrandingConfig>({
-    friendly_name: DEFAULT_AUTH_SERVER_FRIENDLY_NAME,
-    theme_colors: DEFAULT_AUTH_SERVER_THEME_COLORS,
-  });
+  // null = branding config still loading
+  const [branding, setBranding] = useState<AuthServerBrandingConfig | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadBrandingConfig(): Promise<void> {
       try {
-        const response = await fetch("/api/config/branding");
+        const response = await fetch("/api/config/branding", {
+          signal:
+            typeof AbortSignal.timeout === "function"
+              ? AbortSignal.timeout(BRANDING_CONFIG_FETCH_TIMEOUT_MS)
+              : undefined,
+        });
         if (!response.ok) {
           throw new Error(
             `Branding config request failed with HTTP status ${response.status}!`,
@@ -84,6 +104,9 @@ export default function GlobalError({
           "Failed to load white-label branding config; falling back to default branding: ",
           e,
         );
+        if (!cancelled) {
+          setBranding(DEFAULT_BRANDING_CONFIG);
+        }
       }
     }
 
@@ -97,15 +120,19 @@ export default function GlobalError({
   return (
     <html>
       <body>
-        <ErrorPage
-          message="Something went wrong!"
-          error={error}
-          reset={reset}
-          wordmarkProps={{
-            wordmarkText: branding.friendly_name,
-            gradientColors: branding.theme_colors,
-          }}
-        />
+        {branding === null ? (
+          <LoadingPage />
+        ) : (
+          <ErrorPage
+            message="Something went wrong!"
+            error={error}
+            reset={reset}
+            wordmarkProps={{
+              wordmarkText: branding.friendly_name,
+              gradientColors: branding.theme_colors,
+            }}
+          />
+        )}
       </body>
     </html>
   );
