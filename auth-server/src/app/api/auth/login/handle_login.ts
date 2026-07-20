@@ -269,10 +269,12 @@ export async function handleLogin({
     );
   }
 
-  // Lazy-upgrade legacy (v1) password hashes to the current (v2) per-user-salt
-  // scheme now that we have verified the plaintext. Non-fatal: a failed
-  // upgrade must not block the user's login. The next successful login will
-  // retry the upgrade.
+  // Lazy-upgrade stored password hashes now that we have verified the
+  // plaintext: legacy iterated-SHA-256 hashes (v1/v2) are re-hashed under the
+  // current argon2id (v3) scheme, and v3 hashes are re-hashed when their cost
+  // parameters no longer match the configured PRIVATE_ARGON2_* values.
+  // Non-fatal: a failed upgrade must not block the user's login. The next
+  // successful login will retry the upgrade.
   if (compare_password_needs_upgrade) {
     try {
       await userRegistry.upgradePasswordHashIfNeeded(
