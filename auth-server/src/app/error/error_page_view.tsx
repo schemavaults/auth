@@ -1,6 +1,6 @@
 "use client";
 
-import { ErrorPage } from "@schemavaults/ui";
+import { ErrorPage } from "@/components/ErrorPage";
 
 export default function ErrorPageView({
   error,

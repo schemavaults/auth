@@ -1,7 +1,8 @@
 "use client";
 
 import { useLogoutEffect } from "@schemavaults/auth-react-provider";
-import { ErrorPage, LoadingPage, useToast } from "@schemavaults/ui";
+import { LoadingPage, useToast } from "@schemavaults/ui";
+import { ErrorPage } from "@/components/ErrorPage";
 import { useRouter } from "next/navigation";
 import { Component, type PropsWithChildren, type ReactNode, useCallback, type ReactElement } from "react";
 

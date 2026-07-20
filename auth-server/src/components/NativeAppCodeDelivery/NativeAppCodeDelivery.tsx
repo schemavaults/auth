@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ErrorPage, LoadingPage } from "@schemavaults/ui";
+import { LoadingPage } from "@schemavaults/ui";
+import { ErrorPage } from "@/components/ErrorPage";
 
 export interface NativeAppCodeDeliveryProps {
   authorization_code: string;
