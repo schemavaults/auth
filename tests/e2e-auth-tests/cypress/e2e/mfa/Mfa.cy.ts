@@ -125,9 +125,13 @@ describe("MFA (TOTP + recovery codes)", () => {
         cy.get("[data-testid='mfa-recovery-codes-acknowledge']")
           .should("be.visible")
           .click();
+        // force: the "Multi-factor authentication enabled" success toast
+        // overlaps the dialog footer in the CI viewport, and Cypress
+        // refuses to click a covered element. The outcome is still
+        // asserted below via the settings card state.
         cy.get("[data-testid='mfa-enroll-done']")
           .should("not.be.disabled")
-          .click();
+          .click({ force: true });
 
         // The settings card reflects the newly-verified factor.
         cy.contains("Enabled (TOTP)", { timeout: 10_000 }).should(
