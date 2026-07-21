@@ -23,12 +23,18 @@ import MaximumBrowserCookieSize from "./MaximumBrowserCookieSize";
 export { MaximumBrowserCookieSize };
 
 // API Server IDs
-export { getSchemavaultsApiServerId } from "./env/get-schemavaults-api-server-id";
+export {
+  getSchemavaultsApiServerId,
+  getSchemavaultsApiServerId as getSchemaVaultsApiServerId
+} from "./env/get-schemavaults-api-server-id";
 export type { ApiServerId } from "@schemavaults/app-definitions";
 export { apiServerIdSchema } from "@schemavaults/app-definitions";
 
 // Client Application IDs
-export { getSchemavaultsClientApplicationId } from "./env/get-schemavaults-client-application-id";
+export {
+  getSchemavaultsClientApplicationId,
+  getSchemavaultsClientApplicationId as getSchemaVaultsClientApplicationId
+} from "./env/get-schemavaults-client-application-id";
 export type { AppId } from "@schemavaults/app-definitions";
 export { appIdSchema } from "@schemavaults/app-definitions";
 

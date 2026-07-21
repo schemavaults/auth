@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server-sdk",
   "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
-  "version": "0.28.9",
+  "version": "0.28.10",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -39,7 +39,7 @@
     "bun-types": "1.3.14",
     "@types/react": "19.2.14",
     "tsc-alias": "1.9.0",
-    "next": "16.2.6",
+    "next": "16.2.11",
     "eslint": "9.39.1",
     "@eslint/js": "9.39.1",
     "globals": "16.5.0",
@@ -108,6 +108,11 @@
       "require": "./dist/env/get-schemavaults-api-server-id.js"
     },
     "./get-schemavaults-auth-server-url": {
+      "types": "./dist/env/get-schemavaults-auth-server-url.d.ts",
+      "import": "./dist/env/get-schemavaults-auth-server-url.js",
+      "require": "./dist/env/get-schemavaults-auth-server-url.js"
+    },
+    "./get-auth-server-url": {
       "types": "./dist/env/get-schemavaults-auth-server-url.d.ts",
       "import": "./dist/env/get-schemavaults-auth-server-url.js",
       "require": "./dist/env/get-schemavaults-auth-server-url.js"

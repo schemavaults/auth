@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-react-provider",
   "description": "React hooks and components to make using the @schemavaults/auth-client-sdk a breeze",
-  "version": "0.16.6",
+  "version": "0.16.7",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -23,9 +23,9 @@
     "swr": "2.3.4"
   },
   "peerDependencies": {
-    "next": "^16.2.6",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "next": "^16.2.11",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "scripts": {
     "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
