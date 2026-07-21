@@ -57,6 +57,86 @@ describe("MFA (TOTP + recovery codes)", () => {
     });
   });
 
+  // Drives the real /mfa settings UI through the full TOTP enrollment flow
+  // (enroll → verify-enrollment → recovery codes issued), unlike the other
+  // tests in this suite which seed the factor via the test-only endpoint.
+  // Regression test: POST /api/user/mfa/totp/verify-enrollment returned 500
+  // ("calling the transaction method for a Transaction is not supported")
+  // when issuing the first verified factor's recovery codes, because
+  // replaceRecoveryCodes opened a nested transaction inside
+  // issueRecoveryCodesIfNeeded's advisory-lock transaction.
+  it("enrolls TOTP via the /mfa settings UI, issuing recovery codes for the first factor", () => {
+    cy.generate_random_test_user_credentials().then((credentials) => {
+      cy.create_and_login_as_regular_user(credentials).then((ok) => {
+        if (!ok) throw new Error("Failed to register/login regular user");
+        cy.url().should("include", "/account");
+
+        cy.visit("/mfa");
+        cy.wait_for_page_hydration();
+
+        cy.intercept("POST", "/api/user/mfa/totp/verify-enrollment").as(
+          "verifyEnrollment",
+        );
+
+        cy.contains("button", "Set up authenticator app")
+          .should("be.visible")
+          .should("not.be.disabled")
+          .click();
+
+        cy.get("[data-testid='mfa-enroll-qr']", { timeout: 15_000 }).should(
+          "be.visible",
+        );
+
+        // Read the base32 secret from the dialog's "Can't scan? Show
+        // secret" details rather than intercepting the enroll response:
+        // the dialog's retained enrollment is what the verify call is
+        // bound to (and in dev, React StrictMode can double-fire the
+        // enroll effect, making an intercepted response the wrong factor).
+        cy.contains("summary", "Can't scan? Show secret").click();
+        cy.get("details code")
+          .invoke("text")
+          .then((secretText) => {
+            const secret = secretText.trim();
+            expect(secret, "TOTP secret shown in dialog").to.have.length.above(
+              0,
+            );
+            cy.compute_totp_code(secret).then((code) => {
+              cy.get("[data-testid='mfa-enroll-code-input']")
+                .should("be.visible")
+                .should("not.be.disabled")
+                .clear()
+                .type(code);
+              cy.get("[data-testid='mfa-enroll-confirm']")
+                .should("not.be.disabled")
+                .click();
+            });
+          });
+
+        // The endpoint that 500'd pre-fix must succeed...
+        cy.wait("@verifyEnrollment")
+          .its("response.statusCode")
+          .should("eq", 200);
+
+        // ...and the first verified factor mints fresh recovery codes,
+        // which the dialog renders and requires acknowledging.
+        cy.get("[data-testid='mfa-recovery-codes-list']", {
+          timeout: 15_000,
+        }).should("be.visible");
+        cy.get("[data-testid='mfa-recovery-codes-acknowledge']")
+          .should("be.visible")
+          .click();
+        cy.get("[data-testid='mfa-enroll-done']")
+          .should("not.be.disabled")
+          .click();
+
+        // The settings card reflects the newly-verified factor.
+        cy.contains("Enabled (TOTP)", { timeout: 10_000 }).should(
+          "be.visible",
+        );
+      });
+    });
+  });
+
   it("MFA-enrolled user is redirected to /auth/mfa on login and a valid TOTP completes the flow", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
