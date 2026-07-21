@@ -19,7 +19,7 @@ export async function replaceRecoveryCodes(
     created_at: now,
     used_at: null,
   }));
-  await db.transaction().execute(async (tx) => {
+  const replaceAll = async (tx: Kysely<AuthDatabase>): Promise<void> => {
     await tx
       .deleteFrom("user_mfa_recovery_codes")
       .where("uid", "=", args.uid)
@@ -27,5 +27,13 @@ export async function replaceRecoveryCodes(
     if (rows.length > 0) {
       await tx.insertInto("user_mfa_recovery_codes").values(rows).execute();
     }
-  });
+  };
+  // Callers may already be inside a transaction (e.g. the advisory-lock
+  // transaction in issueRecoveryCodesIfNeeded); Kysely throws on nested
+  // .transaction() calls, so only open one when we're not in one already.
+  if (db.isTransaction) {
+    await replaceAll(db);
+  } else {
+    await db.transaction().execute(replaceAll);
+  }
 }
