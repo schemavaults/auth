@@ -145,7 +145,7 @@ export default function CreateAppForm({
       });
       clearFrontendAppsCache(mutate);
       onSuccess();
-      form.reset();
+      form.reset({ ...defaultValues, app_id: uuid() });
       return;
     });
     return;
@@ -186,6 +186,29 @@ export default function CreateAppForm({
               </FormControl>
               <FormDescription>
                 Give a user-friendly name to the new application.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="app_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>App ID</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder={"my-new-react-app"}
+                  {...field}
+                  disabled={submitting}
+                />
+              </FormControl>
+              <FormDescription>
+                A unique identifier for the application. Must start with a
+                lowercase letter or number, and contain only lowercase letters,
+                numbers, hyphens, and underscores. Defaults to a randomly
+                generated ID.
               </FormDescription>
               <FormMessage />
             </FormItem>

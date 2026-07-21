@@ -109,7 +109,7 @@ export function CreateApiServerForm({
       title: "Created new API server successfully",
     });
     clearApiServersCache(mutate);
-    form.reset();
+    form.reset({ ...defaultValues, api_server_id: uuid() });
     onSuccess();
     return;
   }
@@ -139,6 +139,25 @@ export function CreateApiServerForm({
               <FormDescription>
                 Give a user-friendly name to the new backend API server
                 application.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="api_server_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>API Server ID</FormLabel>
+              <FormControl>
+                <Input placeholder={"my-new-resource-server"} {...field} />
+              </FormControl>
+              <FormDescription>
+                A unique identifier for the API server. Must start with a
+                lowercase letter or number, and contain only lowercase letters,
+                numbers, hyphens, and underscores. Defaults to a randomly
+                generated ID.
               </FormDescription>
               <FormMessage />
             </FormItem>

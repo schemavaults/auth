@@ -10,6 +10,8 @@ export interface CreateApiServerParams {
   api_server_description: string;
   public?: boolean;
   organization_id?: string;
+  /** Custom API server ID; when omitted, the form's randomly generated default is kept */
+  api_server_id?: string;
 }
 
 export interface CreateApiServerResult {
@@ -21,12 +23,18 @@ export default function createApiServer(
   params: CreateApiServerParams,
 ): Cypress.Chainable<CreateApiServerResult> {
   const { api_server_name, api_server_description, organization_id } = params;
+  const api_server_id = params.api_server_id;
   const isPublic = params.public ?? false;
 
   if (typeof api_server_name !== "string") {
     throw new TypeError("'api_server_name' must be a string");
   } else if (typeof api_server_description !== "string") {
     throw new TypeError("'api_server_description' must be a string");
+  } else if (
+    typeof api_server_id !== "undefined" &&
+    typeof api_server_id !== "string"
+  ) {
+    throw new TypeError("'api_server_id' must be a string if provided");
   }
 
   // Navigate to the appropriate page based on whether organization_id is provided
@@ -54,6 +62,15 @@ export default function createApiServer(
             .should("not.be.disabled")
             .type(api_server_description);
 
+          // Override the randomly generated API server ID if a custom one was requested
+          if (typeof api_server_id === "string") {
+            cy.get(`input[name="api_server_id"]`, { log: false })
+              .should("exist")
+              .should("not.be.disabled")
+              .clear()
+              .type(api_server_id);
+          }
+
           // Toggle public checkbox if requested
           if (isPublic) {
             cy.get(`button[role="checkbox"][name="public"]`, { log: false })
@@ -71,6 +88,12 @@ export default function createApiServer(
           cy.get(`textarea[name="api_server_description"]`, {
             log: false,
           }).should("have.value", api_server_description);
+          if (typeof api_server_id === "string") {
+            cy.get(`input[name="api_server_id"]`, { log: false }).should(
+              "have.value",
+              api_server_id,
+            );
+          }
 
           cy.intercept({
             method: "POST",

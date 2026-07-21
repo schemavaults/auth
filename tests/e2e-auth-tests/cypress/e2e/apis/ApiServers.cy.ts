@@ -43,6 +43,40 @@ describe("API Servers", () => {
         });
       });
     });
+
+    it("admin can create API server with a custom api server id", () => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
+        if (!success) {
+          throw new Error("Failed to create and login as superuser");
+        }
+
+        cy.generate_random_code(8).then((randomCode: string) => {
+          const api_server_id = `custom-api-${randomCode.toLowerCase()}`;
+          const api_server_name = `Custom ID API ${randomCode}`;
+          const api_server_description = `E2E test API server with custom id ${randomCode}`;
+
+          cy.create_api_server({
+            api_server_name,
+            api_server_description,
+            api_server_id,
+          }).then((result) => {
+            if (!result.success) {
+              throw new Error(
+                "Cypress 'create_api_server' command does not appear to have been a success",
+              );
+            }
+            cy.wrap(result.api_server_id).should(
+              "eq",
+              api_server_id,
+              "Created API server should use the custom api server id",
+            );
+            cy.log(
+              `Successfully created API server with custom id '${api_server_id}'`,
+            );
+          });
+        });
+      });
+    });
   });
 
   describe("Organization API Server Creation", () => {
