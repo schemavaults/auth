@@ -9,7 +9,15 @@ import {
   type BrandingAssetContent,
 } from "@/lib/auth-db/branding";
 import { getDefaultBrandingAsset } from "@/lib/branding/default-assets";
-import { brandingAssetVersionParam } from "@/lib/branding/branding-asset-version";
+import {
+  brandingAssetVersionParam,
+  isBrandingAssetResizeSize,
+  type BrandingAssetResizeSize,
+} from "@/lib/branding/branding-asset-version";
+import {
+  getResizedCustomBrandingAsset,
+  getResizedDefaultBrandingAsset,
+} from "@/lib/branding/resized-assets";
 import {
   getGeneratedOpenGraphImageHash,
   resolveOpenGraphImageBranding,
@@ -31,6 +39,7 @@ function buildAssetHeaders(
   req: NextRequest,
   contentType: string,
   contentHash: string,
+  etag: string,
 ): Record<string, string> {
   // Requests carrying the current content hash as their ?v= cache-busting
   // param can be cached forever: a rebranded deployment changes the hash and
@@ -40,7 +49,7 @@ function buildAssetHeaders(
     requested_version === brandingAssetVersionParam(contentHash);
   return {
     "Content-Type": contentType,
-    ETag: `"${contentHash}"`,
+    ETag: `"${etag}"`,
     "Cache-Control": is_immutable_request
       ? IMMUTABLE_CACHE_CONTROL
       : SHORT_CACHE_CONTROL,
@@ -52,9 +61,9 @@ function buildAssetHeaders(
   };
 }
 
-function requestMatchesEtag(req: NextRequest, contentHash: string): boolean {
+function requestMatchesEtag(req: NextRequest, etag: string): boolean {
   const if_none_match: string | null = req.headers.get("if-none-match");
-  return if_none_match !== null && if_none_match.includes(`"${contentHash}"`);
+  return if_none_match !== null && if_none_match.includes(`"${etag}"`);
 }
 
 function serveAssetBytes(
@@ -62,18 +71,45 @@ function serveAssetBytes(
   bytes: Uint8Array,
   contentType: string,
   contentHash: string,
+  resizedTo?: BrandingAssetResizeSize,
 ): NextResponse {
-  const headers = buildAssetHeaders(req, contentType, contentHash);
-  if (requestMatchesEtag(req, contentHash)) {
+  // Resized variants get a distinct ETag; the ?v= immutability check stays
+  // keyed on the source content hash, which is what the URL carries.
+  const etag: string = resizedTo ? `${contentHash}-s${resizedTo}` : contentHash;
+  const headers = buildAssetHeaders(req, contentType, contentHash, etag);
+  if (requestMatchesEtag(req, etag)) {
     return new NextResponse(null, { status: 304, headers });
   }
   return new NextResponse(new Uint8Array(bytes), { status: 200, headers });
 }
 
+/**
+ * Parse the optional ?s= square-resize parameter. Values outside the bounded
+ * allowlist are ignored (the original asset is served) rather than rejected,
+ * so a stale page referencing a since-removed size degrades to an oversized
+ * image instead of a broken one.
+ */
+function resolveRequestedResizeSize(
+  req: NextRequest,
+): BrandingAssetResizeSize | null {
+  const raw: string | null = req.nextUrl.searchParams.get("s");
+  if (raw === null) {
+    return null;
+  }
+  const parsed: number = Number.parseInt(raw, 10);
+  if (String(parsed) !== raw || !isBrandingAssetResizeSize(parsed)) {
+    console.warn(
+      `[/branding] Ignoring resize param s=${JSON.stringify(raw)} not in the allowed size list`,
+    );
+    return null;
+  }
+  return parsed;
+}
+
 function serveGeneratedOpenGraphImage(req: NextRequest): Response {
   const branding = resolveOpenGraphImageBranding();
   const contentHash = getGeneratedOpenGraphImageHash(branding);
-  const headers = buildAssetHeaders(req, "image/png", contentHash);
+  const headers = buildAssetHeaders(req, "image/png", contentHash, contentHash);
   if (requestMatchesEtag(req, contentHash)) {
     return new NextResponse(null, { status: 304, headers });
   }
@@ -95,9 +131,16 @@ export async function GET(
     );
   }
 
+  // Optional bounded ?s= square resize (e.g. the <Logo /> component requests
+  // a 64px variant instead of the full-size upload). A failed/unsupported
+  // resize falls back to the original bytes.
+  const resize_size: BrandingAssetResizeSize | null =
+    resolveRequestedResizeSize(req);
+
   // Load the administrator-uploaded asset, if any. A database/redis outage
   // must not take down the favicon: fall through to the defaults instead.
   let custom: BrandingAssetContent | null = null;
+  let custom_resized: Buffer | null = null;
   try {
     await using dbh = ServerlessDatabase.createDBH();
     await using redis = RedisCache.createConnection();
@@ -107,6 +150,13 @@ export async function GET(
       redis.client,
     );
     custom = await registry.getAsset(asset);
+    if (custom && resize_size !== null) {
+      custom_resized = await getResizedCustomBrandingAsset(
+        custom,
+        resize_size,
+        redis.client,
+      );
+    }
   } catch (e: unknown) {
     console.error(
       `[/branding/${asset}] Failed to load custom branding asset, serving default:`,
@@ -115,6 +165,15 @@ export async function GET(
   }
 
   if (custom) {
+    if (custom_resized) {
+      return serveAssetBytes(
+        req,
+        custom_resized,
+        custom.contentType,
+        custom.contentHash,
+        resize_size ?? undefined,
+      );
+    }
     return serveAssetBytes(
       req,
       Buffer.from(custom.contentBase64, "base64"),
@@ -125,6 +184,23 @@ export async function GET(
 
   const default_asset = await getDefaultBrandingAsset(asset);
   if (default_asset) {
+    if (resize_size !== null) {
+      const default_resized: Buffer | null =
+        await getResizedDefaultBrandingAsset(
+          asset,
+          default_asset,
+          resize_size,
+        );
+      if (default_resized) {
+        return serveAssetBytes(
+          req,
+          default_resized,
+          default_asset.contentType,
+          default_asset.contentHash,
+          resize_size,
+        );
+      }
+    }
     return serveAssetBytes(
       req,
       default_asset.bytes,

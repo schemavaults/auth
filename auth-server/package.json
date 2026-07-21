@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.36.25",
+  "version": "0.36.27",
   "private": true,
   "repository": {
     "type": "git",
@@ -33,6 +33,7 @@
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "server-only": "0.0.1",
+    "sharp": "0.34.5",
     "swr": "2.3.4",
     "uuid": "13.0.0",
     "zod": "3.25.8",
