@@ -30,7 +30,7 @@ export function CreateAppDialog({
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
         id="create-app-dialog-content"
-        className="sm:max-w-[425px]"
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
       >
         <CreateAppForm
           owner_organization_id={owner_organization_id ?? ownerOrganizationId}
