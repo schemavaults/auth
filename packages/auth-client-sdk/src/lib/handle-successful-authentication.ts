@@ -45,6 +45,12 @@ export interface IHandleSuccessfulAuthenticationOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
   client_app_id: AppId;
   auth_server_url: string;
+  /**
+   * The auth server deployment's own app id (white-label deployments use a
+   * custom value). Injected into audience schema validation because browser
+   * bundles can't resolve the SCHEMAVAULTS_AUTH_SERVER_APP_ID env var.
+   */
+  auth_server_app_id?: AppId;
   defaultTokenAudiences: string | string[];
   // stores a refresh token locally (if http-only cookies not being used)
   storeRefreshToken: (refreshToken: RefreshToken) => void;
@@ -69,6 +75,7 @@ export async function handleSuccessfulAuthentication({
   environment,
   adapter,
   auth_server_url,
+  auth_server_app_id,
   client_app_id,
   defaultTokenAudiences,
   storeRefreshToken,
@@ -305,6 +312,7 @@ export async function handleSuccessfulAuthentication({
   const authorizationCodePOSTBodySchema = createAuthorizationCodePOSTBodySchema(
     z,
     environment,
+    { auth_server_url, auth_server_app_id },
   );
 
   // Exchange the authorization code for an access token
@@ -382,10 +390,10 @@ export async function handleSuccessfulAuthentication({
   let refresh_token_expiry: number | undefined;
   let user: UserData;
   try {
-    const tokens_data = await createRequestTokensResultSchema(
-      z,
-      environment,
-    ).safeParseAsync(await response.json());
+    const tokens_data = await createRequestTokensResultSchema(z, environment, {
+      auth_server_url,
+      auth_server_app_id,
+    }).safeParseAsync(await response.json());
     if (!tokens_data.success) {
       console.error(
         "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] " +

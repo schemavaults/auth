@@ -61,6 +61,7 @@ export {
   createAudienceSchema,
   createAudienceListSchema,
 } from "./audience-schema";
+export type { AudienceSchemaOverrides } from "./audience-schema";
 
 export {
   inviteCodeFormatSchema,

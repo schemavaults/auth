@@ -13,12 +13,32 @@ import type { z as zod } from "zod";
 // concerns; eager module-scope initialization breaks `next build` in Docker
 // where those env vars are unset.
 
+export interface AudienceSchemaOverrides {
+  /**
+   * The auth server's public URL. Browser bundles can't read the
+   * SCHEMAVAULTS_AUTH_SERVER_URL environment variable (they'd silently
+   * resolve the per-environment default), so client-side callers must inject
+   * the URL their auth client was configured with. Server-side callers can
+   * omit it to resolve from the environment.
+   */
+  auth_server_url?: string;
+  /**
+   * The auth server deployment's own app id. Same story as auth_server_url:
+   * client-side callers must inject their configured value in white-label
+   * deployments; server-side callers can omit it.
+   */
+  auth_server_app_id?: string;
+}
+
 export function createAudienceSchema(
   z: typeof zod,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
+  overrides?: AudienceSchemaOverrides,
 ) {
-  const auth_server_url: string = getAuthServerUrl(environment);
-  const auth_server_app_id: string = getAuthServerAppId();
+  const auth_server_url: string =
+    overrides?.auth_server_url ?? getAuthServerUrl(environment);
+  const auth_server_app_id: string =
+    overrides?.auth_server_app_id ?? getAuthServerAppId();
 
   const authServerUrlSchema = z
     .string()
@@ -42,8 +62,9 @@ const MAX_APPS_IN_AUDIENCE_LIST = 10 as const satisfies number;
 export function createAudienceListSchema(
   z: typeof zod,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
+  overrides?: AudienceSchemaOverrides,
 ) {
-  return createAudienceSchema(z, environment)
+  return createAudienceSchema(z, environment, overrides)
     .array()
     .min(1, "Audience list may not be empty")
     .max(

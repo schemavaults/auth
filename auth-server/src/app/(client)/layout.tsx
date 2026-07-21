@@ -4,6 +4,7 @@ import "server-only";
 import {
   type AppId,
   getAppEnvironment,
+  getAuthServerUrl,
   schemaVaultsAppEnvironmentSchema,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -32,14 +33,16 @@ export default async function ClientFacingServerPageLayout({
     );
   }
   const debug: boolean = shouldEnableDebug(environment);
-  // Resolved server-side; client components can't read the env var directly
+  // Resolved server-side; client components can't read the env vars directly
   const auth_server_app_id: AppId = getAuthServerAppId();
+  const auth_server_url: string = getAuthServerUrl(environment);
   return (
     <ClientOnlyGlobalProviders
       environment={environment}
       debug={debug}
       invite_code_required={await requireInviteCode()}
       auth_server_app_id={auth_server_app_id}
+      auth_server_url={auth_server_url}
     >
       {children}
     </ClientOnlyGlobalProviders>

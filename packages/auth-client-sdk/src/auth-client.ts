@@ -649,9 +649,16 @@ export class SchemaVaultsAuthClient
 
     // Created lazily (not at module scope) so that the app environment and
     // auth-server URL are resolved at call time from this client's config.
+    // The configured URL/app id are injected because browser bundles can't
+    // read the SCHEMAVAULTS_AUTH_SERVER_URL / _APP_ID env vars (white-label
+    // deployments would otherwise fail validation against the defaults).
+    const audienceSchemaOverrides = {
+      auth_server_url: this._auth_server_url,
+      auth_server_app_id: this._auth_server_app_id,
+    } as const;
     const defaultTokenAudiencesSchema = z.union([
-      createAudienceSchema(z, this.environment),
-      createAudienceListSchema(z, this.environment),
+      createAudienceSchema(z, this.environment, audienceSchemaOverrides),
+      createAudienceListSchema(z, this.environment, audienceSchemaOverrides),
     ]);
     const parsed = defaultTokenAudiencesSchema.safeParse(
       defaults.length === 1 ? defaults[0] : defaults,
@@ -721,6 +728,7 @@ export class SchemaVaultsAuthClient
       loadOAuth2State: this.loadOAuth2State.bind(this),
       loadOidcNonce: this.loadOidcNonce.bind(this),
       auth_server_url: this.auth_server_uri,
+      auth_server_app_id: this._auth_server_app_id,
       client_app_id: this.app_id,
       adapter: this.adapter,
       storeUserData: this.storeUserData.bind(this),
@@ -1251,6 +1259,8 @@ export class SchemaVaultsAuthClient
       adapter: this.adapter,
       debug: this.debug,
       environment: this.environment,
+      auth_server_url: this._auth_server_url,
+      auth_server_app_id: this._auth_server_app_id,
     });
   }
 
@@ -1272,6 +1282,7 @@ export class SchemaVaultsAuthClient
       client_app_id: this.app_id,
       adapter: this.adapter,
       auth_server_uri: this.auth_server_uri,
+      auth_server_app_id: this._auth_server_app_id,
     });
   } // exchangeAuthTokens()
 

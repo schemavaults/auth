@@ -17,6 +17,12 @@ export interface IExchangeAuthTokensOpts {
   audience: string | string[];
   replaceRefreshToo?: boolean;
   auth_server_uri: string;
+  /**
+   * The auth server deployment's own app id (white-label deployments use a
+   * custom value). Injected into audience schema validation because browser
+   * bundles can't resolve the SCHEMAVAULTS_AUTH_SERVER_APP_ID env var.
+   */
+  auth_server_app_id?: AppId;
   environment: SchemaVaultsAppEnvironment;
   debug: boolean;
   client_app_id: AppId;
@@ -34,6 +40,7 @@ export async function exchangeAuthTokens({
   debug,
   environment,
   auth_server_uri,
+  auth_server_app_id,
   client_app_id,
   adapter,
   handleSuccessfulExchangeAuthTokensResponse,
@@ -57,6 +64,7 @@ export async function exchangeAuthTokens({
   const refreshTokenPOSTBodySchema = createRefreshTokenPOSTBodySchema(
     z,
     environment,
+    { auth_server_url: auth_server_uri, auth_server_app_id },
   );
 
   // Exchange the authorization code for an access token
@@ -189,6 +197,7 @@ export async function exchangeAuthTokens({
     const parsed_tokens_result = await createRequestTokensResultSchema(
       z,
       environment,
+      { auth_server_url: auth_server_uri, auth_server_app_id },
     ).safeParseAsync(await response.json());
     if (!parsed_tokens_result.success) {
       console.error(

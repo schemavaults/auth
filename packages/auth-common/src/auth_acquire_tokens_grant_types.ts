@@ -1,6 +1,7 @@
 import { PKCE_ProofKeyManager } from "./pkce";
 import type { ZodSchema, z as zod } from "zod";
 import {
+  type AudienceSchemaOverrides,
   createAudienceListSchema,
   createAudienceSchema,
 } from "./audience-schema";
@@ -18,11 +19,12 @@ export const grant_types = [
 function createTokenEndpointBaseSchema(
   z: typeof zod,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
+  overrides?: AudienceSchemaOverrides,
 ) {
   return z.object({
     audience: z.union([
-      createAudienceSchema(z, environment),
-      createAudienceListSchema(z, environment),
+      createAudienceSchema(z, environment, overrides),
+      createAudienceListSchema(z, environment, overrides),
     ]),
     client_app_id: appIdSchema,
   });
@@ -31,8 +33,9 @@ function createTokenEndpointBaseSchema(
 export function createAuthorizationCodePOSTBodySchema(
   z: typeof zod,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
+  overrides?: AudienceSchemaOverrides,
 ) {
-  return createTokenEndpointBaseSchema(z, environment)
+  return createTokenEndpointBaseSchema(z, environment, overrides)
     .extend({
       grant_type: z.literal("authorization_code"),
       code: z.string().min(64).max(1024).base64url(),
@@ -61,8 +64,9 @@ export function createAuthorizationCodePOSTBodySchema(
 export function createRefreshTokenPOSTBodySchema(
   z: typeof zod,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
+  overrides?: AudienceSchemaOverrides,
 ) {
-  return createTokenEndpointBaseSchema(z, environment)
+  return createTokenEndpointBaseSchema(z, environment, overrides)
     .extend({
       grant_type: z.literal("refresh_token"),
       replaceRefreshToo: z.boolean().optional(),
