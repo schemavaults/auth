@@ -22,6 +22,10 @@ import {
 import { Trash2, Upload } from "lucide-react";
 import type { BrandingAssetMetadataRecord } from "@/lib/auth-db/branding/types";
 import {
+  buildBrandingAssetAcceptAttribute,
+  resolveBrandingAssetUploadContentType,
+} from "@/lib/auth-db/branding/branding-asset-keys";
+import {
   useBrandingAssets,
   clearBrandingAssetsCache,
 } from "./useBrandingAssets";
@@ -122,7 +126,7 @@ function BrandingAssetRow({
         <input
           ref={fileInputRef}
           type="file"
-          accept={asset.allowedContentTypes.join(",")}
+          accept={buildBrandingAssetAcceptAttribute(asset.allowedContentTypes)}
           className="hidden"
           onChange={handleFileChange}
           data-testid={`branding-asset-file-input-${asset.key}`}
@@ -175,7 +179,11 @@ export function BrandingAssetsCard(
 
   const handleUploadFile = useCallback(
     async (asset: BrandingAssetMetadataRecord, file: File): Promise<void> => {
-      if (!asset.allowedContentTypes.includes(file.type)) {
+      const contentType: string | null = resolveBrandingAssetUploadContentType(
+        file,
+        asset.allowedContentTypes,
+      );
+      if (!contentType) {
         toast({
           variant: "destructive",
           title: "Unsupported file type",
@@ -197,7 +205,7 @@ export function BrandingAssetsCard(
           method: "PUT",
           credentials: "include",
           headers: {
-            "Content-Type": file.type,
+            "Content-Type": contentType,
           },
           body: file,
         });
