@@ -44,15 +44,14 @@ async function safeDefaultAssetHash(key: string): Promise<string | null> {
 }
 
 /**
- * Resolve the branding asset URLs for page metadata. Loads the current asset
- * content hashes (Redis-cached, ~1 lookup per TTL) so URLs are cache-busted
- * whenever an administrator uploads new branding. Degrades gracefully when
- * the database is unreachable (e.g. during `next build`): the URLs fall back
- * to the default assets' versions, and the short-TTL caching on the serving
- * route self-corrects the mismatch.
+ * Load the current asset content hashes (Redis-cached, ~1 lookup per TTL).
+ * Degrades gracefully when the database is unreachable (e.g. during
+ * `next build`): callers fall back to the default assets' versions, and the
+ * short-TTL caching on the serving route self-corrects the mismatch.
  */
-export async function resolveBrandingMetadata(): Promise<ResolvedBrandingMetadata> {
-  let versions: Partial<Record<BrandingAssetKey, string | null>> = {};
+async function safeLoadAssetVersions(): Promise<
+  Partial<Record<BrandingAssetKey, string | null>>
+> {
   try {
     await using dbh = ServerlessDatabase.createDBH();
     await using redis = RedisCache.createConnection();
@@ -61,13 +60,34 @@ export async function resolveBrandingMetadata(): Promise<ResolvedBrandingMetadat
       undefined,
       redis.client,
     );
-    versions = await registry.getAssetVersions();
+    return await registry.getAssetVersions();
   } catch (e: unknown) {
     console.error(
       "[resolveBrandingMetadata] Failed to load branding asset versions, using defaults:",
       e,
     );
+    return {};
   }
+}
+
+/**
+ * Resolve the cache-busted /branding/icon URL for rendering the app icon in
+ * page content (e.g. the dashboard layout logo and the home page), matching
+ * the URL generateMetadata() links in the document head.
+ */
+export async function resolveBrandingIconUrl(): Promise<string> {
+  const versions = await safeLoadAssetVersions();
+  const iconHash: string | null =
+    versions.icon ?? (await safeDefaultAssetHash("icon"));
+  return brandingAssetUrlPath("icon", iconHash);
+}
+
+/**
+ * Resolve the branding asset URLs for page metadata, cache-busted whenever an
+ * administrator uploads new branding.
+ */
+export async function resolveBrandingMetadata(): Promise<ResolvedBrandingMetadata> {
+  const versions = await safeLoadAssetVersions();
 
   let metadataBase: URL | null = null;
   try {

@@ -10,6 +10,7 @@ import { inter } from "./fonts/Inter";
 import { AuthServerFriendlyNameProvider } from "@/components/Wordmark";
 import { AuthServerThemeColorsProvider } from "@/components/ThemeColors";
 import { AuthServerUrlProvider } from "@/components/AuthServerUrl";
+import { AppIconUrlProvider } from "@/components/AppIconUrl";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import getAuthServerDescription from "@/lib/config/auth-server-description";
 import getAuthServerOwnerOrganizationId from "@/lib/config/auth-server-owner-organization";
@@ -18,7 +19,10 @@ import {
   GENERATED_OPENGRAPH_IMAGE_WIDTH,
   GENERATED_OPENGRAPH_IMAGE_HEIGHT,
 } from "@/lib/branding/generated-og-image";
-import { resolveBrandingMetadata } from "@/lib/branding/branding-metadata";
+import {
+  resolveBrandingIconUrl,
+  resolveBrandingMetadata,
+} from "@/lib/branding/branding-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const title: string = getAuthServerFriendlyName();
@@ -72,6 +76,9 @@ export default async function RootLayout({
   // environment, which throws when SCHEMAVAULTS_APP_ENVIRONMENT is unset) out
   // of static prerendering, matching the example resource server's root layout.
   await connection();
+  // Same cache-busted /branding/icon URL generateMetadata() links in the
+  // document head, threaded to client components (e.g. <Logo />) via context.
+  const app_icon_url: string = await resolveBrandingIconUrl();
   return (
     <html
       lang="en"
@@ -105,7 +112,9 @@ export default async function RootLayout({
               theme_colors={getAuthServerThemeColors()}
             >
               <AuthServerUrlProvider auth_server_url={getAuthServerUrl()}>
-                {children}
+                <AppIconUrlProvider app_icon_url={app_icon_url}>
+                  {children}
+                </AppIconUrlProvider>
               </AuthServerUrlProvider>
             </AuthServerThemeColorsProvider>
           </AuthUiOwnerOrganizationProvider>

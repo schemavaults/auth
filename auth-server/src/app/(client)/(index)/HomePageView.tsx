@@ -11,6 +11,7 @@ import {
   CardFooter,
 } from "@schemavaults/ui";
 import { Wordmark } from "@/components/Wordmark";
+import Logo from "@/components/Logo";
 import { ThemedPageBackground } from "@/components/ThemedPageBackground";
 import { HelpCircle } from "lucide-react";
 import Link from "next/link";
@@ -40,6 +41,7 @@ export default function HomePageView(): ReactElement {
         )}
       >
         <CardHeader>
+          <Logo width={56} height={56} />
           <CardTitle>
             Welcome to <Wordmark />
           </CardTitle>

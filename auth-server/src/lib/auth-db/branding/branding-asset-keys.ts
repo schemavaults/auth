@@ -40,7 +40,7 @@ export const BRANDING_ASSET_DEFINITIONS = {
   icon: {
     label: "App Icon",
     description:
-      "Large square icon used for apple-touch-icon and app shortcuts. Served at /branding/icon.",
+      "Large square icon used for apple-touch-icon and app shortcuts, and rendered as the logo in the dashboard layout and on the home page. Served at /branding/icon.",
     allowedContentTypes: ["image/png"],
     maxSizeBytes: 1024 * 1024,
     recommendedDimensions: "512x512",

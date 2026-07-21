@@ -1,8 +1,9 @@
 // Verifies that an administrator can upload custom branding images (the
 // favicon and the app icon) from the admin dashboard at /admin/settings
 // (BrandingAssetsCard), and that the uploads propagate to the public
-// /branding/* serving routes, the /favicon.ico rewrite, and the root
-// layout's <link rel="icon"> cache-busted URLs:
+// /branding/* serving routes, the /favicon.ico rewrite, the root layout's
+// <link rel="icon"> cache-busted URLs, and the rendered app logo (<Logo />
+// on the home page and in the dashboard layout):
 //   - upload via the hidden file input -> "Branding updated" toast ->
 //     row badge flips Default -> Custom -> Reset button appears
 //   - GET /branding/favicon serves the uploaded bytes (new ETag/content-type)
@@ -159,6 +160,45 @@ describe("Admin branding assets (favicon/icon upload from /admin/settings)", () 
         expect(uploaded.headers["etag"]).to.not.eq(defaultEtag);
       });
 
+      // The uploaded icon is rendered as the app logo (via the cache-busted
+      // /branding/icon URL) on the home page and in the dashboard layout.
+      cy.request("/api/admin/branding").then((metadata) => {
+        expect(metadata.status).to.eq(200);
+        const assets: Array<Record<string, unknown>> =
+          metadata.body.data.assets;
+        const icon = assets.find((asset) => asset["key"] === "icon");
+        expect(icon, "icon metadata record").to.exist;
+        expect(icon).to.have.property("hasCustomAsset", true);
+        const contentHash = icon!["contentHash"] as string;
+        expect(contentHash).to.be.a("string").and.not.be.empty;
+        const versionedIconUrl = `/branding/icon?v=${contentHash.slice(0, 16)}`;
+
+        cy.visit("/");
+        cy.wait_for_page_hydration();
+        cy.get('img[alt$=" Logo"]')
+          .first()
+          .should("have.attr", "src", versionedIconUrl);
+        // naturalWidth > 0 proves the browser fetched real image bytes for
+        // the uploaded asset from the /branding/icon route.
+        cy.get('img[alt$=" Logo"]')
+          .first()
+          .should(($img) => {
+            expect(
+              ($img[0] as HTMLImageElement).naturalWidth,
+              "home page logo image loads",
+            ).to.be.greaterThan(0);
+          });
+
+        // Dashboard layout (any authenticated page) shows the same icon.
+        cy.visit("/account");
+        cy.wait_for_page_hydration();
+        cy.get('img[alt$=" Logo"]')
+          .first()
+          .should("have.attr", "src", versionedIconUrl);
+      });
+
+      cy.visit("/admin/settings");
+      cy.wait_for_page_hydration();
       cy.get('[data-testid="branding-asset-remove-icon"]').click();
       cy.contains("Branding reset", { timeout: 10000 }).should("be.visible");
       cy.contains('[data-testid="branding-asset-row-icon"]', "Default", {
