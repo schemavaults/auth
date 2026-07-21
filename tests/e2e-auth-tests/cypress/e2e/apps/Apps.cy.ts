@@ -40,6 +40,36 @@ describe("Apps", () => {
         });
       });
     });
+
+    it("admin can create app with a custom app id", () => {
+      cy.create_and_login_as_superuser_via_request().then((success) => {
+        if (!success) {
+          throw new Error("Failed to create and login as superuser");
+        }
+
+        cy.generate_random_code(8).then((randomCode: string) => {
+          const app_id: string = `custom-app-${randomCode.toLowerCase()}`;
+          const app_name: string = `Custom ID App ${randomCode}`;
+          const app_description: string = `E2E test app with custom id ${randomCode}`;
+
+          cy.create_app({ app_name, app_description, app_id }).then(
+            (result) => {
+              if (!result.success) {
+                throw new Error(
+                  "Cypress 'create_app' command does not appear to have been a success",
+                );
+              }
+              cy.wrap(result.app_id).should(
+                "eq",
+                app_id,
+                "Created app should use the custom app id",
+              );
+              cy.log(`Successfully created app with custom id '${app_id}'`);
+            },
+          );
+        });
+      });
+    });
   });
 
   describe("Regular User Access Restrictions", () => {

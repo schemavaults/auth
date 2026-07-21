@@ -7,6 +7,8 @@ export interface CreateAppParams {
   app_description: string;
   public?: boolean;
   organization_id?: string;
+  /** Custom app ID; when omitted, the form's randomly generated default is kept */
+  app_id?: string;
 }
 
 export interface CreateAppResult {
@@ -17,13 +19,15 @@ export interface CreateAppResult {
 export default function createApp(
   params: CreateAppParams,
 ): Cypress.Chainable<CreateAppResult> {
-  const { app_name, app_description, organization_id } = params;
+  const { app_name, app_description, organization_id, app_id } = params;
   const isPublic = params.public ?? false;
 
   if (typeof app_name !== "string") {
     throw new TypeError("'app_name' must be a string");
   } else if (typeof app_description !== "string") {
     throw new TypeError("'app_description' must be a string");
+  } else if (typeof app_id !== "undefined" && typeof app_id !== "string") {
+    throw new TypeError("'app_id' must be a string if provided");
   }
 
   // Navigate to the appropriate page based on whether organization_id is provided
@@ -54,6 +58,15 @@ export default function createApp(
           .clear()
           .type(app_description);
 
+        // Override the randomly generated app ID if a custom one was requested
+        if (typeof app_id === "string") {
+          cy.get(`input[name="app_id"]`, { log: false })
+            .should("exist")
+            .should("not.be.disabled")
+            .clear()
+            .type(app_id);
+        }
+
         // Toggle public checkbox if requested
         if (isPublic) {
           cy.get(`button[role="checkbox"][name="public"]`, { log: false })
@@ -71,6 +84,12 @@ export default function createApp(
         cy.get(`textarea[name="app_description"]`, {
           log: false,
         }).should("have.value", app_description);
+        if (typeof app_id === "string") {
+          cy.get(`input[name="app_id"]`, { log: false }).should(
+            "have.value",
+            app_id,
+          );
+        }
 
         // Intercept creation request
         cy.intercept({

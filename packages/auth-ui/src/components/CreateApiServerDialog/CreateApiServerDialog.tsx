@@ -31,7 +31,7 @@ export function CreateApiServerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         id="create-api-server-dialog-content"
-        className="sm:max-w-[425px]"
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
       >
         <CreateApiServerForm
           clearApiServersCache={clearApiServersCache}
