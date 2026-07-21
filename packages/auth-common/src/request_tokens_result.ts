@@ -1,7 +1,10 @@
 import type { z as zod } from "zod";
 import { userDataSchema } from "./user_data";
 import { accessTokenDataSchema, refreshTokenDataSchema } from "./token-data";
-import { createAudienceSchema } from "./audience-schema";
+import {
+  type AudienceSchemaOverrides,
+  createAudienceSchema,
+} from "./audience-schema";
 import { organizationIdSchema } from "./organizations";
 import { oidcNonceSchema } from "./oidc/nonce";
 import {
@@ -18,13 +21,14 @@ import {
 export function createSuccessfullyGeneratedTokensRecordSchema(
   z: typeof zod,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
+  overrides?: AudienceSchemaOverrides,
 ) {
   return z
     .object({
       access: z
         .record(
           // map of audience (app id, fs region, or auth server url) to token for that audience
-          createAudienceSchema(z, environment),
+          createAudienceSchema(z, environment, overrides),
           z.union([accessTokenDataSchema, z.literal("AS_HTTP_ONLY_COOKIE")]),
         )
         .optional(),
@@ -65,6 +69,7 @@ export type SuccessfullyGeneratedTokensRecord = zod.infer<
 export function createRequestTokensResultSchema(
   z: typeof zod,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
+  overrides?: AudienceSchemaOverrides,
 ) {
   const requestTokensSuccessfulResultSchema = z
     .object({
@@ -75,6 +80,7 @@ export function createRequestTokensResultSchema(
       tokens: createSuccessfullyGeneratedTokensRecordSchema(
         z,
         environment,
+        overrides,
       ).optional(),
       userData: userDataSchema.optional(),
       userOrgs: organizationIdSchema.array().optional(),

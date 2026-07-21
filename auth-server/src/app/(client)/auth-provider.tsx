@@ -20,6 +20,14 @@ export interface ClientAuthProviderProps {
    * app_id and the auth_server_app_id of the AuthProvider.
    */
   auth_server_app_id: AppId;
+  /**
+   * The auth server's own public URL, resolved server-side from the
+   * SCHEMAVAULTS_AUTH_SERVER_URL environment variable. Client bundles can't
+   * read that env var, so without this prop the AuthProvider would silently
+   * fall back to the per-environment default (e.g. auth.schemavaults.com in
+   * production), sending white-label deployments' API calls cross-origin.
+   */
+  auth_server_url: string;
   debug?: boolean;
   invite_code_required?: boolean;
 }
@@ -28,6 +36,7 @@ export function ClientAuthProvider({
   children,
   environment,
   auth_server_app_id,
+  auth_server_url,
   ...props
 }: ClientAuthProviderProps): ReactElement {
   const router = useRouter();
@@ -59,6 +68,7 @@ export function ClientAuthProvider({
       authMiddlewareRules={defaultAuthMiddlewareRules}
       app_id={auth_server_app_id}
       auth_server_app_id={auth_server_app_id}
+      auth_server_url={auth_server_url}
       environment={environment}
       debug={typeof props.debug === 'boolean' ? props.debug : false}
       invite_code_required={typeof props.invite_code_required === 'boolean' ? props.invite_code_required : true}

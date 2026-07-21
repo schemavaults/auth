@@ -12,6 +12,15 @@ import type { PropsWithChildren } from "react";
 export interface IAppAuthProviderProps extends PropsWithChildren {
   environment: SchemaVaultsAppEnvironment;
   app_id: AppId;
+  /**
+   * The auth server's public URL, resolved server-side (e.g. from the
+   * SCHEMAVAULTS_AUTH_SERVER_URL environment variable) and threaded in as a
+   * prop. Client bundles can't read that env var, so omitting this falls
+   * back to the per-environment default auth server URL — only correct when
+   * the app targets the default SchemaVaults deployment, not a white-label
+   * auth server.
+   */
+  auth_server_url?: string;
   default_audiences: readonly string[];
   debug?: boolean;
   authed_on_unauthed_redirect_uri: string;
@@ -39,6 +48,7 @@ export default function AppAuthProvider({
   return (
     <AuthProvider
       app_id={app_id}
+      auth_server_url={props.auth_server_url}
       login_uri="/auth/login"
       register_uri="/auth/register"
       authed_on_unauthed_redirect_uri={props.authed_on_unauthed_redirect_uri}

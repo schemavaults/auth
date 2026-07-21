@@ -11,6 +11,7 @@ import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "@/lib/a
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type {
   ApiServerId,
+  AppId,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
@@ -19,6 +20,14 @@ export interface IHandleSuccessfulExchangeAuthTokensResponseOpts {
   debug: boolean;
   environment: SchemaVaultsAppEnvironment;
   adapter: ISchemaVaultsAuthClientAdapter;
+  /**
+   * The auth server URL and own-app id this client was configured with.
+   * Injected into audience schema validation because browser bundles can't
+   * resolve the SCHEMAVAULTS_AUTH_SERVER_URL / _APP_ID env vars (white-label
+   * deployments would otherwise fail validation against the defaults).
+   */
+  auth_server_url?: string;
+  auth_server_app_id?: AppId;
   storeMultipleAccessTokens: (
     access_tokens: Record<ApiServerId, AccessToken | "AS_HTTP_ONLY_COOKIE">,
   ) => void;
@@ -28,13 +37,15 @@ export default async function handleSuccessfulExchangeAuthTokensResponse({
   tokens_response,
   debug,
   environment,
+  auth_server_url,
+  auth_server_app_id,
   storeMultipleAccessTokens,
   adapter,
 }: IHandleSuccessfulExchangeAuthTokensResponseOpts): Promise<SuccessfullyGeneratedTokensRecord> {
-  const parsed_tokens_data = await createRequestTokensResultSchema(
-    z,
-    environment,
-  ).safeParseAsync(tokens_response);
+  const parsed_tokens_data = await createRequestTokensResultSchema(z, environment, {
+    auth_server_url,
+    auth_server_app_id,
+  }).safeParseAsync(tokens_response);
   if (!parsed_tokens_data.success) {
     if (debug) {
       console.error(
