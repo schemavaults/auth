@@ -91,4 +91,7 @@ export type {
 // Loading hardcoded apps/apis
 export { getAuthServerUrl } from "@schemavaults/app-definitions";
 
+// Auth server URL for the current app environment
+export { default as getSchemaVaultsAuthServerUrl } from "./env/get-schemavaults-auth-server-url";
+
 export { loadJwksAccessPrivateKey } from "@/env/loadJwksAccessPrivateKey";
