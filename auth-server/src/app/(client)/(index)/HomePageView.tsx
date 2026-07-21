@@ -41,7 +41,9 @@ export default function HomePageView(): ReactElement {
         )}
       >
         <CardHeader>
-          <Logo width={56} height={56} />
+          <div className="flex justify-center">
+            <Logo width={56} height={56} />
+          </div>
           <CardTitle>
             Welcome to <Wordmark />
           </CardTitle>
