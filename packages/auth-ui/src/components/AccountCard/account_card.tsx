@@ -25,6 +25,7 @@ import SignOutButton from "@/components/SignOutButton";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 import ViewFullUserProfileButton from "./view_full_user_profile";
 import ViewAdminDashboardButton from "./view_admin_page_link";
+import EmailVerificationStatus from "./email_verification_status";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import { Building2, Plus } from "lucide-react";
 
@@ -84,7 +85,22 @@ export function AccountDetailsCard(
       <CardContent>
         <div className="flex flex-col items-start justify-start gap-2">
           <KeyValueWithSkeleton label="User ID" value={currentUser?.uid} />
-          <KeyValueWithSkeleton label="Email" value={currentUser?.email} />
+          <div className="flex w-full flex-row flex-wrap items-center justify-start gap-2">
+            <KeyValueWithSkeleton
+              label="Email"
+              value={currentUser?.email}
+              className="w-auto grow-0"
+            />
+            {currentUser && (
+              <EmailVerificationStatus
+                email={currentUser.email}
+                verified={currentUser.email_verified === true}
+                isAuthServerAccountPage={props.isAuthServerAccountPage}
+                auth_server_url={props.auth_server_url}
+                redirect={props.redirect}
+              />
+            )}
+          </div>
 
           {/** User Organizations */}
           {props.isAuthServerAccountPage && (

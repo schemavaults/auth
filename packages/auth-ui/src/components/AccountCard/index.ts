@@ -5,6 +5,9 @@ export {
 } from "./account_card";
 export type * from "./account_card";
 
+export { EmailVerificationStatus } from "./email_verification_status";
+export type { EmailVerificationStatusProps } from "./email_verification_status";
+
 export {
   useMyOrganizations,
   clearMyOrganizationsCache,
