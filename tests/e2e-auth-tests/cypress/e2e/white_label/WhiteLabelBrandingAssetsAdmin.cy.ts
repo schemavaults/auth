@@ -172,12 +172,22 @@ describe("Admin branding assets (favicon/icon upload from /admin/settings)", () 
         const contentHash = icon!["contentHash"] as string;
         expect(contentHash).to.be.a("string").and.not.be.empty;
         const versionedIconUrl = `/branding/icon?v=${contentHash.slice(0, 16)}`;
+        // <Logo /> requests a server-side downscaled variant through the
+        // bounded ?s= resize param instead of the full-size upload.
+        const sizedIconUrl = `${versionedIconUrl}&s=64`;
+
+        // The resized variant is served with a distinct per-size ETag.
+        cy.request(sizedIconUrl).then((resized) => {
+          expect(resized.status).to.eq(200);
+          expect(resized.headers["content-type"]).to.eq("image/png");
+          expect(resized.headers["etag"]).to.eq(`"${contentHash}-s64"`);
+        });
 
         cy.visit("/");
         cy.wait_for_page_hydration();
         cy.get('img[alt$=" Logo"]')
           .first()
-          .should("have.attr", "src", versionedIconUrl);
+          .should("have.attr", "src", sizedIconUrl);
         // naturalWidth > 0 proves the browser fetched real image bytes for
         // the uploaded asset from the /branding/icon route.
         cy.get('img[alt$=" Logo"]')
@@ -194,7 +204,7 @@ describe("Admin branding assets (favicon/icon upload from /admin/settings)", () 
         cy.wait_for_page_hydration();
         cy.get('img[alt$=" Logo"]')
           .first()
-          .should("have.attr", "src", versionedIconUrl);
+          .should("have.attr", "src", sizedIconUrl);
       });
 
       cy.visit("/admin/settings");
