@@ -282,10 +282,25 @@ export interface ISchemaVaultsAuthClient {
   /**
    * @name checkIfAuthenticatedWithServer
    * @returns A promise resolving with the current user's data (if authenticated), or null if not logged in
-   * @description Sends a request to the auth server to check if the client is currently authenticated
+   * @description Sends a request to the auth server to check if the client is currently authenticated.
+   *   The returned user data is also synced into the local cache (with an auth
+   *   state change event when it differs), so stale claims self-heal over time.
    * @see isAuthenticated
    */
   checkIfAuthenticatedWithServer: () => Promise<UserData | null>;
+
+  /**
+   * @name refreshUserData
+   * @returns A promise resolving with the freshly-loaded current user's data,
+   *   or null if no user is logged in
+   * @description Forces a refresh-token exchange (rotating the refresh token
+   *   and re-minting default-audience access tokens) so that token claims and
+   *   the cached `currentUser` reflect the current server-side user record.
+   *   Fires the auth state change event when the cached user data changed.
+   *   Use after an action known to change the user's claims (e.g. completing
+   *   email verification) to reflect it immediately without a re-login.
+   */
+  refreshUserData: () => Promise<UserData | null>;
 
   /**
    * @name sendAuthorizeClientApplicationRequest
