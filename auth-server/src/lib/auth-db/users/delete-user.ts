@@ -67,9 +67,9 @@ export async function deleteUser(
     getHardcodedOrgs().map((org) => org.organization_id),
   );
 
-  const result: DeleteUserResult = await db
-    .transaction()
-    .execute(async (trx): Promise<DeleteUserResult> => {
+  const runDelete = async (
+    trx: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
+  ): Promise<DeleteUserResult> => {
       const existingUser = await trx
         .selectFrom("users")
         .select("uid")
@@ -139,7 +139,15 @@ export async function deleteUser(
         deleted_uid: uid,
         deleted_organizations: orgsToDelete,
       };
-    });
+  };
+
+  // Kysely does not support nested transactions — calling .transaction()
+  // on a Transaction throws — so join an already-open transaction instead
+  // of starting a new one. (Callers passing a Transaction get atomicity
+  // from their own enclosing transaction.)
+  const result: DeleteUserResult = db.isTransaction
+    ? await runDelete(db)
+    : await db.transaction().execute(runDelete);
 
   if (debug) {
     console.log(
