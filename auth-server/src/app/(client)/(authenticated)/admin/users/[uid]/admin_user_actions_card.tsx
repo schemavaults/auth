@@ -17,7 +17,7 @@ import {
   Label,
   useToast,
 } from "@schemavaults/ui";
-import { Ban, CheckCircle2, Mail } from "lucide-react";
+import { Ban, CheckCircle2, Mail, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactElement, useCallback, useState, useTransition } from "react";
 import type { UserData } from "@schemavaults/auth-common";
@@ -37,11 +37,15 @@ export function AdminUserActionsCard({
   const [togglingDisabled, startTogglingDisabled] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
   const [confirmInput, setConfirmInput] = useState<string>("");
+  const [deleting, startDeleting] = useTransition();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState<string>("");
 
   const isSelf: boolean = user.uid === sessionUid;
   const isDisabled: boolean = user.disabled === true;
   const isVerified: boolean = user.email_verified === true;
   const isConfirmed: boolean = confirmInput === user.email;
+  const isDeleteConfirmed: boolean = deleteConfirmInput === user.email;
 
   const handleResendVerification = useCallback((): void => {
     startResending(async () => {
@@ -125,6 +129,49 @@ export function AdminUserActionsCard({
     });
   }, [isDisabled, router, toast, user.email, user.uid]);
 
+  const handleDeleteConfirmOpenChange = useCallback(
+    (open: boolean): void => {
+      if (!open) {
+        setDeleteConfirmInput("");
+      }
+      setDeleteConfirmOpen(open);
+    },
+    [],
+  );
+
+  const handleDeleteUser = useCallback((): void => {
+    startDeleting(async () => {
+      try {
+        const response = await fetch(`/api/admin/users/${user.uid}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || !body.success) {
+          throw new Error(
+            body.message ?? `Request failed with status ${response.status}`,
+          );
+        }
+        toast({
+          title: "Account deleted",
+          description: `${user.email} and all of their owned resources have been permanently deleted.`,
+        });
+        setDeleteConfirmInput("");
+        setDeleteConfirmOpen(false);
+        router.push("/admin/users");
+        router.refresh();
+      } catch (e: unknown) {
+        console.error("Failed to delete user:", e);
+        toast({
+          variant: "destructive",
+          title: "Failed to delete account",
+          description:
+            e instanceof Error ? e.message : "An unknown error occurred",
+        });
+      }
+    });
+  }, [router, toast, user.email, user.uid]);
+
   return (
     <Card className="w-full" data-testid="admin-user-actions-card">
       <CardHeader>
@@ -192,9 +239,30 @@ export function AdminUserActionsCard({
             </Button>
           )}
         </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-border/50 pt-4">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Delete account</span>
+            <span className="text-sm text-muted-foreground">
+              Permanently delete this user, their organization memberships,
+              tokens, MFA factors, and any organizations (with their apps and
+              APIs) where they are the only member. This cannot be undone.
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={isSelf || deleting}
+            onClick={() => setDeleteConfirmOpen(true)}
+            data-testid="admin-user-delete-account-button"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete account
+          </Button>
+        </div>
         {isSelf ? (
           <span className="text-xs text-muted-foreground">
-            You cannot change your own disabled state.
+            You cannot change your own disabled state or delete your own
+            account.
           </span>
         ) : null}
       </CardContent>
@@ -243,6 +311,57 @@ export function AdminUserActionsCard({
             >
               <Ban className="h-4 w-4 mr-2" />
               {togglingDisabled ? "Disabling..." : "Disable account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteConfirmOpen} onOpenChange={handleDeleteConfirmOpenChange}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete account</DialogTitle>
+            <DialogDescription>
+              This will permanently delete {user.email}, including their
+              passwords, sessions, MFA factors, organization memberships, and
+              any organizations where they are the only member (along with
+              those organizations&apos; apps and APIs). This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="confirm-delete-email">
+                Type <span className="font-bold">{user.email}</span> to confirm
+              </Label>
+              <Input
+                id="confirm-delete-email"
+                data-testid="admin-user-delete-account-confirm-input"
+                placeholder={user.email}
+                value={deleteConfirmInput}
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                disabled={deleting}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleDeleteConfirmOpenChange(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteUser}
+              disabled={!isDeleteConfirmed || deleting}
+              data-testid="admin-user-delete-account-confirm-button"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleting ? "Deleting..." : "Delete account"}
             </Button>
           </DialogFooter>
         </DialogContent>

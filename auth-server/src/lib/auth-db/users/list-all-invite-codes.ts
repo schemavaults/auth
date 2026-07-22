@@ -32,9 +32,16 @@ export async function listAllInviteCodes(
           typeof raw_invite_code.created_by === "string"
             ? raw_invite_code.created_by
             : undefined,
+        description:
+          typeof raw_invite_code.description === "string"
+            ? raw_invite_code.description
+            : undefined,
       };
       if (!withParsedFields.created_by) {
         delete withParsedFields.created_by;
+      }
+      if (!withParsedFields.description) {
+        delete withParsedFields.description;
       }
 
       return withParsedFields;

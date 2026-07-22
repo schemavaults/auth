@@ -82,6 +82,22 @@ export async function createUser(
     throw new TypeError("Did not receive valid UUID for new user ID ('uid') in createUser()")
   }
 
+  // Deleted users' uids are permanently reserved (third-party resource
+  // servers may still hold data keyed by them). The
+  // users_prevent_deleted_uid_reuse trigger rejects the insert anyway;
+  // this pre-check surfaces a readable error instead of a failed
+  // transaction.
+  const reserved_uid = await db
+    .selectFrom("deleted_user_uids")
+    .select("uid")
+    .where("uid", "=", uid)
+    .executeTakeFirst();
+  if (reserved_uid) {
+    throw new Error(
+      `The uid '${uid}' belonged to a deleted user and may not be reused!`,
+    );
+  }
+
   const created_at: number = Date.now();
 
   const parsed_user = await userDocumentSchema.safeParseAsync({

@@ -18,6 +18,7 @@ import type {
   EmailVerificationTokensTable,
   UsersTable,
   InviteCodesTable,
+  DeletedUserUidsTable,
 } from "./users";
 import type { JwksAccessKeysForHardcodedTable, JwksAccessKeysTable } from "./jwks-access-keys";
 import type { ServerSettingsTable } from "./server-settings";
@@ -41,6 +42,7 @@ export type AuthDatabase = {
   apps_to_apis_permissions: AppsToApisPermissionsTable;
   apps_to_hardcoded_apis_permissions: AppsToHardcodedApisPermissionsTable;
   users: UsersTable;
+  deleted_user_uids: DeletedUserUidsTable;
   passwords: PasswordsTable;
   password_reset_tokens: PasswordResetTokensTable;
   email_verification_tokens: EmailVerificationTokensTable;
