@@ -10,15 +10,22 @@ import {
   CardTitle,
   cn,
 } from "@schemavaults/ui";
-import type { ListApiServersQueryType } from "@schemavaults/app-definitions";
+import type {
+  ApiServerId,
+  ListApiServersQueryType,
+} from "@schemavaults/app-definitions";
 import {
   ApiServersTable,
   clearUseApiServersCache,
-  type PreloadedApiServersTableData,
+  type PreloadedApiServersTableDataWithDomainRefs,
 } from "@/components/ApiServersTable";
 import CreateApiServerDialog, {
   CreateApiServerDialogOpenDispatchContext,
 } from "@/components/CreateApiServerDialog";
+import CreateApiServerDomainDialog, {
+  CreateApiServerDomainDialogOpenContext,
+  CreateApiServerDomainDialogOpenDispatchContext,
+} from "@/components/CreateApiServerDomainDialog";
 import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 import ConnectAppToApiDialog, {
   ConnectAppToApiDialogOpenDispatchContext,
@@ -30,7 +37,7 @@ export interface ApiServersCardProps {
   cardClassName?: string;
   queryType: ListApiServersQueryType;
   organization_id?: string;
-  preloaded?: PreloadedApiServersTableData;
+  preloaded?: PreloadedApiServersTableDataWithDomainRefs;
   uuid: () => string;
   showConnectAppToApi?: boolean;
   isOrgOwner?: boolean;
@@ -48,6 +55,8 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
     useState<boolean>(false);
   const [connectAppToApiDialogOpen, setConnectAppToApiDialogOpen] =
     useState<boolean>(false);
+  const [isAddApiServerDomainDialogOpen, setAddApiServerDomainDialogOpen] =
+    useState<ApiServerId | false>(false);
 
   return (
     <CreateApiServerDialogOpenDispatchContext.Provider
@@ -56,41 +65,61 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
       <ConnectAppToApiDialogOpenDispatchContext.Provider
         value={setConnectAppToApiDialogOpen}
       >
-        <Card className={cardClassName}>
-          <CardHeader>
-            <CardTitle>{cardTitle}</CardTitle>
-            <CardDescription>{cardDescription}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ApiServersTable
-              queryType={props.queryType}
-              organization_id={props.organization_id}
-              preloaded={props.preloaded}
-              showConnectAppToApi={props.showConnectAppToApi}
-              isOrgOwner={props.isOrgOwner}
+        <CreateApiServerDomainDialogOpenDispatchContext.Provider
+          value={setAddApiServerDomainDialogOpen}
+        >
+          <CreateApiServerDomainDialogOpenContext.Provider
+            value={isAddApiServerDomainDialogOpen}
+          >
+            <Card className={cardClassName}>
+              <CardHeader>
+                <CardTitle>{cardTitle}</CardTitle>
+                <CardDescription>{cardDescription}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ApiServersTable
+                  queryType={props.queryType}
+                  organization_id={props.organization_id}
+                  preloaded={props.preloaded}
+                  showConnectAppToApi={props.showConnectAppToApi}
+                  isOrgOwner={props.isOrgOwner}
+                />
+              </CardContent>
+              <CardFooter>
+                <div className="flex flex-row items-start justify-start gap-2"></div>
+              </CardFooter>
+            </Card>
+            <CreateApiServerDialog
+              clearApiServersCache={clearUseApiServersCache}
+              owner_organization_id={
+                props.queryType === "all"
+                  ? ownerOrganizationId
+                  : props.organization_id
+              }
+              open={createApiServerDialogOpen}
+              onOpenChange={setCreateApiServerDialogOpen}
+              uuid={props.uuid}
             />
-          </CardContent>
-          <CardFooter>
-            <div className="flex flex-row items-start justify-start gap-2"></div>
-          </CardFooter>
-        </Card>
-        <CreateApiServerDialog
-          clearApiServersCache={clearUseApiServersCache}
-          owner_organization_id={
-            props.queryType === "all"
-              ? ownerOrganizationId
-              : props.organization_id
-          }
-          open={createApiServerDialogOpen}
-          onOpenChange={setCreateApiServerDialogOpen}
-          uuid={props.uuid}
-        />
-        {(props.queryType === "all" || props.showConnectAppToApi) && (
-          <ConnectAppToApiDialog
-            open={connectAppToApiDialogOpen}
-            onOpenChange={setConnectAppToApiDialogOpen}
-          />
-        )}
+            {(props.queryType === "all" || props.showConnectAppToApi) && (
+              <ConnectAppToApiDialog
+                open={connectAppToApiDialogOpen}
+                onOpenChange={setConnectAppToApiDialogOpen}
+              />
+            )}
+            {(props.queryType === "all" ||
+              (props.queryType === "org" && props.isOrgOwner)) && (
+              <CreateApiServerDomainDialog
+                open={typeof isAddApiServerDomainDialogOpen === "string"}
+                onOpenChange={(val: boolean): void => {
+                  if (!val) {
+                    setAddApiServerDomainDialogOpen(false);
+                  }
+                }}
+                uuid={props.uuid}
+              />
+            )}
+          </CreateApiServerDomainDialogOpenContext.Provider>
+        </CreateApiServerDomainDialogOpenDispatchContext.Provider>
       </ConnectAppToApiDialogOpenDispatchContext.Provider>
     </CreateApiServerDialogOpenDispatchContext.Provider>
   );

@@ -3,7 +3,7 @@
 import { type FC, useContext, useMemo, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
 import { Datatable } from "@schemavaults/ui";
-import { columns } from "./columns";
+import { getApiServersTableColumns } from "./columns";
 import type {
   ListApiServersQueryType,
   SchemaVaultsApiServerDefinition,
@@ -19,13 +19,14 @@ import {
   ConnectAppToApiDialogOpenDispatchContext,
   ConnectAppToApiDialogTrigger,
 } from "@/components/ConnectAppToApiDialog";
-import type { PreloadedApiServersTableData } from "./preloaded_api_servers_table_data";
+import type { PreloadedApiServersTableDataWithDomainRefs } from "./preloaded_api_servers_table_data";
 import { ApiServersTableConfigContext } from "./ApiServersTableConfigContext";
+import type { ColumnDef } from "@schemavaults/ui";
 
 export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
   organization_id?: string;
-  preloaded?: PreloadedApiServersTableData | undefined;
+  preloaded?: PreloadedApiServersTableDataWithDomainRefs | undefined;
   showConnectAppToApi?: boolean;
   isOrgOwner?: boolean;
 }
@@ -78,6 +79,10 @@ export function ApiServersTable({
     });
   const { isLoading, data } = apis;
 
+  const columns = useMemo((): ColumnDef<SchemaVaultsApiServerDefinition>[] => {
+    return getApiServersTableColumns(preloaded);
+  }, [preloaded]);
+
   const HeaderButtons: FC = useMemo(() => {
     return function ApiServersTableHeaderButtonsWithQueryType() {
       return <ApiServersTableHeaderButtons queryType={queryType} showConnectAppToApi={showConnectAppToApi} isOrgOwner={isOrgOwner} />;
@@ -101,8 +106,12 @@ export function ApiServersTable({
   }, [apis.data]);
 
   const contextValue = useMemo(
-    () => ({ showConnectAppToApi: showConnectAppToApi ?? false, isOrgOwner: isOrgOwner ?? false }),
-    [showConnectAppToApi, isOrgOwner],
+    () => ({
+      showConnectAppToApi: showConnectAppToApi ?? false,
+      isOrgOwner: isOrgOwner ?? false,
+      queryType,
+    }),
+    [showConnectAppToApi, isOrgOwner, queryType],
   );
 
   if (!data && isLoading) {
@@ -125,6 +134,7 @@ export function ApiServersTable({
           api_server_name: true,
           api_server_description: true,
           owner_organization_id: false,
+          domains: true,
         }}
         HeaderButtons={HeaderButtons}
         datatypeLabel="Server"
