@@ -68,7 +68,7 @@ export async function deleteUser(
   );
 
   const runDelete = async (
-    trx: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
+    trx: Transaction<AuthDatabase>,
   ): Promise<DeleteUserResult> => {
       const existingUser = await trx
         .selectFrom("users")
@@ -144,9 +144,11 @@ export async function deleteUser(
   // Kysely does not support nested transactions — calling .transaction()
   // on a Transaction throws — so join an already-open transaction instead
   // of starting a new one. (Callers passing a Transaction get atomicity
-  // from their own enclosing transaction.)
+  // from their own enclosing transaction.) isTransaction === true
+  // guarantees the handle is a Transaction at runtime; TypeScript just
+  // can't narrow the union from a boolean property, hence the cast.
   const result: DeleteUserResult = db.isTransaction
-    ? await runDelete(db)
+    ? await runDelete(db as Transaction<AuthDatabase>)
     : await db.transaction().execute(runDelete);
 
   if (debug) {
