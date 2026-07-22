@@ -128,9 +128,22 @@ describe("API Servers", () => {
                 cy.get('[data-testid="api-server-actions-button"]').click();
               });
 
-            // The dropdown menu renders in a portal outside the table row
-            cy.contains('[role="menuitem"]', "Add domain")
-              .should("exist")
+            // The dropdown menu renders in a portal outside the table row.
+            // First confirm the menu opened at all via an item that is not
+            // permission-gated...
+            cy.contains('[role="menuitem"]', "View API details", {
+              timeout: 10000,
+            }).should("be.visible");
+
+            // ...then wait for the admin-gated "Add domain" item. It is
+            // gated on useAdmin(), i.e. the auth client's in-memory user,
+            // which restores asynchronously after the cookie-only
+            // login-via-request — the open menu re-renders once the client
+            // finishes restoring the admin session, so retry generously.
+            cy.contains('[role="menuitem"]', "Add domain", {
+              timeout: 20000,
+            })
+              .should("be.visible")
               .click();
 
             cy.get("#create-api-server-domain-dialog-content").should("exist");
