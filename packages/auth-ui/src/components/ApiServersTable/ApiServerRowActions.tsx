@@ -6,6 +6,7 @@ import { cn, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
 import {
   ClipboardCopy,
+  EarthLock,
   Eye,
   Key,
   MoreHorizontal,
@@ -25,8 +26,10 @@ import type {
   SchemaVaultsApiServerDefinition,
 } from "@schemavaults/app-definitions";
 import Link from "next/link";
+import { useAdmin } from "@schemavaults/auth-react-provider";
 import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
 import { DeleteApiServerDialog } from "@/components/DeleteApiServerDialog";
+import { CreateApiServerDomainDialogOpenDispatchContext } from "@/components/CreateApiServerDomainDialog";
 import { ApiServersTableConfigContext } from "./ApiServersTableConfigContext";
 
 const menuItemClassname: string = cn(
@@ -43,10 +46,14 @@ export function ApiServerRowActions({
 }: ApiServerRowActionsProps): ReactElement {
   const api_server_id: ApiServerId = api.api_server_id;
   const { toast } = useToast();
+  const admin: boolean = useAdmin();
   const [connectDialogOpen, setConnectDialogOpen] = useState<boolean>(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const { showConnectAppToApi, isOrgOwner } = useContext(
+  const { showConnectAppToApi, isOrgOwner, queryType } = useContext(
     ApiServersTableConfigContext,
+  );
+  const openAddApiServerDomainDialog = useContext(
+    CreateApiServerDomainDialogOpenDispatchContext,
   );
   // The row's own 'hardcoded' flag identifies the auth server's built-in API
   // definition; comparing ids against a client-bundled constant would be
@@ -54,11 +61,21 @@ export function ApiServerRowActions({
   const isDeleteDisabled =
     api.hardcoded || (!showConnectAppToApi && !isOrgOwner);
 
+  // Hardcoded API servers have no database row for a domain to reference;
+  // their domains come from the server's environment configuration.
+  const showAddDomain: boolean =
+    !api.hardcoded &&
+    ((admin && queryType === "all") || (isOrgOwner && queryType === "org"));
+
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            data-testid="api-server-actions-button"
+          >
             <span className="sr-only">Open menu</span>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
@@ -127,6 +144,17 @@ export function ApiServerRowActions({
                 this API
               </DropdownMenuItem>
             </>
+          )}
+          {showAddDomain && (
+            <DropdownMenuItem
+              onClick={(): void => {
+                openAddApiServerDomainDialog(api_server_id);
+                return;
+              }}
+              className={menuItemClassname}
+            >
+              <EarthLock className={menuItemIconClassname} /> Add domain
+            </DropdownMenuItem>
           )}
           {!isDeleteDisabled && (
             <>

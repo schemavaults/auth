@@ -10,7 +10,7 @@ import {
   OrganizationSettingsCard,
   type OrganizationMemberTableData,
   type PreloadedAppsTableDataWithDomainRefs,
-  type PreloadedApiServersTableData,
+  type PreloadedApiServersTableDataWithDomainRefs,
 } from "@schemavaults/auth-ui";
 import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,7 @@ export interface OrgPageViewProps {
   organization: OrganizationDefinition;
   preloaded_members: readonly OrganizationMemberTableData[];
   preloaded_apps: PreloadedAppsTableDataWithDomainRefs;
-  preloaded_api_servers: PreloadedApiServersTableData;
+  preloaded_api_servers: PreloadedApiServersTableDataWithDomainRefs;
   isOrgOwner: boolean;
   userRole?: OrganizationMembershipRoleType;
 }

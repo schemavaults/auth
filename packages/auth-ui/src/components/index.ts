@@ -25,7 +25,10 @@ export type { PreloadedAppsTableDataWithDomainRefs } from "./AppsTable";
 export * from "./ApiServersCard";
 export type * from "./ApiServersCard";
 
-export type { PreloadedApiServersTableData } from "./ApiServersTable";
+export type {
+  PreloadedApiServersTableData,
+  PreloadedApiServersTableDataWithDomainRefs,
+} from "./ApiServersTable";
 
 export { InviteCodesCard } from "./InviteCodesCard";
 export type { InviteCodesCardProps } from "./InviteCodesCard";
