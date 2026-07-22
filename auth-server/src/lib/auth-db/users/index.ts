@@ -22,6 +22,8 @@ export { listAllInviteCodes } from "./list-all-invite-codes";
 export { isValidInviteCodeDefinition, areValidInviteCodeDefinitions } from "./validate-invite-code-definition";
 export { promoteToAdmin } from "./promote-to-admin";
 export { setUserDisabled, UserNotFoundError } from "./set-user-disabled";
+export { deleteUser } from "./delete-user";
+export type { DeleteUserResult } from "./delete-user";
 export { createUser } from "./create-user";
 export { createPasswordResetToken } from "./create-password-reset-token";
 export { validatePasswordResetToken } from "./validate-password-reset-token";

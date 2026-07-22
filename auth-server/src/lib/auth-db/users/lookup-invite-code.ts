@@ -90,6 +90,10 @@ export async function lookupInviteCode(
       typeof inviteCodeDefinition.created_by === "string"
         ? inviteCodeDefinition.created_by
         : undefined,
+    description:
+      typeof inviteCodeDefinition.description === "string"
+        ? inviteCodeDefinition.description
+        : undefined,
   } satisfies InviteCodeDefinition);
   if (!parsed.success) {
     console.error(

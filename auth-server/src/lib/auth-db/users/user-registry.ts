@@ -33,6 +33,10 @@ import { listAllInviteCodes as listAllInviteCodesFn } from "./list-all-invite-co
 import { countInviteCodeUsages as countInviteCodeUsagesFn } from "./count-invite-code-usages";
 import { promoteToAdmin as promoteToAdminFn } from "./promote-to-admin";
 import { setUserDisabled as setUserDisabledFn } from "./set-user-disabled";
+import {
+  deleteUser as deleteUserFn,
+  type DeleteUserResult,
+} from "./delete-user";
 import { createUser as createUserFn } from "./create-user";
 import { createPasswordResetToken as createPasswordResetTokenFn } from "./create-password-reset-token";
 import { validateAndConsumePasswordResetToken as validateAndConsumePasswordResetTokenFn } from "./validate-and-consume-password-reset-token";
@@ -152,6 +156,21 @@ export class UserRegistry {
 
   public async setUserDisabled(uid: string, disabled: boolean): Promise<void> {
     return setUserDisabledFn(this.db, uid, disabled, this.debug);
+  }
+
+  /**
+   * Permanently deletes a user and everything the user owns in a single
+   * transaction: owned rows (passwords, tokens, MFA factors, memberships,
+   * invitations, app authorizations, ...) go via ON DELETE CASCADE,
+   * audit-style `created_by`/`updated_by` references are set to NULL, and
+   * organizations where the user was the sole member are deleted too
+   * (cascading to their apps and API servers). Organizations with other
+   * members are kept.
+   *
+   * @throws {UserNotFoundError} when no user exists with the given uid.
+   */
+  public async deleteUser(uid: string): Promise<DeleteUserResult> {
+    return deleteUserFn(this.db, uid, this.debug);
   }
 
   public async createInviteCode(invite_code_def: InviteCodeDefinition): Promise<void> {
