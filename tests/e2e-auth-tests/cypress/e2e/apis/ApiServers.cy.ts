@@ -148,14 +148,33 @@ describe("API Servers", () => {
 
             cy.get("#create-api-server-domain-dialog-content").should("exist");
 
-            cy.get('input[name="domain"]')
-              .should("be.visible")
-              .should("not.be.disabled")
-              .type(domain);
+            // Cypress .type() can begin firing keydowns while Radix's dialog
+            // is still settling its open animation / focus scope, dropping the
+            // first character(s) into the controlled input (CI has produced
+            // "ps://" and "tps://"). Focus the input first, then type, verify
+            // the full value landed, and clear-and-retype if any keystrokes
+            // were lost. (The product-level re-render bug is already fixed by
+            // mounting the form fresh per dialog open — this only guards the
+            // residual test-harness typing race.)
+            const typeDomainIntoDialog = (attemptsLeft: number): void => {
+              cy.get('input[name="domain"]')
+                .should("be.visible")
+                .should("not.be.disabled")
+                .click()
+                .clear()
+                .type(domain, { delay: 15 });
+              cy.get('input[name="domain"]').then(($input) => {
+                if ($input.val() !== domain && attemptsLeft > 0) {
+                  cy.log(
+                    `Domain input value mismatch after typing ("${$input.val()}"); retrying (${attemptsLeft} attempts left)`,
+                  );
+                  typeDomainIntoDialog(attemptsLeft - 1);
+                }
+              });
+            };
+            typeDomainIntoDialog(3);
 
-            // Validate the input before submission (guards against dropped
-            // keystrokes regressions; the form mounts fresh per dialog open
-            // so typing must not race a post-open re-render)
+            // Validate the input before submission
             cy.get('input[name="domain"]').should("have.value", domain);
 
             cy.get("#api-server-domain-environment-radio-item-test").click();
