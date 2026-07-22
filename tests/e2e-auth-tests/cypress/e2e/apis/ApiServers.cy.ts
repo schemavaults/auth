@@ -148,10 +148,29 @@ describe("API Servers", () => {
 
             cy.get("#create-api-server-domain-dialog-content").should("exist");
 
-            cy.get('input[name="domain"]')
-              .should("exist")
-              .should("not.be.disabled")
-              .type(domain);
+            // The dialog re-renders right after opening (the open-context
+            // effect syncs api_server_id into the form), which can swallow
+            // the first keystrokes of a .type() into the controlled input —
+            // CI once persisted "ps://..." because "htt" was dropped. Type,
+            // verify the full value landed, and retry from a clean field if
+            // any keystrokes were lost.
+            const typeDomainIntoDialog = (attemptsLeft: number): void => {
+              cy.get('input[name="domain"]')
+                .should("be.visible")
+                .should("not.be.disabled")
+                .clear()
+                .type(domain, { delay: 10 });
+              cy.get('input[name="domain"]').then(($input) => {
+                if ($input.val() !== domain && attemptsLeft > 0) {
+                  cy.log(
+                    `Domain input value mismatch after typing; retrying (${attemptsLeft} attempts left)`,
+                  );
+                  typeDomainIntoDialog(attemptsLeft - 1);
+                }
+              });
+            };
+            typeDomainIntoDialog(3);
+            cy.get('input[name="domain"]').should("have.value", domain);
 
             cy.get("#api-server-domain-environment-radio-item-test").click();
 
