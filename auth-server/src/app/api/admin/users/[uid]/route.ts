@@ -84,21 +84,23 @@ export async function DELETE(
   req: NextRequest,
   ctx: RouteContext<"/api/admin/users/[uid]">,
 ): Promise<NextResponse> {
-  const { uid } = await ctx.params;
-  const parsed = uidSchema.safeParse(uid);
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to parse target user ID",
-      } satisfies ResourceCreationResponse,
-      { status: 400 },
-    );
-  }
-
+  // The admin guard runs before uid parsing so unauthenticated and
+  // non-admin callers can't probe parameter handling: 401/403 beat 400.
   const protected_route = await withAdminApiRouteGuard(
-    async (opts: IProtectedAdminApiRouteProps): Promise<NextResponse> =>
-      await DELETE_user_handler(opts, parsed.data),
+    async (opts: IProtectedAdminApiRouteProps): Promise<NextResponse> => {
+      const { uid } = await ctx.params;
+      const parsed = uidSchema.safeParse(uid);
+      if (!parsed.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Failed to parse target user ID",
+          } satisfies ResourceCreationResponse,
+          { status: 400 },
+        );
+      }
+      return await DELETE_user_handler(opts, parsed.data);
+    },
   );
   return await protected_route(req);
 }
