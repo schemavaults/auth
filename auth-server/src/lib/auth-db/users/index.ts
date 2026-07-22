@@ -47,6 +47,7 @@ export { default as doesSomeAdminUserExist } from "./does-some-admin-user-exist"
 
 // Type exports
 export type * from "./users-table";
+export type * from "./deleted-user-uids-table";
 export type * from "./passwords-table";
 export type * from "./authorization-codes-table";
 export type * from "./invite-codes-table";

@@ -37,6 +37,11 @@ export interface DeleteUserResult {
  * API servers), while organizations with other members are kept intact —
  * only the user's membership rows disappear.
  *
+ * The deleted uid is tombstoned in DELETED_USER_UIDS (same transaction)
+ * so it can never be reassigned to a new user — third-party resource
+ * servers may retain data keyed by the uid, and re-issuing it would leak
+ * that data to the new owner.
+ *
  * Note that already-issued access tokens are stateless JWTs and remain
  * verifiable until they expire; refresh grants fail immediately once the
  * user row is gone.
@@ -119,6 +124,16 @@ export async function deleteUser(
           `Expected exactly one user row to be deleted, but '${numDeletedRows}' rows were deleted!`,
         );
       }
+
+      // Permanently reserve the uid: third-party resource servers may
+      // still hold data keyed by it, so it must never be assigned to a
+      // new user (enforced by the users_prevent_deleted_uid_reuse
+      // trigger; createUser also pre-checks this table).
+      await trx
+        .insertInto("deleted_user_uids")
+        .values({ uid, deleted_at: Date.now() })
+        .onConflict((oc) => oc.column("uid").doNothing())
+        .execute();
 
       return {
         deleted_uid: uid,
