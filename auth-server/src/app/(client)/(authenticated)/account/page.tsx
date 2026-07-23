@@ -21,6 +21,7 @@ import {
   type ServerlessDatabase,
 } from "@/lib/auth-db";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
+import adminOnlyOrganizationCreation from "@/lib/config/admin-only-organization-creation";
 import { withServerTrace } from "@/lib/withServerTrace";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next";
@@ -104,7 +105,7 @@ async function attemptToPreloadUserOrganizationMemberships(
 }
 
 async function AuthServerAccountDashboardPageServerComponent(
-  { user, dbh, environment }: IProtectedAuthenticatedServerComponentPageProps
+  { user, dbh, redis, environment }: IProtectedAuthenticatedServerComponentPageProps
 ): Promise<ReactElement> {
   const auth_server_url: string = getAuthServerUrl(environment);
 
@@ -115,16 +116,18 @@ async function AuthServerAccountDashboardPageServerComponent(
     );
   }
 
-  const [appsResult, orgsResult] = await withServerTrace({
-    op_name: "GET /account (preload data)",
-    op_category: "subroutine",
-    event_id: crypto.randomUUID(),
-    callback: async () =>
-      await Promise.allSettled([
-        attemptToPreloadAppsAndDomains(dbh, user),
-        attemptToPreloadUserOrganizationMemberships(dbh, user),
-      ]),
-  });
+  const [appsResult, orgsResult, adminOnlyOrgCreationResult] =
+    await withServerTrace({
+      op_name: "GET /account (preload data)",
+      op_category: "subroutine",
+      event_id: crypto.randomUUID(),
+      callback: async () =>
+        await Promise.allSettled([
+          attemptToPreloadAppsAndDomains(dbh, user),
+          attemptToPreloadUserOrganizationMemberships(dbh, user),
+          adminOnlyOrganizationCreation(dbh.db, redis.client),
+        ]),
+    });
 
   const preloaded_authorized_apps =
     appsResult.status === "fulfilled" ? appsResult.value : undefined;
@@ -140,12 +143,27 @@ async function AuthServerAccountDashboardPageServerComponent(
       orgsResult.reason,
     );
   }
+  if (adminOnlyOrgCreationResult.status === "rejected") {
+    console.error(
+      "Failed to load server setting for admin_only_organization_creation on account page:",
+      adminOnlyOrgCreationResult.reason,
+    );
+  }
+  // If the setting can't be loaded, fall back to showing the button;
+  // POST /api/organizations enforces the restriction regardless.
+  const adminOnlyOrgCreation: boolean =
+    adminOnlyOrgCreationResult.status === "fulfilled"
+      ? adminOnlyOrgCreationResult.value
+      : false;
+  const can_create_organization: boolean =
+    user.admin === true || !adminOnlyOrgCreation;
 
   return (
     <AccountPageView
       auth_server_url={auth_server_url}
       preloaded_authorized_apps_data={preloaded_authorized_apps}
       preloaded_organization_memberships={preloaded_organization_memberships}
+      can_create_organization={can_create_organization}
     />
   );
 }
