@@ -3,14 +3,14 @@
 // green "Verified" status button next to the Email row that opens a dialog,
 // from which an unverified user can re-send their verification email.
 
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
+
+const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
+
 interface EmailVerificationTokenResponseBody {
   success: boolean;
   token?: string;
 }
-
-// Module marker: keeps this spec's top-level interfaces file-scoped so they
-// do not collide with same-named interfaces in other spec files.
-export {};
 
 describe("AccountCard email verification indicator", () => {
   it("shows 'Not verified' for a fresh user and can resend the verification email from the dialog", () => {
@@ -134,6 +134,76 @@ describe("AccountCard email verification indicator", () => {
                 );
               },
             );
+          });
+        },
+      );
+    });
+  });
+
+  it("reflects verification on the account card immediately (no re-login) after confirming via the verify-email page", () => {
+    cy.generate_random_test_user_credentials().then((credentials) => {
+      cy.create_and_login_as_regular_user_via_request(credentials).then(
+        (loggedIn: boolean) => {
+          expect(
+            loggedIn,
+            "create_and_login_as_regular_user_via_request should succeed",
+          ).to.be.true;
+
+          cy.visit("/account");
+          cy.wait_for_page_hydration();
+          cy.get('[data-testid="email-verification-status-button"]')
+            .should("be.visible")
+            .and("contain.text", "Not verified");
+
+          // Fetch a verification token (test-only endpoint), then walk the
+          // real confirmation page while still logged in.
+          cy.request<EmailVerificationTokenResponseBody>({
+            method: "GET",
+            url: `/api/test/email-verification-token/${encodeURIComponent(
+              credentials.email,
+            )}`,
+            failOnStatusCode: false,
+          }).then((tokenResponse) => {
+            expect(tokenResponse.status).to.equal(200);
+            expect(tokenResponse.body.token).to.be.a("string");
+            const token: string = tokenResponse.body.token as string;
+
+            cy.intercept({
+              method: "POST",
+              url: "**/api/auth/verify-email/confirm",
+              times: 1,
+            }).as("confirmVerify");
+            // The confirm view triggers a client token refresh so re-minted
+            // claims carry email_verified=true without a re-login.
+            cy.intercept({
+              method: "POST",
+              url: `**/api/auth/token/refresh_token/${AUTH_APP_ID}`,
+              times: 1,
+            }).as("tokenRefresh");
+
+            cy.visit(`/auth/verify-email?token=${token}`);
+
+            cy.wait("@confirmVerify", { timeout: 15000 }).then(
+              (interception) => {
+                expect(interception.response?.statusCode).to.equal(200);
+              },
+            );
+            cy.wait("@tokenRefresh", { timeout: 15000 }).then(
+              (interception) => {
+                expect(interception.response?.statusCode).to.equal(200);
+              },
+            );
+
+            // Follow the page's own link back to the account page — no
+            // logout/login cycle — and expect the fresh claims to show.
+            cy.contains("Continue to your account").click();
+            cy.url({ timeout: 15000 }).should("include", "/account");
+            cy.wait_for_page_hydration();
+
+            cy.get('[data-testid="email-verification-status-button"]')
+              .should("be.visible")
+              .and("contain.text", "Verified")
+              .and("not.contain.text", "Not verified");
           });
         },
       );

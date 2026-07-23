@@ -4,6 +4,7 @@ import type { UserData } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 import { useEffect, useState } from "react";
 import useAuth from "@/hooks/use-auth";
+import { USER_DATA_LOCAL_STORAGE_KEY } from "@/lib/react-auth-client-adapter";
 
 export function useCurrentUser(): UserData | null {
   const auth = useAuth();
@@ -34,7 +35,19 @@ export function useCurrentUser(): UserData | null {
       setUser(authClient.currentUser);
     });
 
+    // Auth state change events only fire in the tab that caused them; watch
+    // cross-tab localStorage `storage` events for the cached user data so a
+    // change made in another tab (e.g. completing email verification there)
+    // updates this tab too. `key === null` means localStorage.clear().
+    const onStorage = (event: StorageEvent): void => {
+      if (event.key === null || event.key === USER_DATA_LOCAL_STORAGE_KEY) {
+        setUser(authClient.currentUser);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
     return (): void => {
+      window.removeEventListener("storage", onStorage);
       try {
         authClient.removeAuthStateChangeListener(listener_id);
       } catch (e: unknown) {
