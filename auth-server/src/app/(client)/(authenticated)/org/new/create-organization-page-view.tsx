@@ -17,7 +17,7 @@ export default function CreateOrganizationPageView(): ReactElement {
 
   return (
     <PageContainer>
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-lg mx-auto">
         <CardHeader>
           <CardTitle>Create a new organization</CardTitle>
           <CardDescription>

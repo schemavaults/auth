@@ -45,6 +45,13 @@ export interface AccountDetailsCardProps {
    * fetch of `/api/me/organizations`.
    */
   preloaded_memberships?: readonly OrganizationMembershipRoleDetails[];
+  /**
+   * Whether the current user is permitted to create new organizations.
+   * When false, the "Create Organization" button is hidden (e.g. the
+   * `admin_only_organization_creation` server setting is enabled and the
+   * user is not an admin). Defaults to true.
+   */
+  canCreateOrganization?: boolean;
 }
 
 export function AccountDetailsCard(
@@ -134,19 +141,20 @@ export function AccountDetailsCard(
                   No organizations
                 </p>
               )}
-              {(!memberships ||
-                memberships.length < MAXIMUM_USER_ORGANIZATIONS) && (
-                <Link href="/org/new">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex flex-row flex-nowrap gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create Organization
-                  </Button>
-                </Link>
-              )}
+              {(props.canCreateOrganization ?? true) &&
+                (!memberships ||
+                  memberships.length < MAXIMUM_USER_ORGANIZATIONS) && (
+                  <Link href="/org/new">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex flex-row flex-nowrap gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Organization
+                    </Button>
+                  </Link>
+                )}
             </div>
           )}
         </div>

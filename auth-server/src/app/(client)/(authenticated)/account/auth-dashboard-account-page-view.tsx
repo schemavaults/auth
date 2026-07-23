@@ -32,12 +32,19 @@ export interface AuthAccountPageViewProps {
   auth_server_url: string;
   preloaded_authorized_apps_data?: PreloadedAppsTableDataWithDomainRefs;
   preloaded_organization_memberships?: readonly OrganizationMembershipRoleDetails[];
+  /**
+   * Whether the current user may create new organizations (false when the
+   * `admin_only_organization_creation` server setting is enabled and the
+   * user is not an admin). Hides the "Create Organization" button when false.
+   */
+  can_create_organization?: boolean;
 }
 
 export default function AccountPageView({
   auth_server_url,
   preloaded_authorized_apps_data,
   preloaded_organization_memberships,
+  can_create_organization,
 }: AuthAccountPageViewProps): ReactElement {
   const router = useRouter();
   const environment = useAppEnvironment();
@@ -75,6 +82,7 @@ export default function AccountPageView({
         user={user}
         appEnvironment={environment}
         preloaded_memberships={preloaded_organization_memberships}
+        canCreateOrganization={can_create_organization}
       />
       <Card className={cardsClassName}>
         <CardHeader>
