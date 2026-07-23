@@ -13,11 +13,15 @@ import PageContainer from "@/components/PageContainer";
 import type { UserData } from "@schemavaults/auth-common";
 import { LocalDateTime } from "@schemavaults/auth-ui";
 import AdminUserActionsCard from "./admin_user_actions_card";
+import AdminUserOrganizationsCard, {
+  type AdminUserOrganizationMembershipRow,
+} from "./admin_user_organizations_card";
 import { UserTokensCard } from "@/components/UserTokensTable";
 
 export interface AdminUserDetailPageViewProps {
   user: UserData;
   sessionUid: string;
+  organizationMemberships: readonly AdminUserOrganizationMembershipRow[] | null;
 }
 
 function Row({
@@ -55,6 +59,7 @@ function YesNo({
 export function AdminUserDetailPageView({
   user,
   sessionUid,
+  organizationMemberships,
 }: AdminUserDetailPageViewProps): ReactElement {
   const isAdmin = user.admin === true;
 
@@ -108,6 +113,7 @@ export function AdminUserDetailPageView({
             </Row>
           </CardContent>
         </Card>
+        <AdminUserOrganizationsCard memberships={organizationMemberships} />
         <UserTokensCard uid={user.uid} tokenType="refresh" />
         <UserTokensCard uid={user.uid} tokenType="access" />
         <AdminUserActionsCard user={user} sessionUid={sessionUid} />

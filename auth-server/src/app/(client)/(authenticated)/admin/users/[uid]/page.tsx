@@ -7,11 +7,13 @@ import {
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import { UserRegistry, loadUserData } from "@/lib/auth-db";
+import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import redirectWithError from "@/lib/redirect-with-error";
 import type { ServerRuntime } from "next";
 import { z } from "zod";
-import type { UserData } from "@schemavaults/auth-common";
+import type { OrganizationID, UserData } from "@schemavaults/auth-common";
 import { connection } from "next/server";
+import type { AdminUserOrganizationMembershipRow } from "./admin_user_organizations_card";
 
 const uidSchema = z.string().uuid();
 
@@ -44,7 +46,83 @@ async function PreloadedAdminUserDetailPage(
     redirectWithError(400, "bad_request");
   }
 
-  return <AdminUserDetailPageView user={targetUser} sessionUid={user.uid} />;
+  const organizationMemberships: readonly AdminUserOrganizationMembershipRow[] | null =
+    await loadOrganizationMembershipRows(dbh.db, targetUser);
+
+  return (
+    <AdminUserDetailPageView
+      user={targetUser}
+      sessionUid={user.uid}
+      organizationMemberships={organizationMemberships}
+    />
+  );
+}
+
+/**
+ * Loads the target user's organization memberships (including the virtual
+ * owner-organization membership derived from the admin flag) and resolves
+ * each organization's display name. Returns null if the memberships could
+ * not be loaded, so the view can show an error state instead of an empty
+ * list.
+ */
+async function loadOrganizationMembershipRows(
+  db: ConstructorParameters<typeof OrganizationsRegistry>[0],
+  targetUser: UserData,
+): Promise<readonly AdminUserOrganizationMembershipRow[] | null> {
+  const orgsRegistry = new OrganizationsRegistry(db);
+
+  try {
+    const memberships = await orgsRegistry.listUserOrganizationMemberships(
+      targetUser.uid,
+      targetUser.admin === true,
+    );
+
+    const distinctOrgIds: readonly OrganizationID[] = [
+      ...new Set(memberships.map((membership) => membership.organization_id)),
+    ];
+    const organizationNames = new Map<OrganizationID, string>(
+      await Promise.all(
+        distinctOrgIds.map(
+          async (org_id): Promise<[OrganizationID, string]> => {
+            try {
+              const org = await orgsRegistry.lookupOrganization(org_id);
+              return [org_id, org.name];
+            } catch (e: unknown) {
+              console.error(
+                `[AdminUserDetailPage] Failed to lookup organization '${org_id}': `,
+                e,
+              );
+              // Fall back to displaying the ID as the name
+              return [org_id, org_id];
+            }
+          },
+        ),
+      ),
+    );
+
+    return memberships
+      .map(
+        (membership): AdminUserOrganizationMembershipRow => ({
+          membership_declaration_id: membership.membership_declaration_id,
+          organization_id: membership.organization_id,
+          organization_name:
+            organizationNames.get(membership.organization_id) ??
+            membership.organization_id,
+          role: membership.role,
+          membership_created_at: membership.created_at,
+          virtual: membership.membership_declaration_id.startsWith(
+            "admin-virtual-",
+          ),
+        }),
+      )
+      .sort((a, b) => b.membership_created_at - a.membership_created_at);
+  } catch (e: unknown) {
+    console.error(
+      `[AdminUserDetailPage] Failed to load organization memberships for user '${targetUser.uid}': `,
+      e,
+    );
+    return null;
+  }
 }
 
 export default async function AdminUserDetailPage(
