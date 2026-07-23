@@ -29,6 +29,7 @@ import {
   appToApiPermissionSchema,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import { isAppAlreadyConnectedToApiServerError } from "@schemavaults/auth-common";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlugZap } from "lucide-react";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
@@ -90,6 +91,15 @@ export function ConnectAppToApiDialog({
         values.client_app_id,
       );
     } catch (e: unknown) {
+      if (isAppAlreadyConnectedToApiServerError(e)) {
+        toast({
+          variant: "destructive",
+          title: "Already connected",
+          description:
+            "This app already has access to this API server, so there was nothing to connect.",
+        });
+        return;
+      }
       toast({
         variant: "destructive",
         title: "Failed to connect app to API server",

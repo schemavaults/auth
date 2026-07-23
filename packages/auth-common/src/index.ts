@@ -4,6 +4,11 @@ export {
 } from "./auth-error-message-catalog";
 export type { SchemaVaultsAuthErrorId } from "./auth-error-message-catalog";
 
+export {
+  AppAlreadyConnectedToApiServerError,
+  isAppAlreadyConnectedToApiServerError,
+} from "./app-to-api-connection-errors";
+
 export { userDataSchema, type UserData } from "./user_data";
 
 export * from "./credentials";
