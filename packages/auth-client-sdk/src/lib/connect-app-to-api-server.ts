@@ -1,5 +1,6 @@
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { ApiServerId, AppId } from "@schemavaults/app-definitions";
+import { AppAlreadyConnectedToApiServerError } from "@schemavaults/auth-common";
 
 export interface IConnectAppToApiServerOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
@@ -23,6 +24,9 @@ export async function connectAppToApiServer({
   );
 
   if (!response.ok) {
+    if (response.status === 409) {
+      throw new AppAlreadyConnectedToApiServerError();
+    }
     throw new Error(
       `Failed to connect app to API server: ${response.status}`,
     );
