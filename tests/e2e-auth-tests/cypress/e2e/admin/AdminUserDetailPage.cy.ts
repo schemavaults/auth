@@ -40,6 +40,9 @@ describe("Admin User Detail Page", () => {
             cy.wrap($link).click();
             cy.url().should("include", href);
             cy.get('[data-testid="admin-user-detail-card"]').should("exist");
+            cy.get('[data-testid="admin-user-organizations-card"]').should(
+              "exist",
+            );
           });
       });
     });
