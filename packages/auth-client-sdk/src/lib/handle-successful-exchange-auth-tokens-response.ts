@@ -6,7 +6,9 @@ import {
   type RequestTokensResult,
   createRequestTokensResultSchema,
   type SuccessfullyGeneratedTokensRecord,
+  type UserData,
 } from "@schemavaults/auth-common";
+import isSameUserData from "@/lib/is-same-user-data";
 import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "@/lib/assert-http-only-refresh-token-has-accompanying-expiry-marker";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type {
@@ -31,6 +33,16 @@ export interface IHandleSuccessfulExchangeAuthTokensResponseOpts {
   storeMultipleAccessTokens: (
     access_tokens: Record<ApiServerId, AccessToken | "AS_HTTP_ONLY_COOKIE">,
   ) => void;
+  /**
+   * The refresh grant loads user data fresh from the database when minting
+   * tokens and echoes it back as `userData`. When provided, that snapshot is
+   * cached so claims that changed server-side since login (e.g.
+   * `email_verified` after completing email verification) propagate to
+   * `currentUser` without requiring a re-login.
+   */
+  storeUserData?: (userData: UserData) => void;
+  /** Called after `storeUserData` when the cached user data actually changed. */
+  triggerAuthStateChanged?: () => void;
 }
 
 export default async function handleSuccessfulExchangeAuthTokensResponse({
@@ -40,6 +52,8 @@ export default async function handleSuccessfulExchangeAuthTokensResponse({
   auth_server_url,
   auth_server_app_id,
   storeMultipleAccessTokens,
+  storeUserData,
+  triggerAuthStateChanged,
   adapter,
 }: IHandleSuccessfulExchangeAuthTokensResponseOpts): Promise<SuccessfullyGeneratedTokensRecord> {
   const parsed_tokens_data = await createRequestTokensResultSchema(z, environment, {
@@ -138,6 +152,32 @@ export default async function handleSuccessfulExchangeAuthTokensResponse({
       }
     } else {
       throw new TypeError("Invalid refresh token type");
+    }
+  }
+
+  if (request_tokens_result.userData && typeof storeUserData === "function") {
+    // Failures here must not fail the exchange itself — the tokens above are
+    // already stored and usable.
+    try {
+      const previous: UserData | null = adapter.getUserData();
+      const changed: boolean = !isSameUserData(
+        previous,
+        request_tokens_result.userData,
+      );
+      storeUserData(request_tokens_result.userData);
+      if (changed && typeof triggerAuthStateChanged === "function") {
+        if (debug) {
+          console.log(
+            "[SchemaVaultsAuthClient] Cached user data changed after token exchange; triggering auth state change event...",
+          );
+        }
+        triggerAuthStateChanged();
+      }
+    } catch (e: unknown) {
+      console.error(
+        "[SchemaVaultsAuthClient] Failed to sync cached user data from token exchange response: ",
+        e,
+      );
     }
   }
 

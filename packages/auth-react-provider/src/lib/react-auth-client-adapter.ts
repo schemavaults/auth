@@ -37,6 +37,14 @@ const enum AuthClientSdkAdapterLocalStorageKeys {
   USER_DATA = "user_data",
 }
 
+/**
+ * The localStorage key this adapter persists the current user's data under.
+ * Exported so hooks can watch cross-tab `storage` events for it (e.g. another
+ * tab completing email verification and refreshing the cached user data).
+ */
+export const USER_DATA_LOCAL_STORAGE_KEY: string =
+  AuthClientSdkAdapterLocalStorageKeys.USER_DATA;
+
 // Next.js/React.js to JS Client SDK Adapter
 export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter {
   private readonly environment: SchemaVaultsAppEnvironment;

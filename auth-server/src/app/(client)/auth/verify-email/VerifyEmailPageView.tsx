@@ -1,7 +1,14 @@
 "use client";
 
-import { type ReactElement, useEffect, useState, useTransition } from "react";
+import {
+  type ReactElement,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { z } from "zod";
+import { useRefreshUserData } from "@schemavaults/auth-react-provider";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
 import {
@@ -39,6 +46,24 @@ type ConfirmStatus = "pending" | "success" | "error";
 function ConfirmVerifyEmailView({ token }: { token: string }): ReactElement {
   const [status, setStatus] = useState<ConfirmStatus>("pending");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const refreshUserData = useRefreshUserData();
+  const hasTriggeredTokenRefresh = useRef<boolean>(false);
+
+  // Once the email is verified, refresh the auth tokens (no-op when logged
+  // out): the re-minted claims carry email_verified=true, so the account
+  // page reflects the verification immediately instead of after a re-login.
+  useEffect((): void => {
+    if (status !== "success" || hasTriggeredTokenRefresh.current) {
+      return;
+    }
+    hasTriggeredTokenRefresh.current = true;
+    refreshUserData().catch((e: unknown): void => {
+      console.warn(
+        "[ConfirmVerifyEmailView] Failed to refresh auth tokens after email verification:",
+        e,
+      );
+    });
+  }, [status, refreshUserData]);
 
   useEffect(() => {
     let cancelled = false;

@@ -78,6 +78,7 @@ import checkIfAuthenticatedWithServer from "@/lib/check-if-authenticated-with-se
 import exchangeAuthTokens from "@/lib/exchange-auth-tokens";
 import handleSuccessfulAuthentication from "@/lib/handle-successful-authentication";
 import handleSuccessfulExchangeAuthTokensResponse from "@/lib/handle-successful-exchange-auth-tokens-response";
+import isSameUserData from "@/lib/is-same-user-data";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
@@ -1256,6 +1257,8 @@ export class SchemaVaultsAuthClient
     return await handleSuccessfulExchangeAuthTokensResponse({
       tokens_response,
       storeMultipleAccessTokens: this.storeMultipleAccessTokens.bind(this),
+      storeUserData: this.storeUserData.bind(this),
+      triggerAuthStateChanged: this.triggerAuthStateChanged.bind(this),
       adapter: this.adapter,
       debug: this.debug,
       environment: this.environment,
@@ -1388,11 +1391,64 @@ export class SchemaVaultsAuthClient
   }
 
   public async checkIfAuthenticatedWithServer(): Promise<UserData | null> {
-    return await checkIfAuthenticatedWithServer({
+    const user: UserData | null = await checkIfAuthenticatedWithServer({
       adapter: this.adapter,
       auth_server_uri: this.auth_server_uri,
       client_app_id: this.app_id,
     });
+
+    // Sync the server's answer into the local user-data cache so claims that
+    // changed since login (roles, email_verified, ...) propagate to
+    // `currentUser` and its listeners. Merged over the cached copy because
+    // whoami data is claims-derived and lacks fields the login/refresh
+    // responses carry (e.g. invite_code) — overwriting would thrash between
+    // the two shapes. Sync failures must not fail the authentication check
+    // itself.
+    if (user) {
+      try {
+        const cached: UserData | null = this.getUserData();
+        const merged: UserData =
+          cached && cached.uid === user.uid ? { ...cached, ...user } : user;
+        if (!isSameUserData(cached, merged)) {
+          this.storeUserData(merged);
+          this.triggerAuthStateChanged();
+        }
+      } catch (e: unknown) {
+        console.error(
+          "[SchemaVaultsAuthClient] Failed to sync cached user data from whoami response: ",
+          e,
+        );
+      }
+    }
+
+    return user;
+  }
+
+  public async refreshUserData(): Promise<UserData | null> {
+    const adapter: ISchemaVaultsAuthClientAdapter = this.adapter;
+    if (!adapter.hasRefreshToken()) {
+      // Not logged in (in this browser context) — nothing to refresh.
+      return null;
+    }
+
+    const supportsHttpOnlyRefreshToken: boolean =
+      typeof adapter.doesSupportHttpOnlyRefreshToken === "function" &&
+      adapter.doesSupportHttpOnlyRefreshToken();
+
+    const refresh_token: RefreshToken | "AS_HTTP_ONLY_COOKIE" | null =
+      supportsHttpOnlyRefreshToken
+        ? "AS_HTTP_ONLY_COOKIE"
+        : adapter.getRefreshToken();
+    if (!refresh_token) {
+      return null;
+    }
+
+    // `replaceRefreshToo` matters here: server-side route guards read their
+    // claims from the refresh-token cookie, so rotating it ensures they see
+    // the updated claims too (not just this client's access tokens).
+    await this.exchangeAuthTokens(refresh_token, undefined, true);
+
+    return this.currentUser;
   }
 
   public async sendAuthorizeClientApplicationRequest(
