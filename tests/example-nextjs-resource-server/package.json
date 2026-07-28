@@ -16,7 +16,7 @@
     "openid-client": "6.8.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "@schemavaults/ui": "0.87.1",
+    "@schemavaults/ui": "0.93.0",
     "@schemavaults/theme": "0.26.1",
     "server-only": "0.0.1"
   },
