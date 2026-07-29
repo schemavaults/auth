@@ -19,6 +19,7 @@ import captureServerException from "@/lib/captureServerException";
 import { buildDailyAdminReport } from "./buildReportHtml";
 import type { RedisCache } from "@/lib/redis";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 const ADMIN_MAILING_LIST_ID = "00000000-0000-0000-0000-000000000000";
@@ -59,6 +60,10 @@ export async function sendDailyReportHandler({
     const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
     const authServerUri: string = getAuthServerUrl(appEnv);
     const friendlyName: string = getAuthServerFriendlyName();
+    // Refresh tokens are always recorded against the auth server's own
+    // audience, so the report needs the id to know which row's refresh count is
+    // meaningful (all other rows render "N/A").
+    const authServerApiServerId: string = getAuthServerAppId();
 
     const { text, html } = buildDailyAdminReport({
       authServerUri,
@@ -71,6 +76,7 @@ export async function sendDailyReportHandler({
       topMostActiveUsers,
       topMostPopularApps,
       topMostPopularApis,
+      authServerApiServerId,
     });
 
     const dateLabel = windowEnd.toISOString().slice(0, 10);
