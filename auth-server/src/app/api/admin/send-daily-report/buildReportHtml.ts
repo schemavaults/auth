@@ -18,6 +18,12 @@ interface BuildReportOpts {
   topMostActiveUsers: readonly TopMostActiveUserRow[];
   topMostPopularApps: readonly TopMostPopularAppRow[];
   topMostPopularApis: readonly TopMostPopularApiRow[];
+  /**
+   * The auth server's own api server id. Refresh tokens are only ever minted
+   * with the auth server itself as their audience, so the refresh-token count
+   * is meaningless (always 0) for every other API and is rendered as "N/A".
+   */
+  authServerApiServerId: string;
 }
 
 interface ReportContent {
@@ -55,8 +61,16 @@ export function buildDailyAdminReport({
   topMostActiveUsers,
   topMostPopularApps,
   topMostPopularApis,
+  authServerApiServerId,
 }: BuildReportOpts): ReportContent {
   const windowLabel = `${formatTimestamp(windowStart.getTime())} → ${formatTimestamp(windowEnd.getTime())}`;
+
+  /**
+   * Only the auth server's own audience can accumulate refresh tokens, so a
+   * refresh-token count is only meaningful on that row.
+   */
+  const isAuthServerAudience = (a: TopMostPopularApiRow): boolean =>
+    a.api_server_id === authServerApiServerId;
 
   const usersRows = newUsers.length === 0
     ? `<tr><td colspan="3" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No new sign-ups in the last 24 hours.</td></tr>`
@@ -118,12 +132,15 @@ export function buildDailyAdminReport({
     ? `<tr><td colspan="5" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No API token activity in the last 24 hours.</td></tr>`
     : topMostPopularApis
         .map((a, i) => {
+          const refreshCell = isAuthServerAudience(a)
+            ? `<td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.refresh_token_count.toLocaleString("en-US")}</td>`
+            : `<td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};text-align:right;" title="Refresh tokens are only issued for the auth server audience.">N/A</td>`;
           return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;width:48px;">#${i + 1}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};">${escapeHtml(a.api_server_name)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.api_server_id)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.access_token_count.toLocaleString("en-US")}</td>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.refresh_token_count.toLocaleString("en-US")}</td>
+  ${refreshCell}
 </tr>`;
         })
         .join("\n");
@@ -243,6 +260,7 @@ ${topPopularAppsRows}
 ${topPopularApisRows}
           </tbody>
         </table>
+        <p style="margin:8px 0 0;color:${MUTED_COLOR};font-size:12px;">Refresh tokens are only issued with the auth server itself as their audience, so the refresh-token count is not applicable (&ldquo;N/A&rdquo;) for other APIs.</p>
       </td>
     </tr>
     <tr>
@@ -320,10 +338,16 @@ ${errorsRows}
     textLines.push("  (none)");
   } else {
     topMostPopularApis.forEach((a, i) => {
+      const refreshLabel = isAuthServerAudience(a)
+        ? `${a.refresh_token_count.toLocaleString("en-US")} refresh`
+        : "N/A refresh";
       textLines.push(
-        `  ${i + 1}. ${a.api_server_name} [${a.api_server_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${a.refresh_token_count.toLocaleString("en-US")} refresh`,
+        `  ${i + 1}. ${a.api_server_name} [${a.api_server_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${refreshLabel}`,
       );
     });
+    textLines.push(
+      "  (Refresh tokens are only issued with the auth server itself as their audience.)",
+    );
   }
   textLines.push("");
   textLines.push(`New errors (${newErrors.length}):`);
