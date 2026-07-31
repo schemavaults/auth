@@ -39,6 +39,7 @@ export function UsersTable({
         actions: true,
         select: true,
         email: true,
+        uid: false,
         admin: true,
         mfa_factors: true,
         email_verified: false,
