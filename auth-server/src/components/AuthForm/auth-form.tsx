@@ -1,9 +1,10 @@
 "use client";
 
-import { type ReactElement, useState, useTransition } from "react";
+import { type ReactElement, useMemo, useState, useTransition } from "react";
 import {
   emailCredentialsSchema,
   emailRegistrationCredentialsSchema,
+  inviteCodeFormatSchema,
 } from "@schemavaults/auth-common";
 
 // Login / Register functions
@@ -81,9 +82,10 @@ function AuthFormCardDescription<T extends "login" | "register">({
   );
 }
 
-function getDefaultValues<T extends "login" | "register">({
-  type,
-}: AuthFormType<T>): AuthFormData<T> {
+function getDefaultValues<T extends "login" | "register">(
+  { type }: AuthFormType<T>,
+  invite_code_prefill: string = "",
+): AuthFormData<T> {
   if (type === "login") {
     return {
       email: "",
@@ -94,7 +96,7 @@ function getDefaultValues<T extends "login" | "register">({
     email: "",
     password: "",
     confirm: "",
-    invite_code: "",
+    invite_code: invite_code_prefill,
   } as AuthFormData<"register">;
 }
 
@@ -116,16 +118,39 @@ export function AuthForm<T extends "login" | "register">({
   const debug: boolean = props.debug ?? false;
 
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+
+  // Pre-fill the invite code field from the `?invite_code=` search param
+  // (e.g. from a register link copied on the admin invite codes page).
+  // Values that fail the invite code format schema are ignored.
+  const invite_code_prefill: string = useMemo((): string => {
+    if (type !== "register") {
+      return "";
+    }
+    const raw: string | null = searchParams.get("invite_code");
+    if (raw === null) {
+      return "";
+    }
+    const parsed = inviteCodeFormatSchema.safeParse(raw);
+    if (!parsed.success) {
+      console.warn(
+        "[AuthForm] Ignoring invalid 'invite_code' search param:",
+        parsed.error.issues.map((issue) => issue.message),
+      );
+      return "";
+    }
+    return parsed.data;
+  }, [type, searchParams]);
+
   const form = useForm<AuthFormData<"login" | "register">>({
     resolver: getSchemaResolver({ type }),
-    defaultValues: getDefaultValues({ type }),
+    defaultValues: getDefaultValues({ type }, invite_code_prefill),
   });
   const [submitting, startSubmitting] = useTransition();
 
   const auth = useAuth();
   const friendly_name: string = useAuthServerFriendlyName();
 
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   const [pendingAuthorization, setPendingAuthorization] = useState<PendingAuthorizationState | null>(null);

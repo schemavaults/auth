@@ -4,6 +4,24 @@ describe("Invite Codes", () => {
     cy.url().should("include", "/login");
   });
 
+  it("pre-fills the invite code field from the ?invite_code= search param", () => {
+    const invite_code: string = "MY_EXAMPLE_INVITE_CODE";
+    cy.visit(`/auth/register?invite_code=${invite_code}`);
+    cy.wait_for_page_hydration();
+    cy.get("input[name='invite_code']")
+      .should("exist")
+      .should("have.value", invite_code);
+  });
+
+  it("ignores an ?invite_code= search param that fails the invite code format schema", () => {
+    // Too short (< 8 characters) to satisfy the invite code format schema
+    cy.visit("/auth/register?invite_code=bad");
+    cy.wait_for_page_hydration();
+    cy.get("input[name='invite_code']")
+      .should("exist")
+      .should("have.value", "");
+  });
+
   it("can create a new invite code as a superuser", () => {
     cy.as_admin(() => {
       cy.is_admin().should("be.true", "Superuser should have admin privileges");
