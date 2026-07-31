@@ -5,7 +5,7 @@ import type { ReactElement } from "react";
 import type { ColumnDef } from "@schemavaults/ui";
 import { Checkbox, useToast } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { ClipboardCopy, Hash, MoreHorizontal } from "lucide-react";
+import { ClipboardCopy, Hash, Link2, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,6 +110,44 @@ export const columns: ColumnDef<InviteCodeDefinition>[] = [
               }}
             >
               <ClipboardCopy className="h-4 w-4 pr-2" /> Copy Invite Code
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async (e): Promise<void> => {
+                e.preventDefault();
+                const invite_code: string = invite_code_definition.invite_code;
+                // The invite codes admin table is only rendered on the auth
+                // server itself (it fetches relative /api/admin routes), so
+                // the current origin is the auth server's origin.
+                const register_link: URL = new URL(
+                  "/auth/register",
+                  window.location.origin,
+                );
+                register_link.searchParams.set("invite_code", invite_code);
+                try {
+                  if (!window.isSecureContext) {
+                    throw new Error(
+                      "Writing to clipboard is only allowed in secure contexts!",
+                    );
+                  }
+                  await navigator.clipboard.writeText(register_link.toString());
+                } catch (e: unknown) {
+                  toast({
+                    title: "Failed to copy register link to clipboard!",
+                    description:
+                      e instanceof Error
+                        ? e.message
+                        : "An unknown error has occurred!",
+                  });
+                  return;
+                }
+
+                toast({
+                  title: "Successfully copied register link to clipboard!",
+                  description: `Share '${register_link.toString()}' to let someone register with this invite code pre-filled.`,
+                });
+              }}
+            >
+              <Link2 className="h-4 w-4 pr-2" /> Copy Register Link
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={async (e): Promise<void> => {
