@@ -57,7 +57,12 @@ export async function exchangeAuthTokens({
     auth_server_uri,
   );
 
-  if (!audience && !replaceRefreshToo) {
+  // An empty audience list is valid only when rotating the refresh token —
+  // the server would otherwise mint nothing at all.
+  const hasAudience: boolean = Array.isArray(audience)
+    ? audience.length > 0
+    : typeof audience === "string" && audience.length > 0;
+  if (!hasAudience && !replaceRefreshToo) {
     throw new Error("Type of token to acquire not specified");
   }
 

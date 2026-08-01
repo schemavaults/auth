@@ -65,6 +65,7 @@ export { appIdSchema } from "@schemavaults/app-definitions";
 export {
   createAudienceSchema,
   createAudienceListSchema,
+  createEmptyAudienceListSchema,
 } from "./audience-schema";
 export type { AudienceSchemaOverrides } from "./audience-schema";
 

@@ -72,3 +72,20 @@ export function createAudienceListSchema(
       `Audience list may not contain more than ${MAX_APPS_IN_AUDIENCE_LIST} audience references.`,
     );
 }
+
+/**
+ * Matches only an empty audience list (`[]`). Accepted by the token
+ * endpoints alongside {@link createAudienceListSchema}: an explicitly empty
+ * audience means the grant mints no access tokens — authenticate (or rotate
+ * the refresh token) only. This is how clients configured with no default
+ * token audiences complete a login.
+ */
+export function createEmptyAudienceListSchema(z: typeof zod) {
+  return z
+    .string()
+    .array()
+    .max(0, "Expected an empty audience list")
+    .describe(
+      "An empty audience list; the grant mints a refresh token but no access tokens.",
+    );
+}

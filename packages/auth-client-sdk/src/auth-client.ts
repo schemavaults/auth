@@ -642,9 +642,13 @@ export class SchemaVaultsAuthClient
     defaults.push(...this._default_audiences);
 
     if (defaults.length === 0) {
-      console.warn(
-        "[SchemaVaultsAuthClient] No default token audiences set for auth client!",
-      );
+      // Supported configuration: token grants sent with an empty audience
+      // list mint a refresh token (and user data) but no access tokens.
+      if (this.DEBUG) {
+        console.log(
+          "[SchemaVaultsAuthClient] No default token audiences set for auth client!",
+        );
+      }
       return [];
     }
 

@@ -142,6 +142,12 @@ export async function validateAudience(
 
   const audiences: string[] = Array.isArray(audience) ? [...audience] : [audience];
 
+  // An explicitly empty audience list means the grant mints no access
+  // tokens (login/refresh-rotation only — e.g. a client app configured with
+  // no default token audiences). There are no audiences to validate, but the
+  // client app must still be authorized by the user.
+  const isEmptyAudienceList: boolean = audiences.length === 0;
+
   // Audiences arrive in token-audience form (the auth server URL, or an api
   // server id verbatim); the bare auth app id is also tolerated for backwards
   // compatibility.
@@ -149,7 +155,7 @@ export async function validateAudience(
     createAudienceSchema(z, environment),
     z.literal(auth_app_id),
   ]);
-  if (!(await singleAudienceSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
+  if (!isEmptyAudienceList && !(await singleAudienceSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
     throw new TypeError("Invalid token audience(s) in audiences array!")
   }
 
@@ -172,6 +178,10 @@ export async function validateAudience(
   );
   if (!isAuthorized) {
     throw new ClientApplicationNotAuthorizedByUser(`Client application '${client_app_id}' is not authorized by user '${uid}'`)
+  }
+
+  if (isEmptyAudienceList) {
+    return true;
   }
 
   const validateOneAudiencePromises: readonly Promise<ValidateAudienceOutput>[] = audiences.map(
