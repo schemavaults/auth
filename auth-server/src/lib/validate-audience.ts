@@ -149,12 +149,9 @@ export async function validateAudience(
   const isEmptyAudienceList: boolean = audiences.length === 0;
 
   // Audiences arrive in token-audience form (the auth server URL, or an api
-  // server id verbatim); the bare auth app id is also tolerated for backwards
-  // compatibility.
-  const singleAudienceSchema = z.union([
-    createAudienceSchema(z, environment),
-    z.literal(auth_app_id),
-  ]);
+  // server id verbatim); the token endpoints parse request bodies with this
+  // same schema, so the bare auth app id form was already rejected upstream.
+  const singleAudienceSchema = createAudienceSchema(z, environment);
   if (!isEmptyAudienceList && !(await singleAudienceSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
     throw new TypeError("Invalid token audience(s) in audiences array!")
   }
