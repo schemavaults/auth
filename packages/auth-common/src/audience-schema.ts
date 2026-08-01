@@ -59,6 +59,13 @@ export function createAudienceSchema(
 
 const MAX_APPS_IN_AUDIENCE_LIST = 10 as const satisfies number;
 
+/**
+ * A list of token audiences. The list may be empty: at the token endpoints
+ * an empty audience list means the grant mints no access tokens —
+ * authenticate (or rotate the refresh token) only, which is how clients
+ * configured with no default token audiences complete a login. Call sites
+ * that require at least one audience must enforce non-emptiness themselves.
+ */
 export function createAudienceListSchema(
   z: typeof zod,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
@@ -66,26 +73,8 @@ export function createAudienceListSchema(
 ) {
   return createAudienceSchema(z, environment, overrides)
     .array()
-    .min(1, "Audience list may not be empty")
     .max(
       MAX_APPS_IN_AUDIENCE_LIST,
       `Audience list may not contain more than ${MAX_APPS_IN_AUDIENCE_LIST} audience references.`,
-    );
-}
-
-/**
- * Matches only an empty audience list (`[]`). Accepted by the token
- * endpoints alongside {@link createAudienceListSchema}: an explicitly empty
- * audience means the grant mints no access tokens — authenticate (or rotate
- * the refresh token) only. This is how clients configured with no default
- * token audiences complete a login.
- */
-export function createEmptyAudienceListSchema(z: typeof zod) {
-  return z
-    .string()
-    .array()
-    .max(0, "Expected an empty audience list")
-    .describe(
-      "An empty audience list; the grant mints a refresh token but no access tokens.",
     );
 }

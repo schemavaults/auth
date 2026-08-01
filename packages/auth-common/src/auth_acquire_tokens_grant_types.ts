@@ -4,7 +4,6 @@ import {
   type AudienceSchemaOverrides,
   createAudienceListSchema,
   createAudienceSchema,
-  createEmptyAudienceListSchema,
 } from "./audience-schema";
 import {
   appIdSchema,
@@ -23,14 +22,13 @@ function createTokenEndpointBaseSchema(
   overrides?: AudienceSchemaOverrides,
 ) {
   return z.object({
-    // A single audience, a non-empty audience list, or an explicitly empty
-    // list. An empty list mints no access tokens — the grant authenticates
-    // (or rotates the refresh token) only, which is how clients configured
-    // with no default token audiences complete a login.
+    // A single audience, or a (possibly empty) audience list. An empty list
+    // mints no access tokens — the grant authenticates (or rotates the
+    // refresh token) only, which is how clients configured with no default
+    // token audiences complete a login.
     audience: z.union([
       createAudienceSchema(z, environment, overrides),
       createAudienceListSchema(z, environment, overrides),
-      createEmptyAudienceListSchema(z),
     ]),
     client_app_id: appIdSchema,
   });
