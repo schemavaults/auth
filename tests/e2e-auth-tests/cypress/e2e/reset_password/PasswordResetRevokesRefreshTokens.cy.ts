@@ -90,6 +90,19 @@ describe("Password Reset Revokes Refresh Tokens", () => {
                 // semantics with proper timing.)
                 cy.clearCookies();
 
+                // The tokens_valid_after watermark has one-second
+                // granularity and uses strict less-than (see
+                // is-token-iat-revoked.ts): a token minted in the same
+                // unix second as the watermark bump stays valid — by
+                // design. Wait out the second boundary so the rotated
+                // token's iat lands strictly before the watermark set by
+                // the reset confirm below; without this the final 401
+                // assertion is a wall-clock coin toss. The wait MUST come
+                // before the confirm — once iat equals the watermark the
+                // token is valid forever, so delaying the final request
+                // instead would not help.
+                cy.wait(2000);
+
                 // Request a password reset token through the test-only
                 // endpoint.
                 cy.request({
