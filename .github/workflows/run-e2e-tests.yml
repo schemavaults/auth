@@ -213,6 +213,18 @@ jobs:
       test-suite-name: reset_password
       skip-docker-build: true
 
+  Run-Refresh-Token-Rotation-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: refresh_token_rotation
+      skip-docker-build: true
+
   Run-Organizations-E2E-Tests:
     needs:
       - Build-Auth-Server-Test-Docker-Image

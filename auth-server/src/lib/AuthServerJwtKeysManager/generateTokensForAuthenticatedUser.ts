@@ -26,6 +26,7 @@ import {
   type IssuedTokenGrantType,
   type NewIssuedTokenRow,
   recordIssuedTokens,
+  revokeToken,
 } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
 import generateRefreshToken from "./generateRefreshToken";
@@ -34,6 +35,18 @@ import generateAccessToken from "./generateAccessToken";
 export interface ITokenIssuanceTracking {
   db: Kysely<AuthDatabase>;
   grant_type: IssuedTokenGrantType;
+  /**
+   * Refresh token rotation: revoke this (presented) refresh token in the
+   * SAME transaction that records the replacement tokens' issuance rows,
+   * so the rotation commits atomically. Unlike plain issuance tracking,
+   * a failure here is fatal to the grant — returning replacement tokens
+   * without the revocation row would leave the rotated-away token live.
+   */
+  revoke_rotated_refresh_token?: {
+    jti: string;
+    uid: string;
+    expires_at: number;
+  };
 }
 
 export interface IGenerateTokensForAuthenticatedUserOpts {
@@ -137,42 +150,64 @@ export default async function generateTokensForAuthenticatedUser({
   }
 
   if (tracking) {
-    try {
-      const rows: NewIssuedTokenRow[] = [];
-      if (refresh_token && refresh_token.jti) {
-        rows.push({
-          jti: refresh_token.jti,
-          uid: user.uid,
-          token_type: "refresh",
-          client_app_id,
-          audience: getAuthServerAppId(),
-          grant_type: tracking.grant_type,
-          issued_at: refresh_token.iat,
-          expires_at: refresh_token.exp,
-        });
-      }
-      for (const [token_audience, access] of Object.entries(access_tokens)) {
-        if (!access.jti) continue;
-        rows.push({
-          jti: access.jti,
-          uid: user.uid,
-          token_type: "access",
-          client_app_id,
-          // issued-token rows are tracked by the stable api server id
-          audience: getApiServerIdForTokenAudience(token_audience, environment),
-          grant_type: tracking.grant_type,
-          issued_at: access.iat,
-          expires_at: access.exp,
-        });
-      }
-      await recordIssuedTokens(tracking.db, rows);
-    } catch (e: unknown) {
-      // Audit logging must never break token issuance.
-      await captureServerException(tracking.db, e, {
-        op_name: "generateTokensForAuthenticatedUser.recordIssuedTokens",
+    const rows: NewIssuedTokenRow[] = [];
+    if (refresh_token && refresh_token.jti) {
+      rows.push({
+        jti: refresh_token.jti,
         uid: user.uid,
-        context: { client_app_id, grant_type: tracking.grant_type },
+        token_type: "refresh",
+        client_app_id,
+        audience: getAuthServerAppId(),
+        grant_type: tracking.grant_type,
+        issued_at: refresh_token.iat,
+        expires_at: refresh_token.exp,
       });
+    }
+    for (const [token_audience, access] of Object.entries(access_tokens)) {
+      if (!access.jti) continue;
+      rows.push({
+        jti: access.jti,
+        uid: user.uid,
+        token_type: "access",
+        client_app_id,
+        // issued-token rows are tracked by the stable api server id
+        audience: getApiServerIdForTokenAudience(token_audience, environment),
+        grant_type: tracking.grant_type,
+        issued_at: access.iat,
+        expires_at: access.exp,
+      });
+    }
+
+    const rotation = tracking.revoke_rotated_refresh_token;
+    if (rotation) {
+      // Refresh token rotation: the presented token's revocation and the
+      // replacement tokens' issuance rows commit atomically — either the
+      // rotation fully lands, or neither side does. Deliberately NOT
+      // swallowed like the audit-only branch below: a thrown error here
+      // fails the grant closed, because returning the replacement tokens
+      // without the revocation row would leave the rotated-away token
+      // redeemable.
+      await tracking.db.transaction().execute(async (trx) => {
+        await recordIssuedTokens(trx, rows);
+        await revokeToken(
+          trx,
+          rotation.jti,
+          rotation.uid,
+          rotation.expires_at,
+          "rotation",
+        );
+      });
+    } else {
+      try {
+        await recordIssuedTokens(tracking.db, rows);
+      } catch (e: unknown) {
+        // Audit logging must never break token issuance.
+        await captureServerException(tracking.db, e, {
+          op_name: "generateTokensForAuthenticatedUser.recordIssuedTokens",
+          uid: user.uid,
+          context: { client_app_id, grant_type: tracking.grant_type },
+        });
+      }
     }
   }
 

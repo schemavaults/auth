@@ -13,7 +13,7 @@ import {
   isTokenRevoked,
   getUserTokensValidAfter,
   isTokenIatRevoked,
-  revokeToken,
+  REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
 } from "@/lib/auth-db";
 import {
   type OrganizationID,
@@ -213,10 +213,16 @@ export async function handleRefreshTokenGrant(
     );
   }
 
-  // Check if the refresh token has been revoked
+  // Check if the refresh token has been revoked. Rotation revocations are
+  // tolerated for a short reuse grace window so benign races (parallel
+  // tabs or concurrent requests redeeming the same token before the
+  // rotated cookie propagates) don't invalidate the session; logout and
+  // administrative revocations are always immediate.
   if (decoded.jti) {
     try {
-      const revoked = await isTokenRevoked(dbh.db, decoded.jti);
+      const revoked = await isTokenRevoked(dbh.db, decoded.jti, {
+        rotationReuseGraceMs: REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
+      });
       if (revoked) {
         return NextResponse.json(
           {
@@ -455,47 +461,23 @@ export async function handleRefreshTokenGrant(
         tracking: {
           db: dbh.db,
           grant_type: "refresh_token",
+          // Rotation makes the presented refresh token single-use: its
+          // revocation commits in the same transaction as the replacement
+          // tokens' issuance rows, and a failure fails the grant closed.
+          // (Legacy tokens minted before jti tracking have nothing to
+          // revoke — they still rotate.)
+          revoke_rotated_refresh_token: decoded.jti
+            ? {
+                jti: decoded.jti,
+                uid,
+                expires_at: Date.now() + refreshTokenExpiry * 1000,
+              }
+            : undefined,
         },
       });
 
     if (!tokenGenerationResult.success || tokenGenerationResult.error) {
       throw new Error(tokenGenerationResult.message);
-    }
-
-    // Rotation makes the presented refresh token single-use: revoke its
-    // jti now that the replacement exists, so a replayed (stolen or
-    // stale) copy can never be redeemed again. Revoked only after
-    // successful generation — if generation fails the user keeps a
-    // working token. Failing closed on a revocation error is deliberate:
-    // returning the new tokens anyway would leave the old token live
-    // alongside them. (Legacy tokens minted before jti tracking have
-    // nothing to revoke — they still rotate.)
-    if (decoded.jti) {
-      try {
-        await revokeToken(
-          dbh.db,
-          decoded.jti,
-          uid,
-          Date.now() + refreshTokenExpiry * 1000,
-        );
-      } catch (e: unknown) {
-        await captureServerException(dbh.db, e, {
-          op_name: "handleRefreshTokenGrant.revokeRotatedRefreshToken",
-          route: ROUTE,
-          uid,
-          context: { client_app_id: body.client_app_id, jti: decoded.jti },
-        });
-        return NextResponse.json(
-          {
-            success: false,
-            error: true,
-            message: "Failed to rotate refresh token",
-          } satisfies RequestTokensResult,
-          {
-            status: 500,
-          },
-        );
-      }
     }
 
     const isHttpsOnly: boolean =

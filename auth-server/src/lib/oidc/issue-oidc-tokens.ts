@@ -35,6 +35,16 @@ export interface IssueOidcTokensOptions {
    * the id_token).
    */
   include_id_token: boolean;
+  /**
+   * Refresh token rotation (refresh grant only): the presented refresh
+   * token to revoke atomically with the replacement tokens' issuance
+   * records. A failure fails the grant closed.
+   */
+  revoke_rotated_refresh_token?: {
+    jti: string;
+    uid: string;
+    expires_at: number;
+  };
   debug?: boolean;
 }
 
@@ -72,6 +82,7 @@ export async function issueOidcTokens({
   grant_type,
   environment,
   include_id_token,
+  revoke_rotated_refresh_token,
   debug = false,
 }: IssueOidcTokensOptions): Promise<OidcTokenResponseBody> {
   const orgRegistry = new OrganizationsRegistry(dbh.db, debug);
@@ -96,6 +107,7 @@ export async function issueOidcTokens({
       tracking: {
         db: dbh.db,
         grant_type,
+        revoke_rotated_refresh_token,
       },
     });
   if (!tokenGenerationResult.success || tokenGenerationResult.error) {

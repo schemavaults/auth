@@ -83,21 +83,12 @@ describe("Password Reset Revokes Refresh Tokens", () => {
                 // this spec must prove the *password reset* revokes it.
                 // Clearing cookies also makes the requests below fall back
                 // to the Authorization header.
+                //
+                // (Replay of the used original token is NOT asserted here:
+                // within the rotation reuse grace window it would still
+                // succeed — the refresh_token_rotation suite covers replay
+                // semantics with proper timing.)
                 cy.clearCookies();
-
-                // Refresh token rotation: replaying the already-used
-                // original token must be rejected — it was revoked upon
-                // use.
-                redeemRefreshToken(originalRefreshToken).then(
-                  (replayResponse) => {
-                    expect(
-                      replayResponse.status,
-                      "A used refresh token must not be redeemable again",
-                    ).to.eq(401);
-                    expect(replayResponse.body.success).to.eq(false);
-                    expect(replayResponse.body.message).to.include("revoked");
-                  },
-                );
 
                 // Request a password reset token through the test-only
                 // endpoint.
