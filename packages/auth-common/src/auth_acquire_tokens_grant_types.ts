@@ -1,5 +1,5 @@
 import { PKCE_ProofKeyManager } from "./pkce";
-import type { ZodSchema, z as zod } from "zod";
+import type { z as zod } from "zod";
 import {
   type AudienceSchemaOverrides,
   createAudienceListSchema,
@@ -22,6 +22,10 @@ function createTokenEndpointBaseSchema(
   overrides?: AudienceSchemaOverrides,
 ) {
   return z.object({
+    // A single audience, or a (possibly empty) audience list. An empty list
+    // mints no access tokens — the grant authenticates (or rotates the
+    // refresh token) only, which is how clients configured with no default
+    // token audiences complete a login.
     audience: z.union([
       createAudienceSchema(z, environment, overrides),
       createAudienceListSchema(z, environment, overrides),
@@ -69,6 +73,10 @@ export function createRefreshTokenPOSTBodySchema(
   return createTokenEndpointBaseSchema(z, environment, overrides)
     .extend({
       grant_type: z.literal("refresh_token"),
+      // Deprecated and ignored: the refresh grant now always rotates the
+      // refresh token. Still tolerated (the body schema is strict) so
+      // requests from older SDK versions — which unconditionally send the
+      // flag — keep parsing.
       replaceRefreshToo: z.boolean().optional(),
     })
     .required({

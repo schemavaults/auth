@@ -15,7 +15,6 @@ import { z } from "zod";
 export interface IExchangeAuthTokensOpts {
   refreshToken: RefreshToken | "AS_HTTP_ONLY_COOKIE";
   audience: string | string[];
-  replaceRefreshToo?: boolean;
   auth_server_uri: string;
   /**
    * The auth server deployment's own app id (white-label deployments use a
@@ -36,7 +35,6 @@ export interface IExchangeAuthTokensOpts {
 export async function exchangeAuthTokens({
   refreshToken,
   audience,
-  replaceRefreshToo,
   debug,
   environment,
   auth_server_uri,
@@ -57,10 +55,10 @@ export async function exchangeAuthTokens({
     auth_server_uri,
   );
 
-  if (!audience && !replaceRefreshToo) {
-    throw new Error("Type of token to acquire not specified");
-  }
-
+  // An empty audience list is a rotation-only request: the server always
+  // rotates the refresh token, so the exchange still yields a fresh
+  // refresh token (and updated user data) even when no access tokens are
+  // requested.
   const refreshTokenPOSTBodySchema = createRefreshTokenPOSTBodySchema(
     z,
     environment,
@@ -74,7 +72,6 @@ export async function exchangeAuthTokens({
       grant_type: "refresh_token" as const,
       client_app_id,
       audience: audience,
-      replaceRefreshToo: replaceRefreshToo ?? false,
     } satisfies z.infer<typeof refreshTokenPOSTBodySchema>);
     if (!parsed.success) {
       console.error(parsed.error);

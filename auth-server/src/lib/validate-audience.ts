@@ -142,15 +142,34 @@ export async function validateAudience(
 
   const audiences: string[] = Array.isArray(audience) ? [...audience] : [audience];
 
+  if (!Array.isArray(audiences)) {
+    throw new TypeError(
+      "Expected type of 'audiences' to be an array by this point!",
+      { cause: `Received type '${typeof audiences}'`}
+    )
+  }
+
+  // An explicitly empty audience list means the grant mints no access
+  // tokens (login/refresh-rotation only — e.g. a client app configured with
+  // no default token audiences). There are no audiences to validate, but the
+  // client app must still be authorized by the user.
+  const isEmptyAudienceList: boolean = audiences.length === 0;
+
   // Audiences arrive in token-audience form (the auth server URL, or an api
-  // server id verbatim); the bare auth app id is also tolerated for backwards
-  // compatibility.
-  const singleAudienceSchema = z.union([
-    createAudienceSchema(z, environment),
-    z.literal(auth_app_id),
-  ]);
-  if (!(await singleAudienceSchema.array().min(1, "Audiences array must be non-empty").max(16, "Cannot request more than 16 access tokens at once").safeParseAsync(audiences)).success) {
-    throw new TypeError("Invalid token audience(s) in audiences array!")
+  // server id verbatim); the token endpoints parse request bodies with this
+  // same schema, so the bare auth app id form was already rejected upstream.
+  const singleAudienceSchema = createAudienceSchema(z, environment);
+  const audiencesListSchema = singleAudienceSchema.array()
+    .min(1, "Audiences array must be non-empty")
+    .max(16, "Cannot request more than 16 access tokens at once");
+
+  if (!isEmptyAudienceList) {
+    const parsedNonEmptyAudiencesList = await audiencesListSchema.safeParseAsync(audiences);
+    if (!parsedNonEmptyAudiencesList.success) {
+      throw new TypeError("Invalid token audience(s) in audiences array!", {
+        cause: parsedNonEmptyAudiencesList.error
+      });
+    }
   }
 
   if (debug) {
@@ -171,7 +190,13 @@ export async function validateAudience(
     debug
   );
   if (!isAuthorized) {
-    throw new ClientApplicationNotAuthorizedByUser(`Client application '${client_app_id}' is not authorized by user '${uid}'`)
+    throw new ClientApplicationNotAuthorizedByUser(
+      `Client application '${client_app_id}' is not authorized by user '${uid}'`
+    )
+  }
+
+  if (isEmptyAudienceList) {
+    return true;
   }
 
   const validateOneAudiencePromises: readonly Promise<ValidateAudienceOutput>[] = audiences.map(

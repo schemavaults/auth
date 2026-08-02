@@ -7,6 +7,7 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   parseAndGrantScopes,
+  refreshTokenExpiry,
   type UserData,
 } from "@schemavaults/auth-common";
 import {
@@ -23,6 +24,7 @@ import {
   isTokenIatRevoked,
   isTokenRevoked,
   loadUserData,
+  REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
   type ServerlessDatabase,
 } from "@/lib/auth-db";
 import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
@@ -109,8 +111,16 @@ export async function handleOidcRefreshTokenGrant(
   }
 
   // Revocation checks: explicit jti revocation (logout) plus the
-  // per-user tokens_valid_after watermark (password reset).
-  if (decoded.jti && (await isTokenRevoked(dbh.db, decoded.jti))) {
+  // per-user tokens_valid_after watermark (password reset). Rotation
+  // revocations get a short reuse grace window so benign concurrent
+  // refreshes don't invalidate the session; all other revocations are
+  // immediate.
+  if (
+    decoded.jti &&
+    (await isTokenRevoked(dbh.db, decoded.jti, {
+      rotationReuseGraceMs: REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
+    }))
+  ) {
     return oidcTokenErrorResponse(
       "invalid_grant",
       "Refresh token has been revoked.",
@@ -173,8 +183,21 @@ export async function handleOidcRefreshTokenGrant(
     environment,
     // OIDC Core §12.2 permits omitting the id_token on refresh.
     include_id_token: false,
+    // Refresh token rotation: the presented token is single-use — its
+    // revocation commits in the same transaction as the replacement
+    // tokens' issuance records, and a failure throws (failing closed via
+    // the route's shared catch). Legacy tokens minted before jti tracking
+    // have nothing to revoke — they still rotate.
+    revoke_rotated_refresh_token: decoded.jti
+      ? {
+          jti: decoded.jti,
+          uid: decoded.uid,
+          expires_at: Date.now() + refreshTokenExpiry * 1000,
+        }
+      : undefined,
     debug,
   });
+
   return oidcTokenSuccessResponse(body);
 }
 

@@ -4,8 +4,31 @@ import { RefreshTokenCookieName } from "@schemavaults/auth-common";
 const APP_ID = getAuthServerAppIdFromCypressEnv();
 const REFRESH_TOKEN_COOKIE = RefreshTokenCookieName(APP_ID);
 
+// NOTE: the refresh grant reads the refresh token from the session cookies
+// when they are present, and only falls back to the Authorization header
+// once the cookies are cleared. Requests below that need to redeem a
+// *captured* token therefore run after cy.clearCookies().
+function redeemRefreshToken(capturedRefreshToken: string) {
+  return cy.request({
+    method: "POST",
+    url: `/api/auth/token/refresh_token/${APP_ID}`,
+    body: {
+      grant_type: "refresh_token",
+      // token audiences use the auth server URL, not the app id
+      audience: Cypress.env("AUTH_SERVER_URL"),
+      client_app_id: APP_ID,
+    },
+    headers: {
+      Authorization: `Bearer ${capturedRefreshToken}`,
+      "Content-Type": "application/json",
+      Origin: new URL(Cypress.config("baseUrl")!).origin,
+    },
+    failOnStatusCode: false,
+  });
+}
+
 describe("Password Reset Revokes Refresh Tokens", () => {
-  it("rejects a captured refresh token after the user resets their password", () => {
+  it("rejects captured refresh tokens after rotation and after a password reset", () => {
     const newPassword = "RotatedAfterReset123!@#";
 
     cy.generate_random_test_user_credentials().then((credentials) => {
@@ -23,78 +46,86 @@ describe("Password Reset Revokes Refresh Tokens", () => {
             if (!cookie || !cookie.value) {
               throw new Error("Refresh token cookie not found");
             }
-            const capturedRefreshToken: string = cookie.value;
+            const originalRefreshToken: string = cookie.value;
 
-            // Sanity check: the captured token works before the reset.
-            cy.request({
-              method: "POST",
-              url: `/api/auth/token/refresh_token/${APP_ID}`,
-              body: {
-                grant_type: "refresh_token",
-                // token audiences use the auth server URL, not the app id
-                audience: Cypress.env("AUTH_SERVER_URL"),
-                client_app_id: APP_ID,
+            // Sanity check: the session's refresh token works before the
+            // reset. This redemption rotates the refresh token — the
+            // response sets a fresh cookie and revokes the presented
+            // (original) token as used.
+            redeemRefreshToken(originalRefreshToken).then(
+              (preResetResponse) => {
+                expect(
+                  preResetResponse.status,
+                  "Refresh token should work before password reset",
+                ).to.eq(200);
               },
-              headers: {
-                Authorization: `Bearer ${capturedRefreshToken}`,
-                "Content-Type": "application/json",
-                Origin: new URL(Cypress.config("baseUrl")!).origin,
-              },
-              failOnStatusCode: false,
-            }).then((preResetResponse) => {
-              expect(
-                preResetResponse.status,
-                "Captured refresh token should work before password reset",
-              ).to.eq(200);
-            });
+            );
 
-            // Logout to clear the legitimate session's cookies (the
-            // attacker still holds capturedRefreshToken).
-            cy.logout();
+            // The live session token is now the rotated cookie set by the
+            // redemption above; this is the token the "attacker" holds
+            // going into the password reset.
+            cy.getCookie(REFRESH_TOKEN_COOKIE)
+              .should("exist")
+              .then((rotatedCookie) => {
+                if (!rotatedCookie || !rotatedCookie.value) {
+                  throw new Error(
+                    "Rotated refresh token cookie not found after redemption",
+                  );
+                }
+                const rotatedRefreshToken: string = rotatedCookie.value;
+                expect(
+                  rotatedRefreshToken,
+                  "Redemption should rotate the refresh token cookie",
+                ).to.not.eq(originalRefreshToken);
 
-            // Request a password reset token through the test-only endpoint.
-            cy.request({
-              method: "GET",
-              url: `/api/test/password-reset-token/${encodeURIComponent(credentials.email)}`,
-              failOnStatusCode: false,
-            }).then((tokenResponse) => {
-              expect(tokenResponse.status).to.equal(200);
-              expect(tokenResponse.body.token).to.be.a("string");
-              const resetToken: string = tokenResponse.body.token;
+                // End the legitimate session locally WITHOUT logging out:
+                // logout would revoke the rotated token server-side, and
+                // this spec must prove the *password reset* revokes it.
+                // Clearing cookies also makes the requests below fall back
+                // to the Authorization header.
+                //
+                // (Replay of the used original token is NOT asserted here:
+                // within the rotation reuse grace window it would still
+                // succeed — the refresh_token_rotation suite covers replay
+                // semantics with proper timing.)
+                cy.clearCookies();
 
-              // Confirm the password reset.
-              cy.request({
-                method: "POST",
-                url: "/api/auth/reset-password/confirm",
-                body: { token: resetToken, new_password: newPassword },
-                failOnStatusCode: false,
-              }).then((confirmResponse) => {
-                expect(confirmResponse.status).to.equal(200);
-
-                // Attempt to mint new tokens with the captured refresh
-                // token — this MUST now be rejected.
+                // Request a password reset token through the test-only
+                // endpoint.
                 cy.request({
-                  method: "POST",
-                  url: `/api/auth/token/refresh_token/${APP_ID}`,
-                  body: {
-                    grant_type: "refresh_token",
-                    // token audiences use the auth server URL, not the app id
-                    audience: Cypress.env("AUTH_SERVER_URL"),
-                    client_app_id: APP_ID,
-                  },
-                  headers: {
-                    Authorization: `Bearer ${capturedRefreshToken}`,
-                    "Content-Type": "application/json",
-                    Origin: new URL(Cypress.config("baseUrl")!).origin,
-                  },
+                  method: "GET",
+                  url: `/api/test/password-reset-token/${encodeURIComponent(credentials.email)}`,
                   failOnStatusCode: false,
-                }).then((postResetResponse) => {
-                  expect(postResetResponse.status).to.eq(401);
-                  expect(postResetResponse.body.success).to.eq(false);
-                  expect(postResetResponse.body.message).to.include("revoked");
+                }).then((tokenResponse) => {
+                  expect(tokenResponse.status).to.equal(200);
+                  expect(tokenResponse.body.token).to.be.a("string");
+                  const resetToken: string = tokenResponse.body.token;
+
+                  // Confirm the password reset.
+                  cy.request({
+                    method: "POST",
+                    url: "/api/auth/reset-password/confirm",
+                    body: { token: resetToken, new_password: newPassword },
+                    failOnStatusCode: false,
+                  }).then((confirmResponse) => {
+                    expect(confirmResponse.status).to.equal(200);
+
+                    // Attempt to mint new tokens with the captured rotated
+                    // token — never redeemed and never revoked by logout,
+                    // so only the password reset (tokens_valid_after
+                    // watermark) can be what rejects it.
+                    redeemRefreshToken(rotatedRefreshToken).then(
+                      (postResetResponse) => {
+                        expect(postResetResponse.status).to.eq(401);
+                        expect(postResetResponse.body.success).to.eq(false);
+                        expect(postResetResponse.body.message).to.include(
+                          "revoked",
+                        );
+                      },
+                    );
+                  });
                 });
               });
-            });
           });
       });
     });

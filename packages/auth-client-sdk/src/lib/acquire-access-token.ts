@@ -24,7 +24,6 @@ export interface IAcquireAccessTokenFnOptions {
   exchangeAuthTokens: (
     refresh: RefreshToken | "AS_HTTP_ONLY_COOKIE",
     audience: string,
-    replaceRefreshToo?: boolean,
   ) => Promise<SuccessfullyGeneratedTokensRecord>;
   debug?: boolean;
 }

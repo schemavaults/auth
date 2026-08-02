@@ -303,9 +303,14 @@ export async function handleSuccessfulAuthentication({
     );
   }
   if (!audience || (Array.isArray(audience) && audience.length === 0)) {
-    console.warn(
-      "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] No access token audience(s) set",
-    );
+    // Supported configuration: a client with no default token audiences
+    // exchanges the authorization code for a refresh token + user data
+    // only; access tokens can be acquired later on demand.
+    if (debug) {
+      console.log(
+        "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] No access token audience(s) set; exchanging authorization code without minting access tokens",
+      );
+    }
     audience = [];
   }
 

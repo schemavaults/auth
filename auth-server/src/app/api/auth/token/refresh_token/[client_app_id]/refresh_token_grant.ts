@@ -13,6 +13,7 @@ import {
   isTokenRevoked,
   getUserTokensValidAfter,
   isTokenIatRevoked,
+  REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
 } from "@/lib/auth-db";
 import {
   type OrganizationID,
@@ -21,6 +22,7 @@ import {
   MAXIMUM_USER_ORGANIZATIONS,
   ERROR_MESSAGE_CATALOG,
   createRefreshTokenPOSTBodySchema,
+  refreshTokenExpiry,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
@@ -211,10 +213,16 @@ export async function handleRefreshTokenGrant(
     );
   }
 
-  // Check if the refresh token has been revoked
+  // Check if the refresh token has been revoked. Rotation revocations are
+  // tolerated for a short reuse grace window so benign races (parallel
+  // tabs or concurrent requests redeeming the same token before the
+  // rotated cookie propagates) don't invalidate the session; logout and
+  // administrative revocations are always immediate.
   if (decoded.jti) {
     try {
-      const revoked = await isTokenRevoked(dbh.db, decoded.jti);
+      const revoked = await isTokenRevoked(dbh.db, decoded.jti, {
+        rotationReuseGraceMs: REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
+      });
       if (revoked) {
         return NextResponse.json(
           {
@@ -432,11 +440,6 @@ export async function handleRefreshTokenGrant(
   }
 
   try {
-    const replaceRefreshToo: boolean =
-      typeof body.replaceRefreshToo === "boolean"
-        ? body.replaceRefreshToo
-        : false;
-
     const tokenGenerationResult: RequestTokensResult =
       await generateTokensForAuthenticatedUser({
         user,
@@ -446,7 +449,10 @@ export async function handleRefreshTokenGrant(
           : [body.audience],
         environment,
         user_organizations,
-        generate_refresh: replaceRefreshToo,
+        // Refresh token rotation: every refresh grant replaces the
+        // presented refresh token. (The deprecated `replaceRefreshToo`
+        // body flag is tolerated by the schema but ignored.)
+        generate_refresh: true,
         auth_jwt_manager: jwt_keys_manager,
         // Carry the presented refresh token's granted scope forward onto
         // the new tokens; legacy refresh tokens without the claim yield
@@ -455,6 +461,18 @@ export async function handleRefreshTokenGrant(
         tracking: {
           db: dbh.db,
           grant_type: "refresh_token",
+          // Rotation makes the presented refresh token single-use: its
+          // revocation commits in the same transaction as the replacement
+          // tokens' issuance rows, and a failure fails the grant closed.
+          // (Legacy tokens minted before jti tracking have nothing to
+          // revoke — they still rotate.)
+          revoke_rotated_refresh_token: decoded.jti
+            ? {
+                jti: decoded.jti,
+                uid,
+                expires_at: Date.now() + refreshTokenExpiry * 1000,
+              }
+            : undefined,
         },
       });
 
