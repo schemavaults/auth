@@ -7,6 +7,7 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   parseAndGrantScopes,
+  refreshTokenExpiry,
   type UserData,
 } from "@schemavaults/auth-common";
 import {
@@ -23,6 +24,7 @@ import {
   isTokenIatRevoked,
   isTokenRevoked,
   loadUserData,
+  revokeToken,
   type ServerlessDatabase,
 } from "@/lib/auth-db";
 import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
@@ -175,6 +177,22 @@ export async function handleOidcRefreshTokenGrant(
     include_id_token: false,
     debug,
   });
+
+  // Refresh token rotation: the presented token is single-use. Revoke its
+  // jti now that the replacement token set exists, so a replayed copy can
+  // never be redeemed again. A revocation failure throws — failing closed
+  // via the route's shared catch — because returning the new tokens anyway
+  // would leave the old refresh token live alongside them. (Legacy tokens
+  // minted before jti tracking have nothing to revoke — they still rotate.)
+  if (decoded.jti) {
+    await revokeToken(
+      dbh.db,
+      decoded.jti,
+      decoded.uid,
+      Date.now() + refreshTokenExpiry * 1000,
+    );
+  }
+
   return oidcTokenSuccessResponse(body);
 }
 

@@ -132,12 +132,22 @@ describe("createRefreshTokenPOSTBodySchema audience handling", () => {
     expect(parsed.success).toBe(true);
   });
 
-  test("accepts an empty audience list when rotating the refresh token", () => {
-    const parsed = schema.safeParse(validRefreshTokenBody([], true));
+  test("accepts an empty audience list (rotation-only refresh)", () => {
+    const parsed = schema.safeParse(validRefreshTokenBody([]));
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.audience).toEqual([]);
     }
+  });
+
+  test("tolerates the deprecated replaceRefreshToo flag from older clients", () => {
+    expect(
+      schema.safeParse(validRefreshTokenBody(["example-api-server"], true))
+        .success,
+    ).toBe(true);
+    expect(schema.safeParse(validRefreshTokenBody([], false)).success).toBe(
+      true,
+    );
   });
 
   test("still rejects a list containing an invalid audience", () => {

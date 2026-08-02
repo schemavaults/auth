@@ -13,6 +13,7 @@ import {
   isTokenRevoked,
   getUserTokensValidAfter,
   isTokenIatRevoked,
+  revokeToken,
 } from "@/lib/auth-db";
 import {
   type OrganizationID,
@@ -21,6 +22,7 @@ import {
   MAXIMUM_USER_ORGANIZATIONS,
   ERROR_MESSAGE_CATALOG,
   createRefreshTokenPOSTBodySchema,
+  refreshTokenExpiry,
 } from "@schemavaults/auth-common";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
@@ -432,11 +434,6 @@ export async function handleRefreshTokenGrant(
   }
 
   try {
-    const replaceRefreshToo: boolean =
-      typeof body.replaceRefreshToo === "boolean"
-        ? body.replaceRefreshToo
-        : false;
-
     const tokenGenerationResult: RequestTokensResult =
       await generateTokensForAuthenticatedUser({
         user,
@@ -446,7 +443,10 @@ export async function handleRefreshTokenGrant(
           : [body.audience],
         environment,
         user_organizations,
-        generate_refresh: replaceRefreshToo,
+        // Refresh token rotation: every refresh grant replaces the
+        // presented refresh token. (The deprecated `replaceRefreshToo`
+        // body flag is tolerated by the schema but ignored.)
+        generate_refresh: true,
         auth_jwt_manager: jwt_keys_manager,
         // Carry the presented refresh token's granted scope forward onto
         // the new tokens; legacy refresh tokens without the claim yield
@@ -460,6 +460,42 @@ export async function handleRefreshTokenGrant(
 
     if (!tokenGenerationResult.success || tokenGenerationResult.error) {
       throw new Error(tokenGenerationResult.message);
+    }
+
+    // Rotation makes the presented refresh token single-use: revoke its
+    // jti now that the replacement exists, so a replayed (stolen or
+    // stale) copy can never be redeemed again. Revoked only after
+    // successful generation — if generation fails the user keeps a
+    // working token. Failing closed on a revocation error is deliberate:
+    // returning the new tokens anyway would leave the old token live
+    // alongside them. (Legacy tokens minted before jti tracking have
+    // nothing to revoke — they still rotate.)
+    if (decoded.jti) {
+      try {
+        await revokeToken(
+          dbh.db,
+          decoded.jti,
+          uid,
+          Date.now() + refreshTokenExpiry * 1000,
+        );
+      } catch (e: unknown) {
+        await captureServerException(dbh.db, e, {
+          op_name: "handleRefreshTokenGrant.revokeRotatedRefreshToken",
+          route: ROUTE,
+          uid,
+          context: { client_app_id: body.client_app_id, jti: decoded.jti },
+        });
+        return NextResponse.json(
+          {
+            success: false,
+            error: true,
+            message: "Failed to rotate refresh token",
+          } satisfies RequestTokensResult,
+          {
+            status: 500,
+          },
+        );
+      }
     }
 
     const isHttpsOnly: boolean =

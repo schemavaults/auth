@@ -1029,13 +1029,22 @@ export class SchemaVaultsAuthClient
     }
 
     const adapter: ISchemaVaultsAuthClientAdapter = this.adapter;
-    return await tradeRefreshTokenForAccessToken({
-      opts,
-      adapter,
-      logout: this.logout.bind(this),
-      exchangeAuthTokens: this.exchangeAuthTokens.bind(this),
-      debug: this.debug,
-    });
+    // Serialized because redeeming the refresh token rotates it: a
+    // concurrent exchange with the same token would be rejected as an
+    // already-revoked replay. Queueing the whole acquire flow (not just
+    // the exchange) means the refresh token is loaded after any
+    // queued-ahead rotation, and later calls for an audience a preceding
+    // exchange just populated hit the access-token cache instead of
+    // re-exchanging.
+    return await this.enqueueTokenExchange(() =>
+      tradeRefreshTokenForAccessToken({
+        opts,
+        adapter,
+        logout: this.logout.bind(this),
+        exchangeAuthTokens: this.exchangeAuthTokens.bind(this),
+        debug: this.debug,
+      }),
+    );
   }
 
   private storeUserData(userData: UserData): void {
@@ -1271,15 +1280,31 @@ export class SchemaVaultsAuthClient
     });
   }
 
+  private _tokenExchangeQueue: Promise<unknown> = Promise.resolve();
+
+  /**
+   * Serializes operations that redeem the refresh token at the token
+   * endpoint. The server rotates the refresh token on every refresh grant
+   * and revokes the presented token's jti, so two exchanges racing with
+   * the same refresh token would invalidate whichever lands second (the
+   * loser presents an already-revoked token). Queueing ensures each
+   * redemption loads the current — possibly just-rotated — refresh token
+   * before it runs.
+   */
+  private async enqueueTokenExchange<T>(task: () => Promise<T>): Promise<T> {
+    const run: Promise<T> = this._tokenExchangeQueue.then(task);
+    // A failed exchange must not poison the queue for later exchanges.
+    this._tokenExchangeQueue = run.catch((): void => undefined);
+    return await run;
+  }
+
   private async exchangeAuthTokens(
     refreshToken: RefreshToken | "AS_HTTP_ONLY_COOKIE",
     audience?: string | string[],
-    replaceRefreshToo?: boolean,
   ): Promise<SuccessfullyGeneratedTokensRecord> {
     const environment: SchemaVaultsAppEnvironment = this.environment;
     return await exchangeAuthTokens({
       refreshToken,
-      replaceRefreshToo,
       audience: audience ?? this.defaultTokenAudiences,
       logout: this.logout.bind(this),
       debug: this.DEBUG,
@@ -1435,22 +1460,32 @@ export class SchemaVaultsAuthClient
       return null;
     }
 
-    const supportsHttpOnlyRefreshToken: boolean =
-      typeof adapter.doesSupportHttpOnlyRefreshToken === "function" &&
-      adapter.doesSupportHttpOnlyRefreshToken();
+    // The exchange always rotates the refresh token, so server-side route
+    // guards (which read their claims from the refresh-token cookie) see
+    // the updated claims too, not just this client's access tokens.
+    const didExchange: boolean = await this.enqueueTokenExchange(
+      async (): Promise<boolean> => {
+        const supportsHttpOnlyRefreshToken: boolean =
+          typeof adapter.doesSupportHttpOnlyRefreshToken === "function" &&
+          adapter.doesSupportHttpOnlyRefreshToken();
 
-    const refresh_token: RefreshToken | "AS_HTTP_ONLY_COOKIE" | null =
-      supportsHttpOnlyRefreshToken
-        ? "AS_HTTP_ONLY_COOKIE"
-        : adapter.getRefreshToken();
-    if (!refresh_token) {
+        // Resolved inside the queued task so a rotation performed by a
+        // queued-ahead exchange is reflected in the token loaded here.
+        const refresh_token: RefreshToken | "AS_HTTP_ONLY_COOKIE" | null =
+          supportsHttpOnlyRefreshToken
+            ? "AS_HTTP_ONLY_COOKIE"
+            : adapter.getRefreshToken();
+        if (!refresh_token) {
+          return false;
+        }
+
+        await this.exchangeAuthTokens(refresh_token);
+        return true;
+      },
+    );
+    if (!didExchange) {
       return null;
     }
-
-    // `replaceRefreshToo` matters here: server-side route guards read their
-    // claims from the refresh-token cookie, so rotating it ensures they see
-    // the updated claims too (not just this client's access tokens).
-    await this.exchangeAuthTokens(refresh_token, undefined, true);
 
     return this.currentUser;
   }

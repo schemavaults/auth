@@ -73,6 +73,10 @@ export function createRefreshTokenPOSTBodySchema(
   return createTokenEndpointBaseSchema(z, environment, overrides)
     .extend({
       grant_type: z.literal("refresh_token"),
+      // Deprecated and ignored: the refresh grant now always rotates the
+      // refresh token. Still tolerated (the body schema is strict) so
+      // requests from older SDK versions — which unconditionally send the
+      // flag — keep parsing.
       replaceRefreshToo: z.boolean().optional(),
     })
     .required({
