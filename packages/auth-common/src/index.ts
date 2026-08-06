@@ -141,7 +141,6 @@ export { timingSafeStringEqual } from "./timing-safe-string-equal";
 export {
   sanitizeNextHref,
   MAX_NEXT_HREF_LENGTH,
-  NEXT_HREF_REQUEST_HEADER,
 } from "./sanitize-next-href";
 
 export { isOriginInAllowedList } from "./cors";

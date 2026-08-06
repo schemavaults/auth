@@ -18,7 +18,12 @@ export default async function AdminPathsRouteGuardServerComponent({
         redirectWithError(403, "forbidden")
       }
       return <>{children}</>
-    }
+    },
+    // Layouts cannot know which /admin sub-page was requested, and this
+    // layout guard's login redirect wins over the per-page guards', so
+    // the preserved destination for any admin page is the admin
+    // dashboard root.
+    { next_href: "/admin" },
   )
   return protected_layout;
 }

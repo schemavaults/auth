@@ -7,7 +7,6 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   isValidOrganizationID,
-  NEXT_HREF_REQUEST_HEADER,
   organizationIdSchema,
   userDataSchema,
   type PotentiallyValidTokenSource,
@@ -311,30 +310,10 @@ export async function withAuthenticatedServerComponentRouteGuard<
     );
   }
 
-  // Where to send the user back to after they authenticate. An explicit
-  // option wins; otherwise fall back to the request-path header stamped
-  // by the deployment's Next.js proxy (see NEXT_HREF_REQUEST_HEADER) —
-  // guards invoked from layouts (e.g. the auth-server's /admin layout)
-  // have no per-page path to pass, and the header carries the actual
-  // requested URL. Sanitized inside redirectToLogin either way; unsafe
-  // values fall back to no param.
-  let next_href: string | undefined =
+  // Where to send the user back to after they authenticate. Sanitized
+  // inside redirectToLogin; unsafe values fall back to no param.
+  const next_href: string | undefined =
     typeof opts?.next_href === "string" ? opts.next_href : undefined;
-  if (typeof next_href === "undefined") {
-    try {
-      const loadHeaders = await import("next/headers").then(
-        (mod) => mod.headers,
-      );
-      const request_headers = await loadHeaders();
-      const header_value = request_headers.get(NEXT_HREF_REQUEST_HEADER);
-      if (typeof header_value === "string" && header_value.length > 0) {
-        next_href = header_value;
-      }
-    } catch {
-      // Not in a request scope (e.g. unit tests) or headers() is
-      // unavailable — proceed without a next_href.
-    }
-  }
 
   if (token_sources.length === 0) {
     redirectToLogin(redirect, next_href);

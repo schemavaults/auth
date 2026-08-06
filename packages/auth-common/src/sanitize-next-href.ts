@@ -18,18 +18,6 @@
  */
 export const MAX_NEXT_HREF_LENGTH = 2048 as const;
 
-/**
- * Request header the auth-server's `proxy.ts` (Next.js proxy, formerly
- * middleware) stamps with the sanitized pathname+search of the incoming
- * request. Server-component route guards cannot introspect the request
- * URL, so they fall back to this header (when no explicit `next_href`
- * option is passed) to preserve the user's destination across the
- * login redirect. The proxy always deletes any client-supplied value
- * before setting its own, so the header is trustworthy when the proxy
- * is deployed; guards still sanitize it before use.
- */
-export const NEXT_HREF_REQUEST_HEADER = "x-schemavaults-next-href" as const;
-
 // Sentinel base origin used to resolve the candidate path. If the
 // parsed result escapes this origin, the value was not a plain path.
 const SANITIZE_BASE_ORIGIN = "https://next-href.invalid" as const;
