@@ -58,9 +58,15 @@ export default async function AdminErrorDetailPage(
 ): Promise<ReactElement> {
   await connection();
   const { error_id } = await pageParams.params;
+  // Only forward a next_href when the error_id is a well-formed UUID; a
+  // malformed id would 400 after login anyway, so the login redirect
+  // carries no destination in that case.
+  const parsed_error_id = errorIdSchema.safeParse(error_id);
   return await withAdminServerComponentRouteGuard(
     (props) => PreloadedAdminErrorDetailPage(props, pageParams),
-    { next_href: `/admin/errors/${encodeURIComponent(error_id)}` },
+    parsed_error_id.success
+      ? { next_href: `/admin/errors/${parsed_error_id.data}` }
+      : undefined,
   );
 }
 
