@@ -131,9 +131,15 @@ export default async function ViewOrganizationPage(
 ): Promise<ReactElement> {
   await connection();
   const { organization_id } = await pageParams.params;
+  // Only forward a next_href when the organization_id is well-formed; a
+  // malformed id would 400 after login anyway, so the login redirect
+  // carries no destination in that case.
+  const parsed_organization_id = organizationIdSchema.safeParse(organization_id);
   return await withAuthenticatedServerComponentRouteGuard(
     (props) => PreloadedOrgPage(props, pageParams),
-    { next_href: `/org/${encodeURIComponent(organization_id)}` },
+    parsed_organization_id.success
+      ? { next_href: `/org/${parsed_organization_id.data}` }
+      : undefined,
   );
 }
 

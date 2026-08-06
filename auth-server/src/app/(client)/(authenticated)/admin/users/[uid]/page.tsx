@@ -130,9 +130,15 @@ export default async function AdminUserDetailPage(
 ): Promise<ReactElement> {
   await connection();
   const { uid } = await pageParams.params;
+  // Only forward a next_href when the uid is a well-formed UUID; a
+  // malformed uid would 400 after login anyway, so the login redirect
+  // carries no destination in that case.
+  const parsed_uid = uidSchema.safeParse(uid);
   return await withAdminServerComponentRouteGuard(
     (props) => PreloadedAdminUserDetailPage(props, pageParams),
-    { next_href: `/admin/users/${encodeURIComponent(uid)}` },
+    parsed_uid.success
+      ? { next_href: `/admin/users/${parsed_uid.data}` }
+      : undefined,
   );
 }
 

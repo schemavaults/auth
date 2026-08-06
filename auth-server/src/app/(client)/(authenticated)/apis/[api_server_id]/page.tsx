@@ -22,6 +22,10 @@ export default async function ApiServerDetailPage(
 ): Promise<ReactElement> {
   await connection();
   const { api_server_id: raw_api_server_id } = await pageParams.params;
+  // Only forward a next_href when the api_server_id is well-formed; a
+  // malformed id would 400 after login anyway, so the login redirect
+  // carries no destination in that case.
+  const parsed_api_server_id = apiServerIdSchema.safeParse(raw_api_server_id);
 
   return await withAuthenticatedServerComponentRouteGuard(
     async function ApiServerDetailPageServerComponent({
@@ -90,7 +94,9 @@ export default async function ApiServerDetailPage(
         />
       );
     },
-    { next_href: `/apis/${encodeURIComponent(raw_api_server_id)}` },
+    parsed_api_server_id.success
+      ? { next_href: `/apis/${parsed_api_server_id.data}` }
+      : undefined,
   );
 }
 

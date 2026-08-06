@@ -23,6 +23,10 @@ export default async function AppDetailPage(
 ): Promise<ReactElement> {
   await connection();
   const { client_app_id: raw_client_app_id } = await pageParams.params;
+  // Only forward a next_href when the client_app_id is well-formed; a
+  // malformed id would 400 after login anyway, so the login redirect
+  // carries no destination in that case.
+  const parsed_client_app_id = appIdSchema.safeParse(raw_client_app_id);
   return await withAuthenticatedServerComponentRouteGuard(
     async function AppDetailPageServerComponent({
       dbh,
@@ -93,7 +97,9 @@ export default async function AppDetailPage(
         />
       );
     },
-    { next_href: `/apps/${encodeURIComponent(raw_client_app_id)}` },
+    parsed_client_app_id.success
+      ? { next_href: `/apps/${parsed_client_app_id.data}` }
+      : undefined,
   );
 }
 
