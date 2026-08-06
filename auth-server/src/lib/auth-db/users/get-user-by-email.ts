@@ -1,6 +1,8 @@
 import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
+import { normalizeEmail } from "@schemavaults/auth-common";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import { sql } from "@/sql";
 import { parseUserDocument, type UserDocument } from "./parse-user-document";
 
 export async function getUserByEmail(
@@ -12,11 +14,16 @@ export async function getUserByEmail(
     console.log("[getUserByEmail] getUserByEmail: ", email);
   }
 
+  // Emails are case-insensitive: rows are stored lowercased (createUser +
+  // migration 00034) and matched on LOWER(email) so lookups also find any
+  // legacy mixed-case row.
+  const normalized_email: string = normalizeEmail(email);
+
   let rows: unknown[];
   try {
     rows = await db
       .selectFrom("users")
-      .where("email", "=", email)
+      .where(sql<string>`LOWER(email)`, "=", normalized_email)
       .limit(5)
       .select([
         "email",
@@ -38,7 +45,21 @@ export async function getUserByEmail(
   if (rows.length === 0) {
     return null;
   } else if (rows.length > 1) {
-    throw new Error("Multiple users found with the same email");
+    // Legacy case-variant duplicates created before migration 00034 made
+    // emails case-insensitive. Prefer the row whose stored email matches the
+    // input exactly, so both accounts keep working until an operator
+    // resolves the duplicates (the migration refuses to run while they
+    // exist).
+    const exact_matches = rows.filter(
+      (row) =>
+        typeof row === "object" &&
+        row !== null &&
+        (row as { email?: unknown }).email === email,
+    );
+    if (exact_matches.length !== 1) {
+      throw new Error("Multiple users found with the same email");
+    }
+    rows = exact_matches;
   }
 
   if (!rows[0]) return null;

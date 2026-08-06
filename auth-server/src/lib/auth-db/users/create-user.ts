@@ -4,6 +4,7 @@ import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import {
   inviteCodeFormatSchema,
   type InviteCodeDefinition,
+  normalizeEmail,
   passwordSchema,
 } from "@schemavaults/auth-common";
 import { hashPasswordV3, LATEST_PASSWORD_HASH_VERSION } from "@/lib/hash_password";
@@ -34,7 +35,14 @@ export async function createUser(
     throw new TypeError("'email' must be a string");
   } else if (typeof password !== "string") {
     throw new TypeError("'password' must be a string");
-  } else if (!isValidEmail(email)) {
+  }
+
+  // Emails are case-insensitive: store the canonical (lowercased) form so
+  // case-variants of one mailbox cannot register as distinct accounts.
+  // Lookups compare LOWER(email) (see get-user-by-email.ts).
+  email = normalizeEmail(email);
+
+  if (!isValidEmail(email)) {
     throw new TypeError("'email' is invalid!")
   } else if (!passwordSchema.safeParse(password).success) {
     throw new TypeError("'password' is invalid!")

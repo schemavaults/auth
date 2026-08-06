@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { passwordSchema } from './password_requirements';
+import { normalizedEmailSchema } from './normalize-email';
 
 export const emailCredentialsSchema = z.object({
-  email: z.string().email(),
+  email: normalizedEmailSchema,
   password: passwordSchema
 }).required({
   email: true,
