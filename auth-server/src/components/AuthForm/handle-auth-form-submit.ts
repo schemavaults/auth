@@ -22,6 +22,7 @@ import { performPostAuthRedirect } from "./perform-post-auth-redirect";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
 import uuidSync from "@/lib/uuid/uuidSync";
+import resolveNextHref from "@/lib/next-href";
 
 export interface PendingAuthorizationState {
   authorization_code: string;
@@ -240,6 +241,14 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   const flow_scope: string =
     url_scope && url_scope.length > 0 ? url_scope : DEFAULT_AUTH_SCOPE;
 
+  // Where to send the user after the account-page flow completes (set by
+  // the route guards when bouncing an unauthenticated user off a
+  // protected page). Unsafe / auth-flow-internal values resolve to null
+  // → default /account destination.
+  const next_href: string | null = resolveNextHref(
+    searchParams.get("next_href"),
+  );
+
   // Exchange credentials for an authorization code, or be told that the
   // user must complete an MFA challenge first.
   let authorization_code: string;
@@ -304,6 +313,13 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       // A null nonce (RP omitted it) is simply not forwarded.
       if (flow_nonce) params.set("nonce", flow_nonce);
       params.set("scope", flow_scope);
+      // Forward the post-login destination so the MFA challenge page can
+      // land the user where they were originally headed. Only meaningful
+      // for the account-page flow — third-party flows redirect to their
+      // own OAuth2 redirect_uri.
+      if (onSuccessfulAuthenticate === "account-page" && next_href) {
+        params.set("next_href", next_href);
+      }
       // Account-page logins don't carry a `challenge_time` on the URL
       // (no third-party authorize handoff), but the MFA page needs it to
       // look the verifier back up from storage after submission. The
@@ -431,6 +447,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     redirect_uri,
     state,
     nonce: flow_nonce,
+    next_href,
     auth,
     router,
     toast,

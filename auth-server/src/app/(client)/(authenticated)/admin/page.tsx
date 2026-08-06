@@ -12,7 +12,7 @@ async function AuthServerAdminDashboardPageServerComponent(): Promise<ReactEleme
 
 export default async function AuthServerAdminDashboardPage(): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard(AuthServerAdminDashboardPageServerComponent);
+  return await withAdminServerComponentRouteGuard(AuthServerAdminDashboardPageServerComponent, { next_href: "/admin" });
 }
 
 export const runtime: ServerRuntime = "nodejs";

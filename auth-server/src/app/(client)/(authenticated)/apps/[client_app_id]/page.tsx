@@ -22,6 +22,7 @@ export default async function AppDetailPage(
   pageParams: PageProps<"/apps/[client_app_id]">
 ): Promise<ReactElement> {
   await connection();
+  const { client_app_id: raw_client_app_id } = await pageParams.params;
   return await withAuthenticatedServerComponentRouteGuard(
     async function AppDetailPageServerComponent({
       dbh,
@@ -91,7 +92,8 @@ export default async function AppDetailPage(
           current_environment={current_environment}
         />
       );
-    }
+    },
+    { next_href: `/apps/${encodeURIComponent(raw_client_app_id)}` },
   );
 }
 

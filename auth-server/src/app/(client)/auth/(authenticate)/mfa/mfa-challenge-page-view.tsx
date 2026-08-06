@@ -29,6 +29,11 @@ export interface MfaChallengePageViewProps {
   // flow passes it into the token exchange so the response's nonce echo
   // can be verified.
   nonce?: string | null;
+  // Safe same-origin path (validated by `resolveNextHref` in page.tsx)
+  // to land the user on after the account-page flow completes — set
+  // when a route guard bounced them to login from a protected page.
+  // Null → default /account destination.
+  next_href?: string | null;
 }
 
 export default function MfaChallengePageView({
@@ -41,11 +46,18 @@ export default function MfaChallengePageView({
   code_challenge_method,
   state,
   nonce,
+  next_href,
 }: MfaChallengePageViewProps): ReactElement {
   const router = useRouter();
   const env = useAppEnvironment();
   const auth = useAuth();
   const { toast } = useToast();
+
+  // When the user has to restart the login flow, keep their original
+  // destination on the login URL so the retry still lands them there.
+  const login_href: string = next_href
+    ? `/auth/login?next_href=${encodeURIComponent(next_href)}`
+    : "/auth/login";
 
   // Flipped to `true` the moment a factor (or passkey) verifies
   // successfully, before we clear the stashed factor list and kick off
@@ -165,7 +177,7 @@ export default function MfaChallengePageView({
           description:
             "Your sign-in attempt expired. Please log in again.",
         });
-        router.replace("/auth/login");
+        router.replace(login_href);
         return;
       }
       try {
@@ -198,7 +210,7 @@ export default function MfaChallengePageView({
         return;
       }
 
-      router.replace("/account");
+      router.replace(next_href ?? "/account");
     },
     [
       on_successful_authenticate,
@@ -207,6 +219,8 @@ export default function MfaChallengePageView({
       code_challenge_method,
       state,
       nonce,
+      next_href,
+      login_href,
       env,
       router,
       auth,
@@ -218,8 +232,8 @@ export default function MfaChallengePageView({
 
   const onChallengeExpired = useCallback(() => {
     if (challenge_id) clearFactors(challenge_id);
-    router.replace("/auth/login");
-  }, [challenge_id, clearFactors, router]);
+    router.replace(login_href);
+  }, [challenge_id, clearFactors, login_href, router]);
 
   // Read the factor list from the zustand store (persisted to
   // sessionStorage). The login form wrote it there after receiving
@@ -287,7 +301,7 @@ export default function MfaChallengePageView({
           type="button"
           variant="link"
           className="h-auto p-0 text-sm text-muted-foreground"
-          onClick={() => router.replace("/auth/login")}
+          onClick={() => router.replace(login_href)}
         >
           Back to login
         </Button>

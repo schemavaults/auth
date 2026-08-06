@@ -44,7 +44,7 @@ async function PreloadedUsersPage({
 
 export default async function UsersAdminPageServerComponent(): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard(PreloadedUsersPage);
+  return await withAdminServerComponentRouteGuard(PreloadedUsersPage, { next_href: "/admin/users" });
 }
 
 export const runtime: ServerRuntime = "nodejs";

@@ -27,6 +27,7 @@ import AlreadyAuthenticatedOnLoginOrRegisterPage from "../AlreadyAuthenticatedOn
 import toPartialAppInfo from "@/lib/PartialAppInfo";
 import { connection } from "next/server";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
+import resolveNextHref from "@/lib/next-href";
 
 export default async function RegisterPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -38,6 +39,10 @@ export default async function RegisterPage(props: {
 
   const searchParams = await props.searchParams;
   validateAppIdSearchParamOrRedirectWithError(searchParams.app_id);
+
+  // Where to send the user after they authenticate (survives the
+  // login ↔ register swap link, which forwards all search params).
+  const next_href: string | null = resolveNextHref(searchParams.next_href);
 
   await using dbh = ServerlessDatabase.createDBH();
 
@@ -128,6 +133,7 @@ export default async function RegisterPage(props: {
       dbh,
       app,
       on_successful_authenticate,
+      next_href,
       uid: alreadyAuthenticated.uid,
       code_challenge: typeof searchParams.code_challenge === 'string' ? searchParams.code_challenge : null,
       code_challenge_method: typeof searchParams.code_challenge_method === 'string' ? searchParams.code_challenge_method : null,

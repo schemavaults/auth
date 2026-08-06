@@ -36,7 +36,7 @@ async function PreloadedInviteCodesPage({
 
 export default async function InviteCodesServerComponent(): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard(PreloadedInviteCodesPage);
+  return await withAdminServerComponentRouteGuard(PreloadedInviteCodesPage, { next_href: "/admin/invite_codes" });
 }
 
 export const runtime: ServerRuntime = "nodejs";

@@ -21,6 +21,7 @@ export default async function ApiServerDetailPage(
   pageParams: PageProps<"/apis/[api_server_id]">
 ): Promise<ReactElement> {
   await connection();
+  const { api_server_id: raw_api_server_id } = await pageParams.params;
 
   return await withAuthenticatedServerComponentRouteGuard(
     async function ApiServerDetailPageServerComponent({
@@ -88,7 +89,8 @@ export default async function ApiServerDetailPage(
           current_environment={current_environment}
         />
       );
-    }
+    },
+    { next_href: `/apis/${encodeURIComponent(raw_api_server_id)}` },
   );
 }
 

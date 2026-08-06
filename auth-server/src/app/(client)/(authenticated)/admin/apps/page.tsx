@@ -27,7 +27,7 @@ async function AdminAppsPageServerComponent(
 
 export default async function AdminAppsPage(): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard(AdminAppsPageServerComponent)
+  return await withAdminServerComponentRouteGuard(AdminAppsPageServerComponent, { next_href: "/admin/apps" })
 };
 
 export const runtime: ServerRuntime = "nodejs";

@@ -130,8 +130,10 @@ export default async function ViewOrganizationPage(
   pageParams: PageProps<"/org/[organization_id]">,
 ): Promise<ReactElement> {
   await connection();
-  return await withAuthenticatedServerComponentRouteGuard((props) =>
-    PreloadedOrgPage(props, pageParams),
+  const { organization_id } = await pageParams.params;
+  return await withAuthenticatedServerComponentRouteGuard(
+    (props) => PreloadedOrgPage(props, pageParams),
+    { next_href: `/org/${encodeURIComponent(organization_id)}` },
   );
 }
 

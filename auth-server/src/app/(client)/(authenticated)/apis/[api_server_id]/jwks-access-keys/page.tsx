@@ -26,6 +26,7 @@ export default async function JwksAccessKeysPage(
   pageParams: PageProps<"/apis/[api_server_id]/jwks-access-keys">
 ): Promise<ReactElement> {
   await connection();
+  const { api_server_id: raw_api_server_id } = await pageParams.params;
   return await withAuthenticatedServerComponentRouteGuard(
     async function JwksAccessKeysPageServerComponent({
       dbh,
@@ -99,7 +100,8 @@ export default async function JwksAccessKeysPage(
           }}
         />
       );
-    }
+    },
+    { next_href: `/apis/${encodeURIComponent(raw_api_server_id)}/jwks-access-keys` },
   );
 }
 

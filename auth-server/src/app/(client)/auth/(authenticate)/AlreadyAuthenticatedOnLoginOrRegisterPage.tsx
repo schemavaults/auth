@@ -30,6 +30,11 @@ export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   debug: boolean;
   dbh: ServerlessDatabase;
   uid: UserData['uid'];
+  // Safe same-origin path to return the user to for the account-page
+  // flow (already validated by `resolveNextHref` upstream). Null →
+  // default /account destination. Third-party flows ignore this; their
+  // destination is the OAuth2 redirect_uri.
+  next_href?: string | null;
   code_challenge: string | null;
   code_challenge_method: string | null;
   challenge_time_str: string | null;
@@ -54,7 +59,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
   }
 
   if (on_successful_authenticate === 'account-page') {
-    return redirect("/account");
+    return redirect(opts.next_href ?? "/account");
   }
 
   if (!app) {

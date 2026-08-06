@@ -57,8 +57,10 @@ export default async function AdminErrorDetailPage(
   pageParams: PageProps<"/admin/errors/[error_id]">,
 ): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard((props) =>
-    PreloadedAdminErrorDetailPage(props, pageParams),
+  const { error_id } = await pageParams.params;
+  return await withAdminServerComponentRouteGuard(
+    (props) => PreloadedAdminErrorDetailPage(props, pageParams),
+    { next_href: `/admin/errors/${encodeURIComponent(error_id)}` },
   );
 }
 

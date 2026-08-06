@@ -34,7 +34,10 @@ async function CreateOrganizationPageServerComponent(
 
 export default async function CreateOrganizationPage(): Promise<ReactElement> {
   await connection();
-  return await withAuthenticatedServerComponentRouteGuard(CreateOrganizationPageServerComponent);
+  return await withAuthenticatedServerComponentRouteGuard(
+    CreateOrganizationPageServerComponent,
+    { next_href: "/org/new" },
+  );
 }
 
 export const runtime: ServerRuntime = "nodejs";

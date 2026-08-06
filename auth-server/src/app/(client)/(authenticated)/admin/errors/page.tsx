@@ -32,7 +32,7 @@ async function PreloadedAdminErrorsPage({
 
 export default async function AdminErrorsServerComponent(): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard(PreloadedAdminErrorsPage);
+  return await withAdminServerComponentRouteGuard(PreloadedAdminErrorsPage, { next_href: "/admin/errors" });
 }
 
 export const runtime: ServerRuntime = "nodejs";

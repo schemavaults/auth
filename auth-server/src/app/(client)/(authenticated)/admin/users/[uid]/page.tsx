@@ -129,8 +129,10 @@ export default async function AdminUserDetailPage(
   pageParams: PageProps<"/admin/users/[uid]">,
 ): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard((props) =>
-    PreloadedAdminUserDetailPage(props, pageParams),
+  const { uid } = await pageParams.params;
+  return await withAdminServerComponentRouteGuard(
+    (props) => PreloadedAdminUserDetailPage(props, pageParams),
+    { next_href: `/admin/users/${encodeURIComponent(uid)}` },
   );
 }
 

@@ -29,6 +29,11 @@ export interface PerformPostAuthRedirectOptions {
   // flows verify in their own SDK context. Null when the flow carried no
   // nonce (an OIDC RP may omit it) — nothing is echoed/verified then.
   nonce: string | null;
+  // Safe same-origin path (already validated by `resolveNextHref`) to
+  // send the user to after the account-page flow completes — set when
+  // a route guard bounced them to login from a protected page. Null →
+  // default /account destination. Third-party flows ignore this.
+  next_href: string | null;
   auth: ReturnType<typeof useAuth>;
   router: ReturnType<typeof useRouter>;
   toast: ReturnType<typeof useToast>["toast"];
@@ -47,6 +52,7 @@ export async function performPostAuthRedirect(
     redirect_uri,
     state,
     nonce,
+    next_href,
     auth,
     router,
     toast,
@@ -86,7 +92,7 @@ export async function performPostAuthRedirect(
         nonce,
       );
 
-      router.push("/account");
+      router.push(next_href ?? "/account");
       break;
     case "redirect-with-authorization-code":
       if (env !== "production") {
