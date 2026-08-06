@@ -5,8 +5,13 @@ function generate_random_alphanumeric_code_of_given_length(
     throw new Error("Length must be a positive number");
   }
 
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  // Lowercase-only alphabet: generated codes feed the local part of test
+  // user emails (e.g. `test-user-${code}@example.com`), and the auth server
+  // stores emails lowercased. Uppercase here would make stored/displayed
+  // emails differ from the generated string, breaking every exact-match
+  // assertion. Case-insensitivity itself is covered by the dedicated
+  // register/EmailCaseInsensitivity.cy.ts spec.
+  const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
   let result = "";
   const charactersLength = characters.length;
   for (let i = 0; i < length; i++) {
