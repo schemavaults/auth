@@ -20,8 +20,19 @@ export interface IProtectedAdminServerComponentPageProps extends IBaseProtectedA
   redis: RedisCache;
 }
 
+export interface IWithAdminServerComponentRouteGuardWrapperOpts {
+  /**
+   * Same-origin path of the admin page being protected (e.g.
+   * `/admin/users`). Forwarded to `/auth/login?next_href=...` when an
+   * unauthenticated user is bounced to the login page, so the
+   * post-login redirect can return them to where they were headed.
+   */
+  next_href?: string;
+}
+
 export async function withAdminServerComponentRouteGuard(
-  server_component: TProtectedAdminPageServerComponent<IProtectedAdminServerComponentPageProps>
+  server_component: TProtectedAdminPageServerComponent<IProtectedAdminServerComponentPageProps>,
+  wrapper_opts?: IWithAdminServerComponentRouteGuardWrapperOpts,
 ): Promise<ReactElement> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH()
   await using redis: RedisCache = RedisCache.createConnection()
@@ -34,6 +45,7 @@ export async function withAdminServerComponentRouteGuard(
       custom_is_authorized_check: async (props): Promise<boolean> => props.user.admin === true,
       jwt_keys_manager,
       api_server_id: getAuthServerAppId(),
+      next_href: wrapper_opts?.next_href,
       custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
     }
   )

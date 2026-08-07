@@ -32,7 +32,7 @@ async function PreloadedAdminTracesPage({
 
 export default async function AdminTracesServerComponent(): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard(PreloadedAdminTracesPage);
+  return await withAdminServerComponentRouteGuard(PreloadedAdminTracesPage, { next_href: "/admin/traces" });
 }
 
 export const runtime: ServerRuntime = "nodejs";

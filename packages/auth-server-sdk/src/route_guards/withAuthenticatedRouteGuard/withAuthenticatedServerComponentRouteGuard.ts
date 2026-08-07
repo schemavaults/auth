@@ -66,6 +66,17 @@ export interface IWithAuthenticatedServerComponentRouteGuardAdditionalOptions<
    * should pass `/error` since its error route lives at the app root.
    */
   error_page_url?: string;
+  /**
+   * Same-origin path (e.g. `/org/acme`) of the page this guard is
+   * protecting. When an unauthenticated user is redirected to
+   * `/auth/login`, the value is forwarded as the `next_href` query param
+   * so the post-login flow can send them back to where they were
+   * headed. Server components cannot introspect the request URL, so the
+   * page invoking the guard supplies its own path here. Values that are
+   * not safe internal absolute paths are dropped (see
+   * `sanitizeNextHref` in `@schemavaults/auth-common`).
+   */
+  next_href?: string;
   debug?: boolean;
 }
 
@@ -299,8 +310,13 @@ export async function withAuthenticatedServerComponentRouteGuard<
     );
   }
 
+  // Where to send the user back to after they authenticate. Sanitized
+  // inside redirectToLogin; unsafe values fall back to no param.
+  const next_href: string | undefined =
+    typeof opts?.next_href === "string" ? opts.next_href : undefined;
+
   if (token_sources.length === 0) {
-    redirectToLogin(redirect);
+    redirectToLogin(redirect, next_href);
   }
 
   const route_guard_factory = new RouteGuardFactory({
@@ -316,7 +332,7 @@ export async function withAuthenticatedServerComponentRouteGuard<
     );
 
   if (!route_guard.user) {
-    redirectToLogin(redirect);
+    redirectToLogin(redirect, next_href);
   }
   const user: UserData = route_guard.user;
 

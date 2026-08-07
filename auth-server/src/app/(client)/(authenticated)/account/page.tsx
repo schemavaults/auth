@@ -170,7 +170,10 @@ async function AuthServerAccountDashboardPageServerComponent(
 
 export default async function AuthServerAccountDashboardPage(): Promise<ReactElement> {
   await connection();
-  return await withAuthenticatedServerComponentRouteGuard(AuthServerAccountDashboardPageServerComponent);
+  return await withAuthenticatedServerComponentRouteGuard(
+    AuthServerAccountDashboardPageServerComponent,
+    { next_href: "/account" },
+  );
 }
 
 export const runtime: ServerRuntime = "nodejs";

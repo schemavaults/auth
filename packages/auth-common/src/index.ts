@@ -138,6 +138,11 @@ export type { PaginationOptions } from "./pagination";
 
 export { timingSafeStringEqual } from "./timing-safe-string-equal";
 
+export {
+  sanitizeNextHref,
+  MAX_NEXT_HREF_LENGTH,
+} from "./sanitize-next-href";
+
 export { isOriginInAllowedList } from "./cors";
 
 export {

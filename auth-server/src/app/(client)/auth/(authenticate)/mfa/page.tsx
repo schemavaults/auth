@@ -11,6 +11,7 @@ import {
   OAuth2StateValidationError,
 } from "@schemavaults/auth-common";
 import MfaChallengePageView from "./mfa-challenge-page-view";
+import resolveNextHref from "@/lib/next-href";
 
 function readString(
   searchParams: { [key: string]: string | string[] | undefined },
@@ -79,6 +80,12 @@ export default async function MfaChallengePage(props: {
   // challenge record).
   const nonce: string | null = readString(searchParams, "nonce") ?? null;
 
+  // Post-login destination forwarded from the login form (originally
+  // set by a route guard). Unsafe values resolve to null → /account.
+  const next_href: string | null = resolveNextHref(
+    readString(searchParams, "next_href"),
+  );
+
   return (
     <MfaChallengePageView
       challenge_id={challenge_id}
@@ -94,6 +101,7 @@ export default async function MfaChallengePage(props: {
       code_challenge_method={code_challenge_method}
       state={state}
       nonce={nonce}
+      next_href={next_href}
     />
   );
 }

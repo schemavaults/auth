@@ -34,7 +34,7 @@ async function AdminApisPageServerComponent({ dbh, user }: IProtectedAdminServer
 
 export default async function AdminAPIsPage(): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard(AdminApisPageServerComponent);
+  return await withAdminServerComponentRouteGuard(AdminApisPageServerComponent, { next_href: "/admin/apis" });
 }
 
 export const runtime: ServerRuntime = "nodejs";

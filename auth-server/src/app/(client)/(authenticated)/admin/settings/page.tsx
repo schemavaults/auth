@@ -40,7 +40,7 @@ async function PreloadedAdminSettingsPage({
 
 export default async function AdminSettingsServerComponent(): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard(PreloadedAdminSettingsPage);
+  return await withAdminServerComponentRouteGuard(PreloadedAdminSettingsPage, { next_href: "/admin/settings" });
 }
 
 export const runtime: ServerRuntime = "nodejs";

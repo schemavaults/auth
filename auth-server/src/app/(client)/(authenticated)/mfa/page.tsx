@@ -26,6 +26,7 @@ export default async function AuthServerMfaDashboardPage(): Promise<ReactElement
   await connection();
   return await withAuthenticatedServerComponentRouteGuard(
     AuthServerMfaDashboardPageServerComponent,
+    { next_href: "/mfa" },
   );
 }
 

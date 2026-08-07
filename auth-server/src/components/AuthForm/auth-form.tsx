@@ -49,6 +49,7 @@ import AuthFormSwapLink from "./swap-auth-type-link";
 import { authPasswordRequirements } from "./password-requirements";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { AppAuthorizationConsentScreen } from "@/components/AppAuthorizationConsentScreen";
+import resolveNextHref from "@/lib/next-href";
 
 
 interface AuthFormProps<T extends "login" | "register">
@@ -172,6 +173,7 @@ export function AuthForm<T extends "login" | "register">({
         redirect_uri: pendingAuthorization.redirect_uri,
         state: pendingAuthorization.state,
         nonce: pendingAuthorization.nonce,
+        next_href: resolveNextHref(searchParams.get("next_href")),
         auth,
         router,
         toast,
