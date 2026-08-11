@@ -145,6 +145,8 @@ export {
 
 export { isOriginInAllowedList } from "./cors";
 
+export { isRedirectUriInCallbackAllowlist } from "./oauth2";
+
 export {
   oauth2StateSchema,
   OAUTH2_STATE_VSCHAR_REGEX,

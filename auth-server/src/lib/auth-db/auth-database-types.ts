@@ -4,7 +4,13 @@ import type {
   AppsToApisPermissionsTable,
   AppsToHardcodedApisPermissionsTable,
 } from "./apis";
-import type { AppDomainsTable, AppsTable, AuthorizedAppsTable } from "./apps";
+import type {
+  AppCallbackUrlsTable,
+  AppClientSecretsTable,
+  AppDomainsTable,
+  AppsTable,
+  AuthorizedAppsTable,
+} from "./apps";
 import type { JwtKeysTable } from "./jwt_keys";
 import type {
   OrganizationMembershipRolesTable,
@@ -36,6 +42,8 @@ import type {
 export type AuthDatabase = {
   apps: AppsTable;
   app_domains: AppDomainsTable;
+  app_callback_urls: AppCallbackUrlsTable;
+  app_client_secrets: AppClientSecretsTable;
   api_servers: ApiServersTable;
   api_server_domains: ApiServerDomainsTable;
   authorized_apps: AuthorizedAppsTable;

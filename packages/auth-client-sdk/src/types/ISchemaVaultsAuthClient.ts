@@ -31,8 +31,13 @@ import type {
   SchemaVaultsApiServerDefinition,
   SchemaVaultsApiServerDomainRef,
   SchemaVaultsApp,
+  SchemaVaultsAppCallbackUrlRef,
   SchemaVaultsAppDomainRef,
 } from "@schemavaults/app-definitions";
+import type {
+  ClientApplicationSecretMetadata,
+  GeneratedClientApplicationSecret,
+} from "@/lib/client-application-secret";
 
 export interface ISchemaVaultsAuthClient {
   version: string;
@@ -413,6 +418,86 @@ export interface ISchemaVaultsAuthClient {
   listClientApplicationDomains: (
     app_id: AppId,
   ) => Promise<SchemaVaultsAppDomainRef[]>;
+
+  /**
+   * @name listClientApplicationCallbackUrls
+   * @description List the explicit OAuth2/OIDC callback URLs registered for a
+   * client application. When any exist for an environment, redirect_uri
+   * validation in that environment requires an exact match against them.
+   * @argument app_id The unique ID of the client application
+   * @returns A promise resolving to an array of SchemaVaultsAppCallbackUrlRef objects
+   */
+  listClientApplicationCallbackUrls: (
+    app_id: AppId,
+  ) => Promise<SchemaVaultsAppCallbackUrlRef[]>;
+
+  /**
+   * @name createClientApplicationCallbackUrl
+   * @description Register an explicit OAuth2/OIDC callback URL for a client
+   * application in the auth-server database
+   * @argument app_callback_url_definition Callback URL definition to write to database
+   * @returns A promise resolving if creation succeeds
+   */
+  createClientApplicationCallbackUrl: (
+    app_callback_url_definition: SchemaVaultsAppCallbackUrlRef,
+  ) => Promise<void>;
+
+  /**
+   * @name deleteClientApplicationCallbackUrl
+   * @description Remove an explicit OAuth2/OIDC callback URL from a client
+   * application's allowlist
+   * @argument app_id The unique ID of the client application
+   * @argument app_callback_url_ref_id The unique ID of the callback URL entry
+   * @returns A promise resolving if deletion succeeds
+   */
+  deleteClientApplicationCallbackUrl: (
+    app_id: AppId,
+    app_callback_url_ref_id: string,
+  ) => Promise<void>;
+
+  /**
+   * @name getClientApplicationSecretMetadata
+   * @description Load metadata about a client application's OAuth2/OIDC client
+   * secret (whether one exists and when it was generated/rotated). The secret
+   * itself is never retrievable.
+   * @argument app_id The unique ID of the client application
+   * @returns A promise resolving to the client secret metadata
+   */
+  getClientApplicationSecretMetadata: (
+    app_id: AppId,
+  ) => Promise<ClientApplicationSecretMetadata>;
+
+  /**
+   * @name generateClientApplicationSecret
+   * @description Generate a client secret for an app that has none, making it
+   * a confidential OAuth2/OIDC client. The plaintext secret is returned once
+   * and never retrievable again.
+   * @argument app_id The unique ID of the client application
+   * @returns A promise resolving to the generated secret
+   */
+  generateClientApplicationSecret: (
+    app_id: AppId,
+  ) => Promise<GeneratedClientApplicationSecret>;
+
+  /**
+   * @name rotateClientApplicationSecret
+   * @description Rotate (or create) a client application's client secret on
+   * demand. The previous secret is invalidated immediately.
+   * @argument app_id The unique ID of the client application
+   * @returns A promise resolving to the new secret
+   */
+  rotateClientApplicationSecret: (
+    app_id: AppId,
+  ) => Promise<GeneratedClientApplicationSecret>;
+
+  /**
+   * @name deleteClientApplicationSecret
+   * @description Remove a client application's client secret, reverting it to
+   * a public OAuth2/OIDC client
+   * @argument app_id The unique ID of the client application
+   * @returns A promise resolving if deletion succeeds
+   */
+  deleteClientApplicationSecret: (app_id: AppId) => Promise<void>;
 
   /**
    * @name listApiServerDomains

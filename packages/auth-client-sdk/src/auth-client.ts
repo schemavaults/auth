@@ -49,6 +49,10 @@ import {
 import type { Credentials } from "@/types/credentials";
 import type { ISchemaVaultsAuthClient } from "@/types/ISchemaVaultsAuthClient";
 import type {
+  ClientApplicationSecretMetadata,
+  GeneratedClientApplicationSecret,
+} from "@/lib/client-application-secret";
+import type {
   AuthClientEvent,
   OnAuthStateChangedListenerRef,
 } from "@/lib/auth-client-events";
@@ -63,6 +67,7 @@ import {
   type SchemaVaultsApiServerDefinition,
   type SchemaVaultsApiServerDomainRef,
   type SchemaVaultsAppDomainRef,
+  type SchemaVaultsAppCallbackUrlRef,
   type ListAppsQueryResponse,
   type ListAppsQueryType,
   type ListApiServersQueryResponse,
@@ -1589,6 +1594,108 @@ export class SchemaVaultsAuthClient
   ): Promise<SchemaVaultsAppDomainRef[]> {
     const fn = await import("@/lib/list-client-application-domains").then(
       (m) => m.default,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async listClientApplicationCallbackUrls(
+    app_id: AppId,
+  ): Promise<SchemaVaultsAppCallbackUrlRef[]> {
+    const fn = await import(
+      "@/lib/list-client-application-callback-urls"
+    ).then((m) => m.default);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async createClientApplicationCallbackUrl(
+    app_callback_url_definition: SchemaVaultsAppCallbackUrlRef,
+  ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess(
+      "createClientApplicationCallbackUrl",
+    );
+    const fn = await import(
+      "@/lib/create-client-application-callback-url"
+    ).then((m) => m.default);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_callback_url_definition,
+    });
+  }
+
+  public async deleteClientApplicationCallbackUrl(
+    app_id: AppId,
+    app_callback_url_ref_id: string,
+  ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess(
+      "deleteClientApplicationCallbackUrl",
+    );
+    const fn = await import(
+      "@/lib/delete-client-application-callback-url"
+    ).then((m) => m.default);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+      app_callback_url_ref_id,
+    });
+  }
+
+  public async getClientApplicationSecretMetadata(
+    app_id: AppId,
+  ): Promise<ClientApplicationSecretMetadata> {
+    const fn = await import("@/lib/client-application-secret").then(
+      (m) => m.getClientApplicationSecretMetadata,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async generateClientApplicationSecret(
+    app_id: AppId,
+  ): Promise<GeneratedClientApplicationSecret> {
+    this.assertAppAndApiManagementWriteAccess(
+      "generateClientApplicationSecret",
+    );
+    const fn = await import("@/lib/client-application-secret").then(
+      (m) => m.generateClientApplicationSecret,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async rotateClientApplicationSecret(
+    app_id: AppId,
+  ): Promise<GeneratedClientApplicationSecret> {
+    this.assertAppAndApiManagementWriteAccess("rotateClientApplicationSecret");
+    const fn = await import("@/lib/client-application-secret").then(
+      (m) => m.rotateClientApplicationSecret,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async deleteClientApplicationSecret(app_id: AppId): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("deleteClientApplicationSecret");
+    const fn = await import("@/lib/client-application-secret").then(
+      (m) => m.deleteClientApplicationSecret,
     );
     return await fn({
       adapter: this.adapter,

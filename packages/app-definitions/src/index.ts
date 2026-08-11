@@ -4,6 +4,8 @@ export type * from "./app-id";
 export {
   schemaVaultsAppDefinitionSchema,
   schemaVaultsAppDomainRefSchema,
+  schemaVaultsAppCallbackUrlRefSchema,
+  APP_CALLBACK_URL_MAX_LENGTH,
 } from "./client-app-definition";
 export type * from "./client-app-definition";
 

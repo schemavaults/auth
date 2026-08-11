@@ -3,6 +3,7 @@ import {
   type SchemaVaultsApp,
   type ListAppsQueryType,
   type SchemaVaultsAppDomainRef,
+  type SchemaVaultsAppCallbackUrlRef,
   schemaVaultsAppDefinitionSchema,
   schemaVaultsAppDomainRefSchema,
   appIdSchema,
@@ -13,6 +14,7 @@ import {
   getHardcodedAppDomains,
   type AppId,
 } from "@schemavaults/app-definitions";
+import type { AppClientSecret } from "./app-client-secrets-table";
 import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import type { Kysely } from "@schemavaults/dbh";
@@ -240,6 +242,72 @@ export class SchemaVaultsAppRegistry {
 
   public async deleteApp(app_id: string) {
     const fn = await import("./delete-app").then(m => m.default);
+    return await fn(this.db, app_id);
+  }
+
+  public async getAppCallbackUrls(
+    app_id: AppId,
+  ): Promise<readonly SchemaVaultsAppCallbackUrlRef[]> {
+    const fn = await import("./app-callback-urls").then(
+      (m) => m.listAppCallbackUrls,
+    );
+    return await fn(this.db, app_id);
+  }
+
+  public async getAppCallbackUrlsForEnvironment(
+    app_id: AppId,
+    environment: SchemaVaultsAppEnvironment,
+  ): Promise<readonly SchemaVaultsAppCallbackUrlRef[]> {
+    const fn = await import("./app-callback-urls").then(
+      (m) => m.listAppCallbackUrlsForEnvironment,
+    );
+    return await fn(this.db, app_id, environment);
+  }
+
+  public async addAppCallbackUrl(
+    app_id: AppId,
+    new_callback_url: SchemaVaultsAppCallbackUrlRef,
+  ): Promise<void> {
+    const fn = await import("./app-callback-urls").then(
+      (m) => m.addAppCallbackUrl,
+    );
+    return await fn(this.db, app_id, new_callback_url);
+  }
+
+  public async removeAppCallbackUrl(
+    app_id: AppId,
+    app_callback_url_ref_id: string,
+  ): Promise<boolean> {
+    const fn = await import("./app-callback-urls").then(
+      (m) => m.removeAppCallbackUrl,
+    );
+    return await fn(this.db, app_id, app_callback_url_ref_id);
+  }
+
+  public async getClientSecretRecord(
+    app_id: AppId,
+  ): Promise<AppClientSecret | null> {
+    const fn = await import("./app-client-secrets").then(
+      (m) => m.getAppClientSecretRecord,
+    );
+    return await fn(this.db, app_id);
+  }
+
+  public async setClientSecret(
+    app_id: AppId,
+    secret_hash: string,
+    created_by: string | null,
+  ): Promise<void> {
+    const fn = await import("./app-client-secrets").then(
+      (m) => m.setAppClientSecret,
+    );
+    return await fn(this.db, app_id, secret_hash, created_by);
+  }
+
+  public async deleteClientSecret(app_id: AppId): Promise<boolean> {
+    const fn = await import("./app-client-secrets").then(
+      (m) => m.deleteAppClientSecret,
+    );
     return await fn(this.db, app_id);
   }
 

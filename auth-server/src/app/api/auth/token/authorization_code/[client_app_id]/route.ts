@@ -23,6 +23,10 @@ import {
   validateCorsForClientApp,
   applyCorsHeadersFromResult,
 } from "@/lib/cors/cors-for-client-app";
+import {
+  authenticateTokenEndpointClient,
+  parseBasicClientCredentials,
+} from "@/lib/oauth2/authenticate-token-endpoint-client";
 import handleAuthorizationCodeGrant from "./authorization_code_grant";
 
 const grant_type = "authorization_code" as const;
@@ -157,6 +161,40 @@ export async function POST(
         message: "Mismatched grant type",
       } satisfies RequestTokensResult,
       { status: 400 }
+    ));
+  }
+
+  // Confidential clients (apps with a registered client secret) must
+  // authenticate on every token request; this surface redeems the same
+  // authorization codes as /api/oidc/token, so skipping the check here
+  // would let anyone bypass client authentication entirely.
+  const basic_credentials = parseBasicClientCredentials(
+    req.headers.get("Authorization"),
+  );
+  if (basic_credentials === "malformed") {
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Malformed Basic Authorization header",
+      } satisfies RequestTokensResult,
+      { status: 400 }
+    ));
+  }
+  const clientAuth = await authenticateTokenEndpointClient({
+    db: dbh.db,
+    client_app_id: url_client_app_id,
+    basic_credentials,
+    post_client_secret: body.client_secret ?? null,
+  });
+  if (!clientAuth.ok) {
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: clientAuth.error_description,
+      } satisfies RequestTokensResult,
+      { status: clientAuth.status }
     ));
   }
 

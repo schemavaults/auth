@@ -65,6 +65,7 @@ export function oidcTokenErrorResponse(
   error: OidcTokenErrorCode,
   error_description: string | null = null,
   status: number = 400,
+  extra_headers: Record<string, string> = {},
 ): NextResponse {
   return NextResponse.json(
     {
@@ -77,6 +78,7 @@ export function oidcTokenErrorResponse(
         "Cache-Control": "no-store",
         Pragma: "no-cache",
         "Access-Control-Allow-Origin": "*",
+        ...extra_headers,
       },
     },
   );

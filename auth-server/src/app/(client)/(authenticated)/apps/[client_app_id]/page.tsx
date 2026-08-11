@@ -6,7 +6,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import type { ReactElement } from "react";
 import AppDetailPageView from "./app-detail-page-view";
-import { type AppId, appIdSchema, type SchemaVaultsApp, type SchemaVaultsAppDomainRef, getAppEnvironment } from "@schemavaults/app-definitions";
+import { type AppId, appIdSchema, type SchemaVaultsApp, type SchemaVaultsAppCallbackUrlRef, type SchemaVaultsAppDomainRef, getAppEnvironment } from "@schemavaults/app-definitions";
 import { isHardcodedAppId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
@@ -80,6 +80,8 @@ export default async function AppDetailPage(
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
       const connected_api_servers = await permissions_registry.listConnectedApiServers(client_app_id);
       const connected_domains: readonly SchemaVaultsAppDomainRef[] = await app_registry.getAppDomains(client_app_id);
+      const callback_urls: readonly SchemaVaultsAppCallbackUrlRef[] = await app_registry.getAppCallbackUrls(client_app_id);
+      const client_secret_record = hardcoded ? null : await app_registry.getClientSecretRecord(client_app_id);
 
       const orgRegistry = new OrganizationsRegistry(dbh.db)
       const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)
@@ -91,6 +93,16 @@ export default async function AppDetailPage(
           app={app}
           connected_api_servers={connected_api_servers}
           connected_domains={connected_domains}
+          callback_urls={callback_urls}
+          client_secret_metadata={
+            client_secret_record
+              ? {
+                  has_client_secret: true,
+                  created_at: client_secret_record.created_at,
+                  updated_at: client_secret_record.updated_at,
+                }
+              : { has_client_secret: false, created_at: null, updated_at: null }
+          }
           hardcoded={hardcoded}
           isOrgOwner={isOrgOwner}
           current_environment={current_environment}

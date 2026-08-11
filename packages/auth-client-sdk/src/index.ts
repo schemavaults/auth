@@ -10,6 +10,10 @@ export type {
   IAuthClientConstructorOptions,
 } from "@/types/IAuthClientConstructorOptions";
 export type { ISchemaVaultsAuthClient } from "@/types/ISchemaVaultsAuthClient";
+export type {
+  ClientApplicationSecretMetadata,
+  GeneratedClientApplicationSecret,
+} from "@/lib/client-application-secret";
 export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
 
 export type { UserData } from "@/types/UserData";

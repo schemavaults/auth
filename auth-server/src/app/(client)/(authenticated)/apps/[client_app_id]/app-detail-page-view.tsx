@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
-import { isHardcodedApiServerId, type SchemaVaultsApp, type SchemaVaultsAppDomainRef, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { isHardcodedApiServerId, type SchemaVaultsApp, type SchemaVaultsAppCallbackUrlRef, type SchemaVaultsAppDomainRef, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
+import { AppCallbackUrlsCard, AppClientSecretCard } from "@/components/AppOAuthSecurity";
+import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
 import { ExternalLink, Trash2, Unplug } from "lucide-react";
@@ -16,10 +18,18 @@ export interface ConnectedApiServer {
   created_at: number;
 }
 
+export interface AppClientSecretMetadataProps {
+  has_client_secret: boolean;
+  created_at: number | null;
+  updated_at: number | null;
+}
+
 export interface AppDetailPageViewProps {
   app: SchemaVaultsApp;
   connected_api_servers: readonly ConnectedApiServer[];
   connected_domains: readonly SchemaVaultsAppDomainRef[];
+  callback_urls: readonly SchemaVaultsAppCallbackUrlRef[];
+  client_secret_metadata: AppClientSecretMetadataProps;
   hardcoded: boolean;
   isOrgOwner: boolean;
   current_environment: SchemaVaultsAppEnvironment;
@@ -81,6 +91,8 @@ export default function AppDetailPageView({
   app,
   connected_api_servers,
   connected_domains,
+  callback_urls,
+  client_secret_metadata,
   hardcoded,
   isOrgOwner,
   current_environment,
@@ -151,6 +163,26 @@ export default function AppDetailPageView({
           )}
         </CardContent>
       </Card>
+
+      {!hardcoded && (
+        <AppCallbackUrlsCard
+          app_id={app.app_id}
+          callback_urls={callback_urls}
+          current_environment={current_environment}
+          canManage={isOrgOwner}
+          uuid={uuidSync}
+        />
+      )}
+
+      {!hardcoded && (
+        <AppClientSecretCard
+          app_id={app.app_id}
+          has_client_secret={client_secret_metadata.has_client_secret}
+          created_at={client_secret_metadata.created_at}
+          updated_at={client_secret_metadata.updated_at}
+          canManage={isOrgOwner}
+        />
+      )}
 
       <Card>
         <CardHeader>
