@@ -24,6 +24,18 @@ export default function IndexPage(): ReactElement {
       <a href="/openid-client/login" data-testid="openid-client-login-link">
         <Button variant="outline">Sign in with openid-client</Button>
       </a>
+      {/* Same standard-OIDC flow, but as a confidential client: the app
+          has a client secret registered on the auth server, so the token
+          exchange authenticates with client_secret_basic on top of
+          PKCE. */}
+      <a
+        href="/openid-client-confidential/login"
+        data-testid="openid-client-confidential-login-link"
+      >
+        <Button variant="outline">
+          Sign in with openid-client (confidential client)
+        </Button>
+      </a>
     </main>
   );
 }
