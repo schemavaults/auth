@@ -158,6 +158,26 @@ export default defineConfig({
                 "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY"
               ],
             );
+
+            // Second app for the same resource server, registered WITH a
+            // client secret so it is an OAuth2/OIDC confidential client
+            // (the /openid-client-confidential/* routes sign in as it).
+            // It must stay a *separate* app: making the app id above
+            // confidential would force client authentication on the
+            // legacy token endpoints too, breaking every other spec in
+            // this suite, which drives that app as a public client.
+            await seedAppAndApiForExampleResourceServer(
+              auth_server_url,
+              config.env["OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID"],
+              config.env["EXAMPLE_NEXTJS_RESOURCE_SERVER_URL"],
+              config.env[
+                "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY"
+              ],
+              {
+                client_secret:
+                  config.env["OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET"],
+              },
+            );
           } // end of setup for test suite 'example_resource_server'
 
           return;
@@ -204,5 +224,19 @@ export default defineConfig({
       process.env.EXAMPLE_NEXTJS_RESOURCE_SERVER_URL ?? "http://localhost:3007",
     EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY:
       process.env.EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY ?? "",
+    // The confidential client seeded for the example_resource_server suite:
+    // a second app registered WITH a client secret, so token-endpoint
+    // requests for it must authenticate (client_secret_basic /
+    // client_secret_post). The same values are injected into the example
+    // resource server container by docker-compose.yml, which signs in as
+    // this app from its /openid-client-confidential/* routes. Test-only
+    // throwaway credentials; `||` so an empty-string env value (e.g. from
+    // docker-compose `${VAR:-}` interpolation) still falls back.
+    OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID:
+      process.env.OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID ||
+      "11111111-1111-1111-1111-111111111111",
+    OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET:
+      process.env.OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET ||
+      "svs_e2e-confidential-client-secret",
   },
 });

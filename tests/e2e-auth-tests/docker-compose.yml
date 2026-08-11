@@ -18,6 +18,13 @@ services:
       TEST_SUITE_NAME: ${TEST_SUITE_NAME:?error}
       EXAMPLE_NEXTJS_RESOURCE_SERVER_URL: http://example-nextjs-resource-server
       EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY: ${EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY:-null}
+      # Second app seeded for the example_resource_server suite, registered
+      # WITH a client secret so it is an OAuth2/OIDC confidential client.
+      # Must match the example-nextjs-resource-server service's values: the
+      # Cypress runner seeds the secret and probes the token endpoint with
+      # it, and the resource server signs in with it.
+      OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID: ${OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID:-11111111-1111-1111-1111-111111111111}
+      OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET: ${OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET:-svs_e2e-confidential-client-secret}
       # White-label values (set by e2e-auth-tests-cli for the white_label
       # suite); must match the schemavaults-auth service's values so helper
       # commands and specs build app-id-scoped URLs, cookie names, and
@@ -57,6 +64,12 @@ services:
       SCHEMAVAULTS_API_SERVER_ID: 00000000-0000-0000-0000-000000000000
       SCHEMAVAULTS_CLIENT_APP_ID: 00000000-0000-0000-0000-000000000000
       SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY: ${EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PRIVATE_KEY:-null}
+      # client_id/client_secret of the confidential-client variant of the
+      # openid-client demo (/openid-client-confidential/*). Test-environment
+      # throwaway values; they must match the Cypress runner's, which seeds
+      # the secret onto the auth server.
+      OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID: ${OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID:-11111111-1111-1111-1111-111111111111}
+      OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET: ${OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET:-svs_e2e-confidential-client-secret}
     expose:
       - 80
     ports:
