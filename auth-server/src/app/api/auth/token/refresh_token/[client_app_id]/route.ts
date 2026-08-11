@@ -30,6 +30,10 @@ import {
   validateCorsForClientApp,
   applyCorsHeadersFromResult,
 } from "@/lib/cors/cors-for-client-app";
+import {
+  authenticateTokenEndpointClient,
+  parseBasicClientCredentials,
+} from "@/lib/oauth2/authenticate-token-endpoint-client";
 import { RedisCache } from "@/lib/redis";
 import {
   extractClientIp,
@@ -234,6 +238,42 @@ export async function POST(
         message: "Mismatched grant type",
       } satisfies RequestTokensResult,
       { status: 400 }
+    ));
+  }
+
+  // Confidential clients (apps with a registered client secret) must
+  // authenticate on every token request (RFC 6749 §6). The Authorization
+  // header on this surface carries the refresh token (Bearer), so the
+  // secret arrives via the body's client_secret (client_secret_post);
+  // a Basic header is also honored when the refresh token came from the
+  // cookie instead.
+  const basic_credentials = parseBasicClientCredentials(
+    req.headers.get("Authorization"),
+  );
+  if (basic_credentials === "malformed") {
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: "Malformed Basic Authorization header",
+      } satisfies RequestTokensResult,
+      { status: 400 }
+    ));
+  }
+  const clientAuth = await authenticateTokenEndpointClient({
+    db: dbh.db,
+    client_app_id: url_client_app_id,
+    basic_credentials,
+    post_client_secret: body.client_secret ?? null,
+  });
+  if (!clientAuth.ok) {
+    return withCors(NextResponse.json(
+      {
+        success: false,
+        error: true,
+        message: clientAuth.error_description,
+      } satisfies RequestTokensResult,
+      { status: clientAuth.status }
     ));
   }
 

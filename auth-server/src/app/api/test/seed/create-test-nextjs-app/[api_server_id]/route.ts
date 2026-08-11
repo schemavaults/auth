@@ -7,10 +7,20 @@ import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner
 import type { ServerRuntime } from "next/types";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { sign_verify_alg } from "@schemavaults/jwt";
+import { hashClientSecret } from "@/lib/oauth2/client-secret";
+import { randomUUID } from "node:crypto";
 
 const bodySchema = z.object({
   url: z.string().url(),
-  jwks_access_public_key: z.string().min(64)
+  jwks_access_public_key: z.string().min(64),
+  // Optional confidential-client seeding: when set, the plaintext secret
+  // is hashed and stored so the seeded app requires client
+  // authentication at the token endpoints.
+  client_secret: z.string().min(16).max(256).optional(),
+  // Optional explicit redirect-URI allowlist for the seeded app; when
+  // non-empty, redirect_uri validation for the test environment requires
+  // an exact match against these URLs instead of any path on `url`.
+  callback_urls: z.array(z.string().url()).max(50).optional(),
 }).required({
   url: true,
   jwks_access_public_key: true
@@ -48,7 +58,7 @@ export async function POST(
       success: false
     }, { status: 400 })
   }
-  const { url, jwks_access_public_key } = parsed_body.data;
+  const { url, jwks_access_public_key, client_secret, callback_urls } = parsed_body.data;
 
   await using dbh = ServerlessDatabase.createDBH();
 
@@ -101,6 +111,24 @@ export async function POST(
       is_active: true,
       public_key: jwks_access_public_key
     });
+
+    if (client_secret) {
+      await appRegistry.setClientSecret(
+        api_server_id,
+        hashClientSecret(client_secret),
+        null,
+      );
+    }
+
+    for (const callback_url of callback_urls ?? []) {
+      await appRegistry.addAppCallbackUrl(api_server_id, {
+        app_callback_url_ref_id: randomUUID(),
+        app_id: api_server_id,
+        callback_url,
+        environment,
+        created_at: now,
+      });
+    }
   } catch (e: unknown) {
     console.error("Error seeding database with sample app/API for usage in tests: ", e);
     return NextResponse.json({

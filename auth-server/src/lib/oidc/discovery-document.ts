@@ -51,9 +51,15 @@ export function buildOidcDiscoveryDocument(
     subject_types_supported: ["public"],
     id_token_signing_alg_values_supported: ["RS256"],
     scopes_supported: OIDC_SUPPORTED_SCOPES,
-    // Public clients only: there are no client secrets in the platform
-    // (the apps table has no secret column); PKCE S256 is mandatory.
-    token_endpoint_auth_methods_supported: ["none"],
+    // Apps without a registered client secret are public clients
+    // ("none"); apps with one are confidential clients and must
+    // authenticate via client_secret_basic or client_secret_post.
+    // PKCE S256 is mandatory for every client either way.
+    token_endpoint_auth_methods_supported: [
+      "none",
+      "client_secret_basic",
+      "client_secret_post",
+    ],
     code_challenge_methods_supported: ["S256"],
     claims_supported: [
       "sub",

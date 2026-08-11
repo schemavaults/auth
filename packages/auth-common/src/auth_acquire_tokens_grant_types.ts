@@ -31,6 +31,10 @@ function createTokenEndpointBaseSchema(
       createAudienceListSchema(z, environment, overrides),
     ]),
     client_app_id: appIdSchema,
+    // OAuth2 client secret (client_secret_post) — required by the token
+    // endpoints when the app has a client secret registered
+    // (confidential client), and must be omitted otherwise.
+    client_secret: z.string().min(1).max(256).optional(),
   });
 }
 

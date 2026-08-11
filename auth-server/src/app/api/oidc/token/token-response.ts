@@ -4,10 +4,13 @@ import type { OidcTokenResponseBody } from "@/lib/oidc/issue-oidc-tokens";
 
 // CORS: the endpoint serves third-party public clients (PKCE, no
 // cookies, credentials in the form body) so a wildcard origin is safe.
+// Confidential clients call server-to-server (no CORS involved), but
+// Authorization is allowed so browser-based tooling can still exercise
+// client_secret_basic against dev deployments.
 export const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 } as const;
 
 /**

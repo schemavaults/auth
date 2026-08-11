@@ -36,29 +36,31 @@ export async function GET_list_app_domains(
   req: NextRequest,
   ctx: RouteContext<'/api/apps/[app_id]/domains'>,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-
-  const parsed_app_id = await appIdSchema.safeParseAsync(params.app_id);
-  if (!parsed_app_id.success) {
-    console.error("Failed to parse frontend app_id: ", parsed_app_id.error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid frontend app id, not a string",
-      } satisfies ListAppDomainsResponse,
-      {
-        status: 400,
-      },
-    );
-  }
-  const app_id: AppId = parsed_app_id.data;
-
+  // Params are parsed inside the guard so unauthenticated callers get a
+  // 401 without observing whether the app id was well-formed.
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
       environment,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      const params = await ctx.params;
+
+      const parsed_app_id = await appIdSchema.safeParseAsync(params.app_id);
+      if (!parsed_app_id.success) {
+        console.error("Failed to parse frontend app_id: ", parsed_app_id.error);
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid frontend app id, not a string",
+          } satisfies ListAppDomainsResponse,
+          {
+            status: 400,
+          },
+        );
+      }
+      const app_id: AppId = parsed_app_id.data;
+
       if (environment === "development") {
         console.log(`[/api/apps/${app_id}/domains] GET request received`);
       }

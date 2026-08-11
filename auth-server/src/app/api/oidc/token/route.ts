@@ -10,6 +10,11 @@ import {
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import {
+  authenticateTokenEndpointClient,
+  parseBasicClientCredentials,
+  TOKEN_ENDPOINT_WWW_AUTHENTICATE,
+} from "@/lib/oauth2/authenticate-token-endpoint-client";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import handleOidcAuthorizationCodeGrant from "./authorization_code_grant";
 import handleOidcRefreshTokenGrant from "./refresh_token_grant";
@@ -28,12 +33,13 @@ export async function OPTIONS(): Promise<NextResponse> {
  * response — with the refresh token inlined and an id_token on the code
  * grant. Scope/nonce are first-class on every login flow, so any code
  * is redeemable here regardless of which surface initiated the login
- * (PKCE + client + redirect_uri binding are the security boundary).
+ * (PKCE + client + redirect_uri binding are the security boundary, plus
+ * client-secret authentication for confidential clients).
  *
  * This module owns the shared request plumbing (form parsing,
- * grant_type dispatch, client_id validation, exception capture); the
- * per-grant logic lives in ./authorization_code_grant.ts and
- * ./refresh_token_grant.ts.
+ * grant_type dispatch, client_id validation, client authentication,
+ * exception capture); the per-grant logic lives in
+ * ./authorization_code_grant.ts and ./refresh_token_grant.ts.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
@@ -61,7 +67,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const parsed_client_id = appIdSchema.safeParse(param("client_id"));
+  const basic_credentials = parseBasicClientCredentials(
+    request.headers.get("Authorization"),
+  );
+  if (basic_credentials === "malformed") {
+    return oidcTokenErrorResponse(
+      "invalid_request",
+      "Malformed Basic Authorization header.",
+    );
+  }
+
+  // client_secret_basic clients may identify themselves solely through
+  // the Authorization header (RFC 6749 §2.3.1); fall back to it when
+  // the form omits client_id.
+  const parsed_client_id = appIdSchema.safeParse(
+    param("client_id") ?? basic_credentials?.client_id ?? null,
+  );
   if (!parsed_client_id.success) {
     return oidcTokenErrorResponse(
       "invalid_request",
@@ -73,6 +94,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   try {
+    const clientAuth = await authenticateTokenEndpointClient({
+      db: dbh.db,
+      client_app_id,
+      basic_credentials,
+      post_client_secret: param("client_secret"),
+    });
+    if (!clientAuth.ok) {
+      return oidcTokenErrorResponse(
+        clientAuth.error,
+        clientAuth.error_description,
+        clientAuth.status,
+        clientAuth.status === 401
+          ? { "WWW-Authenticate": TOKEN_ENDPOINT_WWW_AUTHENTICATE }
+          : {},
+      );
+    }
+
     if (grant_type === "authorization_code") {
       return await handleOidcAuthorizationCodeGrant(
         dbh,
