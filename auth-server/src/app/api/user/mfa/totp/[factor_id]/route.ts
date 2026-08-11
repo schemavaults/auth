@@ -100,18 +100,20 @@ export async function DELETE(
   req: NextRequest,
   ctx: RouteContext<"/api/user/mfa/totp/[factor_id]">,
 ): Promise<NextResponse> {
-  const { factor_id } = await ctx.params;
-  const parsed = factorIdSchema.safeParse(factor_id);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, message: "Invalid factor_id in URL" },
-      { status: 400 },
-    );
-  }
+  // Params are parsed inside the guard so unauthenticated callers get a
+  // 401 without observing whether the factor id was well-formed.
   return await (
-    await withAuthenticatedApiRouteGuard((props) =>
-      DELETE_factor_handler(props, parsed.data),
-    )
+    await withAuthenticatedApiRouteGuard(async (props) => {
+      const { factor_id } = await ctx.params;
+      const parsed = factorIdSchema.safeParse(factor_id);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { success: false, message: "Invalid factor_id in URL" },
+          { status: 400 },
+        );
+      }
+      return DELETE_factor_handler(props, parsed.data);
+    })
   )(req);
 }
 

@@ -31,43 +31,45 @@ export async function GET_app_to_api_permission_handler(
   req: NextRequest,
   ctx: RouteContext<"/api/apis/[api_server_id]/connect_app/[client_app_id]">,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-
-  const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
-    params.api_server_id,
-  );
-  if (!parsed_api_server_id.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid api_server_id parameter",
-      } satisfies GetAppToApiPermissionResponse,
-      { status: 400 },
-    );
-  }
-
-  const parsed_client_app_id = await appIdSchema.safeParseAsync(
-    params.client_app_id,
-  );
-  if (!parsed_client_app_id.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid client_app_id parameter",
-      } satisfies GetAppToApiPermissionResponse,
-      { status: 400 },
-    );
-  }
-
-  const api_server_id = parsed_api_server_id.data;
-  const client_app_id = parsed_client_app_id.data;
-
+  // Params are parsed inside the guard so unauthenticated callers get a
+  // 401 without observing whether the path parameters were well-formed.
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
       environment,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      const params = await ctx.params;
+
+      const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
+        params.api_server_id,
+      );
+      if (!parsed_api_server_id.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid api_server_id parameter",
+          } satisfies GetAppToApiPermissionResponse,
+          { status: 400 },
+        );
+      }
+
+      const parsed_client_app_id = await appIdSchema.safeParseAsync(
+        params.client_app_id,
+      );
+      if (!parsed_client_app_id.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid client_app_id parameter",
+          } satisfies GetAppToApiPermissionResponse,
+          { status: 400 },
+        );
+      }
+
+      const api_server_id = parsed_api_server_id.data;
+      const client_app_id = parsed_client_app_id.data;
+
       if (environment === "development") {
         console.log(
           `[/api/apis/${api_server_id}/connect_app/${client_app_id}] GET request received`,

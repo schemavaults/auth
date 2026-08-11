@@ -34,29 +34,31 @@ export async function GET_list_api_server_domains(
   req: NextRequest,
   ctx: RouteContext<'/api/apis/[api_server_id]/domains'>,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-
-  const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(params.api_server_id);
-  if (!parsed_api_server_id.success) {
-    console.error("Failed to parse api_server_id: ", parsed_api_server_id.error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid API server id, not a string",
-      } satisfies ListApiServerDomainsResponse,
-      {
-        status: 400,
-      },
-    );
-  }
-  const api_server_id: ApiServerId = parsed_api_server_id.data;
-
+  // Params are parsed inside the guard so unauthenticated callers get a
+  // 401 without observing whether the API server id was well-formed.
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
       environment,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      const params = await ctx.params;
+
+      const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(params.api_server_id);
+      if (!parsed_api_server_id.success) {
+        console.error("Failed to parse api_server_id: ", parsed_api_server_id.error);
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid API server id, not a string",
+          } satisfies ListApiServerDomainsResponse,
+          {
+            status: 400,
+          },
+        );
+      }
+      const api_server_id: ApiServerId = parsed_api_server_id.data;
+
       if (environment === "development") {
         console.log(`[/api/apis/${api_server_id}/domains] GET request received`);
       }

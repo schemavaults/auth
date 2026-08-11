@@ -46,6 +46,10 @@ function parseAppIdParam(raw: unknown): AppId | null {
   return parsed.success ? parsed.data : null;
 }
 
+// Route params are parsed inside the authenticated guard so
+// unauthenticated callers always get a 401 and never observe whether a
+// path parameter was well-formed.
+
 /**
  * GET /api/apps/[app_id]/client-secret
  * Metadata only — the secret itself is never retrievable after generation.
@@ -54,17 +58,16 @@ export async function GET(
   req: NextRequest,
   ctx: RouteContext<"/api/apps/[app_id]/client-secret">,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-  const app_id = parseAppIdParam(params.app_id);
-  if (!app_id) {
-    return NextResponse.json(
-      { success: false, message: "Invalid app id" } satisfies ClientSecretMetadataResponse,
-      { status: 400 },
-    );
-  }
-
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps) => {
+      const app_id = parseAppIdParam((await ctx.params).app_id);
+      if (!app_id) {
+        return NextResponse.json(
+          { success: false, message: "Invalid app id" } satisfies ClientSecretMetadataResponse,
+          { status: 400 },
+        );
+      }
+
       const guard = await loadAppForManagement({
         app_id,
         user,
@@ -111,12 +114,20 @@ export async function GET(
 
 async function generateAndStoreSecret(
   props: IProtectedAuthenticatedApiRouteProps,
-  app_id: AppId,
+  raw_app_id: unknown,
   mode: "create" | "rotate",
 ): Promise<NextResponse> {
   const { user, dbh } = props;
   const op_name =
     mode === "create" ? "POST_generate_client_secret" : "PUT_rotate_client_secret";
+
+  const app_id = parseAppIdParam(raw_app_id);
+  if (!app_id) {
+    return NextResponse.json(
+      { success: false, message: "Invalid app id" } satisfies ClientSecretGenerationResponse,
+      { status: 400 },
+    );
+  }
 
   const guard = await loadAppForManagement({
     app_id,
@@ -184,18 +195,9 @@ export async function POST(
   req: NextRequest,
   ctx: RouteContext<"/api/apps/[app_id]/client-secret">,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-  const app_id = parseAppIdParam(params.app_id);
-  if (!app_id) {
-    return NextResponse.json(
-      { success: false, message: "Invalid app id" } satisfies ClientSecretGenerationResponse,
-      { status: 400 },
-    );
-  }
-
   const protected_route = await withAuthenticatedApiRouteGuard(
     async (props: IProtectedAuthenticatedApiRouteProps) =>
-      generateAndStoreSecret(props, app_id, "create"),
+      generateAndStoreSecret(props, (await ctx.params).app_id, "create"),
   );
   return await protected_route(req);
 }
@@ -209,18 +211,9 @@ export async function PUT(
   req: NextRequest,
   ctx: RouteContext<"/api/apps/[app_id]/client-secret">,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-  const app_id = parseAppIdParam(params.app_id);
-  if (!app_id) {
-    return NextResponse.json(
-      { success: false, message: "Invalid app id" } satisfies ClientSecretGenerationResponse,
-      { status: 400 },
-    );
-  }
-
   const protected_route = await withAuthenticatedApiRouteGuard(
     async (props: IProtectedAuthenticatedApiRouteProps) =>
-      generateAndStoreSecret(props, app_id, "rotate"),
+      generateAndStoreSecret(props, (await ctx.params).app_id, "rotate"),
   );
   return await protected_route(req);
 }
@@ -233,17 +226,16 @@ export async function DELETE(
   req: NextRequest,
   ctx: RouteContext<"/api/apps/[app_id]/client-secret">,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-  const app_id = parseAppIdParam(params.app_id);
-  if (!app_id) {
-    return NextResponse.json(
-      { success: false, message: "Invalid app id" } satisfies ClientSecretDeletionResponse,
-      { status: 400 },
-    );
-  }
-
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps) => {
+      const app_id = parseAppIdParam((await ctx.params).app_id);
+      if (!app_id) {
+        return NextResponse.json(
+          { success: false, message: "Invalid app id" } satisfies ClientSecretDeletionResponse,
+          { status: 400 },
+        );
+      }
+
       const guard = await loadAppForManagement({
         app_id,
         user,

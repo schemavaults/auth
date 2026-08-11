@@ -18,29 +18,31 @@ export async function DELETE_app_handler(
   req: NextRequest,
   ctx: RouteContext<"/api/apps/[app_id]">,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-
-  const parsed_app_id = await appIdSchema.safeParseAsync(params.app_id);
-  if (!parsed_app_id.success) {
-    return NextResponse.json(
-      { success: false, message: "Invalid app_id parameter" },
-      { status: 400 },
-    );
-  }
-  const app_id: AppId = parsed_app_id.data;
-
-  if (isHardcodedAppId(app_id)) {
-    return NextResponse.json(
-      { success: false, message: "Cannot delete a hardcoded app!" },
-      { status: 403 },
-    );
-  }
-
+  // Params are parsed inside the guard so unauthenticated callers get a
+  // 401 without observing whether the app id was well-formed.
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      const params = await ctx.params;
+
+      const parsed_app_id = await appIdSchema.safeParseAsync(params.app_id);
+      if (!parsed_app_id.success) {
+        return NextResponse.json(
+          { success: false, message: "Invalid app_id parameter" },
+          { status: 400 },
+        );
+      }
+      const app_id: AppId = parsed_app_id.data;
+
+      if (isHardcodedAppId(app_id)) {
+        return NextResponse.json(
+          { success: false, message: "Cannot delete a hardcoded app!" },
+          { status: 403 },
+        );
+      }
+
       const registry = new SchemaVaultsAppRegistry(dbh.db);
 
       const app = await registry.getApp(app_id);

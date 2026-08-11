@@ -57,18 +57,20 @@ export async function DELETE(
   req: NextRequest,
   ctx: RouteContext<"/api/admin/users/[uid]/mfa">,
 ): Promise<NextResponse> {
-  const { uid } = await ctx.params;
-  const parsed = uidSchema.safeParse(uid);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, message: "Invalid uid in URL" },
-      { status: 400 },
-    );
-  }
+  // Params are parsed inside the guard so non-admin callers get the
+  // guard's response without observing whether the uid was well-formed.
   return await (
-    await withAdminApiRouteGuard((props) =>
-      DELETE_admin_reset_handler(props, parsed.data),
-    )
+    await withAdminApiRouteGuard(async (props) => {
+      const { uid } = await ctx.params;
+      const parsed = uidSchema.safeParse(uid);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { success: false, message: "Invalid uid in URL" },
+          { status: 400 },
+        );
+      }
+      return DELETE_admin_reset_handler(props, parsed.data);
+    })
   )(req);
 }
 
@@ -112,18 +114,20 @@ export async function GET(
   req: NextRequest,
   ctx: RouteContext<"/api/admin/users/[uid]/mfa">,
 ): Promise<NextResponse> {
-  const { uid } = await ctx.params;
-  const parsed = uidSchema.safeParse(uid);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, message: "Invalid uid in URL" },
-      { status: 400 },
-    );
-  }
+  // Params are parsed inside the guard so non-admin callers get the
+  // guard's response without observing whether the uid was well-formed.
   return await (
-    await withAdminApiRouteGuard((props) =>
-      GET_admin_list_factor_types_handler(props, parsed.data),
-    )
+    await withAdminApiRouteGuard(async (props) => {
+      const { uid } = await ctx.params;
+      const parsed = uidSchema.safeParse(uid);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { success: false, message: "Invalid uid in URL" },
+          { status: 400 },
+        );
+      }
+      return GET_admin_list_factor_types_handler(props, parsed.data);
+    })
   )(req);
 }
 

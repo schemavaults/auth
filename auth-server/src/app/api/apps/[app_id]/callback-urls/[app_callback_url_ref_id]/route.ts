@@ -27,33 +27,35 @@ export async function DELETE(
   req: NextRequest,
   ctx: RouteContext<"/api/apps/[app_id]/callback-urls/[app_callback_url_ref_id]">,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-  const parsed_app_id = await appIdSchema.safeParseAsync(params.app_id);
-  if (!parsed_app_id.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid frontend app id",
-      } satisfies DeleteAppCallbackUrlResponse,
-      { status: 400 },
-    );
-  }
-  const app_id: AppId = parsed_app_id.data;
-
-  const parsed_ref_id = z.string().uuid().safeParse(params.app_callback_url_ref_id);
-  if (!parsed_ref_id.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid callback URL reference id",
-      } satisfies DeleteAppCallbackUrlResponse,
-      { status: 400 },
-    );
-  }
-  const app_callback_url_ref_id: string = parsed_ref_id.data;
-
+  // Params are parsed inside the guard so unauthenticated callers get a
+  // 401 without observing whether the path parameters were well-formed.
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({ user, dbh }: IProtectedAuthenticatedApiRouteProps) => {
+      const params = await ctx.params;
+      const parsed_app_id = await appIdSchema.safeParseAsync(params.app_id);
+      if (!parsed_app_id.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid frontend app id",
+          } satisfies DeleteAppCallbackUrlResponse,
+          { status: 400 },
+        );
+      }
+      const app_id: AppId = parsed_app_id.data;
+
+      const parsed_ref_id = z.string().uuid().safeParse(params.app_callback_url_ref_id);
+      if (!parsed_ref_id.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid callback URL reference id",
+          } satisfies DeleteAppCallbackUrlResponse,
+          { status: 400 },
+        );
+      }
+      const app_callback_url_ref_id: string = parsed_ref_id.data;
+
       const guard = await loadAppForManagement({
         app_id,
         user,

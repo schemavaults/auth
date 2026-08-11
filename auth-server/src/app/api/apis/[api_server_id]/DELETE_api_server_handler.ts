@@ -18,31 +18,33 @@ export async function DELETE_api_server_handler(
   req: NextRequest,
   ctx: RouteContext<"/api/apis/[api_server_id]">,
 ): Promise<NextResponse> {
-  const params = await ctx.params;
-
-  const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
-    params.api_server_id,
-  );
-  if (!parsed_api_server_id.success) {
-    return NextResponse.json(
-      { success: false, message: "Invalid api_server_id parameter" },
-      { status: 400 },
-    );
-  }
-  const api_server_id: ApiServerId = parsed_api_server_id.data;
-
-  if (isHardcodedApiServerId(api_server_id)) {
-    return NextResponse.json(
-      { success: false, message: "Cannot delete a hardcoded API server!" },
-      { status: 403 },
-    );
-  }
-
+  // Params are parsed inside the guard so unauthenticated callers get a
+  // 401 without observing whether the API server id was well-formed.
   const protected_route = await withAuthenticatedApiRouteGuard(
     async ({
       user,
       dbh,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      const params = await ctx.params;
+
+      const parsed_api_server_id = await apiServerIdSchema.safeParseAsync(
+        params.api_server_id,
+      );
+      if (!parsed_api_server_id.success) {
+        return NextResponse.json(
+          { success: false, message: "Invalid api_server_id parameter" },
+          { status: 400 },
+        );
+      }
+      const api_server_id: ApiServerId = parsed_api_server_id.data;
+
+      if (isHardcodedApiServerId(api_server_id)) {
+        return NextResponse.json(
+          { success: false, message: "Cannot delete a hardcoded API server!" },
+          { status: 403 },
+        );
+      }
+
       const registry = new SchemaVaultsApiServerRegistry(dbh.db);
 
       const apiServer = await registry.getApiServer(api_server_id);

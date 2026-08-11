@@ -85,18 +85,20 @@ export async function GET(
   req: NextRequest,
   ctx: RouteContext<"/api/user/mfa/status/[factor_type]">,
 ): Promise<NextResponse> {
-  const { factor_type } = await ctx.params;
-  const parsed = mfaFactorTypeSchema.safeParse(factor_type);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, message: "Unknown MFA factor type" },
-      { status: 400 },
-    );
-  }
+  // Params are parsed inside the guard so unauthenticated callers get a
+  // 401 without observing whether the factor type was well-formed.
   return await (
-    await withAuthenticatedApiRouteGuard((props) =>
-      GET_status_for_factor_type_handler(props, parsed.data),
-    )
+    await withAuthenticatedApiRouteGuard(async (props) => {
+      const { factor_type } = await ctx.params;
+      const parsed = mfaFactorTypeSchema.safeParse(factor_type);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { success: false, message: "Unknown MFA factor type" },
+          { status: 400 },
+        );
+      }
+      return GET_status_for_factor_type_handler(props, parsed.data);
+    })
   )(req);
 }
 
