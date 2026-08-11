@@ -20,6 +20,7 @@ export interface OidcDiscoveryDocument {
   authorization_endpoint: string;
   token_endpoint: string;
   userinfo_endpoint: string;
+  introspection_endpoint: string;
   jwks_uri: string;
   response_types_supported: readonly string[];
   response_modes_supported: readonly string[];
@@ -28,6 +29,7 @@ export interface OidcDiscoveryDocument {
   id_token_signing_alg_values_supported: readonly string[];
   scopes_supported: readonly string[];
   token_endpoint_auth_methods_supported: readonly string[];
+  introspection_endpoint_auth_methods_supported: readonly string[];
   code_challenge_methods_supported: readonly string[];
   claims_supported: readonly string[];
   authorization_response_iss_parameter_supported: boolean;
@@ -44,6 +46,7 @@ export function buildOidcDiscoveryDocument(
     authorization_endpoint: `${issuer}/api/oidc/authorize`,
     token_endpoint: `${issuer}/api/oidc/token`,
     userinfo_endpoint: `${issuer}/api/oidc/userinfo`,
+    introspection_endpoint: `${issuer}/api/oidc/introspect`,
     jwks_uri: `${issuer}/api/oidc/jwks`,
     response_types_supported: ["code"],
     response_modes_supported: ["query"],
@@ -57,6 +60,13 @@ export function buildOidcDiscoveryDocument(
     // PKCE S256 is mandatory for every client either way.
     token_endpoint_auth_methods_supported: [
       "none",
+      "client_secret_basic",
+      "client_secret_post",
+    ],
+    // RFC 7662 token introspection (advertised per RFC 8414 §2). "none"
+    // is deliberately absent: §2.1 requires the endpoint to be
+    // authorized, so only confidential clients may introspect.
+    introspection_endpoint_auth_methods_supported: [
       "client_secret_basic",
       "client_secret_post",
     ],
