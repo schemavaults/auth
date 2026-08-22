@@ -7,6 +7,7 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   accessTokenExpiry,
+  formatOidcSubClaim,
   parseAndGrantScopes,
   refreshTokenExpiry,
   type ParsedOidcScopes,
@@ -179,7 +180,9 @@ export async function introspectOidcToken({
     client_id: decoded.app,
     exp: decoded.iat + validity_seconds,
     iat: decoded.iat,
-    sub: decoded.sub,
+    // OIDC-facing `<auth_server_app_id>|<uid>` form, matching the
+    // id_token and userinfo `sub` for the same user.
+    sub: formatOidcSubClaim(auth_app_id, decoded.sub),
     aud: decoded.aud,
     iss: getAuthServerUri(environment),
     ...(token_kind === "access" ? { token_type: "Bearer" as const } : {}),

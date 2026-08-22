@@ -20,6 +20,8 @@
 // held: authorize -> login UI -> consent -> authenticated token
 // exchange -> id_token validation -> userinfo.
 
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
+
 describe("ConfidentialClientSignIn (openid-client RP, client_secret_basic)", () => {
   const exampleAppUrl: string =
     Cypress.env("EXAMPLE_NEXTJS_RESOURCE_SERVER_URL") ||
@@ -40,6 +42,10 @@ describe("ConfidentialClientSignIn (openid-client RP, client_secret_basic)", () 
   const confidentialClientId: string = Cypress.env(
     "OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID",
   );
+
+  // The OIDC-facing `sub` claim is namespaced by the auth server's own
+  // app id: `<auth_server_app_id>|<uid>`.
+  const expectedSubPrefix = `${getAuthServerAppIdFromCypressEnv()}|`;
 
   /**
    * Drives the confidential-client sign-in flow from the example
@@ -100,8 +106,10 @@ describe("ConfidentialClientSignIn (openid-client RP, client_secret_basic)", () 
     // with the established identity.
     cy.origin(
       exampleAppOrigin,
-      { args: { email, expectedIssuer, confidentialClientId } },
-      ({ email, expectedIssuer, confidentialClientId }) => {
+      {
+        args: { email, expectedIssuer, confidentialClientId, expectedSubPrefix },
+      },
+      ({ email, expectedIssuer, confidentialClientId, expectedSubPrefix }) => {
         cy.url({ timeout: 30000 }).should(
           "include",
           "/openid-client-confidential/profile",
@@ -111,7 +119,13 @@ describe("ConfidentialClientSignIn (openid-client RP, client_secret_basic)", () 
         }).should("be.visible");
         cy.get("[data-testid='openid-client-confidential-sub']")
           .invoke("text")
-          .should("have.length.greaterThan", 0);
+          .should((sub: string) => {
+            expect(
+              sub.startsWith(expectedSubPrefix),
+              `sub ("${sub}") starts with "${expectedSubPrefix}"`,
+            ).to.be.true;
+            expect(sub.length).to.be.greaterThan(expectedSubPrefix.length);
+          });
         cy.get("[data-testid='openid-client-confidential-iss']").should(
           "have.text",
           expectedIssuer,

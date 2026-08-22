@@ -1,9 +1,10 @@
 import { SignJWT, type CryptoKey } from "jose";
 import {
+  getAuthServerAppId,
   getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import type { UserData } from "@schemavaults/auth-common";
+import { formatOidcSubClaim, type UserData } from "@schemavaults/auth-common";
 import type { I_JWT_Keys } from "./jwt_keys";
 import signAndVerifyAlg from "./sign_verify_alg";
 import isValidUuid from "@/utils/isValidUuid";
@@ -34,6 +35,13 @@ export interface GenerateIdTokenOptions {
   jwt_keys: I_JWT_Keys;
   environment: SchemaVaultsAppEnvironment;
   auth_server_url?: string;
+  /**
+   * This deployment's own app id (SCHEMAVAULTS_AUTH_SERVER_APP_ID) —
+   * prefixes the `sub` claim as `<auth_server_app_id>|<uid>` (see
+   * formatOidcSubClaim in @schemavaults/auth-common). Server-side
+   * callers may rely on the env-resolved default.
+   */
+  auth_server_app_id?: string;
 }
 
 export interface GeneratedIdToken {
@@ -57,6 +65,7 @@ export async function generateIdToken({
   jwt_keys,
   environment,
   auth_server_url = getAuthServerUrl(environment),
+  auth_server_app_id = getAuthServerAppId(),
 }: GenerateIdTokenOptions): Promise<GeneratedIdToken> {
   if (typeof user?.uid !== "string" || user.uid.length === 0) {
     throw new TypeError("generateIdToken requires a user with a uid!");
@@ -99,7 +108,11 @@ export async function generateIdToken({
       kid: `${keyset_id}-verification`,
     })
     .setIssuer(auth_server_url)
-    .setSubject(user.uid)
+    // The OIDC-facing subject is namespaced by this deployment's app id
+    // (`<app_id>|<uid>`); /api/oidc/userinfo and introspection MUST
+    // report the same form (OIDC Core §5.3.2 — RP libraries reject a
+    // userinfo `sub` that differs from the id_token's).
+    .setSubject(formatOidcSubClaim(auth_server_app_id, user.uid))
     .setAudience(client_id)
     // jose defaults to the current unix time in SECONDS; do not pass
     // Date.now() here (milliseconds) like sign.ts does for the internal
