@@ -12,6 +12,8 @@
 // public jwks_uri, iss/aud/exp/nonce) and cross-checking the identity
 // at /api/oidc/userinfo.
 
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
+
 describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () => {
   const exampleAppUrl: string =
     Cypress.env("EXAMPLE_NEXTJS_RESOURCE_SERVER_URL") ||
@@ -31,6 +33,10 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
   // cypress.config.ts's before:run hook — the RP's OIDC client_id,
   // which becomes the id_token `aud` claim.
   const seededClientId = "00000000-0000-0000-0000-000000000000";
+
+  // The OIDC-facing `sub` claim is namespaced by the auth server's own
+  // app id: `<auth_server_app_id>|<uid>`.
+  const expectedSubPrefix = `${getAuthServerAppIdFromCypressEnv()}|`;
 
   /**
    * Drives the openid-client sign-in flow from the example resource
@@ -87,15 +93,21 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
     // RP lands on its profile page with the established identity.
     cy.origin(
       exampleAppOrigin,
-      { args: { email, expectedIssuer, seededClientId } },
-      ({ email, expectedIssuer, seededClientId }) => {
+      { args: { email, expectedIssuer, seededClientId, expectedSubPrefix } },
+      ({ email, expectedIssuer, seededClientId, expectedSubPrefix }) => {
         cy.url({ timeout: 30000 }).should("include", "/openid-client/profile");
         cy.get("[data-testid='openid-client-signed-in']", {
           timeout: 15000,
         }).should("be.visible");
         cy.get("[data-testid='openid-client-sub']")
           .invoke("text")
-          .should("have.length.greaterThan", 0);
+          .should((sub: string) => {
+            expect(
+              sub.startsWith(expectedSubPrefix),
+              `sub ("${sub}") starts with "${expectedSubPrefix}"`,
+            ).to.be.true;
+            expect(sub.length).to.be.greaterThan(expectedSubPrefix.length);
+          });
         cy.get("[data-testid='openid-client-iss']").should(
           "have.text",
           expectedIssuer,

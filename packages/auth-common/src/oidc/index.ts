@@ -20,3 +20,9 @@ export {
   OidcNonceValidationError,
 } from "./nonce";
 export type { OidcNonce } from "./nonce";
+
+export {
+  OIDC_SUB_CLAIM_DELIMITER,
+  formatOidcSubClaim,
+  parseOidcSubClaim,
+} from "./sub-claim";

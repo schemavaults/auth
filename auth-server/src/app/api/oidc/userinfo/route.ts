@@ -6,7 +6,10 @@ import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { parseAndGrantScopes } from "@schemavaults/auth-common";
+import {
+  formatOidcSubClaim,
+  parseAndGrantScopes,
+} from "@schemavaults/auth-common";
 import {
   decodeJWT,
   getAudienceFromToken,
@@ -16,6 +19,7 @@ import {
 } from "@schemavaults/jwt";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import { ServerlessDatabase } from "@/lib/auth-db";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 
 // CORS: browser-based RPs call userinfo cross-origin with a Bearer
 // token (no cookies), so a wildcard origin is safe.
@@ -101,9 +105,13 @@ async function handleUserinfo(request: NextRequest): Promise<NextResponse> {
   }
 
   // Claims filtered by the granted scope embedded in the token; `sub`
-  // is always returned (OIDC Core §5.3.2).
+  // is always returned (OIDC Core §5.3.2) in the OIDC-facing
+  // `<auth_server_app_id>|<uid>` form — it MUST exactly match the
+  // id_token's `sub`, which RP libraries verify.
   const { granted } = parseAndGrantScopes(decoded.scope);
-  const claims: Record<string, unknown> = { sub: decoded.sub };
+  const claims: Record<string, unknown> = {
+    sub: formatOidcSubClaim(getAuthServerAppId(), decoded.sub),
+  };
   if (granted.includes("email")) {
     claims.email = decoded.email;
     claims.email_verified = decoded.email_verified;
