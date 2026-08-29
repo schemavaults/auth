@@ -11,7 +11,7 @@
       "source": "schemavaults/send-email",
       "sourceType": "github",
       "skillPath": ".claude/skills/send-email-to-mailing-list/SKILL.md",
-      "computedHash": "0d32a4cd229419d2d83d523e9308d6077e183d3c7922aba3931fbc0702b9daaa"
+      "computedHash": "82f0aa52a6de4b4b4bb354fc00f4bf27f2330963b955f3a38c447fb6f9b46194"
     }
   }
 }
