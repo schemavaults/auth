@@ -26,3 +26,9 @@ export {
   formatOidcSubClaim,
   parseOidcSubClaim,
 } from "./sub-claim";
+
+export { buildOidcProfileClaims } from "./profile-claims";
+export type {
+  OidcProfileClaims,
+  OidcProfileClaimsSource,
+} from "./profile-claims";

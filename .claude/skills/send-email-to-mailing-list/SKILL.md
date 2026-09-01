@@ -138,6 +138,10 @@ bunx schemavaults-send-email send-to-mailing-list \
   --mailing-list-id 00000000-0000-0000-0000-000000000000 \
   --subject "..." --text "..." --html "..."
 
+# Route through a specific mail-server transport (global flag, before the subcommand)
+bunx schemavaults-send-email --transport smtp-primary send-to-mailing-list \
+  --subject "..." --text "..." --html "..."
+
 # Long bodies: read from files instead of inline strings
 bunx schemavaults-send-email send-to-mailing-list \
   --subject "weekly digest" \
@@ -252,6 +256,7 @@ type MailingListNotificationBody = {
   from?: string;      // defaults to the mail-server's configured sender
   replyTo?: string;   // optional reply-to override
   dryRun?: boolean;   // server validates without dispatching
+  transport?: string; // which mail-server transport to deliver with
 };
 
 // Full call signature:
@@ -262,6 +267,7 @@ type ISendEmailToMailingListOpts = {
   mailServerUrl?: string; // override the server origin; rarely needed
   environment?: "production" | "development" | "staging";
   dryRun?: boolean;       // convenience; sets body.dryRun
+  transport?: string;     // convenience; sets body.transport
 };
 ```
 
@@ -292,6 +298,7 @@ Common failure modes:
 | `Invalid or revoked API key.` (HTTP 401) | `SCHEMAVAULTS_MAIL_API_KEY` is wrong, expired, or revoked. |
 | `This API key is not permitted...` (HTTP 403) | The API key is allowlisted to a different mailing list than the one targeted. |
 | `Failed to parse request body!` (HTTP 400) | Server-side Zod parsing failed; usually a template `template_props` shape mismatch. |
+| Unknown-transport error (HTTP 400) | `transport` named a transport the mail-server does not have configured. The client only checks that the name is well-formed; the server decides whether it exists. |
 
 ## Environment targeting
 

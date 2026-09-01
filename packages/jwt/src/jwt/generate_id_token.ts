@@ -4,7 +4,11 @@ import {
   getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { formatOidcSubClaim, type UserData } from "@schemavaults/auth-common";
+import {
+  buildOidcProfileClaims,
+  formatOidcSubClaim,
+  type UserData,
+} from "@schemavaults/auth-common";
 import type { I_JWT_Keys } from "./jwt_keys";
 import signAndVerifyAlg from "./sign_verify_alg";
 import isValidUuid from "@/utils/isValidUuid";
@@ -24,7 +28,9 @@ export interface GenerateIdTokenOptions {
   nonce?: string | null;
   /**
    * Granted OIDC scopes; `email`/`email_verified` claims are only
-   * included when the `email` scope was granted.
+   * included when the `email` scope was granted, and the profile name
+   * claims (`name`, `given_name`, `middle_name`, `family_name`,
+   * `preferred_username`) only when the `profile` scope was granted.
    */
   scopes: readonly string[];
   /**
@@ -99,6 +105,13 @@ export async function generateIdToken({
   if (scopes.includes("email")) {
     claims.email = user.email;
     claims.email_verified = user.email_verified ?? false;
+  }
+  if (scopes.includes("profile")) {
+    // OIDC Core §5.1 profile-scoped claims, derived from the user's
+    // stored name fields (the `name` claim prefers the public display
+    // name). Claims with no stored value are omitted, and /userinfo
+    // derives the same claims via the same builder.
+    Object.assign(claims, buildOidcProfileClaims(user));
   }
 
   const id_token: string = await new SignJWT(claims)

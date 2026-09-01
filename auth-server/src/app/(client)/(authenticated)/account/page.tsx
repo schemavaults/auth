@@ -18,8 +18,13 @@ import {
   OrganizationsRegistry,
   preloadAppsTable,
   SchemaVaultsAppRegistry,
+  UserRegistry,
   type ServerlessDatabase,
 } from "@/lib/auth-db";
+import {
+  userProfileNamesSchema,
+  type UserProfileNames,
+} from "@schemavaults/auth-common";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import adminOnlyOrganizationCreation from "@/lib/config/admin-only-organization-creation";
 import { withServerTrace } from "@/lib/withServerTrace";
@@ -104,6 +109,33 @@ async function attemptToPreloadUserOrganizationMemberships(
   return preloaded;
 }
 
+async function attemptToPreloadUserProfile(
+  dbh: ServerlessDatabase,
+  userData: UserData,
+): Promise<UserProfileNames> {
+  const userDoc = await new UserRegistry(dbh.db).getUserByUID(userData.uid);
+  if (!userDoc) {
+    throw new Error(
+      `Failed to load user document for uid '${userData.uid}' to preload profile`,
+    );
+  }
+  return userProfileNamesSchema.parse({
+    ...(userDoc.username !== undefined ? { username: userDoc.username } : {}),
+    ...(userDoc.first_name !== undefined
+      ? { first_name: userDoc.first_name }
+      : {}),
+    ...(userDoc.middle_name !== undefined
+      ? { middle_name: userDoc.middle_name }
+      : {}),
+    ...(userDoc.last_name !== undefined
+      ? { last_name: userDoc.last_name }
+      : {}),
+    ...(userDoc.display_name !== undefined
+      ? { display_name: userDoc.display_name }
+      : {}),
+  });
+}
+
 async function AuthServerAccountDashboardPageServerComponent(
   { user, dbh, redis, environment }: IProtectedAuthenticatedServerComponentPageProps
 ): Promise<ReactElement> {
@@ -116,7 +148,7 @@ async function AuthServerAccountDashboardPageServerComponent(
     );
   }
 
-  const [appsResult, orgsResult, adminOnlyOrgCreationResult] =
+  const [appsResult, orgsResult, adminOnlyOrgCreationResult, profileResult] =
     await withServerTrace({
       op_name: "GET /account (preload data)",
       op_category: "subroutine",
@@ -126,6 +158,7 @@ async function AuthServerAccountDashboardPageServerComponent(
           attemptToPreloadAppsAndDomains(dbh, user),
           attemptToPreloadUserOrganizationMemberships(dbh, user),
           adminOnlyOrganizationCreation(dbh.db, redis.client),
+          attemptToPreloadUserProfile(dbh, user),
         ]),
     });
 
@@ -133,6 +166,10 @@ async function AuthServerAccountDashboardPageServerComponent(
     appsResult.status === "fulfilled" ? appsResult.value : undefined;
   const preloaded_organization_memberships =
     orgsResult.status === "fulfilled" ? orgsResult.value : undefined;
+  // On preload failure the profile card fetches from
+  // GET /api/user/profile client-side instead.
+  const preloaded_user_profile =
+    profileResult.status === "fulfilled" ? profileResult.value : undefined;
 
   if (appsResult.status === "rejected") {
     console.error("Failed to preload authorized apps:", appsResult.reason);
@@ -142,6 +179,9 @@ async function AuthServerAccountDashboardPageServerComponent(
       "Failed to preload user organization memberships:",
       orgsResult.reason,
     );
+  }
+  if (profileResult.status === "rejected") {
+    console.error("Failed to preload user profile:", profileResult.reason);
   }
   if (adminOnlyOrgCreationResult.status === "rejected") {
     console.error(
@@ -163,6 +203,7 @@ async function AuthServerAccountDashboardPageServerComponent(
       auth_server_url={auth_server_url}
       preloaded_authorized_apps_data={preloaded_authorized_apps}
       preloaded_organization_memberships={preloaded_organization_memberships}
+      preloaded_user_profile={preloaded_user_profile}
       can_create_organization={can_create_organization}
     />
   );

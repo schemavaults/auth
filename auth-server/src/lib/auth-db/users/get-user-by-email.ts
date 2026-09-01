@@ -33,6 +33,11 @@ export async function getUserByEmail(
         "disabled",
         "invite_code",
         "uid",
+        "username",
+        "first_name",
+        "middle_name",
+        "last_name",
+        "display_name",
       ])
       .execute();
   } catch (e: unknown) {

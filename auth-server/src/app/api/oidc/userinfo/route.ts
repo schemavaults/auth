@@ -7,6 +7,7 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
+  buildOidcProfileClaims,
   formatOidcSubClaim,
   parseAndGrantScopes,
 } from "@schemavaults/auth-common";
@@ -18,7 +19,11 @@ import {
   type I_JWT_Keys,
 } from "@schemavaults/jwt";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
-import { ServerlessDatabase } from "@/lib/auth-db";
+import {
+  ServerlessDatabase,
+  UserRegistry,
+  type UserDocument,
+} from "@/lib/auth-db";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 
 // CORS: browser-based RPs call userinfo cross-origin with a Bearer
@@ -75,6 +80,10 @@ async function handleUserinfo(request: NextRequest): Promise<NextResponse> {
     return unauthorized("Malformed Authorization header");
   }
 
+  // The DB handle outlives token validation: the `profile` scope's
+  // claims are read fresh from the USERS row rather than the token.
+  await using dbh = ServerlessDatabase.createDBH();
+
   let decoded: CustomJWTPayload;
   try {
     // The token header names its keyset and audience; only tokens
@@ -85,7 +94,6 @@ async function handleUserinfo(request: NextRequest): Promise<NextResponse> {
     }
     const keyset_id: string = getKeysetIdFromToken(token);
 
-    await using dbh = ServerlessDatabase.createDBH();
     const keyset: I_JWT_Keys = await new AuthServerJwtKeysManager(
       dbh.db,
     ).getKeyset(OIDC_USERINFO_AUDIENCE_ID, keyset_id);
@@ -115,6 +123,28 @@ async function handleUserinfo(request: NextRequest): Promise<NextResponse> {
   if (granted.includes("email")) {
     claims.email = decoded.email;
     claims.email_verified = decoded.email_verified;
+  }
+  if (granted.includes("profile")) {
+    // Profile name claims are not embedded in the access token — read
+    // them fresh from the USERS row so edits on /account are reflected
+    // immediately. The same builder derives the id_token's claims, so
+    // the two surfaces agree for the same user (OIDC Core §5.1/§5.3.2).
+    try {
+      const userDoc: UserDocument | null = await new UserRegistry(
+        dbh.db,
+      ).getUserByUID(decoded.uid);
+      if (userDoc) {
+        Object.assign(claims, buildOidcProfileClaims(userDoc));
+      }
+    } catch (e: unknown) {
+      // A failed profile read degrades to omitting the optional profile
+      // claims (`sub` — and `email` when granted — still identify the
+      // user) rather than failing the whole userinfo response.
+      console.error(
+        "[/api/oidc/userinfo] Failed to load profile claims:",
+        e,
+      );
+    }
   }
 
   return NextResponse.json(claims, {

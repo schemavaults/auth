@@ -52,6 +52,7 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
     email: string,
     password: string,
     consent: "required" | "none",
+    expectedProfile?: { name: string; preferred_username: string },
   ): void {
     // Step 1: Start the flow on the RP. Clear RP-origin storage first so
     // a residual SDK session can't interfere with the flow under test.
@@ -93,8 +94,22 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
     // RP lands on its profile page with the established identity.
     cy.origin(
       exampleAppOrigin,
-      { args: { email, expectedIssuer, seededClientId, expectedSubPrefix } },
-      ({ email, expectedIssuer, seededClientId, expectedSubPrefix }) => {
+      {
+        args: {
+          email,
+          expectedIssuer,
+          seededClientId,
+          expectedSubPrefix,
+          expectedProfile: expectedProfile ?? null,
+        },
+      },
+      ({
+        email,
+        expectedIssuer,
+        seededClientId,
+        expectedSubPrefix,
+        expectedProfile,
+      }) => {
         cy.url({ timeout: 30000 }).should("include", "/openid-client/profile");
         cy.get("[data-testid='openid-client-signed-in']", {
           timeout: 15000,
@@ -125,6 +140,29 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
         cy.get("[data-testid='openid-client-email-verified']")
           .invoke("text")
           .should("be.oneOf", ["true", "false"]);
+        // Userinfo claims granted by the `profile` scope: the `name`
+        // claim carries the user's display name and
+        // `preferred_username` the unique username. A user with no
+        // profile names set gets neither claim (rendered empty).
+        if (expectedProfile) {
+          cy.get("[data-testid='openid-client-name']").should(
+            "have.text",
+            expectedProfile.name,
+          );
+          cy.get("[data-testid='openid-client-preferred-username']").should(
+            "have.text",
+            expectedProfile.preferred_username,
+          );
+        } else {
+          cy.get("[data-testid='openid-client-name']").should(
+            "have.text",
+            "",
+          );
+          cy.get("[data-testid='openid-client-preferred-username']").should(
+            "have.text",
+            "",
+          );
+        }
       },
     );
   }
@@ -149,9 +187,33 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
               (statusCode: number) => {
                 expect(statusCode, "register status code").to.equal(200);
 
+                // Set profile names while still authenticated so the
+                // `profile` scope's userinfo claims have data to carry:
+                // `name` = display name, `preferred_username` = username.
+                const display_name = `Openid Client Tester ${suffix}`;
+                const username = `openid-tester-${suffix}`;
+                cy.request({
+                  method: "PUT",
+                  url: "/api/user/profile",
+                  body: {
+                    first_name: "Openid",
+                    last_name: "Tester",
+                    display_name,
+                    username,
+                  },
+                }).then((profileResponse) => {
+                  expect(
+                    profileResponse.status,
+                    "PUT /api/user/profile status",
+                  ).to.equal(200);
+                });
+
                 cy.logout();
 
-                signInViaOpenidClientFlow(email, password, "required");
+                signInViaOpenidClientFlow(email, password, "required", {
+                  name: display_name,
+                  preferred_username: username,
+                });
               },
             );
           });

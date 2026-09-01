@@ -1,4 +1,9 @@
 import { inviteCodeFormatSchema } from "@/invite-code/invite-code-format";
+import {
+  usernameFormatSchema,
+  userNamePartSchema,
+  userDisplayNameSchema,
+} from "@/user_data/user_profile";
 import { z } from "zod";
 
 const _baseUserDataSchema = z
@@ -10,6 +15,16 @@ const _baseUserDataSchema = z
     // Email
     email: z.string().email(),
     email_verified: z.boolean().optional(),
+
+    // Profile names (user-editable; absent for accounts that never set
+    // them). Only present when the UserData was built from the database
+    // row (loadUserData) — UserData derived from a decoded token payload
+    // does not carry them.
+    username: usernameFormatSchema.optional(),
+    first_name: userNamePartSchema.optional(),
+    middle_name: userNamePartSchema.optional(),
+    last_name: userNamePartSchema.optional(),
+    display_name: userDisplayNameSchema.optional(),
 
     // Admin
     admin: z.boolean().optional(),

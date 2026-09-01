@@ -142,6 +142,103 @@ describe("generateIdToken", () => {
     expect(payload.sub).toBe(`white-label-auth|${user.uid}`);
   });
 
+  it("emits profile name claims when the profile scope is granted", async () => {
+    const keyset = await generateNewJwtKeySet({
+      audience_id: "oidc-userinfo",
+      environment,
+    });
+    const user: UserData = {
+      ...makeUser(),
+      username: "ada.lovelace",
+      first_name: "Ada",
+      middle_name: "King",
+      last_name: "Lovelace",
+      display_name: "Countess of Lovelace",
+    };
+    const { id_token } = await generateIdToken({
+      user,
+      client_id: "example-client-app",
+      nonce: null,
+      scopes: ["openid", "profile"],
+      jwt_keys: keyset,
+      environment,
+      auth_server_url: AUTH_SERVER_URL,
+    });
+
+    const jwks = await to_public_verification_jwks(keyset);
+    const public_key = await importJWK(jwks.keys[0]!, "RS256");
+    const { payload } = await jwtVerify(id_token, public_key, {
+      issuer: AUTH_SERVER_URL,
+    });
+    // The `name` claim is the public display name when set
+    expect(payload.name).toBe("Countess of Lovelace");
+    expect(payload.given_name).toBe("Ada");
+    expect(payload.middle_name).toBe("King");
+    expect(payload.family_name).toBe("Lovelace");
+    expect(payload.preferred_username).toBe("ada.lovelace");
+    // email scope was NOT granted
+    expect(payload).not.toHaveProperty("email");
+  });
+
+  it("falls back to joined name parts for `name` when no display name is set", async () => {
+    const keyset = await generateNewJwtKeySet({
+      audience_id: "oidc-userinfo",
+      environment,
+    });
+    const user: UserData = {
+      ...makeUser(),
+      first_name: "Ada",
+      last_name: "Lovelace",
+    };
+    const { id_token } = await generateIdToken({
+      user,
+      client_id: "example-client-app",
+      nonce: null,
+      scopes: ["openid", "profile"],
+      jwt_keys: keyset,
+      environment,
+      auth_server_url: AUTH_SERVER_URL,
+    });
+
+    const jwks = await to_public_verification_jwks(keyset);
+    const public_key = await importJWK(jwks.keys[0]!, "RS256");
+    const { payload } = await jwtVerify(id_token, public_key, {
+      issuer: AUTH_SERVER_URL,
+    });
+    expect(payload.name).toBe("Ada Lovelace");
+    expect(payload).not.toHaveProperty("middle_name");
+    expect(payload).not.toHaveProperty("preferred_username");
+  });
+
+  it("omits profile claims when the profile scope is not granted", async () => {
+    const keyset = await generateNewJwtKeySet({
+      audience_id: "oidc-userinfo",
+      environment,
+    });
+    const user: UserData = {
+      ...makeUser(),
+      username: "ada.lovelace",
+      display_name: "Ada Lovelace",
+    };
+    const { id_token } = await generateIdToken({
+      user,
+      client_id: "example-client-app",
+      nonce: null,
+      scopes: ["openid", "email"],
+      jwt_keys: keyset,
+      environment,
+      auth_server_url: AUTH_SERVER_URL,
+    });
+
+    const jwks = await to_public_verification_jwks(keyset);
+    const public_key = await importJWK(jwks.keys[0]!, "RS256");
+    const { payload } = await jwtVerify(id_token, public_key, {
+      issuer: AUTH_SERVER_URL,
+    });
+    expect(payload).not.toHaveProperty("name");
+    expect(payload).not.toHaveProperty("preferred_username");
+  });
+
   it("omits nonce and email claims when not requested/granted", async () => {
     const keyset = await generateNewJwtKeySet({
       audience_id: "oidc-userinfo",

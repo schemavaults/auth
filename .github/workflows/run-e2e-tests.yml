@@ -129,6 +129,18 @@ jobs:
           path: tests/e2e-auth-tests/dist/e2e-auth-tests-cli.js
           retention-days: 1
 
+  Run-Account-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: account
+      skip-docker-build: true
+
   Run-Apis-E2E-Tests:
     needs:
       - Build-Auth-Server-Test-Docker-Image
