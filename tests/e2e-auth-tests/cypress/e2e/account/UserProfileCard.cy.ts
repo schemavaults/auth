@@ -17,7 +17,13 @@ interface UserProfileResponseBody {
 }
 
 function fillProfileField(testid: string, value: string): void {
-  cy.get(`[data-testid="${testid}"]`).should("be.visible").clear();
+  // The profile card can sit below the fold inside the dashboard
+  // layout's scroll container; Cypress treats elements clipped by an
+  // overflow ancestor as not visible until scrolled into view.
+  cy.get(`[data-testid="${testid}"]`)
+    .scrollIntoView()
+    .should("be.visible")
+    .clear();
   if (value.length > 0) {
     cy.get(`[data-testid="${testid}"]`).type(value);
   }
@@ -170,9 +176,9 @@ describe("Account page profile card", () => {
                   },
                 );
 
-                cy.contains("That username is already taken.").should(
-                  "be.visible",
-                );
+                cy.contains("That username is already taken.")
+                  .scrollIntoView()
+                  .should("be.visible");
               });
             },
           );
@@ -198,7 +204,9 @@ describe("Account page profile card", () => {
           // Inline zod validation blocks submission
           cy.contains(
             "Username may only contain letters, numbers, '.', '_', and '-'",
-          ).should("be.visible");
+          )
+            .scrollIntoView()
+            .should("be.visible");
         },
       );
     });
