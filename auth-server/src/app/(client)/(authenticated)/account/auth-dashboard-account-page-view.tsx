@@ -8,7 +8,10 @@ import {
 import { useRouter } from "next/navigation";
 import type { ReactElement } from "react";
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
-import type { OrganizationMembershipRoleDetails } from "@schemavaults/auth-common";
+import type {
+  OrganizationMembershipRoleDetails,
+  UserProfileNames,
+} from "@schemavaults/auth-common";
 import {
   useAdmin,
   useAppEnvironment,
@@ -26,12 +29,18 @@ import {
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
+import { UserProfileCard } from "@/components/UserProfile";
 import uuidSync from "@/lib/uuid/uuidSync";
 
 export interface AuthAccountPageViewProps {
   auth_server_url: string;
   preloaded_authorized_apps_data?: PreloadedAppsTableDataWithDomainRefs;
   preloaded_organization_memberships?: readonly OrganizationMembershipRoleDetails[];
+  /**
+   * SSR-preloaded profile name fields for the current user, so the
+   * profile card renders populated on first paint.
+   */
+  preloaded_user_profile?: UserProfileNames;
   /**
    * Whether the current user may create new organizations (false when the
    * `admin_only_organization_creation` server setting is enabled and the
@@ -44,6 +53,7 @@ export default function AccountPageView({
   auth_server_url,
   preloaded_authorized_apps_data,
   preloaded_organization_memberships,
+  preloaded_user_profile,
   can_create_organization,
 }: AuthAccountPageViewProps): ReactElement {
   const router = useRouter();
@@ -83,6 +93,10 @@ export default function AccountPageView({
         appEnvironment={environment}
         preloaded_memberships={preloaded_organization_memberships}
         canCreateOrganization={can_create_organization}
+      />
+      <UserProfileCard
+        className={cardsClassName}
+        preloaded_profile={preloaded_user_profile}
       />
       <Card className={cardsClassName}>
         <CardHeader>

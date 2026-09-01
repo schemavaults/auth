@@ -41,7 +41,7 @@ export async function handleOpenidClientDemoLogin(
 
   const authorizationUrl: URL = oidc.buildAuthorizationUrl(config, {
     redirect_uri,
-    scope: "openid email",
+    scope: "openid email profile",
     state,
     nonce,
     code_challenge,

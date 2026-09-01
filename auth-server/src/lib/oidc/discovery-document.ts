@@ -80,6 +80,13 @@ export function buildOidcDiscoveryDocument(
       "nonce",
       "email",
       "email_verified",
+      // Profile-scoped claims (OIDC Core §5.1), derived from the user's
+      // stored profile name fields; emitted only when set.
+      "name",
+      "given_name",
+      "middle_name",
+      "family_name",
+      "preferred_username",
     ],
     authorization_response_iss_parameter_supported: true,
     // Request Objects (JAR, OIDC Core §6 / RFC 9101) are not implemented;

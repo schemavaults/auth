@@ -117,6 +117,11 @@ export async function handleOpenidClientDemoCallback(
         typeof userinfo.email_verified === "boolean"
           ? userinfo.email_verified
           : undefined,
+      name: typeof userinfo.name === "string" ? userinfo.name : undefined,
+      preferred_username:
+        typeof userinfo.preferred_username === "string"
+          ? userinfo.preferred_username
+          : undefined,
     },
   };
 

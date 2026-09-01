@@ -1,6 +1,11 @@
 import "server-only";
 import { z } from "zod";
-import { inviteCodeFormatSchema } from "@schemavaults/auth-common";
+import {
+  inviteCodeFormatSchema,
+  userDisplayNameSchema,
+  userNamePartSchema,
+  usernameFormatSchema,
+} from "@schemavaults/auth-common";
 
 export const userDocumentSchema = z
   .object({
@@ -12,6 +17,14 @@ export const userDocumentSchema = z
     admin: z.boolean().optional(),
     disabled: z.boolean().optional(),
     tokens_valid_after: z.number().nonnegative().optional(),
+    // User-editable profile name fields (migration 00036); absent when
+    // never set. Writes are validated by updateUserProfile, so reads
+    // apply the same shared format schemas.
+    username: usernameFormatSchema.optional(),
+    first_name: userNamePartSchema.optional(),
+    middle_name: userNamePartSchema.optional(),
+    last_name: userNamePartSchema.optional(),
+    display_name: userDisplayNameSchema.optional(),
   })
   .required({
     email: true,
@@ -21,6 +34,20 @@ export const userDocumentSchema = z
   .strict();
 
 export type UserDocument = z.infer<typeof userDocumentSchema>;
+
+/**
+ * The USERS columns that are nullable in Postgres but surfaced as
+ * `string | undefined` on UserDocument: NULL is normalized to the
+ * absent-key form before schema validation.
+ */
+const NULLABLE_TEXT_COLUMNS = [
+  "invite_code",
+  "username",
+  "first_name",
+  "middle_name",
+  "last_name",
+  "display_name",
+] as const;
 
 export async function parseUserDocument(row: unknown): Promise<UserDocument> {
   if (typeof row !== "object" || !row) {
@@ -40,8 +67,16 @@ export async function parseUserDocument(row: unknown): Promise<UserDocument> {
       : typeof rawTokensValidAfter === "string"
         ? parseInt(rawTokensValidAfter, 10)
         : Number(rawTokensValidAfter);
+
+  const normalizedRow: Record<string, unknown> = { ...rawRow };
+  for (const column of NULLABLE_TEXT_COLUMNS) {
+    if (normalizedRow[column] === null) {
+      delete normalizedRow[column];
+    }
+  }
+
   const parsed_user = await userDocumentSchema.safeParseAsync({
-    ...rawRow,
+    ...normalizedRow,
     created_at: parseInt((row as { created_at: string }).created_at),
     ...(tokens_valid_after === undefined ? {} : { tokens_valid_after }),
   });

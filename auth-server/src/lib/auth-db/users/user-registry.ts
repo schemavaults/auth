@@ -33,6 +33,8 @@ import { listAllInviteCodes as listAllInviteCodesFn } from "./list-all-invite-co
 import { countInviteCodeUsages as countInviteCodeUsagesFn } from "./count-invite-code-usages";
 import { promoteToAdmin as promoteToAdminFn } from "./promote-to-admin";
 import { setUserDisabled as setUserDisabledFn } from "./set-user-disabled";
+import { updateUserProfile as updateUserProfileFn } from "./update-user-profile";
+import type { UpdateUserProfileRequest } from "@schemavaults/auth-common";
 import {
   deleteUser as deleteUserFn,
   type DeleteUserResult,
@@ -156,6 +158,22 @@ export class UserRegistry {
 
   public async setUserDisabled(uid: string, disabled: boolean): Promise<void> {
     return setUserDisabledFn(this.db, uid, disabled, this.debug);
+  }
+
+  /**
+   * Replaces the user-editable profile name fields (username,
+   * first/middle/last name, display name). Omitted or null fields are
+   * cleared.
+   *
+   * @throws {UserNotFoundError} when no user exists with the given uid.
+   * @throws {UsernameTakenError} when the username is already claimed
+   *   by another account (case-insensitively).
+   */
+  public async updateUserProfile(
+    uid: string,
+    profile: UpdateUserProfileRequest,
+  ): Promise<UserDocument> {
+    return updateUserProfileFn(this.db, uid, profile, this.debug);
   }
 
   /**

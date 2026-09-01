@@ -102,6 +102,10 @@ export interface OpenidClientDemoSession {
     sub: string;
     email?: string;
     email_verified?: boolean;
+    /** `profile`-scoped full-name claim (the user's display name). */
+    name?: string;
+    /** `profile`-scoped username claim. */
+    preferred_username?: string;
   };
 }
 

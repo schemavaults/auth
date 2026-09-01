@@ -91,6 +91,14 @@ export async function renderOpenidClientDemoProfilePage(
             ? String(session.userinfo.email_verified)
             : ""}
         </dd>
+        <dt className="font-semibold">name</dt>
+        <dd data-testid={`${demo.testIdPrefix}-name`}>
+          {session.userinfo.name ?? ""}
+        </dd>
+        <dt className="font-semibold">preferred_username</dt>
+        <dd data-testid={`${demo.testIdPrefix}-preferred-username`}>
+          {session.userinfo.preferred_username ?? ""}
+        </dd>
       </dl>
     </main>
   );
