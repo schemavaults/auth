@@ -31,6 +31,16 @@ export function getAuthenticatedUserDashboardLinks(
     ),
   };
 
+  const organizationsPageLink: DashboardSidebarItemDefinition = {
+    type: "dashboard-sidebar-item-definition" as const,
+    title: "Organizations",
+    tooltip: "Your organizations and invitations",
+    url: "/orgs",
+    icon: ({ className }: { className: string }): ReactElement => (
+      <Building2 className={className} />
+    ),
+  };
+
   const mfaPageLink: DashboardSidebarItemDefinition = {
     type: "dashboard-sidebar-item-definition" as const,
     title: "MFA",
@@ -53,7 +63,7 @@ export function getAuthenticatedUserDashboardLinks(
   const dashboardLinks: (
     | DashboardSidebarItemDefinition
     | DashboardSidebarItemGroupDefinition
-  )[] = [accountPageLink, mfaPageLink, helpPageLink];
+  )[] = [accountPageLink, organizationsPageLink, mfaPageLink, helpPageLink];
 
   if (admin) {
     const adminLinkGroup: DashboardSidebarItemGroupDefinition = {

@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 import AccountPageView from "./auth-dashboard-account-page-view";
 import {
   getAuthServerUrl,
-  organizationMembershipRoleDetailsSchema,
   type OrganizationMembershipRoleDetails,
   type UserData,
 } from "@schemavaults/auth-common";
@@ -14,8 +13,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import {
   AuthorizedAppsRegistry,
-  listUserOrganizationMemberships,
-  OrganizationsRegistry,
+  listUserOrganizationMembershipDetails,
   preloadAppsTable,
   SchemaVaultsAppRegistry,
   UserRegistry,
@@ -64,49 +62,10 @@ async function attemptToPreloadUserOrganizationMemberships(
   dbh: ServerlessDatabase,
   userData: UserData,
 ): Promise<readonly OrganizationMembershipRoleDetails[]> {
-  const admin: boolean = userData.admin ?? false;
-  const memberships = await listUserOrganizationMemberships(
-    dbh.db,
-    userData.uid,
-    admin,
-  );
-
-  const organizationsRegistry = new OrganizationsRegistry(dbh.db);
-
-  const enrichedResults = await Promise.allSettled(
-    memberships.map(async (membership): Promise<OrganizationMembershipRoleDetails> => {
-      const orgDef = await organizationsRegistry.lookupOrganization(
-        membership.organization_id,
-      );
-      const parsed = await organizationMembershipRoleDetailsSchema.safeParseAsync({
-        organization_id: membership.organization_id,
-        organization_name: orgDef.name,
-        role: membership.role,
-        created_at: orgDef.created_at,
-        joined_at: membership.created_at,
-      });
-      if (!parsed.success) {
-        throw new Error(
-          `Failed to validate preloaded OrganizationMembershipRoleDetails for organization "${membership.organization_id}": ${parsed.error.message}`,
-        );
-      }
-      return parsed.data;
-    }),
-  );
-
-  const preloaded: OrganizationMembershipRoleDetails[] = [];
-  for (const [i, result] of enrichedResults.entries()) {
-    if (result.status === "fulfilled") {
-      preloaded.push(result.value);
-    } else {
-      console.error(
-        `Failed to preload OrganizationMembershipRoleDetails for organization ${memberships[i]?.organization_id ?? "unknown"}:`,
-        result.reason,
-      );
-    }
-  }
-
-  return preloaded;
+  return await listUserOrganizationMembershipDetails(dbh.db, {
+    uid: userData.uid,
+    admin: userData.admin ?? false,
+  });
 }
 
 async function attemptToPreloadUserProfile(

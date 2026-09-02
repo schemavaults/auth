@@ -40,7 +40,7 @@ const columns: ColumnDef<AdminUserOrganizationMembershipRow>[] = [
       const membership = row.original;
       return (
         <Link
-          href={`/org/${membership.organization_id}`}
+          href={`/orgs/${membership.organization_id}`}
           className="hover:underline text-primary"
           data-testid={`admin-user-org-link-${membership.organization_id}`}
         >
@@ -57,7 +57,7 @@ const columns: ColumnDef<AdminUserOrganizationMembershipRow>[] = [
       const membership = row.original;
       return (
         <Link
-          href={`/org/${membership.organization_id}`}
+          href={`/orgs/${membership.organization_id}`}
           className="hover:underline text-primary"
         >
           {membership.organization_id}

@@ -95,7 +95,7 @@ export async function sendTeamInvitationAcceptedEmail({
 }: SendTeamInvitationAcceptedEmailOptions): Promise<void> {
   const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
   const authServerUri: string = getAuthServerUrl(appEnv);
-  const teamUrl: string = `${authServerUri}/org/${organization_id}`;
+  const teamUrl: string = `${authServerUri}/orgs/${organization_id}`;
 
   const registry = new OrganizationsRegistry(db);
   const [org, inviter, accepter] = await Promise.all([

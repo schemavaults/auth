@@ -24,7 +24,7 @@ export interface IProtectedAuthenticatedServerComponentPageProps extends IBasePr
 export interface IWithAuthenticatedServerComponentRouteGuardWrapperOpts {
   /**
    * Same-origin path of the page being protected (e.g. `/mfa`,
-   * `/org/acme`). Forwarded to `/auth/login?next_href=...` when an
+   * `/orgs/acme`). Forwarded to `/auth/login?next_href=...` when an
    * unauthenticated user is bounced to the login page, so the
    * post-login redirect can return them to where they were headed.
    */

@@ -6,9 +6,15 @@ import {
   type IProtectedAdminServerComponentPageProps,
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
-import { OrganizationsRegistry } from "@/lib/auth-db";
+import {
+  listUserOrganizationMembershipDetails,
+  OrganizationsRegistry,
+} from "@/lib/auth-db";
 import type { ServerRuntime } from "next";
-import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import type {
+  OrganizationDefinition,
+  OrganizationMembershipRoleDetails,
+} from "@schemavaults/auth-common";
 import { connection } from "next/server";
 
 async function PreloadedOrganizationsPage({
@@ -23,10 +29,40 @@ async function PreloadedOrganizationsPage({
 
   const registry = new OrganizationsRegistry(dbh.db);
 
-  const organizations: readonly OrganizationDefinition[] =
-    await registry.listAllOrganizations();
+  const [organizationsResult, myMembershipsResult] = await Promise.allSettled([
+    registry.listAllOrganizations(),
+    listUserOrganizationMembershipDetails(dbh.db, {
+      uid: user.uid,
+      admin: true,
+    }),
+  ]);
 
-  return <AdminOrganizationsPageView preloaded={organizations} />;
+  if (organizationsResult.status === "rejected") {
+    throw organizationsResult.reason;
+  }
+  const organizations: readonly OrganizationDefinition[] =
+    organizationsResult.value;
+
+  // On failure the "Your organizations" stat card fetches from
+  // GET /api/me/organizations client-side instead.
+  let preloaded_my_memberships:
+    | readonly OrganizationMembershipRoleDetails[]
+    | undefined;
+  if (myMembershipsResult.status === "fulfilled") {
+    preloaded_my_memberships = myMembershipsResult.value;
+  } else {
+    console.error(
+      "Failed to preload the admin's own organization memberships for /admin/organizations:",
+      myMembershipsResult.reason,
+    );
+  }
+
+  return (
+    <AdminOrganizationsPageView
+      preloaded={organizations}
+      preloaded_my_memberships={preloaded_my_memberships}
+    />
+  );
 }
 
 async function OrganizationsServerComponent(): Promise<ReactElement> {

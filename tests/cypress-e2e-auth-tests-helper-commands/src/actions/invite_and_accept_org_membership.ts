@@ -44,8 +44,8 @@ export default function inviteAndAcceptOrgMembership(
   );
 
   // Navigate to organization page
-  cy.visit(`/org/${organization_id}`);
-  cy.url().should("include", `/org/${organization_id}`);
+  cy.visit(`/orgs/${organization_id}`);
+  cy.url().should("include", `/orgs/${organization_id}`);
   cy.wait_for_page_hydration();
 
   // Open invite member dialog

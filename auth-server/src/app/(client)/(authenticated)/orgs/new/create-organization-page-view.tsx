@@ -27,7 +27,7 @@ export default function CreateOrganizationPageView(): ReactElement {
         <CardContent>
           <CreateOrganizationForm
             onSuccess={(organization_id: string): void => {
-              router.push(`/org/${organization_id}`);
+              router.push(`/orgs/${organization_id}`);
             }}
           />
         </CardContent>

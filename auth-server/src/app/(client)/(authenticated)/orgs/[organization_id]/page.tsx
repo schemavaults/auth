@@ -49,7 +49,7 @@ function memberToTableData(
 
 async function PreloadedOrgPage(
   { user, dbh }: IProtectedAuthenticatedServerComponentPageProps,
-  pageParams: PageProps<"/org/[organization_id]">,
+  pageParams: PageProps<"/orgs/[organization_id]">,
 ): Promise<ReactElement> {
   const { organization_id: org_id_param } = await pageParams.params;
 
@@ -85,7 +85,7 @@ async function PreloadedOrgPage(
     organization = await registry.lookupOrganization(organization_id);
   } catch (e: unknown) {
     console.error(`Failed to lookup organization '${organization_id}': `, e);
-    redirect("/account?error=organization_not_found");
+    redirect("/orgs?error=organization_not_found");
   }
 
   // Create registries for apps and API servers
@@ -127,7 +127,7 @@ async function PreloadedOrgPage(
 }
 
 export default async function ViewOrganizationPage(
-  pageParams: PageProps<"/org/[organization_id]">,
+  pageParams: PageProps<"/orgs/[organization_id]">,
 ): Promise<ReactElement> {
   await connection();
   const { organization_id } = await pageParams.params;
@@ -138,7 +138,7 @@ export default async function ViewOrganizationPage(
   return await withAuthenticatedServerComponentRouteGuard(
     (props) => PreloadedOrgPage(props, pageParams),
     parsed_organization_id.success
-      ? { next_href: `/org/${parsed_organization_id.data}` }
+      ? { next_href: `/orgs/${parsed_organization_id.data}` }
       : undefined,
   );
 }

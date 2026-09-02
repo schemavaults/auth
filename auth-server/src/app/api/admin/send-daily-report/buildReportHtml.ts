@@ -89,7 +89,7 @@ export function buildDailyAdminReport({
     ? `<tr><td colspan="3" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No new organizations in the last 24 hours.</td></tr>`
     : newOrganizations
         .map((o) => {
-          const link = `${authServerUri}/org/${encodeURIComponent(o.organization_id)}`;
+          const link = `${authServerUri}/orgs/${encodeURIComponent(o.organization_id)}`;
           return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(o.organization_id)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${BRAND_BLUE};text-decoration:none;">${escapeHtml(o.name)}</a></td>
@@ -306,7 +306,7 @@ ${errorsRows}
   } else {
     for (const o of newOrganizations) {
       textLines.push(
-        `  - ${o.name} [${o.organization_id}] — ${formatTimestamp(o.created_at)} — ${authServerUri}/org/${o.organization_id}`,
+        `  - ${o.name} [${o.organization_id}] — ${formatTimestamp(o.created_at)} — ${authServerUri}/orgs/${o.organization_id}`,
       );
     }
   }

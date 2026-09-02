@@ -10,12 +10,21 @@ import {
   StatCardIcon,
   cn,
 } from "@schemavaults/ui";
-import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import type {
+  OrganizationDefinition,
+  OrganizationMembershipRoleDetails,
+} from "@schemavaults/auth-common";
 import { Building2 } from "lucide-react";
 import { useAllOrganizationsList } from "@/components/OrganizationsTable";
+import { MyOrganizationsStatCard } from "@/components/MyOrganizationsStatsRow";
 
 export interface OrganizationsStatsRowProps {
   preloaded?: readonly OrganizationDefinition[];
+  /**
+   * SSR-preloaded memberships for the *current* user, backing the
+   * "Your organizations" stat card (see `useMyOrganizations()`).
+   */
+  preloaded_my_memberships?: readonly OrganizationMembershipRoleDetails[];
   className?: string;
 }
 
@@ -48,6 +57,8 @@ export function OrganizationsStatsRow(
           All organizations visible to admins.
         </StatCardDescription>
       </StatCard>
+
+      <MyOrganizationsStatCard preloaded={props.preloaded_my_memberships} />
     </div>
   );
 }
