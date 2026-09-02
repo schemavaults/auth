@@ -114,6 +114,8 @@ export {
   isValidOrganizationMembershipRoleType,
   organizationMembershipRoleDetailsSchema,
   isValidOrganizationMembershipRoleDetails,
+  addExistingMemberRoles,
+  addExistingMemberFormSchema,
 } from "./organizations";
 export type {
   OrganizationID,
@@ -121,6 +123,9 @@ export type {
   InviteMemberInputMode,
   InviteMemberFormValues,
   InviteMemberSubmitData,
+  AddExistingMemberRole,
+  AddExistingMemberFormValues,
+  AddExistingMemberSubmitData,
   OrganizationInvitationStatus,
   OrganizationInvitation,
   UserPendingInvitation,

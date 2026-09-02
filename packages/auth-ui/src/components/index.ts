@@ -46,8 +46,8 @@ export type {
 export { UsersTable } from "./UsersTable";
 export type { UsersDatatableProps } from "./UsersTable";
 
-export { UsersCard } from "./UsersCard";
-export type { UsersCardProps } from "./UsersCard";
+export { UsersCard, useAllUsers, listAllUsersEndpoint } from "./UsersCard";
+export type { UsersCardProps, UseAllUsersOptions } from "./UsersCard";
 
 export { UsersStatsRow } from "./UsersStatsRow";
 export type { UsersStatsRowProps } from "./UsersStatsRow";
@@ -74,14 +74,31 @@ export type * from "./CreateOrganizationDialog";
 export { CreateOrganizationForm } from "./CreateOrganizationForm";
 export type { CreateOrganizationFormProps } from "./CreateOrganizationForm";
 
-export { OrganizationMembersTable } from "./OrganizationMembersTable";
+export {
+  OrganizationMembersTable,
+  useOrganizationMembers,
+  getOrganizationMembersEndpoint,
+} from "./OrganizationMembersTable";
 export type {
   OrganizationMembersDatatableProps,
   OrganizationMemberTableData,
+  UseOrganizationMembersOptions,
 } from "./OrganizationMembersTable";
 
 export { OrganizationMembersCard } from "./OrganizationMembersCard";
 export type { OrganizationMembersCardProps } from "./OrganizationMembersCard";
+
+export {
+  AddExistingMemberCard,
+  addExistingMemberCardTestId,
+  addExistingMemberUserComboboxTestId,
+  addExistingMemberRoleSelectTestId,
+  addExistingMemberSubmitButtonTestId,
+} from "./AddExistingMemberCard";
+export type {
+  AddExistingMemberCardProps,
+  AddExistingMemberSubmitData,
+} from "./AddExistingMemberCard";
 
 export { InviteMemberDialog } from "./InviteMemberDialog";
 export type {

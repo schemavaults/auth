@@ -3,6 +3,7 @@
 import { useSWRConfig } from "swr";
 import {
   OrganizationMembersCard,
+  AddExistingMemberCard,
   ApiServersCard,
   AppsCard,
   SentInvitationsCard,
@@ -15,7 +16,12 @@ import {
 import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import PageContainer from "@/components/PageContainer";
-import type { InviteMemberSubmitData, OrganizationDefinition, OrganizationMembershipRoleType } from "@schemavaults/auth-common";
+import type {
+  AddExistingMemberSubmitData,
+  InviteMemberSubmitData,
+  OrganizationDefinition,
+  OrganizationMembershipRoleType,
+} from "@schemavaults/auth-common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, useToast } from "@schemavaults/ui";
 import uuidSync from "@/lib/uuid/uuidSync";
 
@@ -25,6 +31,11 @@ export interface OrgPageViewProps {
   preloaded_apps: PreloadedAppsTableDataWithDomainRefs;
   preloaded_api_servers: PreloadedApiServersTableDataWithDomainRefs;
   isOrgOwner: boolean;
+  /**
+   * Global administrator (superuser) flag, resolved server-side. Gates the
+   * admin-only "add existing user" card.
+   */
+  isAdmin: boolean;
   userRole?: OrganizationMembershipRoleType;
 }
 
@@ -52,6 +63,7 @@ export default function OrgPageView({
   preloaded_apps,
   preloaded_api_servers,
   isOrgOwner,
+  isAdmin,
   userRole,
 }: OrgPageViewProps): ReactElement {
   const { toast } = useToast();
@@ -105,6 +117,40 @@ export default function OrgPageView({
           }
         } : undefined}
       />
+
+      {isAdmin && (
+        <AddExistingMemberCard
+          organization_id={organization.organization_id}
+          cardClassName="w-full"
+          onSubmit={async (data: AddExistingMemberSubmitData) => {
+            const response = await fetch(
+              `/api/organizations/${organization.organization_id}/members`,
+              {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ uid: data.uid, role: data.role }),
+              }
+            );
+
+            const body = await response.json();
+
+            if (!response.ok || !body.success) {
+              throw new Error(body.message || "Failed to add user to organization");
+            }
+
+            toast({
+              title: "User added!",
+              description: body.message,
+            });
+
+            // A direct add revokes any pending invitation for that user.
+            clearSentInvitationsCache(mutate, organization.organization_id);
+          }}
+        />
+      )}
 
       {isOrgOwner && (
         <SentInvitationsCard

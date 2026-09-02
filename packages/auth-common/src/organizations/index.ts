@@ -40,6 +40,16 @@ export type {
 } from "./invite_member_form";
 
 export {
+  addExistingMemberRoles,
+  addExistingMemberFormSchema,
+} from "./add_existing_member_form";
+export type {
+  AddExistingMemberRole,
+  AddExistingMemberFormValues,
+  AddExistingMemberSubmitData,
+} from "./add_existing_member_form";
+
+export {
   organizationInvitationStatusTypes,
   organizationInvitationStatusSchema,
   organizationInvitationSchema,

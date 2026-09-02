@@ -7,6 +7,7 @@ import {
 import { OrganizationsRegistry, type OrganizationMemberWithUserData } from "@/lib/auth-db/organizations";
 import { type OrganizationID, organizationIdSchema } from "@schemavaults/auth-common";
 import captureServerException from "@/lib/captureServerException";
+import POST_add_member_handler from "./POST_add_member_handler";
 
 async function GET_organization_members_handler(
   { user, dbh }: IProtectedAuthenticatedApiRouteProps,
@@ -78,6 +79,15 @@ export async function GET(req: NextRequest, context: RouteContext<"/api/organiza
   await connection();
   const handler = await withAuthenticatedApiRouteGuard(
     (props) => GET_organization_members_handler(props, context),
+  );
+
+  return await handler(req);
+}
+
+export async function POST(req: NextRequest, context: RouteContext<"/api/organizations/[organization_id]/members">): Promise<NextResponse> {
+  await connection();
+  const handler = await withAuthenticatedApiRouteGuard(
+    (props) => POST_add_member_handler(props, context, req),
   );
 
   return await handler(req);

@@ -121,6 +121,7 @@ async function PreloadedOrgPage(
       preloaded_apps={preloaded_apps}
       preloaded_api_servers={preloaded_api_servers}
       isOrgOwner={isOrgOwner}
+      isAdmin={user.admin ?? false}
       userRole={userRole}
     />
   );
