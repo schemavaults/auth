@@ -11,17 +11,35 @@ interface CreateInvitationResponseBody {
   message?: string;
 }
 
-function expectStatValue(testid: string, expected: number): void {
-  cy.get(`[data-testid="${testid}"]`, { timeout: 15000 })
+// Stat values are rendered by SWR-backed cards: they may show a loading
+// skeleton before the first fetch resolves, and they update asynchronously
+// after a mutation (e.g. accepting an invitation revalidates both the
+// invitations and memberships caches). The assertion callback is passed to
+// `.should()` so Cypress retries it until it passes or times out, instead of
+// reading the value once.
+function readStatValue(testid: string): Cypress.Chainable<JQuery<HTMLElement>> {
+  return cy
+    .get(`[data-testid="${testid}"]`, { timeout: 15000 })
     .scrollIntoView()
-    .should("be.visible")
-    .invoke("text")
-    .then((text: string) => {
-      expect(
-        Number.parseInt(text.trim(), 10),
-        `${testid} should read ${expected}`,
-      ).to.equal(expected);
-    });
+    .should("be.visible");
+}
+
+function expectStatValue(testid: string, expected: number): void {
+  readStatValue(testid).should(($el: JQuery<HTMLElement>) => {
+    expect(
+      Number.parseInt($el.text().trim(), 10),
+      `${testid} should read ${expected}`,
+    ).to.equal(expected);
+  });
+}
+
+function expectStatValueAtLeast(testid: string, minimum: number): void {
+  readStatValue(testid).should(($el: JQuery<HTMLElement>) => {
+    expect(
+      Number.parseInt($el.text().trim(), 10),
+      `${testid} should read at least ${minimum}`,
+    ).to.be.at.least(minimum);
+  });
 }
 
 describe("User organizations page (/orgs)", () => {
@@ -245,21 +263,13 @@ describe("User organizations page (/orgs)", () => {
 
         cy.get('[data-testid="my-organizations-stat-card"]').should("be.visible");
         // Admins always hold a virtual membership in the owner organization.
-        cy.get('[data-testid="my-organizations-stat-value"]')
-          .invoke("text")
-          .then((text: string) => {
-            expect(Number.parseInt(text.trim(), 10)).to.be.at.least(1);
-          });
+        expectStatValueAtLeast("my-organizations-stat-value", 1);
 
         // Admins see the same page as everyone else at /orgs.
         cy.visit("/orgs");
         cy.wait_for_page_hydration();
         cy.get('[data-testid="my-organizations-card"]').should("be.visible");
-        cy.get('[data-testid="my-organizations-stat-value"]')
-          .invoke("text")
-          .then((text: string) => {
-            expect(Number.parseInt(text.trim(), 10)).to.be.at.least(1);
-          });
+        expectStatValueAtLeast("my-organizations-stat-value", 1);
       });
     });
   });
