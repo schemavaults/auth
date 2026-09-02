@@ -5,7 +5,7 @@ const openConnectAppToApiDialogButtonId =
 export interface ConnectAppToApiParams {
   client_app_id: string;
   api_server_id: string;
-  organization_id?: string; // Navigate to /org/{id} or /admin/apis
+  organization_id?: string; // Navigate to /orgs/{id} or /admin/apis
 }
 
 export interface ConnectAppToApiResult {
@@ -27,7 +27,7 @@ export default function connectAppToApi(
   }
 
   // Navigate to the appropriate page based on whether organization_id is provided
-  const targetUrl = organization_id ? `/org/${organization_id}` : "/admin/apis";
+  const targetUrl = organization_id ? `/orgs/${organization_id}` : "/admin/apis";
 
   return cy.visit(targetUrl).then(() => {
     cy.url().should("include", targetUrl);

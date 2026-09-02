@@ -37,4 +37,6 @@ export { hasUserExceededMaximumOrgMemberships } from './has-user-exceeded-maximu
 export { listAllOrganizations } from './list-all-organizations';
 export { listOrganizationsCreatedSince } from './list-organizations-created-since';
 export { listUserOrganizationMemberships } from './list-user-organization-memberships';
+export { listUserOrganizationMembershipDetails } from './list-user-organization-membership-details';
+export type { ListUserOrganizationMembershipDetailsOptions } from './list-user-organization-membership-details';
 export { listUserOrganizations } from './list-user-organizations';

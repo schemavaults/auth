@@ -36,7 +36,7 @@ export default async function CreateOrganizationPage(): Promise<ReactElement> {
   await connection();
   return await withAuthenticatedServerComponentRouteGuard(
     CreateOrganizationPageServerComponent,
-    { next_href: "/org/new" },
+    { next_href: "/orgs/new" },
   );
 }
 

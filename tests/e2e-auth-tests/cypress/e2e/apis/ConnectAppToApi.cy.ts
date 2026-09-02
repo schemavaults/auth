@@ -444,7 +444,7 @@ describe("Connect App to API Server", () => {
                         cy.logout();
                         cy.create_and_login_as_superuser_via_request().then(() => {
                           // Invite the user to the organization (as member, not owner)
-                          cy.visit(`/org/${organization_id}`);
+                          cy.visit(`/orgs/${organization_id}`);
                           cy.wait_for_page_hydration();
 
                           cy.open_dialog_with_button(

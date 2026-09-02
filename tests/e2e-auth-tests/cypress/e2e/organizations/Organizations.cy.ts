@@ -6,7 +6,7 @@ describe("Organizations", () => {
     });
 
     it("unauthenticated users are redirected from organization pages", () => {
-      cy.visit("/org/test-organization");
+      cy.visit("/orgs/test-organization");
       cy.url().should("include", "/login");
     });
   });
@@ -40,8 +40,8 @@ describe("Organizations", () => {
             );
 
             // Visit the organization page
-            cy.visit(`/org/${organization_id}`);
-            cy.url().should("include", `/org/${organization_id}`);
+            cy.visit(`/orgs/${organization_id}`);
+            cy.url().should("include", `/orgs/${organization_id}`);
 
             // Verify the org page loads correctly (not redirected to error)
             cy.url().should("not.include", "/error");
@@ -79,7 +79,7 @@ describe("Organizations", () => {
             cy.generate_random_test_user_credentials().then((credentials) => {
               cy.create_and_login_as_regular_user_via_request(credentials).then(() => {
                 // Attempt to visit the organization page
-                cy.visit(`/org/${organization_id}`, {
+                cy.visit(`/orgs/${organization_id}`, {
                   failOnStatusCode: false,
                 });
 

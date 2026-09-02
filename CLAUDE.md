@@ -89,6 +89,7 @@ bun run test --filter @schemavaults/auth-server-sdk  # Run tests in auth-server-
 - `src/app/api/` - Next.js API routes (auth endpoints, admin endpoints, token management)
 - `src/app/(client)/` - Client-side pages with route groups
 - `src/app/(client)/(authenticated)/` - Routes requiring authentication
+  - Organization pages live under `/orgs`: `/orgs` (the current user's memberships + pending invitations, built from `MyOrganizationsStatsRow`/`MyOrganizationsCard`/`PendingInvitationsCard` in `@schemavaults/auth-ui`), `/orgs/[organization_id]` (org detail), and `/orgs/new`. The legacy `/org/*` paths are permanently redirected to `/orgs/*` by `redirects()` in `next.config.ts`; link to `/orgs/...` in new code. `/admin/organizations` lists every organization and shares the "Your organizations" stat card (`MyOrganizationsStatCard`, backed by `useMyOrganizations()`; SSR-preloaded via `listUserOrganizationMembershipDetails` in `src/lib/auth-db/organizations/`).
 - `src/lib/auth-db/` - Database resource groups for users, organizations, apps, APIs, JWT keys
 - `src/components/` - Next.js/React.js client components specific to the auth server
 - `src/lib/AuthServerJwtKeysManager/` - JWT key lifecycle management

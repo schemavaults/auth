@@ -22,7 +22,10 @@ import {
 } from "react";
 
 import { useForm } from "@schemavaults/ui";
-import { useAppEnvironment } from "@schemavaults/auth-react-provider";
+import {
+  clearMyOrganizationsCache,
+  useAppEnvironment,
+} from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
   type OrganizationDefinition,
@@ -73,6 +76,9 @@ export function CreateOrganizationForm({
 
   const clearOrganizationsCache = useCallback((): void => {
     mutate("/api/organizations");
+    // The creating user becomes the new organization's owner, so their own
+    // membership list (and the "Your organizations" stat) changes too.
+    clearMyOrganizationsCache(mutate);
   }, [mutate]);
 
   async function onSubmit(values: OrganizationDefinition): Promise<void> {

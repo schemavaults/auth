@@ -38,7 +38,7 @@ export default function createApiServer(
   }
 
   // Navigate to the appropriate page based on whether organization_id is provided
-  const targetUrl = organization_id ? `/org/${organization_id}` : "/admin/apis";
+  const targetUrl = organization_id ? `/orgs/${organization_id}` : "/admin/apis";
 
   return cy.visit(targetUrl).then(() => {
     cy.url().should("include", targetUrl);

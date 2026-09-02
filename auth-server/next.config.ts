@@ -83,6 +83,18 @@ const nextConfig: NextConfig = {
     "/*": ["./public/branding-defaults/**/*"],
   },
   productionBrowserSourceMaps,
+  async redirects() {
+    return [
+      // Organization pages moved from /org/* to /orgs/* (alongside the new
+      // /orgs listing page). Keep old bookmarks, emails, and external links
+      // working with a permanent redirect; the query string is preserved.
+      {
+        source: "/org/:path*",
+        destination: "/orgs/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       // Browsers and crawlers that ignore the <link rel="icon"> tag request

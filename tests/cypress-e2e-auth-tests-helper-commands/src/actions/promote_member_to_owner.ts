@@ -17,8 +17,8 @@ export default function promoteMemberToOwner(
   }
 
   // Navigate to the organization page
-  return cy.visit(`/org/${organization_id}`).then(() => {
-    cy.url().should("include", `/org/${organization_id}`);
+  return cy.visit(`/orgs/${organization_id}`).then(() => {
+    cy.url().should("include", `/orgs/${organization_id}`);
     return cy.wait_for_page_hydration().then(() => {
       // Find the row with the user's email and click the actions menu
       cy.contains("tr", user_email)

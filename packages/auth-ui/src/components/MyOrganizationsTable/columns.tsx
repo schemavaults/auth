@@ -1,77 +1,89 @@
 "use client";
 
 import type { ReactElement } from "react";
-
 import type { ColumnDef } from "@schemavaults/ui";
-import { Checkbox, useToast } from "@schemavaults/ui";
-import { Button } from "@schemavaults/ui";
-import { ClipboardCopy, Eye, MoreHorizontal } from "lucide-react";
-import Link from "next/link";
 import {
+  Badge,
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  useToast,
 } from "@schemavaults/ui";
-import type { OrganizationDefinition } from "@schemavaults/auth-common";
+import { ClipboardCopy, Eye, MoreHorizontal } from "lucide-react";
+import Link from "next/link";
+import type { OrganizationMembershipRoleDetails } from "@schemavaults/auth-common";
 import { LocalDateTime } from "@/lib/LocalDateTime";
 
-export const columns: ColumnDef<OrganizationDefinition>[] = [
+function roleBadgeVariant(
+  role: OrganizationMembershipRoleDetails["role"],
+): "default" | "secondary" | "outline" {
+  switch (role) {
+    case "owner":
+      return "default";
+    case "admin":
+      return "secondary";
+    default:
+      return "outline";
+  }
+}
+
+export const columns: ColumnDef<OrganizationMembershipRoleDetails>[] = [
   {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value: boolean) =>
-          table.toggleAllPageRowsSelected(!!value)
-        }
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value: boolean) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
+    id: "organization_name",
+    accessorKey: "organization_name",
+    header: "Organization",
+    cell: ({ row }): ReactElement => {
+      const membership: OrganizationMembershipRoleDetails = row.original;
+      return (
+        <Link
+          href={`/orgs/${membership.organization_id}`}
+          className="hover:underline text-primary"
+          data-testid={`my-org-link-${membership.organization_id}`}
+        >
+          {membership.organization_name}
+        </Link>
+      );
+    },
   },
   {
     id: "organization_id",
     accessorKey: "organization_id",
     header: "Organization ID",
     cell: ({ row }): ReactElement => {
-      const org: OrganizationDefinition = row.original;
+      const membership: OrganizationMembershipRoleDetails = row.original;
       return (
         <Link
-          href={`/orgs/${org.organization_id}`}
+          href={`/orgs/${membership.organization_id}`}
           className="hover:underline text-primary"
         >
-          {org.organization_id}
+          {membership.organization_id}
         </Link>
       );
     },
   },
   {
-    id: "name",
-    accessorKey: "name",
-    header: "Name",
+    id: "role",
+    accessorKey: "role",
+    header: "Your Role",
     cell: ({ row }): ReactElement => {
-      const org: OrganizationDefinition = row.original;
+      const membership: OrganizationMembershipRoleDetails = row.original;
       return (
-        <Link
-          href={`/orgs/${org.organization_id}`}
-          className="hover:underline text-primary"
-        >
-          {org.name}
-        </Link>
+        <Badge variant={roleBadgeVariant(membership.role)} className="capitalize">
+          {membership.role}
+        </Badge>
       );
+    },
+  },
+  {
+    id: "joined_at",
+    accessorKey: "joined_at",
+    header: "Member Since",
+    cell: ({ row }): ReactElement => {
+      const membership: OrganizationMembershipRoleDetails = row.original;
+      return <LocalDateTime value={membership.joined_at} showSeconds={false} />;
     },
   },
   {
@@ -79,20 +91,26 @@ export const columns: ColumnDef<OrganizationDefinition>[] = [
     accessorKey: "created_at",
     header: "Created At",
     cell: ({ row }): ReactElement => {
-      const org: OrganizationDefinition = row.original;
-      return <LocalDateTime value={org.created_at} />;
+      const membership: OrganizationMembershipRoleDetails = row.original;
+      return (
+        <LocalDateTime value={membership.created_at} showSeconds={false} />
+      );
     },
   },
   {
     id: "actions",
-    cell: function OrganizationsTableRowActionsCell({ row }): ReactElement {
+    cell: function MyOrganizationsTableRowActionsCell({ row }): ReactElement {
       const { toast } = useToast();
-      const org: OrganizationDefinition = row.original;
+      const membership: OrganizationMembershipRoleDetails = row.original;
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              data-testid={`my-org-actions-button-${membership.organization_id}`}
+            >
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
@@ -100,14 +118,14 @@ export const columns: ColumnDef<OrganizationDefinition>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem asChild>
-              <Link href={`/orgs/${org.organization_id}`}>
+              <Link href={`/orgs/${membership.organization_id}`}>
                 <Eye className="h-4 w-4 pr-2" /> View Organization
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={async (e): Promise<void> => {
                 e.preventDefault();
-                const organization_id: string = org.organization_id;
+                const organization_id: string = membership.organization_id;
                 try {
                   if (!window.isSecureContext) {
                     throw new Error(
@@ -130,7 +148,6 @@ export const columns: ColumnDef<OrganizationDefinition>[] = [
                   title: "Successfully copied organization ID to clipboard!",
                   description: `You should now be able to paste '${organization_id}' from your clipboard!`,
                 });
-                return;
               }}
             >
               <ClipboardCopy className="h-4 w-4 pr-2" /> Copy Organization ID

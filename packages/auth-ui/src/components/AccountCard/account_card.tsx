@@ -118,7 +118,7 @@ export function AccountDetailsCard(
                   {memberships.map((membership) => (
                     <Link
                       key={membership.organization_id}
-                      href={`/org/${membership.organization_id}`}
+                      href={`/orgs/${membership.organization_id}`}
                     >
                       <Button
                         variant="outline"
@@ -144,7 +144,7 @@ export function AccountDetailsCard(
               {(props.canCreateOrganization ?? true) &&
                 (!memberships ||
                   memberships.length < MAXIMUM_USER_ORGANIZATIONS) && (
-                  <Link href="/org/new">
+                  <Link href="/orgs/new">
                     <Button
                       variant="outline"
                       size="sm"

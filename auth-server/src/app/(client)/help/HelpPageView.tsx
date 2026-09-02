@@ -116,12 +116,12 @@ export default function HelpPageView({
         id: "create-organization",
         question: "How do I create an organization?",
         answer:
-          "Once you are signed in, navigate to the \"Create organization\" page at /org/new, enter a name and any other required details, and submit the form. After creation you will be redirected to your new organization's page where you can manage members, invitations, and settings.",
+          "Once you are signed in, navigate to the \"Create organization\" page at /orgs/new, enter a name and any other required details, and submit the form. After creation you will be redirected to your new organization's page where you can manage members, invitations, and settings.",
         answerComponent: (
           <span>
             Once you are signed in, navigate to the{" "}
             <Link
-              href="/org/new"
+              href="/orgs/new"
               className="text-primary underline underline-offset-4 hover:opacity-80"
             >
               Create organization

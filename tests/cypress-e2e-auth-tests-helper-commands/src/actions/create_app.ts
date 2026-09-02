@@ -31,7 +31,7 @@ export default function createApp(
   }
 
   // Navigate to the appropriate page based on whether organization_id is provided
-  const targetUrl = organization_id ? `/org/${organization_id}` : "/admin/apps";
+  const targetUrl = organization_id ? `/orgs/${organization_id}` : "/admin/apps";
 
   return cy.visit(targetUrl).then(() => {
     cy.url().should("include", targetUrl);

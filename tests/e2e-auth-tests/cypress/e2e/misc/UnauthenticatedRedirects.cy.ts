@@ -5,9 +5,20 @@ describe("Unauthenticated Redirects", () => {
       cy.url().should("not.include", "/account");
     });
 
+    it("is redirected off the organizations page", () => {
+      cy.visit("/orgs");
+      cy.url().should("not.match", /\/orgs(\/|\?|$)/);
+    });
+
     it("is redirected off the org page", () => {
+      cy.visit("/orgs/fake-org-id");
+      cy.url().should("not.include", "/orgs/fake-org-id");
+    });
+
+    it("is redirected off the legacy org page path", () => {
       cy.visit("/org/fake-org-id");
       cy.url().should("not.include", "/org/fake-org-id");
+      cy.url().should("not.include", "/orgs/fake-org-id");
     });
 
     it("is redirected off the API server detail page", () => {
