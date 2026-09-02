@@ -74,6 +74,13 @@ const nextConfig: NextConfig = {
     root: monorepoRoot,
   },
   outputFileTracingRoot: monorepoRoot,
+  experimental: {
+    // Enables the app/global-not-found.tsx convention: a full-document 404
+    // page rendered for URLs that match no route at all (bypassing the root
+    // layout), branded with the deployment's white-label friendly name and
+    // theme colors.
+    globalNotFound: true,
+  },
   // The /branding/[asset] route and every page's generateMetadata (root
   // layout) read the bundled default branding assets from
   // public/branding-defaults/ at serve time. Force them into serverless
