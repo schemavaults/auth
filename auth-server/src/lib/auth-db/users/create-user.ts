@@ -118,7 +118,7 @@ export async function createUser(
     disabled: false,
   } satisfies UserDocument);
   if (!parsed_user.success) {
-    console.error(parsed_user.error.errors);
+    console.error(parsed_user.error.issues);
     throw new Error("Failed to parse new user document");
   }
   const user: UserDocument = parsed_user.data;

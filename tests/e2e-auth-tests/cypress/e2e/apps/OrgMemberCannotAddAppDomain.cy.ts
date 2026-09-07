@@ -61,7 +61,7 @@ export {};
 // auth server is not served from a secure context in CI; see
 // example_resource_server/ExternalJwksLoad.cy.ts for the same workaround).
 // Generate an RFC4122 v4 UUID with Math.random instead — both ids below feed
-// into `z.string().uuid()` validators on the auth-server, so the format must
+// into `z.guid()` validators on the auth-server, so the format must
 // be valid.
 function generateV4Uuid(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {

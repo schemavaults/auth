@@ -12,7 +12,7 @@ function isValidBaseId(
   if (!parsed.success && typeof log === "function") {
     log(parsed.error);
     log(parsed.error?.cause);
-    log(parsed.error?.errors);
+    log(parsed.error?.issues);
   }
   return parsed.success;
 }

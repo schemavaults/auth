@@ -15,7 +15,7 @@ const ROUTE = "/api/auth/reset-password/confirm";
 
 const resetPasswordConfirmBodySchema = z
   .object({
-    token: z.string().uuid(),
+    token: z.guid(),
     new_password: passwordSchema,
   })
   .strict();
@@ -34,7 +34,7 @@ export async function handleResetPasswordConfirm({
   const parsed = await resetPasswordConfirmBodySchema.safeParseAsync(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { success: false, message: "Invalid request body", errors: parsed.error.errors },
+      { success: false, message: "Invalid request body", errors: parsed.error.issues },
       { status: 400 },
     );
   }

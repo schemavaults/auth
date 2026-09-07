@@ -49,7 +49,7 @@ async function loadPasswordRecord(
         : parseInt(row.created_at as string),
   });
   if (!parsed_password_record.success) {
-    console.error(parsed_password_record.error.errors);
+    console.error(parsed_password_record.error.issues);
     throw new Error("Failed to parse password record from database");
   }
   return parsed_password_record.data;

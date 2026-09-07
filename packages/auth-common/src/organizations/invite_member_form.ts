@@ -8,7 +8,7 @@ export const inviteMemberFormSchema = z
   .object({
     organization_id: organizationIdSchema,
     input_mode: z.enum(inviteMemberInputModes),
-    identifier: z.union([z.string().uuid(), z.string().email()]),
+    identifier: z.union([z.guid(), z.email()]),
   })
   .required({
     organization_id: true,
@@ -18,17 +18,17 @@ export const inviteMemberFormSchema = z
   .strict()
   .superRefine((data, ctx: z.RefinementCtx) => {
     if (data.input_mode === "uid") {
-      if (!z.string().uuid().safeParse(data.identifier).success) {
+      if (!z.guid().safeParse(data.identifier).success) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "Must be a valid UUID",
           path: ["identifier"],
         });
       }
     } else if (data.input_mode === "email") {
-      if (!z.string().email().safeParse(data.identifier).success) {
+      if (!z.email().safeParse(data.identifier).success) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "Must be a valid email address",
           path: ["identifier"],
         });

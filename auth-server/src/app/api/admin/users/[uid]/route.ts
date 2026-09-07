@@ -19,7 +19,7 @@ const ROUTE = "/api/admin/users/[uid]";
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const uidSchema = z.string().uuid();
+const uidSchema = z.guid();
 
 async function DELETE_user_handler(
   { user, dbh }: IProtectedAdminApiRouteProps,

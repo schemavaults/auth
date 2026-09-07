@@ -8,7 +8,7 @@ import {
   type MfaFactorType,
 } from "@schemavaults/auth-common";
 
-const uidSchema = z.string().uuid();
+const uidSchema = z.guid();
 
 export interface VerifiedFactorSummary {
   factor_id: string;

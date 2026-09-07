@@ -214,7 +214,7 @@ export async function sendAuthenticateRequest(
     );
 
     if (!parsed_auth_response.success) {
-      throw new Error(parsed_auth_response.error.errors.join(", "));
+      throw new Error(parsed_auth_response.error.issues.join(", "));
     }
     const data: AuthenticateResult = parsed_auth_response.data;
 

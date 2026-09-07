@@ -11,7 +11,7 @@ import { hashClientSecret } from "@/lib/oauth2/client-secret";
 import { randomUUID } from "node:crypto";
 
 const bodySchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   jwks_access_public_key: z.string().min(64),
   // Optional confidential-client seeding: when set, the plaintext secret
   // is hashed and stored so the seeded app requires client
@@ -20,7 +20,7 @@ const bodySchema = z.object({
   // Optional explicit redirect-URI allowlist for the seeded app; when
   // non-empty, redirect_uri validation for the test environment requires
   // an exact match against these URLs instead of any path on `url`.
-  callback_urls: z.array(z.string().url()).max(50).optional(),
+  callback_urls: z.array(z.url()).max(50).optional(),
 }).required({
   url: true,
   jwks_access_public_key: true

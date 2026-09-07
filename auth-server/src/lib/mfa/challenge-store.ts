@@ -9,7 +9,7 @@ export const MFA_CHALLENGE_MAX_ATTEMPTS = 3;
 
 const challengeStateSchema = z
   .object({
-    uid: z.string().uuid(),
+    uid: z.guid(),
     client_app_id: z.string(),
     code_challenge: z.string(),
     challenge_time: z.number(),

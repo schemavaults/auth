@@ -17,7 +17,7 @@ const ROUTE = "/api/auth/verify-email/request";
 
 const verifyEmailRequestBodySchema = z
   .object({
-    email: z.string().email(),
+    email: z.email(),
   })
   .required({
     email: true,

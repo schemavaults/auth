@@ -9,11 +9,11 @@ import { z } from "zod";
 const _baseUserDataSchema = z
   .object({
     // User ID
-    uid: z.string().uuid(),
-    sub: z.string().uuid(), // duplicate of uid
+    uid: z.guid(),
+    sub: z.guid(), // duplicate of uid
 
     // Email
-    email: z.string().email(),
+    email: z.email(),
     email_verified: z.boolean().optional(),
 
     // Profile names (user-editable; absent for accounts that never set

@@ -9,7 +9,7 @@ import {
 } from "@schemavaults/auth-common";
 import type { UserMfaFactorRow } from "./user-mfa-factors-table";
 
-const uidSchema = z.string().uuid();
+const uidSchema = z.guid();
 
 // Returns the user's factor of a given type — verified OR an in-progress
 // (unverified) enrollment — filtering factor_type in SQL rather than

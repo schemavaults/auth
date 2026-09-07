@@ -41,7 +41,7 @@ export const SERVER_SETTING_DEFINITIONS = {
   spoofed_superuser_email: {
     valueType: "string" as const,
     defaultValue: "admin@schemavaults.com",
-    schema: z.string().email(),
+    schema: z.email(),
     description:
       "Email address embedded as the identity claim in internally-minted (spoofed) superuser access tokens, e.g. the token the auth server uses to authorize with the mail-server.",
   }

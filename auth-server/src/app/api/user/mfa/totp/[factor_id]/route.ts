@@ -14,7 +14,7 @@ import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-ema
 
 const ROUTE = "/api/user/mfa/totp/[factor_id]";
 
-const factorIdSchema = z.string().uuid();
+const factorIdSchema = z.guid();
 
 async function DELETE_factor_handler(
   { user, dbh, redis, req }: IProtectedAuthenticatedApiRouteProps,

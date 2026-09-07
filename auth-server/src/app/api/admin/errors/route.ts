@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 const beforeParamSchema = z.union([
   z.coerce.number().int().nonnegative(),
-  z.string().datetime(),
+  z.iso.datetime(),
 ]);
 
 function parseBeforeParam(

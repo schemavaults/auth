@@ -65,7 +65,7 @@ export default async function handleSuccessfulExchangeAuthTokensResponse({
       console.error(
         "[SchemaVaultsAuthClient::handleSuccessfulExchangeAuthTokensResponse()] " +
           "Failed to parse successful exchange auth tokens result: ",
-        parsed_tokens_data.error.errors,
+        parsed_tokens_data.error.issues,
       );
     }
     throw new Error("Failed to parse successful exchange auth tokens result!");

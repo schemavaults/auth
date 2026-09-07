@@ -3,8 +3,8 @@ import { z } from "zod";
 
 export const passwordRecordSchema = z
   .object({
-    password_id: z.string().uuid(),
-    uid: z.string().uuid(),
+    password_id: z.guid(),
+    uid: z.guid(),
     password: z.string().min(32), // password hash (hex digest for v1/v2, PHC string for v3)
     password_hash_version: z.number().int().positive(), // 1 = legacy global-salt, 2 = per-user uid-salt, 3 = argon2id
     created_at: z.number().nonnegative(),

@@ -5,7 +5,7 @@ import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { UserWebauthnCredentialRow } from "./user-webauthn-credentials-table";
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = z.guid();
 
 function coerceRow(
   row: UserWebauthnCredentialRow,

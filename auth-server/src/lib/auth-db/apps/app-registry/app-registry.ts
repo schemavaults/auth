@@ -128,7 +128,7 @@ export class SchemaVaultsAppRegistry {
       web,
     } satisfies SchemaVaultsApp);
     if (!parsed_app.success) {
-      console.error(parsed_app.error.errors);
+      console.error(parsed_app.error.issues);
       throw new Error("Failed to parse app");
     }
     const app: SchemaVaultsApp = parsed_app.data;

@@ -79,7 +79,7 @@ async function parseErrorId(
         "Failed to load error_id from dynamic [error_id] route segment!",
       );
     }
-    const parsed = await z.string().uuid().safeParseAsync(params.error_id);
+    const parsed = await z.guid().safeParseAsync(params.error_id);
     if (!parsed.success || parsed.data !== params.error_id) {
       throw new Error("Invalid UUID supplied for target error!");
     }

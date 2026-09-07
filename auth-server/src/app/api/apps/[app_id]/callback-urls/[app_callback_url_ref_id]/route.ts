@@ -44,7 +44,7 @@ export async function DELETE(
       }
       const app_id: AppId = parsed_app_id.data;
 
-      const parsed_ref_id = z.string().uuid().safeParse(params.app_callback_url_ref_id);
+      const parsed_ref_id = z.guid().safeParse(params.app_callback_url_ref_id);
       if (!parsed_ref_id.success) {
         return NextResponse.json(
           {

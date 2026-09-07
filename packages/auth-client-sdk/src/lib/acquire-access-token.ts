@@ -13,7 +13,7 @@ import { z } from "zod";
 
 // Token audiences are either an api server id, or the (white-labellable)
 // auth server URL for tokens addressed to the auth server itself.
-const tokenAudienceSchema = z.union([apiServerIdSchema, z.string().url()]);
+const tokenAudienceSchema = z.union([apiServerIdSchema, z.url()]);
 
 export interface IAcquireAccessTokenFnOptions {
   opts: AcquireAccessTokenOptions;

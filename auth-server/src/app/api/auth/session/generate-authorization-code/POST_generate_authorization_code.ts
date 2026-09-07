@@ -30,7 +30,7 @@ const requestBodySchema = z
     // Required when minting for a third-party app; absent only when the
     // auth server itself is the requesting app (the /account flow has
     // no third-party callback to bind).
-    redirect_uri: z.string().url().nullable().optional(),
+    redirect_uri: z.url().nullable().optional(),
     // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
     // scopes (REQUIRED, RFC 6749 §3.3 wire format); see handle_login.ts.
     nonce: oidcNonceSchema.nullable().optional(),

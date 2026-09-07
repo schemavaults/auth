@@ -55,7 +55,7 @@ const registerBodySchema = z
     // OAuth2 `redirect_uri` to bind to the issued authorization code.
     // Required for third-party app flows; null/absent only for the auth
     // server's own /account flow (client_app_id === auth-server's own).
-    redirect_uri: z.string().url().nullable().optional(),
+    redirect_uri: z.url().nullable().optional(),
     // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
     // scopes (REQUIRED, RFC 6749 §3.3 wire format); see handle_login.ts.
     nonce: oidcNonceSchema.nullable().optional(),

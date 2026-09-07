@@ -14,7 +14,7 @@ const ROUTE = "/api/auth/verify-email/confirm";
 
 const verifyEmailConfirmBodySchema = z
   .object({
-    token: z.string().uuid(),
+    token: z.guid(),
   })
   .strict();
 
@@ -32,7 +32,7 @@ export async function handleVerifyEmailConfirm({
   const parsed = await verifyEmailConfirmBodySchema.safeParseAsync(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { success: false, message: "Invalid request body", errors: parsed.error.errors },
+      { success: false, message: "Invalid request body", errors: parsed.error.issues },
       { status: 400 },
     );
   }

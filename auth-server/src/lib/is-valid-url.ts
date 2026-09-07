@@ -1,6 +1,6 @@
 import z from "zod";
 
-const urlSchema = z.string().url();
+const urlSchema = z.url();
 
 export function isValidUrl(val: unknown): val is string {
   return typeof val === 'string' && urlSchema.safeParse(val).success

@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/app-definitions",
   "description": "Define frontend or API server applications",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -14,7 +14,7 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "zod": "3.25.8"
+    "zod": "4.4.3"
   },
   "scripts": {
     "build": "bun run typecheck && bun run build:types && bun run build:esm && bun run build:cjs",

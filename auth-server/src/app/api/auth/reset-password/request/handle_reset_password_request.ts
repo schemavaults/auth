@@ -19,7 +19,7 @@ const ROUTE = "/api/auth/reset-password/request";
 
 const resetPasswordRequestBodySchema = z
   .object({
-    email: z.string().email(),
+    email: z.email(),
   })
   .required({
     email: true

@@ -9,7 +9,7 @@ export const inviteCodeDefinitionSchema = z
     created_at: z.number().nonnegative(),
     max_uses: z.number().int().positive(),
     description: z.string().max(MAX_DESCRIPTION_LENGTH).optional(),
-    created_by: z.string().uuid().optional(),
+    created_by: z.guid().optional(),
   })
   .required({
     invite_code: true,

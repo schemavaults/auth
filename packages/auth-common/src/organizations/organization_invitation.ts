@@ -63,13 +63,13 @@ export interface OrganizationInvitationWithUserData {
 }
 
 export const organizationInvitationSchema = z.object({
-  invitation_id: z.string().uuid(),
+  invitation_id: z.guid(),
   organization_id: organizationIdSchema,
   organization_name: z.string().optional(),
-  inviter_uid: z.string().uuid(),
-  inviter_email: z.string().email().optional(),
-  invitee_uid: z.string().uuid(),
-  invitee_email: z.string().email().optional(),
+  inviter_uid: z.guid(),
+  inviter_email: z.email().optional(),
+  invitee_uid: z.guid(),
+  invitee_email: z.email().optional(),
   status: organizationInvitationStatusSchema,
   created_at: z.number().positive(),
   expires_at: z.number().positive(),

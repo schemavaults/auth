@@ -101,13 +101,19 @@ function getDefaultValues<T extends "login" | "register">(
   } as AuthFormData<"register">;
 }
 
+type AuthFormResolver = NonNullable<
+  Parameters<typeof useForm<AuthFormData<"login" | "register">>>[0]
+>["resolver"];
+
 function getSchemaResolver<T extends "login" | "register">({
   type,
-}: AuthFormType<T>) {
+}: AuthFormType<T>): AuthFormResolver {
+  // `zodResolver` infers a resolver for exactly one schema; the form is typed
+  // over the login | register union, so widen it back to the union here.
   if (type === "login") {
-    return zodResolver(emailCredentialsSchema);
+    return zodResolver(emailCredentialsSchema) as AuthFormResolver;
   }
-  return zodResolver(emailRegistrationCredentialsSchema);
+  return zodResolver(emailRegistrationCredentialsSchema) as AuthFormResolver;
 }
 
 export function AuthForm<T extends "login" | "register">({

@@ -63,7 +63,7 @@ export async function updateUserProfile(
   const parsed = await updateUserProfileRequestSchema.safeParseAsync(profile);
   if (!parsed.success) {
     if (debug) {
-      console.error("[updateUserProfile]", parsed.error.errors);
+      console.error("[updateUserProfile]", parsed.error.issues);
     }
     throw new TypeError("Received invalid user profile fields!");
   }

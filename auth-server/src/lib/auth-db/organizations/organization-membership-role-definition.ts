@@ -4,9 +4,9 @@ import { organizationMembershipRoleTypeSchema } from "@schemavaults/auth-common/
 
 export const organizationMembershipRoleDefinitionSchema = z
   .object({
-    membership_declaration_id: z.string().uuid(),
+    membership_declaration_id: z.guid(),
     organization_id: organizationIdSchema,
-    uid: z.string().uuid(),
+    uid: z.guid(),
     created_at: z.number().positive(),
     role: organizationMembershipRoleTypeSchema,
   })

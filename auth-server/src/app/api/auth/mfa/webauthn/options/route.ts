@@ -34,7 +34,7 @@ const ROUTE = "/api/auth/mfa/webauthn/options";
 
 const bodySchema = z
   .object({
-    challenge_id: z.string().uuid(),
+    challenge_id: z.guid(),
     client_app_id: appIdSchema,
   })
   .strict();

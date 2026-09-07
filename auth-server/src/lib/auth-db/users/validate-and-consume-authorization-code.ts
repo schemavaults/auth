@@ -107,7 +107,7 @@ export async function validateAndConsumeAuthorizationCode(
     if (!parsed_authorization_code.success) {
       console.error(
         "[validateAndConsumeAuthorizationCode] Failed to parse authorization code from database",
-        parsed_authorization_code.error.errors,
+        parsed_authorization_code.error.issues,
       );
       throw new Error("Failed to parse authorization code from database");
     }
