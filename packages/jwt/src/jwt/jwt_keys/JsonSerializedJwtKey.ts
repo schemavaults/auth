@@ -8,7 +8,7 @@ import PEMFormat from "./pem-format";
 export const jsonSerializedJwtKeySchema = z
   .object({
     audience_id: apiServerIdSchema,
-    keyset_id: z.string().uuid(),
+    keyset_id: z.guid(),
     keyset_expiry: z.number().nonnegative().optional(),
     value: z.string().min(1),
     format: z.enum(["pem", "base64url"]),

@@ -44,13 +44,19 @@ import {
  * shared schemas the server enforces, and their issues are surfaced
  * verbatim so inline messages match API validation.
  */
-function optionalProfileField(schema: z.ZodString): z.ZodType<string> {
+function optionalProfileField(
+  schema: z.ZodString,
+): z.ZodType<string, string> {
   return z.string().superRefine((value, ctx) => {
     if (value.trim() === "") return;
     const result = schema.safeParse(value);
     if (!result.success) {
       for (const issue of result.error.issues) {
-        ctx.addIssue(issue);
+        ctx.addIssue({
+          code: "custom",
+          message: issue.message,
+          path: issue.path,
+        });
       }
     }
   });

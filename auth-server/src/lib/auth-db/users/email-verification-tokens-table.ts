@@ -3,8 +3,8 @@ import { z } from "zod";
 
 export const emailVerificationTokenRecordSchema = z
   .object({
-    token_id: z.string().uuid(),
-    uid: z.string().uuid(),
+    token_id: z.guid(),
+    uid: z.guid(),
     token_hash: z.string().min(1),
     expires_at: z.number().positive(),
     used_at: z.number().positive().nullable().optional(),

@@ -11,7 +11,7 @@ export const tokenDataSchema = z
     exp: z.number(),
     token: z.string(),
     aud: z.string(),
-    jti: z.string().uuid().optional(),
+    jti: z.guid().optional(),
   })
   .required({
     type: true,

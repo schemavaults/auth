@@ -15,6 +15,10 @@ export function normalizeEmail(email: string): string {
  * Email schema that normalizes (trims + lowercases) at parse time, so any
  * payload validated with it carries the canonical form of the address.
  */
-export const normalizedEmailSchema = z.string().trim().toLowerCase().email();
+export const normalizedEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.email());
 
 export default normalizeEmail;

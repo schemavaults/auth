@@ -1,5 +1,7 @@
 import "server-only";
 
+import { z } from "zod";
+
 import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import {
   schemaVaultsApiServerDefinitionSchema,
@@ -94,7 +96,7 @@ export class SchemaVaultsApiServerRegistry {
         owner_organization_id,
       });
     if (!parsed_api_server.success) {
-      console.error(parsed_api_server.error.errors);
+      console.error(parsed_api_server.error.issues);
       throw new Error("Failed to parse API server from database");
     }
     const output: SchemaVaultsApiServerDefinition = parsed_api_server.data;
@@ -145,7 +147,7 @@ export class SchemaVaultsApiServerRegistry {
       if (!parsed.success) {
         console.error(
           `Failed to parse API server domain from database (row ${index}):`,
-          JSON.stringify(parsed.error.format(), null, 2),
+          JSON.stringify(z.treeifyError(parsed.error), null, 2),
           "\nRaw row:",
           JSON.stringify(rows[index], null, 2),
         );
@@ -193,7 +195,7 @@ export class SchemaVaultsApiServerRegistry {
         owner_organization_id: owner_organization_id === getAuthServerOwnerOrganizationId() ? null : owner_organization_id,
       } satisfies SchemaVaultsApiServerDefinition);
     if (!parsed_app.success) {
-      console.error(parsed_app.error.errors);
+      console.error(parsed_app.error.issues);
       throw new Error("Failed to parse app");
     }
     const app: SchemaVaultsApiServerDefinition = parsed_app.data;

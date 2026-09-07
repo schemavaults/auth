@@ -5,7 +5,7 @@ import {
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 
-const factorIdSchema = z.string().uuid();
+const factorIdSchema = z.guid();
 
 export async function regenerateRecoveryCodes(args: {
   adapter: ISchemaVaultsAuthClientAdapter;

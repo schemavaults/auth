@@ -3,7 +3,7 @@ import { mfaFactorTypeSchema } from "./mfa/mfa-factor-type";
 
 export const availableMfaFactorSchema = z
   .object({
-    factor_id: z.string().uuid(),
+    factor_id: z.guid(),
     factor_type: mfaFactorTypeSchema,
     last_used_at: z.number().int().positive().nullable(),
   })
@@ -62,7 +62,7 @@ export const mfaRequiredAuthenticateResultSchema = z
     kind: z.literal("mfa_required"),
     success: z.boolean(),
     message: z.string(),
-    challenge_id: z.string().uuid(),
+    challenge_id: z.guid(),
     expires_at: z.number().int().positive(),
     available_factors: z.array(availableMfaFactorSchema),
     recovery_codes_available: z.boolean(),

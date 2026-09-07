@@ -12,7 +12,7 @@ import type { ErrorRow } from "@/lib/auth-db/errors";
 import { z } from "zod";
 import { connection } from "next/server";
 
-const errorIdSchema = z.string().uuid();
+const errorIdSchema = z.guid();
 
 async function PreloadedAdminErrorDetailPage(
   { user, dbh }: IProtectedAdminServerComponentPageProps,

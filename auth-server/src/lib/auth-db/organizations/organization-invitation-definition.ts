@@ -16,10 +16,10 @@ export const organizationInvitationStatusSchema = z.enum(organizationInvitationS
 
 export const organizationInvitationDefinitionSchema = z
   .object({
-    invitation_id: z.string().uuid(),
+    invitation_id: z.guid(),
     organization_id: organizationIdSchema,
-    inviter_uid: z.string().uuid(),
-    invitee_uid: z.string().uuid(),
+    inviter_uid: z.guid(),
+    invitee_uid: z.guid(),
     status: organizationInvitationStatusSchema,
     created_at: z.number().positive(),
     expires_at: z.number().positive(),

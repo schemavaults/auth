@@ -22,14 +22,14 @@ export const mfaProofSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("totp"),
-      factor_id: z.string().uuid(),
+      factor_id: z.guid(),
       code: totpCodeSchema,
     })
     .strict(),
   z
     .object({
       type: z.literal("webauthn"),
-      factor_id: z.string().uuid(),
+      factor_id: z.guid(),
       assertion: webauthnAuthenticationResponseSchema,
     })
     .strict(),
@@ -42,7 +42,7 @@ export type MfaProof = z.infer<typeof mfaProofSchema>;
 
 export const mfaVerifyBodySchema = z
   .object({
-    challenge_id: z.string().uuid(),
+    challenge_id: z.guid(),
     client_app_id: appIdSchema,
     proof: mfaProofSchema,
   })
@@ -52,9 +52,9 @@ export type MfaVerifyBody = z.infer<typeof mfaVerifyBodySchema>;
 
 export const mfaEnrollResponseSchema = z
   .object({
-    factor_id: z.string().uuid(),
+    factor_id: z.guid(),
     factor_type: z.literal("totp"),
-    otpauth_url: z.string().url(),
+    otpauth_url: z.url(),
     qr_code_data_url: z.string().min(1),
     secret: z.string().min(16),
   })
@@ -64,7 +64,7 @@ export type MfaEnrollResponse = z.infer<typeof mfaEnrollResponseSchema>;
 
 export const mfaVerifyEnrollmentBodySchema = z
   .object({
-    factor_id: z.string().uuid(),
+    factor_id: z.guid(),
     code: totpCodeSchema,
   })
   .strict();
@@ -104,7 +104,7 @@ export const mfaFactorStatusResponseSchema = z
   .object({
     enabled: z.boolean(),
     pending: z.boolean(),
-    factor_id: z.string().uuid().optional(),
+    factor_id: z.guid().optional(),
     factor_type: mfaFactorTypeSchema.optional(),
     verified_at: z.number().int().positive().optional(),
   })
@@ -117,7 +117,7 @@ export type MfaFactorStatusResponse = z.infer<
 // A single verified factor in the account-wide MFA status list.
 export const mfaEnrolledFactorSchema = z
   .object({
-    factor_id: z.string().uuid(),
+    factor_id: z.guid(),
     factor_type: mfaFactorTypeSchema,
     verified_at: z.number().int().positive().optional(),
   })
@@ -153,7 +153,7 @@ export type MfaCodeOnlyBody = z.infer<typeof mfaCodeOnlyBodySchema>;
 // enrolled factor's secret in turn.
 export const mfaTotpProofBodySchema = z
   .object({
-    factor_id: z.string().uuid(),
+    factor_id: z.guid(),
     code: totpCodeSchema,
   })
   .strict();

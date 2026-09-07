@@ -83,7 +83,7 @@ describe("API Servers", () => {
     // crypto.randomUUID() is unavailable in the spec's browser context (the
     // auth server is not served from a secure context in CI). Generate an
     // RFC4122 v4 UUID with Math.random instead — the id feeds into a
-    // `z.string().uuid()` validator on the auth-server.
+    // `z.guid()` validator on the auth-server.
     function generateV4Uuid(): string {
       return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0;

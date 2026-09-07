@@ -18,7 +18,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { createAudienceSchema } from "@schemavaults/auth-common";
 import { verifyJWTSignature } from "./verify_signature";
-import { z, type SafeParseReturnType } from "zod";
+import { z, type ZodSafeParseResult } from "zod";
 import isValidUuid from "@/utils/isValidUuid";
 import encryptDecryptAlgorithm from "./encrypt_decrypt_alg";
 
@@ -245,7 +245,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       console.error(parsedPayload.error);
     }
     throw new Error(
-      `Error parsing JWT payload: ${parsedPayload.error.errors
+      `Error parsing JWT payload: ${parsedPayload.error.issues
         .map((e) => e.message)
         .join(", ")}`,
     );
@@ -257,10 +257,8 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     throw new Error("Missing 'env' field in JWT payload!");
   }
 
-  const parsed_app_env: SafeParseReturnType<
-    SchemaVaultsAppEnvironment,
-    SchemaVaultsAppEnvironment
-  > = await schemaVaultsAppEnvironmentSchema.safeParseAsync(payload.env);
+  const parsed_app_env: ZodSafeParseResult<SchemaVaultsAppEnvironment> =
+    await schemaVaultsAppEnvironmentSchema.safeParseAsync(payload.env);
   if (!parsed_app_env.success) {
     throw new Error(
       "Invalid app environment within 'env' field of JWT payload!",

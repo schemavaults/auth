@@ -106,7 +106,7 @@ export async function getApp(
     owner_organization_id,
   });
   if (!parsed_app.success) {
-    console.error(parsed_app.error.errors);
+    console.error(parsed_app.error.issues);
     if (debug) {
       console.error("Row that could not be parsed: ", first_row);
     }

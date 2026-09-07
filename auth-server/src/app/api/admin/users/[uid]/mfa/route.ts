@@ -12,7 +12,7 @@ import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-ema
 
 const ROUTE = "/api/admin/users/[uid]/mfa";
 
-const uidSchema = z.string().uuid();
+const uidSchema = z.guid();
 
 async function DELETE_admin_reset_handler(
   { dbh, redis, environment }: IProtectedAdminApiRouteProps,

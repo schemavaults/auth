@@ -54,7 +54,7 @@ async function PATCH_respond_to_invitation_handler(
   const organization_id: OrganizationID = parsed_org_id.data;
 
   // Validate invitation_id is a UUID
-  if (!z.string().uuid().safeParse(invitation_id).success) {
+  if (!z.guid().safeParse(invitation_id).success) {
     return NextResponse.json(
       {
         success: false,
@@ -221,7 +221,7 @@ async function DELETE_revoke_invitation_handler(
   const organization_id: OrganizationID = parsed_org_id.data;
 
   // Validate invitation_id is a UUID
-  if (!z.string().uuid().safeParse(invitation_id).success) {
+  if (!z.guid().safeParse(invitation_id).success) {
     return NextResponse.json(
       {
         success: false,

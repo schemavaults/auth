@@ -172,7 +172,7 @@ export class SchemaVaultsAppToApiPermissionsRegistry {
         created_at: createdAt,
       });
     if (!parsed_app_to_api_permission.success) {
-      console.error(parsed_app_to_api_permission.error.errors);
+      console.error(parsed_app_to_api_permission.error.issues);
       throw new Error("Failed to parse app to api permission from database");
     }
     return parsed_app_to_api_permission.data;

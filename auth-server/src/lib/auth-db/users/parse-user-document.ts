@@ -9,9 +9,9 @@ import {
 
 export const userDocumentSchema = z
   .object({
-    email: z.string().email(),
+    email: z.email(),
     email_verified: z.boolean().optional(),
-    uid: z.string().uuid(),
+    uid: z.guid(),
     created_at: z.number().nonnegative(),
     invite_code: inviteCodeFormatSchema.optional(),
     admin: z.boolean().optional(),
@@ -83,7 +83,7 @@ export async function parseUserDocument(row: unknown): Promise<UserDocument> {
   if (!parsed_user.success) {
     console.error(
       "[parseUserDocument]",
-      parsed_user.error.errors,
+      parsed_user.error.issues,
     );
     throw new Error("Failed to parse user from database");
   }

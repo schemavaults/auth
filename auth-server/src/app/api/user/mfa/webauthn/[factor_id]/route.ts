@@ -18,7 +18,7 @@ import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-ema
 
 const ROUTE = "/api/user/mfa/webauthn/[factor_id]";
 
-const factorIdSchema = z.string().uuid();
+const factorIdSchema = z.guid();
 
 // Removing a passkey requires step-up proof of a current factor — proving the
 // caller still controls the account, consistent with TOTP removal requiring a

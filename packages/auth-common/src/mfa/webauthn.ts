@@ -54,7 +54,7 @@ export const webauthnLabelSchema = z
 // enrollment will be confirmed against.
 export const webauthnEnrollOptionsResponseSchema = z
   .object({
-    factor_id: z.string().uuid(),
+    factor_id: z.guid(),
     // PublicKeyCredentialCreationOptionsJSON — opaque to us, handed to the
     // browser verbatim.
     options: z.object({}).passthrough(),
@@ -68,7 +68,7 @@ export type WebauthnEnrollOptionsResponse = z.infer<
 // Body for POST /api/user/mfa/webauthn/verify-enrollment.
 export const webauthnVerifyEnrollmentBodySchema = z
   .object({
-    factor_id: z.string().uuid(),
+    factor_id: z.guid(),
     label: webauthnLabelSchema.optional(),
     attestation: webauthnRegistrationResponseSchema,
   })
@@ -94,7 +94,7 @@ export type WebauthnAuthenticationOptionsResponse = z.infer<
 // A single enrolled passkey as surfaced to the account settings UI.
 export const webauthnCredentialSummarySchema = z
   .object({
-    factor_id: z.string().uuid(),
+    factor_id: z.guid(),
     label: z.string().nullable(),
     created_at: z.number().int().positive(),
     last_used_at: z.number().int().positive().nullable(),

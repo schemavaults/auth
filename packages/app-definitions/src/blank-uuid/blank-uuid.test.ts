@@ -4,7 +4,7 @@ import { z } from "zod";
 import { isValidAppId } from "@/app-id";
 import { isValidApiServerId } from "@/api-server-id";
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = z.guid();
 
 describe("Blank UUID", () => {
   test("is parsed as valid by zod schema", () => {

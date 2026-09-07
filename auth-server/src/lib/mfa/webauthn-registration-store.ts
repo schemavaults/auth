@@ -15,7 +15,7 @@ export const WEBAUTHN_REG_TTL_SECONDS = 300;
 
 const regChallengeStateSchema = z
   .object({
-    uid: z.string().uuid(),
+    uid: z.guid(),
     challenge: z.string(),
     created_at: z.number().int().nonnegative(),
   })

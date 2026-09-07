@@ -2,7 +2,7 @@ import type { SchemaVaultsAppEnvironment } from "./app-environments";
 import { getAppEnvironment } from "./get-app-environment";
 import { z } from "zod";
 
-const urlSchema = z.string().url();
+const urlSchema = z.url();
 
 class AuthServerUrlNotSetConfigError extends Error {}
 

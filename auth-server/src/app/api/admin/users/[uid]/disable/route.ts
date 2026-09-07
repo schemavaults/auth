@@ -90,7 +90,7 @@ async function parseTargetUid(
     ) {
       throw new Error("Failed to load UID from dynamic [uid] route segment!");
     }
-    const parsed = await z.string().uuid().safeParseAsync(params.uid);
+    const parsed = await z.guid().safeParseAsync(params.uid);
     if (!parsed.success || parsed.data !== params.uid) {
       throw new Error("Invalid UUID supplied for target user!");
     }

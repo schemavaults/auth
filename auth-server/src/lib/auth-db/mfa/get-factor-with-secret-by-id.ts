@@ -6,7 +6,7 @@ import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { UserMfaFactorRow } from "./user-mfa-factors-table";
 import { decryptSecret } from "@/lib/mfa/kek";
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = z.guid();
 
 export interface FactorWithSecret {
   row: UserMfaFactorRow;

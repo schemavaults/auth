@@ -5,10 +5,10 @@ import {
 
 export const authorizedAppDeclarationSchema = z
   .object({
-    user_app_authorization_id: z.string().uuid(),
+    user_app_authorization_id: z.guid(),
     app_id: appIdSchema,
     authorized_at: z.number().nonnegative(),
-    uid: z.string().uuid(),
+    uid: z.guid(),
   })
   .required({
     user_app_authorization_id: true,

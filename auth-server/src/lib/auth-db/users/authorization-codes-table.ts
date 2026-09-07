@@ -6,7 +6,7 @@ import { z } from "zod";
 export const authorizationCodeRecordSchema = z
   .object({
     authorization_code: z.string(),
-    uid: z.string().uuid(),
+    uid: z.guid(),
     client_app_id: appIdSchema,
     code_challenge: z.string().min(43),
     code_challenge_method: z.literal("S256"),
@@ -20,7 +20,7 @@ export const authorizationCodeRecordSchema = z
     // or it is rejected. Enforced as a valid URL so a malformed value
     // cannot reach the DB even if a server-side caller skips its own
     // body-schema check.
-    redirect_uri: z.string().url().max(2048).nullable().optional(),
+    redirect_uri: z.url().max(2048).nullable().optional(),
     // Login replay nonce (OIDC Core §3.1.2.1) bound at issuance; echoed
     // at redemption as the custom token-response `nonce` field / OIDC
     // id_token claim. OPTIONAL — an RP may omit it, so the column is

@@ -94,7 +94,7 @@ export async function POST(
       throw new Error("Failed to load UID from dynamic [uid] route segment!");
     }
     const route_param_uid = params.uid;
-    const parsed = await z.string().uuid().safeParseAsync(route_param_uid);
+    const parsed = await z.guid().safeParseAsync(route_param_uid);
     if (!parsed.success) {
       throw new Error(
         "Invalid UUID supplied for user 'uid' to promote to admin!",

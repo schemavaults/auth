@@ -41,7 +41,6 @@ export function createAudienceSchema(
     overrides?.auth_server_app_id ?? getAuthServerAppId();
 
   const authServerUrlSchema = z
-    .string()
     .url()
     .refine((url): url is typeof auth_server_url => url === auth_server_url)
     .describe("Allow the auth-server URL configured for the current server!");

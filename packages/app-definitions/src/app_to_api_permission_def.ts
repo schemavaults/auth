@@ -7,7 +7,7 @@ export const appToApiPermissionSchema = z
     client_app_id: appIdSchema,
     api_server_id: apiServerIdSchema,
     created_at: z.number().nonnegative(),
-    created_by: z.string().uuid().optional().nullable(),
+    created_by: z.guid().optional().nullable(),
   })
   .required({
     client_app_id: true,

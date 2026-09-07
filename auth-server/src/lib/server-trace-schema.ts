@@ -10,7 +10,7 @@ export const serverTraceOpCategories = [
 export type ServerTraceOpCategory = (typeof serverTraceOpCategories)[number];
 
 export const serverTraceSchema = z.object({
-  event_id: z.string().uuid(),
+  event_id: z.guid(),
   op_name: z.string().min(1),
   op_category: z.enum(serverTraceOpCategories),
   start_time: z.number().nonnegative(),

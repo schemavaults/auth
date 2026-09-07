@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
-const uidSchema = z.string().uuid();
+const uidSchema = z.guid();
 
 export interface WebauthnCredentialSummaryRow {
   factor_id: string;

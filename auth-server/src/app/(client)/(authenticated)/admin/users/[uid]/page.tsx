@@ -15,7 +15,7 @@ import type { OrganizationID, UserData } from "@schemavaults/auth-common";
 import { connection } from "next/server";
 import type { AdminUserOrganizationMembershipRow } from "./admin_user_organizations_card";
 
-const uidSchema = z.string().uuid();
+const uidSchema = z.guid();
 
 async function PreloadedAdminUserDetailPage(
   { user, dbh }: IProtectedAdminServerComponentPageProps,

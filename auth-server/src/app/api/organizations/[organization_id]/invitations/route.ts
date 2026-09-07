@@ -31,9 +31,9 @@ const createInvitationRequestSchema = z.object({
   identifier: z.string().min(1),
 }).refine((data) => {
   if (data.input_mode === "uid") {
-    return z.string().uuid().safeParse(data.identifier).success;
+    return z.guid().safeParse(data.identifier).success;
   } else if (data.input_mode === "email") {
-    return z.string().email().safeParse(data.identifier).success;
+    return z.email().safeParse(data.identifier).success;
   }
   return false;
 }, {
@@ -71,7 +71,7 @@ async function POST_create_invitation_handler(
         {
           success: false,
           message: "Invalid request body",
-          errors: parsed.error.flatten(),
+          errors: z.flattenError(parsed.error),
         },
         { status: 400 }
       );

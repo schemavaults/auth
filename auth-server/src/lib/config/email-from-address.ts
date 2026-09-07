@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import maybeStripQuotes from "@/lib/maybeStripQuotes";
 
-const emailAddressSchema = z.string().email();
+const emailAddressSchema = z.email();
 
 /**
  * @description Resolves the "from" address for transactional email sent by

@@ -27,7 +27,7 @@ export type SchemaVaultsApiServerDefinition = z.infer<
 
 export const schemaVaultsApiServerDomainRefSchema = z
   .object({
-    api_server_domain_ref_id: z.string().uuid(),
+    api_server_domain_ref_id: z.guid(),
     api_server_id: apiServerIdSchema,
     domain: z.string().max(255),
     environment: schemaVaultsAppEnvironmentSchema,

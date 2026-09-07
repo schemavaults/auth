@@ -14,9 +14,9 @@ export function createJwtPayloadSchema(
 ) {
   return z
     .object({
-      uid: z.string().uuid(),
-      sub: z.string().uuid(),
-      email: z.string().email(),
+      uid: z.guid(),
+      sub: z.guid(),
+      email: z.email(),
       email_verified: z.boolean(),
       aud: createAudienceSchema(z, environment), // Backend resource API UUID, either auth server url or a registered api server's unique UUID
       app: appIdSchema, // Frontend client app UUID, either auth server url or a registered app's unique UUID
@@ -30,9 +30,9 @@ export function createJwtPayloadSchema(
         "Creation time must not be in the future",
       ),
       sig: z.string().min(32).max(4096),
-      iss: z.string().url(),
+      iss: z.url(),
       env: schemaVaultsAppEnvironmentSchema,
-      jti: z.string().uuid().optional(),
+      jti: z.guid().optional(),
       iat: z.number().nonnegative(), // unix seconds (jose's setIssuedAt output)
       // Space-delimited granted scopes (RFC 6749 §3.3). Set on every
       // access/refresh token issued since scopes became first-class;

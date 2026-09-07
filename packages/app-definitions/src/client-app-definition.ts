@@ -27,7 +27,7 @@ export type SchemaVaultsApp = z.infer<typeof schemaVaultsAppDefinitionSchema>;
 
 export const schemaVaultsAppDomainRefSchema = z
   .object({
-    app_domain_ref_id: z.string().uuid(),
+    app_domain_ref_id: z.guid(),
     app_id: appIdSchema,
     domain: z.string().max(255),
     environment: schemaVaultsAppEnvironmentSchema,
@@ -61,12 +61,11 @@ export const APP_CALLBACK_URL_MAX_LENGTH = 2048;
  */
 export const schemaVaultsAppCallbackUrlRefSchema = z
   .object({
-    app_callback_url_ref_id: z.string().uuid(),
+    app_callback_url_ref_id: z.guid(),
     app_id: appIdSchema,
     callback_url: z
-      .string()
-      .max(APP_CALLBACK_URL_MAX_LENGTH)
       .url()
+      .max(APP_CALLBACK_URL_MAX_LENGTH)
       .refine(
         (value) => !value.includes("#"),
         // RFC 6749 §3.1.2: the redirection endpoint URI MUST NOT include
