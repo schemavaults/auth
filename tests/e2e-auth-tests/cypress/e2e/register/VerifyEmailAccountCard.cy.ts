@@ -3,10 +3,6 @@
 // green "Verified" status button next to the Email row that opens a dialog,
 // from which an unverified user can re-send their verification email.
 
-import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
-
-const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
-
 interface EmailVerificationTokenResponseBody {
   success: boolean;
   token?: string;
@@ -177,7 +173,7 @@ describe("AccountCard email verification indicator", () => {
             // claims carry email_verified=true without a re-login.
             cy.intercept({
               method: "POST",
-              url: `**/api/auth/token/refresh_token/${AUTH_APP_ID}`,
+              url: "**/api/oidc/token",
               times: 1,
             }).as("tokenRefresh");
 

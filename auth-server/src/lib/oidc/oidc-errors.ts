@@ -25,7 +25,10 @@ export type OidcTokenErrorCode =
   | "invalid_grant"
   | "unauthorized_client"
   | "unsupported_grant_type"
-  | "invalid_scope";
+  | "invalid_scope"
+  // RFC 8707 §2: the requested `resource` is invalid, unknown, or not
+  // permitted for this client.
+  | "invalid_target";
 
 /**
  * RFC 6749 §4.1.2.1 error redirect back to the RP's redirect_uri.

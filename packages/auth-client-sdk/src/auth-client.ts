@@ -709,6 +709,7 @@ export class SchemaVaultsAuthClient
     code_verifier?: string,
     received_state?: string | null,
     expected_nonce?: string | null,
+    received_iss?: string | null,
   ): Promise<void> {
     // Recompute the `redirect_uri` we sent at issuance so the token
     // endpoint's exact-string binding check has a value to match. In the
@@ -732,6 +733,7 @@ export class SchemaVaultsAuthClient
       challenge_time,
       code_verifier,
       received_state: received_state ?? null,
+      received_iss: received_iss ?? null,
       expected_nonce: expected_nonce ?? null,
       redirect_uri,
       loadCodeVerifier: this.loadCodeVerifier.bind(this),
@@ -744,12 +746,29 @@ export class SchemaVaultsAuthClient
       storeUserData: this.storeUserData.bind(this),
       storeRefreshToken: this.storeRefreshToken.bind(this),
       storeMultipleAccessTokens: this.storeMultipleAccessTokens.bind(this),
+      exchangeAuthTokens: this.exchangeAuthTokens.bind(this),
+      fetchUserData: this.fetchUserDataFromServer.bind(this),
       environment: this.environment,
       debug: this.DEBUG,
       triggerAuthStateChanged: this.triggerAuthStateChanged.bind(this),
       defaultTokenAudiences: this.defaultTokenAudiences,
     });
   } // handleSuccessfulAuthentication()
+
+  /**
+   * Loads the signed-in user's data from the auth server's whoami
+   * endpoint, authenticated with the stored refresh token (cookie or
+   * bearer). The OIDC token responses carry identity claims only; the
+   * platform's full `UserData` is synced from here after every login
+   * and token refresh.
+   */
+  private async fetchUserDataFromServer(): Promise<UserData | null> {
+    return await checkIfAuthenticatedWithServer({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      client_app_id: this.app_id,
+    });
+  }
 
   public async logout(): Promise<void> {
     if (this.debug) {
@@ -1270,11 +1289,12 @@ export class SchemaVaultsAuthClient
   }
 
   private async handleSuccessfulExchangeAuthTokensResponse(
-    tokens_response: unknown,
+    tokens: SuccessfullyGeneratedTokensRecord,
   ): Promise<SuccessfullyGeneratedTokensRecord> {
     return await handleSuccessfulExchangeAuthTokensResponse({
-      tokens_response,
+      tokens,
       storeMultipleAccessTokens: this.storeMultipleAccessTokens.bind(this),
+      fetchUserData: this.fetchUserDataFromServer.bind(this),
       storeUserData: this.storeUserData.bind(this),
       triggerAuthStateChanged: this.triggerAuthStateChanged.bind(this),
       adapter: this.adapter,
@@ -1318,6 +1338,7 @@ export class SchemaVaultsAuthClient
         this.handleSuccessfulExchangeAuthTokensResponse.bind(this),
       client_app_id: this.app_id,
       adapter: this.adapter,
+      fetchUserData: this.fetchUserDataFromServer.bind(this),
       auth_server_uri: this.auth_server_uri,
       auth_server_app_id: this._auth_server_app_id,
     });

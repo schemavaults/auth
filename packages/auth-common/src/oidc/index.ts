@@ -32,3 +32,20 @@ export type {
   OidcProfileClaims,
   OidcProfileClaimsSource,
 } from "./profile-claims";
+
+export { OIDC_ENDPOINT_PATHS, getOidcEndpointUrl } from "./endpoints";
+export type { OidcEndpointName } from "./endpoints";
+
+export {
+  OIDC_TOKEN_RESOURCE_PARAM,
+  OIDC_TOKEN_REFRESH_TOKEN_DELIVERY_PARAM,
+  OIDC_REFRESH_TOKEN_DELIVERY_MODES,
+  oidcRefreshTokenDeliveryModeSchema,
+  DEFAULT_OIDC_REFRESH_TOKEN_DELIVERY_MODE,
+  OIDC_TOKEN_REFRESH_TOKEN_EXPIRES_IN_FIELD,
+  oidcTokenResponseExtensionsSchema,
+} from "./token-endpoint-extensions";
+export type {
+  OidcRefreshTokenDeliveryMode,
+  OidcTokenResponseExtensions,
+} from "./token-endpoint-extensions";

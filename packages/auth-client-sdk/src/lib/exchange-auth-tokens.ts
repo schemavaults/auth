@@ -1,35 +1,71 @@
+// exchange-auth-tokens.ts
+//
+// Redeems a refresh token at the auth server's standard OIDC token
+// endpoint (/api/oidc/token, grant_type=refresh_token) via
+// `openid-client`. The endpoint mints ONE access token per request
+// (RFC 8707 `resource`), so a multi-audience exchange is a sequence of
+// refresh grants — each rotating the refresh token, so each subsequent
+// grant presents the token the previous one returned.
+
+import * as oidc from "openid-client";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import type {
-  AppId,
-  SchemaVaultsAppEnvironment,
+import {
+  OIDC_USERINFO_AUDIENCE_ID,
+  type AppId,
+  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
+  type AccessToken,
+  OIDC_TOKEN_REFRESH_TOKEN_DELIVERY_PARAM,
+  OIDC_TOKEN_RESOURCE_PARAM,
   type RefreshToken,
-  createRefreshTokenPOSTBodySchema,
-  type RequestTokensResult,
-  createRequestTokensResultSchema,
   type SuccessfullyGeneratedTokensRecord,
+  type UserData,
 } from "@schemavaults/auth-common";
-import { z } from "zod";
+import {
+  classifyOidcTokenError,
+  createOidcClientConfiguration,
+  normalizeOidcIssuer,
+  tokenEndpointResponseToTokensRecord,
+} from "./oidc";
 
 export interface IExchangeAuthTokensOpts {
   refreshToken: RefreshToken | "AS_HTTP_ONLY_COOKIE";
+  /**
+   * Audience(s) to mint access tokens for. An empty list is a
+   * rotation-only request: the refresh token is rotated (and user data
+   * re-synced) without minting an access token for any API server.
+   */
   audience: string | string[];
   auth_server_uri: string;
   /**
    * The auth server deployment's own app id (white-label deployments use a
-   * custom value). Injected into audience schema validation because browser
-   * bundles can't resolve the SCHEMAVAULTS_AUTH_SERVER_APP_ID env var.
+   * custom value). Kept for parity with the code-grant path.
    */
   auth_server_app_id?: AppId;
   environment: SchemaVaultsAppEnvironment;
   debug: boolean;
   client_app_id: AppId;
   adapter: ISchemaVaultsAuthClientAdapter;
+  /**
+   * Loads the signed-in user's data from the auth server (whoami) using
+   * the currently stored refresh token. Used to resolve the user id for
+   * the token record when no user data is cached yet.
+   */
+  fetchUserData: () => Promise<UserData | null>;
   handleSuccessfulExchangeAuthTokensResponse: (
-    response: RequestTokensResult,
+    tokens: SuccessfullyGeneratedTokensRecord,
   ) => Promise<SuccessfullyGeneratedTokensRecord>;
   logout: () => Promise<void>;
+}
+
+function normalizeAudiences(audience: string | string[]): string[] {
+  if (Array.isArray(audience)) {
+    return audience.filter(
+      (a): a is string => typeof a === "string" && a.length > 0,
+    );
+  }
+  return typeof audience === "string" && audience.length > 0 ? [audience] : [];
 }
 
 export async function exchangeAuthTokens({
@@ -38,63 +74,18 @@ export async function exchangeAuthTokens({
   debug,
   environment,
   auth_server_uri,
-  auth_server_app_id,
   client_app_id,
   adapter,
+  fetchUserData,
   handleSuccessfulExchangeAuthTokensResponse,
   logout,
 }: IExchangeAuthTokensOpts): Promise<SuccessfullyGeneratedTokensRecord> {
+  void environment;
   if (debug) {
     console.log(
       "[SchemaVaultsAuthClient] Attempting to send request to exchange refresh token for access token...",
     );
   }
-
-  const exchange_refresh_token_endpoint = new URL(
-    `/api/auth/token/refresh_token/${client_app_id}` as const,
-    auth_server_uri,
-  );
-
-  // An empty audience list is a rotation-only request: the server always
-  // rotates the refresh token, so the exchange still yields a fresh
-  // refresh token (and updated user data) even when no access tokens are
-  // requested.
-  const refreshTokenPOSTBodySchema = createRefreshTokenPOSTBodySchema(
-    z,
-    environment,
-    { auth_server_url: auth_server_uri, auth_server_app_id },
-  );
-
-  // Exchange the authorization code for an access token
-  let request_body: z.infer<typeof refreshTokenPOSTBodySchema>;
-  try {
-    const parsed = await refreshTokenPOSTBodySchema.safeParseAsync({
-      grant_type: "refresh_token" as const,
-      client_app_id,
-      audience: audience,
-    } satisfies z.infer<typeof refreshTokenPOSTBodySchema>);
-    if (!parsed.success) {
-      console.error(parsed.error);
-      throw new Error(
-        "Failed to parse tokens from exchange auth tokens POST request!",
-      );
-    }
-    request_body = parsed.data;
-  } catch (e: unknown) {
-    if (debug) {
-      console.error(
-        "Failed to prepare request body for authorization grant request: ",
-        e,
-      );
-    }
-    throw new Error(
-      "Failed to prepare request body for authorization grant request",
-    );
-  }
-
-  const exchangeAuthTokensReqHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
 
   if (!refreshToken) {
     throw new Error(
@@ -102,6 +93,8 @@ export async function exchangeAuthTokens({
     );
   }
 
+  // ---- Which refresh token, and how is it presented? -----------------
+  let useHttpOnlyCookie: boolean;
   if (typeof refreshToken === "object" && refreshToken.type === "refresh") {
     if (
       typeof refreshToken.token !== "string" ||
@@ -109,9 +102,7 @@ export async function exchangeAuthTokens({
     ) {
       throw new TypeError("Expected 'token' to be a non-empty string!");
     }
-
-    exchangeAuthTokensReqHeaders["Authorization"] =
-      `Bearer ${refreshToken.token}`;
+    useHttpOnlyCookie = false;
   } else if (
     typeof refreshToken === "string" &&
     refreshToken === "AS_HTTP_ONLY_COOKIE"
@@ -126,125 +117,154 @@ export async function exchangeAuthTokens({
         "Adapter does not support HTTP-only refresh tokens! Adapter method 'doesSupportHttpOnlyRefreshToken' returned falsy result!",
       );
     }
+    useHttpOnlyCookie = true;
   } else {
     throw new Error(
       "Did not receive a valid refresh token (or valid method of acquiring refresh token)",
     );
   }
 
-  if (debug) {
-    console.log(
-      "[SchemaVaultsAuthClient::exchangeAuthTokens()] " +
-        `Sending POST request to "${exchange_refresh_token_endpoint.toString()}" with body & headers:`,
-      request_body,
-      exchangeAuthTokensReqHeaders,
-    );
+  // ---- Resolve the user id for the token record ----------------------
+  // The refresh grant response carries no id_token (OIDC Core §12.2), so
+  // the subject comes from the cached user data — or, on a cold cache,
+  // from the auth server's whoami endpoint (authenticated with the
+  // refresh token we are about to rotate).
+  let uid: string | undefined = adapter.getUserData()?.uid;
+  if (!uid) {
+    const user: UserData | null = await fetchUserData();
+    if (!user) {
+      await logout();
+      throw new Error("Session expired: the auth server no longer recognizes this session");
+    }
+    uid = user.uid;
   }
 
-  let tokens_response_data: RequestTokensResult;
-  try {
-    if (debug) {
-      console.log(`POST => ${exchange_refresh_token_endpoint}`);
-    }
-    const response: Response = await adapter.fetch(
-      exchange_refresh_token_endpoint.toString(),
-      {
-        body: JSON.stringify(request_body),
-        method: "POST",
-        headers: exchangeAuthTokensReqHeaders,
-        credentials: "include",
-      },
-    );
-    if (!response || typeof response !== "object" || response.status !== 200) {
-      let serverMessage = "unknown error";
-      try {
-        const errorBody: unknown = await response.json();
-        if (
-          errorBody &&
-          typeof errorBody === "object" &&
-          "message" in errorBody &&
-          typeof (errorBody as { message: unknown }).message === "string"
-        ) {
-          serverMessage = (errorBody as { message: string }).message;
-        }
-      } catch {
-        // Response body may not be valid JSON
-      }
+  // ---- The grant(s) --------------------------------------------------
+  const config: oidc.Configuration = createOidcClientConfiguration({
+    auth_server_url: auth_server_uri,
+    client_app_id,
+    adapter,
+  });
+  const issuer: string = normalizeOidcIssuer(auth_server_uri);
 
-      if (response.status === 403 || response.status === 401) {
+  // An empty audience list is a rotation-only request: one grant with no
+  // `resource` (its access token is for the reserved userinfo audience).
+  const audiences: (string | null)[] = normalizeAudiences(audience);
+  const grants: (string | null)[] = audiences.length > 0 ? audiences : [null];
+
+  const access: Record<string, AccessToken> = {};
+  let current: RefreshToken | "AS_HTTP_ONLY_COOKIE" = refreshToken;
+  let last_record: SuccessfullyGeneratedTokensRecord | undefined;
+
+  for (const resource of grants) {
+    const parameters = new URLSearchParams();
+    if (resource) {
+      parameters.set(OIDC_TOKEN_RESOURCE_PARAM, resource);
+    }
+    if (useHttpOnlyCookie) {
+      parameters.set(OIDC_TOKEN_REFRESH_TOKEN_DELIVERY_PARAM, "http_only_cookie");
+    }
+
+    if (debug) {
+      console.log(
+        "[SchemaVaultsAuthClient::exchangeAuthTokens()] " +
+          `Sending refresh grant to "${config.serverMetadata().token_endpoint}" with parameters:`,
+        Object.fromEntries(parameters.entries()),
+        useHttpOnlyCookie
+          ? "(refresh token presented via HTTP-only cookie)"
+          : "(refresh token presented inline)",
+      );
+    }
+
+    let response: oidc.TokenEndpointResponse & oidc.TokenEndpointResponseHelpers;
+    try {
+      if (useHttpOnlyCookie) {
+        // The refresh token lives in the auth server's HTTP-only cookie,
+        // which the adapter's fetch sends with the request; the form
+        // therefore carries no `refresh_token` parameter.
+        response = await oidc.genericGrantRequest(
+          config,
+          "refresh_token",
+          parameters,
+        );
+      } else {
+        if (typeof current !== "object") {
+          throw new Error(
+            "Refresh token rotation switched to cookie delivery mid-exchange",
+          );
+        }
+        response = await oidc.refreshTokenGrant(
+          config,
+          current.token,
+          parameters,
+        );
+      }
+    } catch (e: unknown) {
+      const classified = classifyOidcTokenError(e);
+      if (debug) {
+        console.error("[exchangeAuthTokens] Refresh grant failed: ", e);
+      }
+      if (classified.session_lost) {
         console.error(
-          `${response.status} error response from exchange token attempt, client is not logged in! Server: ${serverMessage}`,
+          `Refresh grant rejected by the auth server (${classified.message}); client is no longer logged in.`,
         );
         await logout();
-        const sessionExpiredMsg = `Session expired (HTTP ${response.status}): ${serverMessage}`;
-        // Guard: downstream error handlers (acquire-access-token.ts, etc.) detect session
-        // expiry by checking if the error message includes "expired". If the message format
-        // is ever refactored and that keyword is accidentally removed, the entire expired-session
-        // detection chain breaks silently. This check ensures the contract is always upheld.
-        if (!sessionExpiredMsg.toLowerCase().includes("expired")) {
-          throw new Error("Session expired");
-        }
-        throw new Error(sessionExpiredMsg);
+        // Downstream handlers (acquire-access-token.ts, etc.) detect an
+        // unrecoverable session by the "expired" keyword in the message.
+        throw new Error("Refresh token has expired!", { cause: e });
       }
-      throw new Error(
-        `Token exchange failed (HTTP ${response.status}): ${serverMessage}`,
-      );
+      throw new Error(`Token exchange failed: ${classified.message}`, {
+        cause: e,
+      });
     }
 
-    const parsed_tokens_result = await createRequestTokensResultSchema(
-      z,
-      environment,
-      { auth_server_url: auth_server_uri, auth_server_app_id },
-    ).safeParseAsync(await response.json());
-    if (!parsed_tokens_result.success) {
-      console.error(
-        "Failed to parse tokens response from server: ",
-        parsed_tokens_result.error,
-      );
-      throw new Error("Failed to parse tokens response from server!");
+    let record: SuccessfullyGeneratedTokensRecord;
+    try {
+      record = tokenEndpointResponseToTokensRecord({
+        response,
+        audience: resource ?? OIDC_USERINFO_AUDIENCE_ID,
+        uid,
+        auth_server_url: issuer,
+      });
+    } catch (e: unknown) {
+      console.error("Failed to parse tokens response from server: ", e);
+      throw new Error("Failed to parse tokens response from server!", {
+        cause: e,
+      });
     }
 
-    tokens_response_data = parsed_tokens_result.data;
-  } catch (e: unknown) {
-    if (debug) {
-      console.error("[exchangeAuthTokens] FETCH FAILED: ", e);
+    Object.assign(access, record.access ?? {});
+    if (typeof record.refresh === "object") {
+      // Rotation: the next grant must present the replacement token.
+      current = record.refresh;
     }
-
-    if (e instanceof Error) {
-      const eMsg: string = e.message.toLowerCase();
-      if (
-        eMsg.includes("expired") ||
-        eMsg.includes("jwtexpired") ||
-        eMsg.includes("err_jwt_expired")
-      ) {
-        console.error("Refresh token appears to have expired!");
-        throw new Error("Refresh token has expired!");
-      }
-    }
-
-    throw e instanceof Error
-      ? e
-      : new Error("Failed to exchange refresh token for access token");
+    last_record = record;
   }
 
+  if (!last_record) {
+    throw new Error("No refresh grant was performed");
+  }
+
+  const merged: SuccessfullyGeneratedTokensRecord = {
+    access,
+    refresh: last_record.refresh,
+    ...(typeof last_record.refresh_token_expiry === "number"
+      ? { refresh_token_expiry: last_record.refresh_token_expiry }
+      : {}),
+  };
+
   try {
-    // Parse tokens from response JSON body
-    return await handleSuccessfulExchangeAuthTokensResponse(
-      tokens_response_data,
-    );
+    return await handleSuccessfulExchangeAuthTokensResponse(merged);
   } catch (e: unknown) {
     if (debug) {
-      console.log("typeof e === ", typeof e);
-      if (e instanceof Error) {
-        console.error("Parse tokens error message: ", e.message);
-      }
       console.error(
-        "Failed to parse authentication tokens from exchange tokens POST request: ",
+        "Failed to store authentication tokens from refresh grant: ",
         e,
       );
     }
     throw new Error(
       "Failed to parse authentication tokens from exchange tokens POST request!",
+      { cause: e },
     );
   }
 }

@@ -3,7 +3,10 @@ import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { OIDC_SUPPORTED_SCOPES } from "@schemavaults/auth-common";
+import {
+  getOidcEndpointUrl,
+  OIDC_SUPPORTED_SCOPES,
+} from "@schemavaults/auth-common";
 import { getAuthServerUri } from "@/lib/auth_server_uri";
 
 /**
@@ -43,11 +46,14 @@ export function buildOidcDiscoveryDocument(
   const issuer: string = getAuthServerUri(environment);
   return {
     issuer,
-    authorization_endpoint: `${issuer}/api/oidc/authorize`,
-    token_endpoint: `${issuer}/api/oidc/token`,
-    userinfo_endpoint: `${issuer}/api/oidc/userinfo`,
-    introspection_endpoint: `${issuer}/api/oidc/introspect`,
-    jwks_uri: `${issuer}/api/oidc/jwks`,
+    // Endpoint paths are shared with @schemavaults/auth-client-sdk, which
+    // builds its openid-client Configuration from the same constants
+    // instead of fetching this document.
+    authorization_endpoint: getOidcEndpointUrl(issuer, "authorization"),
+    token_endpoint: getOidcEndpointUrl(issuer, "token"),
+    userinfo_endpoint: getOidcEndpointUrl(issuer, "userinfo"),
+    introspection_endpoint: getOidcEndpointUrl(issuer, "introspection"),
+    jwks_uri: getOidcEndpointUrl(issuer, "jwks"),
     response_types_supported: ["code"],
     response_modes_supported: ["query"],
     grant_types_supported: ["authorization_code", "refresh_token"],

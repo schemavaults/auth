@@ -7,7 +7,7 @@ import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { ServerlessDatabase } from "@/lib/auth-db";
+import { ServerlessDatabase, UserRegistry, loadUserData } from "@/lib/auth-db";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import {
   handleCorsPreflightForClientApp,
@@ -20,6 +20,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import {
   type PotentiallyValidTokenSource,
+  type UserData,
   userDataSchema,
 } from "@schemavaults/auth-common";
 import { RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
@@ -102,8 +103,32 @@ export async function GET(
 
   const protected_route: (req: NextRequest) => Promise<NextResponse> = await withAuthenticatedApiRouteGuard(
     async ({
-      user,
+      user: user_from_token,
     }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
+      // The guard's `user` is derived from the presented token's claims.
+      // Reload the row so callers — notably the client SDK, which syncs
+      // `currentUser` from this endpoint after every login and token
+      // refresh — get the complete, current UserData (profile names,
+      // invite code, email_verified, ...) rather than a claims snapshot
+      // frozen at token issuance.
+      let user: UserData;
+      try {
+        await using dbh = ServerlessDatabase.createDBH();
+        user = await loadUserData(
+          user_from_token.uid,
+          new UserRegistry(dbh.db, debug),
+        );
+      } catch (e: unknown) {
+        console.error(
+          `[/api/auth/whoami/${client_app_id}] Failed to load user data for uid '${user_from_token.uid}':`,
+          e,
+        );
+        return NextResponse.json(
+          { success: false, error: true, message: "Internal server error" },
+          { status: 500 },
+        );
+      }
+
       // Validate that user object contains only UserData fields.
       // userDataSchema is .strict(), so this returns an error if JWT-internal fields leaked through.
       const parseResult = await userDataSchema.safeParseAsync(user);

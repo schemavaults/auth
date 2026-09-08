@@ -3,7 +3,6 @@ import type { NextResponse } from "next/server";
 import {
   getApiServerIdForTokenAudience,
   type AppId,
-  type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import {
   parseAndGrantScopes,
@@ -17,6 +16,7 @@ import {
   type CustomJWTPayload,
   type I_JWT_Keys,
 } from "@schemavaults/jwt";
+import { RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import {
   UserRegistry,
@@ -25,38 +25,91 @@ import {
   isTokenRevoked,
   loadUserData,
   REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
-  type ServerlessDatabase,
 } from "@/lib/auth-db";
 import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import issueOidcTokens from "@/lib/oidc/issue-oidc-tokens";
 import {
-  oidcTokenSuccessResponse,
-  type OidcTokenFormParam,
+  parseOidcTokenResourceParam,
+  validateOidcTokenResource,
+} from "@/lib/oidc/token-request-extensions";
+import type {
+  OidcGrantContext,
+  OidcGrantOutcome,
+  OidcTokenFormParam,
 } from "./token-response";
 
 /**
- * grant_type=refresh_token (RFC 6749 §6 / OIDC Core §12): redeems a
- * scope-bearing refresh token issued by the OIDC surface for a fresh
- * token set (no id_token — OIDC Core §12.2 permits omitting it).
- * Called from route.ts after grant_type/client_id validation; the
- * shared try/catch there owns exception capture.
+ * Locates the refresh token presented with the grant: the standard
+ * `refresh_token` form parameter (RFC 6749 §6), or — for SDK clients
+ * that asked for HTTP-only-cookie delivery on a previous grant — the
+ * platform's per-client-app refresh-token cookie. The explicit form
+ * parameter wins when both are present.
  */
-export async function handleOidcRefreshTokenGrant(
-  dbh: ServerlessDatabase,
+export function extractPresentedRefreshToken(
   param: OidcTokenFormParam,
+  cookies: OidcGrantContext["request"]["cookies"],
   client_app_id: AppId,
-  environment: SchemaVaultsAppEnvironment,
-  debug: boolean,
-): Promise<NextResponse> {
-  const refresh_token = param("refresh_token");
+): string | null {
+  const from_form: string | null = param("refresh_token");
+  if (from_form) {
+    return from_form;
+  }
+  const from_cookie: string | undefined = cookies.get(
+    RefreshTokenCookieName(client_app_id),
+  )?.value;
+  return typeof from_cookie === "string" && from_cookie.length > 0
+    ? from_cookie
+    : null;
+}
+
+/**
+ * grant_type=refresh_token (RFC 6749 §6 / OIDC Core §12): redeems a
+ * scope-bearing refresh token for a fresh token set (no id_token — OIDC
+ * Core §12.2 permits omitting it). Called from route.ts after
+ * grant_type/client_id validation and client authentication; the
+ * shared try/catch there owns exception capture, and route.ts delivers
+ * the issued tokens.
+ */
+export async function handleOidcRefreshTokenGrant({
+  dbh,
+  request,
+  form,
+  param,
+  client_app_id,
+  environment,
+  debug,
+}: OidcGrantContext): Promise<OidcGrantOutcome> {
+  const fail = (response: NextResponse): OidcGrantOutcome => ({
+    ok: false,
+    response,
+  });
+
+  const refresh_token: string | null = extractPresentedRefreshToken(
+    param,
+    request.cookies,
+    client_app_id,
+  );
   if (!refresh_token) {
-    return oidcTokenErrorResponse(
-      "invalid_request",
-      "Missing 'refresh_token' parameter.",
+    return fail(
+      oidcTokenErrorResponse(
+        "invalid_request",
+        "Missing 'refresh_token' parameter.",
+      ),
     );
   }
+
+  const parsed_resource = parseOidcTokenResourceParam(form, environment);
+  if (!parsed_resource.ok) {
+    return fail(
+      oidcTokenErrorResponse(
+        parsed_resource.error.error,
+        parsed_resource.error.error_description,
+      ),
+    );
+  }
+  const resource: string | null = parsed_resource.resource;
 
   // Locate + decode: keyset id and audience come from the token header;
   // refresh tokens are always signed with the auth server's own keyset.
@@ -72,9 +125,11 @@ export async function handleOidcRefreshTokenGrant(
       getApiServerIdForTokenAudience(token_audience, environment) !==
       auth_app_id
     ) {
-      return oidcTokenErrorResponse(
-        "invalid_grant",
-        "Invalid refresh token audience.",
+      return fail(
+        oidcTokenErrorResponse(
+          "invalid_grant",
+          "Invalid refresh token audience.",
+        ),
       );
     }
     const keyset: I_JWT_Keys = await new AuthServerJwtKeysManager(
@@ -87,26 +142,34 @@ export async function handleOidcRefreshTokenGrant(
       env: environment,
     });
   } catch {
-    return oidcTokenErrorResponse(
-      "invalid_grant",
-      "Invalid or expired refresh token.",
+    return fail(
+      oidcTokenErrorResponse(
+        "invalid_grant",
+        "Invalid or expired refresh token.",
+      ),
     );
   }
 
   // The refresh token must have been issued to this client...
   if (decoded.app !== client_app_id) {
-    return oidcTokenErrorResponse(
-      "invalid_grant",
-      "Refresh token was not issued to this client.",
+    return fail(
+      oidcTokenErrorResponse(
+        "invalid_grant",
+        "Refresh token was not issued to this client.",
+      ),
     );
   }
-  // ...by the OIDC surface (custom-surface refresh tokens carry no
-  // scope claim and are not redeemable here).
+  // ...with an OIDC scope grant. Every login flow binds scopes to its
+  // authorization code and the platform token endpoints carry them
+  // forward on rotation, so tokens from either surface qualify; only
+  // tokens minted before scopes existed (long since expired) do not.
   const original_scopes = parseAndGrantScopes(decoded.scope);
   if (!original_scopes.hasOpenid) {
-    return oidcTokenErrorResponse(
-      "invalid_grant",
-      "This refresh token was not issued by the OIDC token endpoint.",
+    return fail(
+      oidcTokenErrorResponse(
+        "invalid_grant",
+        "This refresh token does not carry an OpenID scope grant.",
+      ),
     );
   }
 
@@ -121,9 +184,11 @@ export async function handleOidcRefreshTokenGrant(
       rotationReuseGraceMs: REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
     }))
   ) {
-    return oidcTokenErrorResponse(
-      "invalid_grant",
-      "Refresh token has been revoked.",
+    return fail(
+      oidcTokenErrorResponse(
+        "invalid_grant",
+        "Refresh token has been revoked.",
+      ),
     );
   }
   const tokens_valid_after: number = await getUserTokensValidAfter(
@@ -131,16 +196,20 @@ export async function handleOidcRefreshTokenGrant(
     decoded.uid,
   );
   if (isTokenIatRevoked(decoded.iat, tokens_valid_after)) {
-    return oidcTokenErrorResponse(
-      "invalid_grant",
-      "Refresh token has been revoked.",
+    return fail(
+      oidcTokenErrorResponse(
+        "invalid_grant",
+        "Refresh token has been revoked.",
+      ),
     );
   }
 
   const userRegistry = new UserRegistry(dbh.db, debug);
   const user: UserData = await loadUserData(decoded.uid, userRegistry);
   if (user.disabled) {
-    return oidcTokenErrorResponse("invalid_grant", "Account is disabled.");
+    return fail(
+      oidcTokenErrorResponse("invalid_grant", "Account is disabled."),
+    );
   }
   const appAuthorized: boolean = await isAppAuthorizedForUser(
     dbh.db,
@@ -149,10 +218,31 @@ export async function handleOidcRefreshTokenGrant(
     debug,
   );
   if (!appAuthorized) {
-    return oidcTokenErrorResponse(
-      "invalid_grant",
-      "The user has not authorized this client application.",
+    return fail(
+      oidcTokenErrorResponse(
+        "invalid_grant",
+        "The user has not authorized this client application.",
+      ),
     );
+  }
+
+  if (resource !== null) {
+    const resourceError = await validateOidcTokenResource({
+      uid: user.uid,
+      client_app_id,
+      resource,
+      dbh,
+      environment,
+      debug,
+    });
+    if (resourceError) {
+      return fail(
+        oidcTokenErrorResponse(
+          resourceError.error,
+          resourceError.error_description,
+        ),
+      );
+    }
   }
 
   // RFC 6749 §6: a scope re-request must be a subset of the original
@@ -165,15 +255,17 @@ export async function handleOidcRefreshTokenGrant(
       original_scopes.granted.includes(s),
     );
     if (!requested.hasOpenid || !isSubset) {
-      return oidcTokenErrorResponse(
-        "invalid_scope",
-        "Requested scope exceeds the originally granted scope.",
+      return fail(
+        oidcTokenErrorResponse(
+          "invalid_scope",
+          "Requested scope exceeds the originally granted scope.",
+        ),
       );
     }
     scope = requested.granted.join(" ");
   }
 
-  const body = await issueOidcTokens({
+  const issued = await issueOidcTokens({
     dbh,
     user,
     client_app_id,
@@ -183,6 +275,7 @@ export async function handleOidcRefreshTokenGrant(
     environment,
     // OIDC Core §12.2 permits omitting the id_token on refresh.
     include_id_token: false,
+    access_token_audience: resource ?? undefined,
     // Refresh token rotation: the presented token is single-use — its
     // revocation commits in the same transaction as the replacement
     // tokens' issuance records, and a failure throws (failing closed via
@@ -198,7 +291,7 @@ export async function handleOidcRefreshTokenGrant(
     debug,
   });
 
-  return oidcTokenSuccessResponse(body);
+  return { ok: true, issued };
 }
 
 export default handleOidcRefreshTokenGrant;
