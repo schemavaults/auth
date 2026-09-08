@@ -189,6 +189,9 @@ export async function handleMfaVerify({
       req,
       res: response,
       environment: env,
+      // Pre-upgrade challenges (≤5 min TTL) carry no scope; fall back to
+      // the platform default rather than minting a scope-less session.
+      scope: challenge.scope ?? undefined,
       debug,
     });
   } catch (e: unknown) {

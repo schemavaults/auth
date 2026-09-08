@@ -3,6 +3,7 @@ import type { NextRequest, NextResponse } from "next/server";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { DEFAULT_AUTH_SCOPE } from "@schemavaults/auth-common";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { UserRegistry } from "@/lib/auth-db";
 import { OrganizationsRegistry } from "@/lib/auth-db";
@@ -18,6 +19,15 @@ export interface SetAuthServerRefreshTokenCookieOpts {
   req: NextRequest;
   res: NextResponse;
   environment: SchemaVaultsAppEnvironment;
+  /**
+   * Space-delimited granted scopes to carry on the session's refresh
+   * token. The OIDC token endpoint — which the client SDK uses for every
+   * refresh — only redeems refresh tokens that carry an `openid` scope
+   * grant, so the first-party session cookie must be minted with the
+   * flow's granted scope (or the platform default) like every other
+   * refresh token.
+   */
+  scope?: string;
   debug?: boolean;
 }
 
@@ -27,6 +37,7 @@ export default async function setAuthServerRefreshTokenCookie({
   req,
   res,
   environment,
+  scope = DEFAULT_AUTH_SCOPE,
   debug = false,
 }: SetAuthServerRefreshTokenCookieOpts): Promise<void> {
   const auth_app_id = getAuthServerAppId();
@@ -43,6 +54,7 @@ export default async function setAuthServerRefreshTokenCookie({
     user: userData,
     user_organizations: userOrgs,
     environment,
+    scope,
   });
 
   const hostname = getHostname(req);

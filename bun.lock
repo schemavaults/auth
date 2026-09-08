@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.42.3",
+      "version": "0.42.4",
       "dependencies": {
         "@hookform/resolvers": "5.9.1",
         "@schemavaults/app-definitions": "workspace:*",
@@ -288,7 +288,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.11.3",
+      "version": "0.11.4",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
