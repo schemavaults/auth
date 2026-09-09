@@ -11,8 +11,9 @@ import { getAuthServerUri } from "@/lib/auth_server_uri";
 
 /**
  * OpenID Provider Metadata (OIDC Discovery 1.0 §3) served at
- * /.well-known/openid-configuration (rewritten in next.config.ts to
- * /api/oidc/openid-configuration).
+ * /.well-known/openid-configuration and the RFC 8414 path
+ * /.well-known/oauth-authorization-server (both rewritten in
+ * next.config.ts to /api/oidc/openid-configuration).
  *
  * The document itself is built by `buildOidcProviderMetadata` in
  * `@schemavaults/auth-common`, which `@schemavaults/auth-client-sdk`
