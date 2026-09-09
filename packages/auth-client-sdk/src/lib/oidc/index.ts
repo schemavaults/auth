@@ -1,8 +1,7 @@
-export {
-  createOidcClientConfiguration,
-  normalizeOidcIssuer,
-} from "./oidc-client-configuration";
+export { createOidcClientConfiguration } from "./oidc-client-configuration";
 export type { CreateOidcClientConfigurationOptions } from "./oidc-client-configuration";
+
+export { normalizeOidcIssuer } from "./normalize-oidc-issuer";
 
 export { tokenEndpointResponseToTokensRecord } from "./token-endpoint-response-to-tokens-record";
 export type {

@@ -11,6 +11,7 @@
 import * as oidc from "openid-client";
 import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
+import { normalizeOidcIssuer } from "./normalize-oidc-issuer";
 
 export interface CreateOidcClientConfigurationOptions {
   /**
@@ -24,16 +25,6 @@ export interface CreateOidcClientConfigurationOptions {
   adapter: ISchemaVaultsAuthClientAdapter;
   /** Timeout for token-endpoint requests, in seconds (default 30). */
   timeout_seconds?: number;
-}
-
-/** Strips a trailing slash so the issuer matches `getAuthServerUrl()`. */
-export function normalizeOidcIssuer(auth_server_url: string): string {
-  if (typeof auth_server_url !== "string" || auth_server_url.length === 0) {
-    throw new TypeError("Expected 'auth_server_url' to be a non-empty string!");
-  }
-  return auth_server_url.endsWith("/")
-    ? auth_server_url.slice(0, -1)
-    : auth_server_url;
 }
 
 /**

@@ -2,10 +2,7 @@ import { describe, expect, test } from "bun:test";
 import * as oidc from "openid-client";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
-import {
-  createOidcClientConfiguration,
-  normalizeOidcIssuer,
-} from "./oidc-client-configuration";
+import { createOidcClientConfiguration } from "./oidc-client-configuration";
 
 function makeAdapter(
   fetchImpl: ISchemaVaultsAuthClientAdapter["fetch"],
@@ -13,20 +10,6 @@ function makeAdapter(
   // Only `fetch` is exercised by the configuration; the rest is inert.
   return { fetch: fetchImpl } as unknown as ISchemaVaultsAuthClientAdapter;
 }
-
-describe("normalizeOidcIssuer", () => {
-  test("strips a single trailing slash", () => {
-    expect(normalizeOidcIssuer("https://auth.example.com/")).toBe(
-      "https://auth.example.com",
-    );
-    expect(normalizeOidcIssuer("https://auth.example.com")).toBe(
-      "https://auth.example.com",
-    );
-  });
-  test("rejects empty input", () => {
-    expect(() => normalizeOidcIssuer("")).toThrow(TypeError);
-  });
-});
 
 describe("createOidcClientConfiguration", () => {
   test("is a public (auth method none) client for the configured app id", () => {
