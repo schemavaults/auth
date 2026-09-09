@@ -226,14 +226,20 @@ export interface ISchemaVaultsAuthClient {
   // a CSRF / session-fixation attempt (RFC 6749 §10.12).
   // `expected_nonce` is the login replay nonce for same-context flows
   // (the auth server's own /account login); redirect flows load their
-  // stored nonce internally. The token response's `nonce` echo must
-  // match or the exchange is rejected as a possible replay.
+  // stored nonce internally. The id_token's `nonce` claim must match or
+  // the exchange is rejected as a possible replay.
+  // `received_iss` is the RFC 9207 `iss` parameter as observed on the
+  // callback URL (redirect flows). When supplied it is verified against
+  // the configured auth server URL, defending against authorization
+  // server mix-up attacks; forward it from the callback whenever
+  // available.
   handleSuccessfulAuthentication: (
     authorization_code: string,
     challenge_time: number,
     code_verifier?: string,
     received_state?: string | null,
     expected_nonce?: string | null,
+    received_iss?: string | null,
   ) => Promise<void>;
 
   getAccessTokenFromCache: (token_id: string) => AccessToken | null;

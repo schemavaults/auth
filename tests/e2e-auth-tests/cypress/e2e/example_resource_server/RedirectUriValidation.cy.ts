@@ -6,6 +6,13 @@
 // list, and the token-exchange path must bind the redirect_uri across
 // issuance and redemption.
 
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
+import {
+  type CodeChallengeWithDetails,
+  DEFAULT_AUTH_SCOPE,
+  PKCE_ProofKeyManager,
+} from "@schemavaults/auth-common";
+
 describe("OAuth2 redirect_uri validation (RFC 6749 §4.1.3)", () => {
   const exampleAppUrl: string =
     Cypress.env("EXAMPLE_NEXTJS_RESOURCE_SERVER_URL") ||
@@ -253,6 +260,280 @@ describe("OAuth2 redirect_uri validation (RFC 6749 §4.1.3)", () => {
                 });
               });
             });
+          });
+        });
+      });
+    });
+  });
+});
+
+// The standard OIDC token endpoint (/api/oidc/token) — which the client
+// SDK now uses for every code redemption — must enforce the same
+// issuance/redemption redirect_uri binding. Per RFC 6749 §4.1.3 the
+// parameter is REQUIRED iff the authorization request carried one, and
+// the values MUST be identical: a code bound to a redirect_uri cannot be
+// redeemed without one or with a different one, and a code bound to none
+// (the auth server's own first-party login) cannot be redeemed with one.
+describe("OIDC token endpoint redirect_uri binding (RFC 6749 §4.1.3)", () => {
+  const exampleAppUrl: string =
+    Cypress.env("EXAMPLE_NEXTJS_RESOURCE_SERVER_URL") ||
+    "http://example-nextjs-resource-server:3007";
+  const exampleAppOrigin: string = new URL(exampleAppUrl).origin;
+  const ATTACKER_ORIGIN = "https://attacker.example";
+
+  interface MintedAuthorizationCode {
+    code: string;
+    code_verifier: string;
+  }
+
+  interface OidcTokenResponseBody {
+    access_token?: string;
+    id_token?: string;
+    refresh_token?: string;
+    refresh_token_expires_in?: number;
+    error?: string;
+    error_description?: string;
+  }
+
+  /**
+   * Mints an authorization code through the login API with a PKCE pair
+   * generated here, so the spec holds the matching code_verifier and can
+   * redeem the code for real. `redirect_uri: null` mirrors the auth
+   * server's own first-party login, which binds no redirect URI.
+   */
+  function mintAuthorizationCode(opts: {
+    email: string;
+    password: string;
+    client_app_id: string;
+    redirect_uri: string | null;
+  }): Cypress.Chainable<MintedAuthorizationCode> {
+    cy.reset_rate_limit();
+    const verifier = PKCE_ProofKeyManager.createCodeVerifier(Date.now());
+    return cy
+      .wrap<Promise<CodeChallengeWithDetails>, CodeChallengeWithDetails>(
+        PKCE_ProofKeyManager.createCodeChallenge(verifier),
+        { log: false },
+      )
+      .then((challenge) =>
+        cy
+          .request({
+            method: "POST",
+            url: "/api/auth/login",
+            failOnStatusCode: false,
+            body: {
+              credentials: { email: opts.email, password: opts.password },
+              client_app_id: opts.client_app_id,
+              code_challenge: challenge.code_challenge,
+              challenge_time: challenge.challenge_time,
+              redirect_uri: opts.redirect_uri,
+              nonce: `e2e-nonce-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              scope: DEFAULT_AUTH_SCOPE,
+            },
+          })
+          .then((response) => {
+            expect(response.status, "login status").to.equal(200);
+            const body = response.body as {
+              kind?: string;
+              authorization_code?: string;
+            };
+            expect(body.kind, "login kind").to.equal("authenticated");
+            expect(body.authorization_code, "authorization_code").to.be.a(
+              "string",
+            );
+            return {
+              code: body.authorization_code as string,
+              code_verifier: verifier.code_verifier,
+            };
+          }),
+      );
+  }
+
+  /** Form-encoded authorization_code grant at the OIDC token endpoint. */
+  function redeemAtOidcTokenEndpoint(
+    params: Record<string, string>,
+  ): Cypress.Chainable<Cypress.Response<OidcTokenResponseBody>> {
+    return cy.request<OidcTokenResponseBody>({
+      method: "POST",
+      url: "/api/oidc/token",
+      form: true,
+      body: { grant_type: "authorization_code", ...params },
+      headers: { Accept: "application/json" },
+      failOnStatusCode: false,
+    });
+  }
+
+  function expectRejectedGrant(
+    response: Cypress.Response<OidcTokenResponseBody>,
+    label: string,
+  ): void {
+    expect(response.status, `${label}: status`).to.equal(400);
+    expect(response.body.error, `${label}: error`).to.equal("invalid_grant");
+    expect(response.body.access_token, `${label}: access_token`).to.be
+      .undefined;
+    expect(response.body.id_token, `${label}: id_token`).to.be.undefined;
+    expect(response.body.refresh_token, `${label}: refresh_token`).to.be
+      .undefined;
+  }
+
+  it("third-party code: rejects an omitted or mismatched redirect_uri, redeems the exact one", () => {
+    cy.create_and_login_as_superuser().then((success: boolean) => {
+      if (!success) throw new Error("Failed to login as superuser");
+
+      cy.generate_random_code(24).then((inviteCode: string) => {
+        cy.create_invite_code(inviteCode, 1).then((created: boolean) => {
+          if (!created) throw new Error("Failed to create invite code");
+
+          cy.logout();
+
+          cy.generate_random_code(12).then((suffix: string) => {
+            const email = `oidc-redirect-uri-bind-${suffix}@example.com`;
+            const password = "TestPassword123!";
+
+            // Register through the real PKCE flow so the user exists and
+            // has authorized the example app; then discover the app id
+            // and the registered redirect_uri from a fresh authorize URL.
+            cy.register_via_resource_server_pkce_flow({
+              resource_server_origin: exampleAppOrigin,
+              email,
+              password,
+              invite_code: inviteCode,
+            }).then(() => {
+              cy.logout();
+              cy.clearAllCookies();
+              cy.origin(exampleAppOrigin, () => {
+                localStorage.clear();
+                sessionStorage.clear();
+                cy.visit("/");
+                cy.contains("button", "Login").click();
+              });
+
+              cy.url({ timeout: 20000 }).should("include", "/auth/login");
+              // The SDK appends the PKCE + redirect params to the login
+              // URL after the initial navigation; wait for them (and for
+              // hydration) before reading the query string, else this
+              // races the client-side URL update.
+              cy.url().should("include", "code_challenge");
+              cy.url().should("include", "redirect_uri");
+              cy.url().should("include", "app_id");
+              cy.wait_for_page_hydration();
+              cy.location("search").then((search: string) => {
+                const params = new URLSearchParams(search);
+                const legitimate_redirect_uri = params.get("redirect_uri");
+                const app_id = params.get("app_id");
+                if (
+                  typeof legitimate_redirect_uri !== "string" ||
+                  typeof app_id !== "string"
+                ) {
+                  throw new Error("missing redirect_uri or app_id");
+                }
+
+                mintAuthorizationCode({
+                  email,
+                  password,
+                  client_app_id: app_id,
+                  redirect_uri: legitimate_redirect_uri,
+                }).then(({ code, code_verifier }) => {
+                  const base = { client_id: app_id, code, code_verifier };
+
+                  // Omitted: the code was issued WITH a redirect_uri, so
+                  // the token request must carry it.
+                  redeemAtOidcTokenEndpoint(base).then((response) =>
+                    expectRejectedGrant(response, "omitted redirect_uri"),
+                  );
+
+                  // Mismatched origin.
+                  redeemAtOidcTokenEndpoint({
+                    ...base,
+                    redirect_uri: `${ATTACKER_ORIGIN}/auth/authorize`,
+                  }).then((response) =>
+                    expectRejectedGrant(response, "attacker redirect_uri"),
+                  );
+
+                  // Same origin, different URL: comparison is exact.
+                  redeemAtOidcTokenEndpoint({
+                    ...base,
+                    redirect_uri: `${legitimate_redirect_uri}?tampered=1`,
+                  }).then((response) =>
+                    expectRejectedGrant(response, "tampered redirect_uri"),
+                  );
+
+                  // The rejections above must not have consumed the code:
+                  // the exact redirect_uri (with the real verifier) still
+                  // redeems it, proving the earlier failures were the
+                  // binding and nothing else.
+                  redeemAtOidcTokenEndpoint({
+                    ...base,
+                    redirect_uri: legitimate_redirect_uri,
+                  }).then((response) => {
+                    expect(response.status, "exact redirect_uri: status").to.equal(
+                      200,
+                    );
+                    expect(response.body.access_token, "access_token").to.be.a(
+                      "string",
+                    );
+                    expect(response.body.id_token, "id_token").to.be.a("string");
+                  });
+
+                  // ...and a code is single-use.
+                  redeemAtOidcTokenEndpoint({
+                    ...base,
+                    redirect_uri: legitimate_redirect_uri,
+                  }).then((response) =>
+                    expectRejectedGrant(response, "replayed code"),
+                  );
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
+  it("first-party code (no redirect_uri bound): rejects a presented redirect_uri, redeems without one", () => {
+    const auth_app_id = getAuthServerAppIdFromCypressEnv();
+    const auth_server_origin: string = new URL(Cypress.config("baseUrl")!)
+      .origin;
+
+    cy.generate_random_test_user_credentials().then((credentials) => {
+      cy.create_and_login_as_regular_user(credentials).then((success) => {
+        expect(success, "create_and_login_as_regular_user should succeed").to
+          .be.true;
+        cy.logout();
+        cy.clearAllCookies();
+
+        mintAuthorizationCode({
+          email: credentials.email,
+          password: credentials.password,
+          client_app_id: auth_app_id,
+          redirect_uri: null,
+        }).then(({ code, code_verifier }) => {
+          const base = { client_id: auth_app_id, code, code_verifier };
+
+          // No redirect_uri was bound at issuance, so presenting one is
+          // a null-vs-string mismatch and must be refused.
+          redeemAtOidcTokenEndpoint({
+            ...base,
+            redirect_uri: `${auth_server_origin}/account`,
+          }).then((response) =>
+            expectRejectedGrant(response, "unexpected redirect_uri"),
+          );
+
+          // Omitting it (RFC 6749 §4.1.3: not required when the
+          // authorization request carried none) redeems the code.
+          redeemAtOidcTokenEndpoint(base).then((response) => {
+            expect(response.status, "no redirect_uri: status").to.equal(200);
+            expect(response.body.access_token, "access_token").to.be.a(
+              "string",
+            );
+            expect(response.body.id_token, "id_token").to.be.a("string");
+            // First-party refresh tokens are always cookie-delivered.
+            expect(response.body.refresh_token, "refresh_token").to.be
+              .undefined;
+            expect(
+              response.body.refresh_token_expires_in,
+              "refresh_token_expires_in",
+            ).to.be.a("number");
           });
         });
       });

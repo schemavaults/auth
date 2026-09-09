@@ -10,6 +10,7 @@ import {
   type RefreshToken,
   type RequestTokensResult,
   type UserData,
+  type OidcTokenResponseExtensions,
 } from "@schemavaults/auth-common";
 import { generateIdToken, type I_JWT_Keys } from "@schemavaults/jwt";
 import {
@@ -36,6 +37,14 @@ export interface IssueOidcTokensOptions {
    */
   include_id_token: boolean;
   /**
+   * Audience of the issued access token, in token-audience form (the
+   * auth server URL, or an API server id). Set from a validated RFC 8707
+   * `resource` request parameter; defaults to the reserved
+   * `oidc-userinfo` audience (an access token redeemable only at
+   * /api/oidc/userinfo) for plain OIDC relying parties.
+   */
+  access_token_audience?: string;
+  /**
    * Refresh token rotation (refresh grant only): the presented refresh
    * token to revoke atomically with the replacement tokens' issuance
    * records. A failure fails the grant closed.
@@ -49,29 +58,40 @@ export interface IssueOidcTokensOptions {
 }
 
 /**
- * RFC 6749 §5.1 / OIDC Core §3.1.3.3 token response body. The refresh
- * token is INLINED in the JSON (never cookie-ized like
- * returnGeneratedTokensToUser does for the custom surface) because OIDC
- * RPs are third-party public clients on other origins.
+ * RFC 6749 §5.1 / OIDC Core §3.1.3.3 token response body, plus the
+ * platform's `refresh_token_expires_in` extension field. `refresh_token`
+ * is inlined by default (OIDC RPs are third-party clients on other
+ * origins); the token endpoint strips it when the client asked for
+ * HTTP-only-cookie delivery (see `deliver-oidc-tokens.ts`).
  */
-export interface OidcTokenResponseBody {
+export interface OidcTokenResponseBody extends OidcTokenResponseExtensions {
   access_token: string;
   token_type: "Bearer";
   expires_in: number;
-  refresh_token: string;
+  refresh_token?: string;
   scope: string;
   id_token?: string;
 }
 
+export interface IssuedOidcTokens {
+  body: OidcTokenResponseBody;
+  /**
+   * The issued refresh token with its metadata, so the token endpoint
+   * can set it as an HTTP-only cookie instead of returning it inline.
+   */
+  refresh_token: RefreshToken;
+}
+
 /**
  * Issues the OIDC token set for an authenticated user: a JWE access
- * token minted for the reserved `oidc-userinfo` audience (opaque to the
- * RP; redeemable only at /api/oidc/userinfo), a refresh token carrying
- * the granted scope, and (on the code grant) an RS256-signed id_token
- * verifiable against the public /api/oidc/jwks.
+ * token minted for `access_token_audience` (default: the reserved
+ * `oidc-userinfo` audience, opaque to the RP and redeemable only at
+ * /api/oidc/userinfo), a refresh token carrying the granted scope, and
+ * (on the code grant) an RS256-signed id_token verifiable against the
+ * public /api/oidc/jwks.
  *
  * All authorization checks (code consumption, disabled account, app
- * authorization) are the caller's responsibility.
+ * authorization, resource validation) are the caller's responsibility.
  */
 export async function issueOidcTokens({
   dbh,
@@ -82,9 +102,10 @@ export async function issueOidcTokens({
   grant_type,
   environment,
   include_id_token,
+  access_token_audience = OIDC_USERINFO_AUDIENCE_ID,
   revoke_rotated_refresh_token,
   debug = false,
-}: IssueOidcTokensOptions): Promise<OidcTokenResponseBody> {
+}: IssueOidcTokensOptions): Promise<IssuedOidcTokens> {
   const orgRegistry = new OrganizationsRegistry(dbh.db, debug);
   const user_organizations: readonly string[] =
     await orgRegistry.listUserOrganizationMembershipIds(
@@ -100,7 +121,7 @@ export async function issueOidcTokens({
       client_app_id,
       user_organizations,
       environment,
-      audiences: [OIDC_USERINFO_AUDIENCE_ID],
+      audiences: [access_token_audience],
       generate_refresh: true,
       auth_jwt_manager: jwt_keys_manager,
       scope,
@@ -114,8 +135,10 @@ export async function issueOidcTokens({
     throw new Error(tokenGenerationResult.message);
   }
 
+  // The access-token record is keyed by canonical token audience, which
+  // is exactly the validated `resource` / userinfo-audience form.
   const access_token: AccessToken | "AS_HTTP_ONLY_COOKIE" | undefined =
-    tokenGenerationResult.tokens?.access?.[OIDC_USERINFO_AUDIENCE_ID];
+    tokenGenerationResult.tokens?.access?.[access_token_audience];
   if (!access_token || typeof access_token === "string") {
     throw new Error("OIDC access token missing from token generation result!");
   }
@@ -130,6 +153,10 @@ export async function issueOidcTokens({
     token_type: "Bearer",
     expires_in: accessTokenExpiry,
     refresh_token: refresh_token.token,
+    refresh_token_expires_in: Math.max(
+      1,
+      Math.floor((refresh_token.exp - Date.now()) / 1000),
+    ),
     scope,
   };
 
@@ -155,7 +182,7 @@ export async function issueOidcTokens({
     body.id_token = id_token;
   }
 
-  return body;
+  return { body, refresh_token };
 }
 
 export default issueOidcTokens;

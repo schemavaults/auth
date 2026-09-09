@@ -455,6 +455,7 @@ export async function handleLogin({
       req,
       res: response,
       environment: appEnv,
+      scope: grant_context.scope ?? undefined,
       debug,
     });
   } catch (e: unknown) {

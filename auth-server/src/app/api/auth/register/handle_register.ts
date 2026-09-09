@@ -521,6 +521,7 @@ export async function handleRegister({
       req,
       res: response,
       environment: appEnv,
+      scope: grant_context.scope ?? undefined,
       debug,
     });
   } catch (e: unknown) {

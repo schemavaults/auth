@@ -1,22 +1,38 @@
+// handle-successful-authentication.ts
+//
+// Redeems an authorization code at the auth server's standard OIDC token
+// endpoint (/api/oidc/token) via `openid-client`, then stores the
+// resulting refresh token, access token(s) and user data through the
+// platform adapter.
+
+import * as oidc from "openid-client";
 import {
   type AccessToken,
-  createAuthorizationCodePOSTBodySchema,
+  OIDC_TOKEN_REFRESH_TOKEN_DELIVERY_PARAM,
+  OIDC_TOKEN_RESOURCE_PARAM,
   PKCE_ProofKeyManager,
   type RefreshToken,
-  createRequestTokensResultSchema,
+  type SuccessfullyGeneratedTokensRecord,
   type UserData,
+  timingSafeStringEqual,
 } from "@schemavaults/auth-common";
+import {
+  OIDC_USERINFO_AUDIENCE_ID,
+  type ApiServerId,
+  type AppId,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import debugPrintTokensAsTable from "./debugPrintTokensAsTable";
 import debugPrintUserDataAsTable from "./debugPrintUserDataAsTable";
-import type {
-  ApiServerId,
-  AppId,
-  SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import { z } from "zod";
 import assertHttpOnlyRefreshTokenCookieHasAccompanyingMarkerCookie from "./assert-http-only-refresh-token-has-accompanying-expiry-marker";
-import { timingSafeStringEqual } from "@schemavaults/auth-common";
+import {
+  classifyOidcTokenError,
+  createOidcClientConfiguration,
+  normalizeOidcIssuer,
+  tokenEndpointResponseToTokensRecord,
+  uidFromOidcSubClaim,
+} from "./oidc";
 
 export interface IHandleSuccessfulAuthenticationOpts {
   authorization_code: string;
@@ -26,6 +42,10 @@ export interface IHandleSuccessfulAuthenticationOpts {
   // rejects the exchange if this does not match the value it persisted
   // before the authorize redirect.
   received_state: string | null | undefined;
+  // RFC 9207 `iss` parameter as received on the callback URL (redirect
+  // flow). openid-client verifies it against the configured issuer,
+  // defending against authorization-server mix-up attacks.
+  received_iss: string | null | undefined;
   // Expected login replay nonce for flows completed in the same JS
   // context that initiated them (the auth server's own /account flow,
   // where no adapter storage round-trip happens). Ignored in the
@@ -47,10 +67,10 @@ export interface IHandleSuccessfulAuthenticationOpts {
   auth_server_url: string;
   /**
    * The auth server deployment's own app id (white-label deployments use a
-   * custom value). Injected into audience schema validation because browser
-   * bundles can't resolve the SCHEMAVAULTS_AUTH_SERVER_APP_ID env var.
+   * custom value; the client resolves it from its constructor option or
+   * the platform default). The id_token `sub` claim is namespaced by it.
    */
-  auth_server_app_id?: AppId;
+  auth_server_app_id: AppId;
   defaultTokenAudiences: string | string[];
   // stores a refresh token locally (if http-only cookies not being used)
   storeRefreshToken: (refreshToken: RefreshToken) => void;
@@ -58,6 +78,22 @@ export interface IHandleSuccessfulAuthenticationOpts {
   storeMultipleAccessTokens: (
     accessTokens: Record<ApiServerId, AccessToken | "AS_HTTP_ONLY_COOKIE">,
   ) => void;
+  /**
+   * Redeems the (just stored) refresh token for access tokens of further
+   * audiences. The token endpoint issues one access token per request,
+   * so default audiences beyond the first are acquired here through
+   * refresh grants right after the code grant.
+   */
+  exchangeAuthTokens: (
+    refreshToken: RefreshToken | "AS_HTTP_ONLY_COOKIE",
+    audience: string | string[],
+  ) => Promise<SuccessfullyGeneratedTokensRecord>;
+  /**
+   * Loads the signed-in user's data from the auth server (whoami) using
+   * the stored refresh token. The OIDC token response carries identity
+   * claims only; the platform's full `UserData` comes from here.
+   */
+  fetchUserData: () => Promise<UserData | null>;
   triggerAuthStateChanged: () => void;
 }
 
@@ -66,6 +102,7 @@ export async function handleSuccessfulAuthentication({
   challenge_time,
   code_verifier,
   received_state,
+  received_iss,
   expected_nonce,
   redirect_uri,
   loadCodeVerifier,
@@ -81,6 +118,8 @@ export async function handleSuccessfulAuthentication({
   storeRefreshToken,
   storeUserData,
   storeMultipleAccessTokens,
+  exchangeAuthTokens,
+  fetchUserData,
   triggerAuthStateChanged,
 }: IHandleSuccessfulAuthenticationOpts) {
   if (debug) {
@@ -137,11 +176,12 @@ export async function handleSuccessfulAuthentication({
   // callback to defend against. In the redirect flow the verifier is
   // loaded from storage below and the state check MUST run before any
   // code redemption so a mismatched callback can never burn the stored
-  // state or trade a victim's code.
+  // state or trade a victim's code. (openid-client repeats the check
+  // when it validates the authorization response.)
   const isRedirectFlow: boolean =
     typeof code_verifier !== "string" || code_verifier.length === 0;
+  let stored_state: string | null = null;
   if (isRedirectFlow) {
-    let stored_state: string | null;
     try {
       stored_state = loadOAuth2State(challenge_time);
     } catch (e: unknown) {
@@ -176,7 +216,7 @@ export async function handleSuccessfulAuthentication({
   }
 
   // Load the stored login replay nonce (redirect flow) BEFORE the code
-  // is redeemed, so the echo in the token response can be verified. In
+  // is redeemed, so the id_token's `nonce` claim can be verified. In
   // the same-context flow the caller passes `expected_nonce` directly.
   let nonce_to_verify: string | null = expected_nonce ?? null;
   if (isRedirectFlow) {
@@ -282,105 +322,151 @@ export async function handleSuccessfulAuthentication({
     }
   }
 
-  // Get the endpoint to exchange the authorization code for an access token
-  // https://datatracker.ietf.org/doc/html/rfc7636#section-4.5
-  const authorization_code_token_endpoint = new URL(
-    `/api/auth/token/authorization_code/${client_app_id}` as const,
+  // ---- Token audiences ------------------------------------------------
+  //
+  // The standard token endpoint mints ONE access token per request
+  // (RFC 8707 `resource`). The code grant carries the first default
+  // audience; any further default audiences are acquired right after
+  // through refresh grants. A client with no default audiences
+  // exchanges the code for a refresh token + user data only (the access
+  // token minted alongside is for the reserved userinfo audience).
+  const audiences: string[] = Array.isArray(defaultTokenAudiences)
+    ? [...defaultTokenAudiences]
+    : typeof defaultTokenAudiences === "string" &&
+        defaultTokenAudiences.length > 0
+      ? [defaultTokenAudiences]
+      : [];
+  if (debug) {
+    console.log(
+      "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Default access token audience(s): ",
+      audiences,
+    );
+  }
+  const first_audience: string | undefined = audiences[0];
+  const remaining_audiences: string[] = audiences.slice(1);
+
+  const wantsHttpOnlyRefreshTokenCookie: boolean =
+    typeof adapter.doesSupportHttpOnlyRefreshToken === "function" &&
+    adapter.doesSupportHttpOnlyRefreshToken();
+
+  const token_endpoint_parameters = new URLSearchParams();
+  if (first_audience) {
+    token_endpoint_parameters.set(OIDC_TOKEN_RESOURCE_PARAM, first_audience);
+  }
+  if (wantsHttpOnlyRefreshTokenCookie) {
+    token_endpoint_parameters.set(
+      OIDC_TOKEN_REFRESH_TOKEN_DELIVERY_PARAM,
+      "http_only_cookie",
+    );
+  }
+
+  // ---- Code redemption via openid-client ------------------------------
+  const config: oidc.Configuration = createOidcClientConfiguration({
     auth_server_url,
-  ).toString();
+    client_app_id,
+    environment,
+    adapter,
+  });
+  const issuer: string = normalizeOidcIssuer(auth_server_url);
+
   if (debug) {
     console.log(
       "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Token Endpoint: ",
-      authorization_code_token_endpoint,
+      config.serverMetadata().token_endpoint,
     );
   }
 
-  let audience: string | string[] = defaultTokenAudiences;
-  if (debug) {
-    console.log(
-      "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Initial access token audience(s): ",
-      audience,
-    );
-  }
-  if (!audience || (Array.isArray(audience) && audience.length === 0)) {
-    // Supported configuration: a client with no default token audiences
-    // exchanges the authorization code for a refresh token + user data
-    // only; access tokens can be acquired later on demand.
-    if (debug) {
-      console.log(
-        "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] No access token audience(s) set; exchanging authorization code without minting access tokens",
-      );
-    }
-    audience = [];
-  }
-
-  const authorizationCodePOSTBodySchema = createAuthorizationCodePOSTBodySchema(
-    z,
-    environment,
-    { auth_server_url, auth_server_app_id },
-  );
-
-  // Exchange the authorization code for an access token
-  let request_body: z.infer<typeof authorizationCodePOSTBodySchema>;
+  let tokens: oidc.TokenEndpointResponse & oidc.TokenEndpointResponseHelpers;
   try {
-    const parsed = await authorizationCodePOSTBodySchema.safeParseAsync({
-      grant_type: "authorization_code" as const,
-      code: authorization_code,
-      code_verifier: cached_code_verifier,
-      client_app_id,
-      audience,
-      challenge_time,
-      redirect_uri,
-    } satisfies z.infer<typeof authorizationCodePOSTBodySchema>);
-    if (!parsed.success) {
-      throw parsed.error;
+    if (isRedirectFlow) {
+      if (typeof redirect_uri !== "string" || redirect_uri.length === 0) {
+        throw new Error(
+          "Cannot redeem an authorization code from a redirect callback without the 'redirect_uri' it was issued for (is 'authorize_uri' configured?)",
+        );
+      }
+      // Reconstruct the authorization response URL openid-client
+      // validates (RFC 6749 §4.1.2 + RFC 9207): the redirect_uri the code
+      // was issued for, plus the `code`, `state` and `iss` parameters the
+      // auth server appended to it.
+      const callback_url = new URL(redirect_uri);
+      callback_url.searchParams.set("code", authorization_code);
+      callback_url.searchParams.set("state", stored_state as string);
+      if (typeof received_iss === "string" && received_iss.length > 0) {
+        callback_url.searchParams.set("iss", received_iss);
+      } else {
+        // Callers that predate the `received_iss` argument cannot forward
+        // the callback's `iss`. The configured issuer is substituted so the
+        // exchange still proceeds under the (already verified) state + PKCE
+        // bindings — equivalent to the pre-openid-client SDK, which never
+        // checked `iss`. Forward it to get the mix-up defense.
+        if (debug) {
+          console.warn(
+            "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] No 'iss' callback parameter supplied; skipping RFC 9207 issuer check",
+          );
+        }
+        callback_url.searchParams.set("iss", issuer);
+      }
+
+      tokens = await oidc.authorizationCodeGrant(
+        config,
+        callback_url,
+        {
+          pkceCodeVerifier: cached_code_verifier,
+          expectedState: stored_state as string,
+          // Always a string in the redirect flow (validated above): the
+          // id_token MUST carry the matching `nonce` claim.
+          expectedNonce: nonce_to_verify as string,
+          idTokenExpected: true,
+        },
+        token_endpoint_parameters,
+      );
+    } else {
+      // Same-context flow (the auth server's own login page): the code
+      // was returned directly by the auth server's login API, so there
+      // is no callback URL / redirect_uri to validate. Redeem it with a
+      // plain authorization_code grant; openid-client still validates
+      // the id_token's iss/aud/exp, and the nonce is checked below.
+      const parameters = new URLSearchParams(token_endpoint_parameters);
+      parameters.set("code", authorization_code);
+      parameters.set("code_verifier", cached_code_verifier);
+      tokens = await oidc.genericGrantRequest(
+        config,
+        "authorization_code",
+        parameters,
+      );
+      const claims: oidc.IDToken | undefined = tokens.claims();
+      if (!claims) {
+        throw new Error("Token response did not include an id_token");
+      }
+      if (nonce_to_verify) {
+        const echoed_nonce: unknown = claims.nonce;
+        if (
+          typeof echoed_nonce !== "string" ||
+          !timingSafeStringEqual(nonce_to_verify, echoed_nonce)
+        ) {
+          console.error(
+            "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] " +
+              "Login nonce mismatch in id_token",
+          );
+          throw new Error(
+            "Login nonce mismatch in token response — possible replay",
+          );
+        }
+      }
     }
-    request_body = parsed.data;
   } catch (e: unknown) {
+    const classified = classifyOidcTokenError(e);
     console.error(
-      "Failed to prepare request body for authorization grant request: ",
-      e,
+      "Failed to exchange authorization code for access token:",
+      classified.message,
     );
+    if (debug) {
+      console.error(e);
+    }
     throw new Error(
-      "Failed to prepare request body for authorization grant request",
+      `Failed to exchange authorization code for access token: ${classified.message}`,
+      { cause: e },
     );
-  }
-
-  // Send the request to the auth server
-  // The auth server will hash the code_verifier and compare it to the code_challenge
-
-  let response: Response;
-  try {
-    if (debug) {
-      console.log(
-        `[SchemaVaultsAuthClient] Exchanging authorization code for access token; sending req body to token endpoint: "${authorization_code_token_endpoint}"`,
-        request_body,
-      );
-    }
-    response = await adapter.fetch(authorization_code_token_endpoint, {
-      body: JSON.stringify(request_body),
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (debug) {
-      console.log(
-        "[SchemaVaultsAuthClient] Received response in attempt to exchange authorization code for access token: ",
-        response,
-      );
-    }
-  } catch (e: unknown) {
-    console.error("Failed to exchange authorization code for access token:", e);
-    throw new Error("Failed to exchange authorization code for access token");
-  }
-
-  if (!response || !response.ok || response.status !== 200) {
-    const errorMsg: string = `Failed to exchange authorization code for access token (status code: ${response.status})`;
-    console.error(errorMsg);
-    throw new Error(errorMsg);
   }
 
   if (debug) {
@@ -390,99 +476,24 @@ export async function handleSuccessfulAuthentication({
     );
   }
 
-  let access_tokens: Record<ApiServerId, AccessToken | "AS_HTTP_ONLY_COOKIE">;
-  let refresh_token: RefreshToken | "AS_HTTP_ONLY_COOKIE";
-  let refresh_token_expiry: number | undefined;
-  let user: UserData;
+  // ---- Translate the token response ------------------------------------
+  let record: SuccessfullyGeneratedTokensRecord;
+  let uid: string;
   try {
-    const tokens_data = await createRequestTokensResultSchema(z, environment, {
-      auth_server_url,
-      auth_server_app_id,
-    }).safeParseAsync(await response.json());
-    if (!tokens_data.success) {
-      console.error(
-        "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] " +
-          "Failed to parse tokens from auth server response:",
-        tokens_data.error,
-      );
-      throw new Error("Failed to parse tokens from auth server response");
-    } else if (!tokens_data.data.success) {
-      throw new Error(tokens_data.data.message);
+    const claims: oidc.IDToken | undefined = tokens.claims();
+    if (!claims) {
+      throw new Error("Token response did not include an id_token");
     }
-
+    uid = uidFromOidcSubClaim(claims.sub, auth_server_app_id, debug);
+    record = tokenEndpointResponseToTokensRecord({
+      response: tokens,
+      audience: first_audience ?? OIDC_USERINFO_AUDIENCE_ID,
+      uid,
+      auth_server_url: issuer,
+    });
     if (debug) {
-      console.log(
-        "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] Success response data: ",
-        tokens_data.data,
-      );
+      debugPrintTokensAsTable(record);
     }
-
-    // Login replay-nonce verification: the server echoes the nonce that
-    // was bound to the redeemed authorization code at login time. A
-    // missing or mismatched echo means the token response was not
-    // produced for THIS flow's code — reject it.
-    if (nonce_to_verify) {
-      const echoed_nonce: string | undefined = tokens_data.data.nonce;
-      if (
-        typeof echoed_nonce !== "string" ||
-        !timingSafeStringEqual(nonce_to_verify, echoed_nonce)
-      ) {
-        console.error(
-          "[SchemaVaultsAuthClient::handleSuccessfulAuthentication()] " +
-            "Login nonce mismatch in token response",
-        );
-        throw new Error(
-          "Login nonce mismatch in token response — possible replay",
-        );
-      }
-    }
-
-    const { tokens, userData } = tokens_data.data;
-    if (!tokens) {
-      console.error("Did not receive tokens in response from auth server");
-      throw new Error("Did not receive tokens in response from auth server");
-    }
-
-    if (!tokens.access) {
-      console.error(
-        "Did not receive any access tokens in response from auth server",
-      );
-      throw new Error(
-        "Did not receive any access tokens in response from auth server",
-      );
-    }
-
-    if (
-      !tokens.refresh ||
-      (typeof tokens.refresh !== "object" && typeof tokens.refresh !== "string")
-    ) {
-      console.error(
-        "Did not receive (valid) refresh token in response from auth server.",
-        `Type: ${typeof tokens.refresh}`,
-        tokens.refresh,
-      );
-      throw new Error(
-        "Did not receive refresh token in response from auth server",
-      );
-    }
-
-    if (debug) {
-      debugPrintTokensAsTable(tokens);
-    }
-
-    access_tokens = tokens.access;
-    refresh_token = tokens.refresh;
-    refresh_token_expiry = tokens.refresh_token_expiry;
-
-    if (!userData) {
-      console.error("Did not receive user data in response from auth server");
-      throw new Error("Did not receive user data in response from auth server");
-    } else {
-      if (debug) {
-        debugPrintUserDataAsTable(userData satisfies UserData);
-      }
-    }
-    user = userData;
   } catch (e: unknown) {
     let errorMessage: string = "Unknown error";
     if (e instanceof Error) {
@@ -492,10 +503,23 @@ export async function handleSuccessfulAuthentication({
     throw new Error(`Failed to parse tokens response: ${errorMessage}`);
   }
 
-  // Store refresh token
+  const access_tokens = record.access;
+  if (!access_tokens) {
+    throw new Error(
+      "Did not receive any access tokens in response from auth server",
+    );
+  }
+  const refresh_token: RefreshToken | "AS_HTTP_ONLY_COOKIE" | undefined =
+    record.refresh;
+  if (!refresh_token) {
+    throw new Error(
+      "Did not receive refresh token in response from auth server",
+    );
+  }
+
+  // ---- Store refresh token -------------------------------------------
   const doStoreReceivedRefreshToken = () => {
     if (typeof refresh_token === "object" && refresh_token.type === "refresh") {
-      refresh_token_expiry = refresh_token.exp;
       try {
         if (debug) {
           console.log("[SchemaVaultsAuthClient] Storing refresh token...");
@@ -512,11 +536,7 @@ export async function handleSuccessfulAuthentication({
       typeof refresh_token === "string" &&
       refresh_token === "AS_HTTP_ONLY_COOKIE"
     ) {
-      const supportsHttpOnlyRefreshTokenCookie: boolean =
-        typeof adapter.doesSupportHttpOnlyRefreshToken === "function" &&
-        adapter.doesSupportHttpOnlyRefreshToken();
-
-      if (!supportsHttpOnlyRefreshTokenCookie) {
+      if (!wantsHttpOnlyRefreshTokenCookie) {
         throw new Error(
           "Received refresh token cookie 'AS_HTTP_ONLY_COOKIE', but this auth client instance's adapter does not support it!",
         );
@@ -528,6 +548,8 @@ export async function handleSuccessfulAuthentication({
         );
       }
 
+      const refresh_token_expiry: number | undefined =
+        record.refresh_token_expiry;
       if (typeof refresh_token_expiry !== "number") {
         throw new TypeError(
           "Expected 'refresh_token_expiry' to be a number if refresh token was passed as HTTP-only cookie!",
@@ -554,8 +576,50 @@ export async function handleSuccessfulAuthentication({
   };
   doStoreReceivedRefreshToken();
 
-  // Store access tokens
+  // ---- Store access token(s) -----------------------------------------
   storeMultipleAccessTokens(access_tokens);
+
+  if (remaining_audiences.length > 0) {
+    if (debug) {
+      console.log(
+        "[SchemaVaultsAuthClient] Acquiring access tokens for remaining default audiences via refresh grant(s): ",
+        remaining_audiences,
+      );
+    }
+    try {
+      await exchangeAuthTokens(refresh_token, remaining_audiences);
+    } catch (e: unknown) {
+      console.error(
+        "[SchemaVaultsAuthClient] Failed to acquire access tokens for remaining default audiences: ",
+        e,
+      );
+      throw new Error(
+        "Failed to acquire access tokens for the remaining default audiences",
+        { cause: e },
+      );
+    }
+  }
+
+  // ---- User data -----------------------------------------------------
+  let user: UserData | null;
+  try {
+    user = await fetchUserData();
+  } catch (e: unknown) {
+    console.error("Failed to load user data after login: ", e);
+    throw new Error("Failed to load user data after login", { cause: e });
+  }
+  if (!user) {
+    console.error("Did not receive user data from auth server after login");
+    throw new Error("Did not receive user data from auth server after login");
+  }
+  if (user.uid !== uid) {
+    throw new Error(
+      "User data returned by the auth server does not belong to the authenticated subject",
+    );
+  }
+  if (debug) {
+    debugPrintUserDataAsTable(user satisfies UserData);
+  }
 
   try {
     if (debug) {

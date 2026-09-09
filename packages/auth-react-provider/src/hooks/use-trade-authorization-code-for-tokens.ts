@@ -11,6 +11,10 @@ const enum AuthorizePageSearchParam {
   AuthorizationCode = "authorization_code",
   ChallengeTime = "challenge_time",
   State = "state",
+  // RFC 9207: the auth server identifies itself on every authorization
+  // response; the SDK verifies it against the configured auth server URL
+  // (authorization-server mix-up protection).
+  Issuer = "iss",
 }
 
 export interface IUseTradeAuthorizationCodeForTokensEffectOptions {
@@ -221,6 +225,7 @@ export function useTradeAuthorizationCodeForTokensEffect(
       // This uses PKCE behind the scenes to ensure that the authorization code is valid (and came from this client)
 
       const received_state = searchParams.get(AuthorizePageSearchParam.State);
+      const received_iss = searchParams.get(AuthorizePageSearchParam.Issuer);
 
       try {
         if (debug) {
@@ -233,6 +238,8 @@ export function useTradeAuthorizationCodeForTokensEffect(
           challenge_time,
           undefined,
           received_state,
+          undefined,
+          received_iss,
         );
       } catch (e: unknown) {
         if (e instanceof Error) {

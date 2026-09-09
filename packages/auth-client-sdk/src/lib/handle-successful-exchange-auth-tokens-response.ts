@@ -3,8 +3,7 @@
 import { z } from "zod";
 import {
   type AccessToken,
-  type RequestTokensResult,
-  createRequestTokensResultSchema,
+  createSuccessfullyGeneratedTokensRecordSchema,
   type SuccessfullyGeneratedTokensRecord,
   type UserData,
 } from "@schemavaults/auth-common";
@@ -18,7 +17,8 @@ import type {
 } from "@schemavaults/app-definitions";
 
 export interface IHandleSuccessfulExchangeAuthTokensResponseOpts {
-  tokens_response: unknown;
+  /** The tokens record built from the refresh grant response(s). */
+  tokens: SuccessfullyGeneratedTokensRecord;
   debug: boolean;
   environment: SchemaVaultsAppEnvironment;
   adapter: ISchemaVaultsAuthClientAdapter;
@@ -34,55 +34,49 @@ export interface IHandleSuccessfulExchangeAuthTokensResponseOpts {
     access_tokens: Record<ApiServerId, AccessToken | "AS_HTTP_ONLY_COOKIE">,
   ) => void;
   /**
-   * The refresh grant loads user data fresh from the database when minting
-   * tokens and echoes it back as `userData`. When provided, that snapshot is
-   * cached so claims that changed server-side since login (e.g.
-   * `email_verified` after completing email verification) propagate to
-   * `currentUser` without requiring a re-login.
+   * Re-loads the user's data from the auth server after the exchange.
+   * The refresh grant loads user data fresh from the database when
+   * minting tokens (server-side guards reading the rotated refresh
+   * token see the new claims), and the whoami re-sync here propagates
+   * claims that changed since login (e.g. `email_verified` after
+   * completing email verification) to `currentUser` without requiring
+   * a re-login. Failures are non-fatal: the tokens are already stored.
    */
+  fetchUserData?: () => Promise<UserData | null>;
   storeUserData?: (userData: UserData) => void;
   /** Called after `storeUserData` when the cached user data actually changed. */
   triggerAuthStateChanged?: () => void;
 }
 
 export default async function handleSuccessfulExchangeAuthTokensResponse({
-  tokens_response,
+  tokens: unvalidated_tokens,
   debug,
   environment,
   auth_server_url,
   auth_server_app_id,
   storeMultipleAccessTokens,
+  fetchUserData,
   storeUserData,
   triggerAuthStateChanged,
   adapter,
 }: IHandleSuccessfulExchangeAuthTokensResponseOpts): Promise<SuccessfullyGeneratedTokensRecord> {
-  const parsed_tokens_data = await createRequestTokensResultSchema(z, environment, {
-    auth_server_url,
-    auth_server_app_id,
-  }).safeParseAsync(tokens_response);
-  if (!parsed_tokens_data.success) {
+  const parsed_tokens = await createSuccessfullyGeneratedTokensRecordSchema(
+    z,
+    environment,
+    { auth_server_url, auth_server_app_id },
+  ).safeParseAsync(unvalidated_tokens);
+  if (!parsed_tokens.success) {
     if (debug) {
       console.error(
         "[SchemaVaultsAuthClient::handleSuccessfulExchangeAuthTokensResponse()] " +
-          "Failed to parse successful exchange auth tokens result: ",
-        parsed_tokens_data.error.issues,
+          "Failed to validate exchange auth tokens result: ",
+        parsed_tokens.error.issues,
       );
     }
     throw new Error("Failed to parse successful exchange auth tokens result!");
   }
 
-  const request_tokens_result: RequestTokensResult = parsed_tokens_data.data;
-
-  if (!request_tokens_result.success) {
-    throw new Error("Request tokens response has success === false");
-  }
-
-  const tokens: SuccessfullyGeneratedTokensRecord | undefined =
-    request_tokens_result.tokens;
-
-  if (!tokens) {
-    throw new Error("Response did not include any tokens");
-  }
+  const tokens: SuccessfullyGeneratedTokensRecord = parsed_tokens.data;
 
   if (!tokens.access) {
     throw new Error("No access token was included in the tokens response");
@@ -94,9 +88,7 @@ export default async function handleSuccessfulExchangeAuthTokensResponse({
     );
   }
 
-  if (tokens.access) {
-    storeMultipleAccessTokens(tokens.access);
-  }
+  storeMultipleAccessTokens(tokens.access);
 
   if (tokens.refresh) {
     if (
@@ -155,27 +147,27 @@ export default async function handleSuccessfulExchangeAuthTokensResponse({
     }
   }
 
-  if (request_tokens_result.userData && typeof storeUserData === "function") {
+  if (typeof fetchUserData === "function" && typeof storeUserData === "function") {
     // Failures here must not fail the exchange itself — the tokens above are
     // already stored and usable.
     try {
-      const previous: UserData | null = adapter.getUserData();
-      const changed: boolean = !isSameUserData(
-        previous,
-        request_tokens_result.userData,
-      );
-      storeUserData(request_tokens_result.userData);
-      if (changed && typeof triggerAuthStateChanged === "function") {
-        if (debug) {
-          console.log(
-            "[SchemaVaultsAuthClient] Cached user data changed after token exchange; triggering auth state change event...",
-          );
+      const fresh: UserData | null = await fetchUserData();
+      if (fresh) {
+        const previous: UserData | null = adapter.getUserData();
+        const changed: boolean = !isSameUserData(previous, fresh);
+        storeUserData(fresh);
+        if (changed && typeof triggerAuthStateChanged === "function") {
+          if (debug) {
+            console.log(
+              "[SchemaVaultsAuthClient] Cached user data changed after token exchange; triggering auth state change event...",
+            );
+          }
+          triggerAuthStateChanged();
         }
-        triggerAuthStateChanged();
       }
     } catch (e: unknown) {
       console.error(
-        "[SchemaVaultsAuthClient] Failed to sync cached user data from token exchange response: ",
+        "[SchemaVaultsAuthClient] Failed to sync cached user data after token exchange: ",
         e,
       );
     }
