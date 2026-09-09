@@ -408,6 +408,14 @@ describe("OIDC token endpoint redirect_uri binding (RFC 6749 §4.1.3)", () => {
               });
 
               cy.url({ timeout: 20000 }).should("include", "/auth/login");
+              // The SDK appends the PKCE + redirect params to the login
+              // URL after the initial navigation; wait for them (and for
+              // hydration) before reading the query string, else this
+              // races the client-side URL update.
+              cy.url().should("include", "code_challenge");
+              cy.url().should("include", "redirect_uri");
+              cy.url().should("include", "app_id");
+              cy.wait_for_page_hydration();
               cy.location("search").then((search: string) => {
                 const params = new URLSearchParams(search);
                 const legitimate_redirect_uri = params.get("redirect_uri");
