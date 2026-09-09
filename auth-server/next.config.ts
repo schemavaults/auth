@@ -118,6 +118,15 @@ const nextConfig: NextConfig = {
         source: "/.well-known/openid-configuration",
         destination: "/api/oidc/openid-configuration",
       },
+      // RFC 8414 §3: plain OAuth 2.0 clients (e.g. MCP clients, which
+      // never speak OIDC) resolve authorization-server metadata at this
+      // well-known path instead. OpenID Provider Metadata is a superset
+      // of RFC 8414 metadata (§2 / OIDC Discovery §3), so the same
+      // document serves both.
+      {
+        source: "/.well-known/oauth-authorization-server",
+        destination: "/api/oidc/openid-configuration",
+      },
     ];
   },
 };
