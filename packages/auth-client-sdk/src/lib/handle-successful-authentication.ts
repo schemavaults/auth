@@ -17,7 +17,6 @@ import {
   timingSafeStringEqual,
 } from "@schemavaults/auth-common";
 import {
-  DEFAULT_AUTH_SERVER_APP_ID,
   OIDC_USERINFO_AUDIENCE_ID,
   type ApiServerId,
   type AppId,
@@ -68,9 +67,10 @@ export interface IHandleSuccessfulAuthenticationOpts {
   auth_server_url: string;
   /**
    * The auth server deployment's own app id (white-label deployments use a
-   * custom value). The id_token `sub` claim is namespaced by it.
+   * custom value; the client resolves it from its constructor option or
+   * the platform default). The id_token `sub` claim is namespaced by it.
    */
-  auth_server_app_id?: AppId;
+  auth_server_app_id: AppId;
   defaultTokenAudiences: string | string[];
   // stores a refresh token locally (if http-only cookies not being used)
   storeRefreshToken: (refreshToken: RefreshToken) => void;
@@ -112,7 +112,7 @@ export async function handleSuccessfulAuthentication({
   environment,
   adapter,
   auth_server_url,
-  auth_server_app_id = DEFAULT_AUTH_SERVER_APP_ID,
+  auth_server_app_id,
   client_app_id,
   defaultTokenAudiences,
   storeRefreshToken,
