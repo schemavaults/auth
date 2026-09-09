@@ -1,18 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
-import {
-  parseOidcRefreshTokenDeliveryParam,
-  parseOidcTokenResourceParam,
-  resolveRefreshTokenDeliveryMode,
-} from "./token-request-extensions";
+import { parseOidcTokenResourceParam } from "./parse-oidc-token-resource-param";
+import { form } from "./test-form";
 
 const ENVIRONMENT = "test" as const;
-
-function form(entries: [string, string][]): FormData {
-  const fd = new FormData();
-  for (const [k, v] of entries) fd.append(k, v);
-  return fd;
-}
 
 describe("parseOidcTokenResourceParam", () => {
   test("absent resource means the plain OIDC (userinfo audience) behavior", () => {
@@ -67,48 +58,5 @@ describe("parseOidcTokenResourceParam", () => {
       expect(parsed.error.error).toBe("invalid_target");
       expect(parsed.error.error_description).toContain("single 'resource'");
     }
-  });
-});
-
-describe("parseOidcRefreshTokenDeliveryParam", () => {
-  test("defaults to inline", () => {
-    expect(parseOidcRefreshTokenDeliveryParam(form([]))).toEqual({
-      ok: true,
-      mode: "inline",
-    });
-  });
-  test("accepts the cookie mode", () => {
-    expect(
-      parseOidcRefreshTokenDeliveryParam(
-        form([["refresh_token_delivery", "http_only_cookie"]]),
-      ),
-    ).toEqual({ ok: true, mode: "http_only_cookie" });
-  });
-  test("rejects unknown modes with invalid_request", () => {
-    const parsed = parseOidcRefreshTokenDeliveryParam(
-      form([["refresh_token_delivery", "cookie"]]),
-    );
-    expect(parsed.ok).toBe(false);
-    if (!parsed.ok) expect(parsed.error.error).toBe("invalid_request");
-  });
-});
-
-describe("resolveRefreshTokenDeliveryMode", () => {
-  test("the auth server's own app always gets the cookie", () => {
-    expect(
-      resolveRefreshTokenDeliveryMode(DEFAULT_AUTH_SERVER_APP_ID, "inline", false),
-    ).toBe("http_only_cookie");
-    expect(
-      resolveRefreshTokenDeliveryMode(DEFAULT_AUTH_SERVER_APP_ID, "inline", true),
-    ).toBe("http_only_cookie");
-  });
-  test("other apps get the cookie only when requested in a secure deployment", () => {
-    expect(resolveRefreshTokenDeliveryMode("my-app", "http_only_cookie", true)).toBe(
-      "http_only_cookie",
-    );
-    expect(resolveRefreshTokenDeliveryMode("my-app", "http_only_cookie", false)).toBe(
-      "inline",
-    );
-    expect(resolveRefreshTokenDeliveryMode("my-app", "inline", true)).toBe("inline");
   });
 });

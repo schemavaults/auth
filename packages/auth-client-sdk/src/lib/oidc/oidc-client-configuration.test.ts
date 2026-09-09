@@ -2,10 +2,7 @@ import { describe, expect, test } from "bun:test";
 import * as oidc from "openid-client";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
-import {
-  createOidcClientConfiguration,
-  isInsecureTransportAllowed,
-} from "./oidc-client-configuration";
+import { createOidcClientConfiguration } from "./oidc-client-configuration";
 
 function makeAdapter(
   fetchImpl: ISchemaVaultsAuthClientAdapter["fetch"],
@@ -148,11 +145,3 @@ describe("createOidcClientConfiguration", () => {
   });
 });
 
-describe("isInsecureTransportAllowed", () => {
-  test("only development and test may use cleartext HTTP", () => {
-    expect(isInsecureTransportAllowed("development")).toBe(true);
-    expect(isInsecureTransportAllowed("test")).toBe(true);
-    expect(isInsecureTransportAllowed("staging")).toBe(false);
-    expect(isInsecureTransportAllowed("production")).toBe(false);
-  });
-});

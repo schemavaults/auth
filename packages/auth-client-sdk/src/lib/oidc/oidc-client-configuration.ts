@@ -15,6 +15,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
+import { isInsecureTransportAllowed } from "./is-insecure-transport-allowed";
 import { normalizeOidcIssuer } from "./normalize-oidc-issuer";
 
 export interface CreateOidcClientConfigurationOptions {
@@ -110,17 +111,6 @@ export function createOidcClientConfiguration({
   };
 
   return config;
-}
-
-/**
- * Whether `environment` may talk to an auth server over cleartext HTTP.
- * Mirrors `SchemaVaultsAuthClient.secure`: development and test are the
- * only non-TLS environments; staging and production always require HTTPS.
- */
-export function isInsecureTransportAllowed(
-  environment: SchemaVaultsAppEnvironment,
-): boolean {
-  return environment === "development" || environment === "test";
 }
 
 export default createOidcClientConfiguration;
