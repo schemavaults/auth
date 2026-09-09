@@ -1,6 +1,5 @@
 export {
   createOidcClientConfiguration,
-  buildAuthServerOidcMetadata,
   normalizeOidcIssuer,
 } from "./oidc-client-configuration";
 export type { CreateOidcClientConfigurationOptions } from "./oidc-client-configuration";

@@ -33,10 +33,11 @@ The SDK talks to the auth server's **standard OIDC surface** through the
 - The platform's full `UserData` (`currentUser`) is synced from
   `GET /api/auth/whoami/[client_app_id]` after every login and refresh.
 
-The server metadata is built statically from the endpoint paths shared with
-the auth server (`OIDC_ENDPOINT_PATHS` in `@schemavaults/auth-common`), so no
-discovery request is made. Plain-HTTP auth servers (local development) are
-supported.
+The server metadata is the auth server's own discovery document, built
+locally with `buildOidcProviderMetadata()` from `@schemavaults/auth-common`
+(the same function the server serves at `/.well-known/openid-configuration`),
+so no discovery request is made and the SDK cannot drift from what the
+server advertises. Plain-HTTP auth servers (local development) are supported.
 
 ## Dependencies
 

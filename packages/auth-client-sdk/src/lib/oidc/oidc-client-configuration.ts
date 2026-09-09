@@ -2,16 +2,14 @@
 //
 // Builds the `openid-client` Configuration the SDK uses to talk to the
 // auth server's standard OIDC surface (/api/oidc/*). The server metadata
-// is assembled statically from the endpoint paths shared with the auth
-// server via @schemavaults/auth-common (the same constants the server's
-// /.well-known/openid-configuration document is generated from), so no
-// discovery round trip is needed on every client instantiation.
+// is the auth server's own discovery document, built locally from the
+// shared `buildOidcProviderMetadata` in @schemavaults/auth-common — the
+// very function the server serves at /.well-known/openid-configuration —
+// so no discovery round trip is needed and the SDK cannot drift from
+// what the server advertises.
 
 import * as oidc from "openid-client";
-import {
-  getOidcEndpointUrl,
-  OIDC_SUPPORTED_SCOPES,
-} from "@schemavaults/auth-common";
+import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 
 export interface CreateOidcClientConfigurationOptions {
@@ -39,41 +37,10 @@ export function normalizeOidcIssuer(auth_server_url: string): string {
 }
 
 /**
- * Server metadata for the auth server at `issuer`, mirroring what its
- * discovery document advertises. Exported for tests.
- */
-export function buildAuthServerOidcMetadata(
-  issuer: string,
-): oidc.ServerMetadata {
-  return {
-    issuer,
-    authorization_endpoint: getOidcEndpointUrl(issuer, "authorization"),
-    token_endpoint: getOidcEndpointUrl(issuer, "token"),
-    userinfo_endpoint: getOidcEndpointUrl(issuer, "userinfo"),
-    introspection_endpoint: getOidcEndpointUrl(issuer, "introspection"),
-    jwks_uri: getOidcEndpointUrl(issuer, "jwks"),
-    response_types_supported: ["code"],
-    response_modes_supported: ["query"],
-    grant_types_supported: ["authorization_code", "refresh_token"],
-    subject_types_supported: ["public"],
-    id_token_signing_alg_values_supported: ["RS256"],
-    scopes_supported: [...OIDC_SUPPORTED_SCOPES],
-    token_endpoint_auth_methods_supported: [
-      "none",
-      "client_secret_basic",
-      "client_secret_post",
-    ],
-    code_challenge_methods_supported: ["S256"],
-    // RFC 9207: the auth server puts `iss` on every authorization
-    // response, so openid-client requires and verifies it on redirect
-    // callbacks (authorization-server mix-up protection).
-    authorization_response_iss_parameter_supported: true,
-  };
-}
-
-/**
  * Creates the openid-client Configuration for this SDK instance.
  *
+ * - Server metadata: the auth server's discovery document for
+ *   `auth_server_url`, from the shared builder (see module comment).
  * - Public client: PKCE S256 is the binding, token endpoint auth method
  *   `none` (the platform never puts client secrets in browsers).
  * - HTTP requests go through the adapter's fetch so each platform
@@ -91,7 +58,7 @@ export function createOidcClientConfiguration({
   timeout_seconds,
 }: CreateOidcClientConfigurationOptions): oidc.Configuration {
   const issuer: string = normalizeOidcIssuer(auth_server_url);
-  const server: oidc.ServerMetadata = buildAuthServerOidcMetadata(issuer);
+  const server: oidc.ServerMetadata = buildOidcProviderMetadata(issuer);
   const token_endpoint: string = server.token_endpoint as string;
 
   const config = new oidc.Configuration(

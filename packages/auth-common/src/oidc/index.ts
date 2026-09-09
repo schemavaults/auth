@@ -49,3 +49,6 @@ export type {
   OidcRefreshTokenDeliveryMode,
   OidcTokenResponseExtensions,
 } from "./token-endpoint-extensions";
+
+export { buildOidcProviderMetadata } from "./provider-metadata";
+export type { OidcProviderMetadata } from "./provider-metadata";

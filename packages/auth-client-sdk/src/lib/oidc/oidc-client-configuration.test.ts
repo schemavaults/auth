@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import * as oidc from "openid-client";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
+import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
 import {
-  buildAuthServerOidcMetadata,
   createOidcClientConfiguration,
   normalizeOidcIssuer,
 } from "./oidc-client-configuration";
@@ -28,23 +28,6 @@ describe("normalizeOidcIssuer", () => {
   });
 });
 
-describe("buildAuthServerOidcMetadata", () => {
-  test("mirrors the auth server's discovery document layout", () => {
-    const md = buildAuthServerOidcMetadata("https://auth.example.com");
-    expect(md.issuer).toBe("https://auth.example.com");
-    expect(md.authorization_endpoint).toBe(
-      "https://auth.example.com/api/oidc/authorize",
-    );
-    expect(md.token_endpoint).toBe("https://auth.example.com/api/oidc/token");
-    expect(md.userinfo_endpoint).toBe(
-      "https://auth.example.com/api/oidc/userinfo",
-    );
-    expect(md.jwks_uri).toBe("https://auth.example.com/api/oidc/jwks");
-    expect(md.code_challenge_methods_supported).toEqual(["S256"]);
-    expect(md.authorization_response_iss_parameter_supported).toBe(true);
-  });
-});
-
 describe("createOidcClientConfiguration", () => {
   test("is a public (auth method none) client for the configured app id", () => {
     const config = createOidcClientConfiguration({
@@ -56,6 +39,23 @@ describe("createOidcClientConfiguration", () => {
     expect(config.clientMetadata().token_endpoint_auth_method).toBe("none");
     expect(config.serverMetadata().issuer).toBe("https://auth.example.com");
     expect(config.serverMetadata().supportsPKCE("S256")).toBe(true);
+  });
+
+  test("uses the auth server's own discovery document as server metadata", () => {
+    // The same builder produces /.well-known/openid-configuration on the
+    // server, so the SDK's view of the endpoints and capabilities is the
+    // server's by construction.
+    const config = createOidcClientConfiguration({
+      auth_server_url: "https://auth.example.com/",
+      client_app_id: "my-app",
+      adapter: makeAdapter(async () => new Response(null)),
+    });
+    const expected = buildOidcProviderMetadata("https://auth.example.com");
+    const actual = config.serverMetadata();
+    for (const [key, value] of Object.entries(expected)) {
+      expect(actual[key as keyof typeof expected], key).toEqual(value);
+    }
+    expect(actual.authorization_response_iss_parameter_supported).toBe(true);
   });
 
   test("routes requests through the adapter fetch, with credentials only for the token endpoint", async () => {
