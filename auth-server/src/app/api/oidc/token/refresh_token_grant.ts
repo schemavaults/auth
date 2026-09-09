@@ -5,6 +5,7 @@ import {
   type AppId,
 } from "@schemavaults/app-definitions";
 import {
+  oidcScopeSchema,
   parseAndGrantScopes,
   refreshTokenExpiry,
   type UserData,
@@ -66,8 +67,10 @@ export function extractPresentedRefreshToken(
 
 /**
  * grant_type=refresh_token (RFC 6749 §6 / OIDC Core §12): redeems a
- * scope-bearing refresh token for a fresh token set (no id_token — OIDC
- * Core §12.2 permits omitting it). Called from route.ts after
+ * refresh token for a fresh token set (no id_token — OIDC Core §12.2
+ * permits omitting it). The token's granted scope (possibly none, for a
+ * plain OAuth 2.1 grant) carries forward on rotation. Called from
+ * route.ts after
  * grant_type/client_id validation and client authentication; the
  * shared try/catch there owns exception capture, and route.ts delivers
  * the issued tokens.
@@ -159,19 +162,10 @@ export async function handleOidcRefreshTokenGrant({
       ),
     );
   }
-  // ...with an OIDC scope grant. Every login flow binds scopes to its
-  // authorization code and the platform token endpoints carry them
-  // forward on rotation, so tokens from either surface qualify; only
-  // tokens minted before scopes existed (long since expired) do not.
+  // ...and its granted scope carries forward. A token with no `scope`
+  // claim was minted for a plain OAuth 2.1 grant (nothing granted); it
+  // rotates like any other and its replacements carry no scope either.
   const original_scopes = parseAndGrantScopes(decoded.scope);
-  if (!original_scopes.hasOpenid) {
-    return fail(
-      oidcTokenErrorResponse(
-        "invalid_grant",
-        "This refresh token does not carry an OpenID scope grant.",
-      ),
-    );
-  }
 
   // Revocation checks: explicit jti revocation (logout) plus the
   // per-user tokens_valid_after watermark (password reset). Rotation
@@ -246,15 +240,22 @@ export async function handleOidcRefreshTokenGrant({
   }
 
   // RFC 6749 §6: a scope re-request must be a subset of the original
-  // grant; absent means "same as originally granted".
+  // grant; absent means "same as originally granted". Narrowing away
+  // `openid` is allowed (the result is a plain OAuth token set), but a
+  // malformed value is rejected rather than read as "nothing".
   let scope: string = original_scopes.granted.join(" ");
   const requested_scope = param("scope");
   if (requested_scope !== null) {
+    if (!oidcScopeSchema.safeParse(requested_scope).success) {
+      return fail(
+        oidcTokenErrorResponse("invalid_scope", "Malformed 'scope' parameter."),
+      );
+    }
     const requested = parseAndGrantScopes(requested_scope);
     const isSubset = requested.granted.every((s) =>
       original_scopes.granted.includes(s),
     );
-    if (!requested.hasOpenid || !isSubset) {
+    if (!isSubset) {
       return fail(
         oidcTokenErrorResponse(
           "invalid_scope",

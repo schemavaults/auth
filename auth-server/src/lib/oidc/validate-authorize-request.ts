@@ -11,6 +11,7 @@ import {
   OAuth2StateValidationError,
   OidcNonceValidationError,
   PKCE_ProofKeyManager,
+  oidcScopeSchema,
   parseAndGrantScopes,
   parseOAuth2State,
   parseOidcNonce,
@@ -27,7 +28,13 @@ import isValidUrl from "@/lib/is-valid-url";
 export interface ValidatedOidcAuthorizeRequest {
   client_app_id: AppId;
   redirect_uri: string;
-  /** Granted scopes, space-delimited (always contains "openid"). */
+  /**
+   * Granted scopes, space-delimited. Empty for a plain OAuth 2.1
+   * authorization grant (no `scope`, or none of the supported scopes
+   * requested): no id_token is minted for it and the bridge URL carries
+   * no `scope`. Contains "openid" iff this is an OpenID Connect
+   * authentication request.
+   */
   scope: string;
   state: string | null;
   nonce: string | null;
@@ -193,15 +200,22 @@ export async function validateOidcAuthorizeRequest(
     );
   }
 
-  const { granted, hasOpenid } = parseAndGrantScopes(
-    searchParams.get("scope") ?? undefined,
-  );
-  if (!hasOpenid) {
-    return redirectError(
-      "invalid_scope",
-      "The 'scope' parameter must include 'openid'.",
-    );
+  // `scope` is OPTIONAL (RFC 6749 §3.3). With `openid` this is an OIDC
+  // authentication request; without it (absent, empty, or naming only
+  // scopes this server does not know) it is a plain OAuth 2.1
+  // authorization grant — access + refresh tokens, no id_token — which
+  // is what OAuth-only clients (e.g. MCP clients) send. Only a
+  // malformed value is an error: it must not be silently reinterpreted
+  // as "no scope".
+  const raw_scope: string | null = searchParams.get("scope");
+  if (
+    raw_scope !== null &&
+    raw_scope.length > 0 &&
+    !oidcScopeSchema.safeParse(raw_scope).success
+  ) {
+    return redirectError("invalid_scope", "Malformed 'scope' parameter.");
   }
+  const { granted } = parseAndGrantScopes(raw_scope ?? undefined);
 
   let nonce: string | null;
   try {

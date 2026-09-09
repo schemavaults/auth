@@ -28,10 +28,13 @@ export interface ISendAuthenticateRequestOptions {
   // response (custom surface) / id_token claim (OIDC surface); when null
   // it is omitted from the request body and no nonce is bound.
   nonce: string | null;
-  // Space-delimited requested scopes (RFC 6749 §3.3) — REQUIRED on
-  // every flow; the server re-derives the granted subset and stamps it
-  // on the code row and issued tokens.
-  scope: string;
+  // Space-delimited requested scopes (RFC 6749 §3.3) — OPTIONAL: null
+  // sends no `scope` (a plain OAuth 2.1 grant: no id_token, no identity
+  // claims). Used by the auth server's own login form when a third-party
+  // flow arrived without one; SDK-initiated flows always request the
+  // platform default. The server re-derives the granted subset and
+  // stamps it on the code row and issued tokens.
+  scope: string | null;
 }
 
 export type { ISendAuthenticateRequestOptions as SendAuthenticateRequestOptions };

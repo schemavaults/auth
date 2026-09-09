@@ -225,8 +225,12 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
   // pages 400 malformed values); an OIDC RP may legitimately omit it, in
   // which case no nonce is bound (null → no id_token claim). The
   // account-page flow has no entry URL, so it mints a plain nonce for its
-  // own custom-surface replay-echo check. `scope` always falls back to
-  // the platform default.
+  // own custom-surface replay-echo check. `scope` is OPTIONAL too
+  // (RFC 6749 §3.3): a third-party flow without one is a plain OAuth 2.1
+  // grant (null → no scope bound, no id_token) — it must NOT be upgraded
+  // to the platform default, which would mint an OpenID grant the client
+  // never asked for. Only the account-page flow (the auth server's own
+  // session) falls back to the platform default.
   const url_nonce = searchParams.get("nonce");
   // uuidSync() (not crypto.randomUUID) so the account-page nonce works in
   // insecure browser contexts (non-localhost http://) where
@@ -238,8 +242,12 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         ? uuidSync()
         : null;
   const url_scope = searchParams.get("scope");
-  const flow_scope: string =
-    url_scope && url_scope.length > 0 ? url_scope : DEFAULT_AUTH_SCOPE;
+  const flow_scope: string | null =
+    url_scope && url_scope.length > 0
+      ? url_scope
+      : onSuccessfulAuthenticate === "account-page"
+        ? DEFAULT_AUTH_SCOPE
+        : null;
 
   // Where to send the user after the account-page flow completes (set by
   // the route guards when bouncing an unauthenticated user off a
@@ -310,9 +318,10 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       // values): the MFA page needs `nonce` for the account-page token
       // exchange's echo verification, and keeping `scope` on the URL
       // preserves the flow's entry parameters across the navigation.
-      // A null nonce (RP omitted it) is simply not forwarded.
+      // A null nonce (RP omitted it) / null scope (plain OAuth 2.1
+      // grant) is simply not forwarded.
       if (flow_nonce) params.set("nonce", flow_nonce);
-      params.set("scope", flow_scope);
+      if (flow_scope) params.set("scope", flow_scope);
       // Forward the post-login destination so the MFA challenge page can
       // land the user where they were originally headed. Only meaningful
       // for the account-page flow — third-party flows redirect to their

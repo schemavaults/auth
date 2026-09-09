@@ -2,6 +2,7 @@ import "server-only";
 import type { NextResponse } from "next/server";
 import {
   PKCE_ProofKeyManager,
+  parseAndGrantScopes,
   type UserData,
 } from "@schemavaults/auth-common";
 import { UserRegistry, loadUserData } from "@/lib/auth-db";
@@ -17,8 +18,11 @@ import type { OidcGrantContext, OidcGrantOutcome } from "./token-response";
 /**
  * grant_type=authorization_code (RFC 6749 §4.1.3 / OIDC Core §3.1.3):
  * consumes a one-time authorization code under PKCE + client +
- * redirect_uri binding and issues the OIDC token set (access + refresh
- * + id_token). Called from route.ts after grant_type/client_id
+ * redirect_uri binding and issues the token set: access + refresh, plus
+ * an id_token iff the code's granted scope includes `openid` (a code
+ * minted for a plain OAuth 2.1 grant carries a null scope and gets no
+ * id_token — OIDC Core §3.1.3.3 only applies to OpenID requests).
+ * Called from route.ts after grant_type/client_id
  * validation and client authentication; the shared try/catch there
  * owns exception capture, and route.ts delivers the issued tokens.
  */
@@ -134,7 +138,9 @@ export async function handleOidcAuthorizationCodeGrant({
     }
   }
 
-  const scope: string = consumed.scope || "openid";
+  // A null stored scope is a plain OAuth 2.1 grant (nothing granted):
+  // the tokens carry no scope claim and no id_token is minted.
+  const scope: string = consumed.scope ?? "";
   const issued = await issueOidcTokens({
     dbh,
     user,
@@ -143,7 +149,7 @@ export async function handleOidcAuthorizationCodeGrant({
     nonce: consumed.nonce,
     grant_type: "authorization_code",
     environment,
-    include_id_token: true,
+    include_id_token: parseAndGrantScopes(scope).hasOpenid,
     access_token_audience: resource ?? undefined,
     debug,
   });

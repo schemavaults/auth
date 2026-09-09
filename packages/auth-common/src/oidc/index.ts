@@ -6,6 +6,7 @@ export {
   oidcScopeSchema,
   parseAndGrantScopes,
   serializeOidcScopes,
+  serializeOidcScopesOrNull,
 } from "./scope";
 export type {
   OidcSupportedScope,

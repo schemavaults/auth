@@ -83,7 +83,9 @@ export interface ISchemaVaultsAuthClient {
   // `nonce` (OPTIONAL, OIDC Core §3.1.2.1 — pass `null` when the flow
   // carried none) is the login replay nonce bound to the minted code and
   // echoed back in the token-exchange response; `scope` (space-delimited)
-  // defaults to DEFAULT_AUTH_SCOPE when omitted.
+  // defaults to DEFAULT_AUTH_SCOPE when omitted, and `null` sends no
+  // scope at all — a plain OAuth 2.1 grant (RFC 6749 §3.3: no id_token,
+  // no identity claims) for third-party flows that requested none.
   sendAuthenticateRequest: (
     authentication_type: AuthenticationOutcomeType,
     client_app_id: AppId,
@@ -91,7 +93,7 @@ export interface ISchemaVaultsAuthClient {
     code_challenge: CodeChallengeWithDetails,
     redirect_uri: string | null,
     nonce: string | null,
-    scope?: string,
+    scope?: string | null,
   ) => Promise<AuthenticateResult>;
 
   /**

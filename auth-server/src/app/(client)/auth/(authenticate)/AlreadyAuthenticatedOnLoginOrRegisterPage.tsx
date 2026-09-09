@@ -14,9 +14,11 @@ import type ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import {
   OAuth2StateValidationError,
   OidcNonceValidationError,
+  oidcScopeSchema,
   parseAndGrantScopes,
   parseOAuth2State,
   parseOidcNonce,
+  serializeOidcScopesOrNull,
   type UserData,
 } from "@schemavaults/auth-common";
 import { getAuthServerUri } from "@/lib/auth_server_uri";
@@ -44,8 +46,9 @@ export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   state: string | null;
   // Login replay nonce + requested scopes (first-class on every flow).
   // A null nonce is bound as-is (OIDC RPs may omit it, OIDC Core
-  // §3.1.2.1); a null/invalid scope is rejected (the entry pages already
-  // gate this).
+  // §3.1.2.1); a null scope is a plain OAuth 2.1 grant (nothing granted,
+  // no id_token) and only a malformed scope is rejected (the entry pages
+  // already gate this).
   nonce: string | null;
   scope: string | null;
 }
@@ -130,9 +133,10 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
 
   // Grant-context validation (first-class on every flow): nonce must be
   // well-formed when present (OPTIONAL per OIDC Core §3.1.2.1 — an RP may
-  // omit it, so absent is bound as null), and the scope must grant at
-  // least one supported scope. The entry pages already 400 on these;
-  // this re-check guards direct navigations.
+  // omit it, so absent is bound as null), and the scope must be
+  // well-formed when present (absent, or granting nothing supported, is
+  // a plain OAuth 2.1 grant bound as null). The entry pages already 400
+  // on these; this re-check guards direct navigations.
   let url_nonce: string | null;
   try {
     url_nonce = parseOidcNonce(opts.nonce);
@@ -146,16 +150,16 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     }
     throw e;
   }
-  const { granted } = parseAndGrantScopes(opts.scope ?? undefined);
-  if (granted.length === 0) {
+  if (opts.scope && !oidcScopeSchema.safeParse(opts.scope).success) {
     console.warn(
-      "[AlreadyAuthenticatedOnLoginOrRegisterPage] Flow missing a supported scope",
+      "[AlreadyAuthenticatedOnLoginOrRegisterPage] Flow has a malformed scope",
     );
     redirectWithError(400, "bad_request");
   }
+  const { granted } = parseAndGrantScopes(opts.scope ?? undefined);
   const grant_context = {
     nonce: url_nonce,
-    scope: granted.join(" "),
+    scope: serializeOidcScopesOrNull(granted),
   };
 
   if (!isAppAuthorized) {

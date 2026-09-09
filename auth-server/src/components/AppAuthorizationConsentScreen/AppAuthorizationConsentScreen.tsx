@@ -127,14 +127,21 @@ export function AppAuthorizationConsentScreen({
       const state = parseOAuth2State(searchParams.get("state"));
       // Grant context. `nonce` is OPTIONAL (OIDC Core §3.1.2.1): use the
       // URL value when the RP supplied one, else bind none (null → no
-      // id_token claim). `scope` always falls back to the platform
-      // default. Mirrors handle-auth-form-submit.ts.
+      // id_token claim). `scope` is OPTIONAL too: a third-party flow
+      // without one is a plain OAuth 2.1 grant (null → no scope bound,
+      // no id_token) and must not be upgraded to the platform default;
+      // only the account-page flow falls back to it. Mirrors
+      // handle-auth-form-submit.ts.
       const url_nonce = searchParams.get("nonce");
       const flow_nonce: string | null =
         url_nonce && url_nonce.length > 0 ? url_nonce : null;
       const url_scope = searchParams.get("scope");
-      const flow_scope: string =
-        url_scope && url_scope.length > 0 ? url_scope : DEFAULT_AUTH_SCOPE;
+      const flow_scope: string | null =
+        url_scope && url_scope.length > 0
+          ? url_scope
+          : onSuccessfulAuthenticate === "account-page"
+            ? DEFAULT_AUTH_SCOPE
+            : null;
 
       if (!code_challenge) {
         throw new Error("Missing code_challenge parameter");
@@ -174,7 +181,7 @@ export function AppAuthorizationConsentScreen({
             challenge_time,
             ...(redirect_uri ? { redirect_uri } : {}),
             ...(flow_nonce ? { nonce: flow_nonce } : {}),
-            scope: flow_scope,
+            ...(flow_scope ? { scope: flow_scope } : {}),
           }),
         },
       );

@@ -149,8 +149,8 @@ export async function handleMfaVerify({
       challenge.challenge_time,
       challenge.redirect_uri ?? null,
       // Restore the grant context captured when the login handler
-      // parked this flow behind the MFA gate. Nullish only for
-      // in-flight pre-upgrade challenges (≤5 min TTL).
+      // parked this flow behind the MFA gate. A null scope is a plain
+      // OAuth 2.1 grant (the flow requested no supported scope).
       {
         nonce: challenge.nonce ?? null,
         scope: challenge.scope ?? null,
@@ -189,8 +189,9 @@ export async function handleMfaVerify({
       req,
       res: response,
       environment: env,
-      // Pre-upgrade challenges (≤5 min TTL) carry no scope; fall back to
-      // the platform default rather than minting a scope-less session.
+      // The first-party session cookie is minted with the platform
+      // default when the flow granted no scope (a third-party plain
+      // OAuth 2.1 grant never narrows the user's own session).
       scope: challenge.scope ?? undefined,
       debug,
     });

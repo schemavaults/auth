@@ -15,9 +15,10 @@ import { type AuthorizationCodeRecord } from "./authorization-codes-table";
  *   `nonce` claim on the OIDC surface). Null when the flow carried no
  *   nonce — OPTIONAL per OIDC Core §3.1.2.1, so an RP may omit it.
  * - `scope`: the granted scopes (space-delimited), stamped on the
- *   tokens minted at redemption.
- * A null `nonce` is a first-class value (RP omitted it); a null `scope`
- * only arises from defensive parsing of legacy rows.
+ *   tokens minted at redemption. Null when nothing was granted — a
+ *   plain OAuth 2.1 grant (no `openid`, so no id_token at redemption).
+ * A null `nonce` and a null `scope` are both first-class values (the
+ * client omitted them).
  */
 export interface AuthorizationCodeGrantContext {
   nonce: string | null;

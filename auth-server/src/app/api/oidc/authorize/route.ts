@@ -12,7 +12,10 @@ import validateOidcAuthorizeRequest from "@/lib/oidc/validate-authorize-request"
  * platform query parameters (`scope`/`nonce` are first-class on every
  * flow now — no discriminator needed). The login flow binds them to the
  * authorization-code row, and every callback carries both the spec
- * parameters (`code`/`state`/`iss`) and the legacy SDK parameters.
+ * parameters (`code`/`state`/`iss`) and the legacy SDK parameters. A
+ * plain OAuth 2.1 grant (no `openid`) bridges with NO `scope` parameter:
+ * the login flow then binds a null scope, and the token endpoint mints
+ * no id_token for the resulting code.
  *
  * `challenge_time` is an SDK-internal timestamp standard RPs don't
  * send; it is synthesized here (it does not enter the PKCE hash — it
@@ -44,7 +47,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (nonce) {
     bridge.searchParams.set("nonce", nonce);
   }
-  bridge.searchParams.set("scope", scope);
+  if (scope.length > 0) {
+    bridge.searchParams.set("scope", scope);
+  }
 
   return NextResponse.redirect(bridge, {
     status: 302,

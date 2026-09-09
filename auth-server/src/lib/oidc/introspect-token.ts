@@ -40,7 +40,12 @@ export type OidcIntrospectionResponseBody =
   | { active: false }
   | {
       active: true;
-      scope: string;
+      /**
+       * Space-delimited granted scopes; absent when the token was minted
+       * for a plain OAuth 2.1 grant (nothing granted) — RFC 7662 §2.2
+       * makes `scope` OPTIONAL.
+       */
+      scope?: string;
       client_id: AppId;
       /** The resource owner's email; only when the `email` scope was granted. */
       username?: string;
@@ -82,8 +87,6 @@ export interface IntrospectOidcTokenOptions {
  *
  *  - it was issued to the introspecting client (`app` claim) — a
  *    confidential client can never probe another client's tokens
- *  - it was issued by the OIDC surface (granted scope includes
- *    `openid`; custom-surface tokens carry no scope claim)
  *  - its jti has not been revoked (logout / rotation) and it predates
  *    no per-user tokens_valid_after watermark (password reset), and the
  *    account is not disabled
@@ -145,10 +148,10 @@ export async function introspectOidcToken({
     return { active: false };
   }
 
+  // The granted scope is reported as-is (RFC 7662 §2.2 `scope` is
+  // OPTIONAL); a token minted for a plain OAuth 2.1 grant carries none
+  // and is every bit as active as an OpenID one.
   const scopes: ParsedOidcScopes = parseAndGrantScopes(decoded.scope);
-  if (!scopes.hasOpenid) {
-    return { active: false };
-  }
 
   if (decoded.disabled) {
     return { active: false };
@@ -176,7 +179,9 @@ export async function introspectOidcToken({
 
   return {
     active: true,
-    scope: scopes.granted.join(" "),
+    ...(scopes.granted.length > 0
+      ? { scope: scopes.granted.join(" ") }
+      : {}),
     client_id: decoded.app,
     exp: decoded.iat + validity_seconds,
     iat: decoded.iat,

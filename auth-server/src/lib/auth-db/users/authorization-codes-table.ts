@@ -30,8 +30,10 @@ export const authorizationCodeRecordSchema = z
     nonce: oidcNonceSchema.nullable().optional(),
     // Granted scopes (space-delimited, RFC 6749 §3.3), e.g.
     // "openid email". Validated with the shared oidcScopeSchema (the same
-    // wire-format check applied when the scope was received). Every new
-    // row has one; nullable for pre-upgrade rows only.
+    // wire-format check applied when the scope was received). Null when
+    // nothing was granted: a plain OAuth 2.1 grant (the wire format has
+    // no empty form), which redeems to tokens without a scope claim and
+    // no id_token.
     scope: oidcScopeSchema.nullable().optional(),
   })
   .required({
