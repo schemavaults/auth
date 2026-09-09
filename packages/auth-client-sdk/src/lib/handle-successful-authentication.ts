@@ -364,6 +364,7 @@ export async function handleSuccessfulAuthentication({
   const config: oidc.Configuration = createOidcClientConfiguration({
     auth_server_url,
     client_app_id,
+    environment,
     adapter,
   });
   const issuer: string = normalizeOidcIssuer(auth_server_url);

@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import * as oidc from "openid-client";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
-import { createOidcClientConfiguration } from "./oidc-client-configuration";
+import {
+  createOidcClientConfiguration,
+  isInsecureTransportAllowed,
+} from "./oidc-client-configuration";
 
 function makeAdapter(
   fetchImpl: ISchemaVaultsAuthClientAdapter["fetch"],
@@ -16,6 +19,7 @@ describe("createOidcClientConfiguration", () => {
     const config = createOidcClientConfiguration({
       auth_server_url: "https://auth.example.com",
       client_app_id: "my-app",
+      environment: "development",
       adapter: makeAdapter(async () => new Response(null)),
     });
     expect(config.clientMetadata().client_id).toBe("my-app");
@@ -31,6 +35,7 @@ describe("createOidcClientConfiguration", () => {
     const config = createOidcClientConfiguration({
       auth_server_url: "https://auth.example.com/",
       client_app_id: "my-app",
+      environment: "development",
       adapter: makeAdapter(async () => new Response(null)),
     });
     const expected = buildOidcProviderMetadata("https://auth.example.com");
@@ -49,6 +54,7 @@ describe("createOidcClientConfiguration", () => {
     const config = createOidcClientConfiguration({
       auth_server_url: "https://auth.example.com/",
       client_app_id: "my-app",
+      environment: "development",
       adapter: makeAdapter(async (url, init) => {
         calls.push({ url, init });
         return new Response("{}", {
@@ -80,7 +86,42 @@ describe("createOidcClientConfiguration", () => {
     expect(calls[1]?.init?.credentials).toBe("same-origin");
   });
 
-  test("allows plain-HTTP issuers (local dev / test network)", async () => {
+  test("refuses plain-HTTP issuers outside development and test", () => {
+    for (const environment of ["staging", "production"] as const) {
+      expect(() =>
+        createOidcClientConfiguration({
+          auth_server_url: "http://auth.example.com",
+          client_app_id: "my-app",
+          environment,
+          adapter: makeAdapter(async () => new Response(null)),
+        }),
+      ).toThrow(/HTTPS/);
+    }
+    // HTTPS is fine everywhere.
+    for (const environment of ["staging", "production"] as const) {
+      expect(() =>
+        createOidcClientConfiguration({
+          auth_server_url: "https://auth.example.com",
+          client_app_id: "my-app",
+          environment,
+          adapter: makeAdapter(async () => new Response(null)),
+        }),
+      ).not.toThrow();
+    }
+  });
+
+  test("rejects an unknown app environment", () => {
+    expect(() =>
+      createOidcClientConfiguration({
+        auth_server_url: "https://auth.example.com",
+        client_app_id: "my-app",
+        environment: "prod" as unknown as "production",
+        adapter: makeAdapter(async () => new Response(null)),
+      }),
+    ).toThrow(TypeError);
+  });
+
+  test("allows plain-HTTP issuers in development and test only", async () => {
     // openid-client refuses http: endpoints unless allowInsecureRequests
     // was applied; a refresh grant against a stubbed http server proves
     // the request is attempted (and reaches the adapter's fetch).
@@ -88,6 +129,7 @@ describe("createOidcClientConfiguration", () => {
     const config = createOidcClientConfiguration({
       auth_server_url: "http://localhost:6767",
       client_app_id: "my-app",
+      environment: "development",
       adapter: makeAdapter(async (url) => {
         requested.push(url);
         return new Response(
@@ -103,5 +145,14 @@ describe("createOidcClientConfiguration", () => {
       oidc.refreshTokenGrant(config, "refresh.jwt", { resource: "my-api" }),
     ).rejects.toBeInstanceOf(oidc.ResponseBodyError);
     expect(requested).toEqual(["http://localhost:6767/api/oidc/token"]);
+  });
+});
+
+describe("isInsecureTransportAllowed", () => {
+  test("only development and test may use cleartext HTTP", () => {
+    expect(isInsecureTransportAllowed("development")).toBe(true);
+    expect(isInsecureTransportAllowed("test")).toBe(true);
+    expect(isInsecureTransportAllowed("staging")).toBe(false);
+    expect(isInsecureTransportAllowed("production")).toBe(false);
   });
 });

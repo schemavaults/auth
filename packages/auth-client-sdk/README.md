@@ -37,7 +37,10 @@ The server metadata is the auth server's own discovery document, built
 locally with `buildOidcProviderMetadata()` from `@schemavaults/auth-common`
 (the same function the server serves at `/.well-known/openid-configuration`),
 so no discovery request is made and the SDK cannot drift from what the
-server advertises. Plain-HTTP auth servers (local development) are supported.
+server advertises. Plain-HTTP auth servers are supported only when the
+client's `app_env` is `development` or `test`; in `staging` and
+`production` an `http://` auth server URL is rejected before any token
+request is made.
 
 ## Dependencies
 

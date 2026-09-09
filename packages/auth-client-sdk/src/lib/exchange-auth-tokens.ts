@@ -80,7 +80,6 @@ export async function exchangeAuthTokens({
   handleSuccessfulExchangeAuthTokensResponse,
   logout,
 }: IExchangeAuthTokensOpts): Promise<SuccessfullyGeneratedTokensRecord> {
-  void environment;
   if (debug) {
     console.log(
       "[SchemaVaultsAuthClient] Attempting to send request to exchange refresh token for access token...",
@@ -143,6 +142,7 @@ export async function exchangeAuthTokens({
   const config: oidc.Configuration = createOidcClientConfiguration({
     auth_server_url: auth_server_uri,
     client_app_id,
+    environment,
     adapter,
   });
   const issuer: string = normalizeOidcIssuer(auth_server_uri);

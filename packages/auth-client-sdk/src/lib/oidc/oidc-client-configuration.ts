@@ -9,6 +9,10 @@
 // what the server advertises.
 
 import * as oidc from "openid-client";
+import {
+  isValidSchemaVaultsAppEnvironment,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import { normalizeOidcIssuer } from "./normalize-oidc-issuer";
@@ -21,6 +25,12 @@ export interface CreateOidcClientConfigurationOptions {
   auth_server_url: string;
   /** The OAuth2 client_id: this client application's app id. */
   client_app_id: string;
+  /**
+   * The app environment this client runs in. Decides whether a plain-HTTP
+   * auth server is tolerated: only `development` and `test` may talk to
+   * the token endpoint without TLS.
+   */
+  environment: SchemaVaultsAppEnvironment;
   /** Platform adapter supplying the fetch implementation. */
   adapter: ISchemaVaultsAuthClientAdapter;
   /** Timeout for token-endpoint requests, in seconds (default 30). */
@@ -40,15 +50,32 @@ export interface CreateOidcClientConfigurationOptions {
  *   the auth server's HTTP-only refresh-token cookie travels with the
  *   refresh grant and the `Set-Cookie` on the response is honored.
  * - Plain-HTTP issuers (local dev / the docker-compose test network)
- *   are allowed; openid-client refuses non-TLS endpoints otherwise.
+ *   are allowed ONLY in the `development` and `test` environments;
+ *   openid-client refuses non-TLS endpoints otherwise, and this function
+ *   throws before building such a configuration in any other environment
+ *   so a misconfigured `auth_server_url` can never leak tokens over
+ *   cleartext in staging or production.
  */
 export function createOidcClientConfiguration({
   auth_server_url,
   client_app_id,
+  environment,
   adapter,
   timeout_seconds,
 }: CreateOidcClientConfigurationOptions): oidc.Configuration {
+  if (!isValidSchemaVaultsAppEnvironment(environment)) {
+    throw new TypeError(
+      `Invalid app environment '${String(environment)}' for the OIDC client configuration!`,
+    );
+  }
   const issuer: string = normalizeOidcIssuer(auth_server_url);
+  const insecure_issuer: boolean = issuer.startsWith("http://");
+  if (insecure_issuer && !isInsecureTransportAllowed(environment)) {
+    throw new Error(
+      `Refusing to use the plain-HTTP auth server '${issuer}' in the '${environment}' environment: ` +
+        "the auth server URL must use HTTPS outside of development and test.",
+    );
+  }
   const server: oidc.ServerMetadata = buildOidcProviderMetadata(issuer);
   const token_endpoint: string = server.token_endpoint as string;
 
@@ -59,7 +86,8 @@ export function createOidcClientConfiguration({
     oidc.None(),
   );
 
-  if (issuer.startsWith("http://")) {
+  if (insecure_issuer) {
+    // Reachable only in development/test (asserted above).
     oidc.allowInsecureRequests(config);
   }
   if (typeof timeout_seconds === "number") {
@@ -82,6 +110,17 @@ export function createOidcClientConfiguration({
   };
 
   return config;
+}
+
+/**
+ * Whether `environment` may talk to an auth server over cleartext HTTP.
+ * Mirrors `SchemaVaultsAuthClient.secure`: development and test are the
+ * only non-TLS environments; staging and production always require HTTPS.
+ */
+export function isInsecureTransportAllowed(
+  environment: SchemaVaultsAppEnvironment,
+): boolean {
+  return environment === "development" || environment === "test";
 }
 
 export default createOidcClientConfiguration;

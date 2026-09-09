@@ -1,4 +1,7 @@
-export { createOidcClientConfiguration } from "./oidc-client-configuration";
+export {
+  createOidcClientConfiguration,
+  isInsecureTransportAllowed,
+} from "./oidc-client-configuration";
 export type { CreateOidcClientConfigurationOptions } from "./oidc-client-configuration";
 
 export { normalizeOidcIssuer } from "./normalize-oidc-issuer";
