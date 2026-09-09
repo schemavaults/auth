@@ -93,11 +93,13 @@ export async function sendAuthenticateRequest(
     typeof opts.nonce === "string" && opts.nonce.length > 0
       ? opts.nonce
       : null;
-  if (typeof opts.scope !== "string" || opts.scope.length === 0) {
-    throw new TypeError(
-      "A non-empty 'scope' is required on every authenticate request",
-    );
-  }
+  // `scope` is optional (RFC 6749 §3.3): null / empty means a plain
+  // OAuth 2.1 grant and is omitted from the body so the server's optional
+  // schema sees no key.
+  const scope: string | null =
+    typeof opts.scope === "string" && opts.scope.length > 0
+      ? opts.scope
+      : null;
 
   const auth_request_body = {
     credentials: {
@@ -111,7 +113,7 @@ export async function sendAuthenticateRequest(
     redirect_uri,
     // Omit entirely when absent so the server's optional schema sees no key.
     ...(nonce ? { nonce } : {}),
-    scope: opts.scope,
+    ...(scope ? { scope } : {}),
   };
 
   let response: Response;

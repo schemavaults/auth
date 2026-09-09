@@ -5,6 +5,7 @@ import {
   oidcScopeSchema,
   parseAndGrantScopes,
   serializeOidcScopes,
+  serializeOidcScopesOrNull,
 } from "./scope";
 
 describe("parseAndGrantScopes", () => {
@@ -52,6 +53,22 @@ describe("parseAndGrantScopes", () => {
       expect(granted).toEqual([]);
       expect(hasOpenid).toBe(false);
     }
+  });
+
+  test("a request without openid is a plain OAuth 2.1 grant, not an error", () => {
+    // Absent / unknown-only scopes grant nothing; the caller stores null.
+    for (const raw of [undefined, "", "mcp:tools", "offline_access"]) {
+      const { granted, hasOpenid } = parseAndGrantScopes(raw);
+      expect(granted).toEqual([]);
+      expect(hasOpenid).toBe(false);
+      expect(serializeOidcScopesOrNull(granted)).toBeNull();
+    }
+    // Supported scopes without openid are still granted (they only gate
+    // claims, which such a grant never surfaces), just without openid.
+    const { granted, hasOpenid } = parseAndGrantScopes("email mcp:tools");
+    expect(granted).toEqual(["email"]);
+    expect(hasOpenid).toBe(false);
+    expect(serializeOidcScopesOrNull(granted)).toBe("email");
   });
 
   test("every supported scope round-trips through serialize", () => {

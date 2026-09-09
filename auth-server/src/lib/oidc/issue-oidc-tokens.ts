@@ -11,6 +11,7 @@ import {
   type RequestTokensResult,
   type UserData,
   type OidcTokenResponseExtensions,
+  parseAndGrantScopes,
 } from "@schemavaults/auth-common";
 import { generateIdToken, type I_JWT_Keys } from "@schemavaults/jwt";
 import {
@@ -24,16 +25,21 @@ export interface IssueOidcTokensOptions {
   dbh: ServerlessDatabase;
   user: UserData;
   client_app_id: AppId;
-  /** Granted scopes, space-delimited (always includes "openid"). */
+  /**
+   * Granted scopes, space-delimited; empty for a plain OAuth 2.1 grant
+   * (the tokens then carry no scope claim and the response omits
+   * `scope`).
+   */
   scope: string;
   /** RP nonce to echo into the id_token; null when absent / on refresh. */
   nonce: string | null;
   grant_type: IssuedTokenGrantType;
   environment: SchemaVaultsAppEnvironment;
   /**
-   * id_token issuance: true on the authorization_code grant; false on
-   * refresh (permitted by OIDC Core §12.2 — refresh responses MAY omit
-   * the id_token).
+   * id_token issuance: true on an authorization_code grant whose scope
+   * includes `openid`; false on refresh (permitted by OIDC Core §12.2 —
+   * refresh responses MAY omit the id_token) and on plain OAuth 2.1
+   * grants (no `openid`, so no OpenID authentication took place).
    */
   include_id_token: boolean;
   /**
@@ -69,7 +75,12 @@ export interface OidcTokenResponseBody extends OidcTokenResponseExtensions {
   token_type: "Bearer";
   expires_in: number;
   refresh_token?: string;
-  scope: string;
+  /**
+   * RFC 6749 §5.1: REQUIRED when the granted scope differs from the
+   * requested one, else OPTIONAL. Omitted only when nothing was granted
+   * (plain OAuth 2.1 grant): the §3.3 wire format has no empty form.
+   */
+  scope?: string;
   id_token?: string;
 }
 
@@ -83,12 +94,12 @@ export interface IssuedOidcTokens {
 }
 
 /**
- * Issues the OIDC token set for an authenticated user: a JWE access
- * token minted for `access_token_audience` (default: the reserved
+ * Issues the token set for an authenticated user: a JWE access token
+ * minted for `access_token_audience` (default: the reserved
  * `oidc-userinfo` audience, opaque to the RP and redeemable only at
  * /api/oidc/userinfo), a refresh token carrying the granted scope, and
- * (on the code grant) an RS256-signed id_token verifiable against the
- * public /api/oidc/jwks.
+ * (on an OpenID code grant) an RS256-signed id_token verifiable against
+ * the public /api/oidc/jwks.
  *
  * All authorization checks (code consumption, disabled account, app
  * authorization, resource validation) are the caller's responsibility.
@@ -157,10 +168,15 @@ export async function issueOidcTokens({
       1,
       Math.floor((refresh_token.exp - Date.now()) / 1000),
     ),
-    scope,
+    ...(scope.length > 0 ? { scope } : {}),
   };
 
   if (include_id_token) {
+    if (!parseAndGrantScopes(scope).hasOpenid) {
+      throw new Error(
+        "An id_token may only be issued for a grant that includes the 'openid' scope!",
+      );
+    }
     const oidc_keyset: I_JWT_Keys =
       await jwt_keys_manager.getFreshEnoughKeysetOrCreateNew(
         OIDC_USERINFO_AUDIENCE_ID,

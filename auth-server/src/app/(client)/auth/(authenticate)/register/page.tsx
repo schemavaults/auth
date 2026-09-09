@@ -12,7 +12,7 @@ import type { ServerRuntime } from "next/types";
 import {
   OAuth2StateValidationError,
   OidcNonceValidationError,
-  parseAndGrantScopes,
+  oidcScopeSchema,
   parseOAuth2State,
   parseOidcNonce,
   type UserData,
@@ -94,12 +94,13 @@ export default async function RegisterPage(props: {
       redirectWithError(400, "invalid_redirect_uri");
     }
 
-    // `scope` is a required entry parameter for third-party flows (the
-    // register POST hard-requires it); `nonce` is optional on the URL
-    // but validated when present. Mirrors login/page.tsx.
+    // `scope` is OPTIONAL on third-party flows (absent → plain OAuth 2.1
+    // grant, no id_token); only a malformed value is rejected. `nonce` is
+    // optional on the URL but validated when present. Mirrors
+    // login/page.tsx.
     const raw_scope = typeof searchParams.scope === 'string' ? searchParams.scope : null;
-    if (!raw_scope || raw_scope.length > 256 || parseAndGrantScopes(raw_scope).granted.length === 0) {
-      console.warn("[RegisterPage] Third-party flow missing or invalid 'scope'");
+    if (raw_scope && !oidcScopeSchema.safeParse(raw_scope).success) {
+      console.warn("[RegisterPage] Third-party flow has a malformed 'scope'");
       redirectWithError(400, "bad_request");
     }
     try {

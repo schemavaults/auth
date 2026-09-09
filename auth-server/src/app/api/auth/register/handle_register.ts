@@ -14,6 +14,7 @@ import {
   oidcNonceSchema,
   oidcScopeSchema,
   parseAndGrantScopes,
+  serializeOidcScopesOrNull,
 } from "@schemavaults/auth-common";
 import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
 import {
@@ -57,22 +58,18 @@ const registerBodySchema = z
     // server's own /account flow (client_app_id === auth-server's own).
     redirect_uri: z.url().nullable().optional(),
     // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
-    // scopes (REQUIRED, RFC 6749 §3.3 wire format); see handle_login.ts.
+    // scopes (OPTIONAL, RFC 6749 §3.3 wire format — absent is a plain
+    // OAuth 2.1 grant); see handle_login.ts.
     nonce: oidcNonceSchema.nullable().optional(),
-    scope: oidcScopeSchema,
+    scope: oidcScopeSchema.optional(),
   })
   .required({
     credentials: true,
     client_app_id: true,
     code_challenge: true,
     challenge_time: true,
-    scope: true,
   })
-  .strict()
-  .refine(
-    (body) => parseAndGrantScopes(body.scope).granted.length > 0,
-    "scope must include at least one supported scope (openid, email, profile)",
-  );
+  .strict();
 
 function wasInviteCodeSupplied(
   invite_code: InviteCode | undefined,
@@ -133,10 +130,12 @@ export async function handleRegister({
   const invite_code: string | undefined = registrationData.invite_code;
   const redirect_uri: string | null = registrationData.redirect_uri ?? null;
   // Granted scopes are re-derived server-side (never trusted verbatim);
-  // the schema refinement above guaranteed at least one is granted.
+  // null when nothing was granted (plain OAuth 2.1 grant).
   const grant_context: AuthorizationCodeGrantContext = {
     nonce: registrationData.nonce ?? null,
-    scope: parseAndGrantScopes(registrationData.scope).granted.join(" "),
+    scope: serializeOidcScopesOrNull(
+      parseAndGrantScopes(registrationData.scope).granted,
+    ),
   };
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();

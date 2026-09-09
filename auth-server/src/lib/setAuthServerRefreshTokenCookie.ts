@@ -21,11 +21,12 @@ export interface SetAuthServerRefreshTokenCookieOpts {
   environment: SchemaVaultsAppEnvironment;
   /**
    * Space-delimited granted scopes to carry on the session's refresh
-   * token. The OIDC token endpoint — which the client SDK uses for every
-   * refresh — only redeems refresh tokens that carry an `openid` scope
-   * grant, so the first-party session cookie must be minted with the
-   * flow's granted scope (or the platform default) like every other
-   * refresh token.
+   * token. This cookie is the auth server's OWN first-party session (the
+   * /account UI refreshes it through the OIDC token endpoint and reads
+   * identity from it), so it is minted with the flow's granted scope or,
+   * when the flow granted none (a third-party plain OAuth 2.1 grant), the
+   * platform default — the third-party client's scope never narrows the
+   * user's own session.
    */
   scope?: string;
   debug?: boolean;

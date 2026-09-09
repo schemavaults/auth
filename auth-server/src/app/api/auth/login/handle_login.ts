@@ -14,6 +14,7 @@ import {
   oidcNonceSchema,
   oidcScopeSchema,
   parseAndGrantScopes,
+  serializeOidcScopesOrNull,
 } from "@schemavaults/auth-common";
 import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
 import type { UserData } from "@schemavaults/auth-common";
@@ -68,23 +69,20 @@ const loginBodySchema = z
     // (custom-surface token-response field / OIDC id_token claim); when
     // absent the code carries null and nothing is echoed.
     nonce: oidcNonceSchema.nullable().optional(),
-    // Requested scopes (space-delimited, RFC 6749 §3.3) — REQUIRED on
-    // every flow; validated for wire format by oidcScopeSchema, then the
-    // server re-derives the granted subset below.
-    scope: oidcScopeSchema,
+    // Requested scopes (space-delimited, RFC 6749 §3.3) — OPTIONAL:
+    // absent (or naming none of the supported scopes) is a plain OAuth
+    // 2.1 grant that binds a null scope to the code (no id_token at
+    // redemption). When present it is validated for wire format by
+    // oidcScopeSchema, then the server re-derives the granted subset.
+    scope: oidcScopeSchema.optional(),
   })
   .required({
     credentials: true,
     client_app_id: true,
     code_challenge: true,
     challenge_time: true,
-    scope: true,
   })
-  .strict()
-  .refine(
-    (body) => parseAndGrantScopes(body.scope).granted.length > 0,
-    "scope must include at least one supported scope (openid, email, profile)",
-  );
+  .strict();
 
 export async function handleLogin({
   body,
@@ -103,10 +101,12 @@ export async function handleLogin({
   const challenge_time: number = parse_login_body.data.challenge_time;
   const redirect_uri: string | null = parse_login_body.data.redirect_uri ?? null;
   // Granted scopes are re-derived server-side (never trusted verbatim);
-  // the schema refinement above guaranteed at least one is granted.
+  // null when nothing was granted (plain OAuth 2.1 grant).
   const grant_context: AuthorizationCodeGrantContext = {
     nonce: parse_login_body.data.nonce ?? null,
-    scope: parseAndGrantScopes(parse_login_body.data.scope).granted.join(" "),
+    scope: serializeOidcScopesOrNull(
+      parseAndGrantScopes(parse_login_body.data.scope).granted,
+    ),
   };
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();

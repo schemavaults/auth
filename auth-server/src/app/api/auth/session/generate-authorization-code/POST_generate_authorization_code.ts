@@ -17,6 +17,7 @@ import {
   oidcNonceSchema,
   oidcScopeSchema,
   parseAndGrantScopes,
+  serializeOidcScopesOrNull,
 } from "@schemavaults/auth-common";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
 
@@ -32,22 +33,18 @@ const requestBodySchema = z
     // no third-party callback to bind).
     redirect_uri: z.url().nullable().optional(),
     // Login replay nonce (OPTIONAL, OIDC Core §3.1.2.1) + requested
-    // scopes (REQUIRED, RFC 6749 §3.3 wire format); see handle_login.ts.
+    // scopes (OPTIONAL, RFC 6749 §3.3 wire format — absent is a plain
+    // OAuth 2.1 grant); see handle_login.ts.
     nonce: oidcNonceSchema.nullable().optional(),
-    scope: oidcScopeSchema,
+    scope: oidcScopeSchema.optional(),
   })
   .required({
     client_app_id: true,
     code_challenge: true,
     code_challenge_method: true,
     challenge_time: true,
-    scope: true,
   })
-  .strict()
-  .refine(
-    (body) => parseAndGrantScopes(body.scope).granted.length > 0,
-    "scope must include at least one supported scope (openid, email, profile)",
-  );
+  .strict();
 
 export async function POST_generate_authorization_code(
   request: NextRequest,
@@ -124,10 +121,12 @@ export async function POST_generate_authorization_code(
       }
 
       // Granted scopes are re-derived server-side (never trusted
-      // verbatim); the schema refinement guaranteed at least one.
+      // verbatim); null when nothing was granted (plain OAuth 2.1 grant).
       const grant_context: AuthorizationCodeGrantContext = {
         nonce: body.nonce ?? null,
-        scope: parseAndGrantScopes(body.scope).granted.join(" "),
+        scope: serializeOidcScopesOrNull(
+          parseAndGrantScopes(body.scope).granted,
+        ),
       };
 
       try {

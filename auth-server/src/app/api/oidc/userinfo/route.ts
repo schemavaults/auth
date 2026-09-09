@@ -52,11 +52,33 @@ function unauthorized(error_description?: string): NextResponse {
 }
 
 /**
+ * RFC 6750 §3.1: the token is valid but its granted scope does not cover
+ * this endpoint. Only tokens minted for an OpenID Connect authentication
+ * request (granted scope includes `openid`) identify the user here; a
+ * token from a plain OAuth 2.1 grant carries no identity claims at all.
+ */
+function insufficientScope(): NextResponse {
+  return NextResponse.json(
+    { error: "insufficient_scope" },
+    {
+      status: 403,
+      headers: {
+        "WWW-Authenticate":
+          'Bearer error="insufficient_scope", error_description="The \'openid\' scope is required to access userinfo", scope="openid"',
+        "Cache-Control": "no-store",
+        ...CORS_HEADERS,
+      },
+    },
+  );
+}
+
+/**
  * The OIDC userinfo endpoint (OIDC Core §5.3): accepts the JWE access
  * token issued by /api/oidc/token as a Bearer credential, decrypts and
  * verifies it server-side (only the auth server holds the
  * `oidc-userinfo` keyset), and returns the claims permitted by the
- * token's granted scope.
+ * token's granted scope. Tokens whose grant did not include `openid`
+ * (plain OAuth 2.1 grants) are refused with `insufficient_scope`.
  */
 async function handleUserinfo(request: NextRequest): Promise<NextResponse> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
@@ -116,7 +138,10 @@ async function handleUserinfo(request: NextRequest): Promise<NextResponse> {
   // is always returned (OIDC Core §5.3.2) in the OIDC-facing
   // `<auth_server_app_id>|<uid>` form — it MUST exactly match the
   // id_token's `sub`, which RP libraries verify.
-  const { granted } = parseAndGrantScopes(decoded.scope);
+  const { granted, hasOpenid } = parseAndGrantScopes(decoded.scope);
+  if (!hasOpenid) {
+    return insufficientScope();
+  }
   const claims: Record<string, unknown> = {
     sub: formatOidcSubClaim(getAuthServerAppId(), decoded.sub),
   };

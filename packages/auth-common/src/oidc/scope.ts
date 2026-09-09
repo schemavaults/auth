@@ -3,11 +3,20 @@
  *
  * The platform's own authorization model is audience-based
  * (see audience-schema.ts / APP_TO_API_PERMISSIONS); OAuth2 scopes exist
- * only on the OIDC surface, where `openid` is mandatory (OIDC Core §3.1.2.1)
- * and `email`/`profile` gate which claims the id_token and /userinfo
- * response carry. Unknown scopes are silently dropped per RFC 6749 §3.3
- * (the granted set is echoed back in the token response, so RPs that
- * hardcode e.g. "openid profile email address" still interoperate).
+ * only on the OIDC surface, where `openid` turns an authorization
+ * request into an OpenID Connect authentication request (OIDC Core
+ * §3.1.2.1: an id_token is minted and /userinfo opens up) and
+ * `email`/`profile` gate which claims the id_token and /userinfo
+ * response carry. A request WITHOUT `openid` — including one with no
+ * `scope` at all (OPTIONAL per RFC 6749 §3.3) — is a plain OAuth 2.1
+ * authorization grant: it yields access + refresh tokens only, no
+ * id_token, and no identity claims (OIDC Core §3.1.2.1 leaves such
+ * requests to OAuth 2.0 semantics). That is what OAuth-only clients such
+ * as MCP clients send; they want a token for a resource server, not an
+ * identity. Unknown scopes are silently dropped per RFC 6749 §3.3 (the
+ * granted set is echoed back in the token response, so RPs that
+ * hardcode e.g. "openid profile email address" still interoperate, and
+ * a request naming only unknown scopes degrades to a plain OAuth grant).
  */
 
 import { z } from "zod";
@@ -66,7 +75,11 @@ export interface ParsedOidcScopes {
    * OIDC_SUPPORTED_SCOPES, deduplicated, in request order.
    */
   granted: OidcSupportedScope[];
-  /** Whether the request included the mandatory `openid` scope. */
+  /**
+   * Whether the request included the `openid` scope, i.e. whether it is
+   * an OpenID Connect authentication request (id_token + userinfo) as
+   * opposed to a plain OAuth 2.1 authorization grant.
+   */
   hasOpenid: boolean;
 }
 
@@ -79,8 +92,10 @@ function isSupportedOidcScope(scope: string): scope is OidcSupportedScope {
 
 /**
  * Parses a raw `scope` request parameter (space-delimited per
- * RFC 6749 §3.3) into the granted subset. Non-string or empty input
- * grants nothing (callers reject missing `openid` via `hasOpenid`).
+ * RFC 6749 §3.3) into the granted subset. Non-string, empty, or
+ * malformed input grants nothing — an empty granted set is a valid
+ * outcome (a plain OAuth 2.1 grant); callers that need to distinguish a
+ * malformed value from an absent one check `oidcScopeSchema` first.
  */
 export function parseAndGrantScopes(raw: unknown): ParsedOidcScopes {
   if (typeof raw !== "string") {
@@ -108,4 +123,16 @@ export function parseAndGrantScopes(raw: unknown): ParsedOidcScopes {
  */
 export function serializeOidcScopes(scopes: readonly string[]): string {
   return scopes.join(" ");
+}
+
+/**
+ * Serializes a granted set to its stored form on the AUTHORIZATION_CODES
+ * row / MFA challenge / token claims: `null` when nothing was granted (a
+ * plain OAuth 2.1 grant carries no `scope` — the wire format has no
+ * representation for an empty list), else the space-delimited list.
+ */
+export function serializeOidcScopesOrNull(
+  scopes: readonly string[],
+): string | null {
+  return scopes.length === 0 ? null : serializeOidcScopes(scopes);
 }

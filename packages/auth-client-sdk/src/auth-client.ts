@@ -1153,7 +1153,10 @@ export class SchemaVaultsAuthClient
     redirect_uri: string | null,
     // Optional per OIDC Core §3.1.2.1 — null when the flow carried no nonce.
     nonce: string | null,
-    scope: string = DEFAULT_AUTH_SCOPE,
+    // Optional per RFC 6749 §3.3 — null for a plain OAuth 2.1 grant (no
+    // `scope` sent, so no id_token); defaults to the platform's OpenID
+    // scope set.
+    scope: string | null = DEFAULT_AUTH_SCOPE,
   ): Promise<AuthenticateResult> {
     if (this.DEBUG)
       console.log(
