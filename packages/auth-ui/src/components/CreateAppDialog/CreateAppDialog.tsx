@@ -5,8 +5,8 @@ import { useContext, type ReactElement } from "react";
 
 import { Dialog, DialogContent } from "@schemavaults/ui";
 import { useSWRConfig } from "swr";
-import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 import { AppWindow } from "lucide-react";
+import type { RequestedResourceOwnership } from "@schemavaults/app-definitions";
 import CreateAppForm from "./CreateAppForm";
 import CreateAppDialogOpenDispatchContext from "./CreateAppDialogOpenDispatchContext";
 
@@ -14,7 +14,11 @@ interface CreateFrontendAppDialogProps {
   clearFrontendAppsCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
-  owner_organization_id?: string | null;
+  /**
+   * Who the new app will belong to: the platform (admins only), an
+   * organization the user administers, or the user's own account.
+   */
+  ownership: RequestedResourceOwnership;
   open: boolean;
   onOpenChange: (val: boolean) => void;
   uuid: () => string;
@@ -22,10 +26,9 @@ interface CreateFrontendAppDialogProps {
 
 export function CreateAppDialog({
   clearFrontendAppsCache,
-  owner_organization_id,
+  ownership,
   ...props
 }: CreateFrontendAppDialogProps): ReactElement {
-  const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
@@ -33,7 +36,7 @@ export function CreateAppDialog({
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
       >
         <CreateAppForm
-          owner_organization_id={owner_organization_id ?? ownerOrganizationId}
+          ownership={ownership}
           clearFrontendAppsCache={clearFrontendAppsCache}
           onSuccess={() => props.onOpenChange(false)}
           uuid={props.uuid}

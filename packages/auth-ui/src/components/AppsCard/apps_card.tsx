@@ -15,7 +15,12 @@ import {
   clearUseAppsListCache,
   type PreloadedAppsTableDataWithDomainRefs,
 } from "@/components/AppsTable";
-import type { AppId, ListAppsQueryType } from "@schemavaults/app-definitions";
+import type {
+  AppId,
+  ListAppsQueryType,
+  RequestedResourceOwnership,
+} from "@schemavaults/app-definitions";
+import { useCurrentUser } from "@schemavaults/auth-react-provider";
 import CreateAppDialog, {
   CreateAppDialogOpenDispatchContext,
 } from "@/components/CreateAppDialog";
@@ -41,9 +46,50 @@ export interface AppsCardProps {
   isOrgOwner?: boolean;
 }
 
+/**
+ * @description Who an app created from a card of the given query type
+ * belongs to: platform-owned from the admin "all" list, organization-owned
+ * from an organization page, user-owned from the "owned" (your
+ * applications) card. Returns null when the card cannot create apps.
+ */
+function resolveCreateOwnershipForCard(
+  queryType: ListAppsQueryType,
+  organization_id: string | undefined,
+  platformOrganizationId: string,
+  currentUserUid: string | undefined,
+): RequestedResourceOwnership | null {
+  switch (queryType) {
+    case "all":
+      return { owner_type: "platform" };
+    case "org":
+      return organization_id && organization_id !== platformOrganizationId
+        ? { owner_type: "organization", owner_organization_id: organization_id }
+        : { owner_type: "platform" };
+    case "owned":
+      return currentUserUid
+        ? { owner_type: "user", owner_uid: currentUserUid }
+        : null;
+    default:
+      return null;
+  }
+}
+
 export function AppsCard(props: AppsCardProps): ReactElement {
   const friendlyName: string = useAuthUiFriendlyName();
   const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
+  const currentUser = useCurrentUser();
+  const createOwnership: RequestedResourceOwnership | null =
+    resolveCreateOwnershipForCard(
+      props.queryType,
+      props.organization_id,
+      ownerOrganizationId,
+      currentUser?.uid,
+    );
+  const canCreateApps: boolean =
+    !!createOwnership &&
+    (props.queryType === "all" ||
+      props.queryType === "owned" ||
+      (props.queryType === "org" && !!props.isOrgOwner));
   const cardTitle = props.cardTitle ?? "Applications";
   const cardDescription =
     props.cardDescription ??
@@ -79,7 +125,7 @@ export function AppsCard(props: AppsCardProps): ReactElement {
                   queryType={props.queryType}
                   preloaded={props.preloaded}
                   organization_id={props.organization_id}
-                  isOrgOwner={props.isOrgOwner}
+                  isOrgOwner={props.isOrgOwner || props.queryType === "owned"}
                 />
               </CardContent>
               <CardFooter>
@@ -87,15 +133,10 @@ export function AppsCard(props: AppsCardProps): ReactElement {
               </CardFooter>
             </Card>
             <>
-              {(props.queryType === "all" ||
-                (props.queryType === "org" && props.isOrgOwner)) && (
+              {canCreateApps && createOwnership && (
                 <CreateAppDialog
                   clearFrontendAppsCache={clearUseAppsListCache}
-                  owner_organization_id={
-                    props.queryType === "all"
-                      ? ownerOrganizationId
-                      : props.organization_id
-                  }
+                  ownership={createOwnership}
                   open={createAppDialogOpen}
                   onOpenChange={setCreateAppDialogOpen}
                   uuid={props.uuid}
@@ -107,8 +148,7 @@ export function AppsCard(props: AppsCardProps): ReactElement {
                   onOpenChange={setAuthorizeAppDialogOpen}
                 />
               )}
-              {(props.queryType === "all" ||
-                (props.queryType === "org" && props.isOrgOwner)) && (
+              {canCreateApps && (
                 <CreateAppDomainDialog
                   open={typeof isAddAppDomainDialogOpen === "string"}
                   onOpenChange={(val: boolean): void => {

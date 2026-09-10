@@ -14,10 +14,8 @@ import {
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
-import { OrganizationMembershipRoleType, type OrganizationID } from "@schemavaults/auth-common";
-import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
+import { canUserManageResource } from "@/lib/ownership/resource-access";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
-import isUserInOrganization from "@/lib/isUserInOrganization";
 import { JwksAccessKeysRegistry, type JwksAccessKeyStatusQueryResponse } from "@/lib/auth-db/jwks-access-keys";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next/types";
@@ -62,26 +60,12 @@ export default async function JwksAccessKeysPage(
 
 
       const api_server: SchemaVaultsApiServerDefinition = await loadApiServerDefinitionFromDatabase({ api_server_id, db: dbh.db });
-      const owner_organization_id: OrganizationID | null | undefined = api_server['owner_organization_id'];
-      if (!owner_organization_id || typeof owner_organization_id !== 'string') {
-        console.error(`Failed to resolve 'owner_organization_id' for API server: '${api_server_id}'`);
-        redirectWithError(500, "internal_server_error");
-      }
-
-      if (owner_organization_id === getAuthServerOwnerOrganizationId() && !user.admin) {
-        console.warn("Blocking request to view JWKS access keys page for a platform-owned API server for non-admin user!")
-        redirectWithError(403, 'forbidden');
-      }
-
-      const role: OrganizationMembershipRoleType | false = await isUserInOrganization(dbh.db, user, owner_organization_id);
-      let canView: boolean = false;
-      if (user.admin) {
-        canView = true;
-      } else if (role === 'admin' || role === 'owner') {
-        canView = true;
-      }
+      // Organization owners/admins, the owning user of a user-owned API
+      // server, and global admins may manage access keys. Platform-owned
+      // API servers are admin-only.
+      const canView: boolean = await canUserManageResource(dbh.db, user, api_server);
       if (!canView) {
-        console.warn("[JwksAccessKeysPage] Blocking access - user does not appear to be in the owner organization!")
+        console.warn("[JwksAccessKeysPage] Blocking access - user does not own this API server!")
         redirectWithError(403, 'forbidden');
       }
 

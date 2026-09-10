@@ -58,14 +58,19 @@ export function ApiServerRowActions({
   // The row's own 'hardcoded' flag identifies the auth server's built-in API
   // definition; comparing ids against a client-bundled constant would be
   // blind to the env-var-driven app id in white-label deployments.
+  // "isOrgOwner" is the card's "the viewer manages the listed API servers"
+  // flag: an organization owner/admin on an org page, or the owning user on
+  // the "owned" (your API servers) card.
+  const canManageListedApis: boolean = isOrgOwner || queryType === "owned";
   const isDeleteDisabled =
-    api.hardcoded || (!showConnectAppToApi && !isOrgOwner);
+    api.hardcoded || (!showConnectAppToApi && !canManageListedApis);
 
   // Hardcoded API servers have no database row for a domain to reference;
   // their domains come from the server's environment configuration.
   const showAddDomain: boolean =
     !api.hardcoded &&
-    ((admin && queryType === "all") || (isOrgOwner && queryType === "org"));
+    ((admin && queryType === "all") ||
+      (canManageListedApis && (queryType === "org" || queryType === "owned")));
 
   return (
     <>

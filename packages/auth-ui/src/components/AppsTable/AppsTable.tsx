@@ -37,9 +37,9 @@ function AppsTableHeaderButtons({
       {queryType === "authorized" && ( // From a user's list of authorized apps, allow them to add more authorized apps
         <AuthorizeClientApplicationDialogTrigger />
       )}
-      {(queryType === "all" || (queryType === "org" && isOrgOwner)) && (
-        <CreateAppDialogTrigger />
-      )}
+      {(queryType === "all" ||
+        queryType === "owned" ||
+        (queryType === "org" && isOrgOwner)) && <CreateAppDialogTrigger />}
     </>
   );
 }

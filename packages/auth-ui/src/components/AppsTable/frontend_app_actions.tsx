@@ -126,10 +126,16 @@ export function FrontendApplicationActions({
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
 
-  const isDeleteAppDisabled: boolean = app.hardcoded || (!admin && !isOrgOwner);
+  // "isOrgOwner" is the card's "the viewer manages the listed apps" flag: an
+  // organization owner/admin on an org page, or the owning user on the
+  // "owned" (your applications) card.
+  const canManageListedApps: boolean = !!isOrgOwner || queryType === "owned";
+  const isDeleteAppDisabled: boolean =
+    app.hardcoded || (!admin && !canManageListedApps);
 
   const showAddAppDomain: boolean =
-    (admin && queryType === "all") || (!!isOrgOwner && queryType === "org");
+    (admin && queryType === "all") ||
+    (canManageListedApps && (queryType === "org" || queryType === "owned"));
   const showConnectApi: boolean = admin && queryType === "all";
 
   return (

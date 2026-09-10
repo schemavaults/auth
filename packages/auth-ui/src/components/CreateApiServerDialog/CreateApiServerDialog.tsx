@@ -7,13 +7,17 @@ import { Dialog, DialogContent } from "@schemavaults/ui";
 import { useSWRConfig } from "swr";
 import { Server } from "lucide-react";
 import CreateApiServerForm from "./CreateApiServerForm";
-import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
+import type { RequestedResourceOwnership } from "@schemavaults/app-definitions";
 
 interface CreateApiServerDialogProps {
   clearApiServersCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
-  owner_organization_id?: string | null;
+  /**
+   * Who the new API server will belong to: the platform (admins only), an
+   * organization the user administers, or the user's own account.
+   */
+  ownership: RequestedResourceOwnership;
   open: boolean;
   onOpenChange: (val: boolean) => void;
   uuid: () => string;
@@ -21,12 +25,11 @@ interface CreateApiServerDialogProps {
 
 export function CreateApiServerDialog({
   clearApiServersCache,
-  owner_organization_id,
+  ownership,
   open,
   onOpenChange,
   uuid,
 }: CreateApiServerDialogProps): ReactElement {
-  const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -35,9 +38,7 @@ export function CreateApiServerDialog({
       >
         <CreateApiServerForm
           clearApiServersCache={clearApiServersCache}
-          owner_organization_id={
-            owner_organization_id ? owner_organization_id : ownerOrganizationId
-          }
+          ownership={ownership}
           onSuccess={() => onOpenChange(false)}
           uuid={uuid}
         />

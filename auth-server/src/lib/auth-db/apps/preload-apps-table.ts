@@ -180,6 +180,11 @@ export async function preloadAppsTable(
         return await returnAppsWithDomains([...org_apps], opts.appsRegistry);
       }
 
+      case "owned": {
+        const owned_apps = await opts.appsRegistry.listUserOwnedApps(userData.uid);
+        return await returnAppsWithDomains(owned_apps, opts.appsRegistry);
+      }
+
       default:
         throw new Error("Unsupported apps query type");
     }

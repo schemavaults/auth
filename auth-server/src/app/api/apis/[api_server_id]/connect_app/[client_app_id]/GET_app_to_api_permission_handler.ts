@@ -5,7 +5,7 @@ import {
 } from "@/lib/auth-db";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
-import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
+import { isUserOwnerOfResource } from "@/lib/ownership/resource-access";
 import {
   apiServerIdSchema,
   appIdSchema,
@@ -114,67 +114,34 @@ export async function GET_app_to_api_permission_handler(
       }
 
       // Authorization: same ownership checks as POST
+      // Ownership: the caller must own the app (organization owner, the
+      // owning user of a user-owned app, or a global admin) and, unless the
+      // API server is a public hardcoded one, must own the API server too.
       if (!user.admin) {
-        const organizationsRegistry = new OrganizationsRegistry(dbh.db);
-        const userMemberships =
-          await organizationsRegistry.listUserOrganizationMemberships(
-            user.uid,
-            false,
-          );
-
-        const appOrgId = app.owner_organization_id;
-        const apiOrgId = apiServer.owner_organization_id;
         const isHardcoded = isHardcodedApiServerId(api_server_id);
         const isPublicHardcoded = isHardcoded && apiServer.public === true;
 
-        if (!appOrgId) {
-          return NextResponse.json(
-            {
-              success: false,
-              message:
-                "App must belong to a non-admin organization if you are not an admin.",
-            } satisfies GetAppToApiPermissionResponse,
-            { status: 403 },
-          );
-        }
-
-        if (!isPublicHardcoded && !apiOrgId) {
-          return NextResponse.json(
-            {
-              success: false,
-              message:
-                "App and API server must belong to non-admin organizations if you are not an admin.",
-            } satisfies GetAppToApiPermissionResponse,
-            { status: 403 },
-          );
-        }
-
-        const userOwnsApp: boolean = userMemberships.some(
-          (m) => m.organization_id === appOrgId && m.role === "owner",
-        );
-
+        const userOwnsApp: boolean = await isUserOwnerOfResource(dbh.db, user, app);
         if (!userOwnsApp) {
           return NextResponse.json(
             {
               success: false,
-              message:
-                "You must have 'owner' role of the organization that owns the app to check this permission!",
+              message: "You must own the app (organization owner or owning user) to check this permission for it!",
             } satisfies GetAppToApiPermissionResponse,
             { status: 403 },
           );
         }
 
+        // For non-public hardcoded APIs, require admin (already blocked above since !user.admin)
+        // For public hardcoded APIs, only app ownership is needed (checked above)
+        // For dynamic APIs, also require API server ownership
         if (!isPublicHardcoded) {
-          const userOwnsApi: boolean = userMemberships.some(
-            (m) => m.organization_id === apiOrgId && m.role === "owner",
-          );
-
+          const userOwnsApi: boolean = await isUserOwnerOfResource(dbh.db, user, apiServer);
           if (!userOwnsApi) {
             return NextResponse.json(
               {
                 success: false,
-                message:
-                  "You must have 'owner' role of the organization(s) that own the app & api server to check this permission!",
+                message: "You must own both the app and the API server (organization owner or owning user) to check this permission for them!",
               } satisfies GetAppToApiPermissionResponse,
               { status: 403 },
             );

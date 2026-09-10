@@ -2,12 +2,16 @@
 
 import {
   AccountDetailsCard,
+  ApiServersCard,
   AppsCard,
   PendingInvitationsCard,
 } from "@schemavaults/auth-ui";
 import { useRouter } from "next/navigation";
 import type { ReactElement } from "react";
-import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
+import type {
+  PreloadedApiServersTableDataWithDomainRefs,
+  PreloadedAppsTableDataWithDomainRefs,
+} from "@schemavaults/auth-ui";
 import type {
   OrganizationMembershipRoleDetails,
   UserProfileNames,
@@ -47,6 +51,16 @@ export interface AuthAccountPageViewProps {
    * user is not an admin). Hides the "Create Organization" button when false.
    */
   can_create_organization?: boolean;
+  /** SSR-preloaded apps owned directly by the current user's account. */
+  preloaded_owned_apps_data?: PreloadedAppsTableDataWithDomainRefs;
+  /** SSR-preloaded API servers owned directly by the current user's account. */
+  preloaded_owned_api_servers_data?: PreloadedApiServersTableDataWithDomainRefs;
+  /**
+   * Whether to render the "Your Applications" / "Your API Servers" cards
+   * (false when the `allow_user_owned_resource_creation` server setting is
+   * disabled and the user is not an admin).
+   */
+  show_owned_resources?: boolean;
 }
 
 export default function AccountPageView({
@@ -55,6 +69,9 @@ export default function AccountPageView({
   preloaded_organization_memberships,
   preloaded_user_profile,
   can_create_organization,
+  preloaded_owned_apps_data,
+  preloaded_owned_api_servers_data,
+  show_owned_resources = true,
 }: AuthAccountPageViewProps): ReactElement {
   const router = useRouter();
   const environment = useAppEnvironment();
@@ -132,6 +149,27 @@ export default function AccountPageView({
         preloaded={preloaded_authorized_apps_data}
         uuid={uuidSync}
       />
+      {show_owned_resources && (
+        <AppsCard
+          cardTitle="Your Applications"
+          cardDescription="Client applications owned by your account, independent of any organization. Register one here to obtain a client id for your own OAuth 2.1 / OpenID Connect integration."
+          cardClassName={cardsClassName}
+          queryType="owned"
+          preloaded={preloaded_owned_apps_data}
+          uuid={uuidSync}
+        />
+      )}
+      {show_owned_resources && (
+        <ApiServersCard
+          cardTitle="Your API Servers"
+          cardDescription="Backend API servers owned by your account, independent of any organization."
+          cardClassName={cardsClassName}
+          queryType="owned"
+          preloaded={preloaded_owned_api_servers_data}
+          uuid={uuidSync}
+          showConnectAppToApi
+        />
+      )}
     </PageContainer>
   );
 }

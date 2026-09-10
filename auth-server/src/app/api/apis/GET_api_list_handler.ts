@@ -200,6 +200,36 @@ async function GET_api_list_handler(
             }
           // end 'org' case
 
+          case "owned":
+            try {
+              return NextResponse.json(
+                {
+                  success: true,
+                  message: "Successfully listed the API servers owned by your account",
+                  list: (await apiServerRegistry.listUserOwnedApiServers(user.uid)) satisfies readonly SchemaVaultsApiServerDefinition[],
+                } satisfies ListApiServersQueryResponse,
+                {
+                  status: 200,
+                },
+              );
+            } catch (e: unknown) {
+              await captureServerException(dbh.db, e, {
+                op_name: "GET_api_list_handler.listUserOwnedApiServers",
+                route: ROUTE,
+                uid: user.uid,
+              });
+              return NextResponse.json(
+                {
+                  success: false,
+                  message: "Failed to list the API servers owned by your account",
+                } satisfies ListApiServersQueryResponse,
+                {
+                  status: 500,
+                },
+              );
+            }
+          // end 'owned' case
+
           default:
             return NextResponse.json(
               {

@@ -13,6 +13,7 @@ import { FrontendApplicationActions } from "./frontend_app_actions";
 import AppDomainsList from "./AppDomainsList";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
 import { AppWindowMac, Globe } from "lucide-react";
+import { ResourceOwnerLabel } from "@/components/ResourceOwnerLabel";
 
 export function getAppsTableColumns(
   queryType: ListAppsQueryType,
@@ -78,7 +79,10 @@ export function getAppsTableColumns(
     {
       id: "owner_organization_id",
       accessorKey: "owner_organization_id",
-      header: "Owner Organization",
+      header: "Owner",
+      cell: ({ row }): ReactElement => (
+        <ResourceOwnerLabel resource={row.original} />
+      ),
     },
     {
       id: "web",

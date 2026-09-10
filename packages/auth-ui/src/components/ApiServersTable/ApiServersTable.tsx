@@ -49,7 +49,9 @@ function ApiServersTableHeaderButtons({
 
   return (
     <>
-      {(queryType === "all" || (queryType === "org" && isOrgOwner)) && (
+      {(queryType === "all" ||
+        queryType === "owned" ||
+        (queryType === "org" && isOrgOwner)) && (
         <CreateApiServerDialogTrigger onOpenChange={onOpenChangeCreateApi} />
       )}
       {(queryType === "all" || showConnectAppToApi) && (
@@ -88,22 +90,6 @@ export function ApiServersTable({
       return <ApiServersTableHeaderButtons queryType={queryType} showConnectAppToApi={showConnectAppToApi} isOrgOwner={isOrgOwner} />;
     };
   }, [queryType, showConnectAppToApi, isOrgOwner]);
-
-  // Assert that 'owner_organization_id' field is present from server
-  useMemo(() => {
-    if (apis.data && Array.isArray(apis.data)) {
-      if (
-        !apis.data.every(
-          (api_server_definition) =>
-            api_server_definition.owner_organization_id,
-        )
-      ) {
-        throw new TypeError(
-          "Received API server definition that is missing 'owner_organization_id' field!",
-        );
-      }
-    }
-  }, [apis.data]);
 
   const contextValue = useMemo(
     () => ({

@@ -11,8 +11,11 @@ import {
   type ApiServerId,
   getHardcodedSchemaVaultsApis,
   getHardcodedApiDomains,
+  type ResourceOwnership,
 } from "@schemavaults/app-definitions";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
+import { ownershipFieldsFromDatabaseRow, toOwnershipDatabaseColumns } from "@/lib/ownership/ownership-columns";
+import type { NewApiServer } from "./apis-table";
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
@@ -85,15 +88,12 @@ export class SchemaVaultsApiServerRegistry {
       throw new Error("Failed to parse created_at from database");
     }
 
-    const owner_organization_id: OrganizationID = (
-      "owner_organization_id" in first_row && typeof first_row['owner_organization_id'] === 'string'
-    ) ? first_row['owner_organization_id'] : getAuthServerOwnerOrganizationId();
-
     const parsed_api_server =
       await schemaVaultsApiServerDefinitionSchema.safeParseAsync({
         ...first_row,
         created_at: createdAt,
-        owner_organization_id,
+        hardcoded: false,
+        ...ownershipFieldsFromDatabaseRow(first_row),
       });
     if (!parsed_api_server.success) {
       console.error(parsed_api_server.error.issues);
@@ -157,20 +157,24 @@ export class SchemaVaultsApiServerRegistry {
     });
   }
 
-  public async registerApiServer(
-    api_server_id: string,
-    api_server_name: string,
-    api_server_description: string,
-    publicly_listed: boolean,
-    owner_organization_id: OrganizationID,
-  ): Promise<void> {
+  public async registerApiServer({
+    api_server_id,
+    api_server_name,
+    api_server_description,
+    publicly_listed,
+    ownership,
+    created_by = null,
+  }: RegisterApiServerOptions): Promise<void> {
     if (!isValidApiServerId(api_server_id)) {
       throw new TypeError(
         "Received invalid API server ID!",
       );
     }
 
-    if (!organizationIdSchema.safeParse(owner_organization_id).success) {
+    if (
+      ownership.owner_type === "organization" &&
+      !organizationIdSchema.safeParse(ownership.owner_organization_id).success
+    ) {
       throw new TypeError("Received invalid organization ID to register API server to!")
     }
 
@@ -184,7 +188,7 @@ export class SchemaVaultsApiServerRegistry {
       );
     }
 
-    const parsed_app =
+    const parsed_api_server =
       await schemaVaultsApiServerDefinitionSchema.safeParseAsync({
         api_server_id,
         api_server_name,
@@ -192,17 +196,29 @@ export class SchemaVaultsApiServerRegistry {
         created_at: Date.now(),
         public: publicly_listed ?? false,
         hardcoded: false,
-        owner_organization_id: owner_organization_id === getAuthServerOwnerOrganizationId() ? null : owner_organization_id,
+        ...ownership,
+        created_by,
       } satisfies SchemaVaultsApiServerDefinition);
-    if (!parsed_app.success) {
-      console.error(parsed_app.error.issues);
-      throw new Error("Failed to parse app");
+    if (!parsed_api_server.success) {
+      console.error(parsed_api_server.error.issues);
+      throw new Error("Failed to parse API server definition");
     }
-    const app: SchemaVaultsApiServerDefinition = parsed_app.data;
+    const api_server: SchemaVaultsApiServerDefinition = parsed_api_server.data;
+
+    const row: NewApiServer = {
+      api_server_id: api_server.api_server_id,
+      api_server_name: api_server.api_server_name,
+      api_server_description: api_server.api_server_description,
+      created_at: api_server.created_at,
+      public: api_server.public,
+      hardcoded: false,
+      ...toOwnershipDatabaseColumns(ownership),
+      created_by,
+    };
 
     const result = await this.db
       .insertInto("api_servers")
-      .values(app)
+      .values(row)
       .onConflict((oc) => oc.column("api_server_id").doNothing())
       .executeTakeFirst();
 
@@ -211,8 +227,36 @@ export class SchemaVaultsApiServerRegistry {
     }
   }
 
+  /**
+   * @description Lists the API servers owned directly by a user account
+   * (`owner_type = 'user'`), independent of any organization membership.
+   */
+  public async listUserOwnedApiServers(
+    uid: string,
+  ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
+    if (typeof uid !== "string" || uid.length === 0) {
+      throw new TypeError("Invalid user ID to list owned API servers for!");
+    }
+
+    let rows: unknown[];
+    try {
+      rows = await this.db
+        .selectFrom("api_servers")
+        .where("owner_type", "=", "user")
+        .where("owner_uid", "=", uid)
+        .orderBy("created_at", "desc")
+        .limit(100)
+        .selectAll()
+        .execute();
+    } catch (e: unknown) {
+      console.error(`Failed to list API servers owned by user '${uid}':`, e);
+      throw new Error("Failed to list API servers owned by user");
+    }
+
+    return await this.parseApiServerDefinitionsFromDbRows(rows);
+  }
+
   private async parseApiServerDefinitionsFromDbRows(rows: unknown[]): Promise<readonly SchemaVaultsApiServerDefinition[]> {
-    const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
     const parsed = await schemaVaultsApiServerDefinitionSchema
       .array()
       .safeParseAsync(
@@ -229,14 +273,11 @@ export class SchemaVaultsApiServerRegistry {
             throw new TypeError("Failed to parse 'created_at' from database");
           }
 
-          const owner_organization_id: OrganizationID = (
-            "owner_organization_id" in row && typeof row['owner_organization_id'] === 'string'
-          ) ? row['owner_organization_id'] : ownerOrganizationId;
-
           return {
             ...row,
             created_at,
-            owner_organization_id
+            hardcoded: false,
+            ...ownershipFieldsFromDatabaseRow(row),
           };
         }),
       );
@@ -344,15 +385,18 @@ export class SchemaVaultsApiServerRegistry {
     const loadOrgApiServerDefinitionsFromDb = async (organization_id: OrganizationID): Promise<readonly SchemaVaultsApiServerDefinition[]> => {
       let rows: unknown[];
       try {
+        // The platform's virtual organization "owns" the platform-owned rows
+        // (owner_type = 'platform'); user-owned rows also have a NULL owner
+        // organization, so the discriminant — not the NULL — selects them.
         rows = await this.db
           .selectFrom("api_servers")
           .where((eb) =>
             organization_id === ownerOrganizationId
-              ? eb.or([
+              ? eb("owner_type", "=", "platform")
+              : eb.and([
+                  eb("owner_type", "=", "organization"),
                   eb("owner_organization_id", "=", organization_id),
-                  eb("owner_organization_id", "is", null),
                 ])
-              : eb("owner_organization_id", "=", organization_id)
           )
           .limit(100)
           .selectAll()
@@ -382,6 +426,17 @@ export class SchemaVaultsApiServerRegistry {
 
     return api_server_definitions;
   }
+}
+
+export interface RegisterApiServerOptions {
+  api_server_id: string;
+  api_server_name: string;
+  api_server_description: string;
+  publicly_listed: boolean;
+  /** Who the API server belongs to; see `resolveRequestedOwnershipForCreation`. */
+  ownership: ResourceOwnership;
+  /** The creating user's uid, for the audit trail (null when unknown). */
+  created_by?: string | null;
 }
 
 export default SchemaVaultsApiServerRegistry;

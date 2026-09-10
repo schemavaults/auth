@@ -14,6 +14,12 @@ export {
 } from "./OwnerOrganizationProvider";
 export type { AuthUiOwnerOrganizationProviderProps } from "./OwnerOrganizationProvider";
 
+export {
+  ResourceOwnerLabel,
+  useResolvedResourceOwnership,
+} from "./ResourceOwnerLabel";
+export type { ResourceOwnerLabelProps } from "./ResourceOwnerLabel";
+
 export * from "./SignOutButton";
 export type * from "./SignOutButton";
 

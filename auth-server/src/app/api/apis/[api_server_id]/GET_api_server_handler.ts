@@ -11,8 +11,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import isUserInOrganization from "@/lib/isUserInOrganization";
-import { type OrganizationID } from "@schemavaults/auth-common";
+import { canUserViewResource } from "@/lib/ownership/resource-access";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apis/[api_server_id]";
@@ -117,17 +116,9 @@ export async function GET_api_server_handler(
       }
 
       if (!apiServer.public && !user.admin) {
-        let authorized: boolean = false;
-        if (apiServer.owner_organization_id) {
-          const role = await isUserInOrganization(
-            dbh.db,
-            user,
-            apiServer.owner_organization_id as OrganizationID,
-          );
-          const canViewApiServer: boolean = role === 'admin' || role === 'owner' || role === 'member';
-          authorized = canViewApiServer;
-        }
-
+        // Organization members, the owning user of a user-owned API server,
+        // or global admins may view a private API server.
+        const authorized: boolean = await canUserViewResource(dbh.db, user, apiServer);
         if (!authorized) {
           return NextResponse.json(
             {

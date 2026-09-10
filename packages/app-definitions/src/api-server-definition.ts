@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { apiServerIdSchema } from "./api-server-id";
 import { schemaVaultsAppEnvironmentSchema } from "./app-environments";
+import { resourceOwnershipFieldsShape } from "./resource-ownership";
 
 export const schemaVaultsApiServerDefinitionSchema = z
   .object({
@@ -10,7 +11,8 @@ export const schemaVaultsApiServerDefinitionSchema = z
     created_at: z.number().nonnegative(),
     public: z.boolean(), // whether the app is publicly listed
     hardcoded: z.boolean(),
-    owner_organization_id: z.string().nullable().optional(),
+    // Ownership: see resource-ownership.ts (resolveResourceOwnership)
+    ...resourceOwnershipFieldsShape,
   })
   .required({
     api_server_id: true,

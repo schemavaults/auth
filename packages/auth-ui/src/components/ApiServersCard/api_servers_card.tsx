@@ -13,7 +13,9 @@ import {
 import type {
   ApiServerId,
   ListApiServersQueryType,
+  RequestedResourceOwnership,
 } from "@schemavaults/app-definitions";
+import { useCurrentUser } from "@schemavaults/auth-react-provider";
 import {
   ApiServersTable,
   clearUseApiServersCache,
@@ -43,8 +45,45 @@ export interface ApiServersCardProps {
   isOrgOwner?: boolean;
 }
 
+/**
+ * @description Who an API server created from a card of the given query
+ * type belongs to: platform-owned from the admin "all" list,
+ * organization-owned from an organization page, user-owned from the
+ * "owned" (your API servers) card. Returns null when the card cannot
+ * create API servers.
+ */
+function resolveCreateOwnershipForCard(
+  queryType: ListApiServersQueryType,
+  organization_id: string | undefined,
+  platformOrganizationId: string,
+  currentUserUid: string | undefined,
+): RequestedResourceOwnership | null {
+  switch (queryType) {
+    case "all":
+      return { owner_type: "platform" };
+    case "org":
+      return organization_id && organization_id !== platformOrganizationId
+        ? { owner_type: "organization", owner_organization_id: organization_id }
+        : { owner_type: "platform" };
+    case "owned":
+      return currentUserUid
+        ? { owner_type: "user", owner_uid: currentUserUid }
+        : null;
+    default:
+      return null;
+  }
+}
+
 export function ApiServersCard(props: ApiServersCardProps): ReactElement {
   const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
+  const currentUser = useCurrentUser();
+  const createOwnership: RequestedResourceOwnership | null =
+    resolveCreateOwnershipForCard(
+      props.queryType,
+      props.organization_id,
+      ownerOrganizationId,
+      currentUser?.uid,
+    );
   const cardTitle = props.cardTitle ?? "API Servers";
   const cardDescription =
     props.cardDescription ??
@@ -82,24 +121,22 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
                   organization_id={props.organization_id}
                   preloaded={props.preloaded}
                   showConnectAppToApi={props.showConnectAppToApi}
-                  isOrgOwner={props.isOrgOwner}
+                  isOrgOwner={props.isOrgOwner || props.queryType === "owned"}
                 />
               </CardContent>
               <CardFooter>
                 <div className="flex flex-row items-start justify-start gap-2"></div>
               </CardFooter>
             </Card>
-            <CreateApiServerDialog
-              clearApiServersCache={clearUseApiServersCache}
-              owner_organization_id={
-                props.queryType === "all"
-                  ? ownerOrganizationId
-                  : props.organization_id
-              }
-              open={createApiServerDialogOpen}
-              onOpenChange={setCreateApiServerDialogOpen}
-              uuid={props.uuid}
-            />
+            {createOwnership && (
+              <CreateApiServerDialog
+                clearApiServersCache={clearUseApiServersCache}
+                ownership={createOwnership}
+                open={createApiServerDialogOpen}
+                onOpenChange={setCreateApiServerDialogOpen}
+                uuid={props.uuid}
+              />
+            )}
             {(props.queryType === "all" || props.showConnectAppToApi) && (
               <ConnectAppToApiDialog
                 open={connectAppToApiDialogOpen}
@@ -107,6 +144,7 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
               />
             )}
             {(props.queryType === "all" ||
+              props.queryType === "owned" ||
               (props.queryType === "org" && props.isOrgOwner)) && (
               <CreateApiServerDomainDialog
                 open={typeof isAddApiServerDomainDialogOpen === "string"}

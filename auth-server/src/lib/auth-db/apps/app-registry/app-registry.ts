@@ -13,14 +13,16 @@ import {
   getHardcodedSchemaVaultsApps,
   getHardcodedAppDomains,
   type AppId,
+  type ResourceOwnership,
 } from "@schemavaults/app-definitions";
 import type { AppClientSecret } from "./app-client-secrets-table";
 import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
+import { toOwnershipDatabaseColumns } from "@/lib/ownership/ownership-columns";
+import type { NewApp } from "./apps-table";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { ConflictError } from "@/lib/error/ConflictError";
-import { z } from "zod";
 import listApps from "./list-apps";
 import parseAppDefinitionDatabaseRow from "./parse-app-definition-database-row";
 
@@ -96,18 +98,15 @@ export class SchemaVaultsAppRegistry {
     return parsed_domains;
   }
 
-  public async registerApp(
-    app_id: string,
-    app_name: string,
-    app_description: string,
-    publicly_listed: boolean,
-    owner_organization_id: OrganizationID,
-    web: boolean,
-  ): Promise<void> {
-
-    if (!organizationIdSchema.safeParse(owner_organization_id).success) {
-      throw new TypeError("Received invalid organization ID to register application to!")
-    }
+  public async registerApp({
+    app_id,
+    app_name,
+    app_description,
+    publicly_listed,
+    ownership,
+    web,
+    created_by = null,
+  }: RegisterAppOptions): Promise<void> {
 
     if (typeof publicly_listed !== 'boolean') {
       throw new TypeError("Expected 'publicly_listed' to be a boolean!")
@@ -117,15 +116,30 @@ export class SchemaVaultsAppRegistry {
       throw new TypeError("Expected 'web' to be a boolean!")
     }
 
+    if (
+      ownership.owner_type === "organization" &&
+      !organizationIdSchema.safeParse(ownership.owner_organization_id).success
+    ) {
+      throw new TypeError("Received invalid organization ID to register application to!")
+    }
+
+    // Hardcoded app ids (the auth server's own id) have no database row, so
+    // the insert's uniqueness conflict cannot protect them. Reject them here.
+    if (isHardcodedAppId(app_id)) {
+      throw new ConflictError(`App ID '${app_id}' is reserved by the platform`);
+    }
+
+    // Validate the API-facing shape first (id/name/description limits, etc.)
     const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
       app_id,
       app_name,
       app_description,
       created_at: Date.now(),
       public: publicly_listed ?? false,
-      owner_organization_id: owner_organization_id === getAuthServerOwnerOrganizationId() ? null : owner_organization_id,
       hardcoded: false,
       web,
+      ...ownership,
+      created_by,
     } satisfies SchemaVaultsApp);
     if (!parsed_app.success) {
       console.error(parsed_app.error.issues);
@@ -133,15 +147,56 @@ export class SchemaVaultsAppRegistry {
     }
     const app: SchemaVaultsApp = parsed_app.data;
 
+    const row: NewApp = {
+      app_id: app.app_id,
+      app_name: app.app_name,
+      app_description: app.app_description,
+      created_at: app.created_at,
+      public: app.public,
+      hardcoded: false,
+      web: app.web,
+      ...toOwnershipDatabaseColumns(ownership),
+      created_by,
+    };
+
     const result = await this.db
       .insertInto("apps")
-      .values(app)
+      .values(row)
       .onConflict((oc) => oc.column("app_id").doNothing())
       .executeTakeFirst();
 
     if (result.numInsertedOrUpdatedRows === BigInt(0)) {
       throw new ConflictError("An app with this ID already exists");
     }
+  }
+
+  /**
+   * @description Lists the apps owned directly by a user account
+   * (`owner_type = 'user'`), independent of any organization membership.
+   */
+  public async listUserOwnedApps(uid: string): Promise<SchemaVaultsApp[]> {
+    if (typeof uid !== "string" || uid.length === 0) {
+      throw new TypeError("Invalid user ID to list owned apps for!");
+    }
+
+    const MAX_PAGE_SIZE: number = 50;
+
+    let rows: unknown[];
+    try {
+      rows = await this.db
+        .selectFrom("apps")
+        .where("owner_type", "=", "user")
+        .where("owner_uid", "=", uid)
+        .orderBy("created_at", "desc")
+        .limit(MAX_PAGE_SIZE)
+        .selectAll()
+        .execute();
+    } catch (e: unknown) {
+      console.error(`Failed to list apps owned by user '${uid}':`, e);
+      throw new Error("Failed to list apps owned by user");
+    }
+
+    return rows.map(this.parseAppDefinitionDatabaseRow);
   }
 
   private parseAppDefinitionDatabaseRow(row: unknown): SchemaVaultsApp {
@@ -177,17 +232,20 @@ export class SchemaVaultsAppRegistry {
     const MAX_PAGE_SIZE: number = 50;
     const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
 
-    let result: SchemaVaultsApp[];
+    let result: unknown[];
     try {
+      // The platform's virtual organization "owns" the platform-owned rows
+      // (owner_type = 'platform'); user-owned rows also have a NULL owner
+      // organization, so the discriminant — not the NULL — selects them.
       result = await this.db
         .selectFrom("apps")
         .where((eb) =>
           org_id === ownerOrganizationId
-            ? eb.or([
+            ? eb("owner_type", "=", "platform")
+            : eb.and([
+                eb("owner_type", "=", "organization"),
                 eb("owner_organization_id", "=", org_id),
-                eb("owner_organization_id", "is", null),
               ])
-            : eb("owner_organization_id", "=", org_id)
         )
         .limit(MAX_PAGE_SIZE)
         .selectAll()
@@ -343,6 +401,18 @@ export class SchemaVaultsAppRegistry {
       throw new Error("Failed to add new app domain; db insert failed");
     }
   }
+}
+
+export interface RegisterAppOptions {
+  app_id: string;
+  app_name: string;
+  app_description: string;
+  publicly_listed: boolean;
+  /** Who the app belongs to; see `resolveRequestedOwnershipForCreation`. */
+  ownership: ResourceOwnership;
+  web: boolean;
+  /** The creating user's uid, for the audit trail (null when unknown). */
+  created_by?: string | null;
 }
 
 export default SchemaVaultsAppRegistry;

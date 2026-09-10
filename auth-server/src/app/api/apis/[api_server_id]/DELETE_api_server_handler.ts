@@ -11,8 +11,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import { isUserInOrganizationWithRole } from "@/lib/isUserInOrganization";
-import { type OrganizationID } from "@schemavaults/auth-common";
+import { isUserOwnerOfResource } from "@/lib/ownership/resource-access";
 
 export async function DELETE_api_server_handler(
   req: NextRequest,
@@ -55,26 +54,14 @@ export async function DELETE_api_server_handler(
         );
       }
 
-      const isGlobalAdmin = user.admin === true;
-      if (!isGlobalAdmin) {
-        if (!apiServer.owner_organization_id) {
-          return NextResponse.json(
-            { success: false, message: "Only global admins can delete this API server" },
-            { status: 403 },
-          );
-        }
-        const isOrgOwner = await isUserInOrganizationWithRole(
-          user,
-          apiServer.owner_organization_id as OrganizationID,
-          "owner",
-          dbh.db,
+      // Organization owners, the owning user of a user-owned API server, or
+      // global admins may delete it (platform-owned API servers: admins only).
+      const isOwner: boolean = await isUserOwnerOfResource(dbh.db, user, apiServer);
+      if (!isOwner) {
+        return NextResponse.json(
+          { success: false, message: "Only the API server's owner (organization owners, the owning user, or global admins) can delete API servers" },
+          { status: 403 },
         );
-        if (!isOrgOwner) {
-          return NextResponse.json(
-            { success: false, message: "Only organization owners or global admins can delete API servers" },
-            { status: 403 },
-          );
-        }
       }
 
       const result = await registry.deleteApiServer(api_server_id);

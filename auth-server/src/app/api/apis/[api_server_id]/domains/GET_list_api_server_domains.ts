@@ -11,7 +11,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
+import hasUserAccessToApiServer from "@/lib/isUserInApiOwnerOrganization";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apis/[api_server_id]/domains";
@@ -100,7 +100,7 @@ export async function GET_list_api_server_domains(
       if (!user.admin) {
         let authorized = false;
         try {
-          authorized = await isUserInApiOwnerOrganization(
+          authorized = await hasUserAccessToApiServer(
             user,
             api_server_id,
             dbh.db,
@@ -108,7 +108,7 @@ export async function GET_list_api_server_domains(
           );
         } catch (e: unknown) {
           await captureServerException(dbh.db, e, {
-            op_name: "GET_list_api_server_domains.isUserInApiOwnerOrganization",
+            op_name: "GET_list_api_server_domains.hasUserAccessToApiServer",
             route: ROUTE,
             uid: user.uid,
             context: { api_server_id, nonFatal: true },

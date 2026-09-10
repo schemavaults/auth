@@ -9,6 +9,7 @@ import type { SchemaVaultsApiServerDefinition } from "@schemavaults/app-definiti
 import { ApiServerRowActions } from "./ApiServerRowActions";
 import ApiServerDomainsList from "./ApiServerDomainsList";
 import type { PreloadedApiServersTableDataWithDomainRefs } from "./preloaded_api_servers_table_data";
+import { ResourceOwnerLabel } from "@/components/ResourceOwnerLabel";
 
 export function getApiServersTableColumns(
   preloaded?: PreloadedApiServersTableDataWithDomainRefs,
@@ -72,7 +73,10 @@ export function getApiServersTableColumns(
     {
       id: "owner_organization_id",
       accessorKey: "owner_organization_id",
-      header: "Owner Organization",
+      header: "Owner",
+      cell: ({ row }): ReactElement => (
+        <ResourceOwnerLabel resource={row.original} />
+      ),
     },
     {
       id: "domains",

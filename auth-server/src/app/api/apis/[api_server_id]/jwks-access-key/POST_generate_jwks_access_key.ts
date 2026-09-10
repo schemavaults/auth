@@ -5,7 +5,7 @@ import { withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuar
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
-import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
+import hasUserAccessToApiServer from "@/lib/isUserInApiOwnerOrganization";
 import type { JwksAccessKeyStatusQueryResponse } from '@/lib/auth-db/jwks-access-keys';
 import captureServerException from "@/lib/captureServerException";
 
@@ -39,7 +39,7 @@ export async function POST_generate_jwks_access_key(request: NextRequest, ctx: R
 
       // Verify user is in the owner organization
       try {
-        const isAuthorized = await isUserInApiOwnerOrganization(user, api_server_id, dbh.db);
+        const isAuthorized = await hasUserAccessToApiServer(user, api_server_id, dbh.db);
         if (!isAuthorized && !user.admin) {
           return NextResponse.json(
             { success: false, message: "You must be a member of the owner organization to manage JWKS access keys" },
@@ -48,7 +48,7 @@ export async function POST_generate_jwks_access_key(request: NextRequest, ctx: R
         }
       } catch (e: unknown) {
         await captureServerException(dbh.db, e, {
-          op_name: "POST_generate_jwks_access_key.isUserInApiOwnerOrganization",
+          op_name: "POST_generate_jwks_access_key.hasUserAccessToApiServer",
           route: ROUTE,
           uid: user.uid,
           context: { api_server_id },

@@ -12,8 +12,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import isUserInOrganization from "@/lib/isUserInOrganization";
-import { type OrganizationID } from "@schemavaults/auth-common";
+import { canUserViewResource } from "@/lib/ownership/resource-access";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apps/[app_id]/domains";
@@ -112,19 +111,9 @@ export async function GET_list_app_domains(
       }
 
       if (!app.public && !user.admin) {
-        let authorized: boolean = false;
-        if (app.owner_organization_id) {
-          const role = await isUserInOrganization(
-            dbh.db,
-            user,
-            app.owner_organization_id as OrganizationID,
-          )
-          if (role === 'admin' || role === 'owner' || role === 'member') {
-            authorized = true;
-          }
-        }
+        const authorized: boolean = await canUserViewResource(dbh.db, user, app);
         if (!authorized) {
-          console.error("Non-public apps are currently reserved for admins!");
+          console.error("Non-public apps are only visible to their owners!");
           return NextResponse.json(
             {
               success: false,

@@ -10,9 +10,8 @@ import {
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import isUserInOrganization from "@/lib/isUserInOrganization";
-import { type OrganizationID } from "@schemavaults/auth-common";
-import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
+import { resolveRequestedOwnershipForCreation } from "@/lib/ownership/requested-ownership";
+import type { ResourceOwnership } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { ConflictError } from "@/lib/error/ConflictError";
 import captureServerException from "@/lib/captureServerException";
@@ -24,7 +23,7 @@ const ROUTE = "/api/apps";
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-  async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps) => {
+  async ({ req, user, dbh, redis, environment }: IProtectedAuthenticatedApiRouteProps) => {
     if (environment === "development") {
       console.log("[/api/apps] POST request received");
     }
@@ -56,56 +55,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-      if (!newResource.owner_organization_id) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "No 'owner_organization_id' was set in request body.",
-          } satisfies ResourceCreationResponse,
-          {
-            status: 400,
-          },
-        );
-    }
-
-      let owner_organization_id: OrganizationID | null | undefined = newResource.owner_organization_id;
-
-    // If owner_organization_id is specified, verify user has access
-      if (owner_organization_id) {
-        const role = await isUserInOrganization(
+    // Who will own the new app (platform / organization / user), and is the
+    // caller allowed to create apps for that owner?
+    let ownership: ResourceOwnership;
+    try {
+      const resolved = await resolveRequestedOwnershipForCreation(
         dbh.db,
         user,
-        owner_organization_id satisfies OrganizationID,
+        newResource,
+        redis.client,
       );
-        const hasAccess: boolean = user.admin || role === 'admin' || role === 'owner';
-      if (!hasAccess) {
+      if (!resolved.ok) {
         return NextResponse.json(
           {
             success: false,
-            message: "You must be a member of the organization to create apps for it",
+            message: resolved.message,
           } satisfies ResourceCreationResponse,
-          {
-            status: 403,
-          },
+          { status: resolved.status },
         );
       }
-    } else {
-      // If no owner_organization_id, only admins can create apps
-      if (!user.admin) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "You must be an admin to create a new frontend application without an organization",
-          } satisfies ResourceCreationResponse,
-          {
-            status: 403,
-          },
-        );
-      } else {
-        // User is an admin, default to the configured owner org if none set
-        owner_organization_id = getAuthServerOwnerOrganizationId();
-      }
+      ownership = resolved.ownership;
+    } catch (e: unknown) {
+      await captureServerException(dbh.db, e, {
+        op_name: "POST_app_creation_handler.resolveRequestedOwnership",
+        route: ROUTE,
+        uid: user.uid,
+        context: { app_id: newResource.app_id },
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Failed to resolve who should own the new app",
+        } satisfies ResourceCreationResponse,
+        { status: 500 },
+      );
     }
 
     let appRegistry: SchemaVaultsAppRegistry;
@@ -142,14 +125,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (debug) {
         console.log("[POST /api/apps] Attempting to register new app: ", newResource)
       }
-      await appRegistry.registerApp(
-        newResource.app_id,
-        newResource.app_name,
-        newResource.app_description,
-        newResource.public,
-        owner_organization_id,
-        newResource.web,
-      );
+      await appRegistry.registerApp({
+        app_id: newResource.app_id,
+        app_name: newResource.app_name,
+        app_description: newResource.app_description,
+        publicly_listed: newResource.public,
+        ownership,
+        web: newResource.web,
+        created_by: user.uid,
+      });
 
       return NextResponse.json({
         success: true,
@@ -170,7 +154,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         op_name: "POST_app_creation_handler.registerApp",
         route: ROUTE,
         uid: user.uid,
-        context: { app_id: newResource.app_id, owner_organization_id },
+        context: { app_id: newResource.app_id, ownership },
       });
       return NextResponse.json(
         {

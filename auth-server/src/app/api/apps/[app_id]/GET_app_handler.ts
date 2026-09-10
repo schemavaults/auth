@@ -11,8 +11,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import isUserInOrganization from "@/lib/isUserInOrganization";
-import { type OrganizationID } from "@schemavaults/auth-common";
+import { canUserViewResource } from "@/lib/ownership/resource-access";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apps/[app_id]";
@@ -110,17 +109,9 @@ export async function GET_app_handler(
       }
 
       if (!app.public && !user.admin) {
-        let authorized: boolean = false;
-        if (app.owner_organization_id) {
-          const role = await isUserInOrganization(
-            dbh.db,
-            user,
-            app.owner_organization_id as OrganizationID,
-          )
-          if (role === 'admin' || role === 'owner' || role === 'member') {
-            authorized = true;
-          }
-        }
+        // Organization members, the owning user of a user-owned app, or
+        // global admins may view a private app.
+        const authorized: boolean = await canUserViewResource(dbh.db, user, app);
         if (!authorized) {
           return NextResponse.json(
             {
