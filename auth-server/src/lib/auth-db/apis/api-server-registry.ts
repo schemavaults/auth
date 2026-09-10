@@ -19,6 +19,7 @@ import type { NewApiServer } from "./apis-table";
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations/list-user-organization-memberships";
 import { ConflictError } from "@/lib/error/ConflictError";
 import {
   isHardcodedApiServerId,
@@ -225,6 +226,63 @@ export class SchemaVaultsApiServerRegistry {
     if (result.numInsertedOrUpdatedRows === BigInt(0)) {
       throw new ConflictError("An API server with this ID already exists");
     }
+  }
+
+  /**
+   * @description Lists every API server the user can reach by ownership:
+   * those owned by their own account, those owned by organizations they
+   * belong to (any role), and — for global admins — every API server
+   * including platform-owned and hardcoded ones. Backs the `/apis` page.
+   */
+  public async listApiServersAccessibleToUser(
+    user: UserData,
+  ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
+    if (!user) {
+      throw new Error("You must be logged in to list API servers");
+    }
+    if (user.admin === true) {
+      return await this.listAllApiServers();
+    }
+
+    const memberships = await listUserOrganizationMemberships(
+      this.db,
+      user.uid,
+      false,
+    );
+    const organization_ids: string[] = [
+      ...new Set(memberships.map((m) => m.organization_id)),
+    ];
+
+    let rows: unknown[];
+    try {
+      rows = await this.db
+        .selectFrom("api_servers")
+        .where((eb) =>
+          eb.or([
+            eb.and([
+              eb("owner_type", "=", "user"),
+              eb("owner_uid", "=", user.uid),
+            ]),
+            ...(organization_ids.length > 0
+              ? [
+                  eb.and([
+                    eb("owner_type", "=", "organization"),
+                    eb("owner_organization_id", "in", organization_ids),
+                  ]),
+                ]
+              : []),
+          ]),
+        )
+        .orderBy("created_at", "desc")
+        .limit(100)
+        .selectAll()
+        .execute();
+    } catch (e: unknown) {
+      console.error(`Failed to list API servers accessible to user '${user.uid}':`, e);
+      throw new Error("Failed to list API servers accessible to user");
+    }
+
+    return await this.parseApiServerDefinitionsFromDbRows(rows);
   }
 
   /**

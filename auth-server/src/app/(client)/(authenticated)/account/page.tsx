@@ -14,9 +14,7 @@ import {
 import {
   AuthorizedAppsRegistry,
   listUserOrganizationMembershipDetails,
-  preloadApiServersTable,
   preloadAppsTable,
-  SchemaVaultsApiServerRegistry,
   SchemaVaultsAppRegistry,
   UserRegistry,
   type ServerlessDatabase,
@@ -25,12 +23,8 @@ import {
   userProfileNamesSchema,
   type UserProfileNames,
 } from "@schemavaults/auth-common";
-import type {
-  PreloadedApiServersTableDataWithDomainRefs,
-  PreloadedAppsTableDataWithDomainRefs,
-} from "@schemavaults/auth-ui";
+import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import adminOnlyOrganizationCreation from "@/lib/config/admin-only-organization-creation";
-import allowUserOwnedResourceCreation from "@/lib/config/allow-user-owned-resource-creation";
 import { withServerTrace } from "@/lib/withServerTrace";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next";
@@ -62,28 +56,6 @@ async function attemptToPreloadAppsAndDomains(
   throw new Error(
     "Failed to prepare dependencies to preload authorized apps for user",
   );
-}
-
-async function attemptToPreloadOwnedApps(
-  dbh: ServerlessDatabase,
-  userData: UserData,
-): Promise<PreloadedAppsTableDataWithDomainRefs> {
-  return await preloadAppsTable({
-    appsRegistry: new SchemaVaultsAppRegistry(dbh.db),
-    list_apps_query_type: "owned",
-    user: userData,
-  });
-}
-
-async function attemptToPreloadOwnedApiServers(
-  dbh: ServerlessDatabase,
-  userData: UserData,
-): Promise<PreloadedApiServersTableDataWithDomainRefs> {
-  return await preloadApiServersTable({
-    apiServerRegistry: new SchemaVaultsApiServerRegistry(dbh.db),
-    list_api_servers_query_type: "owned",
-    user: userData,
-  });
 }
 
 async function attemptToPreloadUserOrganizationMemberships(
@@ -135,29 +107,19 @@ async function AuthServerAccountDashboardPageServerComponent(
     );
   }
 
-  const [
-    appsResult,
-    orgsResult,
-    adminOnlyOrgCreationResult,
-    profileResult,
-    ownedAppsResult,
-    ownedApiServersResult,
-    userOwnedCreationResult,
-  ] = await withServerTrace({
-    op_name: "GET /account (preload data)",
-    op_category: "subroutine",
-    event_id: crypto.randomUUID(),
-    callback: async () =>
-      await Promise.allSettled([
-        attemptToPreloadAppsAndDomains(dbh, user),
-        attemptToPreloadUserOrganizationMemberships(dbh, user),
-        adminOnlyOrganizationCreation(dbh.db, redis.client),
-        attemptToPreloadUserProfile(dbh, user),
-        attemptToPreloadOwnedApps(dbh, user),
-        attemptToPreloadOwnedApiServers(dbh, user),
-        allowUserOwnedResourceCreation(dbh.db, redis.client),
-      ]),
-  });
+  const [appsResult, orgsResult, adminOnlyOrgCreationResult, profileResult] =
+    await withServerTrace({
+      op_name: "GET /account (preload data)",
+      op_category: "subroutine",
+      event_id: crypto.randomUUID(),
+      callback: async () =>
+        await Promise.allSettled([
+          attemptToPreloadAppsAndDomains(dbh, user),
+          attemptToPreloadUserOrganizationMemberships(dbh, user),
+          adminOnlyOrganizationCreation(dbh.db, redis.client),
+          attemptToPreloadUserProfile(dbh, user),
+        ]),
+    });
 
   const preloaded_authorized_apps =
     appsResult.status === "fulfilled" ? appsResult.value : undefined;
@@ -167,36 +129,6 @@ async function AuthServerAccountDashboardPageServerComponent(
   // GET /api/user/profile client-side instead.
   const preloaded_user_profile =
     profileResult.status === "fulfilled" ? profileResult.value : undefined;
-
-  const preloaded_owned_apps =
-    ownedAppsResult.status === "fulfilled" ? ownedAppsResult.value : undefined;
-  const preloaded_owned_api_servers =
-    ownedApiServersResult.status === "fulfilled"
-      ? ownedApiServersResult.value
-      : undefined;
-  if (ownedAppsResult.status === "rejected") {
-    console.error("Failed to preload user-owned apps:", ownedAppsResult.reason);
-  }
-  if (ownedApiServersResult.status === "rejected") {
-    console.error(
-      "Failed to preload user-owned API servers:",
-      ownedApiServersResult.reason,
-    );
-  }
-  if (userOwnedCreationResult.status === "rejected") {
-    console.error(
-      "Failed to load server setting for allow_user_owned_resource_creation on account page:",
-      userOwnedCreationResult.reason,
-    );
-  }
-  // Admins can always create their own apps/APIs; for everyone else the
-  // cards are shown iff the server setting allows it (POST /api/apps and
-  // POST /api/apis enforce the setting regardless).
-  const show_owned_resources: boolean =
-    user.admin === true ||
-    (userOwnedCreationResult.status === "fulfilled"
-      ? userOwnedCreationResult.value
-      : true);
 
   if (appsResult.status === "rejected") {
     console.error("Failed to preload authorized apps:", appsResult.reason);
@@ -232,9 +164,6 @@ async function AuthServerAccountDashboardPageServerComponent(
       preloaded_organization_memberships={preloaded_organization_memberships}
       preloaded_user_profile={preloaded_user_profile}
       can_create_organization={can_create_organization}
-      preloaded_owned_apps_data={preloaded_owned_apps}
-      preloaded_owned_api_servers_data={preloaded_owned_api_servers}
-      show_owned_resources={show_owned_resources}
     />
   );
 }

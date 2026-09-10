@@ -6,7 +6,8 @@
 //     for it explicitly (`owner_type: "user"`) and by sending no ownership
 //     fields at all (the non-admin default);
 //   - the created definition reports owner_type/owner_uid, and shows up in
-//     GET /api/apps?list_apps_query_type=owned;
+//     GET /api/apps?list_apps_query_type=owned and =accessible (the list
+//     behind the /apps page);
 //   - the owning user can manage it (add a domain) and delete it;
 //   - a different regular user can neither read nor delete it (403);
 //   - a regular user cannot create platform-owned apps, nor apps owned by
@@ -148,6 +149,20 @@ describe("User-owned client applications", () => {
                 );
               });
 
+              // 3b. ...and in the "accessible" list that backs /apps
+              cy.request<ListAppsResponseBody>({
+                method: "GET",
+                url: "/api/apps?list_apps_query_type=accessible",
+              }).then((listResp) => {
+                expect(listResp.status).to.eq(200);
+                expect(listResp.body.success).to.eq(true);
+                const ids = (listResp.body.list ?? []).map((a) => a.app_id);
+                expect(
+                  ids,
+                  "accessible list should include the new app",
+                ).to.include(app_id);
+              });
+
               // 4. The owner can manage it (add a domain)
               cy.request({
                 method: "POST",
@@ -232,6 +247,20 @@ describe("User-owned client applications", () => {
                       expect(
                         ids,
                         "another user's owned list must not include the app",
+                      ).to.not.include(app_id);
+                    });
+
+                    cy.request<ListAppsResponseBody>({
+                      method: "GET",
+                      url: "/api/apps?list_apps_query_type=accessible",
+                    }).then((listResp) => {
+                      expect(listResp.status).to.eq(200);
+                      const ids = (listResp.body.list ?? []).map(
+                        (a) => a.app_id,
+                      );
+                      expect(
+                        ids,
+                        "another user's accessible list must not include the app",
                       ).to.not.include(app_id);
                     });
 

@@ -7,6 +7,12 @@ export interface ApiServersTableConfig {
   showConnectAppToApi: boolean;
   isOrgOwner: boolean;
   queryType?: ListApiServersQueryType;
+  /**
+   * For the "accessible" query: ids of the organizations in which the
+   * viewer is an owner/admin (decides which rows expose management
+   * actions).
+   */
+  managedOrganizationIds?: readonly string[];
 }
 
 export const ApiServersTableConfigContext =
@@ -14,4 +20,5 @@ export const ApiServersTableConfigContext =
     showConnectAppToApi: false,
     isOrgOwner: false,
     queryType: undefined,
+    managedOrganizationIds: undefined,
   });

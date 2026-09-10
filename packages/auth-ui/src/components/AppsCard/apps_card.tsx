@@ -21,6 +21,7 @@ import type {
   RequestedResourceOwnership,
 } from "@schemavaults/app-definitions";
 import { useCurrentUser } from "@schemavaults/auth-react-provider";
+import type { OwnerTypeFilterValue } from "@/components/OwnerTypeFilter";
 import CreateAppDialog, {
   CreateAppDialogOpenDispatchContext,
 } from "@/components/CreateAppDialog";
@@ -44,6 +45,20 @@ export interface AppsCardProps {
   organization_id?: string;
   uuid: () => string;
   isOrgOwner?: boolean;
+  /**
+   * For the "accessible" query: ids of the organizations in which the
+   * viewer is an owner/admin (decides which rows expose management
+   * actions).
+   */
+  managedOrganizationIds?: readonly string[];
+  /** Client-side filter on each row's resolved owner type. */
+  ownerTypeFilter?: OwnerTypeFilterValue;
+  /**
+   * Whether the card offers app creation at all (default true). Pages set
+   * this to false when the `allow_user_owned_resource_creation` server
+   * setting is disabled for a non-admin viewer.
+   */
+  canCreate?: boolean;
 }
 
 /**
@@ -66,6 +81,10 @@ function resolveCreateOwnershipForCard(
         ? { owner_type: "organization", owner_organization_id: organization_id }
         : { owner_type: "platform" };
     case "owned":
+    case "accessible":
+      // The "accessible" page creates personal apps; organization-owned
+      // apps are created from the organization's page and platform-owned
+      // ones from the admin console.
       return currentUserUid
         ? { owner_type: "user", owner_uid: currentUserUid }
         : null;
@@ -86,9 +105,11 @@ export function AppsCard(props: AppsCardProps): ReactElement {
       currentUser?.uid,
     );
   const canCreateApps: boolean =
+    (props.canCreate ?? true) &&
     !!createOwnership &&
     (props.queryType === "all" ||
       props.queryType === "owned" ||
+      props.queryType === "accessible" ||
       (props.queryType === "org" && !!props.isOrgOwner));
   const cardTitle = props.cardTitle ?? "Applications";
   const cardDescription =
@@ -125,7 +146,10 @@ export function AppsCard(props: AppsCardProps): ReactElement {
                   queryType={props.queryType}
                   preloaded={props.preloaded}
                   organization_id={props.organization_id}
-                  isOrgOwner={props.isOrgOwner || props.queryType === "owned"}
+                  isOrgOwner={props.isOrgOwner}
+                  managedOrganizationIds={props.managedOrganizationIds}
+                  ownerTypeFilter={props.ownerTypeFilter}
+                  canCreate={props.canCreate ?? true}
                 />
               </CardContent>
               <CardFooter>

@@ -19,6 +19,7 @@ export function getAppsTableColumns(
   queryType: ListAppsQueryType,
   preloaded?: PreloadedAppsTableDataWithDomainRefs,
   isOrgOwner?: boolean,
+  managedOrganizationIds?: readonly string[],
 ): ColumnDef<SchemaVaultsApp>[] {
   const columns: ColumnDef<SchemaVaultsApp>[] = [
     {
@@ -146,7 +147,14 @@ export function getAppsTableColumns(
       cell: ({ row }): ReactElement => {
         const app: SchemaVaultsApp = row.original;
 
-        return <FrontendApplicationActions app={app} queryType={queryType} isOrgOwner={isOrgOwner} />;
+        return (
+          <FrontendApplicationActions
+            app={app}
+            queryType={queryType}
+            isOrgOwner={isOrgOwner}
+            managedOrganizationIds={managedOrganizationIds}
+          />
+        );
       },
     },
   ];

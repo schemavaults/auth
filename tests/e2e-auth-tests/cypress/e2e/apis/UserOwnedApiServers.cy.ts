@@ -137,6 +137,22 @@ describe("User-owned API servers", () => {
                 ).to.include(api_server_id);
               });
 
+              // 3b. ...and in the "accessible" list that backs /apis
+              cy.request<ListApiServersResponseBody>({
+                method: "GET",
+                url: "/api/apis?list_apis_query_type=accessible",
+              }).then((listResp) => {
+                expect(listResp.status).to.eq(200);
+                expect(listResp.body.success).to.eq(true);
+                const ids = (listResp.body.list ?? []).map(
+                  (a) => a.api_server_id,
+                );
+                expect(
+                  ids,
+                  "accessible list should include the new API server",
+                ).to.include(api_server_id);
+              });
+
               // 4. The owner can manage it (add a domain) and list domains
               cy.request({
                 method: "POST",

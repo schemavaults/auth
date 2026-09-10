@@ -102,6 +102,14 @@ export async function preloadApiServersTable(
         );
       }
 
+      case "accessible": {
+        const accessible_api_servers = await opts.apiServerRegistry.listApiServersAccessibleToUser(userData);
+        return await returnApiServersWithDomains(
+          accessible_api_servers,
+          opts.apiServerRegistry,
+        );
+      }
+
       default:
         throw new Error("Unsupported API servers query type");
     }

@@ -364,6 +364,36 @@ export async function GET_app_list_handler(
             }
           // end 'owned' case
 
+          case "accessible":
+            try {
+              return NextResponse.json(
+                {
+                  success: true,
+                  message: "Successfully listed the apps you can access",
+                  list: await appsRegistry.listAppsAccessibleToUser(user),
+                } satisfies ListAppsQueryResponse,
+                {
+                  status: 200,
+                },
+              );
+            } catch (e: unknown) {
+              await captureServerException(dbh.db, e, {
+                op_name: "GET_app_list_handler.listAppsAccessibleToUser",
+                route: ROUTE,
+                uid: user.uid,
+              });
+              return NextResponse.json(
+                {
+                  success: false,
+                  message: "Failed to list the apps you can access",
+                } satisfies ListAppsQueryResponse,
+                {
+                  status: 500,
+                },
+              );
+            }
+          // end 'accessible' case
+
           default:
             return NextResponse.json(
               {
