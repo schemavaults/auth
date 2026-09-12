@@ -83,7 +83,14 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
     // Step 4: First-time authorization shows the consent screen;
     // subsequent sign-ins skip it (the app is already authorized).
     if (consent === "required") {
-      cy.contains("Authorize & Continue", { timeout: 15000 })
+      // The consent screen names the host the user will be sent back to
+      // (derived from the allowlisted redirect_uri, not from the
+      // registrant-supplied app name/description) so users can tell
+      // which site is asking for access.
+      cy.get("[data-testid='consent-redirect-host']", { timeout: 15000 })
+        .should("be.visible")
+        .and("have.text", new URL(exampleAppOrigin).host);
+      cy.contains("Authorize & Continue")
         .should("be.visible")
         .click();
     }
