@@ -169,6 +169,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
         app_id={app.app_id}
         app_name={app.app_name}
         app_description={app.app_description}
+        redirect_uri={redirect_uri}
         onSuccessfulAuthenticate={on_successful_authenticate}
         mode="authorize-and-redirect"
         debug={opts.debug}

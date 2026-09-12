@@ -27,11 +27,22 @@ import {
   OAuth2StateValidationError,
   parseOAuth2State,
 } from "@schemavaults/auth-common";
+import { formatRedirectDestination } from "@/lib/oauth2/format-redirect-destination";
 
 export interface AppAuthorizationConsentScreenProps {
   app_id: string;
+  // `app_name` / `app_description` are whatever the app's registrant
+  // typed in (attacker-controlled under dynamic client registration).
+  // They are rendered as inert text and labelled as unverified; the
+  // trustworthy signal on the screen is `redirect_uri`'s host.
   app_name: string;
   app_description: string;
+  // The OAuth2 `redirect_uri` the user will be sent to after
+  // authorizing. Already validated against the app's registered
+  // callback allowlist by the page-render guard, so its host tells the
+  // user which site is really asking. Null only if the flow somehow
+  // carries none (the screen then says the destination is unknown).
+  redirect_uri: string | null;
   onSuccessfulAuthenticate: OnSuccessfulAuthenticateAction;
   mode: "authorize-and-redirect" | "authorize-only";
   onAuthorizationComplete?: () => void;
@@ -43,6 +54,7 @@ export function AppAuthorizationConsentScreen({
   app_id,
   app_name,
   app_description,
+  redirect_uri,
   onSuccessfulAuthenticate,
   mode,
   onAuthorizationComplete,
@@ -56,6 +68,8 @@ export function AppAuthorizationConsentScreen({
   const appEnv = useAppEnvironment();
   const friendly_name: string = useAuthServerFriendlyName();
   const [submitting, startSubmitting] = useTransition();
+  const redirect_destination: string | null =
+    formatRedirectDestination(redirect_uri);
 
   function handleDeny(): void {
     router.push("/account");
@@ -275,13 +289,40 @@ export function AppAuthorizationConsentScreen({
     >
       <CardHeader>
         <CardTitle>Authorize Application</CardTitle>
-        <CardDescription>
-          <strong>{app_name}</strong> wants to access your {friendly_name}{" "}
-          account.
+        <CardDescription className="break-words">
+          <strong data-testid="consent-app-name">{app_name}</strong> wants to
+          access your {friendly_name} account.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">{app_description}</p>
+        {app_description.length > 0 ? (
+          <p
+            className="text-sm text-muted-foreground break-words"
+            data-testid="consent-app-description"
+          >
+            {app_description}
+          </p>
+        ) : null}
+        <div className="rounded-md border p-3 bg-muted/50">
+          <p className="text-sm font-medium">
+            After authorizing, you will be sent to:
+          </p>
+          {redirect_destination ? (
+            <p
+              className="text-sm font-mono break-all mt-1"
+              data-testid="consent-redirect-host"
+            >
+              {redirect_destination}
+            </p>
+          ) : (
+            <p
+              className="text-sm text-destructive mt-1"
+              data-testid="consent-redirect-host"
+            >
+              Unknown destination
+            </p>
+          )}
+        </div>
         <div className="rounded-md border p-3 bg-muted/50">
           <p className="text-sm font-medium">This application will be able to:</p>
           <ul className="list-disc list-inside text-sm text-muted-foreground mt-1">
@@ -289,6 +330,12 @@ export function AppAuthorizationConsentScreen({
             <li>Access your account information</li>
           </ul>
         </div>
+        <p className="text-xs text-muted-foreground">
+          The application name and description are provided by the
+          application&apos;s developer and are not verified by{" "}
+          {friendly_name}. Only continue if you recognize the destination
+          above.
+        </p>
       </CardContent>
       <CardFooter className="flex flex-row justify-between items-center gap-4">
         <Button
