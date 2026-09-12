@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import { ToggleGroup, ToggleGroupItem, cn } from "@schemavaults/ui";
 import type {
   ResourceOwnerType,
@@ -79,6 +79,12 @@ export interface OwnerTypeFilterProps {
   value: OwnerTypeFilterValue;
   onValueChange: (value: OwnerTypeFilterValue) => void;
   /**
+   * Whether to offer the "Personal" option (default true). Pages hide it
+   * when the viewer owns no personal resources and the server does not let
+   * them create any, so the filter never offers an always-empty view.
+   */
+  showPersonal?: boolean;
+  /**
    * Whether to offer the "Platform" option. Only global admins can see
    * platform-owned resources, so pages hide it for everyone else.
    */
@@ -96,12 +102,25 @@ export interface OwnerTypeFilterProps {
 export function OwnerTypeFilter({
   value,
   onValueChange,
+  showPersonal = true,
   showPlatform = false,
   className,
   id = "owner-type-filter",
 }: OwnerTypeFilterProps): ReactElement {
   const friendlyName: string = useAuthUiFriendlyName();
   const itemClassName = "flex flex-row flex-nowrap items-center gap-2";
+
+  // A selection whose option is no longer offered (e.g. the last personal
+  // app was deleted and the user cannot create another) falls back to "all"
+  // so the list never stays filtered by a hidden option.
+  const isValueHidden: boolean =
+    (value === "user" && !showPersonal) ||
+    (value === "platform" && !showPlatform);
+  useEffect(() => {
+    if (isValueHidden) {
+      onValueChange("all");
+    }
+  }, [isValueHidden, onValueChange]);
 
   return (
     <ToggleGroup
@@ -127,14 +146,16 @@ export function OwnerTypeFilter({
       >
         <Layers className="h-4 w-4" /> All
       </ToggleGroupItem>
-      <ToggleGroupItem
-        value="user"
-        className={itemClassName}
-        data-testid={`${id}-user`}
-        title="Owned by your account"
-      >
-        <UserIcon className="h-4 w-4" /> Personal
-      </ToggleGroupItem>
+      {showPersonal && (
+        <ToggleGroupItem
+          value="user"
+          className={itemClassName}
+          data-testid={`${id}-user`}
+          title="Owned by your account"
+        >
+          <UserIcon className="h-4 w-4" /> Personal
+        </ToggleGroupItem>
+      )}
       <ToggleGroupItem
         value="organization"
         className={itemClassName}
