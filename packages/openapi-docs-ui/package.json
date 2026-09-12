@@ -1,0 +1,79 @@
+{
+  "name": "@schemavaults/openapi-docs-ui",
+  "description": "React.js components (built on @schemavaults/ui) and Next.js page factories for browsing an OpenAPI document: routes, permissions, and auth details",
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schemavaults/auth.git",
+    "directory": "packages/openapi-docs-ui"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {},
+  "peerDependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "next": "^16.2.11",
+    "@schemavaults/ui": "^0.93.0",
+    "lucide-react": "0.575.0"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "tsc-alias": "1.9.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "bun-types": "1.3.14",
+    "eslint": "9.39.1",
+    "@eslint/js": "9.39.1",
+    "globals": "16.5.0",
+    "@typescript-eslint/eslint-plugin": "8.48.1",
+    "@typescript-eslint/parser": "8.48.1",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-jsx-a11y": "6.10.2"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
+    "test": "NODE_ENV=test bun test",
+    "cleanup:compiled-tests-output": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" \\) -delete",
+    "cleanup": "bun run cleanup:compiled-tests-output",
+    "postbuild": "bun run cleanup",
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "bun@1.3.14",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./model": {
+      "types": "./dist/model/index.d.ts",
+      "import": "./dist/model/index.js",
+      "require": "./dist/model/index.js"
+    },
+    "./nextjs": {
+      "types": "./dist/nextjs/index.d.ts",
+      "import": "./dist/nextjs/index.js",
+      "require": "./dist/nextjs/index.js"
+    },
+    "./*": {
+      "types": "./dist/*",
+      "import": "./dist/*",
+      "require": "./dist/*"
+    },
+    "./dist/*": {
+      "types": "./dist/*",
+      "import": "./dist/*",
+      "require": "./dist/*"
+    }
+  }
+}

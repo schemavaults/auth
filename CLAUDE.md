@@ -40,6 +40,8 @@ bun run typecheck --filter @schemavaults/auth-common       # Type check specific
 bun run typecheck --filter @schemavaults/jwt               # Type check specific package
 bun run typecheck --filter @schemavaults/app-definitions   # Type check specific package
 bun run typecheck --filter @schemavaults/auth-ui           # Type check specific package
+bun run typecheck --filter @schemavaults/openapi-operations # Type check specific package
+bun run typecheck --filter @schemavaults/openapi-docs-ui    # Type check specific package
 bun run typecheck --filter @schemavaults/e2e-auth-tests    # Type check test workspace
 ```
 
@@ -58,6 +60,8 @@ bun run test --filter @schemavaults/jwt              # Run tests in jwt package
 bun run test --filter @schemavaults/auth-common      # Run tests in auth-common package
 bun run test --filter @schemavaults/auth-client-sdk  # Run tests in auth-client-sdk package
 bun run test --filter @schemavaults/auth-server-sdk  # Run tests in auth-server-sdk package
+bun run test --filter @schemavaults/openapi-operations # Run tests in openapi-operations package
+bun run test --filter @schemavaults/openapi-docs-ui  # Run tests in openapi-docs-ui package
 ```
 
 ## Architecture
@@ -82,7 +86,29 @@ bun run test --filter @schemavaults/auth-server-sdk  # Run tests in auth-server-
 @schemavaults/auth-react-provider ← React hooks/context for auth state (uses SWR)
         ↓
 @schemavaults/auth-ui             ← React components for auth flows (login, register, etc.)
+
+@schemavaults/openapi-operations  ← OpenAPI-representable HTTP operations (zod v4 schemas + auth schemes + handlers),
+                                    OpenAPI 3.1 document generation (@asteasolutions/zod-to-openapi), Hono app factory
+                                    with Vercel function / Next.js route handler adapters (depends on auth-common)
+@schemavaults/openapi-docs-ui     ← React components (on @schemavaults/ui) + Next.js `docs/` page factories to browse
+                                    an OpenAPI document: routes, permissions, auth details (standalone)
 ```
+
+### OpenAPI operations & API docs
+
+`packages/openapi-operations` is the target shape for HTTP endpoints going forward (the auth server's existing
+`src/app/api/**/route.ts` handlers are NOT migrated yet — that is a separate, future effort). An operation is
+declared once with `defineOperation()` (method, `{param}` path, zod request/response schemas, and an `auth`
+block: accepted auth schemes + route guard + required scopes + organization role). From the same definitions
+`buildOpenApiDocument()` emits an OpenAPI 3.1 document (with an `x-schemavaults-auth` extension carrying the
+permission details) and `createOperationsApp()` builds a Hono app that validates, authenticates and dispatches
+requests; `toNextRouteHandlers()` / `toVercelHandler()` mount it. Credential verification is pluggable per host
+via `authResolvers` keyed by scheme name, so third-party resource servers reuse the definitions.
+
+`packages/openapi-docs-ui` renders such a document: `parseOpenApiDocument()` (framework-free model),
+`ApiDocsIndex` / `ApiOperationPage` components, and `createApiDocsPages()` from the `nextjs` sub-export which
+produces the `app/docs/page.tsx` + `app/docs/[slug]/page.tsx` pages (with `generateStaticParams`). See each
+package's README for usage.
 
 ### auth-server Structure
 - `src/app/` - Next.js App Directory
