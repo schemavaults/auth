@@ -10,9 +10,8 @@ import {
 } from "@schemavaults/app-definitions";
 import { type NextRequest, NextResponse } from "next/server";
 import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGuard } from "@/lib/withAuthenticatedRouteGuard";
-import isUserInOrganization from "@/lib/isUserInOrganization";
-import { type OrganizationID } from "@schemavaults/auth-common";
-import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
+import { resolveRequestedOwnershipForCreation } from "@/lib/ownership/requested-ownership";
+import type { ResourceOwnership } from "@schemavaults/app-definitions";
 import { ConflictError } from "@/lib/error/ConflictError";
 import captureServerException from "@/lib/captureServerException";
 
@@ -23,7 +22,7 @@ const ROUTE = "/api/apis";
  */
 export default async function POST_api_creation_handler(request: NextRequest): Promise<NextResponse> {
   const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({ req, user, dbh, environment }: IProtectedAuthenticatedApiRouteProps) => {
+    async ({ req, user, dbh, redis, environment }: IProtectedAuthenticatedApiRouteProps) => {
       if (environment === "development") {
         console.log("[/api/apis] POST request received");
       }
@@ -53,54 +52,40 @@ export default async function POST_api_creation_handler(request: NextRequest): P
         );
       }
 
-      let owner_organization_id: OrganizationID | null | undefined = newResource.owner_organization_id;
-
-      // If owner_organization_id is specified, verify user has owner/admin role
-      if (owner_organization_id) {
-        const role = await isUserInOrganization(
+      // Who will own the new API server (platform / organization / user),
+      // and is the caller allowed to create API servers for that owner?
+      let ownership: ResourceOwnership;
+      try {
+        const resolved = await resolveRequestedOwnershipForCreation(
           dbh.db,
           user,
-          owner_organization_id satisfies OrganizationID
+          newResource,
+          redis.client,
         );
-        if (!role && !user.admin) {
+        if (!resolved.ok) {
           return NextResponse.json(
             {
               success: false,
-              message: "You must be a member of the organization to create API servers for it",
+              message: resolved.message,
             } satisfies ResourceCreationResponse,
-            {
-              status: 403,
-            },
+            { status: resolved.status },
           );
         }
-        if (role && role !== "owner" && role !== "admin" && !user.admin) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "You must be an owner or admin of the organization to create API servers for it",
-            } satisfies ResourceCreationResponse,
-            {
-              status: 403,
-            },
-          );
-        }
-      } else {
-        // If no owner_organization_id, only admins can create API servers
-        if (!user.admin) {
-          return NextResponse.json(
-            {
-              success: false,
-              message:
-                "You must be an admin to create a new API server without an organization",
-            } satisfies ResourceCreationResponse,
-            {
-              status: 403,
-            },
-          );
-        } else {
-          // User is an admin, and no owner_organization_id has been set-- default to the configured owner org
-          owner_organization_id = getAuthServerOwnerOrganizationId();
-        }
+        ownership = resolved.ownership;
+      } catch (e: unknown) {
+        await captureServerException(dbh.db, e, {
+          op_name: "POST_api_creation_handler.resolveRequestedOwnership",
+          route: ROUTE,
+          uid: user.uid,
+          context: { api_server_id: newResource.api_server_id },
+        });
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Failed to resolve who should own the new API server",
+          } satisfies ResourceCreationResponse,
+          { status: 500 },
+        );
       }
 
       let apiServerRegistry: SchemaVaultsApiServerRegistry;
@@ -124,13 +109,14 @@ export default async function POST_api_creation_handler(request: NextRequest): P
       }
 
       try {
-        await apiServerRegistry.registerApiServer(
-          newResource.api_server_id,
-          newResource.api_server_name,
-          newResource.api_server_description,
-          newResource.public satisfies boolean,
-          owner_organization_id,
-        );
+        await apiServerRegistry.registerApiServer({
+          api_server_id: newResource.api_server_id,
+          api_server_name: newResource.api_server_name,
+          api_server_description: newResource.api_server_description,
+          publicly_listed: newResource.public satisfies boolean,
+          ownership,
+          created_by: user.uid,
+        });
 
         return NextResponse.json({
           success: true,
@@ -151,7 +137,7 @@ export default async function POST_api_creation_handler(request: NextRequest): P
           op_name: "POST_api_creation_handler.registerApiServer",
           route: ROUTE,
           uid: user.uid,
-          context: { api_server_id: newResource.api_server_id, owner_organization_id },
+          context: { api_server_id: newResource.api_server_id, ownership },
         });
         return NextResponse.json(
           {

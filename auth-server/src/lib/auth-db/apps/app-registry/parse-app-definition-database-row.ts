@@ -1,7 +1,13 @@
 import "server-only";
 import { type SchemaVaultsApp, schemaVaultsAppDefinitionSchema } from "@schemavaults/app-definitions";
-import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
+import { ownershipFieldsFromDatabaseRow } from "@/lib/ownership/ownership-columns";
 
+/**
+ * @description Parses an APPS row into the API-facing app definition.
+ * Hardcoded definitions (which never come from the database, but are mixed
+ * into list results) pass through the same normalisation so every returned
+ * definition carries a populated `owner_type`.
+ */
 export default function parseAppDefinitionDatabaseRow(row: unknown): SchemaVaultsApp {
   if (typeof row !== "object" || !row)
     throw new Error("Expected row to be an object");
@@ -16,20 +22,16 @@ export default function parseAppDefinitionDatabaseRow(row: unknown): SchemaVault
     throw new Error("Failed to parse created_at from database");
   }
 
-  const owner_organization_id: string | undefined = (
-    "owner_organization_id" in row && typeof row['owner_organization_id'] === 'string'
-  ) ? (row.owner_organization_id) : getAuthServerOwnerOrganizationId()
-
   const parsed = schemaVaultsAppDefinitionSchema.safeParse({
     ...row,
     created_at,
-    owner_organization_id
+    ...ownershipFieldsFromDatabaseRow(row),
   });
 
   if (!parsed.success) {
     throw new TypeError(
       "Failed to parse client app definition from database row!",
-      { cause: parsed.data }
+      { cause: parsed.error }
     )
   }
 

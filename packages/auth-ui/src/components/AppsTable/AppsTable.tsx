@@ -15,31 +15,49 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@schemavaults/auth-react-provider";
 import type { ColumnDef } from "@schemavaults/ui";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
+import {
+  useOwnerTypeFilteredResources,
+  type OwnerTypeFilterValue,
+} from "@/components/OwnerTypeFilter";
 
 export interface AppsDatatableProps {
   queryType: ListAppsQueryType;
   preloaded?: PreloadedAppsTableDataWithDomainRefs | undefined;
   organization_id?: string;
   isOrgOwner?: boolean;
+  /**
+   * For the "accessible" query: ids of the organizations in which the
+   * viewer is an owner/admin, used to decide which rows expose management
+   * actions.
+   */
+  managedOrganizationIds?: readonly string[];
+  /** Client-side filter on each row's resolved owner type. */
+  ownerTypeFilter?: OwnerTypeFilterValue;
+  /** Whether the "Create app" button is offered (default true). */
+  canCreate?: boolean;
 }
 
 interface AppsTableHeaderButtonsProps {
   queryType: ListAppsQueryType;
   isOrgOwner?: boolean;
+  canCreate: boolean;
 }
 
 function AppsTableHeaderButtons({
   queryType,
   isOrgOwner,
+  canCreate,
 }: AppsTableHeaderButtonsProps): ReactElement {
   return (
     <>
       {queryType === "authorized" && ( // From a user's list of authorized apps, allow them to add more authorized apps
         <AuthorizeClientApplicationDialogTrigger />
       )}
-      {(queryType === "all" || (queryType === "org" && isOrgOwner)) && (
-        <CreateAppDialogTrigger />
-      )}
+      {canCreate &&
+        (queryType === "all" ||
+          queryType === "owned" ||
+          queryType === "accessible" ||
+          (queryType === "org" && isOrgOwner)) && <CreateAppDialogTrigger />}
     </>
   );
 }
@@ -49,6 +67,9 @@ export function AppsTable({
   preloaded,
   organization_id,
   isOrgOwner,
+  managedOrganizationIds,
+  ownerTypeFilter,
+  canCreate = true,
 }: AppsDatatableProps): ReactElement {
   const auth = useAuth();
   const authClient = auth.ready ? auth.client.current : undefined;
@@ -58,18 +79,28 @@ export function AppsTable({
     organization_id,
     authClient,
   });
-  const { isLoading, data } = apps;
+  const { isLoading } = apps;
+  const data = useOwnerTypeFilteredResources(apps.data, ownerTypeFilter);
   const columns = useMemo((): ColumnDef<SchemaVaultsApp>[] => {
-    return getAppsTableColumns(queryType, preloaded, isOrgOwner);
-  }, [queryType, preloaded, isOrgOwner]);
+    return getAppsTableColumns(
+      queryType,
+      preloaded,
+      isOrgOwner,
+      managedOrganizationIds,
+    );
+  }, [queryType, preloaded, isOrgOwner, managedOrganizationIds]);
 
   const HeaderButtons: FC = useMemo(() => {
     return function AppsTableHeaderButtonsWithQueryType() {
       return (
-        <AppsTableHeaderButtons queryType={queryType} isOrgOwner={isOrgOwner} />
+        <AppsTableHeaderButtons
+          queryType={queryType}
+          isOrgOwner={isOrgOwner}
+          canCreate={canCreate}
+        />
       );
     };
-  }, [queryType, isOrgOwner]);
+  }, [queryType, isOrgOwner, canCreate]);
 
   if (!data && isLoading) {
     return (

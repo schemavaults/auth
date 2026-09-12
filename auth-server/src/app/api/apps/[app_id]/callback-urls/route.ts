@@ -8,14 +8,13 @@ import {
   type SchemaVaultsApp,
   type SchemaVaultsAppCallbackUrlRef,
 } from "@schemavaults/app-definitions";
-import { type OrganizationID } from "@schemavaults/auth-common";
 import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import type { ResourceCreationResponse } from "@/lib/auth-db";
-import isUserInOrganization from "@/lib/isUserInOrganization";
+import { canUserViewResource } from "@/lib/ownership/resource-access";
 import loadAppForManagement from "@/lib/load-app-for-management";
 import captureServerException from "@/lib/captureServerException";
 import { ConflictError } from "@/lib/error/ConflictError";
@@ -88,17 +87,7 @@ export async function GET(
       }
 
       if (!app.public && !user.admin) {
-        let authorized: boolean = false;
-        if (app.owner_organization_id) {
-          const role = await isUserInOrganization(
-            dbh.db,
-            user,
-            app.owner_organization_id as OrganizationID,
-          );
-          if (role === "admin" || role === "owner" || role === "member") {
-            authorized = true;
-          }
-        }
+        const authorized: boolean = await canUserViewResource(dbh.db, user, app);
         if (!authorized) {
           return NextResponse.json(
             {

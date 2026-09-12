@@ -11,10 +11,7 @@ import { isHardcodedAppId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
-import { OrganizationMembershipRoleType, type OrganizationID } from "@schemavaults/auth-common";
-import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
-import OrganizationsRegistry from "@/lib/auth-db/organizations";
-import isUserInOrganization from "@/lib/isUserInOrganization";
+import { accessLevelSatisfies, getUserAccessLevelForResource, type OwnedResourceAccessLevel } from "@/lib/ownership/resource-access";
 import type { ServerRuntime } from "next/types";
 import { connection } from "next/server";
 
@@ -55,36 +52,21 @@ export default async function AppDetailPage(
         redirectWithError(404, "app_id_not_found");
       }
 
-      const owner_organization_id: OrganizationID | null | undefined = app['owner_organization_id'];
-      if (!owner_organization_id || typeof owner_organization_id !== 'string') {
-        console.error(`Failed to resolve 'owner_organization_id' for app: '${client_app_id}'`);
-        redirectWithError(500, "internal_server_error");
-      }
-
-      if (owner_organization_id === getAuthServerOwnerOrganizationId() && !user.admin) {
-        console.warn("Blocking request to view app detail page for a platform-owned app for non-admin user!")
+      // Organization members, the owning user of a user-owned app, and
+      // global admins may view; organization owners/admins, the owning user,
+      // and global admins may manage. Platform-owned apps are admin-only.
+      const access: OwnedResourceAccessLevel = await getUserAccessLevelForResource(dbh.db, user, app);
+      if (!accessLevelSatisfies(access, "member")) {
+        console.warn(`Blocking request to view app detail page for app '${client_app_id}': user has no access to it`);
         redirectWithError(403, 'forbidden');
       }
-
-      const role: OrganizationMembershipRoleType | false = await isUserInOrganization(dbh.db, user, owner_organization_id);
-      let canView: boolean = false;
-      if (user.admin) {
-        canView = true;
-      } else if (role === 'admin' || role === 'owner' || role === 'member') {
-        canView = true;
-      }
-      if (!canView) {
-        redirectWithError(403, 'forbidden');
-      }
+      const canManage: boolean = accessLevelSatisfies(access, "admin");
 
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
       const connected_api_servers = await permissions_registry.listConnectedApiServers(client_app_id);
       const connected_domains: readonly SchemaVaultsAppDomainRef[] = await app_registry.getAppDomains(client_app_id);
       const callback_urls: readonly SchemaVaultsAppCallbackUrlRef[] = await app_registry.getAppCallbackUrls(client_app_id);
       const client_secret_record = hardcoded ? null : await app_registry.getClientSecretRecord(client_app_id);
-
-      const orgRegistry = new OrganizationsRegistry(dbh.db)
-      const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)
 
       const current_environment = getAppEnvironment();
 
@@ -104,7 +86,7 @@ export default async function AppDetailPage(
               : { has_client_secret: false, created_at: null, updated_at: null }
           }
           hardcoded={hardcoded}
-          isOrgOwner={isOrgOwner}
+          isOrgOwner={canManage}
           current_environment={current_environment}
         />
       );

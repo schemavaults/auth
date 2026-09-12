@@ -5,7 +5,7 @@ import {
   type ResourceCreationResponse,
 } from "@/lib/auth-db";
 import { ConflictError } from "@/lib/error/ConflictError";
-import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
+import { canUserManageResource } from "@/lib/ownership/resource-access";
 import {
   type AppId,
   appIdSchema,
@@ -71,18 +71,14 @@ export async function POST_create_app_domain(
         );
       }
 
-      // Authorization: allow global admins, or org owners/admins for apps belonging to their org
+      // Authorization: allow global admins, org owners/admins for apps
+      // belonging to their org, or the owning user of a user-owned app
       if (!user.admin) {
         let authorized = false;
         try {
           const appData = await appRegistry.getApp(app_id);
-          if (appData && appData.owner_organization_id) {
-            const orgRegistry = new OrganizationsRegistry(dbh.db);
-            const memberships = await orgRegistry.listUserOrganizationMemberships(user.uid, false);
-            const membership = memberships.find(m => m.organization_id === appData.owner_organization_id);
-            if (membership && (membership.role === "owner" || membership.role === "admin")) {
-              authorized = true;
-            }
+          if (appData) {
+            authorized = await canUserManageResource(dbh.db, user, appData);
           }
         } catch (e: unknown) {
           await captureServerException(dbh.db, e, {

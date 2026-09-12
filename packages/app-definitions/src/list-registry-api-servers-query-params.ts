@@ -3,7 +3,9 @@ import type { SchemaVaultsApiServerDefinition } from "./api-server-definition";
 
 const list_api_servers_query_type = [
   "all", // admin-only
-  "org",
+  "org", // API servers owned by a specific organization
+  "owned", // API servers owned directly by the requesting user's account
+  "accessible", // every API server the requesting user can reach by ownership: their own, their organizations', and (for admins) the platform's
 ] as const satisfies string[];
 
 export type ListApiServersQueryType =

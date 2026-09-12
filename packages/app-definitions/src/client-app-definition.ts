@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { appIdSchema } from "./app-id";
 import { schemaVaultsAppEnvironmentSchema } from "./app-environments";
+import { resourceOwnershipFieldsShape } from "./resource-ownership";
 
 export const schemaVaultsAppDefinitionSchema = z
   .object({
@@ -11,7 +12,8 @@ export const schemaVaultsAppDefinitionSchema = z
     public: z.boolean(), // whether the app is publicly listed
     hardcoded: z.boolean(),
     web: z.boolean(), // whether this app can be opened by url or requires native installation
-    owner_organization_id: z.string().nullable().optional(),
+    // Ownership: see resource-ownership.ts (resolveResourceOwnership)
+    ...resourceOwnershipFieldsShape,
   })
   .required({
     app_id: true,

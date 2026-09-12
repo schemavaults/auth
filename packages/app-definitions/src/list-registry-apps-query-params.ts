@@ -6,6 +6,8 @@ const list_apps_query_type = [
   "public", // publicly listed apps
   "authorized", // apps that the requesting user has authorized
   "org", // apps owned by a specific organization
+  "owned", // apps owned directly by the requesting user's account
+  "accessible", // every app the requesting user can reach by ownership: their own, their organizations', and (for admins) the platform's
 ] as const satisfies string[];
 
 export type ListAppsQueryType = (typeof list_apps_query_type)[number];

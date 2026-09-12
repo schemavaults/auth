@@ -5,7 +5,7 @@ import { type IProtectedAuthenticatedApiRouteProps, withAuthenticatedApiRouteGua
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
-import isUserInApiOwnerOrganization from "@/lib/isUserInApiOwnerOrganization";
+import hasUserAccessToApiServer from "@/lib/isUserInApiOwnerOrganization";
 import captureServerException from "@/lib/captureServerException";
 
 const ROUTE = "/api/apis/[api_server_id]/jwks-access-key";
@@ -45,7 +45,7 @@ export async function PUT_regenerate_jwks_access_key(req: NextRequest, context: 
 
       // Verify user is in the owner organization
       try {
-        const isAuthorized = await isUserInApiOwnerOrganization(user, api_server_id, dbh.db);
+        const isAuthorized = await hasUserAccessToApiServer(user, api_server_id, dbh.db);
         if (!isAuthorized && !user.admin) {
           return NextResponse.json(
             { success: false, message: "You must be a member of the owner organization to regenerate JWKS access keys" },
@@ -54,7 +54,7 @@ export async function PUT_regenerate_jwks_access_key(req: NextRequest, context: 
         }
       } catch (e: unknown) {
         await captureServerException(dbh.db, e, {
-          op_name: "PUT_regenerate_jwks_access_key.isUserInApiOwnerOrganization",
+          op_name: "PUT_regenerate_jwks_access_key.hasUserAccessToApiServer",
           route: ROUTE,
           uid: user.uid,
           context: { api_server_id },

@@ -22,6 +22,10 @@ import {
 import type { PreloadedApiServersTableDataWithDomainRefs } from "./preloaded_api_servers_table_data";
 import { ApiServersTableConfigContext } from "./ApiServersTableConfigContext";
 import type { ColumnDef } from "@schemavaults/ui";
+import {
+  useOwnerTypeFilteredResources,
+  type OwnerTypeFilterValue,
+} from "@/components/OwnerTypeFilter";
 
 export interface ApiServersDatatableProps {
   queryType: ListApiServersQueryType;
@@ -29,16 +33,28 @@ export interface ApiServersDatatableProps {
   preloaded?: PreloadedApiServersTableDataWithDomainRefs | undefined;
   showConnectAppToApi?: boolean;
   isOrgOwner?: boolean;
+  /**
+   * For the "accessible" query: ids of the organizations in which the
+   * viewer is an owner/admin, used to decide which rows expose management
+   * actions.
+   */
+  managedOrganizationIds?: readonly string[];
+  /** Client-side filter on each row's resolved owner type. */
+  ownerTypeFilter?: OwnerTypeFilterValue;
+  /** Whether the "Create API" button is offered (default true). */
+  canCreate?: boolean;
 }
 
 function ApiServersTableHeaderButtons({
   queryType,
   showConnectAppToApi,
   isOrgOwner,
+  canCreate,
 }: {
   queryType: ListApiServersQueryType;
   showConnectAppToApi?: boolean;
   isOrgOwner?: boolean;
+  canCreate: boolean;
 }) {
   const onOpenChangeCreateApi = useContext(
     CreateApiServerDialogOpenDispatchContext,
@@ -49,9 +65,13 @@ function ApiServersTableHeaderButtons({
 
   return (
     <>
-      {(queryType === "all" || (queryType === "org" && isOrgOwner)) && (
-        <CreateApiServerDialogTrigger onOpenChange={onOpenChangeCreateApi} />
-      )}
+      {canCreate &&
+        (queryType === "all" ||
+          queryType === "owned" ||
+          queryType === "accessible" ||
+          (queryType === "org" && isOrgOwner)) && (
+          <CreateApiServerDialogTrigger onOpenChange={onOpenChangeCreateApi} />
+        )}
       {(queryType === "all" || showConnectAppToApi) && (
         <ConnectAppToApiDialogTrigger
           onOpenChange={onOpenChangeConnectAppToApi}
@@ -67,6 +87,9 @@ export function ApiServersTable({
   preloaded,
   showConnectAppToApi,
   isOrgOwner,
+  managedOrganizationIds,
+  ownerTypeFilter,
+  canCreate = true,
 }: ApiServersDatatableProps): ReactElement {
   const auth = useAuth();
   const authClient = auth.ready ? auth.client.current : undefined;
@@ -77,7 +100,8 @@ export function ApiServersTable({
       organization_id,
       authClient,
     });
-  const { isLoading, data } = apis;
+  const { isLoading } = apis;
+  const data = useOwnerTypeFilteredResources(apis.data, ownerTypeFilter);
 
   const columns = useMemo((): ColumnDef<SchemaVaultsApiServerDefinition>[] => {
     return getApiServersTableColumns(preloaded);
@@ -85,33 +109,25 @@ export function ApiServersTable({
 
   const HeaderButtons: FC = useMemo(() => {
     return function ApiServersTableHeaderButtonsWithQueryType() {
-      return <ApiServersTableHeaderButtons queryType={queryType} showConnectAppToApi={showConnectAppToApi} isOrgOwner={isOrgOwner} />;
+      return (
+        <ApiServersTableHeaderButtons
+          queryType={queryType}
+          showConnectAppToApi={showConnectAppToApi}
+          isOrgOwner={isOrgOwner}
+          canCreate={canCreate}
+        />
+      );
     };
-  }, [queryType, showConnectAppToApi, isOrgOwner]);
-
-  // Assert that 'owner_organization_id' field is present from server
-  useMemo(() => {
-    if (apis.data && Array.isArray(apis.data)) {
-      if (
-        !apis.data.every(
-          (api_server_definition) =>
-            api_server_definition.owner_organization_id,
-        )
-      ) {
-        throw new TypeError(
-          "Received API server definition that is missing 'owner_organization_id' field!",
-        );
-      }
-    }
-  }, [apis.data]);
+  }, [queryType, showConnectAppToApi, isOrgOwner, canCreate]);
 
   const contextValue = useMemo(
     () => ({
       showConnectAppToApi: showConnectAppToApi ?? false,
       isOrgOwner: isOrgOwner ?? false,
       queryType,
+      managedOrganizationIds,
     }),
-    [showConnectAppToApi, isOrgOwner, queryType],
+    [showConnectAppToApi, isOrgOwner, queryType, managedOrganizationIds],
   );
 
   if (!data && isLoading) {

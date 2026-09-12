@@ -3,26 +3,32 @@ import "server-only";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import SchemaVaultsApiServerRegistry from "@/lib/auth-db/apis";
-import type { OrganizationID, UserData } from "@schemavaults/auth-common";
-import { isUserInOrganizationWithRole } from "@/lib/isUserInOrganization";
+import type { UserData } from "@schemavaults/auth-common";
 import type { OrganizationMembershipRoleType } from "@/lib/auth-db/organizations";
 import type { SchemaVaultsApiServerDefinition } from "@schemavaults/app-definitions";
+import {
+  getUserAccessLevelForResource,
+  type OwnedResourceAccessLevel,
+} from "@/lib/ownership/resource-access";
 
 const DEFAULT_ROLES: readonly OrganizationMembershipRoleType[] = ['owner', 'admin'];
 
 /**
- * @name isUserInApiOwnerOrganization
+ * @name hasUserAccessToApiServer
  * @param user The user to check
  * @param api_server_id The API server ID
  * @param db Database handle
- * @param roles Accepted organization roles. Defaults to ['owner', 'admin'] —
- * i.e. only organization owners (and the virtual SchemaVaults-org admin role)
- * pass. Pass ['owner', 'admin', 'member'] for read-only flows where any
- * member legitimately has access.
- * @returns A promise resolving to true if the user has one of the accepted
- * roles in the organization that owns the given API server.
+ * @param roles Accepted access roles. Defaults to ['owner', 'admin'] —
+ * i.e. only organization owners/admins (or global admins) pass. Pass
+ * ['owner', 'admin', 'member'] for read-only flows where any member
+ * legitimately has access.
+ * @returns A promise resolving to true if the user's access level for the
+ * API server (see `getUserAccessLevelForResource`) is one of the accepted
+ * roles. Organization-owned API servers map the user's organization role;
+ * user-owned API servers grant their owning user the 'owner' role; global
+ * admins are always 'owner'.
  */
-export default async function isUserInApiOwnerOrganization(
+export async function hasUserAccessToApiServer(
   user: UserData,
   api_server_id: string,
   db: Kysely<AuthDatabase>,
@@ -35,11 +41,17 @@ export default async function isUserInApiOwnerOrganization(
     throw new Error(`No API server found with 'api_server_id': '${api_server_id}'`)
   }
 
-  if (!apiServer.owner_organization_id) {
-    console.warn(`[isUserInOwnerOrganization] No owner organization found for API server: '${api_server_id}'`)
+  const level: OwnedResourceAccessLevel = await getUserAccessLevelForResource(db, user, apiServer);
+  if (level === "none") {
     return false;
   }
-
-  const owner_organization_id: OrganizationID = apiServer.owner_organization_id;
-  return await isUserInOrganizationWithRole(user, owner_organization_id, roles, db);
+  return roles.includes(level);
 }
+
+/**
+ * @deprecated Renamed to {@link hasUserAccessToApiServer}: API servers may
+ * now be owned by a user account rather than an organization.
+ */
+export const isUserInApiOwnerOrganization = hasUserAccessToApiServer;
+
+export default hasUserAccessToApiServer;

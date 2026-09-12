@@ -3,7 +3,7 @@ import { ApiServerId, apiServerIdSchema, getAppEnvironment } from "@schemavaults
 import { NextRequest, NextResponse } from "next/server";
 import { SchemaVaultsApiServerRegistry, SchemaVaultsAppRegistry, SchemaVaultsAppToApiPermissionsRegistry, ServerlessDatabase } from "@/lib/auth-db";
 import { z } from "zod";
-import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
+import { platformOwnership } from "@schemavaults/app-definitions";
 import type { ServerRuntime } from "next/types";
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { sign_verify_alg } from "@schemavaults/jwt";
@@ -70,14 +70,14 @@ export async function POST(
   const jwksRegistry = new JwksAccessKeysRegistry(dbh.db);
 
   try {
-    await appRegistry.registerApp(
-      api_server_id,
-      "Example Frontend App",
-      "App created in seeding for test",
-      false,
-      getAuthServerOwnerOrganizationId(),
-      true
-    );
+    await appRegistry.registerApp({
+      app_id: api_server_id,
+      app_name: "Example Frontend App",
+      app_description: "App created in seeding for test",
+      publicly_listed: false,
+      ownership: platformOwnership(),
+      web: true,
+    });
     await appRegistry.addAppDomain(api_server_id, {
       app_id: api_server_id,
       app_domain_ref_id: api_server_id,
@@ -86,13 +86,13 @@ export async function POST(
       environment,
       domain: url
     })
-    await apiServerRegistry.registerApiServer(
+    await apiServerRegistry.registerApiServer({
       api_server_id,
-      "Example Backend API",
-      "API created in seeding for test",
-      false,
-      getAuthServerOwnerOrganizationId()
-    );
+      api_server_name: "Example Backend API",
+      api_server_description: "API created in seeding for test",
+      publicly_listed: false,
+      ownership: platformOwnership(),
+    });
     await apiServerRegistry.addApiServerDomain(api_server_id, {
       api_server_id,
       api_server_domain_ref_id: api_server_id,

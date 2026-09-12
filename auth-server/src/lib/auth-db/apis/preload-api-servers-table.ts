@@ -94,6 +94,22 @@ export async function preloadApiServersTable(
         );
       }
 
+      case "owned": {
+        const owned_api_servers = await opts.apiServerRegistry.listUserOwnedApiServers(userData.uid);
+        return await returnApiServersWithDomains(
+          owned_api_servers,
+          opts.apiServerRegistry,
+        );
+      }
+
+      case "accessible": {
+        const accessible_api_servers = await opts.apiServerRegistry.listApiServersAccessibleToUser(userData);
+        return await returnApiServersWithDomains(
+          accessible_api_servers,
+          opts.apiServerRegistry,
+        );
+      }
+
       default:
         throw new Error("Unsupported API servers query type");
     }

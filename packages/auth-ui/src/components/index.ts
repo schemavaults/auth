@@ -14,6 +14,28 @@ export {
 } from "./OwnerOrganizationProvider";
 export type { AuthUiOwnerOrganizationProviderProps } from "./OwnerOrganizationProvider";
 
+export {
+  ResourceOwnerLabel,
+  useResolvedResourceOwnership,
+  useCanManageListedResource,
+} from "./ResourceOwnerLabel";
+export type {
+  ResourceOwnerLabelProps,
+  UseCanManageListedResourceOptions,
+} from "./ResourceOwnerLabel";
+
+export {
+  OwnerTypeFilter,
+  OWNER_TYPE_FILTER_VALUES,
+  isOwnerTypeFilterValue,
+  filterByOwnerType,
+  useOwnerTypeFilteredResources,
+} from "./OwnerTypeFilter";
+export type {
+  OwnerTypeFilterProps,
+  OwnerTypeFilterValue,
+} from "./OwnerTypeFilter";
+
 export * from "./SignOutButton";
 export type * from "./SignOutButton";
 

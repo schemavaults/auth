@@ -44,6 +44,7 @@ import { useAppDomains } from "./useAppDomains";
 import { launchWebApp } from "./launchWebApp";
 import { CreateAppDomainDialogOpenDispatchContext } from "@/components/CreateAppDomainDialog";
 import { DeleteAppDialog } from "@/components/DeleteAppDialog";
+import { useCanManageListedResource } from "@/components/ResourceOwnerLabel/useCanManageListedResource";
 
 const dropdownMenuActionsClassName: string =
   "hover:cursor-pointer flex flex-row gap-2 items-center justify-start pointer-events-auto" as const;
@@ -52,6 +53,7 @@ interface FrontendApplicationActionsProps {
   app: SchemaVaultsApp;
   queryType: ListAppsQueryType;
   isOrgOwner?: boolean;
+  managedOrganizationIds?: readonly string[];
 }
 
 class CantCopyWithinInsecureContextError extends Error {}
@@ -60,6 +62,7 @@ export function FrontendApplicationActions({
   app,
   queryType,
   isOrgOwner,
+  managedOrganizationIds,
 }: FrontendApplicationActionsProps): ReactElement {
   const app_id: AppId = app.app_id;
   const { toast } = useToast();
@@ -126,10 +129,25 @@ export function FrontendApplicationActions({
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
 
-  const isDeleteAppDisabled: boolean = app.hardcoded || (!admin && !isOrgOwner);
+  // Whether the viewer may manage this particular app: global admins, an
+  // organization owner/admin on an org page, the owning user of a
+  // user-owned app, or (on the "accessible" list) an owner/admin of the
+  // owning organization. The server enforces every action regardless.
+  const canManageApp: boolean = useCanManageListedResource({
+    resource: app,
+    queryType,
+    isOrgOwner,
+    managedOrganizationIds,
+  });
+  const isDeleteAppDisabled: boolean = app.hardcoded || !canManageApp;
 
   const showAddAppDomain: boolean =
-    (admin && queryType === "all") || (!!isOrgOwner && queryType === "org");
+    !app.hardcoded &&
+    canManageApp &&
+    (queryType === "all" ||
+      queryType === "org" ||
+      queryType === "owned" ||
+      queryType === "accessible");
   const showConnectApi: boolean = admin && queryType === "all";
 
   return (

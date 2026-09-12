@@ -18,7 +18,10 @@ export function getSchemaVaultsAuthApiDefinition(): SchemaVaultsApiServerDefinit
     api_server_description: getAuthServerDescription(),
     hardcoded: true,
     created_at: defaultHardcodedAppCreationTime,
+    owner_type: "platform",
     owner_organization_id: getAuthServerOwnerOrganizationId(),
+    owner_uid: null,
+    created_by: null,
     public: true,
   };
 }

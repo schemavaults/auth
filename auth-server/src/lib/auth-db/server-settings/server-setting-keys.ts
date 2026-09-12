@@ -26,6 +26,13 @@ export const SERVER_SETTING_DEFINITIONS = {
     description:
       "Whether only admins can create new organizations. When false, any non-disabled user can create organizations.",
   },
+  allow_user_owned_resource_creation: {
+    valueType: "boolean" as const,
+    defaultValue: true,
+    schema: z.boolean(),
+    description:
+      "Whether non-admin users may create client applications and API servers owned directly by their own account (outside of any organization). Admins can always create them.",
+  },
   mail_server_configured: {
     valueType: "boolean" as const,
     defaultValue: false,

@@ -41,6 +41,26 @@ export function getAuthenticatedUserDashboardLinks(
     ),
   };
 
+  const appsPageLink: DashboardSidebarItemDefinition = {
+    type: "dashboard-sidebar-item-definition" as const,
+    title: "Applications",
+    tooltip: "Client applications you own or can access",
+    url: "/apps",
+    icon: ({ className }: { className: string }): ReactElement => (
+      <AppWindow className={className} />
+    ),
+  };
+
+  const apisPageLink: DashboardSidebarItemDefinition = {
+    type: "dashboard-sidebar-item-definition" as const,
+    title: "API Servers",
+    tooltip: "API servers you own or can access",
+    url: "/apis",
+    icon: ({ className }: { className: string }): ReactElement => (
+      <Server className={className} />
+    ),
+  };
+
   const mfaPageLink: DashboardSidebarItemDefinition = {
     type: "dashboard-sidebar-item-definition" as const,
     title: "MFA",
@@ -63,7 +83,14 @@ export function getAuthenticatedUserDashboardLinks(
   const dashboardLinks: (
     | DashboardSidebarItemDefinition
     | DashboardSidebarItemGroupDefinition
-  )[] = [accountPageLink, organizationsPageLink, mfaPageLink, helpPageLink];
+  )[] = [
+    accountPageLink,
+    organizationsPageLink,
+    appsPageLink,
+    apisPageLink,
+    mfaPageLink,
+    helpPageLink,
+  ];
 
   if (admin) {
     const adminLinkGroup: DashboardSidebarItemGroupDefinition = {

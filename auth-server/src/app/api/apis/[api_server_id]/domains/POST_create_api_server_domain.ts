@@ -5,7 +5,7 @@ import {
 } from "@/lib/auth-db";
 import { ConflictError } from "@/lib/error/ConflictError";
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
-import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
+import { canUserManageResource } from "@/lib/ownership/resource-access";
 import {
   type ApiServerId,
   apiServerIdSchema,
@@ -71,18 +71,15 @@ export async function POST_create_api_server_domain(
         );
       }
 
-      // Authorization: allow global admins, or org owners/admins for API servers belonging to their org
+      // Authorization: allow global admins, org owners/admins for API
+      // servers belonging to their org, or the owning user of a user-owned
+      // API server
       if (!user.admin) {
         let authorized = false;
         try {
           const apiServerData = await apiServerRegistry.getApiServer(api_server_id);
-          if (apiServerData && apiServerData.owner_organization_id) {
-            const orgRegistry = new OrganizationsRegistry(dbh.db);
-            const memberships = await orgRegistry.listUserOrganizationMemberships(user.uid, false);
-            const membership = memberships.find(m => m.organization_id === apiServerData.owner_organization_id);
-            if (membership && (membership.role === "owner" || membership.role === "admin")) {
-              authorized = true;
-            }
+          if (apiServerData) {
+            authorized = await canUserManageResource(dbh.db, user, apiServerData);
           }
         } catch (e: unknown) {
           await captureServerException(dbh.db, e, {

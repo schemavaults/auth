@@ -26,32 +26,41 @@ import {
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import {
+  type RequestedResourceOwnership,
   type SchemaVaultsApiServerDefinition,
   schemaVaultsApiServerDefinitionSchema,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Server } from "lucide-react";
-import type { OrganizationID } from "@schemavaults/auth-common";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
+import { requestedOwnershipToDefinitionFields } from "@/components/CreateAppDialog/requested-ownership-fields";
 
 interface CreateApiServerFormProps {
   clearApiServersCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
-  owner_organization_id: OrganizationID;
+  /**
+   * Who the new API server will belong to: the platform (admins only), an
+   * organization the user administers, or the user's own account.
+   */
+  ownership: RequestedResourceOwnership;
   uuid: () => string;
   onSuccess: () => void;
 }
 
 export function CreateApiServerForm({
   clearApiServersCache,
-  owner_organization_id,
+  ownership,
   uuid,
   onSuccess,
 }: CreateApiServerFormProps): ReactElement {
   const { toast } = useToast();
   const friendlyName: string = useAuthUiFriendlyName();
+  const ownershipFields = useMemo(
+    () => requestedOwnershipToDefinitionFields(ownership),
+    [ownership],
+  );
 
   const defaultValues: Partial<SchemaVaultsApiServerDefinition> =
     useMemo(() => {
@@ -62,9 +71,9 @@ export function CreateApiServerForm({
         public: false,
         created_at: Date.now(),
         hardcoded: false,
-        owner_organization_id,
+        ...ownershipFields,
       };
-    }, [owner_organization_id, uuid]);
+    }, [ownershipFields, uuid]);
 
   const form = useForm<SchemaVaultsApiServerDefinition>({
     resolver: zodResolver(schemaVaultsApiServerDefinitionSchema),
@@ -92,7 +101,9 @@ export function CreateApiServerForm({
       }
       await authClient.createApiServer({
         ...values,
-        owner_organization_id: owner_organization_id ?? null,
+        // The owner is fixed by the card this form was opened from, never
+        // by form input.
+        ...ownershipFields,
       });
     } catch (e: unknown) {
       toast({

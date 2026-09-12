@@ -31,6 +31,7 @@ import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
 import { DeleteApiServerDialog } from "@/components/DeleteApiServerDialog";
 import { CreateApiServerDomainDialogOpenDispatchContext } from "@/components/CreateApiServerDomainDialog";
 import { ApiServersTableConfigContext } from "./ApiServersTableConfigContext";
+import { useCanManageListedResource } from "@/components/ResourceOwnerLabel/useCanManageListedResource";
 
 const menuItemClassname: string = cn(
   "flex flex-row flex-nowrap gap-2 items-center justify-start",
@@ -49,23 +50,34 @@ export function ApiServerRowActions({
   const admin: boolean = useAdmin();
   const [connectDialogOpen, setConnectDialogOpen] = useState<boolean>(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const { showConnectAppToApi, isOrgOwner, queryType } = useContext(
-    ApiServersTableConfigContext,
-  );
+  const { showConnectAppToApi, isOrgOwner, queryType, managedOrganizationIds } =
+    useContext(ApiServersTableConfigContext);
   const openAddApiServerDomainDialog = useContext(
     CreateApiServerDomainDialogOpenDispatchContext,
   );
   // The row's own 'hardcoded' flag identifies the auth server's built-in API
   // definition; comparing ids against a client-bundled constant would be
   // blind to the env-var-driven app id in white-label deployments.
-  const isDeleteDisabled =
-    api.hardcoded || (!showConnectAppToApi && !isOrgOwner);
+  // Whether the viewer may manage this particular API server: global
+  // admins, an organization owner/admin on an org page, the owning user of
+  // a user-owned API server, or (on the "accessible" list) an owner/admin
+  // of the owning organization. The server enforces every action.
+  const canManageApi: boolean = useCanManageListedResource({
+    resource: api,
+    queryType,
+    isOrgOwner,
+    managedOrganizationIds,
+  });
+  const isDeleteDisabled = api.hardcoded || !canManageApi;
 
   // Hardcoded API servers have no database row for a domain to reference;
   // their domains come from the server's environment configuration.
-  const showAddDomain: boolean =
-    !api.hardcoded &&
-    ((admin && queryType === "all") || (isOrgOwner && queryType === "org"));
+  const showAddDomain: boolean = !api.hardcoded && canManageApi;
+  // Connecting an app requires owning the API server too, so only offer it
+  // on rows the viewer manages (or wherever the card asked for it, e.g. the
+  // admin list).
+  const showConnectForRow: boolean =
+    showConnectAppToApi && (admin || canManageApi);
 
   return (
     <>
@@ -130,7 +142,7 @@ export function ApiServerRowActions({
               </DropdownMenuItem>
             </Link>
           )}
-          {showConnectAppToApi && (
+          {showConnectForRow && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -172,7 +184,7 @@ export function ApiServerRowActions({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      {showConnectAppToApi && (
+      {showConnectForRow && (
         <ConnectAppToApiDialog
           open={connectDialogOpen}
           onOpenChange={setConnectDialogOpen}

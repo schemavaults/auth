@@ -53,6 +53,26 @@ export {
 } from "./get-auth-server-owner-organization-id";
 
 export {
+  RESOURCE_OWNER_TYPES,
+  resourceOwnerTypeSchema,
+  isResourceOwnerType,
+  resourceOwnershipFieldsShape,
+  resourceOwnershipFieldsSchema,
+  resolveResourceOwnership,
+  isPlatformOwnedResource,
+  isOrganizationOwnedResource,
+  isUserOwnedResource,
+  platformOwnership,
+} from "./resource-ownership";
+export type {
+  ResourceOwnerType,
+  ResourceOwnershipFields,
+  ResourceOwnership,
+  RequestedResourceOwnership,
+  ResolveResourceOwnershipOptions,
+} from "./resource-ownership";
+
+export {
   getAuthServerOwnerOrganizationName,
   DEFAULT_AUTH_SERVER_OWNER_ORGANIZATION_NAME,
 } from "./get-auth-server-owner-organization-name";

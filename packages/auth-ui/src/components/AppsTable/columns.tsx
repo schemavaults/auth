@@ -13,11 +13,13 @@ import { FrontendApplicationActions } from "./frontend_app_actions";
 import AppDomainsList from "./AppDomainsList";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
 import { AppWindowMac, Globe } from "lucide-react";
+import { ResourceOwnerLabel } from "@/components/ResourceOwnerLabel";
 
 export function getAppsTableColumns(
   queryType: ListAppsQueryType,
   preloaded?: PreloadedAppsTableDataWithDomainRefs,
   isOrgOwner?: boolean,
+  managedOrganizationIds?: readonly string[],
 ): ColumnDef<SchemaVaultsApp>[] {
   const columns: ColumnDef<SchemaVaultsApp>[] = [
     {
@@ -78,7 +80,10 @@ export function getAppsTableColumns(
     {
       id: "owner_organization_id",
       accessorKey: "owner_organization_id",
-      header: "Owner Organization",
+      header: "Owner",
+      cell: ({ row }): ReactElement => (
+        <ResourceOwnerLabel resource={row.original} />
+      ),
     },
     {
       id: "web",
@@ -142,7 +147,14 @@ export function getAppsTableColumns(
       cell: ({ row }): ReactElement => {
         const app: SchemaVaultsApp = row.original;
 
-        return <FrontendApplicationActions app={app} queryType={queryType} isOrgOwner={isOrgOwner} />;
+        return (
+          <FrontendApplicationActions
+            app={app}
+            queryType={queryType}
+            isOrgOwner={isOrgOwner}
+            managedOrganizationIds={managedOrganizationIds}
+          />
+        );
       },
     },
   ];

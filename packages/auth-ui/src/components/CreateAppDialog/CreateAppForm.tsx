@@ -25,8 +25,8 @@ import {
 } from "@schemavaults/ui";
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
-import { type OrganizationID } from "@schemavaults/auth-common";
 import {
+  type RequestedResourceOwnership,
   type SchemaVaultsApp,
   schemaVaultsAppDefinitionSchema,
   type SchemaVaultsAppEnvironment,
@@ -34,10 +34,14 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AppWindow } from "lucide-react";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
-import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
+import { requestedOwnershipToDefinitionFields } from "@/components/CreateAppDialog/requested-ownership-fields";
 
 export interface CreateAppFormProps {
-  owner_organization_id: OrganizationID;
+  /**
+   * Who the new app will belong to: the platform (admins only), an
+   * organization the user administers, or the user's own account.
+   */
+  ownership: RequestedResourceOwnership;
   clearFrontendAppsCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
@@ -46,13 +50,16 @@ export interface CreateAppFormProps {
 }
 
 export default function CreateAppForm({
-  owner_organization_id,
+  ownership,
   clearFrontendAppsCache,
   onSuccess,
   uuid,
 }: CreateAppFormProps): ReactElement {
   const friendlyName: string = useAuthUiFriendlyName();
-  const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
+  const ownershipFields = useMemo(
+    () => requestedOwnershipToDefinitionFields(ownership),
+    [ownership],
+  );
   const defaultValues: Partial<SchemaVaultsApp> = useMemo(() => {
     return {
       app_name: "",
@@ -62,9 +69,9 @@ export default function CreateAppForm({
       web: true,
       created_at: Date.now(),
       hardcoded: false,
-      owner_organization_id,
+      ...ownershipFields,
     };
-  }, [owner_organization_id, uuid]);
+  }, [ownershipFields, uuid]);
 
   const form = useForm<SchemaVaultsApp>({
     resolver: zodResolver(schemaVaultsAppDefinitionSchema),
@@ -92,13 +99,10 @@ export default function CreateAppForm({
 
       const createAppRequestBody: Partial<SchemaVaultsApp> = {
         ...values,
+        // The owner is fixed by the card this form was opened from, never
+        // by form input.
+        ...ownershipFields,
       };
-
-      if (typeof owner_organization_id === "string") {
-        createAppRequestBody["owner_organization_id"] = owner_organization_id;
-      } else if (!owner_organization_id && authClient?.currentUser?.admin) {
-        createAppRequestBody["owner_organization_id"] = ownerOrganizationId;
-      }
 
       // if we're creating it from this form then it must be non-hardcoded/dynamic...
       createAppRequestBody["hardcoded"] = false;

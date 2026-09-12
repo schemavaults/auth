@@ -11,8 +11,7 @@ import {
   type IProtectedAuthenticatedApiRouteProps,
   withAuthenticatedApiRouteGuard,
 } from "@/lib/withAuthenticatedRouteGuard";
-import { isUserInOrganizationWithRole } from "@/lib/isUserInOrganization";
-import { type OrganizationID } from "@schemavaults/auth-common";
+import { isUserOwnerOfResource } from "@/lib/ownership/resource-access";
 
 export async function DELETE_app_handler(
   req: NextRequest,
@@ -53,26 +52,14 @@ export async function DELETE_app_handler(
         );
       }
 
-      const isGlobalAdmin = user.admin === true;
-      if (!isGlobalAdmin) {
-        if (!app.owner_organization_id) {
-          return NextResponse.json(
-            { success: false, message: "Only global admins can delete this app" },
-            { status: 403 },
-          );
-        }
-        const isOrgOwner = await isUserInOrganizationWithRole(
-          user,
-          app.owner_organization_id as OrganizationID,
-          "owner",
-          dbh.db,
+      // Organization owners, the owning user of a user-owned app, or global
+      // admins may delete an app (platform-owned apps: admins only).
+      const isOwner: boolean = await isUserOwnerOfResource(dbh.db, user, app);
+      if (!isOwner) {
+        return NextResponse.json(
+          { success: false, message: "Only the app's owner (organization owners, the owning user, or global admins) can delete apps" },
+          { status: 403 },
         );
-        if (!isOrgOwner) {
-          return NextResponse.json(
-            { success: false, message: "Only organization owners or global admins can delete apps" },
-            { status: 403 },
-          );
-        }
       }
 
       const result = await registry.deleteApp(app_id);

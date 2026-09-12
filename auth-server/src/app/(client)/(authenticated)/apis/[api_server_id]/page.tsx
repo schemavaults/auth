@@ -10,10 +10,7 @@ import { type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefiniti
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
-import { type OrganizationMembershipRoleType, type OrganizationID } from "@schemavaults/auth-common";
-import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
-import { OrganizationsRegistry } from "@/lib/auth-db";
-import isUserInOrganization from "@/lib/isUserInOrganization";
+import { accessLevelSatisfies, getUserAccessLevelForResource, type OwnedResourceAccessLevel } from "@/lib/ownership/resource-access";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next/types";
 
@@ -50,36 +47,20 @@ export default async function ApiServerDetailPage(
       }
 
       const api_server: SchemaVaultsApiServerDefinition = await loadApiServerDefinitionFromDatabase({ api_server_id, db: dbh.db });
-      const owner_organization_id: OrganizationID | null | undefined = api_server['owner_organization_id'];
-      if (!owner_organization_id || typeof owner_organization_id !== 'string') {
-        console.error(`Failed to resolve 'owner_organization_id' for API server: '${api_server_id}'`);
-        redirectWithError(500, "internal_server_error");
-      }
-
-      if (owner_organization_id === getAuthServerOwnerOrganizationId() && !user.admin) {
-        console.warn("Blocking request to view API server detail page for a platform-owned API server for non-admin user!")
+      // Organization members, the owning user of a user-owned API server,
+      // and global admins may view; organization owners/admins, the owning
+      // user, and global admins may manage. Platform-owned: admin-only.
+      const access: OwnedResourceAccessLevel = await getUserAccessLevelForResource(dbh.db, user, api_server);
+      if (!accessLevelSatisfies(access, "member")) {
+        console.warn(`Blocking request to view API server detail page for '${api_server_id}': user has no access to it`);
         redirectWithError(403, 'forbidden');
       }
-
-
-      const role: OrganizationMembershipRoleType | false = await isUserInOrganization(dbh.db, user, owner_organization_id);
-      let canView: boolean = false;
-      if (user.admin) {
-        canView = true;
-      } else if (role === 'admin' || role === 'owner' || role === 'member') {
-        canView = true;
-      }
-      if (!canView) {
-        redirectWithError(403, 'forbidden');
-      }
+      const canManage: boolean = accessLevelSatisfies(access, "admin");
 
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
       const connected_apps = await permissions_registry.listConnectedApps(api_server_id);
       const api_server_registry = new SchemaVaultsApiServerRegistry(dbh.db);
       const connected_domains: readonly SchemaVaultsApiServerDomainRef[] = await api_server_registry.getApiServerDomains(api_server_id);
-
-      const orgRegistry = new OrganizationsRegistry(dbh.db)
-      const isOrgOwner: boolean = await orgRegistry.isUserOwnerOfOrgOrAdmin(user, owner_organization_id)
 
       const current_environment = getAppEnvironment();
 
@@ -89,7 +70,7 @@ export default async function ApiServerDetailPage(
           connected_apps={connected_apps}
           connected_domains={connected_domains}
           hardcoded={hardcoded}
-          isOrgOwner={isOrgOwner}
+          isOrgOwner={canManage}
           current_environment={current_environment}
         />
       );
