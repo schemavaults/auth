@@ -200,6 +200,7 @@ export function AuthForm<T extends "login" | "register">({
         app_id={props.app.app_id}
         app_name={props.app.app_name}
         app_description={props.app.app_description}
+        redirect_uri={pendingAuthorization.redirect_uri ?? null}
         onSuccessfulAuthenticate={onSuccessfulAuthenticate}
         mode="authorize-only"
         onAuthorizationComplete={resumeRedirectAfterAuthorization}
