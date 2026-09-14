@@ -1,3 +1,5 @@
+"use client";
+
 import { useToast } from "@schemavaults/ui";
 import useSWR, { useSWRConfig } from "swr";
 import {

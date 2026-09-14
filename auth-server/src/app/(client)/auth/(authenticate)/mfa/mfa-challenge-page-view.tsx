@@ -10,8 +10,10 @@ import {
 import { Button, useToast } from "@schemavaults/ui";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import { successRedirect } from "@/components/AuthForm/success-redirect";
+import { AppAuthorizationConsentScreen } from "@/components/AppAuthorizationConsentScreen";
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
 import { PasskeyChallengeButton } from "@/components/Passkeys";
+import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 
 export interface MfaChallengePageViewProps {
   challenge_id: string;
@@ -34,6 +36,11 @@ export interface MfaChallengePageViewProps {
   // when a route guard bounced them to login from a protected page.
   // Null → default /account destination.
   next_href?: string | null;
+  // The client app a third-party flow hands the authorization code to,
+  // as the consent screen presents it. Loaded by `page.tsx` for every
+  // non-account-page flow; null for the account-page flow, which never
+  // needs consent.
+  app?: PartialAppInfo | null;
 }
 
 export default function MfaChallengePageView({
@@ -47,6 +54,7 @@ export default function MfaChallengePageView({
   state,
   nonce,
   next_href,
+  app,
 }: MfaChallengePageViewProps): ReactElement {
   const router = useRouter();
   const env = useAppEnvironment();
@@ -68,22 +76,66 @@ export default function MfaChallengePageView({
   // only ever sees a "finishing sign-in" state during that window.
   const [succeeded, setSucceeded] = useState<boolean>(false);
 
-  const onAuthenticated = useCallback(
-    async (authorization_code: string) => {
-      // Resume whatever post-auth redirect would have happened on a
-      // non-MFA login. Third-party PKCE / native-app flows hand the auth
-      // code off to the requesting client, which redeems it themselves
-      // (with their own code_verifier). The account-page flow runs the
-      // SDK's own token exchange so the in-memory auth state — current
-      // user, access tokens, refresh-token marker — is populated before
-      // we navigate; without that, /account renders skeleton placeholders
-      // forever and useAdmin() returns false.
+  // An authorization code minted by a verified challenge that cannot be
+  // handed to the third-party client yet because the user has never
+  // authorized that app. The consent screen renders while this is set;
+  // approving it resumes the hand-off with this code.
+  const [pendingAuthorizationCode, setPendingAuthorizationCode] =
+    useState<string | null>(null);
+
+  // Whether a verified challenge hands its authorization code to a
+  // third-party client (PKCE redirect or native-app delivery) rather than
+  // finishing the auth server's own account-page sign-in.
+  const handsOffToClient: boolean =
+    on_successful_authenticate !== "account-page" &&
+    typeof redirect_uri === "string" &&
+    redirect_uri.length > 0 &&
+    typeof challenge_time === "number" &&
+    code_challenge_method === "S256";
+
+  // Mirrors the consent gate of the non-MFA login form
+  // (handle-auth-form-submit.ts): the token endpoint refuses an
+  // authorization code for an app the user has not authorized, so a
+  // first sign-in must go through the consent screen before the code is
+  // handed off. The check runs against the refresh-token cookie the
+  // verify response just set; when it cannot be made (SDK not ready,
+  // request failed) consent is asked for rather than assumed.
+  const isClientAppAuthorized = useCallback(async (): Promise<boolean> => {
+    const authClient = auth.ready ? auth.client.current : null;
+    if (!authClient) {
+      return false;
+    }
+    if (client_app_id === authClient.app_id) {
+      return true;
+    }
+    try {
+      return await authClient.checkAppAuthorization(client_app_id);
+    } catch (e: unknown) {
+      console.warn(
+        "[MfaChallengePageView] Could not check app authorization; asking for consent:",
+        e,
+      );
+      return false;
+    }
+  }, [auth, client_app_id]);
+
+  // Hands a minted authorization code to the third-party client the way
+  // a non-MFA login would: PKCE redirect flows are sent back to the
+  // `redirect_uri` with the code (they redeem it themselves, with their
+  // own code_verifier); native-app flows POST it to the `redirect_uri`
+  // and close the window. Resolves `true` once a hand-off has started
+  // and `false` when none applied or it failed.
+  const handOffAuthorizationCode = useCallback(
+    async (authorization_code: string): Promise<boolean> => {
       if (
-        on_successful_authenticate === "redirect-with-authorization-code" &&
-        redirect_uri &&
-        typeof challenge_time === "number" &&
-        code_challenge_method === "S256"
+        !redirect_uri ||
+        typeof challenge_time !== "number" ||
+        code_challenge_method !== "S256"
       ) {
+        return false;
+      }
+
+      if (on_successful_authenticate === "redirect-with-authorization-code") {
         try {
           const authClientForIssuer = auth.ready ? auth.client.current : null;
           successRedirect({
@@ -98,19 +150,16 @@ export default function MfaChallengePageView({
             state,
             issuer: authClientForIssuer?.auth_server_url ?? null,
           });
-          return;
+          return true;
         } catch (e: unknown) {
           console.error("[MfaChallengePageView] successRedirect failed:", e);
-          // Fall through to /account so the user is not stranded.
+          return false;
         }
       }
 
       if (
         on_successful_authenticate ===
-          "send-authorization-code-to-native-app-then-close" &&
-        redirect_uri &&
-        typeof challenge_time === "number" &&
-        code_challenge_method === "S256"
+        "send-authorization-code-to-native-app-then-close"
       ) {
         try {
           const response = await fetch(redirect_uri, {
@@ -127,7 +176,7 @@ export default function MfaChallengePageView({
           });
           if (response.status === 200) {
             window.location.href = "/close_window";
-            return;
+            return true;
           }
           console.error(
             "[MfaChallengePageView] Native-app code delivery failed with status:",
@@ -139,7 +188,42 @@ export default function MfaChallengePageView({
             e,
           );
         }
-        // Fall through to /account on failure.
+        return false;
+      }
+
+      return false;
+    },
+    [
+      on_successful_authenticate,
+      redirect_uri,
+      challenge_time,
+      code_challenge_method,
+      state,
+      env,
+      auth,
+    ],
+  );
+
+  const onAuthenticated = useCallback(
+    async (authorization_code: string) => {
+      // Resume whatever post-auth redirect would have happened on a
+      // non-MFA login. Third-party PKCE / native-app flows hand the auth
+      // code off to the requesting client — after the user has
+      // authorized that client, which a first sign-in still has to do on
+      // the consent screen. The account-page flow runs the SDK's own
+      // token exchange so the in-memory auth state — current user,
+      // access tokens, refresh-token marker — is populated before we
+      // navigate; without that, /account renders skeleton placeholders
+      // forever and useAdmin() returns false.
+      if (handsOffToClient) {
+        if (!(await isClientAppAuthorized())) {
+          setPendingAuthorizationCode(authorization_code);
+          return;
+        }
+        if (await handOffAuthorizationCode(authorization_code)) {
+          return;
+        }
+        // Fall through to /account on failure so the user is not stranded.
       }
 
       // Account-page flow: exchange the authorization_code for tokens
@@ -213,20 +297,35 @@ export default function MfaChallengePageView({
       router.replace(next_href ?? "/account");
     },
     [
-      on_successful_authenticate,
-      redirect_uri,
+      handsOffToClient,
+      isClientAppAuthorized,
+      handOffAuthorizationCode,
       challenge_time,
-      code_challenge_method,
-      state,
       nonce,
       next_href,
       login_href,
-      env,
       router,
       auth,
       toast,
     ],
   );
+
+  // The consent screen's "Authorize & Continue" recorded the
+  // authorization; the code minted by the challenge can now be handed
+  // to the client. It is single-use, so a failed hand-off cannot be
+  // retried with it — the user has to sign in again.
+  async function resumeHandOffAfterAuthorization(): Promise<void> {
+    if (!pendingAuthorizationCode) return;
+    const handedOff = await handOffAuthorizationCode(pendingAuthorizationCode);
+    if (!handedOff) {
+      toast({
+        variant: "destructive",
+        title: "Redirect failed",
+        description:
+          "The application was authorized but we couldn't send you back to it. Please sign in again.",
+      });
+    }
+  }
 
   const clearFactors = useMfaChallengeFactorsStore((s) => s.clearFactors);
 
@@ -256,6 +355,29 @@ export default function MfaChallengePageView({
         <p className="text-sm text-destructive">
           Missing MFA challenge parameters. Please log in again.
         </p>
+      </div>
+    );
+  }
+
+  // First sign-in to a third-party app: ask for consent before the
+  // authorization code minted by the verified challenge is handed off.
+  // Takes priority over the "finishing" state below, which `succeeded`
+  // would otherwise render.
+  if (pendingAuthorizationCode) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-6">
+        <AppAuthorizationConsentScreen
+          app_id={app?.app_id ?? client_app_id}
+          app_name={app?.app_name ?? client_app_id}
+          app_description={app?.app_description ?? ""}
+          redirect_uri={redirect_uri}
+          onSuccessfulAuthenticate={on_successful_authenticate}
+          mode="authorize-only"
+          onAuthorizationComplete={() => {
+            void resumeHandOffAfterAuthorization();
+          }}
+          debug={env !== "production"}
+        />
       </div>
     );
   }
