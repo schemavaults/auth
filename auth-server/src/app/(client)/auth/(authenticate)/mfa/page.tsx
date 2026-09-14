@@ -12,6 +12,10 @@ import {
 } from "@schemavaults/auth-common";
 import MfaChallengePageView from "./mfa-challenge-page-view";
 import resolveNextHref from "@/lib/next-href";
+import { SchemaVaultsAppRegistry, ServerlessDatabase } from "@/lib/auth-db";
+import { appIdSchema, type SchemaVaultsApp } from "@schemavaults/app-definitions";
+import redirectWithError from "@/lib/redirect-with-error";
+import toPartialAppInfo, { type PartialAppInfo } from "@/lib/PartialAppInfo";
 
 function readString(
   searchParams: { [key: string]: string | string[] | undefined },
@@ -19,6 +23,36 @@ function readString(
 ): string | undefined {
   const value = searchParams[key];
   return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+/**
+ * Loads the client app a third-party flow hands its authorization code
+ * to, as the consent screen presents it (name + description). Mirrors
+ * the login page's app lookup: an unknown app is a 404, a database
+ * failure a 500 — the same outcomes the login page produced for the
+ * same `app_id` before the challenge started.
+ */
+async function loadConsentAppInfo(client_app_id: string): Promise<PartialAppInfo> {
+  if (!appIdSchema.safeParse(client_app_id).success) {
+    console.warn("[MfaChallengePage] Invalid 'client_app_id':", client_app_id);
+    redirectWithError(400, "bad_request");
+  }
+  await using dbh = ServerlessDatabase.createDBH();
+  let app: SchemaVaultsApp | null;
+  try {
+    app = await new SchemaVaultsAppRegistry(dbh.db).getApp(client_app_id);
+  } catch (e: unknown) {
+    console.error(
+      `[MfaChallengePage] Failed to load app with ID "${client_app_id}": `,
+      e,
+    );
+    redirectWithError(500, "internal_server_error");
+  }
+  if (!app) {
+    console.warn("[MfaChallengePage] Client app not found:", client_app_id);
+    redirectWithError(404, "app_id_not_found");
+  }
+  return toPartialAppInfo(app);
 }
 
 export default async function MfaChallengePage(props: {
@@ -86,6 +120,14 @@ export default async function MfaChallengePage(props: {
     readString(searchParams, "next_href"),
   );
 
+  // Third-party flows may have to show the consent screen after the
+  // challenge (first sign-in to that app), which needs the app's name
+  // and description. The account-page flow never asks for consent.
+  const app: PartialAppInfo | null =
+    on_successful_authenticate !== "account-page" && client_app_id.length > 0
+      ? await loadConsentAppInfo(client_app_id)
+      : null;
+
   return (
     <MfaChallengePageView
       challenge_id={challenge_id}
@@ -102,6 +144,7 @@ export default async function MfaChallengePage(props: {
       state={state}
       nonce={nonce}
       next_href={next_href}
+      app={app}
     />
   );
 }

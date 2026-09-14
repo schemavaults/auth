@@ -204,4 +204,93 @@ describe("MFA OAuth2 PKCE redirect", () => {
       });
     });
   });
+
+  // Regression coverage for the MFA challenge page's consent gate: an
+  // MFA-enrolled user who has never authorized the third-party app used
+  // to be redirected straight back to it with an authorization code the
+  // token endpoint then refused ("The user has not authorized this
+  // client application"), failing the RP's code exchange. The consent
+  // screen must appear after the challenge, and approving it must
+  // complete the flow.
+  it("an MFA-enrolled user who has not yet authorized the resource server is asked for consent after TOTP", () => {
+    cy.generate_random_test_user_credentials().then((credentials) => {
+      // Register directly on the auth server (never through the resource
+      // server's PKCE flow) so the example app is NOT yet authorized.
+      cy.create_and_login_as_regular_user(credentials).then((ok) => {
+        if (!ok) throw new Error("Failed to register/login regular user");
+        cy.logout();
+
+        cy.enroll_test_user_mfa({ email: credentials.email }).then((mfa) => {
+          cy.reset_rate_limit();
+          cy.clearAllCookies();
+          cy.origin(exampleAppOrigin, () => {
+            localStorage.clear();
+            sessionStorage.clear();
+            cy.visit("/");
+            cy.contains(
+              "h1",
+              "@schemavaults/example-nextjs-resource-server",
+            );
+            cy.contains("button", "Login").click();
+          });
+
+          cy.url({ timeout: 20_000 }).should("include", "/auth/login");
+          cy.url().should("include", "code_challenge");
+          cy.wait_for_page_hydration();
+          cy.get("input[name='email']")
+            .should("be.visible")
+            .type(credentials.email, { force: true });
+          cy.get("input[name='password']")
+            .should("be.visible")
+            .type(credentials.password, { force: true });
+          cy.get("button[type='submit']")
+            .should("not.be.disabled")
+            .click();
+
+          cy.url({ timeout: 15_000 }).should("include", "/auth/mfa");
+          cy.url().should(
+            "include",
+            "on_successful_authenticate=redirect-with-authorization-code",
+          );
+          cy.wait_for_page_hydration();
+          cy.compute_totp_code(mfa.secret).then((code) => {
+            cy.get("[data-testid='mfa-challenge-input']", {
+              timeout: 10_000,
+            })
+              .should("be.visible")
+              .clear()
+              .type(code);
+            cy.get("[data-testid='mfa-challenge-submit']")
+              .should("not.be.disabled")
+              .click();
+          });
+
+          // The app has never been authorized by this user: the consent
+          // screen must be shown on the auth server before any redirect
+          // back to the resource server.
+          cy.url({ timeout: 15_000 }).should("include", "/auth/mfa");
+          cy.get("[data-testid='consent-redirect-host']", {
+            timeout: 15_000,
+          })
+            .should("be.visible")
+            .and("have.text", new URL(exampleAppOrigin).host);
+          cy.contains("Authorize & Continue")
+            .should("be.visible")
+            .click();
+
+          // Approving hands the challenge's authorization code to the
+          // resource server, whose code exchange now succeeds.
+          cy.origin(exampleAppOrigin, () => {
+            cy.url({ timeout: 30_000 }).should("include", "/account");
+            cy.contains("Example Account Page", {
+              timeout: 15_000,
+            }).should("be.visible");
+            cy.contains(
+              "If you're seeing this it means that you were not redirected because you are logged in!",
+            ).should("be.visible");
+          });
+        });
+      });
+    });
+  });
 });
