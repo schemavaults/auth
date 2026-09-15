@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactElement } from "react";
 import { CodeBlock } from "@schemavaults/ui";
 import type { ApiDocsModel, ApiDocsOperation, ApiDocsSecurityScheme } from "@/model/types";

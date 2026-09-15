@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/example-nextjs-resource-server",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -10,14 +10,17 @@
   },
   "dependencies": {
     "@schemavaults/auth-client-sdk": "workspace:*",
+    "@schemavaults/auth-common": "workspace:*",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/auth-server-sdk": "workspace:*",
+    "@schemavaults/openapi-docs-ui": "workspace:*",
+    "@schemavaults/openapi-operations": "workspace:*",
+    "@schemavaults/theme": "0.26.1",
+    "@schemavaults/ui": "0.93.0",
     "next": "16.2.11",
     "openid-client": "6.8.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "@schemavaults/ui": "0.93.0",
-    "@schemavaults/theme": "0.26.1",
     "server-only": "0.0.1"
   },
   "devDependencies": {

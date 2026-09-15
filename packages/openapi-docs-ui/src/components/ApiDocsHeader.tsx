@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactElement } from "react";
 import { Badge, cn } from "@schemavaults/ui";
 import type { ApiDocsModel } from "@/model/types";

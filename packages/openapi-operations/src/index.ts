@@ -1,5 +1,5 @@
-export { z } from "./zod";
-export type { ZodType, ZodObject } from "./zod";
+export { z } from "./zod-openapi";
+export type { ZodType, ZodObject } from "./zod-openapi";
 
 export { HTTP_METHODS, HTTP_METHODS_WITH_REQUEST_BODY, isHttpMethod } from "./http-method";
 export type { HttpMethod } from "./http-method";
@@ -77,7 +77,11 @@ export {
   isOpenApiPath,
 } from "./openapi/path-format";
 
-export * from "./hono";
+export * from "./runtime";
+// Re-exported so hosts can type auth resolvers / read cookies without a
+// direct dependency on hono (isolated installs do not expose transitive deps).
+export type { Hono, Context as HonoContext } from "hono";
+export { getCookie, getSignedCookie } from "hono/cookie";
 export { toVercelHandler } from "./adapters/vercel";
 export type { VercelFunctionHandler } from "./adapters/vercel";
 export { toNextRouteHandlers } from "./adapters/nextjs";

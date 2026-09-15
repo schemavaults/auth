@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactElement } from "react";
 import { Badge, JsonViewer, type JsonValue } from "@schemavaults/ui";
 import type { ApiDocsMediaType, ApiDocsModel, ApiDocsRequestBody } from "@/model/types";

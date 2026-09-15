@@ -70,7 +70,7 @@ bun run test --filter @schemavaults/openapi-docs-ui  # Run tests in openapi-docs
 - **auth-server/**: Next.js 16 App Router application - the main auth server deployed at auth.schemavaults.com
 - **packages/**: Shared TypeScript libraries published to npm & GitHub Packages
 - **tests/e2e-auth-tests/**: Cypress E2E test suite
-- **tests/example-nextjs-resource-server/**: Example Next.js resource server for testing login via OAuth2 PKCE flow
+- **tests/example-nextjs-resource-server/**: Example Next.js resource server for testing login via OAuth2 PKCE flow. Its `/api/*` routes are the trial run of `@schemavaults/openapi-operations` (operations in `src/lib/api/operations.ts`, credential resolvers built on the server SDK's `RouteGuardFactory` in `src/lib/api/auth-resolvers.ts`, one catch-all `src/app/api/[[...route]]/route.ts`) and its `/docs` pages the trial run of `@schemavaults/openapi-docs-ui` (`src/app/docs/`).
 
 ### Package Dependency Hierarchy
 ```
