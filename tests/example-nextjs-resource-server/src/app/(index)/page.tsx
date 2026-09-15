@@ -17,6 +17,11 @@ export default function IndexPage(): ReactElement {
       <Link href="/auth/register">
         <Button>Register</Button>
       </Link>
+      {/* Generated from the @schemavaults/openapi-operations declarations in
+          src/lib/api/operations.ts and rendered by @schemavaults/openapi-docs-ui. */}
+      <Link href="/docs" data-testid="api-docs-link">
+        <Button variant="secondary">API documentation</Button>
+      </Link>
       {/* Standard-OIDC sign-in via the `openid-client` npm package (no
           SchemaVaults SDK): a route handler, so a plain anchor forces a
           full document navigation instead of a Next.js client-side

@@ -70,6 +70,16 @@ COPY --chown=bun:bun packages/jwt/package.json packages/jwt/package.json
 COPY --chown=bun:bun packages/jwt/tsconfig.json packages/jwt/tsconfig.json
 COPY --chown=bun:bun packages/jwt/eslint.config.cjs packages/jwt/eslint.config.cjs
 
+# @schemavaults/openapi-operations
+COPY --chown=bun:bun packages/openapi-operations/package.json packages/openapi-operations/package.json
+COPY --chown=bun:bun packages/openapi-operations/tsconfig.json packages/openapi-operations/tsconfig.json
+COPY --chown=bun:bun packages/openapi-operations/eslint.config.cjs packages/openapi-operations/eslint.config.cjs
+
+# @schemavaults/openapi-docs-ui
+COPY --chown=bun:bun packages/openapi-docs-ui/package.json packages/openapi-docs-ui/package.json
+COPY --chown=bun:bun packages/openapi-docs-ui/tsconfig.json packages/openapi-docs-ui/tsconfig.json
+COPY --chown=bun:bun packages/openapi-docs-ui/eslint.config.cjs packages/openapi-docs-ui/eslint.config.cjs
+
 ### Install packages
 RUN bun install
 
@@ -112,6 +122,12 @@ COPY --chown=bun:bun packages/auth-server-sdk/src/ packages/auth-server-sdk/src/
 # @schemavaults/jwt
 COPY --chown=bun:bun packages/jwt/src/ packages/jwt/src/
 
+# @schemavaults/openapi-operations
+COPY --chown=bun:bun packages/openapi-operations/src/ packages/openapi-operations/src/
+
+# @schemavaults/openapi-docs-ui
+COPY --chown=bun:bun packages/openapi-docs-ui/src/ packages/openapi-docs-ui/src/
+
 ### Build final server code ###
 FROM source AS build
 
@@ -120,6 +136,8 @@ WORKDIR /schemavaults/auth
 RUN bun run build --filter @schemavaults/auth-client-sdk
 RUN bun run build --filter @schemavaults/auth-react-provider
 RUN bun run build --filter @schemavaults/auth-server-sdk
+RUN bun run build --filter @schemavaults/openapi-operations
+RUN bun run build --filter @schemavaults/openapi-docs-ui
 
 # Build server
 ENV NEXT_STANDALONE_DOCKER_BUILD true

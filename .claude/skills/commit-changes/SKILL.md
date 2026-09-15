@@ -41,6 +41,8 @@ right is the `package.json` to read and edit when bumping a version.
 | `auth-ui`                               | `packages/auth-ui/package.json`                                |
 | `auth-resource-server-codegen-templates`| `packages/auth-resource-server-codegen-templates/package.json` |
 | `trpc-backend-init`                     | `packages/trpc-backend-init/package.json`                      |
+| `openapi-operations`                    | `packages/openapi-operations/package.json`                     |
+| `openapi-docs-ui`                       | `packages/openapi-docs-ui/package.json`                        |
 
 Dependency order (base first, used to order multi-package commit subjects — taken
 from `CLAUDE.md`'s package hierarchy and `auth-server-sdk`'s build-time
@@ -55,7 +57,9 @@ codegen-template bundling):
 7. `auth-resource-server-codegen-templates`
 8. `auth-server-sdk` (build copies codegen-templates source into its dist)
 9. `trpc-backend-init` (peerDeps on `auth-server-sdk` and `app-definitions`)
-10. `auth-server`
+10. `openapi-operations` (depends on `auth-common`; Hono + zod-to-openapi runtime)
+11. `openapi-docs-ui` (standalone; peerDeps on `@schemavaults/ui`, `react`, `next`)
+12. `auth-server`
 
 ## Downstream dependents (REQUIRED cascade bumps)
 
@@ -69,7 +73,7 @@ downstream version to pull in the updated base package; skipping this leaves
 | Bumped package                            | Downstream dependents that MUST also be bumped                                       |
 | ----------------------------------------- | ------------------------------------------------------------------------------------ |
 | `app-definitions`                         | `auth-common`, `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `trpc-backend-init`, `auth-server` |
-| `auth-common`                             | `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server` |
+| `auth-common`                             | `jwt`, `auth-server-sdk`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `openapi-operations`, `auth-server` |
 | `jwt`                                     | `auth-server-sdk`, `auth-server`                                                     |
 | `auth-server-sdk`                         | **`trpc-backend-init` (REQUIRED — see note below)**, `auth-resource-server-codegen-templates`, `auth-server` |
 | `auth-client-sdk`                         | `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server` |
@@ -77,6 +81,8 @@ downstream version to pull in the updated base package; skipping this leaves
 | `auth-ui`                                 | `auth-resource-server-codegen-templates`, `auth-server-sdk`, `auth-server`           |
 | `auth-resource-server-codegen-templates`  | `auth-server-sdk`, `auth-server`                                                     |
 | `trpc-backend-init`                       | (none — leaf)                                                                        |
+| `openapi-operations`                      | (none — leaf; nothing in the monorepo depends on it yet)                             |
+| `openapi-docs-ui`                         | (none — leaf; nothing in the monorepo depends on it yet)                             |
 | `auth-server`                             | (none — leaf)                                                                        |
 
 **Note on `auth-resource-server-codegen-templates` → `auth-server-sdk`:** the
