@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { parseOpenApiDocument } from "@/model/parse-openapi-document";
 import { findOperationBySlug } from "@/model/slug";
+import { withServerUrl } from "@/model/server-url";
 import type { ApiDocsModel } from "@/model/types";
 import { ApiDocsIndex, type ApiDocsIndexProps } from "@/components/ApiDocsIndex";
 import { ApiOperationPage, type ApiOperationPageProps } from "@/components/ApiOperationPage";
@@ -19,6 +20,16 @@ export interface CreateApiDocsPagesOptions {
   readonly slugParam?: string;
   /** URL of the raw OpenAPI JSON, shown in the header. */
   readonly openApiDocumentHref?: string;
+  /**
+   * Resolves the API's public base URL at render time, e.g. from the
+   * incoming request's Host / X-Forwarded-* headers via `next/headers`.
+   * When it returns a URL it replaces the document's `servers` on the
+   * rendered pages, so the header and curl examples show the real origin
+   * instead of a relative or build-time placeholder. Never called from
+   * `generateStaticParams` or the metadata helpers, which run outside a
+   * request scope.
+   */
+  readonly resolveServerUrl?: () => Promise<string | undefined> | string | undefined;
   /** Extra props forwarded to the index component. */
   readonly indexProps?: Omit<ApiDocsIndexProps, "model" | "basePath" | "openApiDocumentHref">;
   /** Extra props forwarded to the operation page component. */
@@ -87,6 +98,13 @@ export function createApiDocsPages(options: CreateApiDocsPagesOptions): ApiDocsP
     return isModel(loaded) ? loaded : parseOpenApiDocument(loaded);
   };
 
+  /** Model for a rendered page: the loaded model plus the request-time server URL. */
+  const loadRenderModel = async (): Promise<ApiDocsModel> => {
+    const model = await loadModel();
+    const url = options.resolveServerUrl ? await options.resolveServerUrl() : undefined;
+    return url ? withServerUrl(model, url) : model;
+  };
+
   const resolveSlug = async (props: ApiDocsOperationPageProps): Promise<string | null> => {
     const params = await props.params;
     const raw = params[slugParam];
@@ -96,7 +114,7 @@ export function createApiDocsPages(options: CreateApiDocsPagesOptions): ApiDocsP
   return {
     loadModel,
     async IndexPage(): Promise<ReactElement> {
-      const model = await loadModel();
+      const model = await loadRenderModel();
       return wrap(
         <ApiDocsIndex
           {...options.indexProps}
@@ -107,7 +125,7 @@ export function createApiDocsPages(options: CreateApiDocsPagesOptions): ApiDocsP
       );
     },
     async OperationPage(props: ApiDocsOperationPageProps): Promise<ReactElement> {
-      const model = await loadModel();
+      const model = await loadRenderModel();
       const slug = await resolveSlug(props);
       const operation = slug ? findOperationBySlug(model, slug) : null;
       if (!operation) notFound();

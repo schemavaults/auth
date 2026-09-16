@@ -9,6 +9,7 @@ import type { ExampleApiContext } from "./context";
 import { operations } from "./operations";
 import { authResolvers } from "./auth-resolvers";
 import { openApiDocument } from "./openapi-document";
+import { resolvePublicOrigin, withServerUrl } from "./public-origin";
 
 /**
  * The Hono app that serves every operation. Mounted from
@@ -21,5 +22,11 @@ export const apiApp: Hono = createOperationsApp<ExampleApiContext, UserData>({
     environment: getAppEnvironment(),
     api_server_id: getSchemavaultsApiServerId(),
   }),
-  openapi: { path: "/api/openapi.json", document: openApiDocument },
+  openapi: {
+    path: "/api/openapi.json",
+    // Report the deployment's real origin in `servers` instead of the
+    // static document's relative "/".
+    document: (c) =>
+      withServerUrl(openApiDocument, resolvePublicOrigin((name) => c.req.header(name), c.req.url)),
+  },
 });

@@ -10,7 +10,14 @@ import { assertResolversForOperations, resolveAuth, type AuthResolvers } from ".
 export interface OpenApiDocumentRouteOptions {
   /** Path (relative to `basePath`) serving the JSON document. Default `/openapi.json`. */
   readonly path?: string;
-  readonly document: OpenAPIObject | (() => OpenAPIObject | Promise<OpenAPIObject>);
+  /**
+   * The document, or a function producing it per request. The function
+   * receives the Hono context so hosts can derive request-dependent parts
+   * such as `servers` from the incoming Host / X-Forwarded-* headers.
+   */
+  readonly document:
+    | OpenAPIObject
+    | ((c: Context) => OpenAPIObject | Promise<OpenAPIObject>);
 }
 
 export interface CreateOperationsAppOptions<TContext = unknown, TUser = unknown> {
@@ -101,7 +108,7 @@ export function createOperationsApp<TContext = unknown, TUser = unknown>(
   if (options.openapi) {
     const { document, path = "/openapi.json" } = options.openapi;
     app.get(path, async (c) => {
-      const resolved = typeof document === "function" ? await document() : document;
+      const resolved = typeof document === "function" ? await document(c) : document;
       return c.json(resolved);
     });
   }

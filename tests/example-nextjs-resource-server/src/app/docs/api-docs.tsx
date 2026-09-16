@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import Link from "next/link";
 import { createApiDocsPages } from "@schemavaults/openapi-docs-ui/nextjs";
 import { openApiDocument } from "@/lib/api/openapi-document";
+import { resolvePublicOriginFromRequest } from "@/lib/api/public-origin-next";
 
 /**
  * Shared factory for the /docs pages: the index (`page.tsx`) and one
@@ -11,11 +12,11 @@ export const apiDocs = createApiDocsPages({
   loadDocument: () => openApiDocument,
   basePath: "/docs",
   openApiDocumentHref: "/api/openapi.json",
-  operationProps: {
-    // The document's server URL is relative ("/"); give curl an absolute
-    // base matching `bun run dev` of this app.
-    curlBaseUrl: "http://localhost:3007",
-  },
+  // The generated document's server URL is a relative "/"; the pages show
+  // the deployment's real origin instead, resolved per request from the
+  // SCHEMAVAULTS_EXAMPLE_RESOURCE_SERVER_URL override or the incoming
+  // Host / X-Forwarded-* headers (see src/lib/api/public-origin.ts).
+  resolveServerUrl: resolvePublicOriginFromRequest,
   wrap: (page: ReactElement): ReactElement => (
     <main className="flex w-full max-w-5xl flex-col gap-6 self-center p-4">
       <nav className="text-sm">

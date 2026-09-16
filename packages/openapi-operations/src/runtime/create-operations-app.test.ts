@@ -181,6 +181,21 @@ describe("createOperationsApp", () => {
     expect(Object.keys(doc.paths)).toContain("/api/apps/{app_id}");
   });
 
+  test("serves a per-request OpenAPI document when given a function", async () => {
+    const perRequest = createOperationsApp<Ctx, User>({
+      operations: [health],
+      context: () => ({ now: 1 }),
+      openapi: {
+        path: "/api/openapi.json",
+        document: (c) => ({ ...document, servers: [{ url: new URL(c.req.url).origin }] }),
+      },
+    });
+    const res = await perRequest.request("https://api.example.test/api/openapi.json");
+    expect(res.status).toBe(200);
+    const doc = (await res.json()) as { servers: { url: string }[] };
+    expect(doc.servers).toEqual([{ url: "https://api.example.test" }]);
+  });
+
   test("401 with challenge when no credential", async () => {
     const res = await app.request(`/api/apps/${APP_ID}`);
     expect(res.status).toBe(401);

@@ -134,7 +134,9 @@ const app = createOperationsApp<{ dbh: Kysely<AuthDatabase> }, UserData>({
       };
     },
   },
-  openapi: { document: openApiDocument }, // served at GET /openapi.json
+  // Served at GET /openapi.json. Pass a function to build it per request,
+  // e.g. to set `servers` from the incoming Host / X-Forwarded-* headers.
+  openapi: { document: openApiDocument },
 });
 
 // app/api/[[...route]]/route.ts

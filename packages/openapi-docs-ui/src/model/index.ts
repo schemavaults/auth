@@ -1,5 +1,6 @@
 export { parseOpenApiDocument } from "./parse-openapi-document";
 export { operationSlug, findOperationBySlug, operationDocsHref } from "./slug";
+export { withServerUrl } from "./server-url";
 export {
   schemaRefName,
   resolveSchema,

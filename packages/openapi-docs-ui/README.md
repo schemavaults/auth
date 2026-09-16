@@ -38,6 +38,13 @@ export const apiDocs = createApiDocsPages({
   loadDocument: () => openApiDocument,     // object or already parsed ApiDocsModel
   basePath: "/docs",
   openApiDocumentHref: "/api/openapi.json", // optional link in the header
+  // Optional: the public origin, resolved per request (never during
+  // generateStaticParams). Replaces the document's `servers` on the pages,
+  // so the header and curl examples show the real deployment URL.
+  resolveServerUrl: async () => {
+    const h = await headers(); // from "next/headers"
+    return `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
+  },
   wrap: (page) => <main className="container py-8">{page}</main>, // optional
 });
 ```

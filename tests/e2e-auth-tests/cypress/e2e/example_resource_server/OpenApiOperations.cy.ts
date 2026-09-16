@@ -19,6 +19,7 @@ interface OpenApiOperationObject {
 interface OpenApiDocumentLike {
   openapi: string;
   info: { title: string; version: string };
+  servers?: { url: string }[];
   paths: Record<string, Record<string, OpenApiOperationObject>>;
   components?: { securitySchemes?: Record<string, { type: string }> };
 }
@@ -53,6 +54,8 @@ describe("OpenApiOperations (example resource server)", () => {
         expect(response.status).to.eq(200);
         expect(response.body.openapi).to.eq("3.1.0");
         expect(response.body.info.title).to.eq("Example Next.js Resource Server API");
+        // `servers` is derived from the request's Host header, not hardcoded.
+        expect(response.body.servers?.[0]?.url).to.eq(exampleAppOrigin);
         expect(Object.keys(response.body.paths)).to.include.members([
           "/api/health",
           "/api/echo",
@@ -166,6 +169,8 @@ describe("OpenApiOperations (example resource server)", () => {
       cy.get('[data-testid="api-docs-link"]').click();
       cy.url({ timeout: 15000 }).should("include", "/docs");
       cy.contains("h1", "Example Next.js Resource Server API").should("be.visible");
+      // Server URL resolved from the request, shown in the header
+      cy.contains(exampleAppOrigin).should("be.visible");
       // Security schemes card
       cy.contains("SchemaVaults access token (Bearer)").should("be.visible");
       // Tag cards with the operation rows
