@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-ui",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "private": false,
   "license": "UNLICENSED",
   "description": "React.js UI components for authentication/authorization shared between different SchemaVaults apps",
@@ -15,14 +15,14 @@
   "peerDependencies": {
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "next": "^16.2.11",
+    "next": "^16.3.5",
     "@schemavaults/ui": "^0.101.0",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
     "lucide-react": "0.575.0",
     "swr": "2.3.4",
-    "postcss": "8.5.3",
+    "postcss": "8.5.28",
     "tailwindcss": "3.4.17"
   },
   "devDependencies": {

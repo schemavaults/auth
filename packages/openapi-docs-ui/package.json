@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/openapi-docs-ui",
   "description": "React.js components (built on @schemavaults/ui) and Next.js page factories for browsing an OpenAPI document: routes, permissions, and auth details",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -17,7 +17,7 @@
   "peerDependencies": {
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "next": "^16.2.11",
+    "next": "^16.3.5",
     "@schemavaults/ui": "^0.101.0"
   },
   "devDependencies": {

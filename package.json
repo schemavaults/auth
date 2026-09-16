@@ -7,7 +7,7 @@
   },
   "devDependencies": {
     "turbo": "2.9.14",
-    "@schemavaults/send-email": "0.1.0"
+    "@schemavaults/send-email": "0.3.1"
   },
   "workspaces": [
     "./auth-server",
