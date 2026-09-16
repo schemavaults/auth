@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.42.16",
+      "version": "0.42.18",
       "dependencies": {
         "@hookform/resolvers": "5.9.1",
         "@schemavaults/app-definitions": "workspace:*",
@@ -24,7 +24,7 @@
         "@schemavaults/jwt": "workspace:*",
         "@schemavaults/send-email": "0.1.0",
         "@schemavaults/theme": "0.26.1",
-        "@schemavaults/ui": "0.93.0",
+        "@schemavaults/ui": "0.101.0",
         "@simplewebauthn/browser": "13.3.0",
         "@simplewebauthn/server": "13.3.1",
         "cookies-next": "6.1.1",
@@ -52,7 +52,7 @@
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
         "autoprefixer": "10.4.21",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "eslint": "9.39.1",
         "eslint-config-next": "16.2.11",
         "globals": "16.5.0",
@@ -63,7 +63,7 @@
     },
     "packages/app-definitions": {
       "name": "@schemavaults/app-definitions",
-      "version": "0.13.1",
+      "version": "0.13.2",
       "dependencies": {
         "zod": "4.4.3",
       },
@@ -71,7 +71,7 @@
         "@eslint/js": "9.39.1",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "esbuild": "0.24.0",
         "eslint": "9.39.1",
         "globals": "16.5.0",
@@ -81,7 +81,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.18.9",
+      "version": "0.18.11",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -92,7 +92,7 @@
         "@eslint/js": "9.39.1",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "eslint": "9.39.1",
         "globals": "16.5.0",
         "tsc-alias": "1.9.0",
@@ -101,7 +101,7 @@
     },
     "packages/auth-common": {
       "name": "@schemavaults/auth-common",
-      "version": "0.26.4",
+      "version": "0.26.6",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "crypto-js": "4.2.0",
@@ -112,7 +112,7 @@
         "@types/crypto-js": "4.2.0",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "eslint": "9.39.1",
         "globals": "16.5.0",
         "tsc-alias": "1.9.0",
@@ -121,7 +121,7 @@
     },
     "packages/auth-react-provider": {
       "name": "@schemavaults/auth-react-provider",
-      "version": "0.16.30",
+      "version": "0.16.32",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -136,7 +136,7 @@
         "@types/react": "19.2.14",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "eslint": "9.39.1",
         "eslint-plugin-jsx-a11y": "6.10.2",
         "eslint-plugin-react": "7.37.5",
@@ -153,18 +153,18 @@
     },
     "packages/auth-resource-server-codegen-templates": {
       "name": "@schemavaults/auth-resource-server-codegen-templates",
-      "version": "0.0.139",
+      "version": "0.0.141",
       "devDependencies": {
         "@eslint/js": "9.39.1",
         "@schemavaults/auth-client-sdk": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/auth-react-provider": "workspace:*",
         "@schemavaults/jwt": "workspace:*",
-        "@schemavaults/ui": "^0.93.0",
+        "@schemavaults/ui": "^0.101.0",
         "@types/react": "19.2.14",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "eslint": "9.39.1",
         "eslint-plugin-jsx-a11y": "6.10.2",
         "eslint-plugin-react": "7.37.5",
@@ -178,7 +178,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.28.42",
+      "version": "0.28.44",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -193,7 +193,7 @@
         "@types/react": "19.2.14",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "esbuild": "0.27.3",
         "eslint": "9.39.1",
         "globals": "16.5.0",
@@ -204,7 +204,7 @@
     },
     "packages/auth-ui": {
       "name": "@schemavaults/auth-ui",
-      "version": "0.14.3",
+      "version": "0.14.5",
       "dependencies": {
         "@hookform/resolvers": "5.9.1",
       },
@@ -214,7 +214,7 @@
         "@types/react-dom": "19.2.3",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "eslint": "9.39.1",
         "eslint-plugin-jsx-a11y": "6.10.2",
         "eslint-plugin-react": "7.37.5",
@@ -227,7 +227,7 @@
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/auth-react-provider": "workspace:*",
-        "@schemavaults/ui": "^0.93.0",
+        "@schemavaults/ui": "^0.101.0",
         "lucide-react": "0.575.0",
         "next": "^16.2.11",
         "postcss": "8.5.3",
@@ -239,7 +239,7 @@
     },
     "packages/jwt": {
       "name": "@schemavaults/jwt",
-      "version": "0.13.6",
+      "version": "0.13.8",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -250,7 +250,7 @@
         "@eslint/js": "9.39.1",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "eslint": "9.39.1",
         "globals": "16.5.0",
         "tsc-alias": "1.9.0",
@@ -259,14 +259,14 @@
     },
     "packages/openapi-docs-ui": {
       "name": "@schemavaults/openapi-docs-ui",
-      "version": "0.1.1",
+      "version": "0.1.3",
       "devDependencies": {
         "@eslint/js": "9.39.1",
         "@types/react": "19.2.14",
         "@types/react-dom": "19.2.3",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "eslint": "9.39.1",
         "eslint-plugin-jsx-a11y": "6.10.2",
         "eslint-plugin-react": "7.37.5",
@@ -276,7 +276,7 @@
         "typescript": "6.0.3",
       },
       "peerDependencies": {
-        "@schemavaults/ui": "^0.93.0",
+        "@schemavaults/ui": "^0.101.0",
         "next": "^16.2.11",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
@@ -284,7 +284,7 @@
     },
     "packages/openapi-operations": {
       "name": "@schemavaults/openapi-operations",
-      "version": "0.1.1",
+      "version": "0.1.3",
       "dependencies": {
         "@asteasolutions/zod-to-openapi": "9.1.0",
         "@schemavaults/auth-common": "workspace:*",
@@ -296,7 +296,7 @@
         "@eslint/js": "9.39.1",
         "@typescript-eslint/eslint-plugin": "8.48.1",
         "@typescript-eslint/parser": "8.48.1",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "eslint": "9.39.1",
         "globals": "16.5.0",
         "tsc-alias": "1.9.0",
@@ -305,9 +305,9 @@
     },
     "packages/trpc-backend-init": {
       "name": "@schemavaults/trpc-backend-init",
-      "version": "0.9.54",
+      "version": "0.9.56",
       "devDependencies": {
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "tsc-alias": "1.9.0",
         "typescript": "6.0.3",
       },
@@ -334,7 +334,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.11.11",
+      "version": "0.11.12",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -351,7 +351,7 @@
     },
     "tests/example-nextjs-resource-server": {
       "name": "@schemavaults/example-nextjs-resource-server",
-      "version": "0.5.0",
+      "version": "0.5.3",
       "dependencies": {
         "@schemavaults/auth-client-sdk": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -360,7 +360,7 @@
         "@schemavaults/openapi-docs-ui": "workspace:*",
         "@schemavaults/openapi-operations": "workspace:*",
         "@schemavaults/theme": "0.26.1",
-        "@schemavaults/ui": "0.93.0",
+        "@schemavaults/ui": "0.101.0",
         "next": "16.2.11",
         "openid-client": "6.8.4",
         "react": "19.2.8",
@@ -372,7 +372,7 @@
         "@types/react": "19.2.14",
         "@types/react-dom": "19.2.3",
         "autoprefixer": "10.4.21",
-        "bun-types": "1.3.14",
+        "bun-types": "1.4.2",
         "postcss": "8.5.3",
         "tailwindcss": "3.4.17",
         "typescript": "6.0.3",
@@ -802,7 +802,7 @@
 
     "@schemavaults/trpc-backend-init": ["@schemavaults/trpc-backend-init@workspace:packages/trpc-backend-init"],
 
-    "@schemavaults/ui": ["@schemavaults/ui@0.93.0", "", { "dependencies": { "@emotion/is-prop-valid": "1.4.0", "@hookform/resolvers": "3.9.0", "@radix-ui/react-accordion": "1.2.12", "@radix-ui/react-avatar": "^1.1.11", "@radix-ui/react-checkbox": "1.3.2", "@radix-ui/react-context-menu": "2.2.15", "@radix-ui/react-dialog": "1.1.14", "@radix-ui/react-dropdown-menu": "2.1.15", "@radix-ui/react-hover-card": "1.1.14", "@radix-ui/react-label": "2.1.7", "@radix-ui/react-navigation-menu": "1.2.13", "@radix-ui/react-popover": "1.1.14", "@radix-ui/react-radio-group": "1.3.7", "@radix-ui/react-scroll-area": "1.2.9", "@radix-ui/react-select": "2.2.5", "@radix-ui/react-separator": "1.1.7", "@radix-ui/react-slider": "1.3.6", "@radix-ui/react-slot": "1.2.4", "@radix-ui/react-switch": "1.2.6", "@radix-ui/react-tabs": "1.1.13", "@radix-ui/react-toast": "1.2.14", "@radix-ui/react-tooltip": "1.2.7", "@radix-ui/react-visually-hidden": "1.2.3", "@schemavaults/theme": "0.26.1", "@tanstack/react-table": "8.20.1", "class-variance-authority": "0.7.1", "clsx": "2.1.1", "cmdk": "1.1.1", "framer-motion": "12.23.24", "lucide-react": "0.575.0", "next-themes": "0.4.6", "react-hook-form": "7.76.1", "tailwind-merge": "3.0.2" }, "peerDependencies": { "react": "19.2.8", "react-dom": "19.2.8" } }, "sha512-tLTfnqpeVICy4SxRCYd9F/rqvKYVZ8AAor5gXQ8hSYtFm/qDi9v3obw8NrCNyJ/01SBRuJ4EycO4MGEDErTLng=="],
+    "@schemavaults/ui": ["@schemavaults/ui@0.101.0", "", { "dependencies": { "@emotion/is-prop-valid": "1.4.0", "@hookform/resolvers": "3.9.0", "@radix-ui/react-accordion": "1.2.12", "@radix-ui/react-avatar": "^1.1.11", "@radix-ui/react-checkbox": "1.3.2", "@radix-ui/react-context-menu": "2.2.15", "@radix-ui/react-dialog": "1.1.14", "@radix-ui/react-dropdown-menu": "2.1.15", "@radix-ui/react-hover-card": "1.1.14", "@radix-ui/react-label": "2.1.7", "@radix-ui/react-navigation-menu": "1.2.13", "@radix-ui/react-popover": "1.1.14", "@radix-ui/react-radio-group": "1.3.7", "@radix-ui/react-scroll-area": "1.2.9", "@radix-ui/react-select": "2.2.5", "@radix-ui/react-separator": "1.1.7", "@radix-ui/react-slider": "1.3.6", "@radix-ui/react-slot": "1.2.4", "@radix-ui/react-switch": "1.2.6", "@radix-ui/react-tabs": "1.1.13", "@radix-ui/react-toast": "1.2.14", "@radix-ui/react-tooltip": "1.2.7", "@radix-ui/react-visually-hidden": "1.2.3", "@schemavaults/theme": "0.26.1", "@tanstack/react-table": "8.20.1", "class-variance-authority": "0.7.1", "clsx": "2.1.1", "cmdk": "1.1.1", "framer-motion": "13.0.0", "lucide-react": "0.575.0", "next-themes": "0.4.6", "react-hook-form": "7.76.1", "tailwind-merge": "3.0.2" }, "peerDependencies": { "react": "19.2.8", "react-dom": "19.2.8" } }, "sha512-fkgA7hbQR5CZM/6ygzh0kPnsdSkGWyXeo+jVsfF6qnwuUF1iRS+1mW/X1zxLYzBoc5MSE6KGtL4b2sjg0xJ4SA=="],
 
     "@scure/base": ["@scure/base@2.2.0", "", {}, "sha512-b8XEupJibegiXV+tDUseI8oLQc8ei3d/4Jkb2RpbHh3MfE054ov3uIz2dhFkB3FI8iwYkEh0gGCApkrYggkPNg=="],
 
@@ -1014,7 +1014,7 @@
 
     "buffer": ["buffer@5.7.1", "", { "dependencies": { "base64-js": "^1.3.1", "ieee754": "^1.1.13" } }, "sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ=="],
 
-    "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
+    "bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
 
     "cachedir": ["cachedir@2.4.0", "", {}, "sha512-9EtFOZR8g22CL7BWjJ9BUx1+A/djkofnyW3aOXZORNW2kxoUpx2h+uN2cOqwPmFhnpVmxg+KW2OjOSgChTEvsQ=="],
 
@@ -1242,7 +1242,7 @@
 
     "fraction.js": ["fraction.js@4.3.7", "", {}, "sha512-ZsDfxO51wGAXREY55a7la9LScWpwv9RxIrYABrlvOFBlH/ShPnrtsXeuUIfXKKOVicNxQ+o8JTbJvjS4M89yew=="],
 
-    "framer-motion": ["framer-motion@12.23.24", "", { "dependencies": { "motion-dom": "^12.23.23", "motion-utils": "^12.23.6", "tslib": "^2.4.0" }, "peerDependencies": { "@emotion/is-prop-valid": "*", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@emotion/is-prop-valid", "react", "react-dom"] }, "sha512-HMi5HRoRCTou+3fb3h9oTLyJGBxHfW+HnNE25tAXOvVx/IvwMHK0cx7IR4a2ZU6sh3IX1Z+4ts32PcYBOqka8w=="],
+    "framer-motion": ["framer-motion@13.0.0", "", { "dependencies": { "motion-dom": "^13.0.0", "motion-utils": "^13.0.0", "tslib": "^2.4.0" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["react", "react-dom"] }, "sha512-nQGZXlsiigN48nzvE7AL1GLekql+etcphp8v+PQ0X04oxO20yVmV9rU9XQ25c136RdeIYoaWlKT9oAwvJza3mg=="],
 
     "fs-extra": ["fs-extra@9.1.0", "", { "dependencies": { "at-least-node": "^1.0.0", "graceful-fs": "^4.2.0", "jsonfile": "^6.0.1", "universalify": "^2.0.0" } }, "sha512-hcg3ZmepS30/7BSFqRvoo3DOMQu7IjqxO5nCDt+zM9XWjb33Wg7ziNT+Qvqbuc3+gWpzO02JubVyk2G4Zvo1OQ=="],
 
@@ -1498,9 +1498,9 @@
 
     "minimist": ["minimist@1.2.8", "", {}, "sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA=="],
 
-    "motion-dom": ["motion-dom@12.40.0", "", { "dependencies": { "motion-utils": "^12.39.0" } }, "sha512-HxU3ZaBwNPVQUBQf1xxgq+7JrPNZvjLVxgbpEZL7RrWJnsxOf0/OM+yrHG9ogLQ31Do/r57Oz2gQWPK+6q62mg=="],
+    "motion-dom": ["motion-dom@13.3.0", "", { "dependencies": { "motion-utils": "^13.3.0" } }, "sha512-AmAnB6pHdZ1vHGzWzuzteG6Q3j1lHKeX/lbST6jGlgm0cjvLUgaCk1xhOuPMOy5SgovN6wnnUdwFrkcsus7Ftg=="],
 
-    "motion-utils": ["motion-utils@12.39.0", "", {}, "sha512-8nadJAJjTtqRkmRF36FoJTrywK9nnFmnPwnSMyxaOCU7GDjN9RTMJIxx9De8ErM+vpPhMccr/6fo5WciyQLnMQ=="],
+    "motion-utils": ["motion-utils@13.3.0", "", {}, "sha512-sgSschQp7EseHInIlR7hBbMuvet3RA0bs28KPZAXJcGKGdxHGvh1ogpYDilY3bOMtl73EqPNmp75sAKHYPU5sg=="],
 
     "ms": ["ms@2.1.3", "", {}, "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="],
 
@@ -2086,8 +2086,6 @@
 
     "asn1js/tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
-    "bun-types/@types/node": ["@types/node@24.4.0", "", { "dependencies": { "undici-types": "~7.11.0" } }, "sha512-gUuVEAK4/u6F9wRLznPUU4WGUacSEBDPoC2TrBkw3GAnOLHBL45QdfHOXp1kJ4ypBGLxTOB+t7NJLpKoC3gznQ=="],
-
     "chalk/supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
 
     "chokidar/glob-parent": ["glob-parent@5.1.2", "", { "dependencies": { "is-glob": "^4.0.1" } }, "sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow=="],
@@ -2241,8 +2239,6 @@
     "@types/qrcode/@types/node/undici-types": ["undici-types@7.11.0", "", {}, "sha512-kt1ZriHTi7MU+Z/r9DOdAI3ONdaR3M3csEaRc6ewa4f4dTvX4cQCbJ4NkEn0ohE4hHtq85+PhPSTY+pO/1PwgA=="],
 
     "@typescript-eslint/typescript-estree/minimatch/brace-expansion": ["brace-expansion@2.1.0", "", { "dependencies": { "balanced-match": "^1.0.0" } }, "sha512-TN1kCZAgdgweJhWWpgKYrQaMNHcDULHkWwQIspdtjV4Y5aurRdZpjAqn6yX3FPqTA9ngHCc4hJxMAMgGfve85w=="],
-
-    "bun-types/@types/node/undici-types": ["undici-types@7.11.0", "", {}, "sha512-kt1ZriHTi7MU+Z/r9DOdAI3ONdaR3M3csEaRc6ewa4f4dTvX4cQCbJ4NkEn0ohE4hHtq85+PhPSTY+pO/1PwgA=="],
 
     "cli-truncate/string-width/strip-ansi": ["strip-ansi@7.2.0", "", { "dependencies": { "ansi-regex": "^6.2.2" } }, "sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w=="],
 
