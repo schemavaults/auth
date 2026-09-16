@@ -24,3 +24,7 @@ eslint.config.js
 eslint.config.mjs
 
 openapi-docs-ui.tgz
+
+.npmrc
+.npmrc.github
+.npmrc.npmjs

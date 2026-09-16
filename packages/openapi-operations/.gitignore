@@ -11,3 +11,6 @@ dist-types
 .env.production
 
 openapi-operations.tgz
+
+.npmrc
+.npmrc.*

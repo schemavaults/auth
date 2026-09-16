@@ -16,6 +16,7 @@ turbo.json
 
 .vercel/
 
+.npmrc
 .npmrc.github
 .npmrc.npmjs
 

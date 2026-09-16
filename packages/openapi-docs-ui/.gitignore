@@ -10,4 +10,8 @@ dist-types
 .env.staging
 .env.production
 
+.npmrc
+.npmrc.*
+
+
 openapi-docs-ui.tgz
