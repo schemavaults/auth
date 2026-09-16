@@ -181,10 +181,16 @@ describe("Adding a domain from the app detail page (/apps/:app_id)", () => {
                     // after the dialog succeeds, so the new domain shows up
                     // in the Connected Domains card (environment "test" is
                     // the dialog's default in the E2E environment, i.e. the
-                    // current one).
-                    cy.contains("p", domain, { timeout: 20000 }).should(
-                      "be.visible",
-                    );
+                    // current one). open_dialog_with_button scrolled the
+                    // "Add domain" button to the top of the layout's
+                    // overflow-y-scroll container, and the new row renders
+                    // above that button — i.e. above the container's visible
+                    // box, which Cypress reports as "clipped by a parent with
+                    // overflow" — so bring the row into view before asserting
+                    // visibility.
+                    cy.contains("p", domain, { timeout: 20000 })
+                      .scrollIntoView()
+                      .should("be.visible");
                     cy.contains(
                       "No domains are registered for the current environment",
                     ).should("not.exist");
@@ -257,7 +263,13 @@ describe("Adding a domain from the app detail page (/apps/:app_id)", () => {
                           cy.contains("Connected Domains").should(
                             "be.visible",
                           );
-                          cy.contains("p", domain).should("be.visible");
+                          // The row sits near the bottom edge of the default
+                          // viewport, inside the layout's scroll container;
+                          // scroll it into view rather than relying on the
+                          // fold position.
+                          cy.contains("p", domain)
+                            .scrollIntoView()
+                            .should("be.visible");
                           cy.get(addDomainButtonSelector).should("not.exist");
                           cy.contains("button", "Add domain").should(
                             "not.exist",
