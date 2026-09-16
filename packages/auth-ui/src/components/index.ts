@@ -67,14 +67,49 @@ export type {
   UseAllInviteCodesOptions,
 } from "./InviteCodesTable";
 
-export { UsersTable } from "./UsersTable";
-export type { UsersDatatableProps } from "./UsersTable";
+export {
+  UsersTable,
+  useAllUsersList,
+  LIST_ALL_USERS_ENDPOINT,
+} from "./UsersTable";
+export type {
+  UsersDatatableProps,
+  UseAllUsersListOptions,
+} from "./UsersTable";
 
 export { UsersCard } from "./UsersCard";
 export type { UsersCardProps } from "./UsersCard";
 
 export { UsersStatsRow } from "./UsersStatsRow";
 export type { UsersStatsRowProps } from "./UsersStatsRow";
+
+export {
+  UsersChartsRow,
+  UsersGrowthCard,
+  UsersBreakdownCard,
+  USER_CATEGORY_IDS,
+  USER_GROWTH_RANGE_IDS,
+  USER_GROWTH_RANGE_LABELS,
+  buildUserGrowthSeries,
+  describeUserGrowthTrend,
+  formatUtcDay,
+  formatUtcDayShort,
+  isUserGrowthRangeId,
+  startOfUtcDay,
+  summarizeUserBreakdown,
+} from "./UsersChartsRow";
+export type {
+  UsersChartsRowProps,
+  UsersGrowthCardProps,
+  UsersBreakdownCardProps,
+  BuildUserGrowthSeriesOptions,
+  UserBreakdown,
+  UserCategoryId,
+  UserGrowthBucket,
+  UserGrowthRangeId,
+  UserGrowthSeries,
+  UserGrowthTrend,
+} from "./UsersChartsRow";
 
 export {
   OrganizationsTable,
