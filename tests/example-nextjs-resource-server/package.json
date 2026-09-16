@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/example-nextjs-resource-server",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -16,7 +16,7 @@
     "@schemavaults/openapi-docs-ui": "workspace:*",
     "@schemavaults/openapi-operations": "workspace:*",
     "@schemavaults/theme": "0.26.1",
-    "@schemavaults/ui": "0.93.0",
+    "@schemavaults/ui": "0.101.0",
     "next": "16.2.11",
     "openid-client": "6.8.4",
     "react": "19.2.8",
@@ -28,7 +28,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/node": "24.13.3",
-    "bun-types": "1.3.14",
+    "bun-types": "1.4.2",
     "postcss": "8.5.3",
     "tailwindcss": "3.4.17",
     "autoprefixer": "10.4.21"
