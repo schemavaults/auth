@@ -3,12 +3,31 @@
 import { type ReactElement } from "react";
 
 import { Dialog, DialogContent } from "@schemavaults/ui";
+import type {
+  ApiServerId,
+  SchemaVaultsApiServerDomainRef,
+} from "@schemavaults/app-definitions";
 import CreateApiServerDomainForm from "./CreateApiServerDomainForm";
 
-interface CreateApiServerDomainDialogProps {
+export interface CreateApiServerDomainDialogProps {
   open: boolean;
   onOpenChange: (value: boolean) => void;
   uuid: () => string;
+  /**
+   * The API server the new domain is attached to. When omitted, the target
+   * is read from `CreateApiServerDomainDialogOpenContext` (the pattern used
+   * by the API servers table, where a row action sets the id that opens the
+   * dialog). Pass it explicitly on surfaces that already know their API
+   * server, such as an API server's detail page.
+   */
+  api_server_id?: ApiServerId;
+  /**
+   * Called after a domain has been created successfully, once the SWR cache
+   * for the API server's domains list has been invalidated. Surfaces that
+   * render domains from server-side props (rather than
+   * `useApiServerDomains`) use this to refresh themselves.
+   */
+  onCreated?: (domain: SchemaVaultsApiServerDomainRef) => void;
 }
 
 /**
@@ -21,6 +40,8 @@ export function CreateApiServerDomainDialog({
   open,
   onOpenChange,
   uuid,
+  api_server_id,
+  onCreated,
 }: CreateApiServerDomainDialogProps): ReactElement {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -30,7 +51,11 @@ export function CreateApiServerDomainDialog({
       >
         <CreateApiServerDomainForm
           uuid={uuid}
-          onSuccess={() => onOpenChange(false)}
+          api_server_id={api_server_id}
+          onSuccess={(domain: SchemaVaultsApiServerDomainRef): void => {
+            onOpenChange(false);
+            onCreated?.(domain);
+          }}
         />
       </DialogContent>
     </Dialog>

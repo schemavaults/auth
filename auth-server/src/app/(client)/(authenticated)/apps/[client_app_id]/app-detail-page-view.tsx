@@ -7,8 +7,8 @@ import { DetailRow } from "@/components/DetailRow";
 import { AppCallbackUrlsCard, AppClientSecretCard } from "@/components/AppOAuthSecurity";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
-import { ExternalLink, Trash2, Unplug } from "lucide-react";
+import { CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
+import { ExternalLink, Plus, Trash2, Unplug } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -98,9 +98,16 @@ export default function AppDetailPageView({
   current_environment,
 }: AppDetailPageViewProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addDomainDialogOpen, setAddDomainDialogOpen] = useState(false);
   const [apiServers, setApiServers] = useState<readonly ConnectedApiServer[]>(connected_api_servers);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApiServer | null>(null);
   const router = useRouter();
+
+  // Same gate as the "Add domain" row action on the /apps table: viewers
+  // with read-only (organization member) access never see the control, and
+  // hardcoded apps take their domains from the server's environment rather
+  // than a database row. The server enforces this on POST regardless.
+  const canAddDomain: boolean = !hardcoded && isOrgOwner;
 
   const activeDomains = connected_domains.filter((d) => d.environment === current_environment);
   const inactiveDomains = connected_domains.filter((d) => d.environment !== current_environment);
@@ -161,8 +168,31 @@ export default function AppDetailPageView({
               </AccordionItem>
             </Accordion>
           )}
+          {canAddDomain && (
+            <Button
+              variant="outline"
+              className="mt-4"
+              id="add-app-domain-button"
+              onClick={() => setAddDomainDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add domain
+            </Button>
+          )}
         </CardContent>
       </Card>
+
+      {canAddDomain && (
+        <CreateAppDomainDialog
+          app_id={app.app_id}
+          open={addDomainDialogOpen}
+          onOpenChange={setAddDomainDialogOpen}
+          // Domains on this page come from server-side props, so re-render
+          // the server component to show the new row.
+          onCreated={() => router.refresh()}
+          uuid={uuidSync}
+        />
+      )}
 
       {!hardcoded && (
         <AppCallbackUrlsCard

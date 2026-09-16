@@ -46,20 +46,40 @@ import { EarthLock } from "lucide-react";
 import { CreateAppDomainDialogOpenContext } from "./CreateAppDomainDialogOpenContext";
 import { getUseAppDomainsListEndpoint } from "@/components/AppsTable";
 
-interface CreateFrontendAppDialogProps {
+export interface CreateAppDomainDialogProps {
   open: boolean;
   onOpenChange: (value: boolean) => void;
   uuid: () => string;
+  /**
+   * The application the new domain is attached to. When omitted, the target
+   * is read from `CreateAppDomainDialogOpenContext` (the pattern used by the
+   * apps table, where a row action sets the id that opens the dialog). Pass
+   * it explicitly on surfaces that already know their app, such as an app's
+   * detail page.
+   */
+  app_id?: AppId;
+  /**
+   * Called after a domain has been created successfully, once the SWR cache
+   * for the app's domains list has been invalidated. Surfaces that render
+   * domains from server-side props (rather than `useAppDomains`) use this to
+   * refresh themselves.
+   */
+  onCreated?: (domain: SchemaVaultsAppDomainRef) => void;
 }
 
 export function CreateAppDomainDialog({
   open,
   onOpenChange,
   uuid,
-}: CreateFrontendAppDialogProps): ReactElement {
+  app_id: explicit_app_id,
+  onCreated,
+}: CreateAppDomainDialogProps): ReactElement {
   const { toast } = useToast();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
-  const app_id: AppId | false = useContext(CreateAppDomainDialogOpenContext);
+  const context_app_id: AppId | false = useContext(
+    CreateAppDomainDialogOpenContext,
+  );
+  const app_id: AppId | false = explicit_app_id ?? context_app_id;
 
   const defaultValues: Partial<SchemaVaultsAppDomainRef> = useMemo(() => {
     return {
@@ -99,17 +119,19 @@ export function CreateAppDomainDialog({
       });
     }
 
+    const domain: SchemaVaultsAppDomainRef = {
+      ...values,
+      created_at: Date.now(),
+      app_id: values.app_id,
+    };
+
     startSubmitting(async () => {
       try {
         const authClient = auth.ready ? auth.client.current : undefined;
         if (!authClient) {
           throw new Error("Auth client is not available");
         }
-        await authClient.createClientApplicationDomain({
-          ...values,
-          created_at: Date.now(),
-          app_id: values.app_id,
-        });
+        await authClient.createClientApplicationDomain(domain);
       } catch (e: unknown) {
         toast({
           variant: "destructive",
@@ -131,6 +153,7 @@ export function CreateAppDomainDialog({
       );
       form.reset();
       onOpenChange(false);
+      onCreated?.(domain);
     });
 
     return;
@@ -138,7 +161,10 @@ export function CreateAppDomainDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        id="create-app-domain-dialog-content"
+      >
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(
@@ -227,7 +253,11 @@ export function CreateAppDomainDialog({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={submitting}>
+              <Button
+                type="submit"
+                disabled={submitting}
+                id="submit-create-app-domain-form-button"
+              >
                 <EarthLock className="h-4 w-4 mr-2" />
                 Create app domain
               </Button>

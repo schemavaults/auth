@@ -201,6 +201,20 @@ export type {
   DisconnectAppToApiConfirmationTarget,
 } from "./DisconnectAppToApiDialog";
 
+export {
+  CreateAppDomainDialog,
+  CreateAppDomainDialogOpenContext,
+  CreateAppDomainDialogOpenDispatchContext,
+} from "./CreateAppDomainDialog";
+export type { CreateAppDomainDialogProps } from "./CreateAppDomainDialog";
+
+export {
+  CreateApiServerDomainDialog,
+  CreateApiServerDomainDialogOpenContext,
+  CreateApiServerDomainDialogOpenDispatchContext,
+} from "./CreateApiServerDomainDialog";
+export type { CreateApiServerDomainDialogProps } from "./CreateApiServerDomainDialog";
+
 export { MfaChallengeForm } from "./MfaChallengeForm";
 export type { MfaChallengeFormProps } from "./MfaChallengeForm";
 
