@@ -1,5 +1,7 @@
 import { buildOpenApiDocument } from "@schemavaults/openapi-operations";
 import { operations } from "./operations";
+// The API version tracks this package's version (tsconfig: resolveJsonModule).
+import packageJson from "../../../package.json";
 
 /**
  * The OpenAPI 3.1 document describing every operation above. Served at
@@ -9,7 +11,7 @@ import { operations } from "./operations";
 export const openApiDocument: ReturnType<typeof buildOpenApiDocument> = buildOpenApiDocument({
   info: {
     title: "Example Next.js Resource Server API",
-    version: "0.5.0",
+    version: packageJson.version,
     description:
       "Demo API of the SchemaVaults example resource server. Every operation is declared with @schemavaults/openapi-operations; this document and the /docs pages are generated from those declarations.",
   },
