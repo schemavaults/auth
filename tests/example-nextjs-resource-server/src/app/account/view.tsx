@@ -50,7 +50,7 @@ export default function ExampleAccountPageView({
             const accessToken = await auth.acquireAccessToken({
               audience: api_server_id,
             });
-            response = await fetch(new URL("/api/ping"), {
+            response = await fetch(new URL("/api/ping", window.location.origin), {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${accessToken.token}`,
