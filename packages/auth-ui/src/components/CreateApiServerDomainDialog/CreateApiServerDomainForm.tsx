@@ -43,9 +43,15 @@ import { EarthLock } from "lucide-react";
 import { CreateApiServerDomainDialogOpenContext } from "./CreateApiServerDomainDialogOpenContext";
 import { getUseApiServerDomainsListEndpoint } from "@/components/ApiServersTable";
 
-interface CreateApiServerDomainFormProps {
+export interface CreateApiServerDomainFormProps {
   uuid: () => string;
-  onSuccess: () => void;
+  /** Receives the domain that was just created. */
+  onSuccess: (domain: SchemaVaultsApiServerDomainRef) => void;
+  /**
+   * Explicit target API server; takes precedence over
+   * `CreateApiServerDomainDialogOpenContext` when provided.
+   */
+  api_server_id?: ApiServerId;
 }
 
 /**
@@ -58,12 +64,15 @@ interface CreateApiServerDomainFormProps {
 export function CreateApiServerDomainForm({
   uuid,
   onSuccess,
+  api_server_id: explicit_api_server_id,
 }: CreateApiServerDomainFormProps): ReactElement {
   const { toast } = useToast();
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
-  const api_server_id: ApiServerId | false = useContext(
+  const context_api_server_id: ApiServerId | false = useContext(
     CreateApiServerDomainDialogOpenContext,
   );
+  const api_server_id: ApiServerId | false =
+    explicit_api_server_id ?? context_api_server_id;
 
   const defaultValues: Partial<SchemaVaultsApiServerDomainRef> =
     useMemo(() => {
@@ -99,17 +108,19 @@ export function CreateApiServerDomainForm({
       });
     }
 
+    const domain: SchemaVaultsApiServerDomainRef = {
+      ...values,
+      created_at: Date.now(),
+      api_server_id: values.api_server_id,
+    };
+
     startSubmitting(async () => {
       try {
         const authClient = auth.ready ? auth.client.current : undefined;
         if (!authClient) {
           throw new Error("Auth client is not available");
         }
-        await authClient.createApiServerDomain({
-          ...values,
-          created_at: Date.now(),
-          api_server_id: values.api_server_id,
-        });
+        await authClient.createApiServerDomain(domain);
       } catch (e: unknown) {
         toast({
           variant: "destructive",
@@ -131,7 +142,7 @@ export function CreateApiServerDomainForm({
         { revalidate: true },
       );
       form.reset();
-      onSuccess();
+      onSuccess(domain);
     });
 
     return;

@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/trpc-backend-init",
   "description": "tRPC Server-side Router Factory",
-  "version": "0.9.58",
+  "version": "0.9.59",
   "private": false,
   "license": "UNLICENSED",
   "repository": {

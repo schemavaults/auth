@@ -9,9 +9,10 @@ import {
 } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
+import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
-import { Trash2, KeyRound, Unplug } from "lucide-react";
+import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
+import { Trash2, KeyRound, Plus, Unplug } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -58,9 +59,16 @@ export default function ApiServerDetailPageView({
   current_environment,
 }: ApiServerDetailPageViewProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addDomainDialogOpen, setAddDomainDialogOpen] = useState(false);
   const [apps, setApps] = useState<readonly ConnectedApp[]>(connected_apps);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApp | null>(null);
   const router = useRouter();
+
+  // Same gate as the "Add domain" row action on the /apis table: viewers
+  // with read-only (organization member) access never see the control, and
+  // hardcoded API servers take their domains from the server's environment
+  // rather than a database row. The server enforces this on POST regardless.
+  const canAddDomain: boolean = !hardcoded && isOrgOwner;
 
   const activeDomains = connected_domains.filter((d) => d.environment === current_environment);
   const inactiveDomains = connected_domains.filter((d) => d.environment !== current_environment);
@@ -130,8 +138,31 @@ export default function ApiServerDetailPageView({
               </AccordionItem>
             </Accordion>
           )}
+          {canAddDomain && (
+            <Button
+              variant="outline"
+              className="mt-4"
+              id="add-api-server-domain-button"
+              onClick={() => setAddDomainDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add domain
+            </Button>
+          )}
         </CardContent>
       </Card>
+
+      {canAddDomain && (
+        <CreateApiServerDomainDialog
+          api_server_id={api_server.api_server_id}
+          open={addDomainDialogOpen}
+          onOpenChange={setAddDomainDialogOpen}
+          // Domains on this page come from server-side props, so re-render
+          // the server component to show the new row.
+          onCreated={() => router.refresh()}
+          uuid={uuidSync}
+        />
+      )}
 
       <Card>
         <CardHeader>
