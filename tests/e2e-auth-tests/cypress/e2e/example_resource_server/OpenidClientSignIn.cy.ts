@@ -266,4 +266,91 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
       });
     });
   });
+
+  it("signs out of the relying party from the profile page", () => {
+    cy.create_and_login_as_superuser().then((success: boolean) => {
+      if (!success) throw new Error("Failed to login as superuser");
+
+      cy.generate_random_code(24).then((inviteCode: string) => {
+        cy.create_invite_code(inviteCode, 1).then((created: boolean) => {
+          if (!created) throw new Error("Failed to create invite code");
+
+          cy.logout();
+
+          cy.generate_random_code(12).then((suffix: string) => {
+            const email = `openid-client-logout-${suffix}@example.com`;
+            const password = "TestPassword123!";
+
+            cy.register(email, password, inviteCode).then(
+              (statusCode: number) => {
+                expect(statusCode, "register status code").to.equal(200);
+
+                cy.logout();
+
+                // Establish the RP session this test then tears down.
+                signInViaOpenidClientFlow(email, password, "required");
+
+                cy.origin(
+                  exampleAppOrigin,
+                  { args: { exampleAppOrigin } },
+                  ({ exampleAppOrigin }) => {
+                    // Security property: the logout route must not be
+                    // reachable by GET, or a link prefetch, a preload or a
+                    // cross-site <img>/<iframe> could sign the user out.
+                    // cy.request resolves relative URLs against the Cypress
+                    // baseUrl (the auth server), so name the RP origin.
+                    cy.request({
+                      method: "GET",
+                      url: `${exampleAppOrigin}/openid-client/logout`,
+                      failOnStatusCode: false,
+                    })
+                      .its("status")
+                      .should("equal", 405);
+
+                    // ...and that GET must have left the session intact:
+                    // re-render the page to ask the server, not the DOM.
+                    cy.reload();
+                    cy.get("[data-testid='openid-client-signed-in']", {
+                      timeout: 15000,
+                    }).should("be.visible");
+
+                    // The profile page offers sign-out while signed in.
+                    // Clicking it submits a form POST to the logout route.
+                    cy.get("[data-testid='openid-client-logout-button']")
+                      .should("be.visible")
+                      .click();
+
+                    // The route clears the RP session cookie and redirects
+                    // back to the profile page, now signed out.
+                    cy.url({ timeout: 15000 }).should(
+                      "include",
+                      "/openid-client/profile",
+                    );
+                    cy.get("[data-testid='openid-client-signed-out']", {
+                      timeout: 15000,
+                    }).should("be.visible");
+                    cy.get("[data-testid='openid-client-sub']").should(
+                      "not.exist",
+                    );
+
+                    // The identity is gone from the cookie jar, not merely
+                    // absent from this one render...
+                    cy.getCookie("openid_client_demo_session").should(
+                      "not.exist",
+                    );
+
+                    // ...so a fresh request still renders signed out.
+                    cy.reload();
+                    cy.get("[data-testid='openid-client-signed-out']", {
+                      timeout: 15000,
+                    }).should("be.visible");
+                  },
+                );
+              },
+            );
+          });
+        });
+      });
+    });
+  });
 });
