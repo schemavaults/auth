@@ -217,4 +217,95 @@ describe("ConfidentialClientSignIn (openid-client RP, client_secret_basic)", () 
       });
     });
   });
+
+  it("signs out of the relying party from the profile page", () => {
+    cy.create_and_login_as_superuser().then((success: boolean) => {
+      if (!success) throw new Error("Failed to login as superuser");
+
+      cy.generate_random_code(24).then((inviteCode: string) => {
+        cy.create_invite_code(inviteCode, 1).then((created: boolean) => {
+          if (!created) throw new Error("Failed to create invite code");
+
+          cy.logout();
+
+          cy.generate_random_code(12).then((suffix: string) => {
+            const email = `confidential-client-logout-${suffix}@example.com`;
+            const password = "TestPassword123!";
+
+            cy.register(email, password, inviteCode).then(
+              (statusCode: number) => {
+                expect(statusCode, "register status code").to.equal(200);
+
+                cy.logout();
+
+                // Establish the RP session this test then tears down.
+                signInViaConfidentialClientFlow(email, password, "required");
+
+                cy.origin(
+                  exampleAppOrigin,
+                  { args: { exampleAppOrigin } },
+                  ({ exampleAppOrigin }) => {
+                    // Security property: the logout route must not be
+                    // reachable by GET, or a link prefetch, a preload or a
+                    // cross-site <img>/<iframe> could sign the user out.
+                    // cy.request resolves relative URLs against the Cypress
+                    // baseUrl (the auth server), so name the RP origin.
+                    cy.request({
+                      method: "GET",
+                      url: `${exampleAppOrigin}/openid-client-confidential/logout`,
+                      failOnStatusCode: false,
+                    })
+                      .its("status")
+                      .should("equal", 405);
+
+                    // ...and that GET must have left the session intact:
+                    // re-render the page to ask the server, not the DOM.
+                    cy.reload();
+                    cy.get(
+                      "[data-testid='openid-client-confidential-signed-in']",
+                      { timeout: 15000 },
+                    ).should("be.visible");
+
+                    // The profile page offers sign-out while signed in.
+                    // Clicking it submits a form POST to the logout route.
+                    cy.get(
+                      "[data-testid='openid-client-confidential-logout-button']",
+                    )
+                      .should("be.visible")
+                      .click();
+
+                    // The route clears the RP session cookie and redirects
+                    // back to the profile page, now signed out.
+                    cy.url({ timeout: 15000 }).should(
+                      "include",
+                      "/openid-client-confidential/profile",
+                    );
+                    cy.get(
+                      "[data-testid='openid-client-confidential-signed-out']",
+                      { timeout: 15000 },
+                    ).should("be.visible");
+                    cy.get(
+                      "[data-testid='openid-client-confidential-sub']",
+                    ).should("not.exist");
+
+                    // A fresh request must still render signed out. The
+                    // profile page reads the session cookie server-side, so
+                    // this proves the cookie no longer carries an identity —
+                    // asserted through the rendered page rather than
+                    // cy.getCookie because a cookie cleared with Max-Age=0
+                    // still reads back as an object from inside cy.origin.
+                    cy.reload();
+                    cy.get(
+                      "[data-testid='openid-client-confidential-signed-out']",
+                      { timeout: 15000 },
+                    ).should("be.visible");
+                  },
+                );
+              },
+            );
+          });
+        });
+      });
+    });
+  });
 });
