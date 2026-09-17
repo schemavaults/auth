@@ -8,6 +8,11 @@
 // claims with stable data-testid hooks for the E2E suite. Each variant
 // gets its own testid prefix so a spec can tell the public-client and
 // confidential-client flows apart.
+//
+// The signed-in state offers a sign-out button, which POSTs to the
+// variant's /logout route (see ./logout-handler.ts for why it is a form
+// submission rather than a link, and for what RP-local sign-out does
+// and does not clear).
 
 import "server-only";
 import { cookies } from "next/headers";
@@ -100,6 +105,17 @@ export async function renderOpenidClientDemoProfilePage(
           {session.userinfo.preferred_username ?? ""}
         </dd>
       </dl>
+      {/* A plain form post keeps this page a server component with no
+          client-side JavaScript, and makes the sign-out a POST. */}
+      <form method="post" action={demo.logoutPath}>
+        <button
+          type="submit"
+          data-testid={`${demo.testIdPrefix}-logout-button`}
+          className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+        >
+          Log out
+        </button>
+      </form>
     </main>
   );
 }

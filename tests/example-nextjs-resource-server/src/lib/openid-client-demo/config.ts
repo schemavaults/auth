@@ -51,6 +51,13 @@ export interface OpenidClientDemoConfig {
   loginPath: string;
   callbackPath: string;
   profilePath: string;
+  /**
+   * Route that clears this variant's session cookie. POST-only: a
+   * logout reachable by GET can be triggered by a prefetch, a preload
+   * or an <img> tag on another site, so the profile page signs out with
+   * a form submission instead of a link.
+   */
+  logoutPath: string;
   /** Prefix of the profile page's `data-testid` attributes. */
   testIdPrefix: string;
 }
@@ -65,6 +72,7 @@ const PUBLIC_CLIENT_DEMO_CONFIG: OpenidClientDemoConfig = {
   loginPath: "/openid-client/login",
   callbackPath: "/openid-client/callback",
   profilePath: "/openid-client/profile",
+  logoutPath: "/openid-client/logout",
   testIdPrefix: "openid-client",
 };
 
@@ -78,6 +86,7 @@ const CONFIDENTIAL_CLIENT_DEMO_CONFIG: OpenidClientDemoConfig = {
   loginPath: "/openid-client-confidential/login",
   callbackPath: "/openid-client-confidential/callback",
   profilePath: "/openid-client-confidential/profile",
+  logoutPath: "/openid-client-confidential/logout",
   testIdPrefix: "openid-client-confidential",
 };
 

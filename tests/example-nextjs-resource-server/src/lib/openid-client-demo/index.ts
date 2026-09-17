@@ -15,4 +15,5 @@ export {
 } from "./config";
 export { handleOpenidClientDemoLogin } from "./login-handler";
 export { handleOpenidClientDemoCallback } from "./callback-handler";
+export { handleOpenidClientDemoLogout } from "./logout-handler";
 export { renderOpenidClientDemoProfilePage } from "./profile";
