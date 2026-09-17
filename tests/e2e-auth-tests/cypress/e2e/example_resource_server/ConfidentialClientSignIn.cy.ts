@@ -288,13 +288,12 @@ describe("ConfidentialClientSignIn (openid-client RP, client_secret_basic)", () 
                       "[data-testid='openid-client-confidential-sub']",
                     ).should("not.exist");
 
-                    // The identity is gone from the cookie jar, not merely
-                    // absent from this one render...
-                    cy.getCookie(
-                      "openid_client_confidential_demo_session",
-                    ).should("not.exist");
-
-                    // ...so a fresh request still renders signed out.
+                    // A fresh request must still render signed out. The
+                    // profile page reads the session cookie server-side, so
+                    // this proves the cookie no longer carries an identity —
+                    // asserted through the rendered page rather than
+                    // cy.getCookie because a cookie cleared with Max-Age=0
+                    // still reads back as an object from inside cy.origin.
                     cy.reload();
                     cy.get(
                       "[data-testid='openid-client-confidential-signed-out']",
