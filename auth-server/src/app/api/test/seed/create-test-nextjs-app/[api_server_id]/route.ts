@@ -21,6 +21,11 @@ const bodySchema = z.object({
   // non-empty, redirect_uri validation for the test environment requires
   // an exact match against these URLs instead of any path on `url`.
   callback_urls: z.array(z.url()).max(50).optional(),
+  // Optional extra API servers (already seeded) to connect the new app
+  // to, so it may request `resource` tokens for them — e.g. a
+  // confidential client obtaining client_credentials tokens for the
+  // example resource server's API.
+  connect_to_api_server_ids: z.array(apiServerIdSchema).max(10).optional(),
 }).required({
   url: true,
   jwks_access_public_key: true
@@ -58,7 +63,13 @@ export async function POST(
       success: false
     }, { status: 400 })
   }
-  const { url, jwks_access_public_key, client_secret, callback_urls } = parsed_body.data;
+  const {
+    url,
+    jwks_access_public_key,
+    client_secret,
+    callback_urls,
+    connect_to_api_server_ids,
+  } = parsed_body.data;
 
   await using dbh = ServerlessDatabase.createDBH();
 
@@ -118,6 +129,11 @@ export async function POST(
         hashClientSecret(client_secret),
         null,
       );
+    }
+
+    for (const other_api_server_id of connect_to_api_server_ids ?? []) {
+      if (other_api_server_id === api_server_id) continue;
+      await appToApiRegistry.allow(api_server_id, other_api_server_id, null);
     }
 
     for (const callback_url of callback_urls ?? []) {

@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/openapi-operations",
   "description": "Define OpenAPI-representable HTTP operations (zod schemas + auth schemes + handlers) and serve them as Hono apps on Vercel functions / Next.js route handlers",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "license": "UNLICENSED",
   "private": false,
   "repository": {

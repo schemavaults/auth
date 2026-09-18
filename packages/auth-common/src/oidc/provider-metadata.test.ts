@@ -28,6 +28,7 @@ describe("buildOidcProviderMetadata", () => {
     expect(md.grant_types_supported).toEqual([
       "authorization_code",
       "refresh_token",
+      "client_credentials",
     ]);
     expect(md.code_challenge_methods_supported).toEqual(["S256"]);
     expect(md.id_token_signing_alg_values_supported).toEqual(["RS256"]);

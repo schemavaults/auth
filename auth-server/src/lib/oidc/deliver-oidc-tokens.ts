@@ -44,6 +44,8 @@ export interface DeliverOidcTokensOptions {
  * `http_only_cookie` — as the platform's HTTP-only refresh-token cookie
  * plus its JS-readable expiry marker cookie, with `refresh_token` omitted
  * from the JSON body. `refresh_token_expires_in` is present either way.
+ * A grant that issued no refresh token (client_credentials) has nothing
+ * to deliver and is always answered inline.
  */
 export async function deliverOidcTokens({
   request,
@@ -61,7 +63,7 @@ export async function deliverOidcTokens({
     secure,
   );
 
-  if (mode === "inline") {
+  if (mode === "inline" || issued.refresh_token === null) {
     return oidcTokenSuccessResponse(issued.body);
   }
 

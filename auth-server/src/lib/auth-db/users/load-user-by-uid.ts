@@ -21,6 +21,9 @@ export async function loadUserData(uid: string, userRegistry: UserRegistry): Pro
     middle_name: user.middle_name,
     last_name: user.last_name,
     display_name: user.display_name,
+    ...(typeof user.service_account_app_id === "string"
+      ? { service_account: true }
+      : {}),
   } satisfies UserData)
 
   if (!parsed.success) throw new Error(`Invalid user data for uid ${uid}`);

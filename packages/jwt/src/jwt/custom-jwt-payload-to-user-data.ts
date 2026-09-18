@@ -18,6 +18,7 @@ export function customJwtPayloadToUserData(
     admin: payload.admin,
     disabled: payload.disabled,
     created_at: payload.created_at,
+    ...(payload.service_account === true ? { service_account: true } : {}),
   };
 }
 

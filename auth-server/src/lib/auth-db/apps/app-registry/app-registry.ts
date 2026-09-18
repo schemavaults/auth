@@ -16,6 +16,8 @@ import {
   type ResourceOwnership,
 } from "@schemavaults/app-definitions";
 import type { AppClientSecret } from "./app-client-secrets-table";
+import type { GetOrCreateAppServiceAccountResult } from "./app-service-accounts";
+import type { UserDocument } from "@/lib/auth-db/users";
 import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { toOwnershipDatabaseColumns } from "@/lib/ownership/ownership-columns";
@@ -427,6 +429,34 @@ export class SchemaVaultsAppRegistry {
       (m) => m.deleteAppClientSecret,
     );
     return await fn(this.db, app_id);
+  }
+
+  /** The app's service account (client_credentials subject), or null. */
+  public async getServiceAccount(app_id: AppId): Promise<UserDocument | null> {
+    const fn = await import("./app-service-accounts").then(
+      (m) => m.getAppServiceAccount,
+    );
+    return await fn(this.db, app_id);
+  }
+
+  public async getOrCreateServiceAccount(
+    app_id: AppId,
+    debug: boolean = false,
+  ): Promise<GetOrCreateAppServiceAccountResult> {
+    const fn = await import("./app-service-accounts").then(
+      (m) => m.getOrCreateAppServiceAccount,
+    );
+    return await fn(this.db, app_id, debug);
+  }
+
+  public async deleteServiceAccount(
+    app_id: AppId,
+    debug: boolean = false,
+  ): Promise<boolean> {
+    const fn = await import("./app-service-accounts").then(
+      (m) => m.deleteAppServiceAccount,
+    );
+    return await fn(this.db, app_id, debug);
   }
 
   public async addAppDomain(
