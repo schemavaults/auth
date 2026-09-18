@@ -32,6 +32,9 @@ import CreateAppDomainDialog, {
 import AuthorizeClientApplicationDialog, {
   AuthorizeClientApplicationDialogOpenDispatchContext,
 } from "@/components/AuthorizeClientApplicationDialog";
+import ConnectAppToApiDialog, {
+  ConnectAppToApiDialogOpenDispatchContext,
+} from "@/components/ConnectAppToApiDialog";
 
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
@@ -124,68 +127,80 @@ export function AppsCard(props: AppsCardProps): ReactElement {
   >(false);
   const [authorizeAppDialogOpen, setAuthorizeAppDialogOpen] =
     useState<boolean>(false);
+  const [connectAppToApiDialogOpen, setConnectAppToApiDialogOpen] =
+    useState<boolean>(false);
 
   return (
     <CreateAppDialogOpenDispatchContext.Provider value={setCreateAppDialogOpen}>
       <AuthorizeClientApplicationDialogOpenDispatchContext.Provider
         value={setAuthorizeAppDialogOpen}
       >
-        <CreateAppDomainDialogOpenDispatchContext.Provider
-          value={setAddAppDomainDialogOpen}
+        <ConnectAppToApiDialogOpenDispatchContext.Provider
+          value={setConnectAppToApiDialogOpen}
         >
-          <CreateAppDomainDialogOpenContext.Provider
-            value={isAddAppDomainDialogOpen}
+          <CreateAppDomainDialogOpenDispatchContext.Provider
+            value={setAddAppDomainDialogOpen}
           >
-            <Card className={cardClassName}>
-              <CardHeader>
-                <CardTitle>{cardTitle}</CardTitle>
-                <CardDescription>{cardDescription}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AppsTable
-                  queryType={props.queryType}
-                  preloaded={props.preloaded}
-                  organization_id={props.organization_id}
-                  isOrgOwner={props.isOrgOwner}
-                  managedOrganizationIds={props.managedOrganizationIds}
-                  ownerTypeFilter={props.ownerTypeFilter}
-                  canCreate={props.canCreate ?? true}
-                />
-              </CardContent>
-              <CardFooter>
-                <div className="flex flex-row items-start justify-start gap-2"></div>
-              </CardFooter>
-            </Card>
-            <>
-              {canCreateApps && createOwnership && (
-                <CreateAppDialog
-                  clearFrontendAppsCache={clearUseAppsListCache}
-                  ownership={createOwnership}
-                  open={createAppDialogOpen}
-                  onOpenChange={setCreateAppDialogOpen}
-                  uuid={props.uuid}
-                />
-              )}
-              {props.queryType === "authorized" && (
-                <AuthorizeClientApplicationDialog
-                  open={authorizeAppDialogOpen}
-                  onOpenChange={setAuthorizeAppDialogOpen}
-                />
-              )}
-              {canCreateApps && (
-                <CreateAppDomainDialog
-                  open={typeof isAddAppDomainDialogOpen === "string"}
-                  onOpenChange={(val: boolean): void => {
-                    if (!val) {
-                      setAddAppDomainDialogOpen(false);
-                    }
-                  }}
-                  uuid={props.uuid}
-                />
-              )}
-            </>
-          </CreateAppDomainDialogOpenContext.Provider>
-        </CreateAppDomainDialogOpenDispatchContext.Provider>
+            <CreateAppDomainDialogOpenContext.Provider
+              value={isAddAppDomainDialogOpen}
+            >
+              <Card className={cardClassName}>
+                <CardHeader>
+                  <CardTitle>{cardTitle}</CardTitle>
+                  <CardDescription>{cardDescription}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AppsTable
+                    queryType={props.queryType}
+                    preloaded={props.preloaded}
+                    organization_id={props.organization_id}
+                    isOrgOwner={props.isOrgOwner}
+                    managedOrganizationIds={props.managedOrganizationIds}
+                    ownerTypeFilter={props.ownerTypeFilter}
+                    canCreate={props.canCreate ?? true}
+                  />
+                </CardContent>
+                <CardFooter>
+                  <div className="flex flex-row items-start justify-start gap-2"></div>
+                </CardFooter>
+              </Card>
+              <>
+                {canCreateApps && createOwnership && (
+                  <CreateAppDialog
+                    clearFrontendAppsCache={clearUseAppsListCache}
+                    ownership={createOwnership}
+                    open={createAppDialogOpen}
+                    onOpenChange={setCreateAppDialogOpen}
+                    uuid={props.uuid}
+                  />
+                )}
+                {props.queryType === "authorized" && (
+                  <AuthorizeClientApplicationDialog
+                    open={authorizeAppDialogOpen}
+                    onOpenChange={setAuthorizeAppDialogOpen}
+                  />
+                )}
+                {props.queryType === "all" && (
+                  <ConnectAppToApiDialog
+                    open={connectAppToApiDialogOpen}
+                    onOpenChange={setConnectAppToApiDialogOpen}
+                  />
+                )}
+                {canCreateApps && (
+                  <CreateAppDomainDialog
+                    open={typeof isAddAppDomainDialogOpen === "string"}
+                    onOpenChange={(val: boolean): void => {
+                      if (!val) {
+                        setAddAppDomainDialogOpen(false);
+                      }
+                    }}
+                    uuid={props.uuid}
+                  />
+                )}
+              </>
+            </CreateAppDomainDialogOpenContext.Provider>
+          </CreateAppDomainDialogOpenDispatchContext.Provider>
+        </ConnectAppToApiDialogOpenDispatchContext.Provider>
       </AuthorizeClientApplicationDialogOpenDispatchContext.Provider>
     </CreateAppDialogOpenDispatchContext.Provider>
   );

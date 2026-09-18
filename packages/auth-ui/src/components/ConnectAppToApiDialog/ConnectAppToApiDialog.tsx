@@ -37,23 +37,33 @@ import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 export interface ConnectAppToApiDialogProps {
   open: boolean;
   onOpenChange: (val: boolean) => void;
+  /**
+   * Pre-fills (and locks) the API server field, e.g. when opened from an
+   * API server's row actions.
+   */
   preselectedApiServerId?: string;
+  /**
+   * Pre-fills (and locks) the client app field, e.g. when opened from a
+   * client application's row actions.
+   */
+  preselectedClientAppId?: string;
 }
 
 export function ConnectAppToApiDialog({
   open,
   onOpenChange,
   preselectedApiServerId,
+  preselectedClientAppId,
 }: ConnectAppToApiDialogProps): ReactElement {
   const { toast } = useToast();
   const friendlyName: string = useAuthUiFriendlyName();
   const defaultValues = useMemo(
     () => ({
       api_server_id: preselectedApiServerId ?? "",
-      client_app_id: "",
+      client_app_id: preselectedClientAppId ?? "",
       created_at: Date.now(),
     }),
-    [preselectedApiServerId],
+    [preselectedApiServerId, preselectedClientAppId],
   );
   const form = useForm<AppToApiPermission>({
     resolver: zodResolver(appToApiPermissionSchema),
@@ -63,14 +73,16 @@ export function ConnectAppToApiDialog({
   const auth = useAuth();
 
   useEffect(() => {
-    if (open && preselectedApiServerId) {
-      form.reset({
-        api_server_id: preselectedApiServerId,
-        client_app_id: "",
-        created_at: Date.now(),
-      });
+    if (open && (preselectedApiServerId || preselectedClientAppId)) {
+      form.reset(defaultValues);
     }
-  }, [open, preselectedApiServerId, form]);
+  }, [
+    open,
+    preselectedApiServerId,
+    preselectedClientAppId,
+    defaultValues,
+    form,
+  ]);
 
   async function onSubmit(values: AppToApiPermission): Promise<void> {
     if (environment === "development") {
@@ -158,10 +170,14 @@ export function ConnectAppToApiDialog({
                     <Input
                       placeholder={"475af02e-0957-485c-bfdb-5315946d5b7e"}
                       {...field}
+                      disabled={!!preselectedClientAppId}
+                      readOnly={!!preselectedClientAppId}
                     />
                   </FormControl>
                   <FormDescription>
-                    Enter the UUID of the frontend client application.
+                    {preselectedClientAppId
+                      ? "Client app ID is pre-selected."
+                      : "Enter the UUID of the frontend client application."}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

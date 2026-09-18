@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type FC, type ReactElement } from "react";
+import { useContext, useMemo, type FC, type ReactElement } from "react";
 import type { SWRResponse } from "swr";
 import { Datatable } from "@schemavaults/ui";
 import { getAppsTableColumns } from "./columns";
@@ -11,6 +11,10 @@ import type {
 } from "@schemavaults/app-definitions";
 import { CreateAppDialogTrigger } from "@/components/CreateAppDialog";
 import { AuthorizeClientApplicationDialogTrigger } from "@/components/AuthorizeClientApplicationDialog";
+import {
+  ConnectAppToApiDialogOpenDispatchContext,
+  ConnectAppToApiDialogTrigger,
+} from "@/components/ConnectAppToApiDialog";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@schemavaults/auth-react-provider";
 import type { ColumnDef } from "@schemavaults/ui";
@@ -48,6 +52,9 @@ function AppsTableHeaderButtons({
   isOrgOwner,
   canCreate,
 }: AppsTableHeaderButtonsProps): ReactElement {
+  const onOpenChangeConnectAppToApi = useContext(
+    ConnectAppToApiDialogOpenDispatchContext,
+  );
   return (
     <>
       {queryType === "authorized" && ( // From a user's list of authorized apps, allow them to add more authorized apps
@@ -58,6 +65,11 @@ function AppsTableHeaderButtons({
           queryType === "owned" ||
           queryType === "accessible" ||
           (queryType === "org" && isOrgOwner)) && <CreateAppDialogTrigger />}
+      {queryType === "all" && ( // Admins connect any app to any API server from the admin list
+        <ConnectAppToApiDialogTrigger
+          onOpenChange={onOpenChangeConnectAppToApi}
+        />
+      )}
     </>
   );
 }
