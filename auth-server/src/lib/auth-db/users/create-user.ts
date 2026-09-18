@@ -26,6 +26,24 @@ import doesSomeAdminUserExist from "./does-some-admin-user-exist";
  * @param debug Enable debug logging
  * @returns A copy of the user document that was inserted into the database.
  */
+/**
+ * Thrown when a registration presents an invite code whose `max_uses` has
+ * already been consumed. Surfaced by the register endpoint as a 400 rather
+ * than a generic failure.
+ */
+export class InviteCodeExhaustedError extends Error {
+  public constructor(
+    public readonly invite_code: string,
+    public readonly usages: number,
+    public readonly max_uses: number,
+  ) {
+    super(
+      `Invite code '${invite_code}' has reached its usage limit (${usages}/${max_uses})`,
+    );
+    this.name = "InviteCodeExhaustedError";
+  }
+}
+
 export async function createUser(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   { email, password, invite_code, ...opts }: ICreateUserOptions,
@@ -191,8 +209,10 @@ export async function createUser(
             if (nInviteCodeUsages < maxInviteCodeUsages) {
               // this invite code still has usages remaining
             } else {
-              throw new Error(
-                `Invite code '${inviteCodeDefinition.invite_code}' has exceeded its usage limit (${nInviteCodeUsages}/${maxInviteCodeUsages})!`,
+              throw new InviteCodeExhaustedError(
+                inviteCodeDefinition.invite_code,
+                nInviteCodeUsages,
+                maxInviteCodeUsages,
               );
             }
           }
@@ -233,6 +253,7 @@ export async function createUser(
         }
       });
   } catch (e: unknown) {
+    if (e instanceof InviteCodeExhaustedError) throw e;
     console.error("Failed to insert new user into database", e);
     throw new Error("Failed to insert user into database");
   }

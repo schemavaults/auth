@@ -165,6 +165,28 @@ describe("Admin invite codes API", () => {
       });
     });
 
+    it("returns 409 for an invite code that already exists", () => {
+      cy.generate_random_code(16).then((random: string) => {
+        const invite_code = `e2e-dup-${random}`;
+        cy.request<CreateInviteCodeResponseBody>({
+          method: "POST",
+          url: "/api/admin/invite-codes",
+          body: { invite_code, created_at: Date.now(), max_uses: 1 },
+        }).then((response) => {
+          expect(response.status, "first create").to.eq(200);
+        });
+        cy.request<CreateInviteCodeResponseBody>({
+          method: "POST",
+          url: "/api/admin/invite-codes",
+          body: { invite_code, created_at: Date.now(), max_uses: 1 },
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(response.status, "duplicate invite code").to.eq(409);
+          expect(response.body.success).to.eq(false);
+        });
+      });
+    });
+
     it("returns 412 when created_at is more than 30 seconds in the past", () => {
       cy.request<CreateInviteCodeResponseBody>({
         method: "POST",

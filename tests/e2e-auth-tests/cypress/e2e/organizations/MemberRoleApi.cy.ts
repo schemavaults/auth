@@ -56,7 +56,7 @@ function registerUser(): Cypress.Chainable<User> {
       .then((whoami) => {
         const uid: string = whoami.body.user.uid;
         cy.logout();
-        return { ...credentials, uid };
+        return cy.wrap<User>({ ...credentials, uid }, { log: false });
       }),
   );
 }
@@ -95,7 +95,10 @@ function setup(): Cypress.Chainable<Fixture> {
               body: { action: "accept" },
             }).then((response) => expect(response.status).to.eq(200));
             cy.logout();
-            return { organization_id, owner, member, outsider };
+            return cy.wrap<Fixture>(
+              { organization_id, owner, member, outsider },
+              { log: false },
+            );
           });
       }),
     ),
@@ -204,14 +207,9 @@ describe("Organization member role API", () => {
           expect(response.status, "malformed uid").to.eq(400);
         },
       );
-      // The registry surfaces an unknown target as a generic failure today
-      // rather than the handler's 404 branch; pinned loosely so an OpenAPI
-      // migration can tighten it without first breaking this suite.
       patchRole(organization_id, outsider.uid, { role: "owner" }).then(
         (response) => {
-          expect(response.status, "target is not a member").to.be.oneOf([
-            404, 500,
-          ]);
+          expect(response.status, "target is not a member").to.eq(404);
           expect(response.body.success).to.eq(false);
         },
       );

@@ -1,4 +1,5 @@
 import "server-only";
+import { ConflictError } from "@/lib/error/ConflictError";
 
 import type { ResourceCreationResponse } from "@/lib/auth-db";
 import {
@@ -116,6 +117,18 @@ async function POST_create_organization_handler({
       await addOrganizationMembership(trx, organization_id, uid, "owner");
     })
   } catch (e: unknown) {
+    if (e instanceof ConflictError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: e.message,
+        } satisfies ResourceCreationResponse,
+        {
+          status: 409,
+        },
+      );
+    }
+
     if (e instanceof ExceededMembershipLimitError) {
       return NextResponse.json(
         {

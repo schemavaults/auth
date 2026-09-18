@@ -136,13 +136,16 @@ function setup(): Cypress.Chainable<Fixture> {
                   }).then((response) => expect(response.status).to.eq(200));
                 });
                 cy.logout();
-                return {
-                  organization_id,
-                  api_server_id,
-                  private_key,
-                  owner_uid,
-                  member_uid,
-                };
+                return cy.wrap<Fixture>(
+                  {
+                    organization_id,
+                    api_server_id,
+                    private_key,
+                    owner_uid,
+                    member_uid,
+                  },
+                  { log: false },
+                );
               },
             );
           });

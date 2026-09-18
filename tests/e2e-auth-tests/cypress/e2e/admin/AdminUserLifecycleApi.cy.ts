@@ -66,7 +66,7 @@ function createRegularUser(): Cypress.Chainable<{
               throw new Error("whoami did not return the new user's uid");
             }
             cy.logout();
-            return { uid, ...credentials };
+            return cy.wrap({ uid, ...credentials }, { log: false });
           });
       });
   });
@@ -122,18 +122,13 @@ describe("Admin user lifecycle API", () => {
       });
     });
 
-    it("refuses to promote a uid that does not exist", () => {
-      // The handler maps a "not found" registry error to 404, but the
-      // registry currently surfaces a missing row as a generic promotion
-      // failure (500). Either way the request must not succeed; the exact
-      // status is pinned loosely so an OpenAPI migration can tighten it to
-      // 404 without first breaking this suite.
+    it("returns 404 for a uid that does not exist", () => {
       cy.request<AdminActionResponseBody>({
         method: "POST",
         url: `/api/admin/promote/${NONEXISTENT_UID}`,
         failOnStatusCode: false,
       }).then((response) => {
-        expect(response.status).to.be.oneOf([404, 500]);
+        expect(response.status).to.eq(404);
         expect(response.body.success).to.eq(false);
       });
     });

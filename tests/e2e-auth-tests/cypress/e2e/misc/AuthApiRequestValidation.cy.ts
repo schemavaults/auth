@@ -7,9 +7,9 @@
 //                                            registered, "already signed in
 //                                            as a different user" (403)
 //   POST /api/auth/register               -> password policy, invite-code
-//                                            length/format/unknown, invite
-//                                            code required, "already signed
-//                                            in" (403)
+//                                            length/format/unknown/exhausted,
+//                                            invite code required, "already
+//                                            signed in" (403)
 //   POST /api/auth/reset-password/request -> non-JSON / non-string email
 //   POST /api/auth/reset-password/confirm -> non-GUID token, weak password
 //                                            (zod issues in `errors`)
@@ -136,7 +136,7 @@ function createRegisteredClientApp(): Cypress.Chainable<string> {
         },
       }).then((response) => expect(response.status).to.eq(200));
       cy.logout();
-      return app_id;
+      return cy.wrap(app_id, { log: false });
     });
 }
 
@@ -269,6 +269,41 @@ describe("Auth API request validation", () => {
             post("/api/auth/register", body).then((response) => {
               expect400(response, "invite code required");
               expect(String(response.body.message).toLowerCase()).to.include("required");
+            }),
+          );
+        });
+      });
+    });
+
+    it("returns 400 once an invite code has reached its max_uses", () => {
+      cy.generate_random_code(16).then((random: string) => {
+        const invite_code = `e2e-single-${random}`;
+        cy.create_and_login_as_superuser_via_request().then((ok: boolean) => {
+          if (!ok) throw new Error("Failed to login as superuser");
+          cy.request({
+            method: "POST",
+            url: "/api/admin/invite-codes",
+            body: { invite_code, created_at: Date.now(), max_uses: 1 },
+          }).then((response) => expect(response.status).to.eq(200));
+          cy.logout();
+        });
+        cy.generate_random_test_user_credentials().then((first) => {
+          cy.create_and_login_as_regular_user_via_request({
+            ...first,
+            invite_code,
+          }).then((ok: boolean) => {
+            expect(ok, "first registration consumes the code").to.be.true;
+            cy.logout();
+          });
+        });
+        cy.generate_random_test_user_credentials().then(({ email, password }) => {
+          authBody(email, password, { invite_code }).then((body) =>
+            post("/api/auth/register", body).then((response) => {
+              expect400(response, "exhausted invite code");
+              expect(response.body.kind).to.eq("failure");
+              expect(String(response.body.message).toLowerCase()).to.include(
+                "maximum",
+              );
             }),
           );
         });
@@ -432,13 +467,16 @@ describe("Auth API request validation", () => {
           expect(response.body.profile?.display_name).to.eq("E2E Display");
           expect(response.body.profile?.first_name).to.eq("E2E");
         });
+        // Full-replacement semantics: a null clears the field, and so does
+        // omitting it.
         cy.request<AuthResponseBody>({
           method: "PUT",
           url: "/api/user/profile",
-          body: { display_name: null },
+          body: { first_name: "E2E", display_name: null },
         }).then((response) => {
           expect(response.status).to.eq(200);
           expect(response.body.profile?.display_name ?? null).to.eq(null);
+          expect(response.body.profile?.first_name).to.eq("E2E");
         });
         cy.request<AuthResponseBody>({
           method: "GET",
@@ -448,6 +486,14 @@ describe("Auth API request validation", () => {
           expect(response.body.success).to.eq(true);
           expect(response.body.profile?.display_name ?? null).to.eq(null);
           expect(response.body.profile?.first_name).to.eq("E2E");
+        });
+        cy.request<AuthResponseBody>({
+          method: "PUT",
+          url: "/api/user/profile",
+          body: {},
+        }).then((response) => {
+          expect(response.status).to.eq(200);
+          expect(response.body.profile, "omitted fields are cleared").to.deep.equal({});
         });
       });
     });

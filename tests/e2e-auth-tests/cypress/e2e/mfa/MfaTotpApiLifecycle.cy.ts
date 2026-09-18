@@ -69,7 +69,7 @@ function loginAsFreshRegularUser(): Cypress.Chainable<{
       .then((ok: boolean) => {
         expect(ok, "regular user registration + login").to.be.true;
         cy.reset_rate_limit();
-        return credentials;
+        return cy.wrap(credentials, { log: false });
       }),
   );
 }

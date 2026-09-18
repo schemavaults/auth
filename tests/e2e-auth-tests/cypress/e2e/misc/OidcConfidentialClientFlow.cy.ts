@@ -111,7 +111,10 @@ function createConfidentialClient(withDomain = true): Cypress.Chainable<Confiden
     .then((secret) => {
       expect(secret.status).to.eq(200);
       cy.logout();
-      return { client_id, client_secret: secret.body.client_secret as string };
+      return cy.wrap<ConfidentialClient>(
+        { client_id, client_secret: secret.body.client_secret as string },
+        { log: false },
+      );
     });
 }
 

@@ -99,7 +99,7 @@ function createUserWithIssuedTokens(): Cypress.Chainable<string> {
                         expect(tokenResponse.status, "token exchange").to.eq(200);
                         expect(tokenResponse.body.access_token).to.be.a("string");
                         cy.clearCookies();
-                        return uid;
+                        return cy.wrap(uid, { log: false });
                       });
                   });
               });

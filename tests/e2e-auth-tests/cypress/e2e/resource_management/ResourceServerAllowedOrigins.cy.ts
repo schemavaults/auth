@@ -132,7 +132,10 @@ function setupResourceServer(): Cypress.Chainable<ResourceServerFixture> {
         throw new Error("Failed to generate JWKS access key");
       }
       cy.logout();
-      return { api_server_id, private_key, domains };
+      return cy.wrap<ResourceServerFixture>(
+        { api_server_id, private_key, domains },
+        { log: false },
+      );
     });
 }
 

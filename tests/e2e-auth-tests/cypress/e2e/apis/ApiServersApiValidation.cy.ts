@@ -7,7 +7,8 @@
 //                                              platform ownership 403
 //   GET/DELETE /api/apis/[api_server_id]    -> 400 malformed id, 404 unknown
 //   GET/POST   /api/apis/[api_server_id]/domains -> 404 unknown, 403 non-member,
-//                                              400 body/path id mismatch
+//                                              400 body/path id mismatch,
+//                                              409 duplicate domain + environment
 //   GET/POST   /api/apis/[api_server_id]/jwks-access-key -> `key_metadata: false`
 //                                              before a key exists, 409 on a
 //                                              second POST, 400 malformed id
@@ -150,7 +151,38 @@ describe("API servers API validation", () => {
 
   it("validates domain bodies and hides a private API server's domains from non-members", () => {
     const api_server_id = randomApiServerId();
+    const environment: string =
+      Cypress.env("SCHEMAVAULTS_APP_ENVIRONMENT") ?? "test";
     expectStatus("POST", "/api/apis", 200, apiServerBody(api_server_id));
+    const domainBody = (domain: string, env: string = environment) => ({
+      api_server_domain_ref_id: generateV4Uuid(),
+      api_server_id,
+      domain,
+      environment: env,
+      created_at: Date.now(),
+      hardcoded: false,
+    });
+    expectStatus(
+      "POST",
+      `/api/apis/${api_server_id}/domains`,
+      200,
+      domainBody("dup-api.example"),
+      "first domain",
+    );
+    expectStatus(
+      "POST",
+      `/api/apis/${api_server_id}/domains`,
+      409,
+      domainBody("dup-api.example"),
+      "same domain + environment again",
+    );
+    expectStatus(
+      "POST",
+      `/api/apis/${api_server_id}/domains`,
+      200,
+      domainBody("dup-api.example", environment === "test" ? "development" : "test"),
+      "same domain in another environment",
+    );
     expectStatus(
       "POST",
       `/api/apis/${api_server_id}/domains`,

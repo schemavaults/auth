@@ -100,11 +100,14 @@ function setup(): Cypress.Chainable<Fixture> {
             cy.login_via_request(credentials.email, credentials.password).then(
               (ok: boolean) => expect(ok, "invitee login").to.be.true,
             );
-            return {
-              organization_id,
-              invitation_id: invitation.invitation_id,
-              invitee: { ...credentials, uid: invitee_uid },
-            };
+            return cy.wrap<Fixture>(
+              {
+                organization_id,
+                invitation_id: invitation.invitation_id,
+                invitee: { ...credentials, uid: invitee_uid },
+              },
+              { log: false },
+            );
           });
       });
   });

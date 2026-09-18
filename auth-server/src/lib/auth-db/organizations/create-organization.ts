@@ -1,4 +1,6 @@
 import "server-only";
+import { ConflictError } from "@/lib/error/ConflictError";
+import isUniqueViolation from "@/lib/auth-db/is-unique-violation";
 
 import { getHardcodedOrgs, type OrganizationDefinition, organizationDefinitionSchema } from "@schemavaults/auth-common";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
@@ -59,7 +61,14 @@ export async function createOrganization(
     .insertInto("organizations")
     .values(organization_definition);
 
-  await insertionQuery.executeTakeFirstOrThrow();
+  try {
+    await insertionQuery.executeTakeFirstOrThrow();
+  } catch (e: unknown) {
+    if (isUniqueViolation(e)) {
+      throw new ConflictError("An organization with this ID already exists");
+    }
+    throw e;
+  }
 }
 
 export default createOrganization;

@@ -1,7 +1,8 @@
 // Contract coverage for organization API branches no other spec reaches:
 //   POST /api/organizations
-//        -> body validation (400), the admin_only_organization_creation
-//           server setting (403), the per-user membership limit (409)
+//        -> body validation (400), duplicate organization id (409), the
+//           admin_only_organization_creation server setting (403), the
+//           per-user membership limit (409)
 //   DELETE /api/organizations/[organization_id]
 //        -> 400 malformed id, 403 for a plain member, 404 for an admin
 //           deleting an unknown organization
@@ -58,7 +59,7 @@ function registerUser(): Cypress.Chainable<User> {
       .then((whoami) => {
         const uid: string = whoami.body.user.uid;
         cy.logout();
-        return { ...credentials, uid };
+        return cy.wrap<User>({ ...credentials, uid }, { log: false });
       }),
   );
 }
@@ -100,6 +101,30 @@ describe("Organization API validation", () => {
         }).then((response) => {
           expect(response.status, "non-JSON body").to.eq(400);
         });
+      });
+    });
+
+    it("returns 409 for an organization id that is already taken", () => {
+      const organization_id = randomOrgId("e2e-dup");
+      registerUser().then((user) => {
+        loginAs(user);
+        cy.request<ApiResponseBody>({
+          method: "POST",
+          url: "/api/organizations",
+          body: orgBody(organization_id),
+        }).then((response) => {
+          expect(response.status, "first create").to.eq(200);
+        });
+        cy.request<ApiResponseBody>({
+          method: "POST",
+          url: "/api/organizations",
+          body: orgBody(organization_id),
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(response.status, "duplicate organization id").to.eq(409);
+          expect(response.body.success).to.eq(false);
+        });
+        cy.delete_organization({ organization_id });
       });
     });
 

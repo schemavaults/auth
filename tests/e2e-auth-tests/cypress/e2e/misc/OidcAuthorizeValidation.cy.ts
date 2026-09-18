@@ -62,7 +62,7 @@ function registerClientApp(): Cypress.Chainable<string> {
         },
       }).then((response) => expect(response.status).to.eq(200));
       cy.logout();
-      return app_id;
+      return cy.wrap(app_id, { log: false });
     });
 }
 

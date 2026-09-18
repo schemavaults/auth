@@ -369,6 +369,10 @@ export class OrganizationsRegistry
         );
       }
     } catch (e: unknown) {
+      // Let the handler distinguish "not a member" (404) from a failed write.
+      if (e instanceof Error && e.message.includes("No membership found")) {
+        throw e;
+      }
       console.error(
         `Failed to update user membership role to '${new_role}' for user '${uid}' in organization '${organization_id}': `,
         e,

@@ -29,7 +29,8 @@ interface LegacyTokenResponseBody {
   client_app_id?: string;
   nonce?: string | null;
   tokens?: {
-    access?: string;
+    // One entry per requested audience (or "AS_HTTP_ONLY_COOKIE").
+    access?: string | Record<string, { token?: string; type?: string }>;
     refresh?: string;
     refresh_token_expiry?: number;
   };
@@ -87,12 +88,15 @@ function registerAndMintCode(): Cypress.Chainable<MintedCode> {
                 // Drop the login-issued session so the token endpoints are
                 // exercised from a clean cookie jar.
                 cy.clearCookies();
-                return {
-                  code: login.body.authorization_code as string,
-                  code_verifier: verifier.code_verifier,
-                  challenge_time: challenge.challenge_time,
-                  nonce,
-                };
+                return cy.wrap<MintedCode>(
+                  {
+                    code: login.body.authorization_code as string,
+                    code_verifier: verifier.code_verifier,
+                    challenge_time: challenge.challenge_time,
+                    nonce,
+                  },
+                  { log: false },
+                );
               }),
           );
       }),
@@ -131,7 +135,11 @@ describe("Legacy token endpoints", () => {
             expect(response.body.success).to.eq(true);
             expect(response.body.client_app_id).to.eq(AUTH_APP_ID);
             expect(response.body.nonce, "nonce is echoed").to.eq(minted.nonce);
-            expect(response.body.tokens?.access).to.be.a("string");
+            const access = response.body.tokens?.access;
+            expect(access, "access tokens keyed by audience").to.be.an("object");
+            const audience = String(Cypress.env("AUTH_SERVER_URL"));
+            const entry = (access as Record<string, { token?: string }>)[audience];
+            expect(entry?.token, `access token for ${audience}`).to.be.a("string");
             expect(response.body.tokens?.refresh).to.eq("AS_HTTP_ONLY_COOKIE");
             expect(response.body.tokens?.refresh_token_expiry).to.be.a("number");
             expect(response.body.userData).to.be.an("object");
@@ -212,7 +220,11 @@ describe("Legacy token endpoints", () => {
           (response) => {
             expect(response.status).to.eq(200);
             expect(response.body.success).to.eq(true);
-            expect(response.body.tokens?.access).to.be.a("string");
+            const access = response.body.tokens?.access;
+            expect(access, "access tokens keyed by audience").to.be.an("object");
+            const audience = String(Cypress.env("AUTH_SERVER_URL"));
+            const entry = (access as Record<string, { token?: string }>)[audience];
+            expect(entry?.token, `access token for ${audience}`).to.be.a("string");
             expect(response.body.tokens?.refresh).to.eq("AS_HTTP_ONLY_COOKIE");
           },
         );

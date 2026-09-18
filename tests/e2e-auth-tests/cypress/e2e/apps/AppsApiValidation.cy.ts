@@ -8,7 +8,8 @@
 //                                            every requested-ownership branch
 //   GET/DELETE /api/apps/[app_id]         -> 400 malformed id, 404 unknown app
 //   GET/POST   /api/apps/[app_id]/domains -> 404 unknown, 403 non-member,
-//                                            400 body/path id mismatch
+//                                            400 body/path id mismatch,
+//                                            409 duplicate domain + environment
 //   GET  /api/apps/[app_id]/check-authorization + POST /api/apps/[app_id]/authorize
 //                                         -> the false -> authorize -> true
 //                                            round trip and the request-body
@@ -236,8 +237,39 @@ describe("Apps API validation", () => {
 
     it("validates domain bodies and hides a private app's domains from non-members", () => {
       const app_id = randomAppId();
+      const environment: string =
+        Cypress.env("SCHEMAVAULTS_APP_ENVIRONMENT") ?? "test";
       loginAsFreshRegularUser();
       expectStatus("POST", "/api/apps", 200, appBody(app_id));
+      const domainBody = (domain: string, env: string = environment) => ({
+        app_domain_ref_id: generateV4Uuid(),
+        app_id,
+        domain,
+        environment: env,
+        created_at: Date.now(),
+        hardcoded: false,
+      });
+      expectStatus(
+        "POST",
+        `/api/apps/${app_id}/domains`,
+        200,
+        domainBody("dup.example"),
+        "first domain",
+      );
+      expectStatus(
+        "POST",
+        `/api/apps/${app_id}/domains`,
+        409,
+        domainBody("dup.example"),
+        "same domain + environment again",
+      );
+      expectStatus(
+        "POST",
+        `/api/apps/${app_id}/domains`,
+        200,
+        domainBody("dup.example", environment === "test" ? "development" : "test"),
+        "same domain in another environment",
+      );
       expectStatus(
         "POST",
         `/api/apps/${app_id}/domains`,
