@@ -460,7 +460,10 @@ describe("OAuth2 client credentials grant (RFC 6749 §4.4)", () => {
             "have.text",
             uid,
           );
-          cy.contains(expectedServiceAccountEmail).should("be.visible");
+          cy.get('[data-testid="service-account-email"]').should(
+            "have.text",
+            expectedServiceAccountEmail,
+          );
         });
       });
     });

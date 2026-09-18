@@ -128,7 +128,10 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
             </div>
             <div className="flex flex-row flex-wrap gap-2">
               <span className="font-medium">Email:</span>
-              <span className="text-muted-foreground break-all">
+              <span
+                className="text-muted-foreground break-all"
+                data-testid="service-account-email"
+              >
                 {service_account.email}
               </span>
             </div>
