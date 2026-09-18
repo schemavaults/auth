@@ -73,9 +73,6 @@ export {
   type SuccessfullyGeneratedTokensRecord,
 } from "./request_tokens_result";
 
-export * from "./auth_acquire_tokens_grant_types";
-export type * from "./auth_acquire_tokens_grant_types";
-
 export { getAuthServerUrl } from "@schemavaults/app-definitions";
 export { appIdSchema } from "@schemavaults/app-definitions";
 
@@ -171,8 +168,3 @@ export {
   OAuth2StateValidationError,
 } from "./oauth2-state-schema";
 export type { OAuth2State } from "./oauth2-state-schema";
-
-export {
-  createAuthorizationCodePOSTBodySchema,
-  createRefreshTokenPOSTBodySchema,
-} from "./auth_acquire_tokens_grant_types";

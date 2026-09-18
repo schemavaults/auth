@@ -5,7 +5,7 @@ export const defaultAuthMiddlewareRules = {
     [], // The root path is public
     ["auth", "logout"],
     ["auth", "authorize"],
-    ["api", "auth", "token"],
+    ["api", "oidc", "token"],
     ["api", "auth", "logout"],
     ["api", "environment"], // allow frontend client to ask server what environment this is running in
     ["error"],

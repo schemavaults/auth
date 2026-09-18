@@ -8,23 +8,22 @@ const REFRESH_TOKEN_COOKIE = RefreshTokenCookieName(APP_ID);
 const ROTATION_REUSE_GRACE_MS = 10_000;
 const WAIT_PAST_GRACE_MS = ROTATION_REUSE_GRACE_MS + 1_000;
 
-// NOTE: the refresh grant reads the refresh token from the session cookies
-// when they are present, and only falls back to the Authorization header
-// once the cookies are cleared. Every redemption below that must present a
-// *specific* captured token therefore runs after cy.clearCookies().
+// Redeems a *specific* refresh token at the OIDC token endpoint (RFC 6749
+// §6, form-encoded). The explicit `refresh_token` parameter takes
+// precedence over the session cookie, so each request redeems exactly the
+// token it presents. The auth server's own app always gets the rotated
+// refresh token back as an HTTP-only cookie (never in the JSON body).
 function redeemRefreshToken(refreshToken: string) {
   return cy.request({
     method: "POST",
-    url: `/api/auth/token/refresh_token/${APP_ID}`,
+    url: "/api/oidc/token",
+    form: true,
     body: {
       grant_type: "refresh_token",
-      // token audiences use the auth server URL, not the app id
-      audience: Cypress.env("AUTH_SERVER_URL"),
-      client_app_id: APP_ID,
+      client_id: APP_ID,
+      refresh_token: refreshToken,
     },
     headers: {
-      Authorization: `Bearer ${refreshToken}`,
-      "Content-Type": "application/json",
       Origin: new URL(Cypress.config("baseUrl")!).origin,
     },
     failOnStatusCode: false,
@@ -52,7 +51,10 @@ describe("Refresh Token Rotation", () => {
             // response replaces the refresh cookie with a new token.
             redeemRefreshToken(originalToken).then((firstRedemption) => {
               expect(firstRedemption.status).to.eq(200);
-              expect(firstRedemption.body.success).to.eq(true);
+              expect(firstRedemption.body.access_token).to.be.a("string");
+              expect(firstRedemption.body).to.not.have.property(
+                "refresh_token",
+              );
             });
 
             cy.getCookie(REFRESH_TOKEN_COOKIE)
@@ -69,9 +71,8 @@ describe("Refresh Token Rotation", () => {
                   "Redemption must rotate the refresh token cookie",
                 ).to.not.eq(originalToken);
 
-                // Cookies take precedence over the Authorization header at
-                // the refresh endpoint; clear them so each request below
-                // redeems exactly the token it presents.
+                // Drop the rotated session cookie so the requests below
+                // only ever carry the token they present explicitly.
                 cy.clearCookies();
 
                 // Within the reuse grace window, replaying the just-used
@@ -83,11 +84,11 @@ describe("Refresh Token Rotation", () => {
                     graceReplay.status,
                     "Reuse within the grace window should be tolerated",
                   ).to.eq(200);
-                  expect(graceReplay.body.success).to.eq(true);
+                  expect(graceReplay.body.access_token).to.be.a("string");
                 });
 
                 // The grace redemption above rotated again and set a new
-                // cookie — clear it so later requests stay Bearer-only.
+                // cookie — clear it so later requests stay cookie-free.
                 cy.clearCookies();
 
                 // Once the grace window has elapsed, the used token is
@@ -97,9 +98,12 @@ describe("Refresh Token Rotation", () => {
                   expect(
                     lateReplay.status,
                     "Reuse after the grace window must be rejected",
-                  ).to.eq(401);
-                  expect(lateReplay.body.success).to.eq(false);
-                  expect(lateReplay.body.message).to.include("revoked");
+                  ).to.eq(400);
+                  expect(lateReplay.body.error).to.eq("invalid_grant");
+                  expect(lateReplay.body.error_description).to.include(
+                    "revoked",
+                  );
+                  expect(lateReplay.body).to.not.have.property("access_token");
                 });
 
                 // A rotated-to token that was never redeemed stays valid —
@@ -109,7 +113,7 @@ describe("Refresh Token Rotation", () => {
                     unusedRedemption.status,
                     "An unused rotated token must remain redeemable",
                   ).to.eq(200);
-                  expect(unusedRedemption.body.success).to.eq(true);
+                  expect(unusedRedemption.body.access_token).to.be.a("string");
                 });
               });
           });

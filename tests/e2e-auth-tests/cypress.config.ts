@@ -163,9 +163,9 @@ export default defineConfig({
             // client secret so it is an OAuth2/OIDC confidential client
             // (the /openid-client-confidential/* routes sign in as it).
             // It must stay a *separate* app: making the app id above
-            // confidential would force client authentication on the
-            // legacy token endpoints too, breaking every other spec in
-            // this suite, which drives that app as a public client.
+            // confidential would force client authentication at the
+            // token endpoint, breaking every other spec in this suite,
+            // which drives that app as a public client.
             await seedAppAndApiForExampleResourceServer(
               auth_server_url,
               config.env["OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID"],

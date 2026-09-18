@@ -30,27 +30,28 @@ describe("Token Revocation on Logout", () => {
           // Verify cookies are cleared
           cy.getCookie(REFRESH_TOKEN_COOKIE).should("not.exist");
 
-          // Attempt to use the captured (now revoked) refresh token
+          // Attempt to use the captured (now revoked) refresh token at the
+          // OIDC token endpoint (RFC 6749 §6, form-encoded).
           cy.request({
             method: "POST",
-            url: `/api/auth/token/refresh_token/${APP_ID}`,
+            url: "/api/oidc/token",
+            form: true,
             body: {
               grant_type: "refresh_token",
-              // token audiences use the auth server URL, not the app id
-              audience: Cypress.env("AUTH_SERVER_URL"),
-              client_app_id: APP_ID,
+              client_id: APP_ID,
+              refresh_token: capturedRefreshToken,
             },
             headers: {
-              Authorization: `Bearer ${capturedRefreshToken}`,
-              "Content-Type": "application/json",
               Origin: new URL(Cypress.config("baseUrl")!).origin,
             },
             failOnStatusCode: false,
           }).then((response) => {
-            // The refresh attempt should be rejected because the token was revoked
-            expect(response.status).to.eq(401);
-            expect(response.body.success).to.eq(false);
-            expect(response.body.message).to.include("revoked");
+            // The refresh attempt should be rejected because the token was
+            // revoked (RFC 6749 §5.2 invalid_grant).
+            expect(response.status).to.eq(400);
+            expect(response.body.error).to.eq("invalid_grant");
+            expect(response.body.error_description).to.include("revoked");
+            expect(response.body).to.not.have.property("access_token");
           });
         });
       });

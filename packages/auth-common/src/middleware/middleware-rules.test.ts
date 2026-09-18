@@ -22,7 +22,7 @@ function evaluateAuthMiddlewareRules(
 
 const examplePublicRoutes = [
   [], //              /
-  ["api", "auth", "token"], // /api/token
+  ["api", "oidc", "token"], // /api/oidc/token
 ];
 const exampleUnauthedRoutes = [
   ["auth", "login"],
@@ -194,8 +194,8 @@ test("routes ending in /api or /trpc that are explicitly public are treated as p
     expect(route_type).toEqual("public");
   }
 
-  testPublicApiRoute("/api/auth/token");
-  testPublicApiRoute("/api/auth/token/refresh/blah/blah/blah");
+  testPublicApiRoute("/api/oidc/token");
+  testPublicApiRoute("/api/oidc/token/blah/blah/blah");
 });
 
 // Regression coverage for the admin defense-in-depth gap: the evaluator must

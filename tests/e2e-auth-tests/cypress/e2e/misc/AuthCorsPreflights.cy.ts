@@ -1,10 +1,8 @@
 // CORS contracts of the per-client-app auth endpoints that browsers hit
-// cross-origin. The preflight handlers of the logout and legacy token
-// endpoints had no coverage at all, and the authenticated whoami request
-// from a foreign origin (the strict-CORS 403) was never exercised:
+// cross-origin. The preflight handler of the logout endpoint had no
+// coverage at all, and the authenticated whoami request from a foreign
+// origin (the strict-CORS 403) was never exercised:
 //   OPTIONS /api/auth/logout/[client_app_id]
-//   OPTIONS /api/auth/token/authorization_code/[client_app_id]
-//   OPTIONS /api/auth/token/refresh_token/[client_app_id]
 //   OPTIONS /api/auth/whoami/[client_app_id]   (malformed id, foreign origin)
 //   GET     /api/auth/whoami/[client_app_id]   (authenticated: 403 foreign
 //                                              origin, 200 + CORS own origin,
@@ -44,8 +42,6 @@ function preflight(
 describe("Auth endpoint CORS preflights", () => {
   const preflightEndpoints = [
     "/api/auth/logout",
-    "/api/auth/token/authorization_code",
-    "/api/auth/token/refresh_token",
     "/api/auth/whoami",
   ];
 

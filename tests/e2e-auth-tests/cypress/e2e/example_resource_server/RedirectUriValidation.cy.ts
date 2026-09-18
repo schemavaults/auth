@@ -229,24 +229,22 @@ describe("OAuth2 redirect_uri validation (RFC 6749 §4.1.3)", () => {
                   const requestBaseUrl = Cypress.config("baseUrl") as string;
 
                   const tokenEndpoint =
-                    `${requestBaseUrl}/api/auth/token/authorization_code/${app_id}` as const;
+                    `${requestBaseUrl}/api/oidc/token` as const;
 
                   // Attempt with a SWAPPED redirect_uri — must fail.
                   cy.request({
                     url: tokenEndpoint,
                     method: "POST",
                     failOnStatusCode: false,
+                    form: true,
                     headers: {
-                      "Content-Type": "application/json",
                       Origin: exampleAppOrigin,
                     },
                     body: {
                       grant_type: "authorization_code",
                       code: authorization_code,
                       code_verifier: bogusCodeVerifier,
-                      client_app_id: app_id,
-                      audience: app_id,
-                      challenge_time: Date.now(),
+                      client_id: app_id,
                       redirect_uri: `${ATTACKER_ORIGIN}/auth/authorize`,
                     },
                   }).then((swapResp) => {
@@ -254,8 +252,9 @@ describe("OAuth2 redirect_uri validation (RFC 6749 §4.1.3)", () => {
                     // (mismatched redirect_uri OR mismatched PKCE). Either
                     // way the response must NOT carry tokens.
                     expect(swapResp.status).to.be.within(400, 499);
-                    expect(swapResp.body).to.not.have.property("tokens");
-                    expect(swapResp.body.success).to.not.equal(true);
+                    expect(swapResp.body.error).to.be.a("string");
+                    expect(swapResp.body).to.not.have.property("access_token");
+                    expect(swapResp.body).to.not.have.property("id_token");
                   });
                 });
               });

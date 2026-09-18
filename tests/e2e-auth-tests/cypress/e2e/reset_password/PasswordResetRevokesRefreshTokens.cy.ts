@@ -4,23 +4,21 @@ import { RefreshTokenCookieName } from "@schemavaults/auth-common";
 const APP_ID = getAuthServerAppIdFromCypressEnv();
 const REFRESH_TOKEN_COOKIE = RefreshTokenCookieName(APP_ID);
 
-// NOTE: the refresh grant reads the refresh token from the session cookies
-// when they are present, and only falls back to the Authorization header
-// once the cookies are cleared. Requests below that need to redeem a
-// *captured* token therefore run after cy.clearCookies().
+// Redeems a *captured* refresh token at the OIDC token endpoint (RFC 6749
+// §6, form-encoded). The explicit `refresh_token` parameter takes
+// precedence over the session cookie, so each request redeems exactly the
+// token it presents.
 function redeemRefreshToken(capturedRefreshToken: string) {
   return cy.request({
     method: "POST",
-    url: `/api/auth/token/refresh_token/${APP_ID}`,
+    url: "/api/oidc/token",
+    form: true,
     body: {
       grant_type: "refresh_token",
-      // token audiences use the auth server URL, not the app id
-      audience: Cypress.env("AUTH_SERVER_URL"),
-      client_app_id: APP_ID,
+      client_id: APP_ID,
+      refresh_token: capturedRefreshToken,
     },
     headers: {
-      Authorization: `Bearer ${capturedRefreshToken}`,
-      "Content-Type": "application/json",
       Origin: new URL(Cypress.config("baseUrl")!).origin,
     },
     failOnStatusCode: false,
@@ -81,8 +79,6 @@ describe("Password Reset Revokes Refresh Tokens", () => {
                 // End the legitimate session locally WITHOUT logging out:
                 // logout would revoke the rotated token server-side, and
                 // this spec must prove the *password reset* revokes it.
-                // Clearing cookies also makes the requests below fall back
-                // to the Authorization header.
                 //
                 // (Replay of the used original token is NOT asserted here:
                 // within the rotation reuse grace window it would still
@@ -96,7 +92,7 @@ describe("Password Reset Revokes Refresh Tokens", () => {
                 // unix second as the watermark bump stays valid — by
                 // design. Wait out the second boundary so the rotated
                 // token's iat lands strictly before the watermark set by
-                // the reset confirm below; without this the final 401
+                // the reset confirm below; without this the final 400
                 // assertion is a wall-clock coin toss. The wait MUST come
                 // before the confirm — once iat equals the watermark the
                 // token is valid forever, so delaying the final request
@@ -129,10 +125,15 @@ describe("Password Reset Revokes Refresh Tokens", () => {
                     // watermark) can be what rejects it.
                     redeemRefreshToken(rotatedRefreshToken).then(
                       (postResetResponse) => {
-                        expect(postResetResponse.status).to.eq(401);
-                        expect(postResetResponse.body.success).to.eq(false);
-                        expect(postResetResponse.body.message).to.include(
-                          "revoked",
+                        expect(postResetResponse.status).to.eq(400);
+                        expect(postResetResponse.body.error).to.eq(
+                          "invalid_grant",
+                        );
+                        expect(
+                          postResetResponse.body.error_description,
+                        ).to.include("revoked");
+                        expect(postResetResponse.body).to.not.have.property(
+                          "access_token",
                         );
                       },
                     );

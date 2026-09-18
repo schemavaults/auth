@@ -4,8 +4,8 @@ import type { OidcRefreshTokenDeliveryMode } from "@schemavaults/auth-common";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 
 /**
- * Decides how the refresh token leaves the token endpoint. Mirrors the
- * platform's long-standing cookie policy (`returnGeneratedTokensToUser`):
+ * Decides how the refresh token leaves the token endpoint. This is the
+ * platform's long-standing cookie policy:
  *
  *   - the auth server's own frontend ALWAYS gets an HTTP-only cookie
  *     (its server-rendered route guards read the cookie);
