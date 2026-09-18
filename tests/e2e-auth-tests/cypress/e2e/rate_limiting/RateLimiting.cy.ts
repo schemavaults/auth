@@ -178,17 +178,24 @@ describe("Rate Limiting", () => {
     });
   });
 
-  describe("POST /api/auth/token/refresh_token/:client_app_id (30/min per IP)", () => {
-    // Use a well-formed UUID so we get past the URL client_app_id validation
-    // and actually hit the rate limit check.
+  describe("POST /api/oidc/token grant_type=refresh_token (30/min per IP)", () => {
+    // A well-formed client_id gets past the token endpoint's client_id
+    // validation (an unregistered app is a public client, so client
+    // authentication passes too) and reaches the refresh-grant rate limit
+    // check, which runs before the refresh token itself is looked at.
     const fakeAppId = "00000000-0000-0000-0000-000000000001";
+    const refreshGrantForm = {
+      grant_type: "refresh_token",
+      client_id: fakeAppId,
+    };
 
     it("returns 429 after 30 requests in the window", () => {
       for (let i = 1; i <= 30; i++) {
         cy.request({
           method: "POST",
-          url: `/api/auth/token/refresh_token/${fakeAppId}`,
-          body: {},
+          url: "/api/oidc/token",
+          form: true,
+          body: refreshGrantForm,
           failOnStatusCode: false,
         }).then((response) => {
           expect(
@@ -200,8 +207,9 @@ describe("Rate Limiting", () => {
 
       cy.request({
         method: "POST",
-        url: `/api/auth/token/refresh_token/${fakeAppId}`,
-        body: {},
+        url: "/api/oidc/token",
+        form: true,
+        body: refreshGrantForm,
         failOnStatusCode: false,
       }).then((response) => {
         expectRateLimitedResponse(response, 30);
