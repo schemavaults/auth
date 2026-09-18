@@ -53,6 +53,30 @@ describe("Branding admin API validation", () => {
       });
     });
 
+    it("returns 400 when the Content-Type header is missing", () => {
+      cy.request({
+        method: "PUT",
+        url: "/api/admin/branding/favicon",
+        body: "irrelevant",
+        headers: { "content-type": "" },
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(400);
+        expect(response.body).to.have.property("success", false);
+      });
+    });
+
+    it("DELETE returns 400 for an unknown branding asset key", () => {
+      cy.request({
+        method: "DELETE",
+        url: "/api/admin/branding/bogus-asset-key",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(400);
+        expect(response.body).to.have.property("success", false);
+      });
+    });
+
     it("returns 400 for a disallowed content type", () => {
       cy.request({
         method: "PUT",

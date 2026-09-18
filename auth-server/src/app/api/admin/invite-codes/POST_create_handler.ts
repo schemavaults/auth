@@ -1,4 +1,5 @@
 import "server-only";
+import { ConflictError } from "@/lib/error/ConflictError";
 
 import {
   type ResourceCreationResponse,
@@ -83,6 +84,17 @@ export default async function POST_create_handler(
       resource_id: new_invite_code.invite_code,
     } satisfies ResourceCreationResponse);
   } catch (e: unknown) {
+    if (e instanceof ConflictError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: e.message,
+        } satisfies ResourceCreationResponse,
+        {
+          status: 409,
+        },
+      );
+    }
     await captureServerException(dbh.db, e, {
       op_name: "POST_create_invite_code.createInviteCode",
       route: "/api/admin/invite-codes",

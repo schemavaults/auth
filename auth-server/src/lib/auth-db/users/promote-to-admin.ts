@@ -2,6 +2,7 @@ import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isValidUuid from "@/lib/is-valid-uuid";
+import { UserNotFoundError } from "./set-user-disabled";
 
 export async function promoteToAdmin(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
@@ -28,6 +29,9 @@ export async function promoteToAdmin(
         throw new Error("Expected 'updateResult' to be an object!");
       }
       const numRowsUpdated: number = Number(updateResult.numUpdatedRows);
+      if (numRowsUpdated === 0) {
+        throw new UserNotFoundError(uid);
+      }
       if (numRowsUpdated !== 1) {
         throw new Error(
           `Expected exactly one row to have been modified by superadmin promotion operation, but '${numRowsUpdated}' rows were updated!"`,
@@ -35,6 +39,7 @@ export async function promoteToAdmin(
       }
     });
   } catch (e: unknown) {
+    if (e instanceof UserNotFoundError) throw e;
     console.error(`Failed to promote user '${uid}' to superuser/admin: `, e);
     throw new Error(`Failed to promote user ${uid} to superuser/admin!`);
   }

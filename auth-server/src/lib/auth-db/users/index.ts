@@ -25,7 +25,7 @@ export { setUserDisabled, UserNotFoundError } from "./set-user-disabled";
 export { updateUserProfile, UsernameTakenError } from "./update-user-profile";
 export { deleteUser } from "./delete-user";
 export type { DeleteUserResult } from "./delete-user";
-export { createUser } from "./create-user";
+export { createUser, InviteCodeExhaustedError } from "./create-user";
 export { createPasswordResetToken } from "./create-password-reset-token";
 export { validatePasswordResetToken } from "./validate-password-reset-token";
 export { consumePasswordResetToken } from "./consume-password-reset-token";

@@ -1,4 +1,6 @@
 import "server-only";
+import { ConflictError } from "@/lib/error/ConflictError";
+import isUniqueViolation from "@/lib/auth-db/is-unique-violation";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { InviteCodeDefinition } from "@schemavaults/auth-common";
@@ -43,6 +45,9 @@ export async function createInviteCode(
   try {
     await insertInviteCodeQuery.execute();
   } catch (e: unknown) {
+    if (isUniqueViolation(e)) {
+      throw new ConflictError("An invite code with this value already exists");
+    }
     console.error("Failed to insert invite code into database: ", e);
     throw new Error("Failed to insert invite code into database!");
   }

@@ -407,6 +407,19 @@ export class SchemaVaultsApiServerRegistry {
       throw new Error("API server ID mismatch");
     }
 
+    // The same domain may only be registered once per API server +
+    // environment (the primary key is the ref id, so check explicitly).
+    const existing = await this.getApiServerDomains(api_server_id);
+    const duplicate = existing.some(
+      (ref) =>
+        ref.environment === domain.environment && ref.domain === domain.domain,
+    );
+    if (duplicate) {
+      throw new ConflictError(
+        "This domain is already registered for this API server and environment",
+      );
+    }
+
     try {
       const result = await this.db
         .insertInto("api_server_domains")

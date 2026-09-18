@@ -445,6 +445,20 @@ export class SchemaVaultsAppRegistry {
       throw new Error("App ID mismatch");
     }
 
+    // The same domain may only be registered once per app + environment
+    // (the primary key is the ref id, so this has to be checked explicitly).
+    const existing = await this.getAppDomains(app_id);
+    const duplicate = existing.some(
+      (ref) =>
+        ref.environment === app_domain.environment &&
+        ref.domain === app_domain.domain,
+    );
+    if (duplicate) {
+      throw new ConflictError(
+        "This domain is already registered for this app and environment",
+      );
+    }
+
     try {
       const result = await this.db
         .insertInto("app_domains")

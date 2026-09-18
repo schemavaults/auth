@@ -1,4 +1,5 @@
 import "server-only";
+import { InviteCodeExhaustedError } from "@/lib/auth-db/users";
 
 import { type NextRequest, NextResponse } from "next/server";
 import type {
@@ -424,6 +425,18 @@ export async function handleRegister({
       invite_code,
     });
   } catch (e: unknown) {
+    if (e instanceof InviteCodeExhaustedError) {
+      return NextResponse.json(
+        {
+          kind: "failure",
+          success: false,
+          message: "This invite code has reached its maximum number of uses",
+        } satisfies AuthenticateResult,
+        {
+          status: 400,
+        },
+      );
+    }
     await captureServerException(dbh.db, e, {
       op_name: "handleRegister.createUser",
       route: ROUTE,

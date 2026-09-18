@@ -273,4 +273,58 @@ describe("Rate Limiting", () => {
       });
     });
   });
+
+  describe("POST /api/auth/verify-email/confirm (5/15min per IP)", () => {
+    it("returns 429 after 5 requests in the window", () => {
+      for (let i = 1; i <= 5; i++) {
+        cy.request({
+          method: "POST",
+          url: "/api/auth/verify-email/confirm",
+          body: {},
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(
+            response.status,
+            `request ${i} should not be rate-limited`,
+          ).to.not.eq(429);
+        });
+      }
+
+      cy.request({
+        method: "POST",
+        url: "/api/auth/verify-email/confirm",
+        body: {},
+        failOnStatusCode: false,
+      }).then((response) => {
+        expectRateLimitedResponse(response, 5);
+      });
+    });
+  });
+
+  describe("POST /api/auth/mfa/verify (20/hour per IP)", () => {
+    it("returns 429 after 20 requests in the window", () => {
+      for (let i = 1; i <= 20; i++) {
+        cy.request({
+          method: "POST",
+          url: "/api/auth/mfa/verify",
+          body: {},
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(
+            response.status,
+            `request ${i} should not be rate-limited`,
+          ).to.not.eq(429);
+        });
+      }
+
+      cy.request({
+        method: "POST",
+        url: "/api/auth/mfa/verify",
+        body: {},
+        failOnStatusCode: false,
+      }).then((response) => {
+        expectRateLimitedResponse(response, 20);
+      });
+    });
+  });
 });
