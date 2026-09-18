@@ -10,6 +10,7 @@ describe("Regular User Admin API Forbidden", () => {
   const fakeUid = "00000000-0000-0000-0000-000000000001";
   const fakeSettingKey = "nonexistent_setting_key";
   const fakeErrorId = "00000000-0000-0000-0000-000000000002";
+  const fakeInviteCode = "non-admin-probe-code";
 
   // Create + login a fresh regular (non-admin) user before each test so that
   // no state leaks between the individual 403 assertions.
@@ -149,6 +150,140 @@ describe("Regular User Admin API Forbidden", () => {
     cy.request({
       method: "GET",
       url: `/api/admin/users/${fakeUid}/mfa`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("GET /api/admin/branding returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "GET",
+      url: `/api/admin/branding`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("PUT /api/admin/branding/:asset returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "PUT",
+      url: `/api/admin/branding/favicon`,
+      headers: { "content-type": "image/png" },
+      body: "not-really-a-png",
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("DELETE /api/admin/branding/:asset returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "DELETE",
+      url: `/api/admin/branding/favicon`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("GET /api/admin/invite-codes/:inviteCode/usages returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "GET",
+      url: `/api/admin/invite-codes/${fakeInviteCode}/usages`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("GET /api/admin/send-daily-report returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "GET",
+      url: `/api/admin/send-daily-report`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("POST /api/admin/send-daily-report returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "POST",
+      url: `/api/admin/send-daily-report`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("POST /api/admin/users/:uid/disable returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "POST",
+      url: `/api/admin/users/${fakeUid}/disable`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("DELETE /api/admin/users/:uid/disable returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "DELETE",
+      url: `/api/admin/users/${fakeUid}/disable`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("DELETE /api/admin/users/:uid/mfa returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "DELETE",
+      url: `/api/admin/users/${fakeUid}/mfa`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("POST /api/admin/users/:uid/resend-verification returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "POST",
+      url: `/api/admin/users/${fakeUid}/resend-verification`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("GET /api/admin/users/:uid/tokens returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "GET",
+      url: `/api/admin/users/${fakeUid}/tokens`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
+  it("GET /api/organizations (admin-only listing) returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "GET",
+      url: `/api/organizations`,
       failOnStatusCode: false,
     }).then((response) => {
       expect(response.status).to.eq(403);
