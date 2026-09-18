@@ -249,6 +249,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
       ...(typeof opts.scope === "string" && opts.scope.length > 0
         ? { scope: opts.scope }
         : {}),
+      ...(user.service_account === true ? { service_account: true } : {}),
     };
 
     const jwt = await new EncryptJWT(additionalClaims)

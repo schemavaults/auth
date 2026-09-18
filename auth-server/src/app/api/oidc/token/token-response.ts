@@ -64,6 +64,13 @@ export interface OidcGrantContext {
   form: FormData;
   param: OidcTokenFormParam;
   client_app_id: AppId;
+  /**
+   * Whether the client authenticated with its registered client secret
+   * (a confidential client). Public clients pass client authentication
+   * trivially, so grants restricted to confidential clients
+   * (client_credentials) check this flag.
+   */
+  client_authenticated: boolean;
   environment: SchemaVaultsAppEnvironment;
   debug: boolean;
 }

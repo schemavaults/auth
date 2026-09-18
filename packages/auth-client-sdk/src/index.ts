@@ -14,6 +14,11 @@ export type {
   ClientApplicationSecretMetadata,
   GeneratedClientApplicationSecret,
 } from "@/lib/client-application-secret";
+export type {
+  ClientApplicationServiceAccount,
+  ClientApplicationServiceAccountStatus,
+  CreatedClientApplicationServiceAccount,
+} from "@/lib/client-application-service-account";
 export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
 
 export type { UserData } from "@/types/UserData";

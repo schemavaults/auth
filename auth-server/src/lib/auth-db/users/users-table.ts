@@ -14,6 +14,11 @@ type NullableProfileNameColumns = {
   middle_name?: string | null;
   last_name?: string | null;
   display_name?: string | null;
+  /**
+   * Migration 00038: the owning client app for a service account (NULL
+   * for every human account). See app-service-accounts.ts.
+   */
+  service_account_app_id?: string | null;
 };
 
 export type UsersTable = Omit<

@@ -17,6 +17,7 @@ export async function listUsersCreatedSince(
       "disabled",
       "invite_code",
       "uid",
+      "service_account_app_id",
     ])
     .where("created_at", ">", since_ms)
     .orderBy("created_at", "desc")

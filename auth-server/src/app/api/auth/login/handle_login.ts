@@ -203,6 +203,24 @@ export async function handleLogin({
     );
   }
 
+  if (typeof user.service_account_app_id === "string") {
+    // Service accounts (client_credentials subjects) have no password
+    // and can never sign in interactively. Answer exactly like an
+    // unknown email so the synthetic address reveals nothing.
+    await runDummyPasswordVerification(email_credentials.password);
+    console.error("[handleLogin] Invalid credentials (service account)");
+    return NextResponse.json(
+      {
+        kind: "failure",
+        success: false,
+        message: INVALID_CREDENTIALS_MESSAGE,
+      } satisfies AuthenticateResult,
+      {
+        status: 401,
+      },
+    );
+  }
+
   if (debug) {
     console.log(`Found user with email '${email_credentials.email}' in database`);
   }

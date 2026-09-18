@@ -30,9 +30,12 @@ import {
   extractClientIp,
   ipRequiredResponse,
   rateLimitResponse,
+  CLIENT_CREDENTIALS_RATE_LIMIT,
   REFRESH_TOKEN_RATE_LIMIT,
+  type RateLimitConfig,
 } from "@/lib/rate-limit";
 import handleOidcAuthorizationCodeGrant from "./authorization_code_grant";
+import handleOidcClientCredentialsGrant from "./client_credentials_grant";
 import handleOidcRefreshTokenGrant from "./refresh_token_grant";
 import {
   applyOidcTokenCors,
@@ -65,7 +68,9 @@ export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
  * The OIDC token endpoint (RFC 6749 §3.2, form-encoded): exchanges an
  * authorization code (grant_type=authorization_code) or a scope-bearing
  * refresh token (grant_type=refresh_token) for the standard token
- * response — with an id_token on the code grant. Scope/nonce are
+ * response — with an id_token on the code grant — or, for confidential
+ * clients, mints a machine-to-machine access token for the app's
+ * service account (grant_type=client_credentials). Scope/nonce are
  * first-class on every login flow, so any code is redeemable here
  * regardless of which surface initiated the login (PKCE + client +
  * redirect_uri binding are the security boundary, plus client-secret
@@ -81,8 +86,8 @@ export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
  * This module owns the shared request plumbing (form parsing,
  * grant_type dispatch, client_id validation, CORS, client
  * authentication, rate limiting, token delivery, exception capture);
- * the per-grant logic lives in ./authorization_code_grant.ts and
- * ./refresh_token_grant.ts.
+ * the per-grant logic lives in ./authorization_code_grant.ts,
+ * ./refresh_token_grant.ts and ./client_credentials_grant.ts.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
@@ -106,11 +111,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   };
 
   const grant_type = param("grant_type");
-  if (grant_type !== "authorization_code" && grant_type !== "refresh_token") {
+  if (
+    grant_type !== "authorization_code" &&
+    grant_type !== "refresh_token" &&
+    grant_type !== "client_credentials"
+  ) {
     return applyOidcTokenCors(
       oidcTokenErrorResponse(
         "unsupported_grant_type",
-        "grant_type must be 'authorization_code' or 'refresh_token'.",
+        "grant_type must be 'authorization_code', 'refresh_token', or 'client_credentials'.",
       ),
       null,
     );
@@ -190,19 +199,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    if (grant_type === "refresh_token") {
-      // Same per-IP budget as the platform's refresh grant: a stolen
-      // refresh token must not turn into an unbounded minting loop.
+    // Per-IP budgets for the grants that can be replayed without user
+    // interaction: a stolen refresh token (or leaked client secret) must
+    // not turn into an unbounded minting loop. Each grant has its own
+    // bucket so M2M traffic never starves browser refreshes.
+    const rate_limit: RateLimitConfig | null =
+      grant_type === "refresh_token"
+        ? REFRESH_TOKEN_RATE_LIMIT
+        : grant_type === "client_credentials"
+          ? CLIENT_CREDENTIALS_RATE_LIMIT
+          : null;
+    if (rate_limit) {
       const ip = extractClientIp(request);
       if (!ip) {
         return withCors(ipRequiredResponse());
       }
       await using redis = RedisCache.createConnection();
-      const rateLimitResult = await checkRateLimit(
-        redis.client,
-        REFRESH_TOKEN_RATE_LIMIT,
-        { ip },
-      );
+      const rateLimitResult = await checkRateLimit(redis.client, rate_limit, {
+        ip,
+      });
       if (!rateLimitResult.allowed) {
         return withCors(rateLimitResponse(rateLimitResult));
       }
@@ -226,13 +241,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       form,
       param,
       client_app_id,
+      client_authenticated: clientAuth.confidential,
       environment,
       debug,
     };
     const outcome: OidcGrantOutcome =
       grant_type === "authorization_code"
         ? await handleOidcAuthorizationCodeGrant(ctx)
-        : await handleOidcRefreshTokenGrant(ctx);
+        : grant_type === "refresh_token"
+          ? await handleOidcRefreshTokenGrant(ctx)
+          : await handleOidcClientCredentialsGrant(ctx);
     if (!outcome.ok) {
       return withCors(outcome.response);
     }

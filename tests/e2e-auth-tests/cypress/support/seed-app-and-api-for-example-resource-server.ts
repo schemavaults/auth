@@ -14,6 +14,13 @@ export interface SeedAppAndApiOptions {
    * redirect_uri must match one of these exactly.
    */
   callback_urls?: readonly string[];
+  /**
+   * Additional (already seeded) API server ids to connect the app to, so
+   * it may request RFC 8707 `resource` tokens for them — e.g. a
+   * confidential client minting client_credentials tokens for the example
+   * resource server's API.
+   */
+  connect_to_api_server_ids?: readonly string[];
 }
 
 export async function seedAppAndApiForExampleResourceServer(
@@ -49,6 +56,10 @@ export async function seedAppAndApiForExampleResourceServer(
       ...(options.client_secret ? { client_secret: options.client_secret } : {}),
       ...(options.callback_urls && options.callback_urls.length > 0
         ? { callback_urls: [...options.callback_urls] }
+        : {}),
+      ...(options.connect_to_api_server_ids &&
+      options.connect_to_api_server_ids.length > 0
+        ? { connect_to_api_server_ids: [...options.connect_to_api_server_ids] }
         : {}),
     }),
   });

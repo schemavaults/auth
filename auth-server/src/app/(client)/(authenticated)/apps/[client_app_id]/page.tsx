@@ -67,6 +67,7 @@ export default async function AppDetailPage(
       const connected_domains: readonly SchemaVaultsAppDomainRef[] = await app_registry.getAppDomains(client_app_id);
       const callback_urls: readonly SchemaVaultsAppCallbackUrlRef[] = await app_registry.getAppCallbackUrls(client_app_id);
       const client_secret_record = hardcoded ? null : await app_registry.getClientSecretRecord(client_app_id);
+      const service_account = hardcoded ? null : await app_registry.getServiceAccount(client_app_id);
 
       const current_environment = getAppEnvironment();
 
@@ -84,6 +85,16 @@ export default async function AppDetailPage(
                   updated_at: client_secret_record.updated_at,
                 }
               : { has_client_secret: false, created_at: null, updated_at: null }
+          }
+          service_account={
+            service_account
+              ? {
+                  uid: service_account.uid,
+                  email: service_account.email,
+                  created_at: service_account.created_at,
+                  disabled: service_account.disabled ?? false,
+                }
+              : null
           }
           hardcoded={hardcoded}
           isOrgOwner={canManage}

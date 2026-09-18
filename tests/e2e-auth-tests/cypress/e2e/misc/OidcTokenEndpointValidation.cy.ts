@@ -1,7 +1,8 @@
 // Request-shape validation of POST /api/oidc/token that no OIDC spec covered
 // (they all send well-formed grants), plus the CORS preflights of the three
 // OIDC endpoints that had no coverage at all:
-//   POST    /api/oidc/token      -> unsupported_grant_type, non-form body,
+//   POST    /api/oidc/token      -> unsupported_grant_type, client_credentials
+//                                   for a public client, non-form body,
 //                                   missing code, malformed code_verifier,
 //                                   missing client_id, malformed Basic header
 //   OPTIONS /api/oidc/token      -> credentialed echo for a registered origin,
@@ -39,10 +40,23 @@ const WELL_FORMED_VERIFIER = "v".repeat(50);
 
 describe("POST /api/oidc/token request validation", () => {
   it("rejects an unsupported grant_type", () => {
-    postForm({ grant_type: "client_credentials", client_id: AUTH_APP_ID }).then(
+    postForm({ grant_type: "password", client_id: AUTH_APP_ID }).then(
       (response) => {
         expect(response.status).to.eq(400);
         expect(response.body.error).to.eq("unsupported_grant_type");
+      },
+    );
+  });
+
+  it("refuses client_credentials for a public client with unauthorized_client", () => {
+    // The grant is supported (advertised in the discovery document) but
+    // restricted to confidential clients; the auth server's own app has
+    // no client secret. Full coverage lives in the example_resource_server
+    // suite's ClientCredentialsGrant spec.
+    postForm({ grant_type: "client_credentials", client_id: AUTH_APP_ID }).then(
+      (response) => {
+        expect(response.status).to.eq(400);
+        expect(response.body.error).to.eq("unauthorized_client");
       },
     );
   });

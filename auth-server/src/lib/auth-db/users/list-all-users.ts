@@ -22,6 +22,7 @@ export async function listAllUsers(
         "disabled",
         "invite_code",
         "uid",
+        "service_account_app_id",
       ])
       .orderBy("created_at", "desc");
 
