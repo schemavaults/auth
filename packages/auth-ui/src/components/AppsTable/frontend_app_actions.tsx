@@ -44,6 +44,7 @@ import { useAppDomains } from "./useAppDomains";
 import { launchWebApp } from "./launchWebApp";
 import { CreateAppDomainDialogOpenDispatchContext } from "@/components/CreateAppDomainDialog";
 import { DeleteAppDialog } from "@/components/DeleteAppDialog";
+import { ConnectAppToApiDialog } from "@/components/ConnectAppToApiDialog";
 import { useCanManageListedResource } from "@/components/ResourceOwnerLabel/useCanManageListedResource";
 
 const dropdownMenuActionsClassName: string =
@@ -128,6 +129,8 @@ export function FrontendApplicationActions({
     launchableAppDomains.length === 0;
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [connectApiDialogOpen, setConnectApiDialogOpen] =
+    useState<boolean>(false);
 
   // Whether the viewer may manage this particular app: global admins, an
   // organization owner/admin on an org page, the owning user of a
@@ -286,14 +289,13 @@ export function FrontendApplicationActions({
           {showConnectApi && (
             <DropdownMenuItem
               className={cn(dropdownMenuActionsClassName)}
-              onClick={(): void => {
-                toast({
-                  variant: "default",
-                  title: "Not implemented",
-                });
+              onClick={(e): void => {
+                e.preventDefault();
+                setConnectApiDialogOpen(true);
               }}
+              data-testid="connect-app-to-api-menu-item"
             >
-              <PlugZap className="h-4 w-4" /> Connect API
+              <PlugZap className="h-4 w-4" /> Connect to API
             </DropdownMenuItem>
           )}
 
@@ -325,6 +327,13 @@ export function FrontendApplicationActions({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {showConnectApi && (
+        <ConnectAppToApiDialog
+          open={connectApiDialogOpen}
+          onOpenChange={setConnectApiDialogOpen}
+          preselectedClientAppId={app_id}
+        />
+      )}
       {!isDeleteAppDisabled && (
         <DeleteAppDialog
           app_id={app_id}
