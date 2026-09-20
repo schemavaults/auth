@@ -43,6 +43,13 @@ export interface IssueOidcTokensOptions {
    */
   include_id_token: boolean;
   /**
+   * Whether to mint a refresh token alongside the access token. True on
+   * the user-facing grants; false on client_credentials (RFC 6749 §4.4.3:
+   * a refresh token SHOULD NOT be included — the client re-authenticates
+   * with its own credentials instead). Defaults to true.
+   */
+  issue_refresh_token?: boolean;
+  /**
    * Audience of the issued access token, in token-audience form (the
    * auth server URL, or an API server id). Set from a validated RFC 8707
    * `resource` request parameter; defaults to the reserved
@@ -89,8 +96,9 @@ export interface IssuedOidcTokens {
   /**
    * The issued refresh token with its metadata, so the token endpoint
    * can set it as an HTTP-only cookie instead of returning it inline.
+   * Null when the grant issued no refresh token (client_credentials).
    */
-  refresh_token: RefreshToken;
+  refresh_token: RefreshToken | null;
 }
 
 /**
@@ -113,6 +121,7 @@ export async function issueOidcTokens({
   grant_type,
   environment,
   include_id_token,
+  issue_refresh_token = true,
   access_token_audience = OIDC_USERINFO_AUDIENCE_ID,
   revoke_rotated_refresh_token,
   debug = false,
@@ -133,7 +142,7 @@ export async function issueOidcTokens({
       user_organizations,
       environment,
       audiences: [access_token_audience],
-      generate_refresh: true,
+      generate_refresh: issue_refresh_token,
       auth_jwt_manager: jwt_keys_manager,
       scope,
       tracking: {
@@ -153,21 +162,31 @@ export async function issueOidcTokens({
   if (!access_token || typeof access_token === "string") {
     throw new Error("OIDC access token missing from token generation result!");
   }
-  const refresh_token: RefreshToken | "AS_HTTP_ONLY_COOKIE" | undefined =
+  const generated_refresh: RefreshToken | "AS_HTTP_ONLY_COOKIE" | undefined =
     tokenGenerationResult.tokens?.refresh;
-  if (!refresh_token || typeof refresh_token === "string") {
-    throw new Error("OIDC refresh token missing from token generation result!");
+  let refresh_token: RefreshToken | null = null;
+  if (issue_refresh_token) {
+    if (!generated_refresh || typeof generated_refresh === "string") {
+      throw new Error(
+        "OIDC refresh token missing from token generation result!",
+      );
+    }
+    refresh_token = generated_refresh;
   }
 
   const body: OidcTokenResponseBody = {
     access_token: access_token.token,
     token_type: "Bearer",
     expires_in: accessTokenExpiry,
-    refresh_token: refresh_token.token,
-    refresh_token_expires_in: Math.max(
-      1,
-      Math.floor((refresh_token.exp - Date.now()) / 1000),
-    ),
+    ...(refresh_token
+      ? {
+          refresh_token: refresh_token.token,
+          refresh_token_expires_in: Math.max(
+            1,
+            Math.floor((refresh_token.exp - Date.now()) / 1000),
+          ),
+        }
+      : {}),
     ...(scope.length > 0 ? { scope } : {}),
   };
 

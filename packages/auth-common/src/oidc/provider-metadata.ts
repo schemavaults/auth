@@ -74,7 +74,14 @@ export function buildOidcProviderMetadata(
     jwks_uri: getOidcEndpointUrl(normalized_issuer, "jwks"),
     response_types_supported: ["code"],
     response_modes_supported: ["query"],
-    grant_types_supported: ["authorization_code", "refresh_token"],
+    // client_credentials (RFC 6749 §4.4) is restricted to confidential
+    // clients (apps with a registered client secret) and mints
+    // machine-to-machine access tokens for the app's service account.
+    grant_types_supported: [
+      "authorization_code",
+      "refresh_token",
+      "client_credentials",
+    ],
     subject_types_supported: ["public"],
     id_token_signing_alg_values_supported: ["RS256"],
     scopes_supported: [...OIDC_SUPPORTED_SCOPES],

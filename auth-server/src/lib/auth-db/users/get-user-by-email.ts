@@ -38,6 +38,7 @@ export async function getUserByEmail(
         "middle_name",
         "last_name",
         "display_name",
+        "service_account_app_id",
       ])
       .execute();
   } catch (e: unknown) {

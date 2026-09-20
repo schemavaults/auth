@@ -62,6 +62,7 @@ describe("GET /api/oidc/openid-configuration", () => {
       expect(doc.grant_types_supported).to.deep.equal([
         "authorization_code",
         "refresh_token",
+        "client_credentials",
       ]);
       expect(doc.response_modes_supported).to.deep.equal(["query"]);
       expect(doc.subject_types_supported).to.deep.equal(["public"]);

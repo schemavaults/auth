@@ -36,6 +36,11 @@ const _baseUserDataSchema = z
     // Account Disabled / Banned
     disabled: z.boolean().optional(),
 
+    // Service account: a machine identity owned by a client application
+    // (minted through the OAuth2 client_credentials grant) rather than a
+    // person. Absent/false for every human account.
+    service_account: z.boolean().optional(),
+
     // Creation Timestamp
     created_at: z.number().int().positive(),
 

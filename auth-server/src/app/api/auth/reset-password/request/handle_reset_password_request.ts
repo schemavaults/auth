@@ -79,6 +79,20 @@ export async function handleResetPasswordRequest({
     );
   }
 
+  if (typeof user.service_account_app_id === "string") {
+    // Service accounts have no password to reset and no mailbox to
+    // deliver to; keep the generic answer so nothing is enumerable.
+    if (debug) {
+      console.log(
+        `[handleResetPasswordRequest] Ignoring reset request for service account: ${email}`,
+      );
+    }
+    return NextResponse.json(
+      { success: true, message: GENERIC_SUCCESS_MESSAGE },
+      { status: 200 },
+    );
+  }
+
   try {
     const rawToken: string = await userRegistry.createPasswordResetToken(user.uid);
     const authServerUri: string = getAuthServerUrl(appEnv);

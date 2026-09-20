@@ -62,6 +62,7 @@ describe("Admin settings API", () => {
         "mail_server_configured",
         "mail_server_api_id",
         "spoofed_superuser_email",
+        "service_account_email_domain",
       ]) {
         expect(keys, `settings include ${expected}`).to.include(expected);
       }

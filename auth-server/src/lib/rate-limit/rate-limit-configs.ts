@@ -51,6 +51,19 @@ export const REFRESH_TOKEN_RATE_LIMIT: RateLimitConfig = {
   keySource: "ip",
 };
 
+/**
+ * OAuth2 client_credentials grants at /api/oidc/token, per IP. Bounds
+ * both client-secret guessing and runaway M2M minting loops; a
+ * well-behaved service caches its access token for most of its
+ * lifetime, so this budget is generous for legitimate traffic.
+ */
+export const CLIENT_CREDENTIALS_RATE_LIMIT: RateLimitConfig = {
+  name: "client-credentials",
+  maxAttempts: 60,
+  windowSeconds: 60,
+  keySource: "ip",
+};
+
 // Caps cross-challenge MFA verify abuse from a single IP. Per-challenge
 // attempts are independently capped at 5 by challenge-store.ts; this
 // limiter exists to prevent a bot from rotating challenge_ids to evade

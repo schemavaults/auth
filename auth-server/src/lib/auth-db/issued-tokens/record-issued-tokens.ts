@@ -16,10 +16,11 @@ function validateRow(row: NewIssuedTokenRow): void {
   }
   if (
     row.grant_type !== "refresh_token" &&
-    row.grant_type !== "authorization_code"
+    row.grant_type !== "authorization_code" &&
+    row.grant_type !== "client_credentials"
   ) {
     throw new TypeError(
-      "Invalid grant_type: expected 'refresh_token' or 'authorization_code'",
+      "Invalid grant_type: expected 'refresh_token', 'authorization_code', or 'client_credentials'",
     );
   }
   if (typeof row.issued_at !== "number" || !Number.isFinite(row.issued_at) || row.issued_at <= 0) {

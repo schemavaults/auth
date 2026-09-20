@@ -38,6 +38,19 @@ describe("customJwtPayloadToUserData", () => {
     });
   });
 
+  it("carries the service_account marker through, and only when set", () => {
+    expect(customJwtPayloadToUserData(fullPayload)).not.toHaveProperty(
+      "service_account",
+    );
+    const serviceAccountPayload: CustomJWTPayload = {
+      ...fullPayload,
+      service_account: true,
+    };
+    expect(customJwtPayloadToUserData(serviceAccountPayload)).toMatchObject({
+      service_account: true,
+    });
+  });
+
   it("should not include JWT-specific fields (aud, app, sig, iss, env)", () => {
     const result = customJwtPayloadToUserData(fullPayload);
 

@@ -13,6 +13,11 @@ import loadSuperuserInviteCode, { superuserInviteCodeEnvVarKey } from "@/lib/Sup
 import timingSafeEqualSecretString from "@/lib/timingSafeEqualSecretString";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import isValidEmail from "@/lib/is-valid-email";
+import {
+  getReservedServiceAccountEmailDomains,
+  isReservedServiceAccountEmail,
+  ReservedEmailDomainError,
+} from "@/lib/config/service-account-email-domain";
 import type { ICreateUserOptions } from "./ICreateUserOptions";
 import { userDocumentSchema, type UserDocument } from "./parse-user-document";
 import lookupInviteCode from "./lookup-invite-code";
@@ -68,6 +73,18 @@ export async function createUser(
 
   if (typeof invite_code !== "string" && typeof invite_code !== "undefined") {
     throw new TypeError("'invite_code' must be a string (if passed)");
+  }
+
+  // Human accounts never live under a service-account domain (neither
+  // the configured one nor the built-in default). Service accounts are
+  // created by app-service-accounts.ts, never through here.
+  if (
+    isReservedServiceAccountEmail(
+      email,
+      await getReservedServiceAccountEmailDomains(db),
+    )
+  ) {
+    throw new ReservedEmailDomainError(email.slice(email.indexOf("@") + 1));
   }
 
   const inviteCodesRequiredPromise: Promise<boolean> = inviteCodesRequired(db);

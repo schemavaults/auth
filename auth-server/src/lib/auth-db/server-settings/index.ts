@@ -10,6 +10,8 @@ export {
 // Shared exports - safe to import anywhere (no server-only dependency)
 export {
   SERVER_SETTING_DEFINITIONS,
+  DEFAULT_SERVICE_ACCOUNT_EMAIL_DOMAIN,
+  serviceAccountEmailDomainSchema,
   getDefaultValue,
   getSettingSchema,
   getSettingValueType,

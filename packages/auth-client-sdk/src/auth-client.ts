@@ -53,6 +53,10 @@ import type {
   GeneratedClientApplicationSecret,
 } from "@/lib/client-application-secret";
 import type {
+  ClientApplicationServiceAccountStatus,
+  CreatedClientApplicationServiceAccount,
+} from "@/lib/client-application-service-account";
+import type {
   AuthClientEvent,
   OnAuthStateChangedListenerRef,
 } from "@/lib/auth-client-events";
@@ -1720,6 +1724,51 @@ export class SchemaVaultsAuthClient
     this.assertAppAndApiManagementWriteAccess("deleteClientApplicationSecret");
     const fn = await import("@/lib/client-application-secret").then(
       (m) => m.deleteClientApplicationSecret,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async getClientApplicationServiceAccount(
+    app_id: AppId,
+  ): Promise<ClientApplicationServiceAccountStatus> {
+    const fn = await import("@/lib/client-application-service-account").then(
+      (m) => m.getClientApplicationServiceAccount,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async createClientApplicationServiceAccount(
+    app_id: AppId,
+  ): Promise<CreatedClientApplicationServiceAccount> {
+    this.assertAppAndApiManagementWriteAccess(
+      "createClientApplicationServiceAccount",
+    );
+    const fn = await import("@/lib/client-application-service-account").then(
+      (m) => m.createClientApplicationServiceAccount,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async deleteClientApplicationServiceAccount(
+    app_id: AppId,
+  ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess(
+      "deleteClientApplicationServiceAccount",
+    );
+    const fn = await import("@/lib/client-application-service-account").then(
+      (m) => m.deleteClientApplicationServiceAccount,
     );
     return await fn({
       adapter: this.adapter,

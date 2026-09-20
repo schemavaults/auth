@@ -176,6 +176,12 @@ export default defineConfig({
               {
                 client_secret:
                   config.env["OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET"],
+                // Connected to the example resource server's API as well
+                // so the client_credentials spec can mint `resource`
+                // tokens the resource server's route guard accepts.
+                connect_to_api_server_ids: [
+                  "00000000-0000-0000-0000-000000000000",
+                ],
               },
             );
           } // end of setup for test suite 'example_resource_server'

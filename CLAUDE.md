@@ -186,6 +186,7 @@ The sections below used to live in this file. Each now lives in a Claude Code sk
 | `oidc-subject-claim` | the OIDC `sub` claim format on id_token / userinfo / introspection |
 | `plain-oauth2-grants` | authorization requests without `openid` (OAuth-only / MCP clients), scope handling at the authorize and token endpoints |
 | `oidc-confidential-clients` | client secrets, `client_secret_basic`/`_post`, explicit callback URL allowlists, `redirect_uri` validation |
+| `client-credentials-grant` | `grant_type=client_credentials` M2M tokens, per-app service accounts (`USERS.service_account_app_id`, the `service_account` token claim), the `/api/apps/[app_id]/service-account` management surface |
 | `client-sdk-token-flows` | `@schemavaults/auth-client-sdk` code/refresh exchange via `openid-client`, the token-endpoint extensions, the discovery document |
 | `docker-deployment` | `auth-server/Dockerfile` targets, the `deploy/` compose stack, nginx configuration |
 | `e2e-auth-tests` | writing, debugging, or running the Cypress suite |

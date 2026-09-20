@@ -1,5 +1,11 @@
 import "server-only";
 import { InviteCodeExhaustedError } from "@/lib/auth-db/users";
+import {
+  getReservedServiceAccountEmailDomains,
+  isReservedServiceAccountEmail,
+  RESERVED_EMAIL_DOMAIN_MESSAGE,
+  ReservedEmailDomainError,
+} from "@/lib/config/service-account-email-domain";
 
 import { type NextRequest, NextResponse } from "next/server";
 import type {
@@ -407,6 +413,41 @@ export async function handleRegister({
     );
   }
 
+  // Domains reserved for service accounts (the client_credentials
+  // subjects) can never be registered by a person. Checked here for a
+  // clear 400 (and again inside createUser as the last line of defense
+  // for every other creation path).
+  try {
+    if (
+      isReservedServiceAccountEmail(
+        email,
+        await getReservedServiceAccountEmailDomains(dbh.db),
+      )
+    ) {
+      return NextResponse.json(
+        {
+          kind: "failure",
+          success: false,
+          message: RESERVED_EMAIL_DOMAIN_MESSAGE,
+        } satisfies AuthenticateResult,
+        { status: 400 },
+      );
+    }
+  } catch (e: unknown) {
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRegister.getReservedServiceAccountEmailDomains",
+      route: ROUTE,
+    });
+    return NextResponse.json(
+      {
+        kind: "failure",
+        success: false,
+        message: "Failed to validate email domain",
+      } satisfies AuthenticateResult,
+      { status: 500 },
+    );
+  }
+
   let newUser: UserDocument;
   try {
     if (debug) {
@@ -435,6 +476,16 @@ export async function handleRegister({
         {
           status: 400,
         },
+      );
+    }
+    if (e instanceof ReservedEmailDomainError) {
+      return NextResponse.json(
+        {
+          kind: "failure",
+          success: false,
+          message: RESERVED_EMAIL_DOMAIN_MESSAGE,
+        } satisfies AuthenticateResult,
+        { status: 400 },
       );
     }
     await captureServerException(dbh.db, e, {

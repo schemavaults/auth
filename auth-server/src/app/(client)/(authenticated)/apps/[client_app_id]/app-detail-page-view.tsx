@@ -4,7 +4,7 @@ import { useState, type ReactElement } from "react";
 import { isHardcodedApiServerId, type SchemaVaultsApp, type SchemaVaultsAppCallbackUrlRef, type SchemaVaultsAppDomainRef, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
-import { AppCallbackUrlsCard, AppClientSecretCard } from "@/components/AppOAuthSecurity";
+import { AppCallbackUrlsCard, AppClientSecretCard, AppServiceAccountCard } from "@/components/AppOAuthSecurity";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
@@ -24,12 +24,21 @@ export interface AppClientSecretMetadataProps {
   updated_at: number | null;
 }
 
+export interface AppServiceAccountProps {
+  uid: string;
+  email: string;
+  created_at: number;
+  disabled: boolean;
+}
+
 export interface AppDetailPageViewProps {
   app: SchemaVaultsApp;
   connected_api_servers: readonly ConnectedApiServer[];
   connected_domains: readonly SchemaVaultsAppDomainRef[];
   callback_urls: readonly SchemaVaultsAppCallbackUrlRef[];
   client_secret_metadata: AppClientSecretMetadataProps;
+  /** The app's client_credentials service account, if one exists. */
+  service_account: AppServiceAccountProps | null;
   hardcoded: boolean;
   isOrgOwner: boolean;
   current_environment: SchemaVaultsAppEnvironment;
@@ -93,6 +102,7 @@ export default function AppDetailPageView({
   connected_domains,
   callback_urls,
   client_secret_metadata,
+  service_account,
   hardcoded,
   isOrgOwner,
   current_environment,
@@ -210,6 +220,15 @@ export default function AppDetailPageView({
           has_client_secret={client_secret_metadata.has_client_secret}
           created_at={client_secret_metadata.created_at}
           updated_at={client_secret_metadata.updated_at}
+          canManage={isOrgOwner}
+        />
+      )}
+
+      {!hardcoded && (
+        <AppServiceAccountCard
+          app_id={app.app_id}
+          service_account={service_account}
+          has_client_secret={client_secret_metadata.has_client_secret}
           canManage={isOrgOwner}
         />
       )}

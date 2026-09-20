@@ -38,6 +38,10 @@ import type {
   ClientApplicationSecretMetadata,
   GeneratedClientApplicationSecret,
 } from "@/lib/client-application-secret";
+import type {
+  ClientApplicationServiceAccountStatus,
+  CreatedClientApplicationServiceAccount,
+} from "@/lib/client-application-service-account";
 
 export interface ISchemaVaultsAuthClient {
   version: string;
@@ -506,6 +510,40 @@ export interface ISchemaVaultsAuthClient {
    * @returns A promise resolving if deletion succeeds
    */
   deleteClientApplicationSecret: (app_id: AppId) => Promise<void>;
+
+  /**
+   * @name getClientApplicationServiceAccount
+   * @description Load a client application's service account — the machine
+   * identity that access tokens obtained via the OAuth2 client_credentials
+   * grant are issued to — together with whether the app currently holds a
+   * client secret (and may therefore use that grant).
+   * @argument app_id The unique ID of the client application
+   * @returns A promise resolving to the service account status
+   */
+  getClientApplicationServiceAccount: (
+    app_id: AppId,
+  ) => Promise<ClientApplicationServiceAccountStatus>;
+
+  /**
+   * @name createClientApplicationServiceAccount
+   * @description Create a client application's service account ahead of
+   * its first client_credentials grant (idempotent: an existing service
+   * account is returned with `created: false`).
+   * @argument app_id The unique ID of the client application
+   * @returns A promise resolving to the (possibly pre-existing) service account
+   */
+  createClientApplicationServiceAccount: (
+    app_id: AppId,
+  ) => Promise<CreatedClientApplicationServiceAccount>;
+
+  /**
+   * @name deleteClientApplicationServiceAccount
+   * @description Remove a client application's service account. The next
+   * client_credentials grant creates a new one with a different uid.
+   * @argument app_id The unique ID of the client application
+   * @returns A promise resolving if deletion succeeds
+   */
+  deleteClientApplicationServiceAccount: (app_id: AppId) => Promise<void>;
 
   /**
    * @name listApiServerDomains

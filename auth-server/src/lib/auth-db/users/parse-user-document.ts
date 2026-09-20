@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { appIdSchema } from "@schemavaults/app-definitions";
 import {
   inviteCodeFormatSchema,
   userDisplayNameSchema,
@@ -25,6 +26,9 @@ export const userDocumentSchema = z
     middle_name: userNamePartSchema.optional(),
     last_name: userNamePartSchema.optional(),
     display_name: userDisplayNameSchema.optional(),
+    // Set only on service accounts (migration 00038): the client app this
+    // machine identity belongs to. Absent on every human account.
+    service_account_app_id: appIdSchema.optional(),
   })
   .required({
     email: true,
@@ -47,6 +51,7 @@ const NULLABLE_TEXT_COLUMNS = [
   "middle_name",
   "last_name",
   "display_name",
+  "service_account_app_id",
 ] as const;
 
 export async function parseUserDocument(row: unknown): Promise<UserDocument> {

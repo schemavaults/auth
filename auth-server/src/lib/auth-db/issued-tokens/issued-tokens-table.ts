@@ -1,7 +1,10 @@
 import type { Insertable, Selectable } from "@schemavaults/dbh";
 
 export type IssuedTokenType = "access" | "refresh";
-export type IssuedTokenGrantType = "refresh_token" | "authorization_code";
+export type IssuedTokenGrantType =
+  | "refresh_token"
+  | "authorization_code"
+  | "client_credentials";
 
 export interface IssuedTokensTable {
   jti: string;

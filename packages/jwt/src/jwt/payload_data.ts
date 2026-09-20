@@ -40,6 +40,10 @@ export function createJwtPayloadSchema(
       // until they expire. /api/oidc/userinfo filters its claims by it
       // and route guards enforce `required_scopes` against it.
       scope: z.string().max(256).optional(),
+      // True on tokens minted for a client application's service account
+      // (OAuth2 client_credentials grant, RFC 6749 §4.4): the subject is a
+      // machine identity, not a person. Omitted on every other token.
+      service_account: z.boolean().optional(),
     })
     .required({
       uid: true,
