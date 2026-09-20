@@ -161,6 +161,7 @@ export default async function generateTokensForAuthenticatedUser({
         grant_type: tracking.grant_type,
         issued_at: refresh_token.iat,
         expires_at: refresh_token.exp,
+        refresh_jti: null,
       });
     }
     for (const [token_audience, access] of Object.entries(access_tokens)) {
@@ -175,6 +176,9 @@ export default async function generateTokensForAuthenticatedUser({
         grant_type: tracking.grant_type,
         issued_at: access.iat,
         expires_at: access.exp,
+        // Link to the refresh token minted in this same grant so logging
+        // that session out revokes its access tokens too.
+        refresh_jti: refresh_token?.jti ?? null,
       });
     }
 

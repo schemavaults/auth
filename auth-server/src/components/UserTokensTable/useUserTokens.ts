@@ -16,6 +16,9 @@ const issuedTokenRowSchema = z.object({
   grant_type: z.enum(["refresh_token", "authorization_code"]),
   issued_at: z.coerce.number(),
   expires_at: z.coerce.number(),
+  // Refresh token this access token was issued alongside (migration
+  // 00039); absent/null on refresh tokens and pre-migration rows.
+  refresh_jti: z.string().nullable().optional(),
 });
 
 export interface UseUserTokensOptions {
@@ -70,7 +73,10 @@ export function useUserTokens({
         throw new Error("Failed to parse user tokens from response");
       }
 
-      return parsed.data;
+      return parsed.data.map((token) => ({
+        ...token,
+        refresh_jti: token.refresh_jti ?? null,
+      }));
     },
   );
 }

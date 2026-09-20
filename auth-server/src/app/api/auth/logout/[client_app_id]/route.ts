@@ -17,11 +17,9 @@ import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import {
   ServerlessDatabase,
   SchemaVaultsAppRegistry,
-  invalidateAllTokensForUser,
   revokeToken,
+  revokeTokensIssuedWithRefreshToken,
 } from "@/lib/auth-db";
-import { RedisCache } from "@/lib/redis";
-import { invalidateUserTokensValidAfterCache } from "@/lib/token-revocation";
 import { refreshTokenExpiry } from "@schemavaults/auth-common";
 import { getKeysetIdFromToken, decodeJWT } from "@schemavaults/jwt";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
@@ -197,12 +195,15 @@ export async function POST(
   const refresh_token_expiry_cookie_name: string =
     RefreshTokenExpiryCookieName(client_app_id);
 
-  // Revoke the session server-side before clearing cookies:
-  //  1. the presented refresh token's jti, so it can never be redeemed again;
-  //  2. the user's tokens_valid_after watermark, so every token issued
-  //     before this instant — including the access token(s) minted alongside
-  //     that refresh token, which have their own jti — is rejected by the
-  //     route guards and the token endpoint from now on.
+  // Revoke THIS session server-side before clearing cookies:
+  //  1. the presented refresh token's jti, so it can never be redeemed (or
+  //     presented to a route guard) again;
+  //  2. the access token(s) minted alongside it (issued_tokens.refresh_jti),
+  //     which have their own jti and would otherwise outlive the logout.
+  // Deliberately NOT the user's tokens_valid_after watermark: that is the
+  // password-reset remedy and would end the user's sessions in every other
+  // client app and on every other device, and kill any authorization code
+  // a relying party is about to redeem.
   try {
     const refresh_token_value = req.cookies.get(refresh_token_cookie_name)?.value;
     if (refresh_token_value) {
@@ -221,37 +222,17 @@ export async function POST(
       if (decoded.jti) {
         const expires_at = Date.now() + refreshTokenExpiry * 1000;
         await revokeToken(dbh.db, decoded.jti, decoded.uid, expires_at);
+        const siblings_revoked: number =
+          await revokeTokensIssuedWithRefreshToken(
+            dbh.db,
+            decoded.jti,
+            decoded.uid,
+          );
         if (debug) {
           console.log(
-            `[/api/auth/logout/${client_app_id}] Revoked refresh token jti '${decoded.jti}' for user '${decoded.uid}'`
+            `[/api/auth/logout/${client_app_id}] Revoked refresh token jti '${decoded.jti}' and ${siblings_revoked} access token(s) issued with it for user '${decoded.uid}'`
           );
         }
-      }
-
-      const valid_after_seconds: number = Math.floor(Date.now() / 1000);
-      await invalidateAllTokensForUser(
-        dbh.db,
-        decoded.uid,
-        valid_after_seconds,
-        debug,
-      );
-      if (debug) {
-        console.log(
-          `[/api/auth/logout/${client_app_id}] Bumped tokens_valid_after to ${valid_after_seconds} for user '${decoded.uid}'`
-        );
-      }
-
-      // Drop the guards' cached watermark so the bump applies immediately
-      // rather than after the cache TTL. Best effort: a Redis outage only
-      // delays enforcement by that TTL, it never fails the logout.
-      try {
-        await using redis = RedisCache.createConnection();
-        await invalidateUserTokensValidAfterCache(redis, decoded.uid);
-      } catch (e: unknown) {
-        console.warn(
-          `[/api/auth/logout/${client_app_id}] Could not invalidate the cached tokens_valid_after watermark for user '${decoded.uid}': `,
-          e,
-        );
       }
     }
   } catch (e: unknown) {
