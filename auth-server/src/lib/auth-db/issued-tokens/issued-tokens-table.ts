@@ -15,6 +15,14 @@ export interface IssuedTokensTable {
   grant_type: IssuedTokenGrantType;
   issued_at: number;
   expires_at: number;
+  /**
+   * For an access token: the jti of the refresh token minted in the same
+   * grant (migration 00039), so logout can revoke a session's access
+   * tokens precisely. NULL for refresh-token rows, for access tokens
+   * minted without a refresh token (client_credentials), and for rows
+   * recorded before the column existed.
+   */
+  refresh_jti: string | null;
 }
 
 export type IssuedTokenRow = Selectable<IssuedTokensTable>;

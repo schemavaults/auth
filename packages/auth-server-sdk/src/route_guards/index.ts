@@ -1,5 +1,12 @@
 export type { IRouteGuard } from "./IRouteGuard";
 
+export { evaluateTokenRevocation } from "./token-revocation";
+export type {
+  DecodedTokenClaims,
+  IsTokenRevokedFn,
+  EvaluateTokenRevocationResult,
+} from "./token-revocation";
+
 export { AuthenticationRequiredRouteGuard } from "./authenticated";
 export { AdminRequiredRouteGuard } from "./admin";
 

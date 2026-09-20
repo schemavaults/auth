@@ -24,6 +24,7 @@ import {
   getScopeFromCustomJwtPayload,
 } from "@schemavaults/jwt";
 import isValidUuid from "@/is-valid-uuid";
+import type { DecodedTokenClaims } from "@/route_guards/token-revocation";
 
 // A decoded token: the user identity plus the granted `scope` carried
 // ALONGSIDE it (never folded into UserData). `scope` is null when the token
@@ -37,6 +38,12 @@ export type IDecodeJWTsWithKeyManagerOutput =
   | {
       user: UserData;
       scope: string | null;
+      /**
+       * Revocation-relevant claims (`jti`, `iat`, `uid`, type) of EVERY
+       * token source that decrypted and verified — all belong to `user`.
+       * Route guards feed these to an optional `is_token_revoked` hook.
+       */
+      tokens: readonly DecodedTokenClaims[];
     }
   | {
       user: null;
@@ -75,6 +82,10 @@ export async function decodeJWTsWithKeyManager(
       "Failed to resolve reference to JWT keys manager to load keys to perform decode!",
     );
   }
+
+  // Claims of every token that verified, collected as decodeJWTs works
+  // through the sources (it only returns the first successful decode).
+  const verified_tokens: DecodedTokenClaims[] = [];
 
   let decoded_result: DecodedTokenWithScope | null = null;
   try {
@@ -156,6 +167,19 @@ export async function decodeJWTsWithKeyManager(
               keyset_id,
               env: environment,
             });
+            // decodeJWTs forwards only type/token/audience to this
+            // callback; recover the source hint from the original list.
+            const source_hint: string | undefined =
+              typeof opts.sourceHint === "string"
+                ? opts.sourceHint
+                : token_sources.find((s) => s.token === opts.token)?.sourceHint;
+            verified_tokens.push({
+              jti: typeof jwtPayload.jti === "string" ? jwtPayload.jti : null,
+              iat: jwtPayload.iat,
+              uid: jwtPayload.uid,
+              type: opts.type,
+              ...(typeof source_hint === "string" ? { sourceHint: source_hint } : {}),
+            });
             return {
               user: customJwtPayloadToUserData(jwtPayload),
               scope: getScopeFromCustomJwtPayload(jwtPayload),
@@ -210,6 +234,8 @@ export async function decodeJWTsWithKeyManager(
     return {
       user,
       scope: decoded_result.scope,
+      // decodeJWTs already verified every token resolves the same uid.
+      tokens: verified_tokens.filter((t) => t.uid === user.uid),
     };
   }
 

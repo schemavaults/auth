@@ -35,6 +35,12 @@ function validateRow(row: NewIssuedTokenRow): void {
   if (typeof row.audience !== "string" || row.audience.length === 0) {
     throw new TypeError("Invalid audience: expected a non-empty string");
   }
+  if (row.refresh_jti !== null && !isValidUuid(row.refresh_jti)) {
+    throw new TypeError("Invalid refresh_jti: expected a valid UUID or null");
+  }
+  if (row.token_type === "refresh" && row.refresh_jti !== null) {
+    throw new TypeError("A refresh token row must not carry a refresh_jti");
+  }
 }
 
 export async function recordIssuedTokens(

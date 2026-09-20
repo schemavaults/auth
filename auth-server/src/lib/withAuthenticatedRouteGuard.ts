@@ -14,6 +14,7 @@ import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type { PotentiallyValidTokenSource } from "@schemavaults/auth-common";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import isUserInOrganization from "./isUserInOrganization";
+import { createRouteGuardTokenRevocationCheck } from "./token-revocation";
 import { type NextRequest, NextResponse } from "next/server";
 
 export interface IProtectedAuthenticatedServerComponentPageProps extends IBaseProtectedAuthenticatedServerComponentPageProps {
@@ -50,7 +51,10 @@ export async function withAuthenticatedServerComponentRouteGuard(
       api_server_id: getAuthServerAppId(),
       error_page_url: '/error',
       next_href: wrapper_opts?.next_href,
-      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
+      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
+      // Reject sessions revoked by logout / password reset even though the
+      // token still verifies cryptographically.
+      is_token_revoked: createRouteGuardTokenRevocationCheck({ db: dbh.db, redis }),
     })
 }
 
@@ -98,6 +102,9 @@ export async function withAuthenticatedApiRouteGuard(
         custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
         additional_token_sources: wrapper_opts?.additional_token_sources,
         required_scopes: wrapper_opts?.required_scopes,
+        // Reject sessions revoked by logout / password reset even though the
+        // token still verifies cryptographically.
+        is_token_revoked: createRouteGuardTokenRevocationCheck({ db: dbh.db, redis, debug: wrapper_opts?.debug }),
         debug: wrapper_opts?.debug
       }
     );

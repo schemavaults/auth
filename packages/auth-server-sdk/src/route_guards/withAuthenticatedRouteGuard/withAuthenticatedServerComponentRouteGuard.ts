@@ -32,6 +32,7 @@ import redirectToLogin from "@/redirect-to-login";
 import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType";
 import type { IBaseProtectedAuthenticatedServerComponentPageProps } from "./IBaseProtectedAuthenticatedServerComponentPageProps";
 import initDefaultJwtKeyManagerForAuthenticatedRouteGuard from "./initDefaultJwtKeyManagerForAuthenticatedRouteGuard";
+import type { IsTokenRevokedFn } from "@/route_guards/token-revocation";
 
 type RequestCookies = Awaited<
   ReturnType<typeof import("next/headers").cookies>
@@ -77,6 +78,12 @@ export interface IWithAuthenticatedServerComponentRouteGuardAdditionalOptions<
    * `sanitizeNextHref` in `@schemavaults/auth-common`).
    */
   next_href?: string;
+  /**
+   * Revocation check run against every presented token that verified
+   * (see {@link IsTokenRevokedFn}). A revoked session is sent to the login
+   * page exactly like a missing one. A hook that throws fails closed.
+   */
+  is_token_revoked?: IsTokenRevokedFn;
   debug?: boolean;
 }
 
@@ -323,6 +330,8 @@ export async function withAuthenticatedServerComponentRouteGuard<
     environment,
     is_auth_server: api_server_id === auth_server_app_id,
     jwt_keys_manager,
+    is_token_revoked: opts?.is_token_revoked,
+    debug,
   });
   const route_guard: IRouteGuard =
     await route_guard_factory.createGuardFromTokenSources(
@@ -330,6 +339,15 @@ export async function withAuthenticatedServerComponentRouteGuard<
       token_sources,
       api_server_id,
     );
+
+  if (route_guard.revoked === true) {
+    // The session verified cryptographically but has been revoked (logout
+    // or password reset): treat exactly like a missing session.
+    console.warn(
+      `[${name}] Presented session token has been revoked; redirecting to login.`,
+    );
+    redirectToLogin(redirect, next_href);
+  }
 
   if (!route_guard.user) {
     redirectToLogin(redirect, next_href);
