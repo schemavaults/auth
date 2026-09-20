@@ -107,8 +107,13 @@ describe("service_account_email_domain server setting", () => {
   });
 
   afterEach(() => {
-    // Always restore the default, even if an assertion failed midway.
-    cy.create_and_login_as_superuser_via_request().then(() => {
+    // Always restore the default, even if an assertion failed midway. The
+    // last test signs out to exercise registration, so re-authenticate
+    // only when needed (the login helper asserts a signed-out state).
+    cy.is_authenticated().then((authenticated: boolean) => {
+      if (!authenticated) {
+        cy.create_and_login_as_superuser_via_request();
+      }
       patchDomain(DEFAULT_DOMAIN);
     });
   });
