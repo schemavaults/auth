@@ -6,8 +6,11 @@
 // every existing token, audience, revocation and audit path treats an
 // M2M token exactly like a user token — the only differences are that a
 // service account has no password (it can never sign in interactively),
-// its email is a synthetic, undeliverable address, and its tokens carry
-// the `service_account: true` claim.
+// its email is a synthetic `<app_id>@<domain>` address under the
+// `service_account_email_domain` server setting (default: the reserved,
+// undeliverable `service-accounts.invalid`; humans can never register
+// under either — see lib/config/service-account-email-domain.ts), and
+// its tokens carry the `service_account: true` claim.
 //
 // At most one service account exists per app. It is created lazily by
 // the first successful client_credentials grant (or explicitly via the
@@ -31,19 +34,23 @@ import {
   type UserDocument,
 } from "@/lib/auth-db/users";
 import authorizeAppForUser from "@/lib/auth-db/apps/authorized-apps-registry/authorize-app-for-user";
+import {
+  DEFAULT_SERVICE_ACCOUNT_EMAIL_DOMAIN,
+  getServiceAccountEmailDomain,
+} from "@/lib/config/service-account-email-domain";
+
+export { DEFAULT_SERVICE_ACCOUNT_EMAIL_DOMAIN };
 
 /**
- * Reserved TLD (RFC 2606) so a service account's email can never be
- * delivered to, registered as, or confused with a real mailbox.
+ * The synthetic email of an app's service account under the given
+ * domain. App ids are `[a-z0-9_-]` (see `appIdSchema`), which is a valid
+ * email local part.
  */
-export const SERVICE_ACCOUNT_EMAIL_DOMAIN = "service-accounts.invalid" as const;
-
-/**
- * The synthetic email of an app's service account. App ids are
- * `[a-z0-9_-]` (see `appIdSchema`), which is a valid email local part.
- */
-export function serviceAccountEmailForApp(app_id: AppId): string {
-  return `${app_id}@${SERVICE_ACCOUNT_EMAIL_DOMAIN}`;
+export function serviceAccountEmailForApp(
+  app_id: AppId,
+  domain: string = DEFAULT_SERVICE_ACCOUNT_EMAIL_DOMAIN,
+): string {
+  return `${app_id}@${domain}`;
 }
 
 async function assertManageableAppId(app_id: AppId): Promise<void> {
@@ -121,13 +128,14 @@ export async function getOrCreateAppServiceAccount(
 
   const uid: string = crypto.randomUUID();
   const created_at: number = Date.now();
+  const email_domain: string = await getServiceAccountEmailDomain(db);
   try {
     await db.transaction().execute(async (trx) => {
       await trx
         .insertInto("users")
         .values({
           uid,
-          email: serviceAccountEmailForApp(app_id),
+          email: serviceAccountEmailForApp(app_id, email_domain),
           // There is no mailbox to verify; the identity is established
           // by the app's client secret instead.
           email_verified: true,
