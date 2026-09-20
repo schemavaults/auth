@@ -17,8 +17,11 @@ import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import {
   ServerlessDatabase,
   SchemaVaultsAppRegistry,
+  invalidateAllTokensForUser,
   revokeToken,
 } from "@/lib/auth-db";
+import { RedisCache } from "@/lib/redis";
+import { invalidateUserTokensValidAfterCache } from "@/lib/token-revocation";
 import { refreshTokenExpiry } from "@schemavaults/auth-common";
 import { getKeysetIdFromToken, decodeJWT } from "@schemavaults/jwt";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
@@ -194,7 +197,12 @@ export async function POST(
   const refresh_token_expiry_cookie_name: string =
     RefreshTokenExpiryCookieName(client_app_id);
 
-  // Attempt to revoke the refresh token's jti before clearing cookies
+  // Revoke the session server-side before clearing cookies:
+  //  1. the presented refresh token's jti, so it can never be redeemed again;
+  //  2. the user's tokens_valid_after watermark, so every token issued
+  //     before this instant — including the access token(s) minted alongside
+  //     that refresh token, which have their own jti — is rejected by the
+  //     route guards and the token endpoint from now on.
   try {
     const refresh_token_value = req.cookies.get(refresh_token_cookie_name)?.value;
     if (refresh_token_value) {
@@ -219,11 +227,37 @@ export async function POST(
           );
         }
       }
+
+      const valid_after_seconds: number = Math.floor(Date.now() / 1000);
+      await invalidateAllTokensForUser(
+        dbh.db,
+        decoded.uid,
+        valid_after_seconds,
+        debug,
+      );
+      if (debug) {
+        console.log(
+          `[/api/auth/logout/${client_app_id}] Bumped tokens_valid_after to ${valid_after_seconds} for user '${decoded.uid}'`
+        );
+      }
+
+      // Drop the guards' cached watermark so the bump applies immediately
+      // rather than after the cache TTL. Best effort: a Redis outage only
+      // delays enforcement by that TTL, it never fails the logout.
+      try {
+        await using redis = RedisCache.createConnection();
+        await invalidateUserTokensValidAfterCache(redis, decoded.uid);
+      } catch (e: unknown) {
+        console.warn(
+          `[/api/auth/logout/${client_app_id}] Could not invalidate the cached tokens_valid_after watermark for user '${decoded.uid}': `,
+          e,
+        );
+      }
     }
   } catch (e: unknown) {
     // Token may be expired, invalid, or missing -- still proceed with cookie clearing
     if (debug) {
-      console.warn("[logout] Could not revoke token jti (token may be expired/invalid): ", e);
+      console.warn("[logout] Could not revoke session server-side (token may be expired/invalid): ", e);
     }
   }
 

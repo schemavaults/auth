@@ -44,6 +44,12 @@ export interface ConsumedAuthorizationCode {
   uid: string;
   nonce: string | null;
   scope: string | null;
+  /**
+   * When the code was minted (unix **milliseconds**). The token endpoint
+   * compares it against the user's `tokens_valid_after` watermark so a code
+   * minted by a session that was revoked afterwards cannot be redeemed.
+   */
+  created_at: number;
 }
 
 export async function validateAndConsumeAuthorizationCode(
@@ -120,6 +126,7 @@ export async function validateAndConsumeAuthorizationCode(
       challenge_time: stored_challenge_time,
       nonce: stored_nonce,
       scope: stored_scope,
+      created_at: stored_created_at,
     } = parsed_authorization_code.data;
 
     // 3. Defense-in-depth: the code must be redeemed by the same client
@@ -261,6 +268,7 @@ export async function validateAndConsumeAuthorizationCode(
       uid,
       nonce: stored_nonce ?? null,
       scope: stored_scope ?? null,
+      created_at: stored_created_at,
     };
   });
 }

@@ -9,15 +9,19 @@ export type { IRouteGuard } from "./IRouteGuard";
 export abstract class BaseRouteGuard implements IRouteGuard {
   protected readonly _user: UserData | null;
   protected readonly _scope: string | null;
+  protected readonly _revoked: boolean;
   private readonly environment: SchemaVaultsAppEnvironment;
 
   public constructor({
     user,
     scope,
+    revoked,
     environment,
   }: InitRouteGuardCheckOptions) {
-    this._user = user;
-    this._scope = scope ?? null;
+    this._revoked = revoked === true;
+    // A revoked credential never resolves a user, whatever the caller passed.
+    this._user = this._revoked ? null : user;
+    this._scope = this._revoked ? null : (scope ?? null);
     this.environment = environment;
   }
 
@@ -45,5 +49,9 @@ export abstract class BaseRouteGuard implements IRouteGuard {
 
   public get scope(): string | null {
     return this._scope;
+  }
+
+  public get revoked(): boolean {
+    return this._revoked;
   }
 }

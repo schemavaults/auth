@@ -15,6 +15,10 @@ import {
 import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-url";
 import decodeJWTsWithKeyManager from "@/decode-jwts-with-key-manager";
+import {
+  evaluateTokenRevocation,
+  type IsTokenRevokedFn,
+} from "./token-revocation";
 
 /**
  * Constructor options for {@link RouteGuardFactory}.
@@ -43,6 +47,15 @@ export interface RouteGuardFactoryInitOptions {
    * be provided. Defaults to `false` (i.e. a remote resource server).
    */
   is_auth_server?: boolean;
+  /**
+   * Optional revocation check run against every token that verified, before
+   * a guard is built. Return `true` to reject the token as revoked; a hook
+   * that throws fails closed (treated as revoked). The auth server supplies
+   * one backed by its `token_revocations` table and the per-user
+   * `tokens_valid_after` watermark; resource servers may omit it to keep the
+   * claims-only fast path. See {@link IsTokenRevokedFn}.
+   */
+  is_token_revoked?: IsTokenRevokedFn;
   /**
    * When `true`, the factory and the guards it creates emit verbose
    * `console.log` diagnostics. Defaults to `false`.
@@ -93,10 +106,18 @@ export class RouteGuardFactory {
   private readonly environment: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
   private readonly is_auth_server: boolean;
+  private readonly is_token_revoked: IsTokenRevokedFn | undefined;
 
   public constructor({ environment, ...opts }: RouteGuardFactoryInitOptions) {
     this.environment = environment;
     this.debug = opts.debug ?? false;
+    if (
+      typeof opts.is_token_revoked !== "undefined" &&
+      typeof opts.is_token_revoked !== "function"
+    ) {
+      throw new TypeError("'is_token_revoked' must be a function when set");
+    }
+    this.is_token_revoked = opts.is_token_revoked;
     if (
       typeof opts.is_auth_server !== "boolean" &&
       typeof opts.is_auth_server !== "undefined"
@@ -231,11 +252,35 @@ export class RouteGuardFactory {
       this.debug,
     );
 
+    // Revocation is a post-verification check: a token that decrypts and
+    // verifies can still have been revoked by logout (jti) or a password
+    // reset (tokens_valid_after). Every verified token is checked; one
+    // revoked credential fails the whole request, and a hook error fails
+    // closed.
+    let revoked: boolean = false;
+    if (decoded.user && typeof this.is_token_revoked === "function") {
+      const revocation = await evaluateTokenRevocation(
+        this.is_token_revoked,
+        decoded.tokens,
+        this.debug,
+      );
+      revoked = revocation.revoked;
+      if (revoked) {
+        console.warn(
+          `[RouteGuardFactory] Rejecting verified ${revocation.token?.type ?? "unknown"} token for user '${decoded.user.uid}': ` +
+            (revocation.error !== undefined
+              ? "revocation check failed (failing closed)"
+              : "token has been revoked"),
+        );
+      }
+    }
+
     const init_opts: InitRouteGuardCheckOptions = {
-      user: decoded.user,
+      user: revoked ? null : decoded.user,
       // Thread the token's granted scope alongside the user (null when no
       // user was resolved or the token carried no scope claim).
-      scope: decoded.user ? decoded.scope : null,
+      scope: decoded.user && !revoked ? decoded.scope : null,
+      revoked,
       environment: getAppEnvironment(),
     };
 

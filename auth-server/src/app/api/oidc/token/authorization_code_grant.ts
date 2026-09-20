@@ -5,7 +5,12 @@ import {
   parseAndGrantScopes,
   type UserData,
 } from "@schemavaults/auth-common";
-import { UserRegistry, loadUserData } from "@/lib/auth-db";
+import {
+  UserRegistry,
+  getUserTokensValidAfter,
+  isTokenIatRevoked,
+  loadUserData,
+} from "@/lib/auth-db";
 import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import issueOidcTokens from "@/lib/oidc/issue-oidc-tokens";
@@ -94,6 +99,28 @@ export async function handleOidcAuthorizationCodeGrant({
       oidcTokenErrorResponse(
         "invalid_grant",
         "Invalid, expired, or already-used authorization code (or PKCE/redirect_uri mismatch).",
+      ),
+    );
+  }
+
+  // The code was minted by an authenticated session (the guarded
+  // generate-authorization-code route). If that session was revoked after
+  // the code was minted — a password reset bumps the user's
+  // tokens_valid_after watermark, logout does too — the code must not be
+  // redeemable: the tokens it would mint carry a fresh `iat` past the
+  // watermark and would launder the dead session into a fully valid one.
+  // Same strict less-than / unix-seconds semantics as the refresh grant.
+  const tokens_valid_after: number = await getUserTokensValidAfter(
+    dbh.db,
+    consumed.uid,
+  );
+  if (
+    isTokenIatRevoked(Math.floor(consumed.created_at / 1000), tokens_valid_after)
+  ) {
+    return fail(
+      oidcTokenErrorResponse(
+        "invalid_grant",
+        "Authorization code was issued to a session that has since been revoked.",
       ),
     );
   }

@@ -34,6 +34,7 @@ import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType"
 import type { IBaseProtectedAuthenticatedApiRouteInputs } from "./IBaseProtectedAuthenticatedApiRouteInputs";
 import initDefaultJwtKeyManagerForAuthenticatedRouteGuard from "./initDefaultJwtKeyManagerForAuthenticatedRouteGuard";
 import assertValidTokenSourcesArray from "./assertValidTokenSourcesArray";
+import type { IsTokenRevokedFn } from "@/route_guards/token-revocation";
 
 export type TProtectedAuthenticatedApiRoute<
   TRouteInputs extends IBaseProtectedAuthenticatedApiRouteInputs =
@@ -81,6 +82,14 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
    */
   required_scopes?: readonly string[];
   additional_token_sources?: PotentiallyValidTokenSource[];
+  /**
+   * Revocation check run against every presented token that verified
+   * (see {@link IsTokenRevokedFn}). A revoked token is denied 401 even
+   * though its signature is valid and it has not expired. The auth server
+   * always passes one; resource servers may omit it for a claims-only
+   * fast path. A hook that throws fails closed.
+   */
+  is_token_revoked?: IsTokenRevokedFn;
   debug?: boolean;
 }
 
@@ -284,11 +293,24 @@ export function withAuthenticatedApiRouteGuard<
       environment,
       is_auth_server: api_server_id === auth_server_app_id,
       jwt_keys_manager,
+      is_token_revoked: opts?.is_token_revoked,
+      debug,
     }).createGuardFromTokenSources(
       route_guard_type,
       token_sources,
       api_server_id,
     );
+
+    if (route_guard.revoked === true) {
+      return json(
+        {
+          success: false,
+          error: true,
+          message: "Authentication failed, token has been revoked",
+        },
+        { status: 401 },
+      );
+    }
 
     if (!route_guard.user) {
       return json(

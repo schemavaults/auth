@@ -14,6 +14,7 @@ import { RedisCache } from "./redis";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
 import isUserInOrganization from "./isUserInOrganization";
+import { createRouteGuardTokenRevocationCheck } from "./token-revocation";
 
 export interface IProtectedAdminServerComponentPageProps extends IBaseProtectedAdminServerComponentPageProps {
   dbh: ServerlessDatabase;
@@ -46,7 +47,8 @@ export async function withAdminServerComponentRouteGuard(
       jwt_keys_manager,
       api_server_id: getAuthServerAppId(),
       next_href: wrapper_opts?.next_href,
-      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
+      custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
+      is_token_revoked: createRouteGuardTokenRevocationCheck({ db: dbh.db, redis }),
     }
   )
 }
@@ -76,7 +78,8 @@ export async function withAdminApiRouteGuard(
         custom_is_authorized_check: async (props) => props.user.admin === true,
         api_server_id: getAuthServerAppId(),
         jwt_keys_manager,
-        custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id)
+        custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
+        is_token_revoked: createRouteGuardTokenRevocationCheck({ db: dbh.db, redis }),
       }
     );
     return await guarded(req);
