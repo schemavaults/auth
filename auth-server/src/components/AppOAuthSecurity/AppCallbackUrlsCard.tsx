@@ -63,7 +63,9 @@ export interface AppCallbackUrlsCardProps {
  * callback (redirect) URL allowlist. While the list for an environment
  * is empty, any path on a registered app domain is accepted as a
  * redirect_uri (legacy behavior); once at least one callback URL is
- * registered for an environment, only exact matches are accepted there.
+ * registered for an environment, only exact matches are accepted there
+ * (a registered http://127.0.0.1 or http://[::1] URL matches on any port,
+ * RFC 8252 §7.3, for native apps that pick a port at runtime).
  */
 export const AppCallbackUrlsCard: FC<AppCallbackUrlsCardProps> = ({
   app_id,
@@ -163,7 +165,9 @@ export const AppCallbackUrlsCard: FC<AppCallbackUrlsCardProps> = ({
           Explicit OAuth2/OIDC redirect URLs for this application. While this
           list is empty for an environment, any path on a registered domain is
           accepted; once a callback URL is registered, only exact matches are
-          accepted in that environment.
+          accepted in that environment. A registered http://127.0.0.1 or
+          http://[::1] URL matches on any port, so native apps can listen on
+          an ephemeral port.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

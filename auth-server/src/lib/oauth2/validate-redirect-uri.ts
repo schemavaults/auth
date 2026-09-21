@@ -11,7 +11,10 @@
 //  1. Explicit callback URLs (APP_CALLBACK_URLS): when any are
 //     registered for the app + environment, the redirect_uri must be an
 //     exact match of one of them (RFC 6749 §3.1.2.3 simple string
-//     comparison) — the registered origins are NOT consulted.
+//     comparison) — the registered origins are NOT consulted. The one
+//     relaxation is RFC 8252 §7.3: a registered http loopback URL
+//     (127.0.0.1 / [::1]) matches on any port, because native apps
+//     (CLI, desktop, MCP clients) only learn their port at runtime.
 //  2. Origin fallback (APP_DOMAINS): when no explicit callback URLs are
 //     registered, any path on a registered origin is accepted
 //     (legacy/default behavior).
@@ -36,8 +39,9 @@ export interface ValidateRedirectUriOptions {
 /**
  * Return whether `redirect_uri` is registered for the given app +
  * environment: an exact match of an explicit callback URL when any are
- * registered, otherwise an origin match against the registered
- * domains. A malformed URI returns false.
+ * registered (port-agnostic for registered http loopback URLs, RFC 8252
+ * §7.3), otherwise an origin match against the registered domains. A
+ * malformed URI returns false.
  */
 export async function isRedirectUriRegisteredForClientApp({
   redirect_uri,
