@@ -112,3 +112,127 @@ describe("isRedirectUriInCallbackAllowlist", () => {
     ).toBe(false);
   });
 });
+
+describe("isRedirectUriInCallbackAllowlist loopback redirect URIs (RFC 8252 §7.3)", () => {
+  const loopbackAllowlist = [
+    "http://127.0.0.1/callback",
+    "http://[::1]:9000/callback",
+  ] as const;
+
+  test("accepts any port for a registered IPv4 loopback URI", () => {
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://127.0.0.1:53421/callback",
+        loopbackAllowlist,
+      ),
+    ).toBe(true);
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://127.0.0.1/callback",
+        loopbackAllowlist,
+      ),
+    ).toBe(true);
+  });
+
+  test("accepts any port for a registered IPv6 loopback URI", () => {
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://[::1]:1234/callback",
+        loopbackAllowlist,
+      ),
+    ).toBe(true);
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://[::1]/callback",
+        loopbackAllowlist,
+      ),
+    ).toBe(true);
+  });
+
+  test("still requires the path and query to match on loopback", () => {
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://127.0.0.1:53421/other",
+        loopbackAllowlist,
+      ),
+    ).toBe(false);
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://127.0.0.1:53421/callback/",
+        loopbackAllowlist,
+      ),
+    ).toBe(false);
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://127.0.0.1:53421/callback?next=https://attacker.example",
+        loopbackAllowlist,
+      ),
+    ).toBe(false);
+  });
+
+  test("does not let a loopback registration match another loopback host", () => {
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://localhost:53421/callback",
+        loopbackAllowlist,
+      ),
+    ).toBe(false);
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://127.0.0.2:53421/callback",
+        loopbackAllowlist,
+      ),
+    ).toBe(false);
+  });
+
+  test("does not relax the port for a registered localhost URI", () => {
+    const localhostAllowlist = ["http://localhost:3000/callback"] as const;
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://localhost:3000/callback",
+        localhostAllowlist,
+      ),
+    ).toBe(true);
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://localhost:4000/callback",
+        localhostAllowlist,
+      ),
+    ).toBe(false);
+  });
+
+  test("does not relax the port for a non-http loopback registration", () => {
+    const httpsLoopback = ["https://127.0.0.1:8443/callback"] as const;
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "https://127.0.0.1:8443/callback",
+        httpsLoopback,
+      ),
+    ).toBe(true);
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "https://127.0.0.1:9443/callback",
+        httpsLoopback,
+      ),
+    ).toBe(false);
+  });
+
+  test("does not relax the port for a non-loopback registration", () => {
+    const remote = ["http://app.example.com:8080/callback"] as const;
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://app.example.com:9090/callback",
+        remote,
+      ),
+    ).toBe(false);
+  });
+
+  test("a presented loopback URI never matches a non-loopback registration", () => {
+    expect(
+      isRedirectUriInCallbackAllowlist(
+        "http://127.0.0.1:53421/auth/callback",
+        ["https://app.example.com/auth/callback"],
+      ),
+    ).toBe(false);
+  });
+});

@@ -59,7 +59,9 @@ export const APP_CALLBACK_URL_MAX_LENGTH = 2048;
  * When one or more callback URLs are registered for an app + environment,
  * `redirect_uri` validation switches from origin matching (any path on a
  * registered app domain) to exact-URL matching against this allowlist
- * (RFC 6749 §3.1.2.3 simple string comparison).
+ * (RFC 6749 §3.1.2.3 simple string comparison). A registered http
+ * loopback URL (`http://127.0.0.1/...` or `http://[::1]/...`) matches on
+ * any port (RFC 8252 §7.3) so native apps can listen on an ephemeral port.
  */
 export const schemaVaultsAppCallbackUrlRefSchema = z
   .object({
