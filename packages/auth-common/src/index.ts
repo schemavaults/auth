@@ -79,6 +79,9 @@ export { appIdSchema } from "@schemavaults/app-definitions";
 export {
   createAudienceSchema,
   createAudienceListSchema,
+  createResourceUrlAudienceSchema,
+  isResourceUrlAudience,
+  RESOURCE_URL_AUDIENCE_MAX_LENGTH,
 } from "./audience-schema";
 export type { AudienceSchemaOverrides } from "./audience-schema";
 

@@ -2,18 +2,29 @@ import { z } from "zod";
 import { appIdSchema } from "./app-id";
 import { schemaVaultsAppEnvironmentSchema } from "./app-environments";
 import { resourceOwnershipFieldsShape } from "./resource-ownership";
+import { dynamicClientRegistrationMetadataFieldsShape } from "./dynamic-client-registration-metadata";
+
+/**
+ * Maximum length of a client application's display name. Also bounds the
+ * RFC 7591 `client_name` accepted by dynamic client registration.
+ */
+export const APP_NAME_MAX_LENGTH = 128 as const;
+export const APP_DESCRIPTION_MAX_LENGTH = 512 as const;
 
 export const schemaVaultsAppDefinitionSchema = z
   .object({
     app_id: appIdSchema.describe("Client Application ID"),
-    app_name: z.string().max(64),
-    app_description: z.string().max(512),
+    app_name: z.string().max(APP_NAME_MAX_LENGTH),
+    app_description: z.string().max(APP_DESCRIPTION_MAX_LENGTH),
     created_at: z.number().nonnegative(),
     public: z.boolean(), // whether the app is publicly listed
     hardcoded: z.boolean(),
     web: z.boolean(), // whether this app can be opened by url or requires native installation
     // Ownership: see resource-ownership.ts (resolveResourceOwnership)
     ...resourceOwnershipFieldsShape,
+    // RFC 7591 metadata of dynamically registered clients (NULL otherwise):
+    // see dynamic-client-registration-metadata.ts
+    ...dynamicClientRegistrationMetadataFieldsShape,
   })
   .required({
     app_id: true,

@@ -56,7 +56,14 @@ export { schemaVaultsAppEnvironmentSchema } from "@schemavaults/app-definitions"
 
 // Decode helper
 export { decodeJWTsWithKeyManager } from "./decode-jwts-with-key-manager";
-export type { IDecodeJWTsWithKeyManagerOutput } from "./decode-jwts-with-key-manager";
+export type {
+  IDecodeJWTsWithKeyManagerOutput,
+  DecodeJWTsWithKeyManagerOptions,
+} from "./decode-jwts-with-key-manager";
+export {
+  resolveExpectedTokenAudience,
+  normalizeAcceptedAudiences,
+} from "./resolve-expected-token-audience";
 
 // Check user organization membership from auth server (for resource servers)
 export { isUserInOrganization } from "./isUserInOrganization";

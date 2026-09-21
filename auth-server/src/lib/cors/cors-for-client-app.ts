@@ -8,7 +8,9 @@ import {
   type AppId,
   appIdSchema,
   getAppEnvironment,
+  isDynamicallyRegisteredClient,
   type SchemaVaultsApp,
+  type SchemaVaultsAppCallbackUrlRef,
   type SchemaVaultsAppDomainRef,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -24,7 +26,39 @@ export function getOriginFromRequest(req: NextRequest): string | null {
 }
 
 /**
- * Get the allowed origins for a client app in a specific environment
+ * Origins (scheme + host + port) of an app's registered http(s) callback
+ * URLs in one environment. Private-use scheme URIs have no web origin
+ * and are skipped.
+ */
+function originsOfCallbackUrls(
+  callback_urls: readonly SchemaVaultsAppCallbackUrlRef[],
+): string[] {
+  const origins = new Set<string>();
+  for (const ref of callback_urls) {
+    try {
+      const url = new URL(ref.callback_url);
+      if (
+        (url.protocol === "https:" || url.protocol === "http:") &&
+        url.origin !== "null"
+      ) {
+        origins.add(url.origin);
+      }
+    } catch {
+      // ignore unparsable rows
+    }
+  }
+  return [...origins];
+}
+
+/**
+ * Get the allowed origins for a client app in a specific environment.
+ *
+ * Console-managed apps register their origins explicitly (APP_DOMAINS).
+ * A client registered through RFC 7591 dynamic client registration has
+ * no domains — registration only carries redirect URIs — so for those
+ * apps the origins of their registered http(s) callback URLs are allowed
+ * as well, which lets a browser-based dynamic client (a single-page MCP
+ * client, say) call the token endpoint from the page it redirects to.
  */
 export async function getAppAllowedOriginsForEnvironment(
   client_app_id: AppId,
@@ -35,7 +69,22 @@ export async function getAppAllowedOriginsForEnvironment(
   const allDomains: readonly SchemaVaultsAppDomainRef[] =
     await appRegistry.getAppDomains(client_app_id);
   const domainsForEnv = allDomains.filter((d) => d.environment === environment);
-  return domainsForEnv.map((d) => d.domain);
+  const origins: string[] = domainsForEnv.map((d) => d.domain);
+
+  const app: SchemaVaultsApp | null = await getApp(dbh.db, client_app_id);
+  if (app && isDynamicallyRegisteredClient(app)) {
+    const callbackUrls = await appRegistry.getAppCallbackUrlsForEnvironment(
+      client_app_id,
+      environment,
+    );
+    for (const origin of originsOfCallbackUrls(callbackUrls)) {
+      if (!origins.includes(origin)) {
+        origins.push(origin);
+      }
+    }
+  }
+
+  return origins;
 }
 
 /**

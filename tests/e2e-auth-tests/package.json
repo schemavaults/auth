@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/e2e-auth-tests",
-  "version": "0.11.23",
+  "version": "0.11.24",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/schemavaults/auth.git",
@@ -13,6 +13,7 @@
     "@schemavaults/jwt": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
+    "@schemavaults/auth-client-sdk": "workspace:*",
     "@schemavaults/cypress-e2e-auth-tests-helper-commands": "workspace:*"
   },
   "devDependencies": {

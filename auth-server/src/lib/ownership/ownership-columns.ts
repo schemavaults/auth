@@ -39,6 +39,14 @@ export function toOwnershipDatabaseColumns(
         owner_organization_id: null,
         owner_uid: ownership.owner_uid,
       };
+    case "dynamic-client-registration":
+      // Nobody owns a dynamically registered client (APPS only; the
+      // API_SERVERS CHECK constraint rejects this value).
+      return {
+        owner_type: "dynamic-client-registration",
+        owner_organization_id: null,
+        owner_uid: null,
+      };
   }
 }
 

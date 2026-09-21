@@ -186,6 +186,36 @@ export default defineConfig({
             );
           } // end of setup for test suite 'example_resource_server'
 
+          if (testSuiteName === "dynamic_client_registration") {
+            if (
+              !config.env[
+                "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY"
+              ]
+            ) {
+              throw new Error(
+                "Missing environment variable EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY, which is required for this test suite!",
+              );
+            }
+
+            // The example resource server's app/API pair, with the API
+            // server opted into serving dynamically registered clients
+            // (RFC 7591) and matching RFC 8707 `resource` URLs by prefix,
+            // so a registered client can request a token for
+            // `<resource server URL>/api` and call its API with it.
+            await seedAppAndApiForExampleResourceServer(
+              auth_server_url,
+              "00000000-0000-0000-0000-000000000000",
+              config.env["EXAMPLE_NEXTJS_RESOURCE_SERVER_URL"],
+              config.env[
+                "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY"
+              ],
+              {
+                allow_dynamic_clients: true,
+                resource_url_match_mode: "prefix",
+              },
+            );
+          } // end of setup for test suite 'dynamic_client_registration'
+
           return;
         } else {
           // dont trigger migration in non-test environment

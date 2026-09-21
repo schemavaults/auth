@@ -8,7 +8,7 @@ import {
   type ResourceOwnershipFields,
 } from "@schemavaults/app-definitions";
 import { useCurrentUser } from "@schemavaults/auth-react-provider";
-import { Building2, Server, User as UserIcon } from "lucide-react";
+import { Bot, Building2, Server, User as UserIcon } from "lucide-react";
 import { cn } from "@schemavaults/ui";
 import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
@@ -98,6 +98,17 @@ export function ResourceOwnerLabel({
         </span>
       );
     }
+    case "dynamic-client-registration":
+      return (
+        <span
+          className={wrapperClassName}
+          title="Registered anonymously through OAuth 2.0 dynamic client registration (RFC 7591); managed by administrators only"
+          data-owner-type="dynamic-client-registration"
+        >
+          <Bot className="h-4 w-4 text-muted-foreground" />
+          <span>Dynamic registration</span>
+        </span>
+      );
   }
 }
 

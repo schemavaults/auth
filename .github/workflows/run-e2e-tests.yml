@@ -287,6 +287,20 @@ jobs:
       skip-docker-build: true
       load-resource-server-image: true
 
+  Run-Dynamic-Client-Registration-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+      - Build-Resource-Server-Docker-Image
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: dynamic_client_registration
+      skip-docker-build: true
+      load-resource-server-image: true
+
   Run-Miscellaneous-E2E-Tests:
     needs:
       - Build-Auth-Server-Test-Docker-Image

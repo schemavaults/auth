@@ -2,6 +2,7 @@ import { z } from "zod";
 import { apiServerIdSchema } from "./api-server-id";
 import { schemaVaultsAppEnvironmentSchema } from "./app-environments";
 import { resourceOwnershipFieldsShape } from "./resource-ownership";
+import { apiServerDynamicClientFieldsShape } from "./api-server-dynamic-clients";
 
 export const schemaVaultsApiServerDefinitionSchema = z
   .object({
@@ -13,6 +14,8 @@ export const schemaVaultsApiServerDefinitionSchema = z
     hardcoded: z.boolean(),
     // Ownership: see resource-ownership.ts (resolveResourceOwnership)
     ...resourceOwnershipFieldsShape,
+    // Dynamic-client policy: see api-server-dynamic-clients.ts
+    ...apiServerDynamicClientFieldsShape,
   })
   .required({
     api_server_id: true,

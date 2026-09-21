@@ -1,6 +1,7 @@
 import "server-only";
 import {
   OIDC_USERINFO_AUDIENCE_ID,
+  type ApiServerId,
   type AppId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -57,6 +58,15 @@ export interface IssueOidcTokensOptions {
    * /api/oidc/userinfo) for plain OIDC relying parties.
    */
   access_token_audience?: string;
+  /**
+   * The API server whose keyset signs the access token, when
+   * `access_token_audience` is an RFC 8707 resource URL (the URL cannot
+   * be mapped to a keyset statically; the grant handler resolved it
+   * through the API server's registered domains). Omit for the auth
+   * server URL / API server id forms, which map to their keyset by
+   * themselves.
+   */
+  access_token_audience_api_server_id?: ApiServerId;
   /**
    * Refresh token rotation (refresh grant only): the presented refresh
    * token to revoke atomically with the replacement tokens' issuance
@@ -123,6 +133,7 @@ export async function issueOidcTokens({
   include_id_token,
   issue_refresh_token = true,
   access_token_audience = OIDC_USERINFO_AUDIENCE_ID,
+  access_token_audience_api_server_id,
   revoke_rotated_refresh_token,
   debug = false,
 }: IssueOidcTokensOptions): Promise<IssuedOidcTokens> {
@@ -142,6 +153,13 @@ export async function issueOidcTokens({
       user_organizations,
       environment,
       audiences: [access_token_audience],
+      ...(access_token_audience_api_server_id
+        ? {
+            audience_api_server_ids: {
+              [access_token_audience]: access_token_audience_api_server_id,
+            },
+          }
+        : {}),
       generate_refresh: issue_refresh_token,
       auth_jwt_manager: jwt_keys_manager,
       scope,

@@ -5,6 +5,7 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   buildOidcProviderMetadata,
+  type BuildOidcProviderMetadataOptions,
   type OidcProviderMetadata,
 } from "@schemavaults/auth-common";
 import { getAuthServerUri } from "@/lib/auth_server_uri";
@@ -24,13 +25,19 @@ import { getAuthServerUri } from "@/lib/auth_server_uri";
  * `issuer` MUST be byte-identical to the `iss` claim in id_tokens —
  * both derive from getAuthServerUrl()/getAuthServerUri(), which never
  * emits a trailing slash.
+ *
+ * The one deployment-dependent member is `registration_endpoint` (RFC
+ * 7591): the route passes whether the `allow_dynamic_client_registration`
+ * server setting is on, and the SDK (which never registers clients)
+ * builds the document without it.
  */
 export type OidcDiscoveryDocument = OidcProviderMetadata;
 
 export function buildOidcDiscoveryDocument(
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
+  options: BuildOidcProviderMetadataOptions = {},
 ): OidcDiscoveryDocument {
-  return buildOidcProviderMetadata(getAuthServerUri(environment));
+  return buildOidcProviderMetadata(getAuthServerUri(environment), options);
 }
 
 export default buildOidcDiscoveryDocument;

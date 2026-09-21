@@ -45,7 +45,25 @@ export type OidcProviderMetadata = {
   authorization_response_iss_parameter_supported: boolean;
   request_parameter_supported: boolean;
   request_uri_parameter_supported: boolean;
+  /**
+   * RFC 7591 §3 / RFC 8414 §2 dynamic client registration endpoint.
+   * Present only when the deployment has enabled dynamic client
+   * registration (the `allow_dynamic_client_registration` server
+   * setting); absent otherwise, so clients do not attempt registrations
+   * the endpoint would refuse.
+   */
+  registration_endpoint?: string;
 };
+
+export interface BuildOidcProviderMetadataOptions {
+  /**
+   * Whether to advertise the RFC 7591 `registration_endpoint`. The auth
+   * server passes the value of its `allow_dynamic_client_registration`
+   * setting; the client SDK, which builds the metadata statically, leaves
+   * it out (it never needs to register a client to redeem tokens).
+   */
+  registration_endpoint?: boolean;
+}
 
 /**
  * Builds the provider metadata for the auth server at `issuer`. A
@@ -54,6 +72,7 @@ export type OidcProviderMetadata = {
  */
 export function buildOidcProviderMetadata(
   issuer: string,
+  options: BuildOidcProviderMetadataOptions = {},
 ): OidcProviderMetadata {
   if (typeof issuer !== "string" || issuer.length === 0) {
     throw new TypeError("Expected 'issuer' to be a non-empty string!");
@@ -132,6 +151,14 @@ export function buildOidcProviderMetadata(
     // out would falsely advertise support.
     request_parameter_supported: false,
     request_uri_parameter_supported: false,
+    ...(options.registration_endpoint === true
+      ? {
+          registration_endpoint: getOidcEndpointUrl(
+            normalized_issuer,
+            "registration",
+          ),
+        }
+      : {}),
   };
 }
 

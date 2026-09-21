@@ -13,6 +13,8 @@ import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
 import { Trash2, KeyRound, Plus, Unplug } from "lucide-react";
+import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
+import { DEFAULT_RESOURCE_URL_MATCH_MODE } from "@schemavaults/app-definitions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -222,6 +224,17 @@ export default function ApiServerDetailPageView({
           )}
         </CardContent>
       </Card>
+
+      {!hardcoded && (
+        <ApiServerDynamicClientsCard
+          api_server_id={api_server.api_server_id}
+          allow_dynamic_clients={api_server.allow_dynamic_clients === true}
+          resource_url_match_mode={
+            api_server.resource_url_match_mode ?? DEFAULT_RESOURCE_URL_MATCH_MODE
+          }
+          canManage={isOrgOwner}
+        />
+      )}
 
       {disconnectTarget && (
         <DisconnectAppToApiDialog

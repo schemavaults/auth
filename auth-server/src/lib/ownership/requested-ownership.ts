@@ -68,6 +68,14 @@ export async function resolveRequestedOwnershipForCreation(
   }
 
   switch (owner_type) {
+    case "dynamic-client-registration":
+      // Only POST /api/oidc/register creates ownerless clients.
+      return {
+        ok: false,
+        status: 400,
+        message:
+          "Dynamically registered clients cannot be created through this API; use the OAuth 2.0 dynamic client registration endpoint",
+      };
     case "platform": {
       if (owner_uid || (owner_organization_id && owner_organization_id !== platformOrganizationId)) {
         return {

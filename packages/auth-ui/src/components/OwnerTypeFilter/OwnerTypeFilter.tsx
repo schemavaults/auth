@@ -7,7 +7,7 @@ import type {
   ResourceOwnershipFields,
 } from "@schemavaults/app-definitions";
 import { resolveResourceOwnership } from "@schemavaults/app-definitions";
-import { Building2, Layers, Server, User as UserIcon } from "lucide-react";
+import { Bot, Building2, Layers, Server, User as UserIcon } from "lucide-react";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 import { useAuthUiOwnerOrganizationId } from "@/components/OwnerOrganizationProvider";
 
@@ -22,6 +22,7 @@ export const OWNER_TYPE_FILTER_VALUES = [
   "user",
   "organization",
   "platform",
+  "dynamic-client-registration",
 ] as const satisfies readonly OwnerTypeFilterValue[];
 
 export function isOwnerTypeFilterValue(
@@ -89,6 +90,13 @@ export interface OwnerTypeFilterProps {
    * platform-owned resources, so pages hide it for everyone else.
    */
   showPlatform?: boolean;
+  /**
+   * Whether to offer the "Dynamic registration" option (client
+   * applications registered anonymously through RFC 7591 dynamic client
+   * registration). Only global admins can see those rows, and only client
+   * applications can have them, so pages hide it everywhere else.
+   */
+  showDynamicClientRegistration?: boolean;
   className?: string;
   /** Test/automation hook; defaults to "owner-type-filter". */
   id?: string;
@@ -97,13 +105,15 @@ export interface OwnerTypeFilterProps {
 /**
  * @description A single-select toggle group for filtering listed apps / API
  * servers by who owns them: all, the current user's own account, one of
- * their organizations, or the platform.
+ * their organizations, the platform, or (for admins listing client
+ * applications) nobody — dynamically registered clients.
  */
 export function OwnerTypeFilter({
   value,
   onValueChange,
   showPersonal = true,
   showPlatform = false,
+  showDynamicClientRegistration = false,
   className,
   id = "owner-type-filter",
 }: OwnerTypeFilterProps): ReactElement {
@@ -115,7 +125,9 @@ export function OwnerTypeFilter({
   // so the list never stays filtered by a hidden option.
   const isValueHidden: boolean =
     (value === "user" && !showPersonal) ||
-    (value === "platform" && !showPlatform);
+    (value === "platform" && !showPlatform) ||
+    (value === "dynamic-client-registration" &&
+      !showDynamicClientRegistration);
   useEffect(() => {
     if (isValueHidden) {
       onValueChange("all");
@@ -172,6 +184,16 @@ export function OwnerTypeFilter({
           title={`Owned by the ${friendlyName} platform`}
         >
           <Server className="h-4 w-4" /> Platform
+        </ToggleGroupItem>
+      )}
+      {showDynamicClientRegistration && (
+        <ToggleGroupItem
+          value="dynamic-client-registration"
+          className={itemClassName}
+          data-testid={`${id}-dynamic-client-registration`}
+          title="Registered anonymously through OAuth 2.0 dynamic client registration"
+        >
+          <Bot className="h-4 w-4" /> Dynamic registration
         </ToggleGroupItem>
       )}
     </ToggleGroup>

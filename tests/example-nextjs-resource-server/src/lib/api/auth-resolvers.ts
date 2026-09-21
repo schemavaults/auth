@@ -37,10 +37,30 @@ import { accessTokenBearerScheme, accessTokenCookieScheme } from "./auth-schemes
 
 let routeGuardFactory: RouteGuardFactory | null = null;
 
+/**
+ * RFC 8707 resource URL(s) this server is known by, from the
+ * comma-separated `SCHEMAVAULTS_ACCEPTED_TOKEN_AUDIENCES` env var. A
+ * client (an MCP client, say) that requested its token with
+ * `resource=<one of these URLs>` receives a token whose `aud` is that URL
+ * rather than this API server's id; listing the URL here accepts it.
+ */
+export const ACCEPTED_TOKEN_AUDIENCES_ENV_VAR =
+  "SCHEMAVAULTS_ACCEPTED_TOKEN_AUDIENCES" as const;
+
+export function getAcceptedTokenAudiences(): readonly string[] {
+  const raw = process.env[ACCEPTED_TOKEN_AUDIENCES_ENV_VAR];
+  if (typeof raw !== "string") return [];
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
 function getRouteGuardFactory(): RouteGuardFactory {
   routeGuardFactory ??= new RouteGuardFactory({
     environment: getAppEnvironment(),
     debug: getAppEnvironment() === "development",
+    accepted_audiences: getAcceptedTokenAudiences(),
   });
   return routeGuardFactory;
 }

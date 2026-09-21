@@ -19,8 +19,10 @@ export type ParsedOidcTokenResource =
  *
  * Absent → `null` (plain OIDC behavior: userinfo-audience access token).
  * One value → validated against the platform's audience schema (the auth
- * server URL, or an API server id; the bare auth app id is rejected, as
- * everywhere else). More than one → `invalid_target`: the platform
+ * server URL, an API server id, or an RFC 8707 resource URL that the
+ * grant handler resolves to an API server through its registered
+ * domains; the bare auth app id is rejected, as everywhere else). More
+ * than one → `invalid_target`: the platform
  * issues one encrypted access token per audience, so it "only supports
  * issuing an access token with a single audience" (RFC 8707 §2) and the
  * client must send one token request per resource.
@@ -54,7 +56,7 @@ export function parseOidcTokenResourceParam(
       error: {
         error: "invalid_target",
         error_description:
-          "The 'resource' parameter must be the auth server URL or a registered API server id.",
+          "The 'resource' parameter must be the auth server URL, a registered API server id, or the https URL of a registered API server.",
       },
     };
   }

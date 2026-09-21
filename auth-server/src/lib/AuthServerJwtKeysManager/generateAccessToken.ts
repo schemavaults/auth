@@ -14,6 +14,13 @@ export interface IGenerateAccessTokenOpts {
   auth_jwt_manager: AuthServerJwtKeysManager;
   client_app_id: AppId;
   audience_id: ApiServerId;
+  /**
+   * The `aud` claim to mint. Defaults to the token-audience form of
+   * `audience_id` (the auth server URL for the auth app, the id verbatim
+   * otherwise); an RFC 8707 resource URL resolved to `audience_id` is
+   * passed here so the token names the resource the client asked for.
+   */
+  token_audience?: string;
   user: UserData;
   user_organizations: readonly string[];
   environment: SchemaVaultsAppEnvironment;
@@ -29,6 +36,7 @@ export default async function generateAccessToken({
   auth_jwt_manager,
   client_app_id,
   audience_id,
+  token_audience,
   user,
   user_organizations,
   environment,
@@ -55,7 +63,7 @@ export default async function generateAccessToken({
     jwt_keys: appropriate_jwt_keys,
   });
   const token: AccessToken = await jwt_factory.access(
-    getTokenAudienceForApiServerId(audience_id, environment),
+    token_audience ?? getTokenAudienceForApiServerId(audience_id, environment),
     scope ? { scope } : undefined,
   );
   return token;

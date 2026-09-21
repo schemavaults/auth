@@ -28,3 +28,22 @@ and the `auth-provider.tsx` into your Next.js App Router project.
 - `--debug` — Enable debug logging.
 - `--help`, `-h` — Show help.
 - `--version`, `-v` — Show package name and version.
+
+## Accepting resource-URL token audiences
+
+Access tokens are normally minted with your API server id as their `aud`.
+A client that requested its token with an RFC 8707 `resource` **URL** (MCP
+clients do, and so do clients registered through RFC 7591 dynamic client
+registration) receives a token whose `aud` is that URL instead. To accept
+such tokens, list the URL(s) your server is known by:
+
+```ts
+new RouteGuardFactory({ environment, accepted_audiences: ["https://mcp.example.com/mcp"] });
+// or, for the middleware:
+new SchemaVaultsServerMiddleware({ ..., accepted_audiences: ["https://mcp.example.com/mcp"] });
+```
+
+Keysets are still looked up by the API server id; only the `aud` comparison
+changes, and only for tokens whose header names one of the listed URLs
+(`resolveExpectedTokenAudience()`). Tokens with any other `aud` fail as
+before.

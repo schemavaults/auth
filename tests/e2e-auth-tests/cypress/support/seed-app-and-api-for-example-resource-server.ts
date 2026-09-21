@@ -21,6 +21,17 @@ export interface SeedAppAndApiOptions {
    * resource server's API.
    */
   connect_to_api_server_ids?: readonly string[];
+  /**
+   * Whether clients registered through RFC 7591 dynamic client
+   * registration may request `resource` tokens for the seeded API server
+   * without an explicit connection.
+   */
+  allow_dynamic_clients?: boolean;
+  /**
+   * How an RFC 8707 `resource` URL is matched against the seeded API
+   * server's domain: `exact` (default) or `prefix`.
+   */
+  resource_url_match_mode?: "exact" | "prefix";
 }
 
 export async function seedAppAndApiForExampleResourceServer(
@@ -60,6 +71,12 @@ export async function seedAppAndApiForExampleResourceServer(
       ...(options.connect_to_api_server_ids &&
       options.connect_to_api_server_ids.length > 0
         ? { connect_to_api_server_ids: [...options.connect_to_api_server_ids] }
+        : {}),
+      ...(typeof options.allow_dynamic_clients === "boolean"
+        ? { allow_dynamic_clients: options.allow_dynamic_clients }
+        : {}),
+      ...(options.resource_url_match_mode
+        ? { resource_url_match_mode: options.resource_url_match_mode }
         : {}),
     }),
   });

@@ -42,6 +42,11 @@ import type {
   ClientApplicationServiceAccountStatus,
   CreatedClientApplicationServiceAccount,
 } from "@/lib/client-application-service-account";
+import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
+import type {
+  DynamicClientRegistrationRequest,
+  DynamicClientRegistrationResponse,
+} from "@schemavaults/auth-common";
 
 export interface ISchemaVaultsAuthClient {
   version: string;
@@ -386,6 +391,33 @@ export interface ISchemaVaultsAuthClient {
   loadApiServerDefinition: (
     api_server_id: ApiServerId,
   ) => Promise<SchemaVaultsApiServerDefinition>;
+
+  /**
+   * @name updateApiServerDynamicClientPolicy
+   * @description Update whether clients registered through RFC 7591 dynamic
+   * client registration may request tokens for an API server without an
+   * explicit connection (`allow_dynamic_clients`), and how an RFC 8707
+   * `resource` URL is matched against the server's registered domains
+   * (`resource_url_match_mode`). Requires management access to the API server.
+   * @returns The updated API server definition
+   */
+  updateApiServerDynamicClientPolicy: (
+    api_server_id: ApiServerId,
+    update: ApiServerDynamicClientPolicyUpdate,
+  ) => Promise<SchemaVaultsApiServerDefinition>;
+
+  /**
+   * @name registerDynamicClient
+   * @description Register a new OAuth 2.0 client anonymously through RFC
+   * 7591 dynamic client registration (`POST /api/oidc/register`), when the
+   * auth server has enabled it. Returns the issued `client_id` (and one-time
+   * `client_secret` for confidential clients) with the registered metadata.
+   * @throws DynamicClientRegistrationFailedError when the server refuses the
+   * registration or has registration disabled.
+   */
+  registerDynamicClient: (
+    metadata: DynamicClientRegistrationRequest,
+  ) => Promise<DynamicClientRegistrationResponse>;
 
   /**
    * @name listApiServers

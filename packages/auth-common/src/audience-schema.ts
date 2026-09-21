@@ -30,6 +30,42 @@ export interface AudienceSchemaOverrides {
   auth_server_app_id?: string;
 }
 
+/**
+ * Longest RFC 8707 resource indicator URL accepted as a token audience;
+ * matches the callback URL cap so both URL-shaped inputs share a bound.
+ */
+export const RESOURCE_URL_AUDIENCE_MAX_LENGTH = 2048 as const;
+
+/**
+ * An RFC 8707 resource indicator in URL form: an absolute `https` (or
+ * `http`, for loopback / development resource servers) URL without a
+ * fragment (§2: "MUST NOT include a fragment component"). Resource
+ * servers that identify themselves by URL — MCP servers in particular —
+ * are matched against an API server's registered domains by the auth
+ * server, and the issued access token carries the URL verbatim as its
+ * `aud`.
+ */
+export function createResourceUrlAudienceSchema(z: typeof zod) {
+  return z
+    .url({ protocol: /^https?$/ })
+    .max(RESOURCE_URL_AUDIENCE_MAX_LENGTH)
+    .refine(
+      (url: string): boolean => !url.includes("#"),
+      "A resource indicator must not include a fragment component",
+    )
+    .describe(
+      "An RFC 8707 resource indicator URL identifying a registered API server by one of its domains",
+    );
+}
+
+/**
+ * A token audience is one of:
+ *  - the auth server URL (tokens for the auth server itself),
+ *  - a registered API server id (used verbatim as the `aud`), or
+ *  - an RFC 8707 resource URL that the auth server resolves to a
+ *    registered API server through its domains (`aud` = the URL).
+ * The bare auth app id is rejected everywhere.
+ */
 export function createAudienceSchema(
   z: typeof zod,
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
@@ -53,7 +89,33 @@ export function createAudienceSchema(
       `An API server ID, but the auth app's ID (${auth_server_app_id}) is forbidden.`,
     );
 
-  return z.union([authServerUrlSchema, apiServerIdWithoutAuthServerIdSchema]);
+  return z.union([
+    authServerUrlSchema,
+    apiServerIdWithoutAuthServerIdSchema,
+    createResourceUrlAudienceSchema(z),
+  ]);
+}
+
+/**
+ * @description Whether a (schema-valid) token audience is an RFC 8707
+ * resource URL — i.e. a URL other than the auth server's own URL. Such
+ * an audience must be resolved to an API server before a token can be
+ * minted or verified for it.
+ */
+export function isResourceUrlAudience(
+  audience: string,
+  environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
+  overrides?: AudienceSchemaOverrides,
+): boolean {
+  if (typeof audience !== "string" || audience.length === 0) {
+    return false;
+  }
+  const auth_server_url: string =
+    overrides?.auth_server_url ?? getAuthServerUrl(environment);
+  if (audience === auth_server_url) {
+    return false;
+  }
+  return /^https?:\/\//i.test(audience);
 }
 
 const MAX_APPS_IN_AUDIENCE_LIST = 10 as const satisfies number;
