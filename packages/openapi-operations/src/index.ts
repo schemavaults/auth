@@ -33,6 +33,7 @@ export {
   defineOperationGroup,
   defaultOperationId,
   assertUniqueOperations,
+  operationHttpMethods,
 } from "./operation";
 export type {
   AnyOperationDefinition,

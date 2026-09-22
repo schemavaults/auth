@@ -70,7 +70,7 @@ bun run test --filter @schemavaults/openapi-docs-ui  # Run tests in openapi-docs
 - **auth-server/**: Next.js 16 App Router application - the main auth server deployed at auth.schemavaults.com
 - **packages/**: Shared TypeScript libraries published to npm & GitHub Packages
 - **tests/e2e-auth-tests/**: Cypress E2E test suite
-- **tests/example-nextjs-resource-server/**: Example Next.js resource server for testing login via OAuth2 PKCE flow. Its `/api/*` routes are the trial run of `@schemavaults/openapi-operations` (operations in `src/lib/api/operations.ts`, credential resolvers built on the server SDK's `RouteGuardFactory` in `src/lib/api/auth-resolvers.ts`, one catch-all `src/app/api/[[...route]]/route.ts`) and its `/docs` pages the trial run of `@schemavaults/openapi-docs-ui` (`src/app/docs/`).
+- **tests/example-nextjs-resource-server/**: Example Next.js resource server for testing login via OAuth2 PKCE flow. Its `/api/*` routes are the trial run of `@schemavaults/openapi-operations`: every operation is declared in an `operation.ts` beside its own Next.js `route.ts` under `src/app/api/` (e.g. `src/app/api/health/`, `src/app/api/organizations/[organization_id]/greeting/`), the catalogue `src/lib/api/operations.ts` collects them for the single OpenAPI document (`src/lib/api/openapi-document.ts`, served by `src/app/api/openapi.json/route.ts`), `src/lib/api/app.ts` builds the per-route Hono apps with `createOperationsAppFactory()` (refusing operations missing from the catalogue), credential resolvers are built on the server SDK's `RouteGuardFactory` in `src/lib/api/auth-resolvers.ts`, and `src/lib/api/routes.test.ts` checks that route files and catalogue match. Its `/docs` pages are the trial run of `@schemavaults/openapi-docs-ui` (`src/app/docs/`).
 
 ### Package Dependency Hierarchy
 ```
@@ -102,7 +102,9 @@ declared once with `defineOperation()` (method, `{param}` path, zod request/resp
 block: accepted auth schemes + route guard + required scopes + organization role). From the same definitions
 `buildOpenApiDocument()` emits an OpenAPI 3.1 document (with an `x-schemavaults-auth` extension carrying the
 permission details) and `createOperationsApp()` builds a Hono app that validates, authenticates and dispatches
-requests; `toNextRouteHandlers()` / `toVercelHandler()` mount it. Credential verification is pluggable per host
+requests; `toNextRouteHandlers()` / `toVercelHandler()` mount it. `createOperationsAppFactory()` binds the shared
+resolvers/context plus the full catalogue once so each Next.js `route.ts` can mount its own small app
+(`api.app([operation])`, exporting `operationHttpMethods([operation])`) while one document covers all routes. Credential verification is pluggable per host
 via `authResolvers` keyed by scheme name, so third-party resource servers reuse the definitions.
 
 `packages/openapi-docs-ui` renders such a document: `parseOpenApiDocument()` (framework-free model),

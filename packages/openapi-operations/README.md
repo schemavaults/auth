@@ -147,6 +147,47 @@ export const { GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS } = toNextRouteHandl
 export default toVercelHandler(app);
 ```
 
+### One route file per operation
+
+A catch-all is not required. To give every operation its own Next.js `route.ts`
+(or Vercel function file) while still serving one OpenAPI document that lists all of
+them, bind the shared runtime configuration and the full operation catalogue once with
+`createOperationsAppFactory()` and build a small app per route file from it:
+
+```ts
+// src/lib/api/app.ts
+import { createOperationsAppFactory, operationHttpMethods, toNextRouteHandlers } from "@schemavaults/openapi-operations";
+
+export const operations = [getApp, health]; // the catalogue buildOpenApiDocument() is given
+export const api = createOperationsAppFactory<{ dbh: Kysely<AuthDatabase> }, UserData>({
+  operations,
+  authResolvers,
+  context: async () => ({ dbh: await getDbh() }),
+});
+
+// app/api/apps/[app_id]/route.ts   (Next.js segment [app_id] ↔ OpenAPI {app_id})
+export const runtime = "nodejs";
+export const { GET } = toNextRouteHandlers(api.app([getApp]), operationHttpMethods([getApp]));
+
+// app/api/health/route.ts
+export const { GET } = toNextRouteHandlers(api.app([health]), operationHttpMethods([health]));
+
+// app/api/openapi.json/route.ts
+export const { GET } = toNextRouteHandlers(
+  api.openApiDocumentApp({ path: "/api/openapi.json", document: openApiDocument }),
+  ["get"],
+);
+```
+
+Each app routes on the full request pathname, so no `basePath` is needed and the
+dynamic segment is parsed by the app itself (Next.js' `params` are never read).
+`operationHttpMethods()` exports only the methods the operations declare, leaving 405s
+for the rest to Next.js. The factory validates the whole catalogue up front (unique
+operations, a resolver for every scheme) and `api.app()` throws for an operation that
+is not in it, so a route file cannot serve something the document does not describe.
+The reverse (a documented operation with no route file) is a file-layout question;
+the example resource server in this repository checks it with a small `bun test`.
+
 Per request the app: resolves the context, tries each accepted scheme's resolver in
 order (401 + `WWW-Authenticate` if none yields a principal), enforces the route guard
 (403), required scopes (403 `insufficient_scope`), organization membership (403), then

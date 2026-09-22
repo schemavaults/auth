@@ -417,6 +417,17 @@ export function defineOperationGroup(group: OperationGroup): AnyOperationDefinit
   });
 }
 
+/**
+ * Distinct HTTP methods declared by the given operations, in declaration
+ * order. Hands `toNextRouteHandlers()` exactly the methods a route file
+ * should export, so Next.js answers 405 for the others itself.
+ */
+export function operationHttpMethods(
+  operations: readonly AnyOperationDefinition[],
+): HttpMethod[] {
+  return Array.from(new Set(operations.map((operation) => operation.method)));
+}
+
 export function assertUniqueOperations(operations: readonly AnyOperationDefinition[]): void {
   const ids = new Set<string>();
   const routes = new Set<string>();
