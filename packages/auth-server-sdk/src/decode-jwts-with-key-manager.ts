@@ -23,6 +23,10 @@ import {
   customJwtPayloadToUserData,
   getScopeFromCustomJwtPayload,
 } from "@schemavaults/jwt";
+import {
+  normalizeAcceptedAudiences,
+  resolveExpectedTokenAudience,
+} from "@/resolve-expected-token-audience";
 import isValidUuid from "@/is-valid-uuid";
 import type { DecodedTokenClaims } from "@/route_guards/token-revocation";
 
@@ -49,12 +53,25 @@ export type IDecodeJWTsWithKeyManagerOutput =
       user: null;
     };
 
+export interface DecodeJWTsWithKeyManagerOptions {
+  /**
+   * Additional `aud` values accepted on ACCESS tokens besides the API
+   * server's own token audience: the RFC 8707 resource URL(s) this
+   * resource server is known by, which the auth server mints verbatim
+   * when a client requested a token with a `resource` URL. Keyset
+   * lookups still use `jwt_audience`. See
+   * {@link resolveExpectedTokenAudience}.
+   */
+  accepted_audiences?: readonly string[];
+}
+
 export async function decodeJWTsWithKeyManager(
   keys_manager: IJwtKeyManager,
   token_sources: readonly PotentiallyValidTokenSource[],
   jwt_audience: string = getSchemavaultsApiServerId(),
   environment: SchemaVaultsAppEnvironment = getAppEnvironment(),
   debug: boolean = false,
+  options: DecodeJWTsWithKeyManagerOptions = {},
 ): Promise<IDecodeJWTsWithKeyManagerOutput> {
   if (debug) {
     console.log(
@@ -75,6 +92,9 @@ export async function decodeJWTsWithKeyManager(
   const token_audience: string = getTokenAudienceForApiServerId(
     jwt_audience,
     environment,
+  );
+  const accepted_audiences: readonly string[] = normalizeAcceptedAudiences(
+    options.accepted_audiences,
   );
 
   if (!keys_manager) {
@@ -157,11 +177,23 @@ export async function decodeJWTsWithKeyManager(
           }
           const { decryption_key, verification_key } = decodingKeys;
 
+          // Access tokens minted for one of this server's resource URLs
+          // carry that URL as `aud`; refresh tokens always name the auth
+          // server.
+          const expected_audience: string =
+            opts.type === "access"
+              ? resolveExpectedTokenAudience(
+                  opts.token,
+                  opts.jwt_audience,
+                  accepted_audiences,
+                )
+              : opts.jwt_audience;
+
           try {
             const jwtPayload = await decodeSchemavaultsJwt({
               jwt: opts.token,
               type: opts.type,
-              audience: opts.jwt_audience,
+              audience: expected_audience,
               decryption_key,
               verification_key,
               keyset_id,

@@ -46,6 +46,21 @@ describe("buildOidcProviderMetadata", () => {
     expect(md.request_uri_parameter_supported).toBe(false);
   });
 
+  test("advertises the registration endpoint only when asked to", () => {
+    expect(buildOidcProviderMetadata(ISSUER).registration_endpoint).toBeUndefined();
+    expect(
+      "registration_endpoint" in buildOidcProviderMetadata(ISSUER, {}),
+    ).toBe(false);
+    expect(
+      buildOidcProviderMetadata(ISSUER, { registration_endpoint: false })
+        .registration_endpoint,
+    ).toBeUndefined();
+    expect(
+      buildOidcProviderMetadata(ISSUER, { registration_endpoint: true })
+        .registration_endpoint,
+    ).toBe(`${ISSUER}${OIDC_ENDPOINT_PATHS.registration}`);
+  });
+
   test("normalizes a trailing slash on the issuer", () => {
     const md = buildOidcProviderMetadata(`${ISSUER}/`);
     expect(md.issuer).toBe(ISSUER);

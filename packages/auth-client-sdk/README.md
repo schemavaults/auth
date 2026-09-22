@@ -42,6 +42,36 @@ client's `app_env` is `development` or `test`; in `staging` and
 `production` an `http://` auth server URL is rejected before any token
 request is made.
 
+## Dynamic client registration (RFC 7591)
+
+Auth servers that enable the `allow_dynamic_client_registration` setting
+advertise a `registration_endpoint` in their discovery document. OAuth-only
+clients (MCP clients, CLIs) can register themselves anonymously:
+
+```ts
+import { registerDynamicClient } from "@schemavaults/auth-client-sdk";
+
+const registered = await registerDynamicClient({
+  adapter: { fetch },
+  auth_server_uri: "https://auth.example.com",
+  metadata: {
+    client_name: "My MCP client",
+    redirect_uris: ["http://127.0.0.1:0/callback"],
+    token_endpoint_auth_method: "none", // public client; omit for a client secret
+    grant_types: ["authorization_code", "refresh_token"],
+  },
+});
+// registered.client_id, registered.client_secret (confidential clients only), ...
+```
+
+The same helper is available as `client.registerDynamicClient(metadata)`.
+Refusals throw `DynamicClientRegistrationFailedError` with the RFC 7591
+`error` code (`invalid_redirect_uri`, `invalid_client_metadata`) or
+`access_denied` when registration is disabled. A registered client can then
+request an access token for a resource server **by URL** (`resource=<the
+resource server's URL>`); the token's `aud` is that URL, and the API server
+must allow dynamic clients (`client.updateApiServerDynamicClientPolicy()`).
+
 ## Dependencies
 
 - [@schemavaults/auth](https://github.com/schemavaults/auth)

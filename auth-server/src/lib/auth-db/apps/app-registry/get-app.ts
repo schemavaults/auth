@@ -3,6 +3,7 @@ import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { type AppId, appIdSchema, getHardcodedApp, isHardcodedAppId, type SchemaVaultsApp, schemaVaultsAppDefinitionSchema } from "@schemavaults/app-definitions";
 import { ownershipFieldsFromDatabaseRow } from "@/lib/ownership/ownership-columns";
+import { normalizeAppDatabaseRow } from "./parse-app-definition-database-row";
 
 export async function getApp(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
@@ -88,18 +89,13 @@ export async function getApp(
     throw new Error("App row missing creation timestamp");
   }
 
-  const createdAt: number = parseInt(
-    (first_row as { created_at: string }).created_at,
-  );
-  if (isNaN(createdAt)) {
-    throw new Error("Failed to parse created_at from database");
-  }
+  // BIGINT columns (created_at, client_id_issued_at) arrive as strings.
+  const normalized_row = normalizeAppDatabaseRow(first_row);
 
   const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
-    ...first_row,
-    created_at: createdAt,
+    ...normalized_row,
     hardcoded: false,
-    ...ownershipFieldsFromDatabaseRow(first_row),
+    ...ownershipFieldsFromDatabaseRow(normalized_row),
   });
   if (!parsed_app.success) {
     console.error(parsed_app.error.issues);

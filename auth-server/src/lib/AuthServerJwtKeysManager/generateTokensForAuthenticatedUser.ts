@@ -3,6 +3,7 @@
 // We assume that all validation has happened prior to this being called!
 
 import {
+  apiServerIdSchema,
   getApiServerIdForTokenAudience,
   getTokenAudienceForApiServerId,
   type ApiServerId,
@@ -52,8 +53,16 @@ export interface ITokenIssuanceTracking {
 export interface IGenerateTokensForAuthenticatedUserOpts {
   auth_jwt_manager: AuthServerJwtKeysManager;
   client_app_id: AppId;
-  /** Requested audiences in token-audience form (auth server URL, or api server id) */
+  /** Requested audiences in token-audience form (auth server URL, api server id, or resource URL) */
   audiences: readonly string[];
+  /**
+   * For audiences that are RFC 8707 resource URLs: the API server id
+   * (keyset owner) each such audience was resolved to. The token's `aud`
+   * carries the URL verbatim; the keyset comes from the mapped id. An
+   * audience that is neither statically mappable nor listed here is
+   * rejected.
+   */
+  audience_api_server_ids?: Readonly<Record<string, ApiServerId>>;
   user: UserData;
   user_organizations: readonly string[];
   environment: SchemaVaultsAppEnvironment;
@@ -84,6 +93,7 @@ export default async function generateTokensForAuthenticatedUser({
   generate_refresh,
   tracking,
   scope,
+  audience_api_server_ids,
 }: IGenerateTokensForAuthenticatedUserOpts): Promise<RequestTokensResult> {
   if (!isValidUserOrganizations(user_organizations)) {
     throw new Error("'user_organizations' must be an array of valid organization IDs");
@@ -106,20 +116,32 @@ export default async function generateTokensForAuthenticatedUser({
   // id, while the response record is keyed by the canonical token audience —
   // that's the key clients use to look up the token they requested.
   const access_tokens: Record<string, AccessToken> = {};
+  // Keyset owner per minted token audience (needed again below when the
+  // issuance records are written).
+  const keyset_api_server_ids: Record<string, ApiServerId> = {};
   for (const audience of audiences) {
-    const audience_id: ApiServerId = getApiServerIdForTokenAudience(
-      audience,
-      environment,
-    );
-    const token_audience: string = getTokenAudienceForApiServerId(
-      audience_id,
-      environment,
-    );
+    // A resource URL audience carries no keyset id of its own: the caller
+    // resolved it to an API server and passes the mapping; the `aud`
+    // claim keeps the URL verbatim.
+    const mapped_api_server_id: ApiServerId | undefined =
+      audience_api_server_ids?.[audience];
+    const audience_id: ApiServerId =
+      mapped_api_server_id ?? getApiServerIdForTokenAudience(audience, environment);
+    if (!apiServerIdSchema.safeParse(audience_id).success) {
+      throw new TypeError(
+        `Token audience '${audience}' does not map to an API server id; resolve resource URLs to an API server before minting tokens`,
+      );
+    }
+    const token_audience: string = mapped_api_server_id
+      ? audience
+      : getTokenAudienceForApiServerId(audience_id, environment);
+    keyset_api_server_ids[token_audience] = audience_id;
     access_tokens[token_audience] = await generateAccessToken({
       client_app_id,
       auth_jwt_manager,
       user,
       audience_id,
+      token_audience,
       environment,
       user_organizations,
       scope,
@@ -171,8 +193,11 @@ export default async function generateTokensForAuthenticatedUser({
         uid: user.uid,
         token_type: "access",
         client_app_id,
-        // issued-token rows are tracked by the stable api server id
-        audience: getApiServerIdForTokenAudience(token_audience, environment),
+        // issued-token rows are tracked by the stable api server id (a
+        // resource URL audience maps to the API server it resolved to)
+        audience:
+          keyset_api_server_ids[token_audience] ??
+          getApiServerIdForTokenAudience(token_audience, environment),
         grant_type: tracking.grant_type,
         issued_at: access.iat,
         expires_at: access.exp,

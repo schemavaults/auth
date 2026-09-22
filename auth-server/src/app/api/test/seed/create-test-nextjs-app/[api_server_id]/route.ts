@@ -1,5 +1,5 @@
 import "server-only";
-import { ApiServerId, apiServerIdSchema, getAppEnvironment } from "@schemavaults/app-definitions";
+import { ApiServerId, apiServerIdSchema, getAppEnvironment, resourceUrlMatchModeSchema } from "@schemavaults/app-definitions";
 import { NextRequest, NextResponse } from "next/server";
 import { SchemaVaultsApiServerRegistry, SchemaVaultsAppRegistry, SchemaVaultsAppToApiPermissionsRegistry, ServerlessDatabase } from "@/lib/auth-db";
 import { z } from "zod";
@@ -26,6 +26,12 @@ const bodySchema = z.object({
   // confidential client obtaining client_credentials tokens for the
   // example resource server's API.
   connect_to_api_server_ids: z.array(apiServerIdSchema).max(10).optional(),
+  // Optional dynamic-client policy for the seeded API server: whether
+  // RFC 7591 dynamically registered clients may request `resource`
+  // tokens for it without a connection, and how a resource URL is
+  // matched against its domain (`exact` | `prefix`).
+  allow_dynamic_clients: z.boolean().optional(),
+  resource_url_match_mode: resourceUrlMatchModeSchema.optional(),
 }).required({
   url: true,
   jwks_access_public_key: true
@@ -69,6 +75,8 @@ export async function POST(
     client_secret,
     callback_urls,
     connect_to_api_server_ids,
+    allow_dynamic_clients,
+    resource_url_match_mode,
   } = parsed_body.data;
 
   await using dbh = ServerlessDatabase.createDBH();
@@ -113,6 +121,16 @@ export async function POST(
       domain: url
     })
     await appToApiRegistry.allow(api_server_id, api_server_id, null);
+
+    if (
+      allow_dynamic_clients !== undefined ||
+      resource_url_match_mode !== undefined
+    ) {
+      await apiServerRegistry.setApiServerDynamicClientPolicy(api_server_id, {
+        allow_dynamic_clients,
+        resource_url_match_mode,
+      });
+    }
 
     await jwksRegistry.storeNewKey({
       api_server_id,

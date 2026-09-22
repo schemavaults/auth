@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+  dynamicClientRegistrationOwnership,
+  isDynamicallyRegisteredClient,
   isOrganizationOwnedResource,
   isPlatformOwnedResource,
   isUserOwnedResource,
@@ -90,6 +92,44 @@ describe("resolveResourceOwnership", () => {
         { platform_owner_organization_id: "from-context" },
       ).owner_organization_id,
     ).toBe("from-context");
+  });
+
+  test("dynamically registered clients have no owner", () => {
+    expect(
+      resolveResourceOwnership({ owner_type: "dynamic-client-registration" }),
+    ).toEqual({
+      owner_type: "dynamic-client-registration",
+      owner_organization_id: null,
+      owner_uid: null,
+    });
+    expect(dynamicClientRegistrationOwnership()).toEqual({
+      owner_type: "dynamic-client-registration",
+      owner_organization_id: null,
+      owner_uid: null,
+    });
+    expect(
+      isDynamicallyRegisteredClient({
+        owner_type: "dynamic-client-registration",
+      }),
+    ).toBe(true);
+    expect(isDynamicallyRegisteredClient({ owner_type: "platform" })).toBe(
+      false,
+    );
+    expect(isPlatformOwnedResource({ owner_type: "dynamic-client-registration" })).toBe(false);
+    // Never inferred for legacy rows: only an explicit owner_type selects it.
+    expect(resolveResourceOwnership({}).owner_type).toBe("platform");
+    expect(() =>
+      resolveResourceOwnership({
+        owner_type: "dynamic-client-registration",
+        owner_uid: UID,
+      }),
+    ).toThrow(TypeError);
+    expect(() =>
+      resolveResourceOwnership({
+        owner_type: "dynamic-client-registration",
+        owner_organization_id: "acme",
+      }),
+    ).toThrow(TypeError);
   });
 
   test("inconsistent explicit ownership throws", () => {

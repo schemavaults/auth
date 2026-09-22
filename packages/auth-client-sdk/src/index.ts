@@ -70,3 +70,21 @@ export type {
   AuthMiddlewareOptions,
   AuthMiddlewareError,
 } from "@schemavaults/auth-common";
+
+// RFC 7591 dynamic client registration helper (see registerDynamicClient on
+// the client) and the API server dynamic-client policy update shape.
+export {
+  registerDynamicClient,
+  DynamicClientRegistrationFailedError,
+} from "./lib/register-dynamic-client";
+export type { IRegisterDynamicClientOpts } from "./lib/register-dynamic-client";
+export type {
+  DynamicClientRegistrationRequest,
+  DynamicClientRegistrationResponse,
+  DynamicClientRegistrationError,
+} from "@schemavaults/auth-common";
+export { apiServerDynamicClientPolicyUpdateSchema } from "./lib/update-api-server-dynamic-client-policy";
+export type {
+  ApiServerDynamicClientPolicy,
+  ApiServerDynamicClientPolicyUpdate,
+} from "./lib/update-api-server-dynamic-client-policy";

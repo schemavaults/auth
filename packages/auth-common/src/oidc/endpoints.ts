@@ -20,6 +20,9 @@ export const OIDC_ENDPOINT_PATHS = {
   userinfo: "/api/oidc/userinfo",
   introspection: "/api/oidc/introspect",
   jwks: "/api/oidc/jwks",
+  // RFC 7591 dynamic client registration; advertised in the discovery
+  // document only when the server setting enabling it is on.
+  registration: "/api/oidc/register",
 } as const satisfies Record<string, `/${string}`>;
 
 export type OidcEndpointName = keyof typeof OIDC_ENDPOINT_PATHS;

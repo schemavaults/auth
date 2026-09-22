@@ -58,6 +58,27 @@ export const SERVER_SETTING_DEFINITIONS = {
     description:
       "Whether non-admin users may create client applications and API servers owned directly by their own account (outside of any organization). Admins can always create them.",
   },
+  allow_dynamic_client_registration: {
+    valueType: "boolean" as const,
+    defaultValue: false,
+    schema: z.boolean(),
+    description:
+      "Whether anonymous OAuth 2.0 Dynamic Client Registration (RFC 7591) is enabled at POST /api/oidc/register, e.g. for MCP clients. Registered clients have no owner and are managed by administrators only; the discovery document advertises registration_endpoint only while this is on.",
+  },
+  dynamic_client_registration_allow_localhost_redirect_uris: {
+    valueType: "boolean" as const,
+    defaultValue: true,
+    schema: z.boolean(),
+    description:
+      "Whether dynamic client registration accepts http://localhost redirect URIs (matched port-exactly). The loopback IP literals http://127.0.0.1 and http://[::1] (RFC 8252 §7.3, any port) and https URIs are always accepted.",
+  },
+  dynamic_client_registration_allow_custom_scheme_redirect_uris: {
+    valueType: "boolean" as const,
+    defaultValue: true,
+    schema: z.boolean(),
+    description:
+      "Whether dynamic client registration accepts private-use URI scheme redirect URIs such as com.example.app:/callback or vscode://... (RFC 8252 §7.1) for native clients.",
+  },
   mail_server_configured: {
     valueType: "boolean" as const,
     defaultValue: false,

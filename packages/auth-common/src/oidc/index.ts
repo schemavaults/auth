@@ -52,4 +52,28 @@ export type {
 } from "./token-endpoint-extensions";
 
 export { buildOidcProviderMetadata } from "./provider-metadata";
-export type { OidcProviderMetadata } from "./provider-metadata";
+export type {
+  OidcProviderMetadata,
+  BuildOidcProviderMetadataOptions,
+} from "./provider-metadata";
+
+export {
+  DYNAMIC_CLIENT_REGISTRATION_ERRORS,
+  DYNAMIC_CLIENT_MAX_REDIRECT_URIS,
+  DYNAMIC_CLIENT_UNSUPPORTED_METADATA_FIELDS,
+  dynamicClientRegistrationErrorSchema,
+  dynamicClientRegistrationResponseSchema,
+  parseDynamicClientRegistrationRequest,
+  classifyDynamicClientRedirectUri,
+  deriveDynamicClientNameFromRedirectUri,
+} from "./dynamic-client-registration";
+export type {
+  DynamicClientRegistrationError,
+  DynamicClientRegistrationErrorCode,
+  DynamicClientRegistrationRequest,
+  DynamicClientRegistrationResponse,
+  ParsedDynamicClientMetadata,
+  ParseDynamicClientRegistrationRequestOptions,
+  ParseDynamicClientRegistrationRequestResult,
+  DynamicClientRedirectUriKind,
+} from "./dynamic-client-registration";

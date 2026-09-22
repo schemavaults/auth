@@ -64,6 +64,10 @@ services:
       SCHEMAVAULTS_API_SERVER_ID: 00000000-0000-0000-0000-000000000000
       SCHEMAVAULTS_CLIENT_APP_ID: 00000000-0000-0000-0000-000000000000
       SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY: ${EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PRIVATE_KEY:-null}
+      # RFC 8707 resource URL(s) this server accepts as a token `aud`: the
+      # URL the Cypress runner uses for it (the dynamic_client_registration
+      # suite requests tokens with `resource=<this URL>`).
+      SCHEMAVAULTS_ACCEPTED_TOKEN_AUDIENCES: ${SCHEMAVAULTS_ACCEPTED_TOKEN_AUDIENCES:-http://example-nextjs-resource-server/api}
       # client_id/client_secret of the confidential-client variant of the
       # openid-client demo (/openid-client-confidential/*). Test-environment
       # throwaway values; they must match the Cypress runner's, which seeds

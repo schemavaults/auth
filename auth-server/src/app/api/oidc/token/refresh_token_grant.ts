@@ -2,6 +2,7 @@ import "server-only";
 import type { NextResponse } from "next/server";
 import {
   getApiServerIdForTokenAudience,
+  type ApiServerId,
   type AppId,
 } from "@schemavaults/app-definitions";
 import {
@@ -220,8 +221,13 @@ export async function handleOidcRefreshTokenGrant({
     );
   }
 
+  // The validated resource, resolved to the API server whose keyset
+  // signs the token: `access_token_audience` is what the token's `aud`
+  // carries (a resource URL verbatim), `api_server_id` the keyset owner.
+  let access_token_audience: string | undefined = undefined;
+  let access_token_audience_api_server_id: ApiServerId | undefined = undefined;
   if (resource !== null) {
-    const resourceError = await validateOidcTokenResource({
+    const validated_resource = await validateOidcTokenResource({
       uid: user.uid,
       client_app_id,
       resource,
@@ -229,14 +235,16 @@ export async function handleOidcRefreshTokenGrant({
       environment,
       debug,
     });
-    if (resourceError) {
+    if (!validated_resource.ok) {
       return fail(
         oidcTokenErrorResponse(
-          resourceError.error,
-          resourceError.error_description,
+          validated_resource.error.error,
+          validated_resource.error.error_description,
         ),
       );
     }
+    access_token_audience = validated_resource.access_token_audience;
+    access_token_audience_api_server_id = validated_resource.api_server_id;
   }
 
   // RFC 6749 §6: a scope re-request must be a subset of the original
@@ -276,7 +284,8 @@ export async function handleOidcRefreshTokenGrant({
     environment,
     // OIDC Core §12.2 permits omitting the id_token on refresh.
     include_id_token: false,
-    access_token_audience: resource ?? undefined,
+    access_token_audience,
+    access_token_audience_api_server_id,
     // Refresh token rotation: the presented token is single-use — its
     // revocation commits in the same transaction as the replacement
     // tokens' issuance records, and a failure throws (failing closed via

@@ -56,6 +56,11 @@ import type {
   ClientApplicationServiceAccountStatus,
   CreatedClientApplicationServiceAccount,
 } from "@/lib/client-application-service-account";
+import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
+import type {
+  DynamicClientRegistrationRequest,
+  DynamicClientRegistrationResponse,
+} from "@schemavaults/auth-common";
 import type {
   AuthClientEvent,
   OnAuthStateChangedListenerRef,
@@ -1841,6 +1846,37 @@ export class SchemaVaultsAuthClient
       adapter: this.adapter,
       auth_server_url: this.auth_server_url,
       api_server_id,
+    });
+  }
+
+  public async updateApiServerDynamicClientPolicy(
+    api_server_id: ApiServerId,
+    update: ApiServerDynamicClientPolicyUpdate,
+  ): Promise<SchemaVaultsApiServerDefinition> {
+    this.assertAppAndApiManagementWriteAccess(
+      "updateApiServerDynamicClientPolicy",
+    );
+    const fn = await import(
+      "@/lib/update-api-server-dynamic-client-policy"
+    ).then((m) => m.default);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      update,
+    });
+  }
+
+  public async registerDynamicClient(
+    metadata: DynamicClientRegistrationRequest,
+  ): Promise<DynamicClientRegistrationResponse> {
+    const fn = await import("@/lib/register-dynamic-client").then(
+      (m) => m.default,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      metadata,
     });
   }
 

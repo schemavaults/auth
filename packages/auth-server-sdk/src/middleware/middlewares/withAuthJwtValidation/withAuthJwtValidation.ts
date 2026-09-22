@@ -33,9 +33,19 @@ import doLoadJwtDecodingKeys, {
   type IDecodeAuthTokenKeys,
 } from "@/JwtKeyManager/loadJwtDecodingKeys";
 import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
+import {
+  normalizeAcceptedAudiences,
+  resolveExpectedTokenAudience,
+} from "@/resolve-expected-token-audience";
 
 export interface AuthJwtValidationMiddlewareOptions {
   audience: string;
+  /**
+   * RFC 8707 resource URL(s) this resource server is known by; access
+   * tokens minted with one of them as `aud` are accepted alongside the
+   * API server id form. See `resolveExpectedTokenAudience`.
+   */
+  accepted_audiences?: readonly string[];
   middleware_rules?: AuthMiddlewareRules;
   debug?: boolean;
   environment: SchemaVaultsAppEnvironment;
@@ -51,6 +61,7 @@ class AuthJwtValidationMiddleware
   implements ISchemaVaultsMiddleware
 {
   private readonly audience: string;
+  private readonly accepted_audiences: readonly string[];
   private readonly middleware_rules: AuthMiddlewareRules;
   private readonly keys_manager: IJwtKeyManager;
 
@@ -76,6 +87,7 @@ class AuthJwtValidationMiddleware
     }
 
     this.audience = audience;
+    this.accepted_audiences = normalizeAcceptedAudiences(opts.accepted_audiences);
     this.middleware_rules = opts.middleware_rules ?? defaultAuthMiddlewareRules;
     this.keys_manager = opts.keys_manager;
   }
@@ -234,11 +246,23 @@ class AuthJwtValidationMiddleware
           }
           const { decryption_key, verification_key } = decodingKeys;
 
+          // Access tokens minted for one of this server's resource URLs
+          // carry that URL as `aud`; refresh tokens always name the auth
+          // server.
+          const expected_audience: string =
+            type === "access"
+              ? resolveExpectedTokenAudience(
+                  token,
+                  jwt_audience,
+                  this.accepted_audiences,
+                )
+              : jwt_audience;
+
           try {
             const decoded: CustomJWTPayload = await decodeJWT({
               jwt: token,
               type,
-              audience: jwt_audience,
+              audience: expected_audience,
               env: environment,
               decryption_key,
               verification_key,

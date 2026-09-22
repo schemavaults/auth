@@ -18,6 +18,7 @@ import {
   parseOidcTokenResourceParam,
   validateOidcTokenResource,
 } from "@/lib/oidc/token-request-extensions";
+import type { ApiServerId } from "@schemavaults/app-definitions";
 import type { OidcGrantContext, OidcGrantOutcome } from "./token-response";
 
 /**
@@ -146,8 +147,13 @@ export async function handleOidcAuthorizationCodeGrant({
     );
   }
 
+  // The validated resource, resolved to the API server whose keyset
+  // signs the token: `access_token_audience` is what the token's `aud`
+  // carries (a resource URL verbatim), `api_server_id` the keyset owner.
+  let access_token_audience: string | undefined = undefined;
+  let access_token_audience_api_server_id: ApiServerId | undefined = undefined;
   if (resource !== null) {
-    const resourceError = await validateOidcTokenResource({
+    const validated_resource = await validateOidcTokenResource({
       uid: user.uid,
       client_app_id,
       resource,
@@ -155,14 +161,16 @@ export async function handleOidcAuthorizationCodeGrant({
       environment,
       debug,
     });
-    if (resourceError) {
+    if (!validated_resource.ok) {
       return fail(
         oidcTokenErrorResponse(
-          resourceError.error,
-          resourceError.error_description,
+          validated_resource.error.error,
+          validated_resource.error.error_description,
         ),
       );
     }
+    access_token_audience = validated_resource.access_token_audience;
+    access_token_audience_api_server_id = validated_resource.api_server_id;
   }
 
   // A null stored scope is a plain OAuth 2.1 grant (nothing granted):
@@ -177,7 +185,8 @@ export async function handleOidcAuthorizationCodeGrant({
     grant_type: "authorization_code",
     environment,
     include_id_token: parseAndGrantScopes(scope).hasOpenid,
-    access_token_audience: resource ?? undefined,
+    access_token_audience,
+    access_token_audience_api_server_id,
     debug,
   });
   return { ok: true, issued };

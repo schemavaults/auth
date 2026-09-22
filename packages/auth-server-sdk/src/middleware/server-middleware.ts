@@ -40,6 +40,13 @@ export interface IServerMiddlewareInitializationOptions {
   environment?: SchemaVaultsAppEnvironment;
   jwt_keys_manager?: IJwtKeyManager;
   allowed_origins_resolver?: IAllowedOriginsResolver;
+  /**
+   * RFC 8707 resource URL(s) this resource server is known by; access
+   * tokens minted with one of them as `aud` (clients that requested the
+   * token with a `resource` URL, e.g. MCP clients) are accepted alongside
+   * the API server id form.
+   */
+  accepted_audiences?: readonly string[];
 }
 
 export class SchemaVaultsServerMiddleware
@@ -138,6 +145,7 @@ export class SchemaVaultsServerMiddleware
         }),
         new AuthJwtValidationMiddlewareFactory({
           audience,
+          accepted_audiences: opts.accepted_audiences,
           middleware_rules: opts.auth_middleware_rules,
           debug: debug,
           environment: environment,

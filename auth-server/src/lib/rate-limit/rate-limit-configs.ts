@@ -64,6 +64,19 @@ export const CLIENT_CREDENTIALS_RATE_LIMIT: RateLimitConfig = {
   keySource: "ip",
 };
 
+/**
+ * Anonymous RFC 7591 dynamic client registrations at
+ * /api/oidc/register, per IP. Registration is unauthenticated and each
+ * success creates database rows, so the budget is small: a legitimate
+ * MCP client registers once and reuses its client_id.
+ */
+export const DYNAMIC_CLIENT_REGISTRATION_RATE_LIMIT: RateLimitConfig = {
+  name: "dynamic-client-registration",
+  maxAttempts: 10,
+  windowSeconds: 60 * 60,
+  keySource: "ip",
+};
+
 // Caps cross-challenge MFA verify abuse from a single IP. Per-challenge
 // attempts are independently capped at 5 by challenge-store.ts; this
 // limiter exists to prevent a bot from rotating challenge_ids to evade

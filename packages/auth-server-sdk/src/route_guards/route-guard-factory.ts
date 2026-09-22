@@ -15,6 +15,7 @@ import {
 import { RemoteJwtKeyManager, type IJwtKeyManager } from "@/JwtKeyManager";
 import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-url";
 import decodeJWTsWithKeyManager from "@/decode-jwts-with-key-manager";
+import { normalizeAcceptedAudiences } from "@/resolve-expected-token-audience";
 import {
   evaluateTokenRevocation,
   type IsTokenRevokedFn,
@@ -56,6 +57,14 @@ export interface RouteGuardFactoryInitOptions {
    * claims-only fast path. See {@link IsTokenRevokedFn}.
    */
   is_token_revoked?: IsTokenRevokedFn;
+  /**
+   * RFC 8707 resource URL(s) this resource server is known by (e.g. the
+   * public URL of an MCP server, `https://mcp.example.com/mcp`). Access
+   * tokens a client requested with such a `resource` carry the URL as
+   * their `aud` instead of the API server id; listing the URL(s) here
+   * accepts them. Tokens with any other `aud` still fail verification.
+   */
+  accepted_audiences?: readonly string[];
   /**
    * When `true`, the factory and the guards it creates emit verbose
    * `console.log` diagnostics. Defaults to `false`.
@@ -107,10 +116,12 @@ export class RouteGuardFactory {
   private readonly debug: boolean;
   private readonly is_auth_server: boolean;
   private readonly is_token_revoked: IsTokenRevokedFn | undefined;
+  private readonly accepted_audiences: readonly string[];
 
   public constructor({ environment, ...opts }: RouteGuardFactoryInitOptions) {
     this.environment = environment;
     this.debug = opts.debug ?? false;
+    this.accepted_audiences = normalizeAcceptedAudiences(opts.accepted_audiences);
     if (
       typeof opts.is_token_revoked !== "undefined" &&
       typeof opts.is_token_revoked !== "function"
@@ -250,6 +261,7 @@ export class RouteGuardFactory {
       jwt_audience,
       this.environment,
       this.debug,
+      { accepted_audiences: this.accepted_audiences },
     );
 
     // Revocation is a post-verification check: a token that decrypts and

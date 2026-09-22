@@ -53,6 +53,21 @@ function listTestSuites(): readonly string[] {
   return test_suites;
 }
 
+/**
+ * Suites that run against the example Next.js resource server as well as
+ * the auth server: any suite named after it, plus the dynamic client
+ * registration suite (which completes a plain OAuth flow with a
+ * dynamically registered client and calls the resource server's API with
+ * the resulting `resource`-audience token). These use the
+ * `e2e_with_resource_server` compose profile and get JWKS access keys.
+ */
+export function suiteNeedsExampleResourceServer(test_suite_name: string): boolean {
+  return (
+    test_suite_name.includes("resource_server") ||
+    test_suite_name === "dynamic_client_registration"
+  );
+}
+
 async function launchDockerComposeTests(
   test_suite_name: string,
   docker_compose_profile: string,
@@ -77,7 +92,7 @@ async function launchDockerComposeTests(
     TEST_SUITE_NAME: test_suite_name,
   };
 
-  if (test_suite_name === "example_resource_server") {
+  if (suiteNeedsExampleResourceServer(test_suite_name)) {
     // we need to set up jwks access keys for the example resource server
     const [privateKey, publicKey] = await generateJwtSigningKeyPair();
     environmentVariables[
@@ -151,8 +166,8 @@ e2eAuthTestsCli
       process.exit(404);
     }
 
-    const dockerComposeProfile: string = test_suite_name.includes(
-      "resource_server",
+    const dockerComposeProfile: string = suiteNeedsExampleResourceServer(
+      test_suite_name,
     )
       ? ("e2e_with_resource_server" as const)
       : ("e2e" as const);

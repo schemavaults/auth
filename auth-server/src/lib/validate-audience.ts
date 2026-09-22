@@ -3,13 +3,16 @@ import {
   SchemaVaultsAppToApiPermissionsRegistry,
 } from "@/lib/auth-db";
 import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
+import { getApp } from "@/lib/auth-db/apps";
+import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import {
   type ApiServerId,
-  apiServerIdSchema,
   type AppId,
   appIdSchema,
-  getApiServerIdForTokenAudience,
+  isDynamicallyRegisteredClient,
+  type SchemaVaultsApiServerDefinition,
+  type SchemaVaultsApp,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
@@ -17,6 +20,11 @@ import { createAudienceSchema } from "@schemavaults/auth-common";
 import isValidUuid from "@/lib/is-valid-uuid";
 import ClientApplicationNotAuthorizedByUser from "@/lib/error/ClientApplicationNotAuthorizedByUser";
 import AppNotConnectedToApiServerError from "@/lib/error/AppNotConnectedToApiServerError";
+import UnresolvableTokenResourceError from "@/lib/error/UnresolvableTokenResourceError";
+import {
+  resolveTokenAudience,
+  type ResolvedTokenAudience,
+} from "@/lib/oidc/resolve-token-audience";
 import { z } from "zod";
 
 export type ValidateAudienceOutput =
@@ -24,63 +32,61 @@ export type ValidateAudienceOutput =
   | "api-resource-server"
   | false;
 
-async function validateOneAudience(
-  uid: string,
-  client_app_id: string,
-  audience: string,
-  dbh: ServerlessDatabase,
-  environment: SchemaVaultsAppEnvironment,
-  debug: boolean = false,
-  auth_app_id: string = getAuthServerAppId(),
-): Promise<ValidateAudienceOutput> {
-  const audienceSchema = createAudienceSchema(z, environment);
-
-  if (
-    typeof uid !== "string" ||
-    typeof client_app_id !== "string" ||
-    typeof audience !== "string"
-  ) {
-    throw new TypeError("Expected 'uid', 'client_app_id', and 'audience' arguments to be strings");
-  }
-
-  // Tokens for the auth server carry the (white-labellable) auth server URL
-  // as their audience; translate back to the stable app id before comparing.
-  // The bare app id form is also accepted for backwards compatibility.
-  if (
-    audience === auth_app_id ||
-    getApiServerIdForTokenAudience(audience, environment) ===
-      auth_app_id
-  ) {
-    return "auth-server-only";
-  }
-
-  console.assert(
-    audience !== auth_app_id,
-    `Expected this to be a non-auth server API server if this point was reached`
+/**
+ * @description Whether a dynamically registered client may access an API
+ * server without an explicit app-to-API connection: the API server must
+ * have opted in with `allow_dynamic_clients`. Managed (console-created)
+ * clients always need a connection, whatever the API server's policy.
+ */
+function mayDynamicClientBypassConnection(
+  client_app: SchemaVaultsApp,
+  api_server: SchemaVaultsApiServerDefinition | null,
+): boolean {
+  return (
+    isDynamicallyRegisteredClient(client_app) &&
+    api_server?.allow_dynamic_clients === true
   );
+}
 
-
-
-  const parsed_aud = await audienceSchema.safeParseAsync(audience);
-  const isSemanticallyValidAudience = parsed_aud.success satisfies boolean;
-  if (!isSemanticallyValidAudience || !parsed_aud.data) {
-    console.error(
-      `[validateAudience] Invalid audience ref. ` +
-        `Instead received: "${audience}"`,
-      parsed_aud.error,
-    );
-    return false;
+async function validateOneAudience(
+  client_app: SchemaVaultsApp,
+  resolved: ResolvedTokenAudience,
+  dbh: ServerlessDatabase,
+  debug: boolean = false,
+): Promise<ValidateAudienceOutput> {
+  if (resolved.kind === "auth-server") {
+    return "auth-server-only";
   }
 
-  const aud: string = parsed_aud.data;
+  const client_app_id: AppId = client_app.app_id;
+  const aud: ApiServerId = resolved.api_server_id;
 
-  if (aud === auth_app_id) {
-    return "auth-server-only";
-  } else if (apiServerIdSchema.safeParse(aud).success) {
-    // pass
-  } else {
-    console.error("Not prepared to handle audience: ", aud);
-    throw new Error("Unhandled audience reference type!");
+  // Dynamically registered clients have no connections; an API server
+  // that opted into serving them is reachable without one.
+  if (isDynamicallyRegisteredClient(client_app)) {
+    let api_server: SchemaVaultsApiServerDefinition | null = resolved.api_server;
+    if (api_server === null) {
+      try {
+        api_server = await new SchemaVaultsApiServerRegistry(
+          dbh.db,
+          debug,
+        ).getApiServer(aud);
+      } catch (e: unknown) {
+        console.error(
+          `[validateOneAudience] Failed to load API server '${aud}' to evaluate its dynamic-client policy: `,
+          e,
+        );
+        return false;
+      }
+    }
+    if (mayDynamicClientBypassConnection(client_app, api_server)) {
+      if (debug) {
+        console.log(
+          `[validateOneAudience] API server '${aud}' allows dynamic clients; skipping the app-to-API connection check for '${client_app_id}'`,
+        );
+      }
+      return "api-resource-server";
+    }
   }
 
   // Validate that the frontend app has authorized API server audience
@@ -120,14 +126,36 @@ async function validateOneAudience(
   return "api-resource-server";
 }
 
-export async function validateAudience(
+export type ValidatedAudiences =
+  | { ok: true; resolved: readonly ResolvedTokenAudience[] }
+  | { ok: false };
+
+/**
+ * @description Validates that `client_app_id`, authorized by user `uid`,
+ * may be issued access tokens for every audience in `audience`, and
+ * resolves each audience to the API server that will verify the token
+ * (an RFC 8707 resource URL resolves through the API servers' registered
+ * domains). Only the auth server's own app may request auth-server
+ * audience tokens; every other audience needs an app-to-API connection —
+ * unless the client was dynamically registered and the API server allows
+ * dynamic clients.
+ *
+ * @throws TypeError for malformed ids / audiences.
+ * @throws ClientApplicationNotAuthorizedByUser when the user has not
+ * authorized the client app.
+ * @throws AppNotConnectedToApiServerError when the app is not connected to
+ * a requested API server.
+ * @throws UnresolvableTokenResourceError when a resource URL matches no,
+ * or more than one, registered API server.
+ */
+export async function validateAndResolveAudiences(
   uid: string,
   client_app_id: AppId,
   audience: string | readonly string[],
   dbh: ServerlessDatabase,
   environment: SchemaVaultsAppEnvironment,
   debug: boolean = shouldEnableDebug(),
-): Promise<boolean> {
+): Promise<ValidatedAudiences> {
   const auth_app_id = getAuthServerAppId();
 
   if (!isValidUuid(uid)) {
@@ -155,9 +183,10 @@ export async function validateAudience(
   // client app must still be authorized by the user.
   const isEmptyAudienceList: boolean = audiences.length === 0;
 
-  // Audiences arrive in token-audience form (the auth server URL, or an api
-  // server id verbatim); the token endpoints parse request bodies with this
-  // same schema, so the bare auth app id form was already rejected upstream.
+  // Audiences arrive in token-audience form (the auth server URL, an api
+  // server id verbatim, or an RFC 8707 resource URL); the token endpoints
+  // parse request bodies with this same schema, so the bare auth app id
+  // form was already rejected upstream.
   const singleAudienceSchema = createAudienceSchema(z, environment);
   const audiencesListSchema = singleAudienceSchema.array()
     .min(1, "Audiences array must be non-empty")
@@ -196,18 +225,38 @@ export async function validateAudience(
   }
 
   if (isEmptyAudienceList) {
-    return true;
+    return { ok: true, resolved: [] };
   }
 
-  const validateOneAudiencePromises: readonly Promise<ValidateAudienceOutput>[] = audiences.map(
-    (audience: string): Promise<ValidateAudienceOutput> =>
-      validateOneAudience(uid, client_app_id, audience, dbh, environment, debug, auth_app_id),
+  const client_app: SchemaVaultsApp | null = await getApp(
+    dbh.db,
+    client_app_id,
+    debug,
   );
+  if (!client_app) {
+    console.error(
+      `[validateAudience] Client application '${client_app_id}' does not exist`,
+    );
+    return { ok: false };
+  }
+
+  const resolved: ResolvedTokenAudience[] = await Promise.all(
+    audiences.map(
+      (aud: string): Promise<ResolvedTokenAudience> =>
+        resolveTokenAudience(dbh.db, aud, environment, debug),
+    ),
+  );
+
+  const validateOneAudiencePromises: readonly Promise<ValidateAudienceOutput>[] =
+    resolved.map(
+      (one: ResolvedTokenAudience): Promise<ValidateAudienceOutput> =>
+        validateOneAudience(client_app, one, dbh, debug),
+    );
   const validationResults = await Promise.all(validateOneAudiencePromises);
 
   if (validationResults.some((result) => !result)) {
     console.error("One or more of token audiences is not allowed");
-    return false;
+    return { ok: false };
   }
 
   if (
@@ -222,10 +271,42 @@ export async function validateAudience(
     console.error(
       "Some of the audiences for access tokens can only be requested from a hardcoded first-party app",
     );
-    return false;
+    return { ok: false };
   }
 
-  return true;
+  return { ok: true, resolved };
+}
+
+/**
+ * @description Boolean form of {@link validateAndResolveAudiences} for the
+ * platform's login/token flows. A resource URL that cannot be resolved to
+ * an API server is reported as not allowed (rather than thrown).
+ */
+export async function validateAudience(
+  uid: string,
+  client_app_id: AppId,
+  audience: string | readonly string[],
+  dbh: ServerlessDatabase,
+  environment: SchemaVaultsAppEnvironment,
+  debug: boolean = shouldEnableDebug(),
+): Promise<boolean> {
+  try {
+    const result = await validateAndResolveAudiences(
+      uid,
+      client_app_id,
+      audience,
+      dbh,
+      environment,
+      debug,
+    );
+    return result.ok;
+  } catch (e: unknown) {
+    if (e instanceof UnresolvableTokenResourceError) {
+      console.error(`[validateAudience] ${e.message}`);
+      return false;
+    }
+    throw e;
+  }
 }
 
 export default validateAudience;

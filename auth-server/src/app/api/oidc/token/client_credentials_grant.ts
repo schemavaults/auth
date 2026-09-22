@@ -14,6 +14,7 @@ import {
   parseOidcTokenResourceParam,
   validateOidcTokenResource,
 } from "@/lib/oidc/token-request-extensions";
+import type { ApiServerId } from "@schemavaults/app-definitions";
 import type { OidcGrantContext, OidcGrantOutcome } from "./token-response";
 
 /**
@@ -108,8 +109,13 @@ export async function handleOidcClientCredentialsGrant({
     );
   }
 
+  // The validated resource, resolved to the API server whose keyset
+  // signs the token: `access_token_audience` is what the token's `aud`
+  // carries (a resource URL verbatim), `api_server_id` the keyset owner.
+  let access_token_audience: string | undefined = undefined;
+  let access_token_audience_api_server_id: ApiServerId | undefined = undefined;
   if (resource !== null) {
-    const resourceError = await validateOidcTokenResource({
+    const validated_resource = await validateOidcTokenResource({
       uid: user.uid,
       client_app_id,
       resource,
@@ -117,14 +123,16 @@ export async function handleOidcClientCredentialsGrant({
       environment,
       debug,
     });
-    if (resourceError) {
+    if (!validated_resource.ok) {
       return fail(
         oidcTokenErrorResponse(
-          resourceError.error,
-          resourceError.error_description,
+          validated_resource.error.error,
+          validated_resource.error.error_description,
         ),
       );
     }
+    access_token_audience = validated_resource.access_token_audience;
+    access_token_audience_api_server_id = validated_resource.api_server_id;
   }
 
   const issued = await issueOidcTokens({
@@ -137,7 +145,8 @@ export async function handleOidcClientCredentialsGrant({
     environment,
     include_id_token: false,
     issue_refresh_token: false,
-    access_token_audience: resource ?? undefined,
+    access_token_audience,
+    access_token_audience_api_server_id,
     debug,
   });
   return { ok: true, issued };

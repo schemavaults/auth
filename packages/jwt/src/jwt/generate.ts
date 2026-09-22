@@ -17,7 +17,7 @@ import {
   getTokenAudienceForApiServerId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import { createAudienceSchema } from "@schemavaults/auth-common";
+import { createAudienceSchema, isResourceUrlAudience } from "@schemavaults/auth-common";
 import { z } from "zod";
 import isValidUuid from "@/utils/isValidUuid";
 
@@ -137,7 +137,14 @@ export async function generateJWT<T extends AuthTokenTypes>(
       keyset_audience_id,
       opts.env,
     );
-    if (keyset_token_audience !== aud) {
+    // An RFC 8707 resource URL audience cannot be derived from the keyset
+    // id: the auth server resolved the URL to the API server that owns
+    // this keyset through its registered domains before minting, so the
+    // mismatch is expected there and only the static forms are compared.
+    if (
+      keyset_token_audience !== aud &&
+      !(type === "access" && isResourceUrlAudience(aud, opts.env))
+    ) {
       throw new Error(
         `JWT keyset audience ID '${keyset_audience_id}' (token audience '${keyset_token_audience}') does not match requested token audience '${aud}'`,
       );

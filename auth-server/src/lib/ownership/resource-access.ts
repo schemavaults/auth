@@ -65,8 +65,10 @@ function accessLevelForOrganizationRole(
  * @description Resolves how much `user` may do with a resource that has the
  * given ownership. Global admins always get `owner` access. Platform-owned
  * resources are reachable only by global admins; organization-owned
- * resources map the user's organization role onto the access level; and
- * user-owned resources grant `owner` access to the owning user only.
+ * resources map the user's organization role onto the access level;
+ * user-owned resources grant `owner` access to the owning user only; and
+ * dynamically registered clients (no owner) are reachable only by global
+ * admins.
  */
 export async function getUserAccessLevelForOwnership(
   db: Kysely<AuthDatabase>,
@@ -78,6 +80,7 @@ export async function getUserAccessLevelForOwnership(
   }
   switch (ownership.owner_type) {
     case "platform":
+    case "dynamic-client-registration":
       return "none";
     case "user":
       return ownership.owner_uid === user.uid ? "owner" : "none";

@@ -73,6 +73,7 @@ export default function AppsPageView({
             onValueChange={setOwnerTypeFilter}
             showPersonal={showPersonalFilter}
             showPlatform={is_admin}
+            showDynamicClientRegistration={is_admin}
           />
         </Card>
         <AppsCard

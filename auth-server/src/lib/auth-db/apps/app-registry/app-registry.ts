@@ -14,6 +14,7 @@ import {
   getHardcodedAppDomains,
   type AppId,
   type ResourceOwnership,
+  type DynamicClientRegistrationMetadataFields,
 } from "@schemavaults/app-definitions";
 import type { AppClientSecret } from "./app-client-secrets-table";
 import type { GetOrCreateAppServiceAccountResult } from "./app-service-accounts";
@@ -109,6 +110,7 @@ export class SchemaVaultsAppRegistry {
     ownership,
     web,
     created_by = null,
+    dynamic_client_metadata,
   }: RegisterAppOptions): Promise<void> {
 
     if (typeof publicly_listed !== 'boolean') {
@@ -143,12 +145,22 @@ export class SchemaVaultsAppRegistry {
       web,
       ...ownership,
       created_by,
+      ...(dynamic_client_metadata ?? {}),
     } satisfies SchemaVaultsApp);
     if (!parsed_app.success) {
       console.error(parsed_app.error.issues);
       throw new Error("Failed to parse app");
     }
     const app: SchemaVaultsApp = parsed_app.data;
+
+    if (
+      (ownership.owner_type === "dynamic-client-registration") !==
+      (dynamic_client_metadata !== undefined)
+    ) {
+      throw new TypeError(
+        "RFC 7591 client metadata is stored for (and only for) dynamically registered clients",
+      );
+    }
 
     const row: NewApp = {
       app_id: app.app_id,
@@ -160,6 +172,29 @@ export class SchemaVaultsAppRegistry {
       web: app.web,
       ...toOwnershipDatabaseColumns(ownership),
       created_by,
+      // JSONB columns: Kysely/pg serialize arrays as JSON when passed as
+      // JSON text; stringify explicitly so a string[] is not bound as a
+      // Postgres array literal.
+      ...(dynamic_client_metadata
+        ? {
+            client_uri: dynamic_client_metadata.client_uri ?? null,
+            logo_uri: dynamic_client_metadata.logo_uri ?? null,
+            tos_uri: dynamic_client_metadata.tos_uri ?? null,
+            policy_uri: dynamic_client_metadata.policy_uri ?? null,
+            contacts: toJsonbColumnValue(dynamic_client_metadata.contacts),
+            grant_types: toJsonbColumnValue(dynamic_client_metadata.grant_types),
+            response_types: toJsonbColumnValue(
+              dynamic_client_metadata.response_types,
+            ),
+            token_endpoint_auth_method:
+              dynamic_client_metadata.token_endpoint_auth_method ?? null,
+            software_id: dynamic_client_metadata.software_id ?? null,
+            software_version: dynamic_client_metadata.software_version ?? null,
+            registered_scope: dynamic_client_metadata.registered_scope ?? null,
+            client_id_issued_at:
+              dynamic_client_metadata.client_id_issued_at ?? null,
+          }
+        : {}),
     };
 
     const result = await this.db
@@ -517,6 +552,24 @@ export interface RegisterAppOptions {
   web: boolean;
   /** The creating user's uid, for the audit trail (null when unknown). */
   created_by?: string | null;
+  /**
+   * RFC 7591 metadata to persist; required for (and only allowed with)
+   * `dynamic-client-registration` ownership. See
+   * `dynamicClientRegistrationMetadataFieldsShape`.
+   */
+  dynamic_client_metadata?: DynamicClientRegistrationMetadataFields;
+}
+
+/**
+ * JSONB column values are bound as JSON text so that Postgres stores the
+ * JSON array itself (binding a JS array would be sent as a Postgres array
+ * literal, which JSONB rejects). `undefined`/`null` store SQL NULL.
+ */
+function toJsonbColumnValue<T>(value: readonly T[] | null | undefined): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  return JSON.stringify(value);
 }
 
 export default SchemaVaultsAppRegistry;

@@ -32,8 +32,28 @@ describe("parseOidcTokenResourceParam", () => {
     ).toEqual({ ok: true, resource: "my-api-server" });
   });
 
+  test("accepts an RFC 8707 resource URL (resolved to an API server by the grant handler)", () => {
+    for (const url of [
+      "https://mcp.example.com/mcp",
+      "https://elsewhere.example",
+      "http://127.0.0.1:3007/api",
+    ]) {
+      expect(
+        parseOidcTokenResourceParam(form([["resource", url]]), ENVIRONMENT),
+      ).toEqual({ ok: true, resource: url });
+    }
+    // ...but not one with a fragment, or a non-http(s) scheme.
+    for (const bad of ["https://mcp.example.com/mcp#frag", "com.example.app:/cb"]) {
+      const parsed = parseOidcTokenResourceParam(
+        form([["resource", bad]]),
+        ENVIRONMENT,
+      );
+      expect(parsed.ok).toBe(false);
+    }
+  });
+
   test("rejects the bare auth app id and malformed values with invalid_target", () => {
-    for (const bad of [DEFAULT_AUTH_SERVER_APP_ID, "not a resource!", "https://elsewhere.example"]) {
+    for (const bad of [DEFAULT_AUTH_SERVER_APP_ID, "not a resource!", "mcp.example.com/mcp"]) {
       const parsed = parseOidcTokenResourceParam(
         form([["resource", bad]]),
         ENVIRONMENT,

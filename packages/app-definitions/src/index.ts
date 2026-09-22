@@ -6,8 +6,41 @@ export {
   schemaVaultsAppDomainRefSchema,
   schemaVaultsAppCallbackUrlRefSchema,
   APP_CALLBACK_URL_MAX_LENGTH,
+  APP_NAME_MAX_LENGTH,
+  APP_DESCRIPTION_MAX_LENGTH,
 } from "./client-app-definition";
 export type * from "./client-app-definition";
+
+export {
+  DYNAMIC_CLIENT_TOKEN_ENDPOINT_AUTH_METHODS,
+  dynamicClientTokenEndpointAuthMethodSchema,
+  DYNAMIC_CLIENT_GRANT_TYPES,
+  dynamicClientGrantTypeSchema,
+  DYNAMIC_CLIENT_RESPONSE_TYPES,
+  dynamicClientResponseTypeSchema,
+  DYNAMIC_CLIENT_METADATA_URI_MAX_LENGTH,
+  DYNAMIC_CLIENT_MAX_CONTACTS,
+  DYNAMIC_CLIENT_CONTACT_MAX_LENGTH,
+  DYNAMIC_CLIENT_SOFTWARE_FIELD_MAX_LENGTH,
+  DYNAMIC_CLIENT_SCOPE_MAX_LENGTH,
+  dynamicClientRegistrationMetadataFieldsShape,
+  dynamicClientRegistrationMetadataFieldsSchema,
+} from "./dynamic-client-registration-metadata";
+export type {
+  DynamicClientTokenEndpointAuthMethod,
+  DynamicClientGrantType,
+  DynamicClientResponseType,
+  DynamicClientRegistrationMetadataFields,
+} from "./dynamic-client-registration-metadata";
+
+export {
+  RESOURCE_URL_MATCH_MODES,
+  DEFAULT_RESOURCE_URL_MATCH_MODE,
+  resourceUrlMatchModeSchema,
+  apiServerDynamicClientFieldsShape,
+  doesResourceUrlMatchApiServerDomain,
+} from "./api-server-dynamic-clients";
+export type { ResourceUrlMatchMode } from "./api-server-dynamic-clients";
 
 export * from "./list-registry-apps-query-params";
 export type * from "./list-registry-apps-query-params";
@@ -62,7 +95,10 @@ export {
   isPlatformOwnedResource,
   isOrganizationOwnedResource,
   isUserOwnedResource,
+  isDynamicallyRegisteredClient,
   platformOwnership,
+  dynamicClientRegistrationOwnership,
+  DYNAMIC_CLIENT_REGISTRATION_OWNER_TYPE,
 } from "./resource-ownership";
 export type {
   ResourceOwnerType,

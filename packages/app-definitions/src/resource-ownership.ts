@@ -14,13 +14,26 @@ import type { OrganizationID } from "./organization-id";
  *   owners/admins, viewable by its members.
  * - `user`: owned directly by a single user account, independent of any
  *   organization membership; managed only by that user (and global admins).
- *   This is the ownership mode that dynamic client registration builds on.
+ * - `dynamic-client-registration`: a client application registered
+ *   anonymously through RFC 7591 dynamic client registration. Nobody owns
+ *   it; only global admins can manage it. Never valid for API servers.
  */
 export const RESOURCE_OWNER_TYPES = [
   "platform",
   "organization",
   "user",
+  "dynamic-client-registration",
 ] as const satisfies readonly string[];
+
+/**
+ * The owner type of a client application created through OAuth 2.0
+ * Dynamic Client Registration (RFC 7591) at `POST /api/oidc/register`.
+ * Such clients have no owner at all (registration is unauthenticated):
+ * only global admins can view, manage or delete them, and they never
+ * appear in any user's or organization's resource lists.
+ */
+export const DYNAMIC_CLIENT_REGISTRATION_OWNER_TYPE =
+  "dynamic-client-registration" as const satisfies ResourceOwnerType;
 
 export type ResourceOwnerType = (typeof RESOURCE_OWNER_TYPES)[number];
 
@@ -76,10 +89,17 @@ export type ResourceOwnership =
       owner_type: "user";
       owner_organization_id: null;
       owner_uid: string;
+    }
+  | {
+      owner_type: "dynamic-client-registration";
+      owner_organization_id: null;
+      owner_uid: null;
     };
 
 /**
- * The ownership a caller asks for when creating a new app/API server.
+ * The ownership a caller asks for when creating a new app/API server
+ * through the management APIs. Dynamically registered clients are never
+ * requested this way — only `POST /api/oidc/register` creates them.
  */
 export type RequestedResourceOwnership =
   | { owner_type: "platform" }
@@ -195,7 +215,51 @@ export function resolveResourceOwnership(
         owner_organization_id: null,
         owner_uid,
       };
+    case "dynamic-client-registration":
+      if (owner_uid) {
+        throw new TypeError(
+          "A dynamically registered client must not declare an 'owner_uid'",
+        );
+      }
+      if (owner_organization_id) {
+        throw new TypeError(
+          "A dynamically registered client must not declare an 'owner_organization_id'",
+        );
+      }
+      return {
+        owner_type: "dynamic-client-registration",
+        owner_organization_id: null,
+        owner_uid: null,
+      };
   }
+}
+
+/**
+ * @description Convenience predicate: was the client application registered
+ * anonymously through RFC 7591 dynamic client registration?
+ */
+export function isDynamicallyRegisteredClient(
+  definition: ResourceOwnershipFields,
+  opts?: ResolveResourceOwnershipOptions,
+): boolean {
+  return (
+    resolveResourceOwnership(definition, opts).owner_type ===
+    "dynamic-client-registration"
+  );
+}
+
+/**
+ * @description Builds the ownership fields for a dynamically registered
+ * client application (used by `POST /api/oidc/register`).
+ */
+export function dynamicClientRegistrationOwnership(): ResourceOwnership & {
+  owner_type: "dynamic-client-registration";
+} {
+  return {
+    owner_type: "dynamic-client-registration",
+    owner_organization_id: null,
+    owner_uid: null,
+  };
 }
 
 /**
