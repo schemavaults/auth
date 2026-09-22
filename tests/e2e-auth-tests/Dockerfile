@@ -39,6 +39,13 @@ COPY packages/jwt/package.json packages/jwt/package.json
 COPY packages/jwt/src packages/jwt/src
 COPY packages/jwt/tsconfig.json packages/jwt/tsconfig.json
 
+# @schemavaults/auth-client-sdk (the dynamic_client_registration suite
+# drives registerDynamicClient() from a spec)
+COPY packages/auth-client-sdk/package.json packages/auth-client-sdk/package.json
+COPY packages/auth-client-sdk/src packages/auth-client-sdk/src
+COPY packages/auth-client-sdk/tsconfig.json packages/auth-client-sdk/tsconfig.json
+COPY packages/auth-client-sdk/generate-version.sh packages/auth-client-sdk/generate-version.sh
+
 COPY tests/cypress-e2e-auth-tests-helper-commands/package.json tests/cypress-e2e-auth-tests-helper-commands/package.json
 COPY tests/cypress-e2e-auth-tests-helper-commands/src tests/cypress-e2e-auth-tests-helper-commands/src
 COPY tests/cypress-e2e-auth-tests-helper-commands/tsconfig.json tests/cypress-e2e-auth-tests-helper-commands/tsconfig.json
@@ -56,6 +63,11 @@ WORKDIR /schemavaults/auth/packages/auth-common
 RUN bun run build
 
 WORKDIR /schemavaults/auth/packages/jwt
+RUN bun run build
+
+# src/generated/version.ts is gitignored and produced from package.json
+WORKDIR /schemavaults/auth/packages/auth-client-sdk
+RUN bun run generate-version
 RUN bun run build
 
 WORKDIR /schemavaults/auth/tests/cypress-e2e-auth-tests-helper-commands
