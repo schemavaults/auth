@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import Link from "next/link";
 import { createApiDocsPages } from "@schemavaults/openapi-docs-ui/nextjs";
-import { openApiDocument } from "@/lib/api/openapi-document";
+import { OPENAPI_DOCUMENT_PATH, openApiDocument } from "@/lib/api/openapi-document";
 import { resolvePublicOriginFromRequest } from "@/lib/api/public-origin-next";
 
 /**
@@ -11,7 +11,7 @@ import { resolvePublicOriginFromRequest } from "@/lib/api/public-origin-next";
 export const apiDocs = createApiDocsPages({
   loadDocument: () => openApiDocument,
   basePath: "/docs",
-  openApiDocumentHref: "/api/openapi.json",
+  openApiDocumentHref: OPENAPI_DOCUMENT_PATH,
   // The generated document's server URL is a relative "/"; the pages show
   // the deployment's real origin instead, resolved per request from the
   // SCHEMAVAULTS_EXAMPLE_RESOURCE_SERVER_URL override or the incoming

@@ -9,8 +9,8 @@ export type NextRouteHandlers<TMethods extends HttpMethod = HttpMethod> = {
 };
 
 /**
- * Next.js App Router route-handler exports for the operations app. Typical
- * usage from a catch-all route so one Hono app serves every operation:
+ * Next.js App Router route-handler exports for the operations app. Either
+ * mount one app from a catch-all route so it serves every operation:
  *
  * ```ts
  * // app/api/[[...route]]/route.ts
@@ -18,8 +18,22 @@ export type NextRouteHandlers<TMethods extends HttpMethod = HttpMethod> = {
  * export const { GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS } = toNextRouteHandlers(app);
  * ```
  *
- * Pass `methods` to only export a subset (e.g. when a route file coexists
- * with hand-written handlers for other methods).
+ * or give each operation its own `route.ts` at the matching Next.js path
+ * (`app/api/apps/[app_id]/route.ts` for `/api/apps/{app_id}`) and mount an
+ * app built for just that operation, via `createOperationsAppFactory()`,
+ * exporting only the methods it declares so Next.js answers 405 for the
+ * rest:
+ *
+ * ```ts
+ * // app/api/apps/[app_id]/route.ts
+ * export const { GET } = toNextRouteHandlers(api.app([getApp]), operationHttpMethods([getApp]));
+ * ```
+ *
+ * The app receives the raw request, so it routes on the full pathname
+ * regardless of which route file it is exported from; no `basePath` is
+ * needed for per-route mounting. Pass `methods` to only export a subset
+ * (e.g. when a route file coexists with hand-written handlers for other
+ * methods).
  */
 export function toNextRouteHandlers<const TMethods extends readonly HttpMethod[] = typeof HTTP_METHODS>(
   app: Hono,

@@ -3,10 +3,13 @@ import { operations } from "./operations";
 // The API version tracks this package's version (tsconfig: resolveJsonModule).
 import packageJson from "../../../package.json";
 
+/** Where the document is served from (src/app/api/openapi.json/route.ts). */
+export const OPENAPI_DOCUMENT_PATH = "/api/openapi.json" as const;
+
 /**
- * The OpenAPI 3.1 document describing every operation above. Served at
- * GET /api/openapi.json (see ./app.ts) and rendered by the /docs pages.
- * Built once at module load: the definitions are static.
+ * The OpenAPI 3.1 document describing every operation in the catalogue.
+ * Served at GET /api/openapi.json by its own route file and rendered by the
+ * /docs pages. Built once at module load: the definitions are static.
  */
 export const openApiDocument: ReturnType<typeof buildOpenApiDocument> = buildOpenApiDocument({
   info: {

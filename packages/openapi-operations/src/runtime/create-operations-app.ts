@@ -26,7 +26,8 @@ export interface CreateOperationsAppOptions<TContext = unknown, TUser = unknown>
    * Prefix stripped by the deployment before routing (e.g. `/api` when the
    * app is mounted from `app/api/[[...route]]/route.ts`). Operation paths
    * stay absolute in the OpenAPI document; leave unset to route on them
-   * verbatim.
+   * verbatim (Next.js route handlers and Vercel functions receive the full
+   * request URL, so they never need it).
    */
   readonly basePath?: string;
   /** Credential resolvers keyed by auth scheme name. */

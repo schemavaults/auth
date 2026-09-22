@@ -17,8 +17,9 @@ export default function IndexPage(): ReactElement {
       <Link href="/auth/register">
         <Button>Register</Button>
       </Link>
-      {/* Generated from the @schemavaults/openapi-operations declarations in
-          src/lib/api/operations.ts and rendered by @schemavaults/openapi-docs-ui. */}
+      {/* Generated from the @schemavaults/openapi-operations declarations
+          collected in src/lib/api/operations.ts (one per src/app/api route)
+          and rendered by @schemavaults/openapi-docs-ui. */}
       <Link href="/docs" data-testid="api-docs-link">
         <Button variant="secondary">API documentation</Button>
       </Link>
