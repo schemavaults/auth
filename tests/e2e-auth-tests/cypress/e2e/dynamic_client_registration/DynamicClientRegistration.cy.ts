@@ -89,10 +89,24 @@ describe("Dynamic client registration (RFC 7591)", () => {
     registration_endpoint?: string;
   }
 
-  function setRegistrationEnabled(enabled: boolean): void {
+  /**
+   * The superuser login helper asserts that nobody is signed in first; a
+   * failed assertion earlier in a test can leave a session behind, so
+   * every superuser step starts from a signed-out state.
+   */
+  function loginAsSuperuser(): void {
+    cy.is_authenticated().then((authenticated: boolean) => {
+      if (authenticated) {
+        cy.logout();
+      }
+    });
     cy.create_and_login_as_superuser_via_request().then((ok: boolean) => {
       if (!ok) throw new Error("Failed to login as superuser");
     });
+  }
+
+  function setRegistrationEnabled(enabled: boolean): void {
+    loginAsSuperuser();
     cy.request({
       method: "PATCH",
       url: `/api/admin/settings/${SETTING_KEY}`,
@@ -659,9 +673,7 @@ describe("Dynamic client registration (RFC 7591)", () => {
       it("refuses the resource by API server id too when the client is not connected and the server disallows dynamic clients", () => {
         // Flip the seeded API server's policy off for this check, then
         // restore it. Admin-only management surface (PATCH /api/apis/:id).
-        cy.create_and_login_as_superuser_via_request().then((ok: boolean) => {
-          if (!ok) throw new Error("Failed to login as superuser");
-        });
+        loginAsSuperuser();
         cy.request({
           method: "PATCH",
           url: `/api/apis/${EXAMPLE_API_SERVER_ID}`,
@@ -696,9 +708,7 @@ describe("Dynamic client registration (RFC 7591)", () => {
           },
         );
 
-        cy.create_and_login_as_superuser_via_request().then((ok: boolean) => {
-          if (!ok) throw new Error("Failed to login as superuser");
-        });
+        loginAsSuperuser();
         cy.request({
           method: "PATCH",
           url: `/api/apis/${EXAMPLE_API_SERVER_ID}`,
@@ -714,9 +724,7 @@ describe("Dynamic client registration (RFC 7591)", () => {
       });
 
       it("is visible to administrators as an ownerless client and hidden from everyone else", () => {
-        cy.create_and_login_as_superuser_via_request().then((ok: boolean) => {
-          if (!ok) throw new Error("Failed to login as superuser");
-        });
+        loginAsSuperuser();
         cy.request<{
           success: boolean;
           list: { app_id: string; owner_type?: string; public: boolean; web: boolean }[];
