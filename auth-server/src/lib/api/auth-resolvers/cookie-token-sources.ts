@@ -5,9 +5,10 @@ import {
   RefreshTokenCookieName,
   type PotentiallyValidTokenSource,
 } from "@schemavaults/auth-common";
-import { getCookie, type HonoContext } from "@schemavaults/openapi-operations";
+import type { HonoContext } from "@schemavaults/openapi-operations";
 import getStringByteSize from "@schemavaults/auth-server-sdk/getStringByteSize";
 import MaximumBrowserCookieSize from "@/lib/MaximumBrowserCookieSize";
+import { readCookie } from "./read-cookie";
 
 /**
  * Cookie values shorter than a JWT can be, or larger than a browser would
@@ -28,7 +29,7 @@ export function refreshTokenCookieSource(
   app_id: string,
   sourceHint: string,
 ): PotentiallyValidTokenSource | null {
-  const value = getCookie(c, RefreshTokenCookieName(app_id));
+  const value = readCookie(c.req.header("cookie"), RefreshTokenCookieName(app_id));
   if (!plausibleTokenCookie(value)) return null;
   return { sourceHint, type: "refresh", token: value };
 }
@@ -43,7 +44,7 @@ export function accessTokenCookieSource(
   app_id: string,
 ): PotentiallyValidTokenSource | null {
   const cookieName = AccessTokenCookieName(app_id);
-  const value = getCookie(c, cookieName);
+  const value = readCookie(c.req.header("cookie"), cookieName);
   if (!plausibleTokenCookie(value)) return null;
   let jwt: string | null = null;
   try {

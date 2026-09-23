@@ -54,6 +54,8 @@ describe("App service account API lifecycle", () => {
       })
         .its("status")
         .should("eq", 200);
+      // Each test signs in again from a clean cookie jar.
+      cy.clearCookies();
     });
   });
 
@@ -64,6 +66,7 @@ describe("App service account API lifecycle", () => {
   });
 
   after(() => {
+    cy.clearCookies();
     cy.create_and_login_as_superuser_via_request().then(() => {
       cy.request({ method: "DELETE", url: `/api/apps/${app_id}`, failOnStatusCode: false });
     });
