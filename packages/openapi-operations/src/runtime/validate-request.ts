@@ -66,6 +66,10 @@ export async function readRequestBody(
   const contentLength = c.req.header("content-length");
   const looksEmpty =
     actual === null && (contentLength === undefined || contentLength === "0");
+  const lenient = definition.lenientContentType === true;
+  // A body labelled text/plain (or not labelled at all) is re-parsed as the
+  // expected media type when the operation opted into leniency.
+  const relabelled = lenient && (actual === null || actual === "text/plain");
 
   if (looksEmpty) {
     if (!required) return undefined;
@@ -78,7 +82,11 @@ export async function readRequestBody(
     });
   }
 
-  if (actual !== expected && !(expected === "text/plain" && actual?.startsWith("text/"))) {
+  if (
+    actual !== expected &&
+    !relabelled &&
+    !(expected === "text/plain" && actual?.startsWith("text/"))
+  ) {
     throw new OperationError(415, {
       error: OPERATION_ERROR_CODES.unsupportedMediaType,
       message: `Expected a ${expected} request body but received ${actual ?? "none"}`,
@@ -88,14 +96,20 @@ export async function readRequestBody(
   try {
     switch (expected) {
       case "application/json":
-        return await c.req.json();
+        // c.req.json() trusts the declared media type; parse the raw text
+        // ourselves so relabelled text/plain bodies work too.
+        return JSON.parse(await c.req.text());
       case "application/x-www-form-urlencoded":
+        if (relabelled) {
+          return Object.fromEntries(new URLSearchParams(await c.req.text()));
+        }
+        return await c.req.parseBody({ all: true });
       case "multipart/form-data":
         return await c.req.parseBody({ all: true });
       case "text/plain":
         return await c.req.text();
       default:
-        if (expected.endsWith("+json")) return await c.req.json();
+        if (expected.endsWith("+json")) return JSON.parse(await c.req.text());
         return await c.req.text();
     }
   } catch (e: unknown) {
@@ -138,7 +152,7 @@ export async function validateRequest(
     ? ((await parseWith(headers as ZodObject, headersToObject(c), "headers")) as Record<string, unknown>)
     : EMPTY;
   let parsedBody: unknown = undefined;
-  if (body) {
+  if (body && body.documentOnly !== true) {
     const raw = await readRequestBody(c, body);
     if (raw !== undefined || (body.required ?? true)) {
       parsedBody = await parseWith(body.schema, raw, "body");

@@ -2,6 +2,7 @@ export { createOperationsApp } from "./create-operations-app";
 export type {
   CreateOperationsAppOptions,
   OpenApiDocumentRouteOptions,
+  OperationFailureInfo,
 } from "./create-operations-app";
 export { createOperationsAppFactory } from "./create-operations-app-factory";
 export type {

@@ -80,6 +80,27 @@ export const health = defineOperation({
 `defineOperationGroup({ pathPrefix, tags, operations })` applies a shared prefix and tags.
 Throw `new OperationError(status, { error, message })` from a handler to short-circuit.
 
+Schemas built by OTHER packages (e.g. `@schemavaults/auth-common`) may have been constructed
+before this package installed the `.openapi()` extension (zod v4 copies prototype methods onto
+each instance at construction time), in which case `schema.openapi(...)` throws at module load
+depending on import order. Use `withOpenApi(schema, refId?, metadata)` for them:
+
+```ts
+import { withOpenApi } from "@schemavaults/openapi-operations";
+export const Organization = withOpenApi(organizationDefinitionSchema, "Organization", { description: "..." });
+```
+
+Request bodies take two extra flags:
+
+- `lenientContentType: true` also parses bodies labelled `text/plain` (or carrying no
+  `Content-Type` at all) as the declared media type. Browsers send
+  `text/plain;charset=UTF-8` for `fetch(url, { body: JSON.stringify(x) })` without an
+  explicit header, so JSON endpoints with such callers need it.
+- `documentOnly: true` describes the body in the OpenAPI document but leaves the
+  request untouched: `ctx.body` is `undefined` and the handler reads `ctx.request`
+  itself. For endpoints whose parsing / error format is mandated by a protocol (the
+  OAuth 2.0 token endpoint's `{ error, error_description }`, ...).
+
 ### Auth schemes
 
 An `AuthSchemeDefinition` is a named OpenAPI security scheme plus docs metadata. Built-ins:
@@ -118,10 +139,14 @@ import { createOperationsApp, toNextRouteHandlers } from "@schemavaults/openapi-
 
 const app = createOperationsApp<{ dbh: Kysely<AuthDatabase> }, UserData>({
   operations: [getApp, health],
+  // Built per request BEFORE credentials are resolved (keep it cheap, open
+  // expensive resources lazily); released by disposeContext afterwards.
   context: async () => ({ dbh: await getDbh() }),
+  disposeContext: async ({ dbh }) => dbh.destroy(),
   authResolvers: {
-    // keyed by scheme name; return null when no credential for that scheme is present
-    "schemavaults-access-token": async (c) => {
+    // keyed by scheme name; return null when no credential for that scheme is
+    // present. The third argument is the per-request context.
+    "schemavaults-access-token": async (c, _scheme, { dbh }) => {
       const token = c.req.header("authorization")?.replace(/^Bearer /, "");
       if (!token) return null;
       const user = await verifyAccessToken(token); // throw OperationError(401, ...) if invalid
@@ -137,6 +162,8 @@ const app = createOperationsApp<{ dbh: Kysely<AuthDatabase> }, UserData>({
   // Served at GET /openapi.json. Pass a function to build it per request,
   // e.g. to set `servers` from the incoming Host / X-Forwarded-* headers.
   openapi: { document: openApiDocument },
+  // Unexpected failures: log / persist them before the generic 500 goes out.
+  onError: (error, c, { operation, context }) => reportException(error, operation.operationId),
 });
 
 // app/api/[[...route]]/route.ts
