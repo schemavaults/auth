@@ -96,25 +96,60 @@ bun run test --filter @schemavaults/openapi-docs-ui  # Run tests in openapi-docs
 
 ### OpenAPI operations & API docs
 
-`packages/openapi-operations` is the target shape for HTTP endpoints going forward (the auth server's existing
-`src/app/api/**/route.ts` handlers are NOT migrated yet — that is a separate, future effort). An operation is
-declared once with `defineOperation()` (method, `{param}` path, zod request/response schemas, and an `auth`
-block: accepted auth schemes + route guard + required scopes + organization role). From the same definitions
+`packages/openapi-operations` is the shape of every HTTP endpoint in this repo. An operation is declared once
+with `defineOperation()` (method, `{param}` path, zod request/response schemas, and an `auth` block: accepted
+auth schemes + route guard + required scopes + organization role). From the same definitions
 `buildOpenApiDocument()` emits an OpenAPI 3.1 document (with an `x-schemavaults-auth` extension carrying the
-permission details) and `createOperationsApp()` builds a Hono app that validates, authenticates and dispatches
-requests; `toNextRouteHandlers()` / `toVercelHandler()` mount it. `createOperationsAppFactory()` binds the shared
-resolvers/context plus the full catalogue once so each Next.js `route.ts` can mount its own small app
-(`api.app([operation])`, exporting `operationHttpMethods([operation])`) while one document covers all routes. Credential verification is pluggable per host
-via `authResolvers` keyed by scheme name, so third-party resource servers reuse the definitions.
+permission details) and `createOperationsApp()` builds a Hono app that builds a per-request context, resolves
+credentials, validates the request and dispatches it; `toNextRouteHandlers()` / `toVercelHandler()` mount it.
+Credential verification is pluggable per host via `authResolvers` keyed by scheme name (resolvers receive the
+per-request context), so third-party resource servers reuse the definitions. Request bodies support
+`lenientContentType` (parse `text/plain` / unlabelled JSON from callers that omit `Content-Type`) and
+`documentOnly` (describe the body, let the handler parse it: protocol endpoints with mandated error formats).
 
 `packages/openapi-docs-ui` renders such a document: `parseOpenApiDocument()` (framework-free model),
 `ApiDocsIndex` / `ApiOperationPage` components, and `createApiDocsPages()` from the `nextjs` sub-export which
 produces the `app/docs/page.tsx` + `app/docs/[slug]/page.tsx` pages (with `generateStaticParams`). See each
 package's README for usage.
 
+#### The auth server's API (`auth-server/src/lib/api/`)
+
+Every `auth-server/src/app/api/**/route.ts` is served by `@schemavaults/openapi-operations`:
+
+- Each route folder holds an `operation.ts` (one `defineOperation()` per HTTP method, `path` matching the folder:
+  `[app_id]` ↔ `{app_id}`) next to a `route.ts` that only does
+  `export const { GET, POST } = apiRouteHandlers([getFoo, createFoo])`. Large handlers stay in sibling files.
+- `src/lib/api/app.ts` — `apiRouteHandlers(operations, { preflight?, configure? })` builds one small Hono app
+  per route file (no global catch-all) with the shared auth resolvers, a lazily-opened per-request
+  `dbh`/`redis` context (`AuthServerRequestContext`, released after the response) and exception capture to the
+  ERRORS table. `preflight` answers CORS `OPTIONS` outside the document; `configure` adds Hono middleware
+  (e.g. per-client-app CORS headers on every response).
+- `src/lib/api/context.ts` — `defineOperation` bound to `AuthServerApiContext` + `UserData`
+  (`ctx.context.{db,dbh,redis,environment,debug}`, `ctx.auth.user`).
+- `src/lib/api/auth-schemes.ts` + `auth-resolvers/` — the credentials the API accepts: `sessionSchemes`
+  (auth server refresh-token cookie, access-token cookie, `Authorization: Bearer`) resolved through the server's
+  own `RouteGuardFactory` (revocation, disabled accounts, org roles), the per-client-app refresh cookie (whoami
+  only) and JWKS access assertions (resource-server endpoints). `requireAuth({ schemes: sessionSchemes })`
+  replaces the retired `withAuthenticatedApiRouteGuard`; `routeGuard: "admin"` replaces `withAdminApiRouteGuard`.
+  Standards endpoints (`/api/oidc/*`, login/register) stay `publicAccess()` and keep their protocol-mandated
+  parsing / error bodies (`documentOnly` bodies).
+- `src/lib/api/schemas.ts` (shared envelopes), `domain-schemas/<domain>.ts` (per-domain shared schemas),
+  `tags.ts` (exactly one `API_TAGS.*` per operation).
+- `src/lib/api/operations/<domain>.ts` — the catalogue. Route files do NOT import it (bundles stay small);
+  `src/lib/api/routes.test.ts` (`bun test`) enforces that every route file's operations are catalogued, every
+  catalogued operation has its route file, and the document lists exactly the catalogued paths. Adding an
+  endpoint = `operation.ts` + `route.ts` + one line in the domain catalogue. Production Docker images strip
+  `src/app/api/test` and empty `operations/test-environment.ts` (see `auth-server/Dockerfile`).
+- `GET /api/openapi.json` (`src/app/api/openapi.json/route.ts`, built by `src/lib/api/openapi-document.ts`)
+  and the `/docs` pages (`src/app/docs/`, via `@schemavaults/openapi-docs-ui`) are generated from the catalogue.
+  The E2E suite `tests/e2e-auth-tests/cypress/e2e/api_contract/` pins the document, the docs pages and the wire
+  contract of the API (credential sources, envelopes, text/plain JSON bodies).
+
 ### auth-server Structure
 - `src/app/` - Next.js App Directory
-- `src/app/api/` - Next.js API routes (auth endpoints, admin endpoints, token management)
+- `src/app/api/` - Next.js API routes (auth endpoints, admin endpoints, token management), each declared as an OpenAPI operation (see above)
+- `src/app/docs/` - Generated API reference pages (`/docs`, `/docs/[slug]`)
+- `src/lib/api/` - The OpenAPI operations runtime of the auth server (context, auth schemes/resolvers, catalogue, document)
 - `src/app/(client)/` - Client-side pages with route groups
 - `src/app/(client)/(authenticated)/` - Routes requiring authentication
   - Organization pages live under `/orgs`: `/orgs` (the current user's memberships + pending invitations, built from `MyOrganizationsStatsRow`/`MyOrganizationsCard`/`PendingInvitationsCard` in `@schemavaults/auth-ui`), `/orgs/[organization_id]` (org detail), and `/orgs/new`. The legacy `/org/*` paths are permanently redirected to `/orgs/*` by `redirects()` in `next.config.ts`; link to `/orgs/...` in new code. `/admin/organizations` lists every organization and shares the "Your organizations" stat card (`MyOrganizationsStatCard`, backed by `useMyOrganizations()`; SSR-preloaded via `listUserOrganizationMembershipDetails` in `src/lib/auth-db/organizations/`).

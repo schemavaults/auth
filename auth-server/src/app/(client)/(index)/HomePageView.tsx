@@ -13,7 +13,7 @@ import {
 import { Wordmark } from "@/components/Wordmark";
 import Logo from "@/components/Logo";
 import { ThemedPageBackground } from "@/components/ThemedPageBackground";
-import { HelpCircle } from "lucide-react";
+import { BookOpenText, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { AuthActionButtons } from "@schemavaults/auth-ui";
@@ -58,13 +58,21 @@ export default function HomePageView(): ReactElement {
         <CardContent>
           <AuthActionButtons />
         </CardContent>
-        <CardFooter className="justify-center">
+        <CardFooter className="justify-center gap-6">
           <Link
             href="/help"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5"
           >
             <HelpCircle className="h-4 w-4" />
             Help & FAQ
+          </Link>
+          <Link
+            href="/docs"
+            data-testid="api-docs-link"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+          >
+            <BookOpenText className="h-4 w-4" />
+            API reference
           </Link>
         </CardFooter>
       </Card>

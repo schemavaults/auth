@@ -1,8 +1,10 @@
 import "server-only";
 import type { ServerRuntime } from "next";
+import { apiRouteHandlers } from "@/lib/api/app";
+import { createOrganizationOperation, listAllOrganizations } from "./operation";
 
-export const runtime: ServerRuntime = "nodejs"
-export const dynamic = "force-dynamic"; // defaults to auto
+// GET, POST /api/organizations
+export const { GET, POST } = apiRouteHandlers([listAllOrganizations, createOrganizationOperation]);
 
-export { POST } from "./POST_create_handler";
-export { GET } from './GET_list_organizations_handler';
+export const runtime: ServerRuntime = "nodejs";
+export const dynamic = "force-dynamic";

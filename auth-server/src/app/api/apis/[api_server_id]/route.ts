@@ -1,10 +1,14 @@
 import "server-only";
-import { GET_api_server_handler as GET } from "./GET_api_server_handler";
-import { DELETE_api_server_handler as DELETE } from "./DELETE_api_server_handler";
-import { PATCH_api_server_handler as PATCH } from "./PATCH_api_server_handler";
 import type { ServerRuntime } from "next";
+import { apiRouteHandlers } from "@/lib/api/app";
+import { deleteApiServer, getApiServer, updateApiServerDynamicClientPolicy } from "./operation";
 
-export { GET, DELETE, PATCH };
+// GET, PATCH, DELETE /api/apis/{api_server_id}
+export const { GET, PATCH, DELETE } = apiRouteHandlers([
+  getApiServer,
+  updateApiServerDynamicClientPolicy,
+  deleteApiServer,
+]);
 
-export const dynamic = "force-dynamic";
 export const runtime: ServerRuntime = "nodejs";
+export const dynamic = "force-dynamic";

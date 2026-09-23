@@ -4,7 +4,7 @@
 // packages/auth-common/src/pkce/code_verifier.ts -> MAX_PKCE_CODE_VERIFIER_AGE).
 //
 // The guard lives in
-// auth-server/src/app/api/auth/session/generate-authorization-code/POST_generate_authorization_code.ts
+// auth-server/src/app/api/auth/session/generate-authorization-code/operation.ts
 // (the `if (isPkceChallengeExpired(body.challenge_time))` branch). It must
 // short-circuit BEFORE the authorization code is persisted, returning
 // HTTP 400 with `error_id: "pkce_challenge_expired"` so that the front-end

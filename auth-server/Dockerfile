@@ -139,7 +139,16 @@ FROM source AS source-prod
 
 WORKDIR /schemavaults/auth
 
-RUN rm -rf auth-server/src/app/api/test
+# The OpenAPI catalogue (src/lib/api/operations/) imports every route's
+# operation.ts, so the test-environment domain list is emptied together with
+# the route files it would import (keeping the build compiling and the test
+# operations out of /api/openapi.json and /docs).
+RUN rm -rf auth-server/src/app/api/test \
+  && printf '%s\n' \
+    'import type { AnyOperationDefinition } from "@schemavaults/openapi-operations";' \
+    '/** Stripped from production images: the /api/test routes do not exist here. */' \
+    'export const test_environmentOperations: readonly AnyOperationDefinition[] = [];' \
+    > auth-server/src/lib/api/operations/test-environment.ts
 
 ### Source variant: test (test routes retained for E2E suite)
 FROM source AS source-test

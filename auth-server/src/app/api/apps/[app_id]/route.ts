@@ -1,9 +1,10 @@
 import "server-only";
-import { GET_app_handler as GET } from "./GET_app_handler";
-import { DELETE_app_handler as DELETE } from "./DELETE_app_handler";
 import type { ServerRuntime } from "next";
+import { apiRouteHandlers } from "@/lib/api/app";
+import { deleteApp, getApp } from "./operation";
 
-export { GET, DELETE };
+// GET, DELETE /api/apps/{app_id}
+export const { GET, DELETE } = apiRouteHandlers([getApp, deleteApp]);
 
 export const dynamic = "force-dynamic";
 export const runtime: ServerRuntime = "nodejs";

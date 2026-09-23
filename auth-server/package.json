@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.44.2",
+  "version": "0.45.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -18,6 +18,8 @@
     "@schemavaults/auth-ui": "workspace:*",
     "@schemavaults/dbh": "0.12.0",
     "@schemavaults/jwt": "workspace:*",
+    "@schemavaults/openapi-docs-ui": "workspace:*",
+    "@schemavaults/openapi-operations": "workspace:*",
     "@schemavaults/send-email": "0.3.1",
     "@schemavaults/theme": "0.26.1",
     "@schemavaults/ui": "0.101.0",

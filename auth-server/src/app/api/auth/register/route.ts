@@ -1,86 +1,10 @@
-// /api/auth/register
-
 import "server-only";
-import { type ServerRuntime } from "next";
-import { type NextRequest, NextResponse } from "next/server";
-import type { AuthenticateResult } from "@schemavaults/auth-common";
-import handleRegister from "./handle_register";
-import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
-import shouldEnableDebug from "@/lib/should-enable-debug";
-import { withServerTrace } from "@/lib/withServerTrace";
-import { RedisCache } from "@/lib/redis";
-import {
-  extractClientIp,
-  checkRateLimit,
-  REGISTER_RATE_LIMIT,
-  rateLimitResponse,
-  ipRequiredResponse,
-} from "@/lib/rate-limit";
+import type { ServerRuntime } from "next";
+import { apiRouteHandlers } from "@/lib/api/app";
+import { register } from "./operation";
 
-export async function POST(
-  req: NextRequest,
-): Promise<NextResponse> {
-  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-
-  const ip = extractClientIp(req);
-  if (!ip) {
-    return ipRequiredResponse();
-  }
-
-  {
-    await using redis = RedisCache.createConnection();
-    const result = await checkRateLimit(redis.client, REGISTER_RATE_LIMIT, { ip });
-    if (!result.allowed) {
-      return rateLimitResponse(result);
-    }
-  }
-
-  // Ensure body is valid JSON
-  let body_json: unknown;
-  try {
-    body_json = await req.json();
-  } catch (e: unknown) {
-    if (environment === "development") {
-      console.error(e);
-    }
-    return NextResponse.json(
-      {
-        kind: "failure",
-        success: false,
-        message: "Invalid body JSON",
-      } satisfies AuthenticateResult,
-      {
-        status: 400,
-      },
-    );
-  }
-
-  const debug: boolean = shouldEnableDebug(environment);
-
-  try {
-    return await withServerTrace({
-      op_name: "POST /api/auth/register",
-      op_category: "subroutine",
-      event_id: crypto.randomUUID(),
-      callback: async () => await handleRegister({ body: body_json, req }, debug),
-    });
-  } catch (e: unknown) {
-    console.error(
-      "Internal server error attempting to handle /api/auth/register request",
-      e,
-    );
-    return NextResponse.json(
-      {
-        kind: "failure",
-        success: false,
-        message: "Internal server error",
-      } satisfies AuthenticateResult,
-      {
-        status: 500,
-      },
-    );
-  }
-}
+// POST /api/auth/register
+export const { POST } = apiRouteHandlers([register]);
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";

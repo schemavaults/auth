@@ -1,9 +1,14 @@
 import "server-only";
+import type { ServerRuntime } from "next";
+import { apiRouteHandlers } from "@/lib/api/app";
+import { generateJwksAccessKey, getJwksAccessKeyMetadata, regenerateJwksAccessKey } from "./operation";
 
-import GET from './GET_jwks_access_key_metadata';
-import POST from './POST_generate_jwks_access_key';
-import PUT from "./PUT_regenerate_jwks_access_key";
+// GET, POST, PUT /api/apis/{api_server_id}/jwks-access-key
+export const { GET, POST, PUT } = apiRouteHandlers([
+  getJwksAccessKeyMetadata,
+  generateJwksAccessKey,
+  regenerateJwksAccessKey,
+]);
 
-export { GET, POST, PUT };
-
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
