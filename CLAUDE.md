@@ -74,25 +74,34 @@ bun run test --filter @schemavaults/openapi-docs-ui  # Run tests in openapi-docs
 
 ### Package Dependency Hierarchy
 ```
-@schemavaults/app-definitions     ← Base types for apps/environments
-        ↓
-@schemavaults/auth-common         ← Shared auth types, middleware rules, PKCE, hashing
-        ↓
-@schemavaults/jwt                 ← JWT key management, token signing/verification (uses jose)
-        ↓
-@schemavaults/auth-server-sdk     ← Server-side middleware, route protection for resource servers
-@schemavaults/auth-client-sdk     ← Client SDK for API calls to auth server
-        ↓
-@schemavaults/auth-react-provider ← React hooks/context for auth state (uses SWR)
-        ↓
-@schemavaults/auth-ui             ← React components for auth flows (login, register, etc.)
+@schemavaults/app-definitions                         ← Base types for apps/environments
+  └─ @schemavaults/auth-common                        ← Shared auth types, middleware rules, PKCE, hashing
+       ├─ @schemavaults/jwt                           ← JWT key management, token signing/verification (uses jose)
+       │    └─ @schemavaults/auth-server-sdk          ← Server-side middleware, route protection for resource servers,
+       │                                                `auth-server-sdk codegen` CLI; its build bundles the codegen templates below
+       │         └─ @schemavaults/trpc-backend-init   ← tRPC router factory with access-token validation
+       │                                                (peerDeps: auth-server-sdk, app-definitions)
+       ├─ @schemavaults/auth-client-sdk               ← Client SDK for API calls to auth server (uses openid-client)
+       │    └─ @schemavaults/auth-react-provider      ← React hooks/context for auth state (uses SWR)
+       │         ├─ @schemavaults/auth-ui             ← React components for auth flows (login, register, etc.)
+       │         └─ @schemavaults/auth-resource-server-codegen-templates
+       │                                              ← Auth pages the codegen CLI writes into resource servers. Not published
+       │                                                on its own: auth-server-sdk's build copies them into its dist
+       └─ @schemavaults/openapi-operations            ← OpenAPI-representable HTTP operations (zod v4 schemas + auth schemes
+                                                        + handlers), OpenAPI 3.1 document generation
+                                                        (@asteasolutions/zod-to-openapi), Hono app factory with Vercel
+                                                        function / Next.js route handler adapters
 
-@schemavaults/openapi-operations  ← OpenAPI-representable HTTP operations (zod v4 schemas + auth schemes + handlers),
-                                    OpenAPI 3.1 document generation (@asteasolutions/zod-to-openapi), Hono app factory
-                                    with Vercel function / Next.js route handler adapters (depends on auth-common)
-@schemavaults/openapi-docs-ui     ← React components (on @schemavaults/ui) + Next.js `docs/` page factories to browse
-                                    an OpenAPI document: routes, permissions, auth details (standalone)
+@schemavaults/openapi-docs-ui                         ← React components (on @schemavaults/ui) + Next.js `docs/` page
+                                                        factories to browse an OpenAPI document: routes, permissions, auth
+                                                        details (standalone: no workspace dependencies)
 ```
+
+Each package depends (directly or transitively) on every package above it on its branch. The one edge the tree
+can't show is build-time only: `auth-server-sdk` copies `auth-resource-server-codegen-templates` into its published
+dist, so a template change ships through `auth-server-sdk`. The `auth-server` app consumes every package except
+`trpc-backend-init` and the codegen templates. The exact per-package edges, and which version bumps cascade to which
+dependents, are in the `commit-changes` skill.
 
 ### OpenAPI operations & API docs
 
