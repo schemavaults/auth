@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import { Badge, cn } from "@schemavaults/ui";
 import type { ApiDocsModel } from "@/model/types";
+import { DocsText } from "./DocsText";
 
 export interface ApiDocsHeaderProps {
   model: Pick<ApiDocsModel, "title" | "version" | "description" | "servers" | "openapiVersion">;
@@ -13,13 +14,17 @@ export interface ApiDocsHeaderProps {
 
 export function ApiDocsHeader({ model, openApiDocumentHref, className }: ApiDocsHeaderProps): ReactElement {
   return (
-    <header className={cn("flex flex-col gap-2", className)}>
+    <header className={cn("flex flex-col gap-3", className)}>
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">{model.title}</h1>
         {model.version ? <Badge variant="secondary" className="font-mono font-normal">v{model.version}</Badge> : null}
         <Badge variant="outline" className="font-normal">OpenAPI {model.openapiVersion}</Badge>
       </div>
-      {model.description ? <p className="max-w-prose text-sm text-muted-foreground">{model.description}</p> : null}
+      {model.description ? (
+        <p className="max-w-prose whitespace-pre-line text-sm text-muted-foreground">
+          <DocsText text={model.description} />
+        </p>
+      ) : null}
       {model.servers.length > 0 || openApiDocumentHref ? (
         <dl className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
           {model.servers.map((server) => (

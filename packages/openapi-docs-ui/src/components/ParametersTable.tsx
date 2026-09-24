@@ -12,6 +12,7 @@ import {
 } from "@schemavaults/ui";
 import type { ApiDocsModel, ApiDocsParameter, ApiDocsParameterLocation } from "@/model/types";
 import { schemaTypeLabel } from "@/model/schema-utils";
+import { DocsText } from "./DocsText";
 
 export interface ParametersTableProps {
   parameters: readonly ApiDocsParameter[];
@@ -68,7 +69,7 @@ export function ParametersTable({ parameters, schemas, location }: ParametersTab
                   {schemaTypeLabel(parameter.schema, schemas)}
                 </TableCell>
                 <TableCell className="align-top text-xs">
-                  {description ? <p>{description}</p> : null}
+                  {description ? <p><DocsText text={description} /></p> : null}
                   {enumValues && !schemaTypeLabel(parameter.schema, schemas).includes("|") ? (
                     <p className="mt-1 flex flex-wrap gap-1">
                       {enumValues.map((value) => (

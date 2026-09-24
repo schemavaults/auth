@@ -18,6 +18,7 @@ import {
 import type { ApiDocsModel, ApiDocsResponse } from "@/model/types";
 import { schemaTypeLabel } from "@/model/schema-utils";
 import { MediaTypeSection } from "./RequestBodySection";
+import { DocsText } from "./DocsText";
 
 export interface ResponsesListProps {
   responses: readonly ApiDocsResponse[];
@@ -43,16 +44,18 @@ export function ResponsesList({ responses, schemas, showExample }: ResponsesList
   return (
     <Accordion type="multiple" defaultValue={defaultOpen} variant="bordered">
       {responses.map((response) => (
-        <AccordionItem key={response.status} value={response.status}>
+        <AccordionItem key={response.status} value={response.status} className="px-4 last:border-b-0">
           <AccordionTrigger>
-            <span className="flex flex-wrap items-center gap-2 text-left">
-              <span className={cn("font-mono text-sm font-semibold", responseStatusTone(response.status))}>
+            <span className="flex items-baseline gap-3 pr-3 text-left">
+              <span className={cn("shrink-0 font-mono text-sm font-semibold", responseStatusTone(response.status))}>
                 {response.status}
               </span>
-              <span className="text-sm">{response.description}</span>
-              {response.content.length === 0 ? (
-                <Badge variant="outline" className="font-normal">no body</Badge>
-              ) : null}
+              <span className="text-sm">
+                <DocsText text={response.description} />
+                {response.content.length === 0 ? (
+                  <Badge variant="outline" className="ml-2 font-normal">no body</Badge>
+                ) : null}
+              </span>
             </span>
           </AccordionTrigger>
           <AccordionContent>
@@ -74,7 +77,9 @@ export function ResponsesList({ responses, schemas, showExample }: ResponsesList
                           <TableCell className="font-mono text-xs text-muted-foreground">
                             {schemaTypeLabel(header.schema, schemas)}
                           </TableCell>
-                          <TableCell className="text-xs">{header.description ?? ""}</TableCell>
+                          <TableCell className="text-xs">
+                            {header.description ? <DocsText text={header.description} /> : null}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

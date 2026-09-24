@@ -5,6 +5,7 @@ import { Badge, JsonViewer, type JsonValue } from "@schemavaults/ui";
 import type { ApiDocsMediaType, ApiDocsModel, ApiDocsRequestBody } from "@/model/types";
 import { exampleFromSchema } from "@/model/schema-utils";
 import { SchemaViewer } from "./SchemaViewer";
+import { DocsText } from "./DocsText";
 
 export interface MediaTypeSectionProps {
   mediaType: ApiDocsMediaType;
@@ -55,7 +56,12 @@ export function RequestBodySection({ requestBody, schemas, showExample }: Reques
     <div className="flex flex-col gap-3">
       <p className="text-xs text-muted-foreground">
         {requestBody.required ? "Required" : "Optional"}
-        {requestBody.description ? ` — ${requestBody.description}` : ""}
+        {requestBody.description ? (
+          <>
+            {" — "}
+            <DocsText text={requestBody.description} />
+          </>
+        ) : null}
       </p>
       {requestBody.content.map((mediaType) => (
         <MediaTypeSection

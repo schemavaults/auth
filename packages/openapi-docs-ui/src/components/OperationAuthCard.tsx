@@ -17,6 +17,8 @@ import {
 import type { ApiDocsAuth, ApiDocsSecurityScheme } from "@/model/types";
 import { describeSecuritySchemeTransport, securitySchemeAnchorId } from "./ApiSecuritySchemesCard";
 import { OperationAuthBadges } from "./OperationAuthBadges";
+import { DocsText } from "./DocsText";
+import { DOCS_CARD_CONTENT_CLASS, DOCS_CARD_HEADER_CLASS } from "./card-padding";
 
 export interface OperationAuthCardProps {
   auth: ApiDocsAuth;
@@ -42,14 +44,14 @@ export function OperationAuthCard({ auth, schemes, schemesHref, className }: Ope
 
   return (
     <Card className={cn("w-full", className)}>
-      <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
+      <CardHeader className={DOCS_CARD_HEADER_CLASS}>
+        <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
           Authentication &amp; permissions
           <OperationAuthBadges auth={auth} detailed={false} />
         </CardTitle>
         <CardDescription>{routeGuardLabel(auth)}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className={DOCS_CARD_CONTENT_CLASS}>
         <DescriptionList layout="responsive" size="sm" divided>
           <DescriptionItem>
             <DescriptionTerm>Accepted credentials</DescriptionTerm>
@@ -135,7 +137,9 @@ export function OperationAuthCard({ auth, schemes, schemesHref, className }: Ope
           {auth.notes ? (
             <DescriptionItem>
               <DescriptionTerm>Notes</DescriptionTerm>
-              <DescriptionDetails>{auth.notes}</DescriptionDetails>
+              <DescriptionDetails>
+                <DocsText text={auth.notes} />
+              </DescriptionDetails>
             </DescriptionItem>
           ) : null}
         </DescriptionList>

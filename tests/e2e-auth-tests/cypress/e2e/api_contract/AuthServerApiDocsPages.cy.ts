@@ -22,7 +22,7 @@ describe("API reference pages (/docs)", () => {
     cy.contains("a", "/api/openapi.json").should("have.attr", "href", "/api/openapi.json");
 
     // Security schemes and tag groups from the document.
-    cy.contains("SchemaVaults session (refresh token cookie)").should("exist");
+    cy.contains("Auth server session (refresh token cookie)").should("exist");
     cy.contains("Authentication").should("exist");
     cy.contains("Administration").should("exist");
     cy.contains("Client applications").should("exist");

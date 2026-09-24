@@ -42,12 +42,12 @@ export const OidcTokenRequest = z
     }),
     resource: z.string().optional().openapi({
       description:
-        "RFC 8707 resource indicator (SchemaVaults extension use): the URL of a registered API server; the `access_token` is then minted for that audience instead of the reserved userinfo audience. At most one per request.",
+        "RFC 8707 resource indicator, as extended by @schemavaults/auth-server: the URL of a registered API server; the `access_token` is then minted for that audience instead of the reserved userinfo audience. At most one per request.",
       example: "https://api.example.com",
     }),
     refresh_token_delivery: oidcRefreshTokenDeliveryModeSchema.optional().openapi({
       description:
-        "SchemaVaults extension: `http_only_cookie` sets the refresh token as the HTTP-only `refresh_token_<client_id>` cookie (plus a JS-readable expiry marker) and omits `refresh_token` from the body. Default `inline`.",
+        "@schemavaults/auth-server extension: `http_only_cookie` sets the refresh token as the HTTP-only `refresh_token_<client_id>` cookie (plus a JS-readable expiry marker) and omits `refresh_token` from the body. Default `inline`.",
     }),
   })
   .openapi("OidcTokenRequest");
@@ -61,7 +61,7 @@ export const OidcTokenResponse = z
       description: "Omitted for `client_credentials` and when `refresh_token_delivery=http_only_cookie`.",
     }),
     refresh_token_expires_in: z.number().int().optional().openapi({
-      description: "SchemaVaults extension: seconds until the (possibly cookie-delivered) refresh token expires.",
+      description: "@schemavaults/auth-server extension: seconds until the (possibly cookie-delivered) refresh token expires.",
     }),
     scope: z.string().optional().openapi({ description: "Granted scope; omitted when nothing was granted (plain OAuth 2.1 grant)." }),
     id_token: z.string().optional().openapi({
@@ -77,7 +77,7 @@ export const postOidcToken = defineOperation({
   summary: "Token endpoint",
   description:
     "The OAuth 2.0 / OIDC token endpoint (RFC 6749 §3.2, form-encoded). Three grants: `authorization_code` (PKCE `code_verifier` required, `redirect_uri` must match; mints an id_token when the grant's scope includes `openid`), `refresh_token` (rotates the refresh token; the previous one is revoked), and `client_credentials` (confidential clients only; mints a machine-to-machine access token for the app's service account, no refresh token). " +
-    "SchemaVaults extensions: the RFC 8707 `resource` parameter mints the access token for a registered API server, and `refresh_token_delivery=http_only_cookie` delivers the refresh token as an HTTP-only cookie (`Set-Cookie`) instead of in the body; every response with a refresh token carries `refresh_token_expires_in`. " +
+    "@schemavaults/auth-server extensions: the RFC 8707 `resource` parameter mints the access token for a registered API server, and `refresh_token_delivery=http_only_cookie` delivers the refresh token as an HTTP-only cookie (`Set-Cookie`) instead of in the body; every response with a refresh token carries `refresh_token_expires_in`. " +
     "Browser callers (with an `Origin` header) must come from one of the client app's registered origins and then receive a credentialed CORS allowance; other callers get `Access-Control-Allow-Origin: *`. `refresh_token` and `client_credentials` requests are rate limited per IP. Responses carry `Cache-Control: no-store`.",
   tags: [API_TAGS.oidc],
   auth: publicAccess(

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createApiDocsPages } from "./index";
+import { apiReferenceTitle, createApiDocsPages } from "./index";
 
 const document = {
   openapi: "3.1.0",
@@ -64,8 +64,14 @@ describe("createApiDocsPages", () => {
     ).rejects.toThrow();
   });
 
+  test("apiReferenceTitle does not double a trailing API", () => {
+    expect(apiReferenceTitle("Factory API")).toBe("Factory API reference");
+    expect(apiReferenceTitle("Acme Identity")).toBe("Acme Identity API reference");
+    expect(apiReferenceTitle("Rapid")).toBe("Rapid API reference");
+  });
+
   test("metadata helpers", async () => {
-    expect(await pages.generateIndexMetadata()).toEqual({ title: "Factory API API reference" });
+    expect(await pages.generateIndexMetadata()).toEqual({ title: "Factory API reference" });
     expect(
       await pages.generateOperationMetadata({ params: Promise.resolve({ slug: "get-api-health" }) }),
     ).toEqual({ title: "GET /api/health | Factory API", description: "Health" });

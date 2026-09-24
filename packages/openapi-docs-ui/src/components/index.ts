@@ -24,3 +24,5 @@ export { ResponsesList, responseStatusTone } from "./ResponsesList";
 export type { ResponsesListProps } from "./ResponsesList";
 export { CurlSnippet, buildCurlCommand } from "./CurlSnippet";
 export type { CurlSnippetProps } from "./CurlSnippet";
+export { DocsText } from "./DocsText";
+export type { DocsTextProps } from "./DocsText";

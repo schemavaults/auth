@@ -25,6 +25,8 @@ import { PARAMETER_LOCATION_LABELS, ParametersTable } from "./ParametersTable";
 import { RequestBodySection } from "./RequestBodySection";
 import { ResponsesList } from "./ResponsesList";
 import { CurlSnippet } from "./CurlSnippet";
+import { DocsText } from "./DocsText";
+import { DOCS_CARD_CONTENT_CLASS, DOCS_CARD_HEADER_CLASS } from "./card-padding";
 
 export interface ApiOperationPageProps {
   model: ApiDocsModel;
@@ -104,7 +106,9 @@ export function ApiOperationPage({
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">{operation.summary}</h1>
         {operation.description ? (
-          <p className="max-w-prose whitespace-pre-line text-sm text-muted-foreground">{operation.description}</p>
+          <p className="max-w-prose whitespace-pre-line text-sm text-muted-foreground">
+            <DocsText text={operation.description} />
+          </p>
         ) : null}
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           {operation.operationId ? (
@@ -152,10 +156,10 @@ export function ApiOperationPage({
 
       {related.length > 0 ? (
         <Card>
-          <CardHeader>
+          <CardHeader className={DOCS_CARD_HEADER_CLASS}>
             <CardTitle className="text-base">Other methods on this path</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className={DOCS_CARD_CONTENT_CLASS}>
             <ul className="flex flex-wrap gap-2">
               {related.map((candidate) => (
                 <li key={candidate.slug}>

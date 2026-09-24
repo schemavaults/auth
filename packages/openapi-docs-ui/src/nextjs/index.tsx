@@ -72,6 +72,12 @@ function isModel(value: unknown): value is ApiDocsModel {
   );
 }
 
+/** "Acme" → "Acme API reference"; "Acme API" → "Acme API reference" (no doubled "API"). */
+export function apiReferenceTitle(documentTitle: string): string {
+  const title = documentTitle.trim();
+  return /\bAPI$/i.test(title) ? `${title} reference` : `${title} API reference`;
+}
+
 /**
  * Builds the Next.js App Router pages for a `docs/` directory:
  *
@@ -157,7 +163,7 @@ export function createApiDocsPages(options: CreateApiDocsPagesOptions): ApiDocsP
     async generateIndexMetadata(): Promise<ApiDocsPageMetadata> {
       const model = await loadModel();
       return {
-        title: `${model.title} API reference`,
+        title: apiReferenceTitle(model.title),
         ...(model.description !== undefined ? { description: model.description } : {}),
       };
     },
