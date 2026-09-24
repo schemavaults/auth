@@ -1,7 +1,13 @@
 import type { z, ZodObject, ZodType } from "zod";
 import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
 import { type HttpMethod, HTTP_METHODS_WITH_REQUEST_BODY, isHttpMethod } from "./http-method";
-import type { OperationAuth, PublicOperationAuth } from "./auth-scheme";
+import type {
+  AllSchemesResolveUser,
+  AuthSchemeDefinition,
+  OperationAuth,
+  PublicOperationAuth,
+  RequiredOperationAuth,
+} from "./auth-scheme";
 import { extractPathParameterNames, isOpenApiPath } from "./openapi/path-format";
 
 // ---------------------------------------------------------------------------
@@ -144,6 +150,26 @@ export interface AuthPrincipal<TUser = unknown> {
   ) => Promise<OrganizationMembershipRoleType | false>;
 }
 
+/** An {@link AuthPrincipal} that is known to carry a user (`principal: "user"` schemes). */
+export interface UserAuthPrincipal<TUser = unknown> extends AuthPrincipal<TUser> {
+  readonly user: TUser;
+}
+
+/**
+ * The `ctx.auth` type of an operation: `null` for public operations, a
+ * {@link UserAuthPrincipal} when every accepted scheme declares
+ * `principal: "user"`, and a plain {@link AuthPrincipal} (nullable `user`)
+ * otherwise.
+ */
+export type ResolvedAuthPrincipal<TUser, TAuth extends OperationAuth> =
+  TAuth extends PublicOperationAuth
+    ? null
+    : TAuth extends RequiredOperationAuth<infer TSchemes extends readonly AuthSchemeDefinition[]>
+      ? AllSchemesResolveUser<TSchemes> extends true
+        ? UserAuthPrincipal<TUser>
+        : AuthPrincipal<TUser>
+      : AuthPrincipal<TUser>;
+
 // ---------------------------------------------------------------------------
 // Handler context
 // ---------------------------------------------------------------------------
@@ -222,7 +248,7 @@ export interface OperationDefinition<
       InferBody<TBody>,
       TResponses,
       TContext,
-      TAuth extends PublicOperationAuth ? null : AuthPrincipal<TUser>
+      ResolvedAuthPrincipal<TUser, TAuth>
     >,
   ): OperationHandlerResult;
 }

@@ -13,8 +13,12 @@ export const accessTokenBearerScheme = schemaVaultsAccessTokenBearerScheme;
  * is only known from the environment at request time, so the documented
  * name uses the placeholder and the resolver computes the real one.
  */
-export const accessTokenCookieScheme: AuthSchemeDefinition<"schemavaults-access-token-cookie"> =
+export const accessTokenCookieScheme: AuthSchemeDefinition<"schemavaults-access-token-cookie", "user"> =
   schemaVaultsAccessTokenCookieScheme("access_token_<api_server_id>");
 
-/** Either credential is accepted by the user-facing operations. */
+/**
+ * Either credential is accepted by the user-facing operations. Both are
+ * `principal: "user"` schemes, so handlers of operations accepting only
+ * these get `ctx.auth.user` typed as `UserData` (never null).
+ */
 export const userCredentialSchemes = [accessTokenBearerScheme, accessTokenCookieScheme] as const;

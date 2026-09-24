@@ -57,6 +57,26 @@ export class OperationError extends Error {
   }
 }
 
+/**
+ * Whether `error` is an {@link OperationError}: an instance of this
+ * package's class, or a structurally identical one from another copy of
+ * the package (isolated installs can load it twice), so a resolver or
+ * handler throwing from a different copy still short-circuits as intended.
+ */
+export function isOperationError(error: unknown): error is OperationError {
+  if (error instanceof OperationError) return true;
+  if (typeof error !== "object" || error === null) return false;
+  const candidate = error as Partial<OperationError> & { name?: unknown };
+  return (
+    candidate.name === "OperationError" &&
+    typeof candidate.status === "number" &&
+    typeof candidate.body === "object" &&
+    candidate.body !== null &&
+    candidate.body.success === false &&
+    typeof candidate.toResponse === "function"
+  );
+}
+
 export function jsonResponse(
   status: number,
   body: unknown,

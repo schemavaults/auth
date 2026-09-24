@@ -1,6 +1,6 @@
 import type { Context } from "hono";
-import type { AuthSchemeDefinition, OperationAuth } from "../auth-scheme";
-import type { AnyOperationDefinition, AuthPrincipal } from "../operation";
+import { schemeResolvesUser, type AuthSchemeDefinition, type OperationAuth } from "../auth-scheme";
+import type { AnyOperationDefinition, AuthPrincipal, UserAuthPrincipal } from "../operation";
 import { OPERATION_ERROR_CODES, OperationError } from "./errors";
 
 /**
@@ -45,6 +45,36 @@ function challengeHeader(schemes: readonly AuthSchemeDefinition[]): Record<strin
   return challenges.length > 0 ? { "WWW-Authenticate": challenges.join(", ") } : {};
 }
 
+/**
+ * Narrows a principal to one carrying a user, failing closed with a 401
+ * when it does not (or when the operation is public and `auth` is null).
+ * For handlers whose operations accept schemes without `principal: "user"`
+ * but which still need a signed-in user.
+ */
+export function requireUser<TUser>(
+  auth: AuthPrincipal<TUser> | null | undefined,
+): TUser {
+  if (auth?.user === null || auth?.user === undefined) {
+    throw new OperationError(401, {
+      error: OPERATION_ERROR_CODES.unauthorized,
+      message: "This operation requires a signed-in user",
+    });
+  }
+  return auth.user;
+}
+
+function assertUserPrincipal<TUser>(
+  scheme: AuthSchemeDefinition,
+  principal: AuthPrincipal<TUser>,
+): asserts principal is UserAuthPrincipal<TUser> {
+  if (schemeResolvesUser(scheme) && (principal.user === null || principal.user === undefined)) {
+    throw new OperationError(401, {
+      error: OPERATION_ERROR_CODES.unauthorized,
+      message: `The credential presented for "${scheme.name}" does not identify a user`,
+    });
+  }
+}
+
 export function grantedScopes(principal: AuthPrincipal): string[] {
   if (typeof principal.scope !== "string") return [];
   return principal.scope.split(" ").filter((scope) => scope.length > 0);
@@ -74,7 +104,10 @@ export async function resolveAuth<TUser, TContext = unknown>(
     const resolver = resolvers[scheme.name];
     if (!resolver) continue;
     principal = await resolver(c, scheme, context);
-    if (principal) break;
+    if (principal) {
+      assertUserPrincipal(scheme, principal);
+      break;
+    }
   }
   if (!principal) {
     throw new OperationError(

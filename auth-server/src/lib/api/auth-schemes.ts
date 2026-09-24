@@ -20,11 +20,11 @@ import {
 const AUTH_SERVER_APP_ID_PLACEHOLDER = "<auth_server_app_id>";
 
 /** The HTTP-only refresh token cookie set by login: the browser session. */
-export const sessionCookieScheme: AuthSchemeDefinition<"schemavaults-refresh-token-cookie"> =
+export const sessionCookieScheme: AuthSchemeDefinition<"schemavaults-refresh-token-cookie", "user"> =
   schemaVaultsRefreshTokenCookieScheme(RefreshTokenCookieName(AUTH_SERVER_APP_ID_PLACEHOLDER));
 
 /** The auth server's own first-party access token cookie (`{ token, exp }` JSON). */
-export const accessTokenCookieScheme: AuthSchemeDefinition<"schemavaults-access-token-cookie"> =
+export const accessTokenCookieScheme: AuthSchemeDefinition<"schemavaults-access-token-cookie", "user"> =
   schemaVaultsAccessTokenCookieScheme(AccessTokenCookieName(AUTH_SERVER_APP_ID_PLACEHOLDER));
 
 /** `Authorization: Bearer <access token>` minted for the auth server audience. */
@@ -37,6 +37,7 @@ export const accessTokenBearerScheme = schemaVaultsAccessTokenBearerScheme;
  */
 export const clientAppSessionCookieScheme = defineAuthScheme({
   name: "schemavaults-client-app-refresh-token-cookie",
+  principal: "user",
   title: "Client app session (refresh token cookie)",
   description:
     "The HTTP-only refresh token cookie `refresh_token_<client_app_id>` issued to a client application during the OAuth2 grant; `client_app_id` is the path parameter of the operation.",
@@ -71,7 +72,8 @@ export const jwksAccessAssertionScheme = defineAuthScheme({
 /**
  * The credentials every session-guarded operation accepts, in the order
  * they are tried: the browser session first, then the access token cookie,
- * then a bearer access token.
+ * then a bearer access token. All three are `principal: "user"` schemes,
+ * so `ctx.auth.user` is a `UserData` (never null) in their handlers.
  */
 export const sessionSchemes = [
   sessionCookieScheme,

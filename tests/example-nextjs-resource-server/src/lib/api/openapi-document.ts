@@ -9,7 +9,10 @@ export const OPENAPI_DOCUMENT_PATH = "/api/openapi.json" as const;
 /**
  * The OpenAPI 3.1 document describing every operation in the catalogue.
  * Served at GET /api/openapi.json by its own route file and rendered by the
- * /docs pages. Built once at module load: the definitions are static.
+ * /docs pages. Built once at module load: the definitions are static. The
+ * responses the runtime produces on its own (400 validation, 401 / 403 on
+ * protected operations, 415, 500) are documented too, with the
+ * `OperationError` envelope schema.
  */
 export const openApiDocument: ReturnType<typeof buildOpenApiDocument> = buildOpenApiDocument({
   info: {
@@ -26,4 +29,5 @@ export const openApiDocument: ReturnType<typeof buildOpenApiDocument> = buildOpe
     { name: "Organizations", description: "Operations gated on organization membership" },
   ],
   operations,
+  documentRuntimeResponses: true,
 });

@@ -43,6 +43,10 @@ export {
   RefreshTokenCookieName,
   RefreshTokenExpiryCookieName,
 } from "./RefreshTokenCookieNames";
+export {
+  AccessTokenCookieName,
+  AccessTokenExpiryCookieName,
+} from "./AccessTokenCookieNames";
 
 export { default as getStringByteSize } from "./getStringByteSize";
 

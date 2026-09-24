@@ -22,6 +22,7 @@ import {
   SCHEMAVAULTS_SCHEME_TITLE_EXTENSION,
   toSchemaVaultsAuthExtension,
 } from "./extensions";
+import { withRuntimeErrorResponses } from "./runtime-responses";
 
 export interface BuildOpenApiDocumentOptions {
   readonly info: InfoObject;
@@ -34,6 +35,14 @@ export interface BuildOpenApiDocumentOptions {
   readonly additionalAuthSchemes?: readonly AuthSchemeDefinition[];
   /** Document-level vendor extensions. */
   readonly extensions?: Readonly<Record<`x-${string}`, unknown>>;
+  /**
+   * Also document the responses the runtime produces on its own (400
+   * validation, 401 / 403 on protected operations, 415 on operations with
+   * a validated body, 500), each with the `OperationError` envelope
+   * schema; see `runtimeErrorResponses()`. A response an operation
+   * declares itself takes precedence for the same status. Default false.
+   */
+  readonly documentRuntimeResponses?: boolean;
 }
 
 /** Every distinct auth scheme referenced by the operations (first definition wins per name). */
@@ -138,11 +147,14 @@ export function toRouteConfig(operation: AnyOperationDefinition): RouteConfig {
 export function buildOpenApiDocument(options: BuildOpenApiDocumentOptions): OpenAPIObject {
   assertUniqueOperations(options.operations);
   const registry = new OpenAPIRegistry();
+  const operations = options.documentRuntimeResponses
+    ? options.operations.map(withRuntimeErrorResponses)
+    : options.operations;
 
-  for (const scheme of collectAuthSchemes(options.operations, options.additionalAuthSchemes)) {
+  for (const scheme of collectAuthSchemes(operations, options.additionalAuthSchemes)) {
     registry.registerComponent("securitySchemes", scheme.name, toSecuritySchemeComponent(scheme));
   }
-  for (const operation of options.operations) {
+  for (const operation of operations) {
     registry.registerPath(toRouteConfig(operation));
   }
 
