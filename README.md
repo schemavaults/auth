@@ -5,14 +5,17 @@ Welcome to the monorepo for the [SchemaVaults Auth Platform](https://auth.schema
 The auth platform code is within a [Turborepo](https://turborepo.com/) repository using Bun workspaces for package installation.
 
 ### The `packages` directory
-- [@schemavaults/app-definitions](./packages/app-definitions)
-- [@schemavaults/auth-client-sdk](./packages/auth-client-sdk)
-- [@schemavaults/auth-common](./packages/auth-common)
-- [@schemavaults/auth-react-provider](./packages/auth-react-provider)
-- [@schemavaults/auth-server-sdk](./packages/auth-server-sdk)
-- [@schemavaults/auth-ui](./packages/auth-ui)
-- [@schemavaults/jwt](./packages/jwt)
-- [@schemavaults/trpc-backend-init](./packages/trpc-backend-init)
+- [@schemavaults/app-definitions](./packages/app-definitions) - base types for client apps, API servers, and environments
+- [@schemavaults/auth-client-sdk](./packages/auth-client-sdk) - TypeScript SDK for calling the auth server (OIDC code/refresh flows via `openid-client`)
+- [@schemavaults/auth-common](./packages/auth-common) - shared auth types, middleware rules, PKCE, and hashing helpers
+- [@schemavaults/auth-react-provider](./packages/auth-react-provider) - React hooks/context for auth state, built on `auth-client-sdk`
+- [@schemavaults/auth-resource-server-codegen-templates](./packages/auth-resource-server-codegen-templates) - auth pages (login, register, logout, authorize, error) and `auth-provider.tsx` that the `auth-server-sdk codegen` CLI generates into Next.js resource-server apps (bundled into `auth-server-sdk`, not published on its own)
+- [@schemavaults/auth-server-sdk](./packages/auth-server-sdk) - middleware and route guards for the auth server and resource servers, plus the `auth-server-sdk` codegen CLI
+- [@schemavaults/auth-ui](./packages/auth-ui) - React components for auth flows and auth datatypes (users, organizations, apps, APIs)
+- [@schemavaults/jwt](./packages/jwt) - JWT key management and token signing/verification
+- [@schemavaults/openapi-docs-ui](./packages/openapi-docs-ui) - React components and Next.js `docs/` page factories for browsing an OpenAPI document
+- [@schemavaults/openapi-operations](./packages/openapi-operations) - OpenAPI-representable HTTP operations (zod schemas + auth schemes + handlers), OpenAPI 3.1 document generation, and a Hono app factory for Vercel functions / Next.js route handlers
+- [@schemavaults/trpc-backend-init](./packages/trpc-backend-init) - tRPC server-side router factory with SchemaVaults Auth access-token validation
 
 ### The `auth-server` application directory
 In the [`auth-server`](./auth-server) directory is the code for the actual authentication/authorization server, which makes use of the packages in the [`packages`](./packages) directory.
@@ -21,9 +24,9 @@ In the [`auth-server`](./auth-server) directory is the code for the actual authe
 The [`auth-postgres-db`](./auth-postgres-db) directory contains utilities for launching/managing the dev/test versions of the Postgres database that `@schemavaults/auth-server` uses.
 
 ### The `tests` directory
-- [@schemavaults/cypress-e2e-auth-tests-helper-commands](./packages/cypress-e2e-auth-tests-helper-commands)
-- [@schemavaults/e2e-auth-tests](./packages/e2e-auth-tests)
-- [@schemavaults/example-nextjs-resource-server](./packages/example-nextjs-resource-server)
+- [@schemavaults/cypress-e2e-auth-tests-helper-commands](./tests/cypress-e2e-auth-tests-helper-commands) - reusable Cypress commands for the E2E suite
+- [@schemavaults/e2e-auth-tests](./tests/e2e-auth-tests) - the Cypress E2E test suite
+- [@schemavaults/example-nextjs-resource-server](./tests/example-nextjs-resource-server) - example Next.js resource server that logs in via the OAuth2 PKCE flow and trial-runs `openapi-operations` / `openapi-docs-ui`
 
 ## Development
 See the [@schemavaults/auth-server README.md](./auth-server/README.md) for instructions on how to start the development server.
