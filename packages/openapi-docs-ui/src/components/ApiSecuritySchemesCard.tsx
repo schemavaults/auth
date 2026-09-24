@@ -11,6 +11,8 @@ import {
   cn,
 } from "@schemavaults/ui";
 import type { ApiDocsSecurityScheme } from "@/model/types";
+import { DocsText } from "./DocsText";
+import { DOCS_CARD_CONTENT_CLASS, DOCS_CARD_HEADER_CLASS } from "./card-padding";
 
 export interface ApiSecuritySchemesCardProps {
   schemes: readonly ApiDocsSecurityScheme[];
@@ -56,11 +58,11 @@ export function ApiSecuritySchemesCard({
   if (visible.length === 0) return null;
   return (
     <Card className={cn("w-full", className)}>
-      <CardHeader>
+      <CardHeader className={DOCS_CARD_HEADER_CLASS}>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className={DOCS_CARD_CONTENT_CLASS}>
         <ul className="flex flex-col divide-y">
           {visible.map((scheme) => (
             <li key={scheme.name} id={securitySchemeAnchorId(scheme.name)} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
@@ -73,7 +75,7 @@ export function ApiSecuritySchemesCard({
                 {describeSecuritySchemeTransport(scheme)}
               </code>
               {scheme.description ? (
-                <p className="text-sm text-muted-foreground">{scheme.description}</p>
+                <p className="text-sm text-muted-foreground"><DocsText text={scheme.description} /></p>
               ) : null}
               {scheme.challenge ? (
                 <p className="text-xs text-muted-foreground">

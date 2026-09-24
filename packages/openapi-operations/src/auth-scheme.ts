@@ -132,19 +132,22 @@ export function isPublicOperationAuth(auth: OperationAuth): auth is PublicOperat
 // ---------------------------------------------------------------------------
 // Built-in SchemaVaults schemes
 // ---------------------------------------------------------------------------
+// The auth server may be any deployment of @schemavaults/auth-server,
+// including white-label ones, so the docs copy never names SchemaVaults as
+// the issuer. The scheme names (and challenge realms) are protocol
+// identifiers and stay as they are.
 
-/** `Authorization: Bearer <access token>` issued by the SchemaVaults auth server. */
+/** `Authorization: Bearer <access token>` issued by the auth server. */
 export const schemaVaultsAccessTokenBearerScheme = defineAuthScheme({
   name: "schemavaults-access-token",
-  title: "SchemaVaults access token (Bearer)",
+  title: "Access token (Bearer)",
   description:
-    "An access token issued by the SchemaVaults auth server for this API server, sent as `Authorization: Bearer <token>`.",
+    "An access token issued by the auth server for this API server, sent as `Authorization: Bearer <token>`.",
   securityScheme: {
     type: "http",
     scheme: "bearer",
     bearerFormat: "JWT",
-    description:
-      "Access token issued by the SchemaVaults auth server for this API server.",
+    description: "Access token issued by the auth server for this API server.",
   },
   challenge: 'Bearer realm="schemavaults"',
 });
@@ -159,14 +162,13 @@ export function schemaVaultsAccessTokenCookieScheme(
 ): AuthSchemeDefinition<"schemavaults-access-token-cookie"> {
   return defineAuthScheme({
     name: "schemavaults-access-token-cookie",
-    title: "SchemaVaults access token (cookie)",
+    title: "Access token (cookie)",
     description: `The first-party HTTP-only access token cookie \`${cookieName}\` set after login.`,
     securityScheme: {
       type: "apiKey",
       in: "cookie",
       name: cookieName,
-      description:
-        "First-party access token cookie set by the SchemaVaults auth flow.",
+      description: "First-party access token cookie set after login.",
     },
   });
 }
@@ -177,7 +179,7 @@ export function schemaVaultsRefreshTokenCookieScheme(
 ): AuthSchemeDefinition<"schemavaults-refresh-token-cookie"> {
   return defineAuthScheme({
     name: "schemavaults-refresh-token-cookie",
-    title: "SchemaVaults session (refresh token cookie)",
+    title: "Auth server session (refresh token cookie)",
     description: `The auth server's HTTP-only refresh token cookie \`${cookieName}\`; only the auth server itself can resolve it.`,
     securityScheme: {
       type: "apiKey",

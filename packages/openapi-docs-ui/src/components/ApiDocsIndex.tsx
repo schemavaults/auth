@@ -25,6 +25,8 @@ import { operationDocsHref } from "@/model/slug";
 import { ApiDocsHeader } from "./ApiDocsHeader";
 import { ApiSecuritySchemesCard } from "./ApiSecuritySchemesCard";
 import { OperationAuthBadges } from "./OperationAuthBadges";
+import { DocsText } from "./DocsText";
+import { DOCS_CARD_CONTENT_CLASS, DOCS_CARD_HEADER_CLASS } from "./card-padding";
 
 export interface ApiDocsIndexProps {
   model: ApiDocsModel;
@@ -54,7 +56,7 @@ export function OperationsTable({ operations, basePath, className }: OperationsT
             <TableHead className="w-24">Method</TableHead>
             <TableHead>Path</TableHead>
             <TableHead className="hidden md:table-cell">Summary</TableHead>
-            <TableHead>Access</TableHead>
+            <TableHead className="hidden sm:table-cell">Access</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -66,13 +68,14 @@ export function OperationsTable({ operations, basePath, className }: OperationsT
                   <HttpMethodBadge method={operation.method} size="sm" width="fixed" />
                 </TableCell>
                 <TableCell>
-                  <Link href={href} className="font-mono text-xs underline-offset-4 hover:underline">
+                  <Link href={href} className="font-mono text-xs underline-offset-4 [overflow-wrap:anywhere] hover:underline">
                     {operation.path}
                   </Link>
                   <p className="text-xs text-muted-foreground md:hidden">{operation.summary}</p>
+                  <OperationAuthBadges auth={operation.auth} deprecated={operation.deprecated} className="mt-1.5 sm:hidden" />
                 </TableCell>
                 <TableCell className="hidden text-sm md:table-cell">{operation.summary}</TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">
                   <OperationAuthBadges auth={operation.auth} deprecated={operation.deprecated} />
                 </TableCell>
               </TableRow>
@@ -92,13 +95,17 @@ export interface TagOperationsCardProps {
 export function TagOperationsCard({ tag, basePath }: TagOperationsCardProps): ReactElement {
   return (
     <Card id={`tag-${tag.name.replace(/[^A-Za-z0-9_-]+/g, "-")}`} className="w-full">
-      <CardHeader>
+      <CardHeader className={DOCS_CARD_HEADER_CLASS}>
         <CardTitle>{tag.name}</CardTitle>
         <CardDescription>
-          {tag.description ?? `${tag.operations.length} operation${tag.operations.length === 1 ? "" : "s"}`}
+          {tag.description ? (
+            <DocsText text={tag.description} />
+          ) : (
+            `${tag.operations.length} operation${tag.operations.length === 1 ? "" : "s"}`
+          )}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className={DOCS_CARD_CONTENT_CLASS}>
         <OperationsTable operations={tag.operations} basePath={basePath} />
       </CardContent>
     </Card>

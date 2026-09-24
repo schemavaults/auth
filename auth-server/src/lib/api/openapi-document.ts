@@ -1,7 +1,12 @@
-import { getAuthServerFriendlyName } from "@schemavaults/app-definitions";
+import {
+  getAuthServerFriendlyName,
+  getAuthServerOwnerOrganizationId,
+  getAuthServerOwnerOrganizationName,
+} from "@schemavaults/app-definitions";
 import { buildOpenApiDocument, type OpenAPIObject } from "@schemavaults/openapi-operations";
 import { operations } from "./operations";
 import { API_TAG_DESCRIPTIONS } from "./tags";
+import { describeAuthServerApi } from "./api-document-description";
 import {
   accessTokenBearerScheme,
   accessTokenCookieScheme,
@@ -23,15 +28,19 @@ let cached: OpenAPIObject | null = null;
  * The OpenAPI 3.1 document describing every operation in the catalogue.
  * Served at GET /api/openapi.json by its own route file and rendered by the
  * /docs pages. Built on first use (the definitions are static; only the
- * white-label friendly name comes from the environment) and memoised.
+ * white-label friendly name and owner organization come from the
+ * environment) and memoised.
  */
 export function getOpenApiDocument(): OpenAPIObject {
   cached ??= buildOpenApiDocument({
     info: {
       title: `${getAuthServerFriendlyName()} API`,
       version: packageJson.version,
-      description:
-        "HTTP API of the SchemaVaults auth server: authentication and OpenID Connect endpoints, account and organization management, client application and API server registrations, and platform administration. Every operation is declared with @schemavaults/openapi-operations; this document and the /docs pages are generated from those declarations.",
+      description: describeAuthServerApi({
+        friendlyName: getAuthServerFriendlyName(),
+        ownerOrganizationId: getAuthServerOwnerOrganizationId(),
+        ownerOrganizationName: getAuthServerOwnerOrganizationName(),
+      }),
     },
     servers: [{ url: "/", description: "This auth server" }],
     tags: API_TAG_DESCRIPTIONS,

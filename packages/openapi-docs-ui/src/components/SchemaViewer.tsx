@@ -19,6 +19,7 @@ import {
   schemaRefName,
   schemaTypeLabel,
 } from "@/model/schema-utils";
+import { DocsText } from "./DocsText";
 
 export interface SchemaViewerProps {
   schema: ApiDocsJsonSchema | null | undefined;
@@ -92,7 +93,7 @@ function SchemaRows({
         return (
           <FragmentRow key={property.name}>
             <TableRow>
-              <TableCell className="align-top font-mono text-xs" style={{ paddingLeft: `${0.75 + depth * 1.25}rem` }}>
+              <TableCell className="align-top font-mono text-xs" style={{ paddingLeft: `${1 + depth * 1.25}rem` }}>
                 {property.name}
                 {property.required ? <span className="ml-1 text-destructive" title="required">*</span> : null}
               </TableCell>
@@ -101,7 +102,7 @@ function SchemaRows({
                 {isNullableSchema(resolved) ? " | null" : ""}
               </TableCell>
               <TableCell className="align-top text-xs">
-                {description ? <p>{description}</p> : null}
+                {description ? <p><DocsText text={description} /></p> : null}
                 {extra.length > 0 ? (
                   <p className="mt-1 flex flex-wrap gap-1">
                     {extra.map((item) => (
@@ -150,7 +151,11 @@ export function SchemaViewer({ schema, schemas, maxDepth = 3, className }: Schem
     return (
       <div className={cn("text-sm", className)}>
         <span className="font-mono text-xs">{label}</span>
-        {description ? <p className="mt-1 text-xs text-muted-foreground">{description}</p> : null}
+        {description ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            <DocsText text={description} />
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -160,7 +165,11 @@ export function SchemaViewer({ schema, schemas, maxDepth = 3, className }: Schem
       {refName || description ? (
         <div className="border-b bg-muted/40 px-3 py-2 text-xs">
           {refName ? <span className="font-mono font-medium">{refName}</span> : null}
-          {description ? <span className="ml-2 text-muted-foreground">{description}</span> : null}
+          {description ? (
+            <span className="ml-2 text-muted-foreground">
+              <DocsText text={description} />
+            </span>
+          ) : null}
         </div>
       ) : null}
       <Table>

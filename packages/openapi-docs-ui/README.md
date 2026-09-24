@@ -80,6 +80,7 @@ server or client components.
 | `ApiSecuritySchemesCard` | every `components.securitySchemes` entry with how the credential is transported |
 | `SchemaViewer` | nested property table for a JSON schema (`$ref`s resolved against `components.schemas`) |
 | `ParametersTable`, `RequestBodySection`, `ResponsesList`, `CurlSnippet`, `ApiDocsHeader` | building blocks used by the pages |
+| `DocsText` | a description string with its CommonMark code spans (`` `name` ``) as inline `<code>`; every description on the pages goes through it |
 
 ## Model layer (`@schemavaults/openapi-docs-ui/model`)
 

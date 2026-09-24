@@ -119,7 +119,7 @@ describe("buildOpenApiDocument", () => {
     expect(schemes["schemavaults-access-token"]).toMatchObject({
       type: "http",
       scheme: "bearer",
-      [SCHEMAVAULTS_SCHEME_TITLE_EXTENSION]: "SchemaVaults access token (Bearer)",
+      [SCHEMAVAULTS_SCHEME_TITLE_EXTENSION]: "Access token (Bearer)",
     });
     expect(schemes["schemavaults-access-token-cookie"]).toMatchObject({
       type: "apiKey",

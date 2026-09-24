@@ -4,6 +4,7 @@ import { parseOpenApiDocument } from "@/model/parse-openapi-document";
 import { ApiDocsIndex } from "./ApiDocsIndex";
 import { ApiOperationPage } from "./ApiOperationPage";
 import { buildCurlCommand } from "./CurlSnippet";
+import { DocsText } from "./DocsText";
 import { SchemaViewer } from "./SchemaViewer";
 
 const document = {
@@ -156,5 +157,16 @@ describe("buildCurlCommand", () => {
       "'http://localhost:6767/api/apps/<app_id>'",
     );
     expect(buildCurlCommand(get, model)).toContain("-H 'x-trace: <x-trace>'");
+  });
+});
+
+describe("DocsText", () => {
+  test("renders code spans as <code> and leaves other text plain", () => {
+    const html = renderToStaticMarkup(
+      <DocsText text="Send `Retry-After` and `X-RateLimit-*` headers; a lone ` stays." />,
+    );
+    expect(html).toContain("Send <code");
+    expect(html).toContain(">Retry-After</code> and <code");
+    expect(html).toContain(">X-RateLimit-*</code> headers; a lone ` stays.");
   });
 });

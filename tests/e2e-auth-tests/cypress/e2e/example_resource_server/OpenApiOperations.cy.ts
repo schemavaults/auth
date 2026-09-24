@@ -172,7 +172,7 @@ describe("OpenApiOperations (example resource server)", () => {
       // Server URL resolved from the request, shown in the header
       cy.contains(exampleAppOrigin).should("be.visible");
       // Security schemes card
-      cy.contains("SchemaVaults access token (Bearer)").should("be.visible");
+      cy.contains("Access token (Bearer)").should("be.visible");
       // Tag cards with the operation rows
       cy.contains("Account").should("be.visible");
       cy.contains("a", "/api/ping").should("be.visible").click();
