@@ -15,13 +15,33 @@ export type RequestBodyContentType =
   | "text/plain"
   | (string & {});
 
-export interface RequestBodyDefinition<TSchema extends ZodType = ZodType> {
+export interface RequestBodyDefinition<
+  TSchema extends ZodType = ZodType,
+  TDocumentOnly extends boolean = boolean,
+> {
   /** Media type the body is parsed as (default `application/json`). */
   readonly contentType?: RequestBodyContentType;
   readonly schema: TSchema;
   readonly description?: string;
   /** Default true. */
   readonly required?: boolean;
+  /**
+   * Also parse the body as `contentType` when the request labels it
+   * `text/plain` or carries no Content-Type header at all. Browsers send
+   * `text/plain;charset=UTF-8` for `fetch(url, { body: JSON.stringify(x) })`
+   * without an explicit header, so JSON APIs with such callers need this.
+   * Default false (415 on a media type mismatch).
+   */
+  readonly lenientContentType?: boolean;
+  /**
+   * Describe the body in the OpenAPI document but leave the request
+   * untouched: the runtime neither reads nor validates it and `ctx.body`
+   * is `undefined`, so the handler reads `ctx.request` itself. For
+   * endpoints whose error format is mandated by a protocol (the OAuth 2.0
+   * token endpoint's `{ error, error_description }`, ...) and endpoints
+   * with bespoke parsing that must keep its exact responses.
+   */
+  readonly documentOnly?: TDocumentOnly;
 }
 
 export interface ResponseDefinition<
@@ -61,11 +81,13 @@ export type InferParsed<T> = T extends ZodType
   ? z.output<T>
   : Readonly<Record<string, never>>;
 
-export type InferBody<T> = T extends RequestBodyDefinition<infer S>
-  ? S extends ZodType
-    ? z.output<S>
-    : undefined
-  : undefined;
+export type InferBody<T> = T extends { readonly documentOnly: true }
+  ? undefined
+  : T extends RequestBodyDefinition<infer S>
+    ? S extends ZodType
+      ? z.output<S>
+      : undefined
+    : undefined;
 
 export type ResponseStatusOf<TResponses extends ResponsesDefinition> = Extract<
   keyof TResponses,

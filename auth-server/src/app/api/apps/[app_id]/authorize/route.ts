@@ -1,7 +1,10 @@
 import "server-only";
 import type { ServerRuntime } from "next";
-import POST from './POST_authorize_client_application';
+import { apiRouteHandlers } from "@/lib/api/app";
+import { authorizeApp } from "./operation";
 
-export { POST };
+// POST /api/apps/{app_id}/authorize
+export const { POST } = apiRouteHandlers([authorizeApp]);
+
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
-export const runtime: ServerRuntime = "nodejs"

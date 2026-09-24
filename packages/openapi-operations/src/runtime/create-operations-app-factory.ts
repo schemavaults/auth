@@ -16,9 +16,11 @@ export interface CreateOperationsAppFactoryOptions<TContext = unknown, TUser = u
    */
   readonly operations: readonly AnyOperationDefinition[];
   /** Credential resolvers keyed by auth scheme name, shared by every app. */
-  readonly authResolvers?: AuthResolvers<TUser>;
+  readonly authResolvers?: AuthResolvers<TUser, TContext>;
   /** Builds the per-request context handed to handlers as `ctx.context`. */
   readonly context?: CreateOperationsAppOptions<TContext, TUser>["context"];
+  /** Releases the per-request context once the response was produced. */
+  readonly disposeContext?: CreateOperationsAppOptions<TContext, TUser>["disposeContext"];
   /** Called for unexpected (non-OperationError) failures before the 500 is sent. */
   readonly onError?: CreateOperationsAppOptions<TContext, TUser>["onError"];
 }
@@ -33,7 +35,7 @@ export interface OperationsAppFactory<TContext = unknown, TUser = unknown> {
   /** The full catalogue the factory was created with. */
   readonly operations: readonly AnyOperationDefinition[];
   /** The shared resolvers every app built by the factory authenticates with. */
-  readonly authResolvers: AuthResolvers<TUser>;
+  readonly authResolvers: AuthResolvers<TUser, TContext>;
   /**
    * Builds a Hono app serving the given operations (default: the whole
    * catalogue) with the shared resolvers / context / error reporting.
@@ -87,7 +89,7 @@ export function createOperationsAppFactory<TContext = unknown, TUser = unknown>(
 ): OperationsAppFactory<TContext, TUser> {
   const catalogue: readonly AnyOperationDefinition[] = Object.freeze([...options.operations]);
   assertUniqueOperations(catalogue);
-  const resolvers: AuthResolvers<TUser> = options.authResolvers ?? {};
+  const resolvers: AuthResolvers<TUser, TContext> = options.authResolvers ?? {};
   assertResolversForOperations(catalogue, resolvers);
   const registered = new Set<AnyOperationDefinition>(catalogue);
 
@@ -110,6 +112,7 @@ export function createOperationsAppFactory<TContext = unknown, TUser = unknown>(
       operations,
       authResolvers: resolvers,
       context: options.context,
+      disposeContext: options.disposeContext,
       onError: options.onError,
       basePath: appOptions.basePath,
       configure: appOptions.configure,

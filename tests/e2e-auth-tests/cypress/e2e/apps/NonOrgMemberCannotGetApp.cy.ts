@@ -1,10 +1,10 @@
 // Verifies that GET /api/apps/:app_id returns 403 when the authenticated
 // caller is neither a global admin nor a member of the app's owner
 // organization, AND the app is not public. This guards the authorization
-// branch in auth-server/src/app/api/apps/[app_id]/GET_app_handler.ts that
+// branch in auth-server/src/app/api/apps/[app_id]/operation.ts (getApp) that
 // returns "You are not authorized to view this app" (the
 // `if (!app.public && !user.admin) { ... !authorized ... return 403 }` block
-// around lines 111-132 of GET_app_handler.ts).
+// in the getApp handler).
 //
 // The unauthenticated (401) case is covered by
 // misc/UnauthenticatedApiRequests.cy.ts and the symmetric DELETE branch is

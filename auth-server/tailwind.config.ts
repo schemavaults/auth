@@ -15,6 +15,7 @@ try {
       "./src/**/*.{tsx,jsx,js,ts}",
       "@schemavaults/ui",
       "@schemavaults/auth-ui",
+      "@schemavaults/openapi-docs-ui",
     ],
   }) satisfies Config;
 } catch (e) {

@@ -1,11 +1,10 @@
 import "server-only";
-import {
-  getAppEnvironment,
-  type SchemaVaultsAppEnvironment,
-} from "@schemavaults/app-definitions";
-import { NextResponse } from "next/server";
+import type { ServerRuntime } from "next";
+import { apiRouteHandlers } from "@/lib/api/app";
+import { getEnvironment } from "./operation";
 
-export async function GET(): Promise<NextResponse> {
-  const environment: SchemaVaultsAppEnvironment = getAppEnvironment();
-  return NextResponse.json({ environment });
-}
+// GET /api/environment
+export const { GET } = apiRouteHandlers([getEnvironment]);
+
+export const runtime: ServerRuntime = "nodejs";
+export const dynamic = "force-dynamic";

@@ -39,8 +39,17 @@ jobs:
       # /api/test/* routes are gated at runtime by getAppEnvironment() !== 'test',
       # but we want them entirely absent from the production bundle so they cannot
       # be served even if the environment check is ever bypassed.
+      # The OpenAPI catalogue (auth-server/src/lib/api/operations/) imports every
+      # route's operation.ts, so the test-environment domain list is emptied with
+      # the routes it would import (same as auth-server/Dockerfile + vercel-build.sh).
       - name: Strip /api/test routes from production build
-        run: rm -rf auth-server/src/app/api/test
+        run: |
+          rm -rf auth-server/src/app/api/test
+          printf '%s\n' \
+            'import type { AnyOperationDefinition } from "@schemavaults/openapi-operations";' \
+            '/** Stripped from production builds: the /api/test routes do not exist here. */' \
+            'export const test_environmentOperations: readonly AnyOperationDefinition[] = [];' \
+            > auth-server/src/lib/api/operations/test-environment.ts
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
       - name: Build Project Artifacts

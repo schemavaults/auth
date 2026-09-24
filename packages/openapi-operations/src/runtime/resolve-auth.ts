@@ -7,18 +7,24 @@ import { OPERATION_ERROR_CODES, OperationError } from "./errors";
  * Verifies the credential transported by one auth scheme. Returns null when
  * the request carries no credential for the scheme (so the next accepted
  * scheme is tried); throws {@link OperationError} to reject outright (e.g.
- * a credential that IS present but invalid).
+ * a credential that IS present but invalid). Receives the per-request
+ * context built by `createOperationsApp({ context })` so it can share the
+ * request's database handle / caches with the handler.
  */
-export type AuthResolver<TUser = unknown> = (
+export type AuthResolver<TUser = unknown, TContext = unknown> = (
   c: Context,
   scheme: AuthSchemeDefinition,
+  context: TContext,
 ) => Promise<AuthPrincipal<TUser> | null> | AuthPrincipal<TUser> | null;
 
-export type AuthResolvers<TUser = unknown> = Readonly<Record<string, AuthResolver<TUser>>>;
+export type AuthResolvers<TUser = unknown, TContext = unknown> = Readonly<
+  Record<string, AuthResolver<TUser, TContext>>
+>;
 
 export function assertResolversForOperations(
   operations: readonly AnyOperationDefinition[],
-  resolvers: AuthResolvers,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  resolvers: AuthResolvers<any, any>,
 ): void {
   for (const operation of operations) {
     if (operation.auth.type !== "required") continue;
@@ -55,10 +61,11 @@ export function missingScopes(principal: AuthPrincipal, required: readonly strin
  * required scopes, and organization membership. Returns the principal, or
  * null for public operations.
  */
-export async function resolveAuth<TUser>(
+export async function resolveAuth<TUser, TContext = unknown>(
   c: Context,
   auth: OperationAuth,
-  resolvers: AuthResolvers<TUser>,
+  resolvers: AuthResolvers<TUser, TContext>,
+  context: TContext = undefined as TContext,
 ): Promise<AuthPrincipal<TUser> | null> {
   if (auth.type === "public") return null;
 
@@ -66,7 +73,7 @@ export async function resolveAuth<TUser>(
   for (const scheme of auth.schemes) {
     const resolver = resolvers[scheme.name];
     if (!resolver) continue;
-    principal = await resolver(c, scheme);
+    principal = await resolver(c, scheme, context);
     if (principal) break;
   }
   if (!principal) {

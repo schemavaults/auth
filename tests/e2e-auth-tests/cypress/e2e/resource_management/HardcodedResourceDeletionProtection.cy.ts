@@ -3,7 +3,7 @@
 // is the global superuser admin.
 //
 // See:
-//   - auth-server/src/app/api/apps/[app_id]/DELETE_app_handler.ts
+//   - auth-server/src/app/api/apps/[app_id]/operation.ts (deleteApp)
 //   - auth-server/src/app/api/apis/[api_server_id]/DELETE_api_server_handler.ts
 //   - getHardcodedSchemaVaultsApps() / getHardcodedSchemaVaultsApis()
 //     in @schemavaults/app-definitions

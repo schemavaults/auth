@@ -1,7 +1,10 @@
 import "server-only";
 import type { ServerRuntime } from "next";
-import GET from './GET_check_app_authorization';
+import { apiRouteHandlers } from "@/lib/api/app";
+import { checkAppAuthorization } from "./operation";
 
-export { GET };
+// GET /api/apps/{app_id}/check-authorization
+export const { GET } = apiRouteHandlers([checkAppAuthorization]);
+
+export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";
-export const runtime: ServerRuntime = "nodejs"

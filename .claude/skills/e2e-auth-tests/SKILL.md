@@ -27,6 +27,8 @@ Called by PR, feature-branch, and main-branch CI workflows via `workflow_call`. 
 
 Each suite job runs on its own CI runner in parallel. The `example_resource_server` suite additionally depends on `Build-Resource-Server-Docker-Image` and passes `load-resource-server-image: true`.
 
+The `api_contract` suite pins the wire contract of the auth server's `/api/*` routes independently of the UI: success-path response envelopes, every accepted credential source (session cookie, bearer access token, access-token cookie), `text/plain` JSON bodies, the service-account lifecycle, and the generated `GET /api/openapi.json` document + `/docs` pages. Extend it whenever an endpoint's request/response shape changes.
+
 If creating new fresh test suite then it will need to be added to this `run-e2e-tests.yml` workflow as a new job.
 
 ### `run-e2e-test-suite.yml` (per-suite executor)

@@ -1,5 +1,5 @@
-export { z } from "./zod-openapi";
-export type { ZodType, ZodObject } from "./zod-openapi";
+export { z, withOpenApi } from "./zod-openapi";
+export type { ZodType, ZodObject, OpenApiSchemaMetadata } from "./zod-openapi";
 
 export { HTTP_METHODS, HTTP_METHODS_WITH_REQUEST_BODY, isHttpMethod } from "./http-method";
 export type { HttpMethod } from "./http-method";
@@ -63,6 +63,8 @@ export {
   toSecuritySchemeComponent,
 } from "./openapi/build-openapi-document";
 export type { BuildOpenApiDocumentOptions } from "./openapi/build-openapi-document";
+// Re-exported so hosts can type generated documents without depending on openapi3-ts.
+export type { OpenAPIObject } from "openapi3-ts/oas31";
 export {
   SCHEMAVAULTS_AUTH_EXTENSION,
   SCHEMAVAULTS_SCHEME_TITLE_EXTENSION,

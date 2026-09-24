@@ -1,11 +1,8 @@
 import "server-only";
 import type { ReactElement } from "react";
-import type { NextRequest, NextResponse } from "next/server";
 import {
   withAdminServerComponentRouteGuard as _withAdminServerComponentRouteGuard,
-  withAdminApiRouteGuard as _withAdminApiRouteGuard,
   type TProtectedAdminPageServerComponent,
-  type TProtectedAdminApiRoute,
   type IBaseProtectedAdminServerComponentPageProps,
   type IBaseProtectedAdminApiRouteInputs,
 } from "@schemavaults/auth-server-sdk/route_guards";
@@ -58,32 +55,10 @@ export interface IProtectedAdminApiRouteProps extends IBaseProtectedAdminApiRout
   redis: RedisCache;
 }
 
-export async function withAdminApiRouteGuard(
-  api_server_handler: TProtectedAdminApiRoute<IProtectedAdminApiRouteProps>
-): Promise<(req: NextRequest) => Promise<NextResponse>> {
-  // The guarded route below is a lazy handler that Next.js invokes *after*
-  // this factory returns. The dbh/redis resources must therefore be created
-  // and disposed inside that handler — if we `await using` them out here they
-  // get disposed the moment this factory returns (before the request runs),
-  // which closes the Redis connection and surfaces as
-  // "Connection is closed" when a handler touches `redis.client`.
-  return async (req: NextRequest): Promise<NextResponse> => {
-    await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH()
-    await using redis: RedisCache = RedisCache.createConnection()
-    const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
-    const guarded = _withAdminApiRouteGuard<IProtectedAdminApiRouteProps>(
-      api_server_handler,
-      { dbh, redis },
-      {
-        custom_is_authorized_check: async (props) => props.user.admin === true,
-        api_server_id: getAuthServerAppId(),
-        jwt_keys_manager,
-        custom_is_user_in_organization: async (user, org_id) => await isUserInOrganization(dbh.db, user, org_id),
-        is_token_revoked: createRouteGuardTokenRevocationCheck({ db: dbh.db, redis }),
-      }
-    );
-    return await guarded(req);
-  };
-}
+// The admin API route guard that used to live here (`withAdminApiRouteGuard`)
+// was retired when the API routes moved onto @schemavaults/openapi-operations:
+// operations declare `requireAuth({ schemes: sessionSchemes, routeGuard: "admin" })`.
+// The props interface above is kept for handlers bridged through
+// `src/lib/api/legacy-route-props.ts`.
 
 export type { IProtectedAdminApiRouteProps as IProtectedAdminApiRouteInputs }

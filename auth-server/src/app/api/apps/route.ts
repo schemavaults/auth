@@ -1,6 +1,10 @@
 import "server-only";
-export { POST } from "./POST_app_creation_handler";
-export { GET_app_list_handler as GET } from "./GET_app_list_handler";
 import type { ServerRuntime } from "next";
+import { apiRouteHandlers } from "@/lib/api/app";
+import { createApp, listApps } from "./operation";
 
-export const runtime: ServerRuntime = "nodejs"
+// GET, POST /api/apps
+export const { GET, POST } = apiRouteHandlers([listApps, createApp]);
+
+export const runtime: ServerRuntime = "nodejs";
+export const dynamic = "force-dynamic";

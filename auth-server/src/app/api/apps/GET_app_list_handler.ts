@@ -1,431 +1,194 @@
 import "server-only";
 
+import { AuthorizedAppsRegistry, SchemaVaultsAppRegistry } from "@/lib/auth-db";
 import {
-  type AuthorizedAppDeclaration,
-  AuthorizedAppsRegistry,
-  SchemaVaultsAppRegistry,
-  getDefinitionForAuthorizedDeclaration,
-} from "@/lib/auth-db";
-import {
-  type SchemaVaultsApp,
   type ListAppsQueryType,
   listAppsQueryTypeSchema,
   type ListAppsQueryResponse,
 } from "@schemavaults/app-definitions";
-import { type NextRequest, NextResponse } from "next/server";
-import {
-  organizationIdSchema,
-  type OrganizationID,
-  type UserData,
-} from "@schemavaults/auth-common";
-import {
-  type IProtectedAuthenticatedApiRouteProps,
-  withAuthenticatedApiRouteGuard,
-} from "@/lib/withAuthenticatedRouteGuard";
+import { NextResponse } from "next/server";
+import { organizationIdSchema, type OrganizationID } from "@schemavaults/auth-common";
+import type { IProtectedAuthenticatedApiRouteProps } from "@/lib/withAuthenticatedRouteGuard";
 import { isUserInOrganization } from "@/lib/isUserInOrganization";
 import captureServerException from "@/lib/captureServerException";
-import type { Kysely } from "@schemavaults/dbh";
-import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import { listAuthorizedAppsForUser } from "./list-authorized-apps-for-user";
 
 const ROUTE = "/api/apps";
 
-async function listAuthorizedAppsForUser(
-  appsRegistry: SchemaVaultsAppRegistry,
-  authorizedAppsRegistry: AuthorizedAppsRegistry,
-  userData: UserData,
-  db: Kysely<AuthDatabase>,
-): Promise<NextResponse<ListAppsQueryResponse>> {
-  const user_authorized_apps: AuthorizedAppDeclaration[] =
-    await authorizedAppsRegistry.listAuthorizedAppsForUser(userData.uid);
+/** The query string of `GET /api/apps` as declared by the operation. */
+export interface ListAppsQuery {
+  readonly list_apps_query_type?: string;
+  readonly organization_id?: string;
+}
 
-  if (user_authorized_apps.length === 0) {
-    return NextResponse.json(
-      {
-        success: true,
-        message: "You have not authorized any applications",
-        list: [],
-      } satisfies ListAppsQueryResponse,
-      {
-        status: 200,
-      },
-    );
-  }
+function respond(status: number, body: ListAppsQueryResponse): NextResponse<ListAppsQueryResponse> {
+  return NextResponse.json(body, { status });
+}
 
-  let authorized_apps_details: SchemaVaultsApp[];
-  try {
-    const loadAppDefinitionsForAuthorizedAppsPromises: Promise<SchemaVaultsApp>[] =
-      user_authorized_apps.map(async function loadDefForApp(
-        authorized_app: AuthorizedAppDeclaration,
-      ): Promise<SchemaVaultsApp> {
-        return await getDefinitionForAuthorizedDeclaration(
-          authorized_app,
-          appsRegistry,
-        );
-      });
-
-    authorized_apps_details = await Promise.all(
-      loadAppDefinitionsForAuthorizedAppsPromises,
-    );
-  } catch (e: unknown) {
-    await captureServerException(db, e, {
-      op_name: "listAuthorizedAppsForUser.getDefinitionForAuthorizedDeclaration",
-      route: ROUTE,
-      uid: userData.uid,
-    });
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "Failed to load full app definitions for apps marked as authorized",
-      } satisfies ListAppsQueryResponse,
-      {
-        status: 500,
-      },
-    );
-  }
-
-  return NextResponse.json(
-    {
-      success: true,
-      message: "Successfully listed apps that you have authorized",
-      list: authorized_apps_details,
-    } satisfies ListAppsQueryResponse,
-    {
-      status: 200,
-    },
-  );
+function failure(status: number, message: string): NextResponse<ListAppsQueryResponse> {
+  return respond(status, { success: false, message });
 }
 
 /**
- * List available SchemaVaults apps
+ * List available SchemaVaults apps. Runs behind the `listApps` operation
+ * (see ./get.operation.ts); `query` is the validated query string.
  */
 export async function GET_app_list_handler(
-  req: NextRequest,
-): Promise<NextResponse> {
-  const protected_route = await withAuthenticatedApiRouteGuard(
-    async ({
-      user,
-      dbh,
-      environment,
-    }: IProtectedAuthenticatedApiRouteProps): Promise<NextResponse> => {
-      if (environment === "development") {
-        console.log("[/api/apps] GET request received");
-      }
+  { user, dbh, environment }: IProtectedAuthenticatedApiRouteProps,
+  query: ListAppsQuery,
+): Promise<NextResponse<ListAppsQueryResponse>> {
+  if (environment === "development") {
+    console.log("[/api/apps] GET request received");
+  }
 
-      const searchParams: URLSearchParams = req.nextUrl.searchParams;
+  const parsed_query_type = await listAppsQueryTypeSchema.safeParseAsync(query.list_apps_query_type);
+  if (!parsed_query_type.success) {
+    return failure(400, "Invalid list apps query type");
+  }
+  const list_apps_query_type: ListAppsQueryType = parsed_query_type.data;
 
-      const parsed_query_type = await listAppsQueryTypeSchema.safeParseAsync(
-        searchParams.get("list_apps_query_type"),
-      );
-      if (!parsed_query_type.success) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Invalid list apps query type",
-          } satisfies ListAppsQueryResponse,
-          {
-            status: 400,
-          },
-        );
-      }
-      const list_apps_query_type: ListAppsQueryType = parsed_query_type.data;
+  if (list_apps_query_type === "org" && query.organization_id === undefined) {
+    return failure(400, "Missing 'organization_id' search param to accompany query type!");
+  }
+  const organization_id: string | null = query.organization_id ?? null;
+  if (
+    list_apps_query_type === "org" &&
+    (!organization_id || !organizationIdSchema.safeParse(organization_id).success)
+  ) {
+    return failure(400, "Invalid 'organization_id' search param!");
+  }
 
-      if (list_apps_query_type === "org" && !searchParams.has("organization_id")) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Missing 'organization_id' search param to accompany query type!",
-          } satisfies ListAppsQueryResponse,
-          {
-            status: 400,
-          },
-        );
-      }
-      const organization_id: string | null = searchParams.get("organization_id") ?? null;
-      if (
-        list_apps_query_type === "org" &&
-        (!organization_id || !organizationIdSchema.safeParse(organization_id).success)
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Invalid 'organization_id' search param!",
-          } satisfies ListAppsQueryResponse,
-          {
-            status: 400,
-          },
-        );
-      }
+  let appsRegistry: SchemaVaultsAppRegistry;
+  let authorizedAppsRegistry: AuthorizedAppsRegistry;
+  try {
+    appsRegistry = new SchemaVaultsAppRegistry(dbh.db);
+    authorizedAppsRegistry = new AuthorizedAppsRegistry(dbh.db);
+  } catch (e: unknown) {
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_app_list_handler.loadAppsRegistry",
+      route: ROUTE,
+      uid: user.uid,
+    });
+    return failure(500, "Failed to load apps registry");
+  }
 
-      let appsRegistry: SchemaVaultsAppRegistry;
-      let authorizedAppsRegistry: AuthorizedAppsRegistry;
-      try {
-        appsRegistry = new SchemaVaultsAppRegistry(dbh.db);
-        authorizedAppsRegistry = new AuthorizedAppsRegistry(dbh.db);
-      } catch (e: unknown) {
-        await captureServerException(dbh.db, e, {
-          op_name: "GET_app_list_handler.loadAppsRegistry",
-          route: ROUTE,
-          uid: user.uid,
-        });
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Failed to load apps registry",
-          } satisfies ListAppsQueryResponse,
-          {
-            status: 500,
-          },
-        );
-      }
-
-      try {
-        switch (list_apps_query_type) {
-          case "all":
-            if (!user.admin) {
-              return NextResponse.json(
-                {
-                  success: false,
-                  message: "You must be an admin to list all apps",
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 403,
-                },
-              );
-            }
-            try {
-              return NextResponse.json(
-                {
-                  success: true,
-                  message: "Successfully listed all apps",
-                  list: await appsRegistry.listApps("all", user),
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 200,
-                },
-              );
-            } catch (e: unknown) {
-              await captureServerException(dbh.db, e, {
-                op_name: "GET_app_list_handler.listApps.all",
-                route: ROUTE,
-                uid: user.uid,
-              });
-              return NextResponse.json(
-                {
-                  success: false,
-                  message: "Failed to list all apps",
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 500,
-                },
-              );
-            }
-
-          case "public":
-            try {
-              return NextResponse.json(
-                {
-                  success: true,
-                  message:
-                    "Successfully listed all publicly-available apps",
-                  list: await appsRegistry.listApps("public", user),
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 200,
-                },
-              );
-            } catch (e: unknown) {
-              await captureServerException(dbh.db, e, {
-                op_name: "GET_app_list_handler.listApps.public",
-                route: ROUTE,
-                uid: user.uid,
-              });
-              return NextResponse.json(
-                {
-                  success: false,
-                  message: "Failed to list public apps",
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 500,
-                },
-              );
-            }
-
-          case "authorized":
-            try {
-              return await listAuthorizedAppsForUser(
-                appsRegistry,
-                authorizedAppsRegistry,
-                user,
-                dbh.db,
-              );
-            } catch (e: unknown) {
-              await captureServerException(dbh.db, e, {
-                op_name: "GET_app_list_handler.listAuthorizedAppsForUser",
-                route: ROUTE,
-                uid: user.uid,
-              });
-              return NextResponse.json(
-                {
-                  success: false,
-                  message: "Failed to list authorized apps for user",
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 500,
-                },
-              );
-            }
-
-          case "org":
-            if (!organization_id) {
-              throw new Error(
-                "Expected there to be a valid 'organization_id' set if this point was reached!",
-              );
-            }
-            if (!user.admin) {
-              const role = await isUserInOrganization(
-                dbh.db,
-                user,
-                organization_id as OrganizationID,
-              );
-              if (role !== "admin" && role !== "owner" && role !== "member") {
-                return NextResponse.json(
-                  {
-                    success: false,
-                    message:
-                      "You must be a member of the organization to list its apps",
-                  } satisfies ListAppsQueryResponse,
-                  {
-                    status: 403,
-                  },
-                );
-              }
-            }
-            try {
-              return NextResponse.json(
-                {
-                  success: true,
-                  message: "Successfully listed all apps for organization",
-                  list: await appsRegistry.listOrganizationApps(
-                    organization_id,
-                    user,
-                  ),
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 200,
-                },
-              );
-            } catch (e: unknown) {
-              await captureServerException(dbh.db, e, {
-                op_name: "GET_app_list_handler.listOrganizationApps",
-                route: ROUTE,
-                uid: user.uid,
-                context: { organization_id },
-              });
-              return NextResponse.json(
-                {
-                  success: false,
-                  message: "Failed to list apps for organization",
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 500,
-                },
-              );
-            }
-          // end 'org' case
-
-          case "owned":
-            try {
-              return NextResponse.json(
-                {
-                  success: true,
-                  message: "Successfully listed the apps owned by your account",
-                  list: await appsRegistry.listUserOwnedApps(user.uid),
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 200,
-                },
-              );
-            } catch (e: unknown) {
-              await captureServerException(dbh.db, e, {
-                op_name: "GET_app_list_handler.listUserOwnedApps",
-                route: ROUTE,
-                uid: user.uid,
-              });
-              return NextResponse.json(
-                {
-                  success: false,
-                  message: "Failed to list the apps owned by your account",
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 500,
-                },
-              );
-            }
-          // end 'owned' case
-
-          case "accessible":
-            try {
-              return NextResponse.json(
-                {
-                  success: true,
-                  message: "Successfully listed the apps you can access",
-                  list: await appsRegistry.listAppsAccessibleToUser(user),
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 200,
-                },
-              );
-            } catch (e: unknown) {
-              await captureServerException(dbh.db, e, {
-                op_name: "GET_app_list_handler.listAppsAccessibleToUser",
-                route: ROUTE,
-                uid: user.uid,
-              });
-              return NextResponse.json(
-                {
-                  success: false,
-                  message: "Failed to list the apps you can access",
-                } satisfies ListAppsQueryResponse,
-                {
-                  status: 500,
-                },
-              );
-            }
-          // end 'accessible' case
-
-          default:
-            return NextResponse.json(
-              {
-                success: false,
-                message: "Unsupported apps query type",
-              } satisfies ListAppsQueryResponse,
-              {
-                status: 400,
-              },
-            );
+  try {
+    switch (list_apps_query_type) {
+      case "all":
+        if (!user.admin) {
+          return failure(403, "You must be an admin to list all apps");
         }
-      } catch (e: unknown) {
-        await captureServerException(dbh.db, e, {
-          op_name: "GET_app_list_handler.outerCatch",
-          route: ROUTE,
-          uid: user.uid,
-          context: { list_apps_query_type, organization_id },
-        });
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Failed to list apps",
-          } satisfies ListAppsQueryResponse,
-          {
-            status: 500,
-          },
-        );
-      }
-    },
-  );
+        try {
+          return respond(200, {
+            success: true,
+            message: "Successfully listed all apps",
+            list: await appsRegistry.listApps("all", user),
+          });
+        } catch (e: unknown) {
+          await captureServerException(dbh.db, e, {
+            op_name: "GET_app_list_handler.listApps.all",
+            route: ROUTE,
+            uid: user.uid,
+          });
+          return failure(500, "Failed to list all apps");
+        }
 
-  return await protected_route(req);
+      case "public":
+        try {
+          return respond(200, {
+            success: true,
+            message: "Successfully listed all publicly-available apps",
+            list: await appsRegistry.listApps("public", user),
+          });
+        } catch (e: unknown) {
+          await captureServerException(dbh.db, e, {
+            op_name: "GET_app_list_handler.listApps.public",
+            route: ROUTE,
+            uid: user.uid,
+          });
+          return failure(500, "Failed to list public apps");
+        }
+
+      case "authorized":
+        try {
+          return await listAuthorizedAppsForUser(appsRegistry, authorizedAppsRegistry, user, dbh.db);
+        } catch (e: unknown) {
+          await captureServerException(dbh.db, e, {
+            op_name: "GET_app_list_handler.listAuthorizedAppsForUser",
+            route: ROUTE,
+            uid: user.uid,
+          });
+          return failure(500, "Failed to list authorized apps for user");
+        }
+
+      case "org":
+        if (!organization_id) {
+          throw new Error("Expected there to be a valid 'organization_id' set if this point was reached!");
+        }
+        if (!user.admin) {
+          const role = await isUserInOrganization(dbh.db, user, organization_id as OrganizationID);
+          if (role !== "admin" && role !== "owner" && role !== "member") {
+            return failure(403, "You must be a member of the organization to list its apps");
+          }
+        }
+        try {
+          return respond(200, {
+            success: true,
+            message: "Successfully listed all apps for organization",
+            list: await appsRegistry.listOrganizationApps(organization_id, user),
+          });
+        } catch (e: unknown) {
+          await captureServerException(dbh.db, e, {
+            op_name: "GET_app_list_handler.listOrganizationApps",
+            route: ROUTE,
+            uid: user.uid,
+            context: { organization_id },
+          });
+          return failure(500, "Failed to list apps for organization");
+        }
+
+      case "owned":
+        try {
+          return respond(200, {
+            success: true,
+            message: "Successfully listed the apps owned by your account",
+            list: await appsRegistry.listUserOwnedApps(user.uid),
+          });
+        } catch (e: unknown) {
+          await captureServerException(dbh.db, e, {
+            op_name: "GET_app_list_handler.listUserOwnedApps",
+            route: ROUTE,
+            uid: user.uid,
+          });
+          return failure(500, "Failed to list the apps owned by your account");
+        }
+
+      case "accessible":
+        try {
+          return respond(200, {
+            success: true,
+            message: "Successfully listed the apps you can access",
+            list: await appsRegistry.listAppsAccessibleToUser(user),
+          });
+        } catch (e: unknown) {
+          await captureServerException(dbh.db, e, {
+            op_name: "GET_app_list_handler.listAppsAccessibleToUser",
+            route: ROUTE,
+            uid: user.uid,
+          });
+          return failure(500, "Failed to list the apps you can access");
+        }
+
+      default:
+        return failure(400, "Unsupported apps query type");
+    }
+  } catch (e: unknown) {
+    await captureServerException(dbh.db, e, {
+      op_name: "GET_app_list_handler.outerCatch",
+      route: ROUTE,
+      uid: user.uid,
+      context: { list_apps_query_type, organization_id },
+    });
+    return failure(500, "Failed to list apps");
+  }
 }
-
-export const dynamic = "force-dynamic"; // defaults to auto

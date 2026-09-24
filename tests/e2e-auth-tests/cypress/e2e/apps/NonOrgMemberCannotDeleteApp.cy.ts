@@ -1,7 +1,7 @@
 // Verifies that DELETE /api/apps/:app_id returns 403 when the authenticated
 // caller is neither a global admin nor a member of the app's owner
 // organization. This guards the authorization branch in
-// auth-server/src/app/api/apps/[app_id]/DELETE_app_handler.ts that returns
+// auth-server/src/app/api/apps/[app_id]/operation.ts (deleteApp) that returns
 // "Only organization owners or global admins can delete apps" (the
 // isUserInOrganizationWithRole(..., "owner") check).
 //

@@ -20,6 +20,13 @@ export interface OpenApiDocumentRouteOptions {
     | ((c: Context) => OpenAPIObject | Promise<OpenAPIObject>);
 }
 
+/** What `onError` learns about the failed request besides the error itself. */
+export interface OperationFailureInfo<TContext = unknown> {
+  readonly operation: AnyOperationDefinition;
+  /** The per-request context, when it had been built before the failure. */
+  readonly context: TContext | undefined;
+}
+
 export interface CreateOperationsAppOptions<TContext = unknown, TUser = unknown> {
   readonly operations: readonly AnyOperationDefinition[];
   /**
@@ -31,13 +38,28 @@ export interface CreateOperationsAppOptions<TContext = unknown, TUser = unknown>
    */
   readonly basePath?: string;
   /** Credential resolvers keyed by auth scheme name. */
-  readonly authResolvers?: AuthResolvers<TUser>;
-  /** Builds the per-request context handed to handlers as `ctx.context`. */
+  readonly authResolvers?: AuthResolvers<TUser, TContext>;
+  /**
+   * Builds the per-request context handed to auth resolvers and to handlers
+   * as `ctx.context`. Built before credentials are resolved, so it should
+   * be cheap (open expensive resources lazily) and is released through
+   * `disposeContext` once the response has been produced.
+   */
   readonly context?: (c: Context) => Promise<TContext> | TContext;
+  /**
+   * Releases the per-request context (database handles, cache connections)
+   * after the handler returned or failed. Errors thrown here are reported
+   * to `onError` (or the console) and never change the response.
+   */
+  readonly disposeContext?: (context: TContext, c: Context) => void | Promise<void>;
   /** Serve the OpenAPI document from the app; omit to not expose it. */
   readonly openapi?: OpenApiDocumentRouteOptions;
   /** Called for unexpected (non-OperationError) failures before the 500 is sent. */
-  readonly onError?: (error: unknown, c: Context) => void | Promise<void>;
+  readonly onError?: (
+    error: unknown,
+    c: Context,
+    info: OperationFailureInfo<TContext>,
+  ) => void | Promise<void>;
   /** Extra middleware / routes registered before the operations (CORS, logging, ...). */
   readonly configure?: (app: Hono) => void;
 }
@@ -99,7 +121,7 @@ export function createOperationsApp<TContext = unknown, TUser = unknown>(
   options: CreateOperationsAppOptions<TContext, TUser>,
 ): Hono {
   assertUniqueOperations(options.operations);
-  const resolvers: AuthResolvers<TUser> = options.authResolvers ?? {};
+  const resolvers: AuthResolvers<TUser, TContext> = options.authResolvers ?? {};
   assertResolversForOperations(options.operations, resolvers);
 
   const root = new Hono();
@@ -114,14 +136,38 @@ export function createOperationsApp<TContext = unknown, TUser = unknown>(
     });
   }
 
+  const report = async (
+    error: unknown,
+    c: Context,
+    info: OperationFailureInfo<TContext>,
+  ): Promise<void> => {
+    if (options.onError) {
+      try {
+        await options.onError(error, c, info);
+      } catch {
+        // never let error reporting mask the response
+      }
+    } else {
+      console.error(
+        `[openapi-operations] ${info.operation.method.toUpperCase()} ${info.operation.path} failed:`,
+        error,
+      );
+    }
+  };
+
   for (const operation of options.operations) {
     app.on(
       operation.method.toUpperCase(),
       openApiPathToHonoPath(operation.path),
       async (c: Context): Promise<Response> => {
+        let context: TContext | undefined = undefined;
+        let built = false;
         try {
-          const context = options.context ? await options.context(c) : (undefined as TContext);
-          const auth = await resolveAuth(c, operation.auth, resolvers);
+          if (options.context) {
+            context = await options.context(c);
+            built = true;
+          }
+          const auth = await resolveAuth(c, operation.auth, resolvers, context as TContext);
           const validated = await validateRequest(c, operation);
           const ctx = buildHandlerContext(c, operation, validated, auth, context);
           const result = await operation.handler(ctx);
@@ -133,23 +179,20 @@ export function createOperationsApp<TContext = unknown, TUser = unknown>(
           return result;
         } catch (error: unknown) {
           if (error instanceof OperationError) return error.toResponse();
-          if (options.onError) {
-            try {
-              await options.onError(error, c);
-            } catch {
-              // never let error reporting mask the response
-            }
-          } else {
-            console.error(
-              `[openapi-operations] ${operation.method.toUpperCase()} ${operation.path} failed:`,
-              error,
-            );
-          }
+          await report(error, c, { operation, context });
           return jsonResponse(500, {
             success: false,
             error: OPERATION_ERROR_CODES.internal,
             message: "Internal Server Error",
           });
+        } finally {
+          if (built && options.disposeContext) {
+            try {
+              await options.disposeContext(context as TContext, c);
+            } catch (error: unknown) {
+              await report(error, c, { operation, context });
+            }
+          }
         }
       },
     );

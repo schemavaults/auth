@@ -43,6 +43,14 @@ fi
 if [ "$IS_PRODUCTION_BUILD" = true ] && is_true "${SCHEMAVAULTS_VERCEL_BUILD_STRIP_TEST_ROUTES:-}"; then
   echo "[vercel-build] Stripping /api/test routes from the production build"
   rm -rf "$AUTH_SERVER_DIRECTORY/src/app/api/test"
+  # The OpenAPI catalogue imports every route's operation.ts; empty the
+  # test-environment domain list with the routes it would import (same as
+  # the production Dockerfile stage).
+  printf '%s\n' \
+    'import type { AnyOperationDefinition } from "@schemavaults/openapi-operations";' \
+    '/** Stripped from production builds: the /api/test routes do not exist here. */' \
+    'export const test_environmentOperations: readonly AnyOperationDefinition[] = [];' \
+    > "$AUTH_SERVER_DIRECTORY/src/lib/api/operations/test-environment.ts"
 fi
 
 echo "[vercel-build] Building @schemavaults/auth-server"

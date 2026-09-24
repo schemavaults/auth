@@ -1,6 +1,6 @@
 // Verifies the auth-server admin-only API endpoints reject authenticated-but-
 // non-admin requests with a 403 Forbidden response. These routes are guarded
-// by `withAdminApiRouteGuard` in auth-server/src/lib/withAdminRouteGuard.ts,
+// by `requireAuth({ routeGuard: "admin" })` on their operations (auth-server/src/lib/api/),
 // which enforces `user.admin === true`. The unauthenticated (401) case is
 // already covered by UnauthenticatedApiRequests.cy.ts, but the
 // authenticated-non-admin (403) case — the primary privilege-escalation
