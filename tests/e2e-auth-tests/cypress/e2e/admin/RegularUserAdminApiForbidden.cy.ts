@@ -108,6 +108,17 @@ describe("Regular User Admin API Forbidden", () => {
     });
   });
 
+  it("GET /api/admin/server-traces/operations returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "GET",
+      url: "/api/admin/server-traces/operations",
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
   it("DELETE /api/admin/errors returns 403 for authenticated non-admin", () => {
     cy.request({
       method: "DELETE",

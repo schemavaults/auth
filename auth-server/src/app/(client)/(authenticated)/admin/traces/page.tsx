@@ -7,32 +7,73 @@ import {
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import type { ServerRuntime } from "next";
-import type { ServerTraceRow } from "@/lib/auth-db/server-traces";
+import {
+  listServerTraceOperations,
+  listServerTraces,
+} from "@/lib/auth-db/server-traces";
+import {
+  getServerTraceRangeStart,
+  isServerTraceOpCategory,
+  parseServerTraceFilters,
+  type ServerTraceFilters,
+} from "@/lib/server-trace-filters";
+import type {
+  ServerTraceOperation,
+  ServerTraceOperationsSnapshot,
+  ServerTracesSnapshot,
+} from "@/components/ServerTracesDashboard";
 import { connection } from "next/server";
 
-async function PreloadedAdminTracesPage({
-  user,
-  dbh,
-}: IProtectedAdminServerComponentPageProps): Promise<ReactElement> {
+async function PreloadedAdminTracesPage(
+  { user, dbh }: IProtectedAdminServerComponentPageProps,
+  pageProps: PageProps<"/admin/traces">,
+): Promise<ReactElement> {
   if (!user.admin) {
     throw new Error(
       "Expected user to have been asserted to be an admin by this point!"
     );
   }
 
-  const traces: ServerTraceRow[] = await dbh.db
-    .selectFrom("server_traces")
-    .selectAll()
-    .orderBy("start_time", "desc")
-    .limit(200)
-    .execute();
+  // The dashboard keeps its filters in the URL; preload exactly that view.
+  const filters: ServerTraceFilters = parseServerTraceFilters(await pageProps.searchParams);
+  const fetched_at: number = Date.now();
+  const since_ms: number | undefined = getServerTraceRangeStart(filters.range, fetched_at);
 
-  return <AdminTracesPageView preloaded={traces} />;
+  const [traces, operations] = await Promise.all([
+    listServerTraces(dbh.db, {
+      limit: filters.limit,
+      since_ms,
+      op_names: filters.op_names,
+      op_categories: filters.op_categories,
+    }),
+    listServerTraceOperations(dbh.db, { since_ms }),
+  ]);
+
+  const preloadedTraces: ServerTracesSnapshot = { traces, fetched_at, filters };
+  const preloadedOperations: ServerTraceOperationsSnapshot = {
+    operations: operations.filter(
+      (op): op is ServerTraceOperation => isServerTraceOpCategory(op.op_category),
+    ),
+    fetched_at,
+    range: filters.range,
+  };
+
+  return (
+    <AdminTracesPageView
+      preloadedTraces={preloadedTraces}
+      preloadedOperations={preloadedOperations}
+    />
+  );
 }
 
-export default async function AdminTracesServerComponent(): Promise<ReactElement> {
+export default async function AdminTracesServerComponent(
+  pageProps: PageProps<"/admin/traces">,
+): Promise<ReactElement> {
   await connection();
-  return await withAdminServerComponentRouteGuard(PreloadedAdminTracesPage, { next_href: "/admin/traces" });
+  return await withAdminServerComponentRouteGuard(
+    (props) => PreloadedAdminTracesPage(props, pageProps),
+    { next_href: "/admin/traces" },
+  );
 }
 
 export const runtime: ServerRuntime = "nodejs";

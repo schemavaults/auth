@@ -15,6 +15,7 @@ import { removeBrandingAsset, uploadBrandingAsset } from "@/app/api/admin/brandi
 import { deleteError } from "@/app/api/admin/errors/[error_id]/operation";
 import { purgeErrorsBefore } from "@/app/api/admin/errors/operation";
 import { listServerTraces } from "@/app/api/admin/server-traces/operation";
+import { listServerTraceOperations } from "@/app/api/admin/server-traces/operations/operation";
 import { sendDailyReportViaGet, sendDailyReportViaPost } from "@/app/api/admin/send-daily-report/operation";
 
 /** Operations of the "admin" domain, in the order they appear in the docs. */
@@ -43,6 +44,7 @@ export const adminOperations: readonly AnyOperationDefinition[] = [
   purgeErrorsBefore,
   deleteError,
   listServerTraces,
+  listServerTraceOperations,
   sendDailyReportViaGet,
   sendDailyReportViaPost,
 ];
