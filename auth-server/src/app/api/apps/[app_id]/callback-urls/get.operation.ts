@@ -28,7 +28,7 @@ export const listAppCallbackUrls = defineOperation({
     500: { description: "Failed to list the callback URLs", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { app_id } = ctx.params;
     const appRegistry = new SchemaVaultsAppRegistry(db);

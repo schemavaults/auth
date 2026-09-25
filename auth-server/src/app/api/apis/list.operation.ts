@@ -49,7 +49,7 @@ export const listApiServers = defineOperation({
     500: { description: "Failed to list API servers", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, environment } = ctx.context;
     if (environment === "development") {
       console.log(`[/api/apis] GET request received`);

@@ -74,7 +74,7 @@ export const createOrganizationInvitationOperation = defineOperation({
     500: { description: "Failed to create the invitation", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     const { organization_id } = ctx.params;
     const { input_mode, identifier } = ctx.body;

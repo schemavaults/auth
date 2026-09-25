@@ -29,7 +29,7 @@ export const listBrandingAssets = defineOperation({
     500: { description: "Failed to list branding assets", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
 
     let assets: BrandingAssetMetadata[];

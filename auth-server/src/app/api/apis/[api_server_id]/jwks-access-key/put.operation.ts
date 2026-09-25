@@ -24,7 +24,7 @@ export const regenerateJwksAccessKey = defineOperation({
     500: { description: "Failed to verify authorization or to regenerate the key", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { api_server_id } = ctx.params;
 

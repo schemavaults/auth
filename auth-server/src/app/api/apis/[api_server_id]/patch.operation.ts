@@ -59,7 +59,7 @@ export const updateApiServerDynamicClientPolicy = defineOperation({
     500: { description: "Failed to update the API server", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { api_server_id } = ctx.params;
 

@@ -32,7 +32,7 @@ export const deleteUserAccount = defineOperation({
     500: { description: "Failed to delete the user", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const target_uid = ctx.params.uid;
 

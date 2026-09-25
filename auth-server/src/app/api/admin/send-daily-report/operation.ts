@@ -18,7 +18,7 @@ const description =
 /** Session-guarded path: an administrator triggered the report by hand. */
 function runForAdministrator(ctx: GuardedOperationContext): OperationHandlerResult {
   const { dbh, redis } = ctx.context;
-  return sendDailyReportHandler({ dbh, redis, uid: ctx.auth.user!.uid });
+  return sendDailyReportHandler({ dbh, redis, uid: ctx.auth.user.uid });
 }
 
 const responses = {

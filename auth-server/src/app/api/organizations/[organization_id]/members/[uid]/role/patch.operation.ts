@@ -42,7 +42,7 @@ export const updateOrganizationMemberRole = defineOperation({
     500: { description: "Failed to update the role", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { organization_id, uid: target_uid } = ctx.params;
     const new_role: string = ctx.body.role;

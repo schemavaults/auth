@@ -39,7 +39,7 @@ export const purgeErrorsBefore = defineOperation({
     500: { description: "Failed to delete errors", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { before } = ctx.query;
 

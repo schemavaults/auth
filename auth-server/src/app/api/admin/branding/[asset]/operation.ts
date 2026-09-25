@@ -48,7 +48,7 @@ export const uploadBrandingAsset = defineOperation({
     500: { description: "Failed to store the asset", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     const { asset } = ctx.params;
     const req = ctx.request;
@@ -125,7 +125,7 @@ export const removeBrandingAsset = defineOperation({
     500: { description: "Failed to remove the asset", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     const { asset } = ctx.params;
 

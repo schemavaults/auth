@@ -34,7 +34,7 @@ export const getMyOrganizationRole = defineOperation({
     500: { description: "Failed to look up the membership", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { organization_id } = ctx.params;
     try {

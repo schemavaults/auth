@@ -35,7 +35,7 @@ export const listServerSettings = defineOperation({
     500: { description: "Failed to list server settings", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     let settings: ServerSettingRecord[];
     try {

@@ -31,7 +31,7 @@ export const deleteError = defineOperation({
     500: { description: "Failed to delete the error", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { error_id } = ctx.params;
 

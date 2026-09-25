@@ -39,7 +39,7 @@ export const verifyTotpEnrollment = defineOperation({
     500: { description: "Failed to verify the enrollment", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis, environment } = ctx.context;
     const { factor_id, code } = ctx.body;
 

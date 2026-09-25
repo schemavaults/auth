@@ -45,7 +45,7 @@ export const createApiServer = defineOperation({
     500: { description: "Failed to register the API server", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis, environment } = ctx.context;
     if (environment === "development") {
       console.log("[/api/apis] POST request received");

@@ -28,7 +28,7 @@ export const listUserOrganizations = defineOperation({
     ...sessionErrorResponses,
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const organizationsRegistry = new OrganizationsRegistry(db);
 

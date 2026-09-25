@@ -39,7 +39,7 @@ export const listInviteCodes = defineOperation({
     500: { description: "Failed to list invite codes", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
 
     let invite_codes: readonly InviteCodeDefinitionType[];
@@ -86,7 +86,7 @@ export const createInviteCode = defineOperation({
     500: { description: "Failed to store the invite code", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
 
     if (Math.abs(ctx.body.created_at - Date.now()) > MAX_CREATED_AT_AGE_MS) {

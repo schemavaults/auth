@@ -31,7 +31,7 @@ export const deleteAppServiceAccount = defineOperation({
     404: { description: "No such app, or the app has no service account to remove", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, dbh } = ctx.context;
     const { app_id } = ctx.params;
 

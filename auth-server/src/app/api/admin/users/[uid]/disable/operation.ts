@@ -35,7 +35,7 @@ interface SetDisabledContext extends GuardedOperationContext {
 }
 
 async function setDisabled(ctx: SetDisabledContext, disabled: boolean): Promise<Response> {
-  const user = ctx.auth.user!;
+  const user = ctx.auth.user;
   const { db } = ctx.context;
   const target_uid = ctx.params.uid;
 

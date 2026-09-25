@@ -28,7 +28,7 @@ export const getApiServer = defineOperation({
     500: { description: "Failed to load the API server", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, environment } = ctx.context;
     const { api_server_id } = ctx.params;
     if (environment === "development") {

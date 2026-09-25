@@ -34,7 +34,7 @@ export const listServerTraces = defineOperation({
     500: { description: "Failed to list server traces", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
 
     let rawTraces: readonly ServerTraceRow[];

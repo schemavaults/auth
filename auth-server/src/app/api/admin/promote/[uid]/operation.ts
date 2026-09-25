@@ -31,7 +31,7 @@ export const promoteUserToAdmin = defineOperation({
     500: { description: "Failed to promote the user", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const new_superuser_uid = ctx.params.uid;
 

@@ -52,7 +52,7 @@ export const getUserProfile = defineOperation({
     500: { description: "Failed to load the profile", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     try {
       const userDoc = await new UserRegistry(db).getUserByUID(user.uid);
@@ -91,7 +91,7 @@ export const updateUserProfile = defineOperation({
     500: { description: "Failed to update the profile", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     try {
       const updated = await new UserRegistry(db).updateUserProfile(user.uid, ctx.body);

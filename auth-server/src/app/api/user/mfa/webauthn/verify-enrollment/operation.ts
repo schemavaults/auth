@@ -61,7 +61,7 @@ export const verifyPasskeyEnrollment = defineOperation({
     500: { description: "Failed to verify the enrollment", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis, environment } = ctx.context;
     // Throttle enrollment-verification attempts per uid (and per IP when
     // available); each call performs credential writes and factor flips.
