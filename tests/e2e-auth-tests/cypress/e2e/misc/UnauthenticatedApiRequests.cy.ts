@@ -486,6 +486,16 @@ describe("Unauthenticated API Requests", () => {
       });
     });
 
+    it("GET /api/admin/server-traces/operations returns 401", () => {
+      cy.request({
+        method: "GET",
+        url: "/api/admin/server-traces/operations",
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
     it("GET /api/admin/send-daily-report returns 401", () => {
       cy.request({
         method: "GET",

@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import type { ColumnDef } from "@schemavaults/ui";
 import { Button } from "@schemavaults/ui";
-import { MoreHorizontal, Copy } from "lucide-react";
+import { MoreHorizontal, Copy, Filter } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,14 @@ import {
 import { LocalDateTime } from "@schemavaults/auth-ui";
 import type { ServerTraceRow } from "@/lib/auth-db/server-traces";
 
-export function createColumns(): ColumnDef<ServerTraceRow>[] {
+export interface CreateColumnsOptions {
+  /** Adds a "Filter by this operation" row action. */
+  onFilterByOperation?: (op_name: string) => void;
+}
+
+export function createColumns(
+  options: CreateColumnsOptions = {},
+): ColumnDef<ServerTraceRow>[] {
   return [
     {
       id: "op_name",
@@ -80,6 +87,8 @@ export function createColumns(): ColumnDef<ServerTraceRow>[] {
     },
     {
       id: "duration",
+      accessorFn: (trace: ServerTraceRow): number =>
+        Number(trace.end_time) - Number(trace.start_time),
       header: "Duration (ms)",
       cell: ({ row }): ReactElement => {
         const duration = Number(row.original.end_time) - Number(row.original.start_time);
@@ -112,6 +121,15 @@ export function createColumns(): ColumnDef<ServerTraceRow>[] {
               >
                 <Copy className="h-4 w-4 mr-2" /> Copy Event ID
               </DropdownMenuItem>
+              {options.onFilterByOperation ? (
+                <DropdownMenuItem
+                  onClick={(): void => {
+                    options.onFilterByOperation?.(trace.op_name);
+                  }}
+                >
+                  <Filter className="h-4 w-4 mr-2" /> Filter by this operation
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         );

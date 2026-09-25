@@ -3,6 +3,12 @@ export type {
   ServerTraceRow,
   NewServerTraceRow,
 } from "./server-traces-table";
+export {
+  listServerTraces,
+  listServerTraceOperations,
+  type ListServerTracesOptions,
+  type ServerTraceOperationRow,
+} from "./list-server-traces";
 
 export {
   serverTraceSchema,

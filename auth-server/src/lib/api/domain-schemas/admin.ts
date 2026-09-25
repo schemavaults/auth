@@ -2,7 +2,7 @@ import { inviteCodeDefinitionSchema, mfaFactorTypeSchema } from "@schemavaults/a
 import { z, withOpenApi } from "@schemavaults/openapi-operations";
 import { getAllBrandingAssetKeys, type BrandingAssetKey } from "@/lib/auth-db/branding";
 import { userDocumentSchema } from "@/lib/auth-db/users";
-import { serverTraceSchema } from "@/lib/server-trace-schema";
+import { serverTraceOpCategories, serverTraceSchema } from "@/lib/server-trace-schema";
 
 /**
  * Schemas shared by the "admin" domain operations (`src/app/api/admin/**`).
@@ -58,6 +58,26 @@ export const BrandingAssetUploadResult = z
 export const AdminServerTrace = withOpenApi(serverTraceSchema, "AdminServerTrace", {
   description: "A timing trace captured by the server; `start_time` / `end_time` are Unix epoch milliseconds.",
 });
+
+/** An operation that recorded server traces, with its trace count in the requested window. */
+export const AdminServerTraceOperation = z
+  .object({
+    op_name: z.string().min(1).openapi({ example: "POST /api/auth/login" }),
+    op_category: z.enum(serverTraceOpCategories),
+    count: z.number().int().nonnegative().openapi({ description: "Traces recorded for the operation in the window" }),
+    last_seen: z.number().nonnegative().openapi({ description: "Start of the operation's most recent trace (Unix epoch milliseconds)" }),
+  })
+  .openapi("AdminServerTraceOperation");
+
+/** The `since` filter of the server trace endpoints, as the query string carries it. */
+export const serverTraceSinceParamSchema = z
+  .string()
+  .min(1)
+  .pipe(z.coerce.number<string>().int().nonnegative())
+  .openapi({
+    description: "Only traces that started at or after this instant (a non-negative integer Unix epoch in milliseconds).",
+    example: "1735689600000",
+  });
 
 export const issuedTokenTypeSchema = z
   .enum(["access", "refresh"])

@@ -186,6 +186,14 @@ describe("Authenticated API response shapes", () => {
       });
     });
 
+    it("GET /api/admin/server-traces/operations -> { success, data.operations[] }", () => {
+      get("/api/admin/server-traces/operations").then((response) => {
+        expect(response.status).to.eq(200);
+        expect(response.body.success).to.eq(true);
+        expect(response.body.data?.operations).to.be.an("array");
+      });
+    });
+
     it("GET /api/admin/invite-codes -> { success, data.invite_codes[] }", () => {
       get("/api/admin/invite-codes").then((response) => {
         expect(response.status).to.eq(200);
