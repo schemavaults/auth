@@ -1,5 +1,5 @@
 import "server-only";
-import { getAppEnvironment, type UserData } from "@schemavaults/auth-server-sdk";
+import type { UserData } from "@schemavaults/auth-server-sdk";
 import { createSchemaVaultsAuthResolvers } from "@schemavaults/auth-server-sdk/openapi-operations";
 import type { AuthResolvers } from "@schemavaults/openapi-operations";
 import type { ExampleApiContext } from "./context";
@@ -13,7 +13,8 @@ import type { ExampleApiContext } from "./context";
  * token, 403 for a disabled account, 500 with a clear message when
  * `SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY` is missing). The API server
  * id, environment and auth server URL are read from the environment on
- * first use.
+ * first use, never at module load: `next build` evaluates this module
+ * while collecting page data, without the runtime environment.
  */
 
 /**
@@ -38,5 +39,5 @@ export function getAcceptedTokenAudiences(): readonly string[] {
 export const authResolvers: AuthResolvers<UserData, ExampleApiContext> =
   createSchemaVaultsAuthResolvers<ExampleApiContext>({
     acceptedAudiences: getAcceptedTokenAudiences(),
-    debug: process.env.NODE_ENV === "development" || getAppEnvironment() === "development",
+    debug: process.env.NODE_ENV === "development",
   });
