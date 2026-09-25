@@ -9,6 +9,7 @@ import {
   schemaVaultsAccessTokenBearerScheme,
   schemaVaultsAccessTokenCookieScheme,
   schemeResolvesUser,
+  isValidAuthPrincipalKind,
   type AllSchemesResolveUser,
 } from "../auth-scheme";
 import { createOperationsApp } from "./create-operations-app";
@@ -124,6 +125,10 @@ describe("principal: \"user\" schemes", () => {
   });
 
   test("defineAuthScheme rejects unknown principal kinds", () => {
+    expect(isValidAuthPrincipalKind("user")).toBe(true);
+    expect(isValidAuthPrincipalKind("any")).toBe(true);
+    expect(isValidAuthPrincipalKind("robot")).toBe(false);
+    expect(isValidAuthPrincipalKind(undefined)).toBe(false);
     expect(() =>
       defineAuthScheme({
         name: "bad",

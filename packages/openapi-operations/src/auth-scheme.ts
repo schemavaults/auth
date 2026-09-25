@@ -14,6 +14,12 @@ import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/o
  */
 export type AuthPrincipalKind = "user" | "any";
 
+export const AUTH_PRINCIPAL_KINDS = ["user", "any"] as const satisfies readonly AuthPrincipalKind[];
+
+export function isValidAuthPrincipalKind(value: unknown): value is AuthPrincipalKind {
+  return typeof value === "string" && (AUTH_PRINCIPAL_KINDS as readonly string[]).includes(value);
+}
+
 /**
  * A named OpenAPI security scheme (`components.securitySchemes[name]`) plus
  * the metadata the SchemaVaults docs UI uses to explain how to authenticate.
@@ -58,13 +64,9 @@ export function defineAuthScheme<
       `Auth scheme name "${definition.name}" must match /^[A-Za-z0-9._-]+$/ (it becomes an OpenAPI component key)`,
     );
   }
-  if (
-    definition.principal !== undefined &&
-    definition.principal !== "user" &&
-    definition.principal !== "any"
-  ) {
+  if (definition.principal !== undefined && !isValidAuthPrincipalKind(definition.principal)) {
     throw new TypeError(
-      `Auth scheme "${definition.name}" has an unknown principal kind "${String(definition.principal)}" (expected "user" or "any")`,
+      `Auth scheme "${definition.name}" has an unknown principal kind "${String(definition.principal)}" (expected one of: ${AUTH_PRINCIPAL_KINDS.join(", ")})`,
     );
   }
   return Object.freeze({ ...definition });

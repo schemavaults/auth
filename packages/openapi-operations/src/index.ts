@@ -6,6 +6,8 @@ export type { HttpMethod } from "./http-method";
 
 export {
   defineAuthScheme,
+  AUTH_PRINCIPAL_KINDS,
+  isValidAuthPrincipalKind,
   schemeResolvesUser,
   publicAccess,
   requireAuth,
