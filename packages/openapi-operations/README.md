@@ -105,19 +105,68 @@ Request bodies take two extra flags:
 
 An `AuthSchemeDefinition` is a named OpenAPI security scheme plus docs metadata. Built-ins:
 
-| Export | Scheme |
-| --- | --- |
-| `schemaVaultsAccessTokenBearerScheme` | `Authorization: Bearer <access token>` |
-| `schemaVaultsAccessTokenCookieScheme(cookieName)` | first-party access token cookie |
-| `schemaVaultsRefreshTokenCookieScheme(cookieName)` | auth-server session cookie |
-| `oidcClientSecretBasicScheme` / `oidcClientSecretPostScheme` | OAuth 2.0 client authentication |
-| `apiKeyHeaderScheme(name, header)` | static API key |
-| `defineAuthScheme({...})` | anything else |
+| Export | Scheme | Principal |
+| --- | --- | --- |
+| `schemaVaultsAccessTokenBearerScheme` | `Authorization: Bearer <access token>` | user |
+| `schemaVaultsAccessTokenCookieScheme(cookieName)` | first-party access token cookie | user |
+| `schemaVaultsRefreshTokenCookieScheme(cookieName)` | auth-server session cookie | user |
+| `oidcClientSecretBasicScheme` / `oidcClientSecretPostScheme` | OAuth 2.0 client authentication | any |
+| `apiKeyHeaderScheme(name, header)` | static API key | any |
+| `defineAuthScheme({...})` | anything else | as declared |
 
 Schemes describe *how* credentials are transported; verification is a per-host
 `AuthResolver` (below). The OpenAPI document carries the standard `security`
 requirement per operation and an `x-schemavaults-auth` extension with the route guard,
 required scopes and organization role so docs can display them.
+
+#### User-bearing schemes: non-nullable `ctx.auth.user`
+
+`AuthPrincipal.user` is `TUser | null` because a principal may be a non-user credential
+(client credentials, an API key). A scheme whose resolver *always* identifies a user
+declares `principal: "user"` (the three SchemaVaults token schemes do), and when every
+scheme an operation accepts is such a scheme, its handler gets `ctx.auth.user` typed as
+`TUser`:
+
+```ts
+const userSchemes = [schemaVaultsAccessTokenBearerScheme, accessTokenCookieScheme] as const;
+
+export const me = defineOperation({
+  auth: requireAuth({ schemes: userSchemes }), // keep the tuple type: `as const`, no widening
+  handler: (ctx) => ctx.json(200, { uid: ctx.auth.user.uid }), // UserData, not UserData | null
+  // ...
+});
+```
+
+Keep the scheme list's tuple type (a helper returning `RequiredOperationAuth` without
+its type parameter, or a scheme annotated as `AuthSchemeDefinition<"name">` instead of
+`AuthSchemeDefinition<"name", "user">`, widens it back to nullable). The runtime enforces
+the declaration: a `principal: "user"` scheme whose resolver returns a principal without
+a user is refused with 401. For operations that also accept non-user schemes,
+`requireUser(ctx.auth)` narrows and throws a 401 `OperationError` otherwise.
+
+Resource servers verifying SchemaVaults access tokens do not write resolvers for these
+schemes themselves: `createSchemaVaultsAuthResolvers()` from
+`@schemavaults/auth-server-sdk/openapi-operations` returns them, keyed by scheme name,
+built on the server SDK's `RouteGuardFactory` and the auth server's JWKS.
+
+### The error envelope
+
+Every error the runtime produces, and every `OperationError` a handler throws, is
+`{ success: false, error, message, issues?, details? }`. `OperationErrorBodySchema` is
+that envelope as a zod schema (registered as `components.schemas.OperationError`, with
+`OperationValidationIssueSchema` as `OperationValidationIssue`), for the 404 / 409 / ...
+responses a handler declares:
+
+```ts
+responses: {
+  200: { description: "App", schema: AppSchema },
+  404: { description: "No such app", schema: OperationErrorBodySchema },
+},
+handler: (ctx) => {
+  if (!app) throw new OperationError(404, { error: "not_found", message: "No such app" });
+  // ...
+},
+```
 
 ## Generating the OpenAPI document
 
@@ -129,8 +178,20 @@ export const openApiDocument = buildOpenApiDocument({
   servers: [{ url: "https://auth.schemavaults.com" }],
   tags: [{ name: "apps", description: "Client applications" }],
   operations: [getApp, health],
+  // Also document the responses the runtime produces on its own (below).
+  documentRuntimeResponses: true,
 });
 ```
+
+`buildOpenApiDocument` emits the responses each operation declares. The runtime also
+answers on its own with 400 (validation of params / query / headers / body, missing
+organization parameter), 401 (protected operations; with `WWW-Authenticate`), 403 (admin
+route guard, required scopes, organization role), 415 (operations with a validated body)
+and 500, all with the `OperationError` envelope. `documentRuntimeResponses: true` merges
+those into every operation that can produce them; a response the operation declares for
+the same status takes precedence. `runtimeErrorResponses(operation)` returns the set for
+one operation (and `withRuntimeErrorResponses(operation)` a copy with them merged) when
+you assemble responses yourself.
 
 ## Serving with Hono on Vercel / Next.js
 
@@ -212,15 +273,42 @@ dynamic segment is parsed by the app itself (Next.js' `params` are never read).
 for the rest to Next.js. The factory validates the whole catalogue up front (unique
 operations, a resolver for every scheme) and `api.app()` throws for an operation that
 is not in it, so a route file cannot serve something the document does not describe.
-The reverse (a documented operation with no route file) is a file-layout question;
-the example resource server in this repository checks it with a small `bun test`.
+The reverse (a documented operation with no route file, or one in the wrong folder) is a
+file-layout question; `checkNextAppRouterRoutes()` from
+`@schemavaults/openapi-operations/nextjs/app-router-routes` answers it for a `bun test`
+or a generation script. Given the catalogue and the `app` directory it verifies that every
+`operation.ts` / `operations.ts` under `app/api/**` exports operations that are in the
+catalogue and declare the path its folder serves (`[id]` ↔ `{id}`, `(group)` segments
+ignored, catch-all segments rejected), that a sibling `route.ts` exists, that every
+catalogue entry comes from such a file, and that every `route.ts` serves a catalogued path:
+
+```ts
+// src/lib/api/routes.test.ts
+import { checkNextAppRouterRoutes } from "@schemavaults/openapi-operations/nextjs/app-router-routes";
+
+test("route files and the catalogue agree", async () => {
+  const report = await checkNextAppRouterRoutes({
+    operations,                                   // the catalogue
+    appDirectory: path.resolve(import.meta.dir, "../../app"),
+    ignoredRoutePaths: ["/api/openapi.json"],     // route files that are not operations
+  });
+  expect(report.problems).toEqual([]);
+});
+```
+
+`assertNextAppRouterRoutes()` throws an `Error` listing every problem instead, for
+scripts. Options: `apiDirectory` (default `api`), `operationFileNames` (default
+`["operation.ts", "operations.ts"]`), `routeFileName`, `ignoredRouteDirectories` (e.g.
+`api/auth/[...nextauth]`), `importModule` (default dynamic `import()`), `catalogueLabel`.
 
 Per request the app: resolves the context, tries each accepted scheme's resolver in
 order (401 + `WWW-Authenticate` if none yields a principal), enforces the route guard
 (403), required scopes (403 `insufficient_scope`), organization membership (403), then
 validates params/query/headers/body (400 with zod issues, 415 on media type mismatch)
 and finally calls the handler. Errors use the `{ success: false, error, message }`
-envelope.
+envelope (`OperationErrorBodySchema`). An `OperationError` thrown from a different copy of
+this package (isolated installs can load it twice) is recognised structurally
+(`isOperationError()`), so it still short-circuits with its status and body.
 
 ## Scripts
 

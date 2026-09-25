@@ -3,7 +3,7 @@ import type { OpenAPIObject } from "openapi3-ts/oas31";
 import type { AnyOperationDefinition, OperationHandlerContext, ResponsesDefinition } from "../operation";
 import { assertUniqueOperations } from "../operation";
 import { openApiPathToHonoPath } from "../openapi/path-format";
-import { OPERATION_ERROR_CODES, OperationError, jsonResponse } from "./errors";
+import { OPERATION_ERROR_CODES, isOperationError, jsonResponse } from "./errors";
 import { validateRequest } from "./validate-request";
 import { assertResolversForOperations, resolveAuth, type AuthResolvers } from "./resolve-auth";
 
@@ -178,7 +178,7 @@ export function createOperationsApp<TContext = unknown, TUser = unknown>(
           }
           return result;
         } catch (error: unknown) {
-          if (error instanceof OperationError) return error.toResponse();
+          if (isOperationError(error)) return error.toResponse();
           await report(error, c, { operation, context });
           return jsonResponse(500, {
             success: false,

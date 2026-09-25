@@ -34,6 +34,6 @@ export const organizationGreeting = defineOperation({
   },
   handler: (ctx) =>
     ctx.json(200, {
-      message: `Hello ${ctx.auth.user?.email ?? ctx.auth.user?.uid ?? "member"} of organization ${ctx.params.organization_id}!`,
+      message: `Hello ${ctx.auth.user.email ?? ctx.auth.user.uid} of organization ${ctx.params.organization_id}!`,
     }),
 });

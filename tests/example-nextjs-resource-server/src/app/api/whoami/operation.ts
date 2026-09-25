@@ -33,8 +33,8 @@ export const whoami = defineOperation({
   },
   handler: (ctx) =>
     ctx.json(200, {
-      uid: ctx.auth.user?.uid ?? "",
-      email: ctx.auth.user?.email ?? null,
+      uid: ctx.auth.user.uid,
+      email: ctx.auth.user.email ?? null,
       admin: ctx.auth.isAdmin,
       scheme: ctx.auth.scheme,
       scope: ctx.auth.scope,

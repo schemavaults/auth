@@ -6,6 +6,9 @@ export type { HttpMethod } from "./http-method";
 
 export {
   defineAuthScheme,
+  AUTH_PRINCIPAL_KINDS,
+  isValidAuthPrincipalKind,
+  schemeResolvesUser,
   publicAccess,
   requireAuth,
   isPublicOperationAuth,
@@ -18,8 +21,11 @@ export {
   apiKeyHeaderScheme,
 } from "./auth-scheme";
 export type {
+  AllSchemesResolveUser,
+  AuthPrincipalKind,
   AuthSchemeDefinition,
   AuthRequirements,
+  UserAuthSchemeDefinition,
   OperationAuth,
   PublicOperationAuth,
   RequiredOperationAuth,
@@ -50,10 +56,12 @@ export type {
   OperationRequestDefinition,
   RequestBodyContentType,
   RequestBodyDefinition,
+  ResolvedAuthPrincipal,
   ResponseBodyOf,
   ResponseDefinition,
   ResponseStatusOf,
   ResponsesDefinition,
+  UserAuthPrincipal,
 } from "./operation";
 
 export {
@@ -63,6 +71,7 @@ export {
   toSecuritySchemeComponent,
 } from "./openapi/build-openapi-document";
 export type { BuildOpenApiDocumentOptions } from "./openapi/build-openapi-document";
+export { runtimeErrorResponses, withRuntimeErrorResponses } from "./openapi/runtime-responses";
 // Re-exported so hosts can type generated documents without depending on openapi3-ts.
 export type { OpenAPIObject } from "openapi3-ts/oas31";
 export {

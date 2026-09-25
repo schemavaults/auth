@@ -39,10 +39,10 @@ the `on-push-main-branch-prod-cicd.yml` workflow).
 | `auth-client-sdk`                        | `packages/auth-client-sdk/package.json`                          | published |
 | `auth-react-provider`                    | `packages/auth-react-provider/package.json`                      | published |
 | `auth-ui`                                | `packages/auth-ui/package.json`                                  | published |
+| `openapi-operations`                     | `packages/openapi-operations/package.json`                       | published |
 | `auth-resource-server-codegen-templates` | `packages/auth-resource-server-codegen-templates/package.json`   | not published on its own; copied into `auth-server-sdk`'s dist at build time |
 | `auth-server-sdk`                        | `packages/auth-server-sdk/package.json`                          | published (includes the `auth-server-sdk codegen` CLI) |
 | `trpc-backend-init`                      | `packages/trpc-backend-init/package.json`                        | published |
-| `openapi-operations`                     | `packages/openapi-operations/package.json`                       | published |
 | `openapi-docs-ui`                        | `packages/openapi-docs-ui/package.json`                          | published |
 | `auth-server`                            | `auth-server/package.json`                                       | deployed app (private) |
 | `cypress-e2e-auth-tests-helper-commands` | `tests/cypress-e2e-auth-tests-helper-commands/package.json`      | test workspace |
@@ -68,10 +68,10 @@ cascade.
 | `auth-client-sdk`                        | `app-definitions`, `auth-common`                                                                |
 | `auth-react-provider`                    | `app-definitions`, `auth-common`, `auth-client-sdk`                                             |
 | `auth-ui`                                | `app-definitions`, `auth-common`, `auth-react-provider` (all peerDeps)                          |
-| `auth-resource-server-codegen-templates` | `auth-react-provider` (the templates import it; devDep). Its devDeps on `jwt`, `auth-common` and `auth-client-sdk` are type-check only; the templates never import them |
-| `auth-server-sdk`                        | `app-definitions`, `auth-common`, `jwt`; **`auth-resource-server-codegen-templates` (build-time copy, see note)** |
-| `trpc-backend-init`                      | `app-definitions`, `auth-server-sdk` (both peerDeps)                                            |
 | `openapi-operations`                     | `auth-common`                                                                                   |
+| `auth-resource-server-codegen-templates` | `auth-react-provider` (the templates import it; devDep). Its devDeps on `jwt`, `auth-common` and `auth-client-sdk` are type-check only; the templates never import them |
+| `auth-server-sdk`                        | `app-definitions`, `auth-common`, `jwt`, `openapi-operations` (optional peerDep + devDep, for the `/openapi-operations` sub-export); **`auth-resource-server-codegen-templates` (build-time copy, see note)** |
+| `trpc-backend-init`                      | `app-definitions`, `auth-server-sdk` (both peerDeps)                                            |
 | `openapi-docs-ui`                        | (none; peerDep on the external `@schemavaults/ui` only)                                          |
 | `auth-server`                            | `app-definitions`, `auth-common`, `jwt`, `auth-client-sdk`, `auth-react-provider`, `auth-ui`, `auth-server-sdk`, `openapi-operations`, `openapi-docs-ui` |
 | `cypress-e2e-auth-tests-helper-commands` | `app-definitions`, `auth-common`, `jwt`                                                         |
@@ -102,10 +102,10 @@ dependents of dependents.
 | `auth-client-sdk`                         | `auth-react-provider`, `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server-sdk`, `trpc-backend-init`, `auth-server` |
 | `auth-react-provider`                     | `auth-ui`, `auth-resource-server-codegen-templates`, `auth-server-sdk`, `trpc-backend-init`, `auth-server` |
 | `auth-ui`                                 | `auth-server`                                                                        |
+| `openapi-operations`                      | `auth-server-sdk`, `trpc-backend-init`, `auth-server`                                |
 | `auth-resource-server-codegen-templates`  | `auth-server-sdk`, `trpc-backend-init`, `auth-server`                                |
 | `auth-server-sdk`                         | **`trpc-backend-init` (REQUIRED — see note below)**, `auth-server`                   |
 | `trpc-backend-init`                       | (none — leaf)                                                                        |
-| `openapi-operations`                      | `auth-server`                                                                        |
 | `openapi-docs-ui`                         | `auth-server`                                                                        |
 | `auth-server`                             | (none — leaf)                                                                        |
 | test workspaces                           | (none — never cascade; see note below)                                               |
@@ -157,7 +157,16 @@ committing.
 server serves every `/api/**` route through `@schemavaults/openapi-operations` and
 renders `/docs` with `@schemavaults/openapi-docs-ui`, so a change to either
 package bumps `auth-server` too (e.g. `21bfe41`). Neither package depends on
-`auth-server-sdk`, so they never pull in `trpc-backend-init`.
+`auth-server-sdk`.
+
+**Note on `openapi-operations` → `auth-server-sdk` → `trpc-backend-init`:** since
+`auth-server-sdk` 0.31.0, `@schemavaults/openapi-operations` is an optional
+peerDependency (and a `workspace:*` devDependency) of `auth-server-sdk`, needed by
+its `@schemavaults/auth-server-sdk/openapi-operations` sub-export
+(`createSchemaVaultsAuthResolvers()`). An `openapi-operations` bump therefore
+cascades into `auth-server-sdk`, and from there into `trpc-backend-init` (the
+peerDependency rule above). `openapi-docs-ui` has no such edge: it still cascades
+only into `auth-server`.
 
 **Note on test workspaces:** `cypress-e2e-auth-tests-helper-commands`,
 `e2e-auth-tests` and `example-nextjs-resource-server` are never published and
@@ -352,9 +361,11 @@ version bump, not just the ones whose code changed.
 openapi-operations:0.3.1, openapi-docs-ui:0.1.7, auth-server:0.45.3, e2e-auth-tests:0.11.29 - tidy API docs spacing; white-label-aware docs copy
 ```
 
-`openapi-operations` and `openapi-docs-ui` cascade only into `auth-server`;
-`e2e-auth-tests` is listed because a spec under `tests/e2e-auth-tests/` changed,
-and it goes last.
+`openapi-docs-ui` cascades only into `auth-server`; `e2e-auth-tests` is listed
+because a spec under `tests/e2e-auth-tests/` changed, and it goes last. (This commit
+predates the `openapi-operations` → `auth-server-sdk` edge; since `auth-server-sdk`
+0.31.0 an `openapi-operations` bump also lists `auth-server-sdk` and
+`trpc-backend-init`.)
 
 **Repo-level chore** (real commit `dcda683`):
 

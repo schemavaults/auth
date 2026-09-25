@@ -15,5 +15,5 @@ export const myEmail = defineOperation({
     200: { description: "The caller's email", schema: z.object({ email: z.string().nullable() }) },
     ...errorResponses,
   },
-  handler: (ctx) => ctx.json(200, { email: ctx.auth.user?.email ?? null }),
+  handler: (ctx) => ctx.json(200, { email: ctx.auth.user.email ?? null }),
 });

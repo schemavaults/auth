@@ -2,6 +2,25 @@ import type { SecuritySchemeObject } from "openapi3-ts/oas31";
 import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
 
 /**
+ * What kind of principal a scheme's resolver produces:
+ *
+ * - `"user"`: the credential always identifies a user, so a principal
+ *   resolved from it carries a non-null `user`. When every scheme an
+ *   operation accepts is a user scheme, its handler sees `ctx.auth.user`
+ *   typed as `TUser` (not `TUser | null`), and the runtime fails closed
+ *   (401) should a resolver ever return a principal without a user.
+ * - `"any"` (the default): the principal may or may not be a user (client
+ *   credentials, API keys, ...); handlers narrow `ctx.auth.user` themselves.
+ */
+export type AuthPrincipalKind = "user" | "any";
+
+export const AUTH_PRINCIPAL_KINDS = ["user", "any"] as const satisfies readonly AuthPrincipalKind[];
+
+export function isValidAuthPrincipalKind(value: unknown): value is AuthPrincipalKind {
+  return typeof value === "string" && (AUTH_PRINCIPAL_KINDS as readonly string[]).includes(value);
+}
+
+/**
  * A named OpenAPI security scheme (`components.securitySchemes[name]`) plus
  * the metadata the SchemaVaults docs UI uses to explain how to authenticate.
  *
@@ -11,9 +30,14 @@ import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/o
  * server (which can decrypt its own tokens) and on a third-party resource
  * server (which verifies them against the auth server's JWKS).
  */
-export interface AuthSchemeDefinition<TName extends string = string> {
+export interface AuthSchemeDefinition<
+  TName extends string = string,
+  TPrincipal extends AuthPrincipalKind = AuthPrincipalKind,
+> {
   /** Key under `components.securitySchemes` and in `security` requirements. */
   readonly name: TName;
+  /** What the resolver of this scheme produces; see {@link AuthPrincipalKind}. Default `"any"`. */
+  readonly principal?: TPrincipal;
   /** Human readable label for docs. */
   readonly title: string;
   /** Longer explanation for docs (where to get the credential, lifetime, ...). */
@@ -28,9 +52,10 @@ export interface AuthSchemeDefinition<TName extends string = string> {
   readonly challenge?: string;
 }
 
-export function defineAuthScheme<const TName extends string>(
-  definition: AuthSchemeDefinition<TName>,
-): AuthSchemeDefinition<TName> {
+export function defineAuthScheme<
+  const TName extends string,
+  const TPrincipal extends AuthPrincipalKind = "any",
+>(definition: AuthSchemeDefinition<TName, TPrincipal>): AuthSchemeDefinition<TName, TPrincipal> {
   if (typeof definition.name !== "string" || definition.name.length === 0) {
     throw new TypeError("An auth scheme needs a non-empty name");
   }
@@ -39,8 +64,31 @@ export function defineAuthScheme<const TName extends string>(
       `Auth scheme name "${definition.name}" must match /^[A-Za-z0-9._-]+$/ (it becomes an OpenAPI component key)`,
     );
   }
+  if (definition.principal !== undefined && !isValidAuthPrincipalKind(definition.principal)) {
+    throw new TypeError(
+      `Auth scheme "${definition.name}" has an unknown principal kind "${String(definition.principal)}" (expected one of: ${AUTH_PRINCIPAL_KINDS.join(", ")})`,
+    );
+  }
   return Object.freeze({ ...definition });
 }
+
+/** Whether a principal resolved from the scheme is guaranteed to carry a user. */
+export function schemeResolvesUser(scheme: AuthSchemeDefinition): boolean {
+  return scheme.principal === "user";
+}
+
+/** A scheme whose resolver always produces a user principal. */
+export type UserAuthSchemeDefinition<TName extends string = string> = AuthSchemeDefinition<
+  TName,
+  "user"
+>;
+
+/**
+ * `true` when every scheme in the (non-empty) list is a user scheme, so a
+ * principal resolved through any of them carries a non-null user.
+ */
+export type AllSchemesResolveUser<TSchemes extends readonly AuthSchemeDefinition[]> =
+  TSchemes extends readonly [] ? false : TSchemes[number] extends UserAuthSchemeDefinition ? true : false;
 
 /**
  * Route guard levels mirroring `@schemavaults/auth-server-sdk`'s
@@ -71,9 +119,11 @@ export interface OrganizationRoleRequirement {
  * `x-schemavaults-auth` vendor extension so docs can show the route guard
  * and organization role in addition to the scopes.
  */
-export interface AuthRequirements {
+export interface AuthRequirements<
+  TSchemes extends readonly AuthSchemeDefinition[] = readonly AuthSchemeDefinition[],
+> {
   /** Schemes accepted for this operation (any one of them satisfies it). */
-  readonly schemes: readonly AuthSchemeDefinition[];
+  readonly schemes: TSchemes;
   /** Who may call once authenticated. Defaults to "authenticated". */
   readonly routeGuard?: RouteGuardType;
   /**
@@ -93,7 +143,9 @@ export interface PublicOperationAuth {
   readonly notes?: string;
 }
 
-export interface RequiredOperationAuth extends AuthRequirements {
+export interface RequiredOperationAuth<
+  TSchemes extends readonly AuthSchemeDefinition[] = readonly AuthSchemeDefinition[],
+> extends AuthRequirements<TSchemes> {
   readonly type: "required";
 }
 
@@ -104,8 +156,14 @@ export function publicAccess(notes?: string): PublicOperationAuth {
   return notes === undefined ? { type: "public" } : { type: "public", notes };
 }
 
-/** Marks an operation as requiring one of the given schemes (+ extra checks). */
-export function requireAuth(requirements: AuthRequirements): RequiredOperationAuth {
+/**
+ * Marks an operation as requiring one of the given schemes (+ extra checks).
+ * The scheme list type is preserved so that operations accepting only
+ * `principal: "user"` schemes get a non-nullable `ctx.auth.user`.
+ */
+export function requireAuth<const TSchemes extends readonly AuthSchemeDefinition[]>(
+  requirements: AuthRequirements<TSchemes>,
+): RequiredOperationAuth<TSchemes> {
   if (!Array.isArray(requirements.schemes) || requirements.schemes.length === 0) {
     throw new TypeError(
       "requireAuth() needs at least one auth scheme; use publicAccess() for open operations",
@@ -140,6 +198,7 @@ export function isPublicOperationAuth(auth: OperationAuth): auth is PublicOperat
 /** `Authorization: Bearer <access token>` issued by the auth server. */
 export const schemaVaultsAccessTokenBearerScheme = defineAuthScheme({
   name: "schemavaults-access-token",
+  principal: "user",
   title: "Access token (Bearer)",
   description:
     "An access token issued by the auth server for this API server, sent as `Authorization: Bearer <token>`.",
@@ -159,9 +218,10 @@ export const schemaVaultsAccessTokenBearerScheme = defineAuthScheme({
  */
 export function schemaVaultsAccessTokenCookieScheme(
   cookieName: string,
-): AuthSchemeDefinition<"schemavaults-access-token-cookie"> {
+): AuthSchemeDefinition<"schemavaults-access-token-cookie", "user"> {
   return defineAuthScheme({
     name: "schemavaults-access-token-cookie",
+    principal: "user",
     title: "Access token (cookie)",
     description: `The first-party HTTP-only access token cookie \`${cookieName}\` set after login.`,
     securityScheme: {
@@ -176,9 +236,10 @@ export function schemaVaultsAccessTokenCookieScheme(
 /** The auth server's own refresh-token cookie (only meaningful ON the auth server). */
 export function schemaVaultsRefreshTokenCookieScheme(
   cookieName: string,
-): AuthSchemeDefinition<"schemavaults-refresh-token-cookie"> {
+): AuthSchemeDefinition<"schemavaults-refresh-token-cookie", "user"> {
   return defineAuthScheme({
     name: "schemavaults-refresh-token-cookie",
+    principal: "user",
     title: "Auth server session (refresh token cookie)",
     description: `The auth server's HTTP-only refresh token cookie \`${cookieName}\`; only the auth server itself can resolve it.`,
     securityScheme: {

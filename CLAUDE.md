@@ -70,7 +70,7 @@ bun run test --filter @schemavaults/openapi-docs-ui  # Run tests in openapi-docs
 - **auth-server/**: Next.js 16 App Router application - the main auth server deployed at auth.schemavaults.com
 - **packages/**: Shared TypeScript libraries published to npm & GitHub Packages
 - **tests/e2e-auth-tests/**: Cypress E2E test suite
-- **tests/example-nextjs-resource-server/**: Example Next.js resource server for testing login via OAuth2 PKCE flow. Its `/api/*` routes are the trial run of `@schemavaults/openapi-operations`: every operation is declared in an `operation.ts` beside its own Next.js `route.ts` under `src/app/api/` (e.g. `src/app/api/health/`, `src/app/api/organizations/[organization_id]/greeting/`), the catalogue `src/lib/api/operations.ts` collects them for the single OpenAPI document (`src/lib/api/openapi-document.ts`, served by `src/app/api/openapi.json/route.ts`), `src/lib/api/app.ts` builds the per-route Hono apps with `createOperationsAppFactory()` (refusing operations missing from the catalogue), credential resolvers are built on the server SDK's `RouteGuardFactory` in `src/lib/api/auth-resolvers.ts`, and `src/lib/api/routes.test.ts` checks that route files and catalogue match. Its `/docs` pages are the trial run of `@schemavaults/openapi-docs-ui` (`src/app/docs/`).
+- **tests/example-nextjs-resource-server/**: Example Next.js resource server for testing login via OAuth2 PKCE flow. Its `/api/*` routes are the trial run of `@schemavaults/openapi-operations`: every operation is declared in an `operation.ts` beside its own Next.js `route.ts` under `src/app/api/` (e.g. `src/app/api/health/`, `src/app/api/organizations/[organization_id]/greeting/`), the catalogue `src/lib/api/operations.ts` collects them for the single OpenAPI document (`src/lib/api/openapi-document.ts`, served by `src/app/api/openapi.json/route.ts`), `src/lib/api/app.ts` builds the per-route Hono apps with `createOperationsAppFactory()` (refusing operations missing from the catalogue), credential resolvers come from the server SDK's `createSchemaVaultsAuthResolvers()` in `src/lib/api/auth-resolvers.ts`, and `src/lib/api/routes.test.ts` checks that route files and catalogue match with `checkNextAppRouterRoutes()`. Its `/docs` pages are the trial run of `@schemavaults/openapi-docs-ui` (`src/app/docs/`).
 
 ### Package Dependency Hierarchy
 ```
@@ -78,7 +78,9 @@ bun run test --filter @schemavaults/openapi-docs-ui  # Run tests in openapi-docs
   └─ @schemavaults/auth-common                        ← Shared auth types, middleware rules, PKCE, hashing
        ├─ @schemavaults/jwt                           ← JWT key management, token signing/verification (uses jose)
        │    └─ @schemavaults/auth-server-sdk          ← Server-side middleware, route protection for resource servers,
-       │                                                `auth-server-sdk codegen` CLI; its build bundles the codegen templates below
+       │                                                `auth-server-sdk codegen` CLI; its build bundles the codegen templates below.
+       │                                                Optional peerDep on openapi-operations for its `/openapi-operations`
+       │                                                sub-export (`createSchemaVaultsAuthResolvers()`)
        │         └─ @schemavaults/trpc-backend-init   ← tRPC router factory with access-token validation
        │                                                (peerDeps: auth-server-sdk, app-definitions)
        ├─ @schemavaults/auth-client-sdk               ← Client SDK for API calls to auth server (uses openid-client)
@@ -97,11 +99,13 @@ bun run test --filter @schemavaults/openapi-docs-ui  # Run tests in openapi-docs
                                                         details (standalone: no workspace dependencies)
 ```
 
-Each package depends (directly or transitively) on every package above it on its branch. The one edge the tree
-can't show is build-time only: `auth-server-sdk` copies `auth-resource-server-codegen-templates` into its published
-dist, so a template change ships through `auth-server-sdk`. The `auth-server` app consumes every package except
-`trpc-backend-init` and the codegen templates. The exact per-package edges, and which version bumps cascade to which
-dependents, are in the `commit-changes` skill.
+Each package depends (directly or transitively) on every package above it on its branch. Two edges the tree
+can't show: `auth-server-sdk` copies `auth-resource-server-codegen-templates` into its published dist at build
+time, so a template change ships through `auth-server-sdk`; and `auth-server-sdk` has an optional peer dependency
+on `openapi-operations` (only its `@schemavaults/auth-server-sdk/openapi-operations` sub-export needs it), so an
+`openapi-operations` change also ships through `auth-server-sdk` (and on to `trpc-backend-init`). The `auth-server`
+app consumes every package except `trpc-backend-init` and the codegen templates. The exact per-package edges, and
+which version bumps cascade to which dependents, are in the `commit-changes` skill.
 
 ### OpenAPI operations & API docs
 
@@ -112,7 +116,15 @@ auth schemes + route guard + required scopes + organization role). From the same
 permission details) and `createOperationsApp()` builds a Hono app that builds a per-request context, resolves
 credentials, validates the request and dispatches it; `toNextRouteHandlers()` / `toVercelHandler()` mount it.
 Credential verification is pluggable per host via `authResolvers` keyed by scheme name (resolvers receive the
-per-request context), so third-party resource servers reuse the definitions. Request bodies support
+per-request context), so third-party resource servers reuse the definitions; resource servers get ready-made
+resolvers for the SchemaVaults access-token schemes from `createSchemaVaultsAuthResolvers()` in
+`@schemavaults/auth-server-sdk/openapi-operations` (built on `RouteGuardFactory` + the remote JWKS). Schemes
+declare `principal: "user"` when their resolver always yields a user, so handlers of operations accepting only such
+schemes get a non-null `ctx.auth.user` (the runtime fails closed with 401 otherwise; `requireUser(auth)` narrows
+the rest). `buildOpenApiDocument({ documentRuntimeResponses: true })` also documents the runtime's own 400 / 401 /
+403 / 415 / 500 responses with the `OperationErrorBodySchema` envelope (`components.schemas.OperationError`), and
+`checkNextAppRouterRoutes()` (`@schemavaults/openapi-operations/nextjs/app-router-routes`) verifies that the
+per-route `operation.ts` / `route.ts` files and the catalogue agree. Request bodies support
 `lenientContentType` (parse `text/plain` / unlabelled JSON from callers that omit `Content-Type`) and
 `documentOnly` (describe the body, let the handler parse it: protocol endpoints with mandated error formats).
 
@@ -145,8 +157,9 @@ Every `auth-server/src/app/api/**/route.ts` is served by `@schemavaults/openapi-
 - `src/lib/api/schemas.ts` (shared envelopes), `domain-schemas/<domain>.ts` (per-domain shared schemas),
   `tags.ts` (exactly one `API_TAGS.*` per operation).
 - `src/lib/api/operations/<domain>.ts` — the catalogue. Route files do NOT import it (bundles stay small);
-  `src/lib/api/routes.test.ts` (`bun test`) enforces that every route file's operations are catalogued, every
-  catalogued operation has its route file, and the document lists exactly the catalogued paths. Adding an
+  `src/lib/api/routes.test.ts` (`bun test`, via `checkNextAppRouterRoutes()`) enforces that every route file's
+  operations are catalogued, every catalogued operation has its route file, and the document lists exactly the
+  catalogued paths. Adding an
   endpoint = `operation.ts` + `route.ts` + one line in the domain catalogue. Production Docker images strip
   `src/app/api/test` and empty `operations/test-environment.ts` (see `auth-server/Dockerfile`).
 - `GET /api/openapi.json` (`src/app/api/openapi.json/route.ts`, built by `src/lib/api/openapi-document.ts`)
