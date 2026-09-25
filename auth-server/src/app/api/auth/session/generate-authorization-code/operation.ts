@@ -90,7 +90,7 @@ export const generateAuthorizationCodeOperation = defineOperation({
     500: { description: "Failed to generate the authorization code", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { dbh, environment } = ctx.context;
     const body = ctx.body;
 

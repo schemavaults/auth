@@ -40,7 +40,7 @@ export const createAppCallbackUrl = defineOperation({
     409: { description: "The callback URL is already registered for this app and environment", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, dbh } = ctx.context;
     const { app_id } = ctx.params;
 

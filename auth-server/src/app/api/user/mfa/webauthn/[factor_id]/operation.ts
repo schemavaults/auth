@@ -52,7 +52,7 @@ export const removePasskey = defineOperation({
     500: { description: "Failed to remove the passkey", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis, environment } = ctx.context;
     const { factor_id } = ctx.params;
     const { proof } = ctx.body;

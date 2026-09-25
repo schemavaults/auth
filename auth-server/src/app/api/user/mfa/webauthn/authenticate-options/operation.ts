@@ -38,7 +38,7 @@ export const beginPasskeyStepUp = defineOperation({
     500: { description: "Failed to start the passkey verification", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     try {
       // Throttle step-up challenge minting per uid (and per IP when available);

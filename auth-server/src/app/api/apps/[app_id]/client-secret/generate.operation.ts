@@ -85,7 +85,7 @@ export const generateClientSecretOperation = defineOperation({
   request: { params: appIdParams },
   responses,
   handler: async (ctx) => {
-    const outcome = await generateAndStoreSecret(ctx.context, ctx.auth.user!, ctx.params.app_id, "create");
+    const outcome = await generateAndStoreSecret(ctx.context, ctx.auth.user, ctx.params.app_id, "create");
     if (outcome.status === "guard") return outcome.response;
     return outcome.status === 200 ? ctx.json(200, outcome.body) : ctx.json(outcome.status, outcome.body);
   },
@@ -102,7 +102,7 @@ export const rotateClientSecret = defineOperation({
   request: { params: appIdParams },
   responses,
   handler: async (ctx) => {
-    const outcome = await generateAndStoreSecret(ctx.context, ctx.auth.user!, ctx.params.app_id, "rotate");
+    const outcome = await generateAndStoreSecret(ctx.context, ctx.auth.user, ctx.params.app_id, "rotate");
     if (outcome.status === "guard") return outcome.response;
     return outcome.status === 200 ? ctx.json(200, outcome.body) : ctx.json(outcome.status, outcome.body);
   },

@@ -34,7 +34,7 @@ export const resendUserVerificationEmail = defineOperation({
     500: { description: "Failed to load the user or send the e-mail", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     const target_uid = ctx.params.uid;
     const registry = new UserRegistry(db);

@@ -36,7 +36,7 @@ export const enrollTotp = defineOperation({
     500: { description: "Failed to start the enrollment", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     // Headers-only view of the request for the IP helper.
     const ip = extractClientIp(new NextRequest(ctx.url, { headers: ctx.request.headers }));

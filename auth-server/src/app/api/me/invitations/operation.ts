@@ -42,7 +42,7 @@ export const listMyInvitations = defineOperation({
     const { user } = ctx.auth;
     const { db } = ctx.context;
     try {
-      const invitations = await listUserPendingInvitations(db, user!.uid);
+      const invitations = await listUserPendingInvitations(db, user.uid);
       return ctx.json(200, {
         success: true,
         message: "Successfully listed pending invitations",
@@ -52,7 +52,7 @@ export const listMyInvitations = defineOperation({
       await captureServerException(db, e, {
         op_name: "GET_user_invitations_handler.listUserPendingInvitations",
         route: "/api/me/invitations",
-        uid: user!.uid,
+        uid: user.uid,
       });
       return ctx.json(500, { success: false, message: "Failed to list pending invitations" });
     }

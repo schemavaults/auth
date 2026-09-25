@@ -54,7 +54,7 @@ export const createOrganizationOperation = defineOperation({
     500: { description: "Failed to create the organization", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis, environment } = ctx.context;
     if (environment === "development") console.log("POST => /api/organizations");
 
@@ -139,7 +139,7 @@ export const listAllOrganizations = defineOperation({
     500: { description: "Failed to list organizations", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     let organizations: readonly OrganizationDefinition[];
     try {

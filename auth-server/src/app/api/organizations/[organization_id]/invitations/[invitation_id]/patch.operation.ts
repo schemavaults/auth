@@ -50,7 +50,7 @@ export const respondToOrganizationInvitation = defineOperation({
     500: { description: "Failed to respond to the invitation", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     const { organization_id, invitation_id } = ctx.params;
     const { action } = ctx.body;

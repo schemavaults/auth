@@ -38,7 +38,7 @@ export const listUserIssuedTokens = defineOperation({
     500: { description: "Failed to list the tokens", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const target_uid = ctx.params.uid;
     const { token_type } = ctx.query;

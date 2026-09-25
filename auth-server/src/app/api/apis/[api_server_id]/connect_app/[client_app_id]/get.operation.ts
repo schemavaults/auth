@@ -33,7 +33,7 @@ export const getAppToApiServerConnection = defineOperation({
     500: { description: "Failed to check the connection", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, environment } = ctx.context;
     const { api_server_id, client_app_id } = ctx.params;
     if (environment === "development") {

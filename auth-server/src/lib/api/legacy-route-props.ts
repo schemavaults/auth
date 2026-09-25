@@ -1,16 +1,20 @@
 import "server-only";
 import type { UserData } from "@schemavaults/auth-common";
 import type { OrganizationID, OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
-import type { AuthPrincipal } from "@schemavaults/openapi-operations";
+import type { UserAuthPrincipal } from "@schemavaults/openapi-operations";
 import type { IProtectedAuthenticatedApiRouteProps } from "@/lib/withAuthenticatedRouteGuard";
 import type { IProtectedAdminApiRouteProps } from "@/lib/withAdminRouteGuard";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import type { AuthServerApiContext } from "./context";
 import { toNextRequest } from "./next-request";
 
-/** The subset of an operation handler context the bridge needs. */
+/**
+ * The subset of an operation handler context the bridge needs: that of an
+ * operation accepting only `principal: "user"` schemes (e.g.
+ * `sessionSchemes`), so `auth.user` is a `UserData`, never null.
+ */
 export interface GuardedOperationContext {
-  readonly auth: AuthPrincipal<UserData>;
+  readonly auth: UserAuthPrincipal<UserData>;
   readonly context: AuthServerApiContext;
   readonly request: Request;
 }
@@ -29,14 +33,10 @@ export interface GuardedOperationContext {
 export function legacyRouteProps(
   ctx: GuardedOperationContext,
 ): IProtectedAuthenticatedApiRouteProps & IProtectedAdminApiRouteProps {
-  const user = ctx.auth.user;
-  if (!user) {
-    throw new TypeError("legacyRouteProps() needs a user principal (session-guarded operation)");
-  }
   const { dbh, redis, environment } = ctx.context;
   return {
     req: toNextRequest(ctx.request),
-    user,
+    user: ctx.auth.user,
     environment,
     dbh,
     redis,

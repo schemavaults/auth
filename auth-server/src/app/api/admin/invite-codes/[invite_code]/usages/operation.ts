@@ -36,7 +36,7 @@ export const countInviteCodeUsages = defineOperation({
     500: { description: "Failed to count usages", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const invite_code: InviteCode = ctx.params.invite_code;
 

@@ -41,7 +41,7 @@ export const listMyOrganizations = defineOperation({
     500: { description: "Failed to list the memberships", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     try {
       const admin: boolean = user.admin ?? false;

@@ -30,7 +30,7 @@ export const listApiServerDomains = defineOperation({
     500: { description: "Failed to list the domains", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, environment } = ctx.context;
     const { api_server_id } = ctx.params;
     if (environment === "development") {

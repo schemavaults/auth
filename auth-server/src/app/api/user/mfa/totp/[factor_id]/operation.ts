@@ -40,7 +40,7 @@ export const removeTotpFactor = defineOperation({
     500: { description: "Failed to remove the factor", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     const { factor_id } = ctx.params;
     const { code } = ctx.body;

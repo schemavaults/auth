@@ -30,7 +30,7 @@ export const listAllUsers = defineOperation({
     500: { description: "Failed to list users", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
 
     let users: readonly UserDocument[];

@@ -45,7 +45,7 @@ export const whoami = defineOperation({
     500: { description: "Failed to load the user", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user_from_token = ctx.auth.user!;
+    const user_from_token = ctx.auth.user;
     const { db, debug } = ctx.context;
     const { client_app_id } = ctx.params;
 

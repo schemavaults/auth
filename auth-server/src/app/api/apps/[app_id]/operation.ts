@@ -43,7 +43,7 @@ export const getApp = defineOperation({
     500: { description: "Failed to load the app", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, environment } = ctx.context;
     const { app_id } = ctx.params;
     if (environment === "development") {
@@ -93,7 +93,7 @@ export const deleteApp = defineOperation({
     404: { description: "No such app", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { app_id } = ctx.params;
 

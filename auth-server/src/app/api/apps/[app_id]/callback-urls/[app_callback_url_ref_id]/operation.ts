@@ -39,7 +39,7 @@ export const deleteAppCallbackUrl = defineOperation({
     },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, dbh } = ctx.context;
     const { app_id, app_callback_url_ref_id } = ctx.params;
 

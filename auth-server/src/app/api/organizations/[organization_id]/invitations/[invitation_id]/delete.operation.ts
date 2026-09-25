@@ -35,7 +35,7 @@ export const revokeOrganizationInvitation = defineOperation({
     500: { description: "Failed to revoke the invitation", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { organization_id, invitation_id } = ctx.params;
 

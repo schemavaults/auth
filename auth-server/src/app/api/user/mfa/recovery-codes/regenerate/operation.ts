@@ -41,7 +41,7 @@ export const regenerateRecoveryCodes = defineOperation({
     500: { description: "Failed to regenerate the recovery codes", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { factor_id, code } = ctx.body;
 

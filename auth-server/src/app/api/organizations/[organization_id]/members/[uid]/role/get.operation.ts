@@ -33,7 +33,7 @@ export const getOrganizationMemberRole = defineOperation({
     404: { description: "The user is not a member of the organization", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db } = ctx.context;
     const { organization_id, uid: target_uid } = ctx.params;
 

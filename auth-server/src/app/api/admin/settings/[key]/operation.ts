@@ -47,7 +47,7 @@ export const updateServerSetting = defineOperation({
     500: { description: "Failed to update the setting", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, redis } = ctx.context;
     const { key } = ctx.params;
 

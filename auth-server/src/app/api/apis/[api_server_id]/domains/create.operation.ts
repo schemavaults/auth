@@ -48,7 +48,7 @@ export const addApiServerDomain = defineOperation({
     500: { description: "Failed to add the domain", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, environment } = ctx.context;
     const { api_server_id } = ctx.params;
     if (environment === "development") {

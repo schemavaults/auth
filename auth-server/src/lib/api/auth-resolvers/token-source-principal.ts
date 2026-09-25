@@ -1,7 +1,7 @@
 import "server-only";
 import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth-common";
 import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
-import { OperationError, type AuthPrincipal } from "@schemavaults/openapi-operations";
+import { OperationError, type UserAuthPrincipal } from "@schemavaults/openapi-operations";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
@@ -10,7 +10,8 @@ import type { AuthServerApiContext } from "../context";
 /**
  * Verifies one candidate token with the auth server's own route guard
  * factory (local keyset store + revocation check) and turns the result
- * into an {@link AuthPrincipal}.
+ * into a {@link UserAuthPrincipal}: every scheme it backs is a
+ * `principal: "user"` scheme.
  *
  * Semantics match the retired `withAuthenticatedApiRouteGuard` wrapper:
  * - a token that does not verify resolves nobody (`null`), so the next
@@ -23,7 +24,7 @@ export async function principalFromTokenSource(
   context: AuthServerApiContext,
   schemeName: string,
   source: PotentiallyValidTokenSource,
-): Promise<AuthPrincipal<UserData> | null> {
+): Promise<UserAuthPrincipal<UserData> | null> {
   let guard: IRouteGuard;
   try {
     guard = await new RouteGuardFactory(context.db, context.redis).createGuardFromTokenSources(

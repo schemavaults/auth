@@ -56,7 +56,7 @@ export const authorizeApp = defineOperation({
     500: { description: "Failed to record the authorization", schema: ErrorResponse },
   },
   handler: async (ctx) => {
-    const user = ctx.auth.user!;
+    const user = ctx.auth.user;
     const { db, environment } = ctx.context;
     const { app_id } = ctx.params;
     if (environment === "development") {
