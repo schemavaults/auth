@@ -88,7 +88,8 @@ export interface IntrospectOidcTokenOptions {
  *  - it was issued to the introspecting client (`app` claim) — a
  *    confidential client can never probe another client's tokens
  *  - its jti has not been revoked (logout / rotation) and it predates
- *    no per-user tokens_valid_after watermark (password reset), and the
+ *    no per-user tokens_valid_after watermark (password reset, disabled
+ *    account), and the
  *    account is not disabled
  */
 export async function introspectOidcToken({

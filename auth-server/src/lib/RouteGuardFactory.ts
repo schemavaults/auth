@@ -10,7 +10,8 @@ import { createRouteGuardTokenRevocationCheck } from "@/lib/token-revocation";
 /**
  * The auth server's route guard factory: verifies tokens with the local
  * keyset store AND rejects verified tokens that have since been revoked
- * (logout jti revocation / password-reset `tokens_valid_after` watermark).
+ * (logout jti revocation / the `tokens_valid_after` watermark bumped by a
+ * password reset and pinned while the account is disabled).
  * Pass a Redis connection to serve the watermark from cache.
  */
 export class RouteGuardFactory extends BaseRouteGuardFactory {
