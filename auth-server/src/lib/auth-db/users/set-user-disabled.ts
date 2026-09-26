@@ -2,6 +2,7 @@ import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isValidUuid from "@/lib/is-valid-uuid";
+import { DISABLED_USER_TOKENS_VALID_AFTER } from "./is-token-iat-revoked";
 
 export class UserNotFoundError extends Error {
   public constructor(uid: string) {
@@ -10,6 +11,26 @@ export class UserNotFoundError extends Error {
   }
 }
 
+/**
+ * Disables or re-enables an account.
+ *
+ * Disabling also revokes every session and token of the account: the
+ * route guards read `disabled` from the token claims, not the live row, so
+ * flipping the column alone would leave a stolen refresh-token cookie
+ * working until it expires. In the same transaction, the account's
+ * `tokens_valid_after` watermark is pinned to
+ * `DISABLED_USER_TOKENS_VALID_AFTER`, which revokes every token it has,
+ * whatever its `iat`, for as long as it stays disabled.
+ *
+ * Re-enabling moves a pinned watermark down to the current time, so tokens
+ * minted before the account was re-enabled stay revoked and the user has to
+ * log in again. Re-enabling an account that is not disabled leaves its
+ * watermark (and so its sessions) alone.
+ *
+ * Callers must drop the route guards' cached watermark afterwards
+ * (`invalidateUserTokensValidAfterCache`) so this applies immediately
+ * instead of after the cache TTL.
+ */
 export async function setUserDisabled(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   uid: string,
@@ -30,7 +51,11 @@ export async function setUserDisabled(
     await db.transaction().execute(async (trx) => {
       const updateResult = await trx
         .updateTable("users")
-        .set({ disabled })
+        .set(
+          disabled
+            ? { disabled, tokens_valid_after: DISABLED_USER_TOKENS_VALID_AFTER }
+            : { disabled },
+        )
         .where("uid", "=", uid)
         .executeTakeFirst();
 
@@ -45,6 +70,17 @@ export async function setUserDisabled(
         throw new Error(
           `Expected exactly one row to have been modified by setUserDisabled, but '${numRowsUpdated}' rows were updated!`,
         );
+      }
+
+      if (!disabled) {
+        // Unpin the watermark. Strict less-than keeps a token minted in the
+        // same second as (right after) the re-enable valid.
+        await trx
+          .updateTable("users")
+          .set({ tokens_valid_after: Math.floor(Date.now() / 1000) })
+          .where("uid", "=", uid)
+          .where("tokens_valid_after", ">=", DISABLED_USER_TOKENS_VALID_AFTER)
+          .executeTakeFirst();
       }
     });
   } catch (e: unknown) {

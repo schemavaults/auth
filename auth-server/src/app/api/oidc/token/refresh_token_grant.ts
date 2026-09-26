@@ -169,7 +169,8 @@ export async function handleOidcRefreshTokenGrant({
   const original_scopes = parseAndGrantScopes(decoded.scope);
 
   // Revocation checks: explicit jti revocation (logout) plus the
-  // per-user tokens_valid_after watermark (password reset). Rotation
+  // per-user tokens_valid_after watermark (password reset, disabled
+  // account). Rotation
   // revocations get a short reuse grace window so benign concurrent
   // refreshes don't invalidate the session; all other revocations are
   // immediate.

@@ -11,6 +11,7 @@ import {
 import { API_TAGS } from "@/lib/api/tags";
 import { UserNotFoundError, UserRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import { invalidateUserTokensValidAfterCache } from "@/lib/token-revocation";
 
 const ROUTE = "/api/admin/users/{uid}/disable";
 
@@ -58,6 +59,19 @@ async function setDisabled(ctx: SetDisabledContext, disabled: boolean): Promise<
     return ctx.json(500, { success: false, message: `Failed to ${disabled ? "disable" : "enable"} user` });
   }
 
+  // setUserDisabled moved the target's tokens_valid_after watermark; drop
+  // the route guards' cached copy so the revocation applies immediately,
+  // not after the cache TTL. Best effort: a Redis outage only delays
+  // enforcement by that TTL.
+  try {
+    await invalidateUserTokensValidAfterCache(ctx.context.redis, target_uid);
+  } catch (e: unknown) {
+    console.warn(
+      `[setDisabled] Could not invalidate the cached tokens_valid_after watermark for uid '${target_uid}': `,
+      e,
+    );
+  }
+
   return ctx.json(200, {
     success: true,
     message: `Successfully ${disabled ? "disabled" : "enabled"} user`,
@@ -70,7 +84,7 @@ export const disableUser = defineOperation({
   path: ROUTE,
   summary: "Disable a user",
   description:
-    "Marks the account disabled: its sessions and tokens stop being accepted and it can no longer log in. Administrators cannot disable themselves.",
+    "Marks the account disabled and revokes every session and token it holds (the user's `tokens_valid_after` watermark is pinned while the account stays disabled), so it can no longer log in or use an existing session. Administrators cannot disable themselves.",
   tags: [API_TAGS.admin],
   auth: requireAuth({ schemes: sessionSchemes, routeGuard: "admin" }),
   request,
@@ -82,7 +96,8 @@ export const enableUser = defineOperation({
   method: "delete",
   path: ROUTE,
   summary: "Re-enable a user",
-  description: "Clears the disabled flag set by `POST /api/admin/users/{uid}/disable`.",
+  description:
+    "Clears the disabled flag set by `POST /api/admin/users/{uid}/disable`. Sessions revoked by the disable stay revoked: the user has to log in again.",
   tags: [API_TAGS.admin],
   auth: requireAuth({ schemes: sessionSchemes, routeGuard: "admin" }),
   request,
