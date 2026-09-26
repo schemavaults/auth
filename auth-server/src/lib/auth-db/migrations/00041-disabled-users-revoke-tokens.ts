@@ -12,8 +12,10 @@
 import type { Kysely } from "@schemavaults/dbh";
 import { sql } from "@/sql";
 
-// Keep in sync with DISABLED_USER_TOKENS_VALID_AFTER.
-const DISABLED_USER_TOKENS_VALID_AFTER = "9007199254740991";
+// Keep in sync with DISABLED_USER_TOKENS_VALID_AFTER. Not a timestamp: a
+// value past any token's `iat`, meaning "no token is valid". Bound as a
+// string ("9007199254740991") for the BIGINT column.
+const DISABLED_USER_TOKENS_VALID_AFTER = String(Number.MAX_SAFE_INTEGER);
 
 export async function up(db: Kysely<any>): Promise<void> {
   await sql`

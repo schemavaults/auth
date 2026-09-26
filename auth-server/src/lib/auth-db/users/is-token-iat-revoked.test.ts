@@ -64,13 +64,14 @@ describe("DISABLED_USER_TOKENS_VALID_AFTER", () => {
     expect(Number.isSafeInteger(DISABLED_USER_TOKENS_VALID_AFTER)).toBe(true);
   });
 
-  test("matches the literal migration 00041 pins already-disabled accounts to", () => {
+  test("matches the value migration 00041 pins already-disabled accounts to", () => {
     const migration: string = readFileSync(
       join(import.meta.dir, "..", "migrations", "00041-disabled-users-revoke-tokens.ts"),
       "utf8",
     );
+    expect(DISABLED_USER_TOKENS_VALID_AFTER).toBe(Number.MAX_SAFE_INTEGER);
     expect(migration).toContain(
-      `const DISABLED_USER_TOKENS_VALID_AFTER = "${DISABLED_USER_TOKENS_VALID_AFTER}";`,
+      "const DISABLED_USER_TOKENS_VALID_AFTER = String(Number.MAX_SAFE_INTEGER);",
     );
   });
 });
