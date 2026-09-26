@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, type ReactElement } from "react";
-import { SegmentedBar, cn, type SegmentedBarSegment } from "@schemavaults/ui";
+import {
+  BarList,
+  SegmentedBar,
+  cn,
+  type BarListItem,
+  type SegmentedBarSegment,
+} from "@schemavaults/ui";
 import { TRACE_TILES } from "../tiles";
 import {
   countByCategory,
@@ -13,12 +19,10 @@ import {
 } from "../trace-analytics";
 import { formatCount, formatDuration, formatShare } from "../format";
 import {
-  TRACE_ACCENT_COLOR,
   TRACE_CATEGORY_ORDER,
   getTraceCategoryColor,
   getTraceCategoryLabel,
 } from "../trace-categories";
-import { RankedBarList, type RankedBarItem } from "../charts/RankedBarList";
 import { TraceTileCard } from "./TraceTileCard";
 import type { TraceTileProps } from "./tile-props";
 
@@ -127,21 +131,23 @@ export function CategoryBreakdownTile({
 
 function rankingProps(props: TraceTileProps) {
   return {
-    color: TRACE_ACCENT_COLOR,
     selectedIds: props.selectedOperations,
-    onSelect: (item: RankedBarItem): void => props.toggleOperation(item.id),
+    onSelect: (item: BarListItem): void => props.toggleOperation(item.id),
+    // Operation names are code identifiers.
+    labelClassName: "font-mono text-xs",
+    emptyMessage: "No traces match the filters",
   };
 }
 
 /** Operations ranked by p95 duration: where the time goes. */
 export function SlowestOperationsTile(props: TraceTileProps): ReactElement {
-  const items: RankedBarItem[] = useMemo(
-    (): RankedBarItem[] =>
+  const items: BarListItem[] = useMemo(
+    (): BarListItem[] =>
       [...props.operations]
         .sort((a: OperationStats, b: OperationStats): number => b.p95 - a.p95)
         .slice(0, RANKING_SIZE)
         .map(
-          (op: OperationStats): RankedBarItem => ({
+          (op: OperationStats): BarListItem => ({
             id: op.op_name,
             label: op.op_name,
             value: op.p95,
@@ -157,17 +163,17 @@ export function SlowestOperationsTile(props: TraceTileProps): ReactElement {
       description={`Top ${RANKING_SIZE} by p95 duration. Click one to filter by it.`}
       refreshing={props.refreshing}
     >
-      <RankedBarList items={items} label="Operations ranked by p95 duration" {...rankingProps(props)} />
+      <BarList items={items} label="Operations ranked by p95 duration" {...rankingProps(props)} />
     </TraceTileCard>
   );
 }
 
 /** Operations ranked by how many traces they recorded. */
 export function BusiestOperationsTile(props: TraceTileProps): ReactElement {
-  const items: RankedBarItem[] = useMemo(
-    (): RankedBarItem[] =>
+  const items: BarListItem[] = useMemo(
+    (): BarListItem[] =>
       props.operations.slice(0, RANKING_SIZE).map(
-        (op: OperationStats): RankedBarItem => ({
+        (op: OperationStats): BarListItem => ({
           id: op.op_name,
           label: op.op_name,
           value: op.count,
@@ -183,7 +189,7 @@ export function BusiestOperationsTile(props: TraceTileProps): ReactElement {
       description={`Top ${RANKING_SIZE} by trace count. Click one to filter by it.`}
       refreshing={props.refreshing}
     >
-      <RankedBarList items={items} label="Operations ranked by trace count" {...rankingProps(props)} />
+      <BarList items={items} label="Operations ranked by trace count" {...rankingProps(props)} />
     </TraceTileCard>
   );
 }

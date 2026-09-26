@@ -1,16 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
-  buildDurationHistogram,
   buildTimeSeries,
   countByCategory,
+  niceAxisTop,
   niceStep,
-  niceTicks,
   percentile,
   summarizeDurations,
   summarizeOperations,
   summarizeTraces,
   timeTicks,
-  type DurationBucket,
   type TraceSample,
 } from "./trace-analytics";
 
@@ -27,10 +25,6 @@ function trace(
     start_time,
     end_time: start_time + duration,
   };
-}
-
-function totalCount(buckets: readonly DurationBucket[]): number {
-  return buckets.reduce((sum, bucket) => sum + bucket.count, 0);
 }
 
 describe("percentile", () => {
@@ -138,7 +132,7 @@ describe("countByCategory", () => {
   });
 });
 
-describe("niceStep / niceTicks", () => {
+describe("niceStep / niceAxisTop", () => {
   test("rounds steps up to 1, 2 or 5 × 10^k", () => {
     expect(niceStep(0.7)).toBe(1);
     expect(niceStep(1.5)).toBe(2);
@@ -148,66 +142,14 @@ describe("niceStep / niceTicks", () => {
     expect(niceStep(0.3, 1)).toBe(1);
   });
 
-  test("produces clean ticks within the domain", () => {
-    expect(niceTicks(0, 100, 4)).toEqual([0, 50, 100]);
-    expect(niceTicks(0, 0.3, 3)).toEqual([0, 0.1, 0.2, 0.3]);
-    expect(niceTicks(3, 3)).toEqual([3]);
-  });
-});
-
-describe("buildDurationHistogram", () => {
-  test("is empty for no durations", () => {
-    expect(buildDurationHistogram([], "linear")).toEqual([]);
-    expect(buildDurationHistogram([], "log")).toEqual([]);
-  });
-
-  test("bins linearly with nice widths and keeps every duration", () => {
-    const durations = Array.from({ length: 100 }, (_, i) => 100 + i);
-    const buckets = buildDurationHistogram(durations, "linear");
-    expect(totalCount(buckets)).toBe(100);
-    const widths = new Set(buckets.map((b) => (b.upper ?? 0) - b.lower));
-    expect(widths.size).toBe(1);
-    expect(buckets[0]!.lower).toBeLessThanOrEqual(100);
-    expect(buckets.at(-1)!.upper!).toBeGreaterThan(199);
-  });
-
-  test("puts identical durations in a single 1 ms bin", () => {
-    expect(buildDurationHistogram([5, 5, 5], "linear")).toEqual([
-      { lower: 5, upper: 6, count: 3 },
-    ]);
-  });
-
-  test("folds a long tail past the p95 into an open-ended overflow bucket", () => {
-    // 96 fast traces and a burst of 4 slow ones.
-    const durations = [...Array.from({ length: 96 }, (_, i) => i % 50), 3_000, 3_500, 3_900, 10_000];
-    const buckets = buildDurationHistogram(durations, "linear");
-    const overflow = buckets.at(-1)!;
-    expect(overflow.upper).toBeNull();
-    expect(overflow.count).toBe(4);
-    expect(totalCount(buckets)).toBe(100);
-    // The bulk still gets fine bins instead of one bin squashed by the outlier.
-    expect(buckets.length).toBeGreaterThan(5);
-  });
-
-  test("bins logarithmically on the 1-2-5 series and trims empty edges", () => {
-    const buckets = buildDurationHistogram([3, 4, 60, 1500], "log");
-    expect(buckets.map((b) => [b.lower, b.upper, b.count])).toEqual([
-      [2, 5, 2],
-      [5, 10, 0],
-      [10, 20, 0],
-      [20, 50, 0],
-      [50, 100, 1],
-      [100, 200, 0],
-      [200, 500, 0],
-      [500, 1000, 0],
-      [1000, 2000, 1],
-    ]);
-  });
-
-  test("puts sub-millisecond (zero) durations in the first log bucket", () => {
-    expect(buildDurationHistogram([0, 0], "log")).toEqual([
-      { lower: 0, upper: 1, count: 2 },
-    ]);
+  test("tops a zero-based axis at the first nice tick at or above the maximum", () => {
+    expect(niceAxisTop(100, 4)).toBe(100);
+    expect(niceAxisTop(130, 4)).toBe(150);
+    expect(niceAxisTop(3, 4)).toBe(3);
+    // Whole-number axes never get fractional steps, and an empty axis still has height.
+    expect(niceAxisTop(0.4, 4, 1)).toBe(1);
+    expect(niceAxisTop(0, 4, 1)).toBe(1);
+    expect(niceAxisTop(NaN, 4, 1)).toBe(1);
   });
 });
 

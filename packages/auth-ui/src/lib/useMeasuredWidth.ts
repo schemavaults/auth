@@ -17,6 +17,10 @@ export interface UseMeasuredWidthResult<T extends HTMLElement> {
  * The fallback width is used for the server render and the first client
  * render — the observer only reports after mount — so the two agree and
  * hydration stays clean.
+ *
+ * @deprecated `@schemavaults/ui` 0.110 charts size themselves: pass
+ * `width="auto"` to the chart, wrap a custom one in `ResponsiveChart`, or use
+ * the `useMeasuredWidth` hook exported by `@schemavaults/ui`.
  */
 export function useMeasuredWidth<T extends HTMLElement>(
   fallback_width: number,

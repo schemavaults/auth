@@ -9,6 +9,7 @@ import {
   CardTitle,
   PieChart,
   cn,
+  getChartColorClasses,
   type PieChartSegment,
   type PieChartSegmentColorId,
 } from "@schemavaults/ui";
@@ -30,10 +31,8 @@ export interface UsersBreakdownCardProps {
 interface CategoryDescriptor {
   id: UserCategoryId;
   label: string;
-  /** Preset from the `@schemavaults/ui` chart palette. */
+  /** Preset from the `@schemavaults/ui` chart palette (also paints the legend swatch). */
   color: PieChartSegmentColorId;
-  /** Matching Tailwind background for the legend swatch. */
-  swatchClassName: string;
   Icon: typeof UserRound;
   /** Hover text; the legend itself stays a single line per category. */
   title: string;
@@ -48,8 +47,7 @@ const CATEGORIES: readonly CategoryDescriptor[] = [
   {
     id: "normal",
     label: "Standard",
-    color: "default",
-    swatchClassName: "bg-schemavaults-brand-blue",
+    color: "chart-1",
     Icon: UserRound,
     title: "Active accounts without administrator privileges.",
   },
@@ -57,7 +55,6 @@ const CATEGORIES: readonly CategoryDescriptor[] = [
     id: "admin",
     label: "Admins",
     color: "warning",
-    swatchClassName: "bg-warning",
     Icon: ShieldCheck,
     title:
       "Active accounts with administrator privileges. Disabled administrators are counted under Disabled, so this can be lower than the Admins stat card.",
@@ -66,7 +63,6 @@ const CATEGORIES: readonly CategoryDescriptor[] = [
     id: "disabled",
     label: "Disabled",
     color: "destructive",
-    swatchClassName: "bg-destructive",
     Icon: UserX,
     title: "Accounts blocked from signing in, administrator or not.",
   },
@@ -168,7 +164,7 @@ export function UsersBreakdownCard(
                   aria-hidden="true"
                   className={cn(
                     "size-2.5 shrink-0 rounded-full",
-                    category.swatchClassName,
+                    getChartColorClasses(category.color).bg,
                   )}
                 />
                 <category.Icon
