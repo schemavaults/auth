@@ -25,6 +25,9 @@ import { getAuthServerUri } from "@/lib/auth_server_uri";
 import isValidOnSuccessfulAuthenticateAction from "./isValidOnSuccessfulAuthenticateAction";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
+import { UserRegistry } from "@/lib/auth-db";
+import { isEmailVerificationRequiredForClientApp } from "@/lib/email-verification/third-party-app-gate";
+import { buildVerifyEmailRequiredHref } from "@/lib/email-verification/verify-email-required-href";
 
 export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   on_successful_authenticate: OnSuccessfulAuthenticateAction;
@@ -161,6 +164,44 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     nonce: url_nonce,
     scope: serializeOidcScopesOrNull(granted),
   };
+
+  // E-mail verification gate, checked before consent and before minting:
+  // an already-signed-in user whose address is not verified is parked on
+  // the "verify your email to continue" page instead of being sent to the
+  // third-party app. Read from the row, not the session cookie's claims,
+  // so a verification completed after sign-in is honoured immediately.
+  let emailVerificationRequired: boolean;
+  try {
+    const userRow = await new UserRegistry(dbh.db, opts.debug).getUserByUID(uid);
+    if (!userRow) {
+      throw new Error(`User '${uid}' of the session no longer exists`);
+    }
+    emailVerificationRequired = await isEmailVerificationRequiredForClientApp({
+      db: dbh.db,
+      client_app_id: app_id,
+      email_verified: userRow.email_verified === true,
+    });
+  } catch (e: unknown) {
+    console.error(
+      `[AlreadyAuthenticatedOnLoginOrRegisterPage] Failed to check email verification requirements for user '${uid}': `,
+      e,
+    );
+    redirectWithError(500, "internal_server_error");
+  }
+  if (emailVerificationRequired) {
+    return redirect(
+      buildVerifyEmailRequiredHref({
+        app_id,
+        code_challenge,
+        code_challenge_method,
+        challenge_time: challenge_time_str,
+        redirect_uri,
+        state: opts.state,
+        nonce: opts.nonce,
+        scope: opts.scope,
+      }),
+    );
+  }
 
   if (!isAppAuthorized) {
     // App NOT authorized — show consent screen

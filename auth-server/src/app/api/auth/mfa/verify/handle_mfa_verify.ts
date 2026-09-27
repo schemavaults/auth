@@ -21,6 +21,10 @@ import { RedisCache } from "@/lib/redis";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import captureServerException from "@/lib/captureServerException";
 import shouldEnableDebug from "@/lib/should-enable-debug";
+import {
+  EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+  isEmailVerificationRequiredForClientApp,
+} from "@/lib/email-verification/third-party-app-gate";
 
 const ROUTE = "/api/auth/mfa/verify";
 
@@ -138,27 +142,29 @@ export async function handleMfaVerify({
   // an authorization code via the same path login uses.
   await deleteChallenge(redis.client, challenge_id);
 
-  let authorization_code: string;
+  const userRegistry = new UserRegistry(dbh.db, debug);
+
+  // E-mail verification gate (same rule as the password login, applied
+  // here because MFA users only reach the mint after the challenge): a
+  // third-party client app gets no authorization code until the account's
+  // address is verified. The session cookie is still set below, so the
+  // user is signed in to the auth server and parked on the "verify your
+  // email to continue" page. Fail closed on lookup errors.
+  let emailVerificationRequired: boolean;
   try {
-    const userRegistry = new UserRegistry(dbh.db, debug);
-    authorization_code = await userRegistry.generateAuthorizationCode(
-      challenge.uid,
-      challenge.client_app_id,
-      challenge.code_challenge,
-      "S256",
-      challenge.challenge_time,
-      challenge.redirect_uri ?? null,
-      // Restore the grant context captured when the login handler
-      // parked this flow behind the MFA gate. A null scope is a plain
-      // OAuth 2.1 grant (the flow requested no supported scope).
-      {
-        nonce: challenge.nonce ?? null,
-        scope: challenge.scope ?? null,
-      },
-    );
+    const user = await userRegistry.getUserByUID(challenge.uid);
+    if (!user) {
+      throw new Error(`User '${challenge.uid}' of the MFA challenge no longer exists`);
+    }
+    emailVerificationRequired = await isEmailVerificationRequiredForClientApp({
+      db: dbh.db,
+      redis: redis.client,
+      client_app_id: challenge.client_app_id,
+      email_verified: user.email_verified === true,
+    });
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
-      op_name: "handleMfaVerify.generateAuthorizationCode",
+      op_name: "handleMfaVerify.isEmailVerificationRequiredForClientApp",
       route: ROUTE,
       uid: challenge.uid,
     });
@@ -166,19 +172,60 @@ export async function handleMfaVerify({
       {
         kind: "failure",
         success: false,
-        message: "Failed to generate authorization code",
+        message: "Failed to check email verification requirements",
       } satisfies AuthenticateResult,
       { status: 500 },
     );
   }
 
+  let authorization_code: string | null = null;
+  if (!emailVerificationRequired) {
+    try {
+      authorization_code = await userRegistry.generateAuthorizationCode(
+        challenge.uid,
+        challenge.client_app_id,
+        challenge.code_challenge,
+        "S256",
+        challenge.challenge_time,
+        challenge.redirect_uri ?? null,
+        // Restore the grant context captured when the login handler
+        // parked this flow behind the MFA gate. A null scope is a plain
+        // OAuth 2.1 grant (the flow requested no supported scope).
+        {
+          nonce: challenge.nonce ?? null,
+          scope: challenge.scope ?? null,
+        },
+      );
+    } catch (e: unknown) {
+      await captureServerException(dbh.db, e, {
+        op_name: "handleMfaVerify.generateAuthorizationCode",
+        route: ROUTE,
+        uid: challenge.uid,
+      });
+      return NextResponse.json(
+        {
+          kind: "failure",
+          success: false,
+          message: "Failed to generate authorization code",
+        } satisfies AuthenticateResult,
+        { status: 500 },
+      );
+    }
+  }
+
   const response = NextResponse.json(
-    {
-      kind: "authenticated",
-      success: true,
-      message: "Login successful",
-      authorization_code,
-    } satisfies AuthenticateResult,
+    authorization_code !== null
+      ? ({
+          kind: "authenticated",
+          success: true,
+          message: "Login successful",
+          authorization_code,
+        } satisfies AuthenticateResult)
+      : ({
+          kind: "email_verification_required",
+          success: true,
+          message: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+        } satisfies AuthenticateResult),
     { status: 200 },
   );
 

@@ -6,7 +6,7 @@ import { publicAccess, z } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import {
   AuthenticateBadRequest,
-  AuthenticatedResult,
+  AuthenticatedOrEmailVerificationRequiredResult,
   AuthenticateFailureResult,
   authRateLimitedResponse,
   RegisterRequest,
@@ -30,7 +30,7 @@ export const register = defineOperation({
   path: ROUTE,
   summary: "Register a new account",
   description:
-    "Creates an account for the e-mail address and, like login, starts a PKCE authorization-code grant for `client_app_id` (authorization code + the auth server's HTTP-only session cookie) and sends the verification e-mail. When the `invite_code_required` server setting is on an invite code is mandatory; a supplied code is always validated and consumed. E-mail addresses on the reserved service-account domain are refused. Rate limited per IP.",
+    "Creates an account for the e-mail address and, like login, starts a PKCE authorization-code grant for `client_app_id` (authorization code + the auth server's HTTP-only session cookie) and sends the verification e-mail. A registration started by a third-party `client_app_id` answers `email_verification_required` (session cookie set, no authorization code) while the `require_email_verification_for_third_party_apps` server setting is on, since a new account is never verified. When the `invite_code_required` server setting is on an invite code is mandatory; a supplied code is always validated and consumed. E-mail addresses on the reserved service-account domain are refused. Rate limited per IP.",
   tags: [API_TAGS.authentication],
   auth: publicAccess("Refused while the browser already holds an auth server session."),
   request: {
@@ -42,7 +42,11 @@ export const register = defineOperation({
     },
   },
   responses: {
-    200: { description: "The account was created and the user is authenticated", schema: AuthenticatedResult },
+    200: {
+      description:
+        "The account was created and the user is authenticated, or the third-party hand-off is parked until the e-mail address is verified",
+      schema: AuthenticatedOrEmailVerificationRequiredResult,
+    },
     400: {
       description:
         "Invalid JSON, a body that fails schema validation (raw zod issues), a missing / malformed / exhausted invite code, a reserved e-mail domain, a missing or unregistered `redirect_uri`, or the client IP could not be determined",

@@ -16,7 +16,10 @@ import type { Credentials } from "@/types/credentials";
 // Send an authentication request to the auth server. Returns the parsed
 // AuthenticateResult discriminated union so callers can branch between
 // `authenticated` (authorization code present), `mfa_required` (challenge
-// must be completed at /api/auth/mfa/verify), and `failure` outcomes.
+// must be completed at /api/auth/mfa/verify), `email_verification_required`
+// (the credentials were accepted and the auth server session was set, but a
+// third-party client app gets no authorization code until the account's
+// e-mail address is verified) and `failure` outcomes.
 export async function sendAuthenticateRequest(
   opts: ISendAuthenticateRequestOptions,
 ): Promise<AuthenticateResult> {

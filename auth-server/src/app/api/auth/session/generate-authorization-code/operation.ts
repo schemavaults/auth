@@ -19,6 +19,11 @@ import {
 } from "@/lib/auth-db/users/generate-authorization-code";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
+import { UserRegistry } from "@/lib/auth-db";
+import {
+  EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+  isEmailVerificationRequiredForClientApp,
+} from "@/lib/email-verification/third-party-app-gate";
 
 const ROUTE = "/api/auth/session/generate-authorization-code";
 
@@ -62,10 +67,13 @@ export const AuthorizationCodeRefusal = z
   .object({
     success: z.literal(false),
     message: z.string(),
-    error_id: z.enum(["pkce_challenge_expired", "invalid_redirect_uri"]).optional(),
+    error_id: z
+      .enum(["pkce_challenge_expired", "invalid_redirect_uri", "email_verification_required"])
+      .optional(),
   })
   .openapi("AuthorizationCodeRefusal", {
-    description: "`error_id` identifies the refusal: an expired PKCE challenge or a missing / unregistered `redirect_uri`.",
+    description:
+      "`error_id` identifies the refusal: an expired PKCE challenge, a missing / unregistered `redirect_uri`, or (403) a third-party app asking for a code while the account's e-mail address is not verified yet.",
   });
 
 export const generateAuthorizationCodeOperation = defineOperation({
@@ -73,7 +81,7 @@ export const generateAuthorizationCodeOperation = defineOperation({
   path: ROUTE,
   summary: "Issue an authorization code for the current session",
   description:
-    "Mints a PKCE authorization code for `client_app_id` on behalf of the signed-in user without re-entering credentials (the OAuth2 authorize bridge and the consent screen use it once the user has authorized the app). The code is bound to the code challenge, the `redirect_uri`, the granted scopes and the nonce exactly as a fresh login would bind them.",
+    "Mints a PKCE authorization code for `client_app_id` on behalf of the signed-in user without re-entering credentials (the OAuth2 authorize bridge and the consent screen use it once the user has authorized the app). The code is bound to the code challenge, the `redirect_uri`, the granted scopes and the nonce exactly as a fresh login would bind them. Like a fresh login, a code for a third-party app is refused (403, `error_id: email_verification_required`) while the account's e-mail address is not verified and the `require_email_verification_for_third_party_apps` server setting is on.",
   tags: [API_TAGS.authentication],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {
@@ -86,7 +94,12 @@ export const generateAuthorizationCodeOperation = defineOperation({
         "The body failed validation, the PKCE challenge expired, or the `redirect_uri` is missing / not registered for the app",
       schema: z.union([ValidationErrorResponse, AuthorizationCodeRefusal]),
     },
-    ...sessionErrorResponses,
+    401: sessionErrorResponses[401],
+    403: {
+      description:
+        "The account is disabled, or the account's e-mail address must be verified before a code can be minted for this third-party app (`error_id: email_verification_required`)",
+      schema: z.union([ErrorResponse, AuthorizationCodeRefusal]),
+    },
     500: { description: "Failed to generate the authorization code", schema: ErrorResponse },
   },
   handler: async (ctx) => {
@@ -132,6 +145,32 @@ export const generateAuthorizationCodeOperation = defineOperation({
         message: "redirect_uri is required for this client_app_id",
         error_id: "invalid_redirect_uri",
       });
+    }
+
+    // E-mail verification gate: the same rule a fresh login applies. Read
+    // the row (not the token's claims, which may predate the verification)
+    // so a user who just verified in another tab is let through.
+    try {
+      const userRow = await new UserRegistry(dbh.db, environment === "development").getUserByUID(user.uid);
+      if (!userRow) {
+        throw new Error(`User '${user.uid}' of the session no longer exists`);
+      }
+      const emailVerificationRequired = await isEmailVerificationRequiredForClientApp({
+        db: dbh.db,
+        redis: ctx.context.redis.client,
+        client_app_id: body.client_app_id,
+        email_verified: userRow.email_verified === true,
+      });
+      if (emailVerificationRequired) {
+        return ctx.json(403, {
+          success: false,
+          message: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+          error_id: "email_verification_required",
+        });
+      }
+    } catch (e: unknown) {
+      console.error("[generate-authorization-code] Failed to check email verification requirements:", e);
+      return ctx.json(500, { success: false, message: "Failed to check email verification requirements" });
     }
 
     // Granted scopes are re-derived server-side (never trusted

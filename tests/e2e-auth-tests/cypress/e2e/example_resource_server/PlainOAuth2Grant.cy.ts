@@ -196,9 +196,11 @@ describe("Plain OAuth 2.1 grants (authorization requests without `openid`)", () 
   }
 
   /**
-   * Creates a fresh user, signs them in (session cookie), and records
-   * their consent for the example app — the OIDC code grant refuses
-   * codes for apps the user has not authorized.
+   * Creates a fresh user, signs them in (session cookie), verifies their
+   * e-mail address (a third-party code is refused for unverified accounts
+   * while `require_email_verification_for_third_party_apps` is on) and
+   * records their consent for the example app — the OIDC code grant
+   * refuses codes for apps the user has not authorized.
    */
   function createUserAuthorizedForExampleApp(): Cypress.Chainable<{
     email: string;
@@ -208,6 +210,11 @@ describe("Plain OAuth 2.1 grants (authorization requests without `openid`)", () 
       cy.create_and_login_as_regular_user(credentials).then((success) => {
         expect(success, "create_and_login_as_regular_user should succeed").to
           .be.true;
+        cy.verify_email_via_request(credentials.email).then(
+          (verified: boolean) => {
+            expect(verified, "email verified").to.be.true;
+          },
+        );
         return cy
           .request({
             method: "POST",

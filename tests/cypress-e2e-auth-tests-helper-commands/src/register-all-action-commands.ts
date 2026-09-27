@@ -34,6 +34,7 @@ import enroll_test_user_mfa from "@/actions/enroll_test_user_mfa";
 import compute_totp_code from "@/actions/compute_totp_code";
 import add_virtual_authenticator from "@/actions/add_virtual_authenticator";
 import remove_virtual_authenticator from "@/actions/remove_virtual_authenticator";
+import verify_email_via_request from "@/actions/verify_email_via_request";
 
 export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("login", login);
@@ -43,6 +44,8 @@ export function registerAllActionCommands(commands: Cypress.Commands) {
   commands.add("register_via_request", register_via_request);
 
   commands.add("reset_rate_limit", reset_rate_limit);
+
+  commands.add("verify_email_via_request", verify_email_via_request);
 
   commands.add("create_and_login_as_superuser", createAndLoginAsSuperuser);
 

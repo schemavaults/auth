@@ -44,6 +44,10 @@ import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHav
 import sendVerificationEmail from "@/lib/mail/send-verification-email";
 import captureServerException from "@/lib/captureServerException";
 import { RedisCache } from "@/lib/redis";
+import {
+  EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+  isEmailVerificationRequiredForClientApp,
+} from "@/lib/email-verification/third-party-app-gate";
 
 const ROUTE = "/api/auth/register";
 
@@ -531,20 +535,23 @@ export async function handleRegister({
     });
   }
 
-  let authorization_code: string;
+  // E-mail verification gate: a brand-new account is never verified, so
+  // a registration started by a third-party client app gets no
+  // authorization code (server setting, default on). The session cookie
+  // is still set below — the user is signed in to the auth server and
+  // parked on the "verify your email to continue" page, which resumes the
+  // hand-off once they click the link just sent. Registrations for the
+  // auth server's own /account flow are never gated. Fail closed.
+  let emailVerificationRequired: boolean;
   try {
-    authorization_code = await userRegistry.generateAuthorizationCode(
-      newUser.uid satisfies string,
+    emailVerificationRequired = await isEmailVerificationRequiredForClientApp({
+      db: dbh.db,
       client_app_id,
-      code_challenge,
-      "S256",
-      challenge_time,
-      redirect_uri,
-      grant_context,
-    );
+      email_verified: newUser.email_verified === true,
+    });
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
-      op_name: "handleRegister.generateAuthorizationCode",
+      op_name: "handleRegister.isEmailVerificationRequiredForClientApp",
       route: ROUTE,
       uid: newUser.uid,
       context: { client_app_id },
@@ -553,21 +560,61 @@ export async function handleRegister({
       {
         kind: "failure",
         success: false,
-        message: "Failed to generate authorization code",
+        message: "Failed to check email verification requirements",
       } satisfies AuthenticateResult,
-      {
-        status: 500,
-      },
+      { status: 500 },
+    );
+  }
+
+  let authorization_code: string | null = null;
+  if (!emailVerificationRequired) {
+    try {
+      authorization_code = await userRegistry.generateAuthorizationCode(
+        newUser.uid satisfies string,
+        client_app_id,
+        code_challenge,
+        "S256",
+        challenge_time,
+        redirect_uri,
+        grant_context,
+      );
+    } catch (e: unknown) {
+      await captureServerException(dbh.db, e, {
+        op_name: "handleRegister.generateAuthorizationCode",
+        route: ROUTE,
+        uid: newUser.uid,
+        context: { client_app_id },
+      });
+      return NextResponse.json(
+        {
+          kind: "failure",
+          success: false,
+          message: "Failed to generate authorization code",
+        } satisfies AuthenticateResult,
+        {
+          status: 500,
+        },
+      );
+    }
+  } else if (debug) {
+    console.log(
+      `[handleRegister] Parking third-party registration for app '${client_app_id}' until the email address of uid '${newUser.uid}' is verified`,
     );
   }
 
   const response = NextResponse.json(
-    {
-      kind: "authenticated",
-      success: true,
-      message: "User created successfully",
-      authorization_code,
-    } satisfies AuthenticateResult,
+    authorization_code !== null
+      ? ({
+          kind: "authenticated",
+          success: true,
+          message: "User created successfully",
+          authorization_code,
+        } satisfies AuthenticateResult)
+      : ({
+          kind: "email_verification_required",
+          success: true,
+          message: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+        } satisfies AuthenticateResult),
     {
       status: 200,
     },

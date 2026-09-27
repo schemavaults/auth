@@ -157,6 +157,12 @@ describe("OIDC confidential client flow (management API only)", () => {
         cy.create_and_login_as_regular_user_via_request(credentials).then(
           (ok: boolean) => expect(ok).to.be.true,
         );
+        // A code for a third-party client is refused (403
+        // email_verification_required) while the account's e-mail address
+        // is unverified; verify it out of band first.
+        cy.verify_email_via_request(credentials.email).then(
+          (verified: boolean) => expect(verified, "email verified").to.be.true,
+        );
         cy.request({
           method: "POST",
           url: `/api/apps/${client.client_id}/authorize`,
@@ -215,7 +221,7 @@ describe("OIDC confidential client flow (management API only)", () => {
                     new RegExp(`^${expectedSubPrefix.replace("|", "\\|")}`),
                   );
                   expect(response.body.email).to.eq(credentials.email);
-                  expect(response.body.email_verified).to.eq(false);
+                  expect(response.body.email_verified).to.eq(true);
                 },
               );
               userinfo("POST", { Authorization: `Bearer ${access_token}` }).then(

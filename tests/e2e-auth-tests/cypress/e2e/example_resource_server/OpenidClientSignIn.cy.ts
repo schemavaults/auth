@@ -194,6 +194,13 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
               (statusCode: number) => {
                 expect(statusCode, "register status code").to.equal(200);
 
+                // The account must have a verified e-mail address before
+                // the auth server hands it off to a third-party app
+                // (`require_email_verification_for_third_party_apps`).
+                cy.verify_email_via_request(email).then((verified: boolean) => {
+                  expect(verified, "email verified").to.be.true;
+                });
+
                 // Set profile names while still authenticated so the
                 // `profile` scope's userinfo claims have data to carry:
                 // `name` = display name, `preferred_username` = username.
@@ -247,6 +254,13 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
               (statusCode: number) => {
                 expect(statusCode, "register status code").to.equal(200);
 
+                // The account must have a verified e-mail address before
+                // the auth server hands it off to a third-party app
+                // (`require_email_verification_for_third_party_apps`).
+                cy.verify_email_via_request(email).then((verified: boolean) => {
+                  expect(verified, "email verified").to.be.true;
+                });
+
                 cy.logout();
 
                 // First sign-in authorizes the client app (consent).
@@ -284,6 +298,13 @@ describe("OpenidClientSignIn (openid-client RP, authorization code + PKCE)", () 
             cy.register(email, password, inviteCode).then(
               (statusCode: number) => {
                 expect(statusCode, "register status code").to.equal(200);
+
+                // The account must have a verified e-mail address before
+                // the auth server hands it off to a third-party app
+                // (`require_email_verification_for_third_party_apps`).
+                cy.verify_email_via_request(email).then((verified: boolean) => {
+                  expect(verified, "email verified").to.be.true;
+                });
 
                 cy.logout();
 

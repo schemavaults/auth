@@ -37,9 +37,52 @@ export default function login_via_resource_server_pkce_flow(
     .should("be.visible")
     .type(password, { force: true });
 
+  cy.intercept({ method: "POST", url: "**/api/auth/login" }).as(
+    "loginViaResourceServerPkceFlow",
+  );
   cy.get("button[type='submit']").should("not.be.disabled").click();
 
-  // Step 4: After login, the auth server either shows the consent screen
+  // Step 4: While the `require_email_verification_for_third_party_apps`
+  // server setting is on (the default), an account whose e-mail address is
+  // not verified is parked on /auth/verify-email/required instead of being
+  // handed off to the resource server. Specs should verify their users
+  // up front (cy.verify_email_via_request) so this branch is not taken;
+  // when it is, verify the address here and resume the flow.
+  cy.wait("@loginViaResourceServerPkceFlow", { timeout: 20000 }).then(
+    (interception) => {
+      const kind: unknown = interception.response?.body?.kind;
+      if (kind === "email_verification_required") {
+        cy.url({ timeout: 20000 }).should("include", "/auth/verify-email/required");
+        cy.get('[data-testid="email-verification-required-card"]', {
+          timeout: 15000,
+        }).should("be.visible");
+        cy.verify_email_via_request(email).then((verified: boolean) => {
+          if (!verified) {
+            throw new Error(`Failed to verify the email address '${email}'`);
+          }
+        });
+        // Resume the flow. The interstitial also polls `whoami` and
+        // auto-continues once the address is verified, so the button may
+        // already be gone by the time we get here: click it natively when
+        // it is still there and otherwise let the auto-continue carry on.
+        cy.get("body").then(($body) => {
+          const $button = $body.find(
+            '[data-testid="continue-after-email-verification-button"]',
+          );
+          const button: HTMLElement | undefined = $button.get(0);
+          if (button) {
+            button.click();
+          }
+        });
+      } else if (kind !== "authenticated") {
+        throw new Error(
+          `Unexpected /api/auth/login response kind: ${String(kind)} (status ${interception.response?.statusCode})`,
+        );
+      }
+    },
+  );
+
+  // Step 5: After login, the auth server either shows the consent screen
   // (first-time app authorization) or redirects directly to the resource
   // server (already consented — the common case after prior registration).
   // We handle both by first checking if we're still on the auth server.
@@ -49,7 +92,7 @@ export default function login_via_resource_server_pkce_flow(
     }
   });
 
-  // Step 5: Verify redirect back to resource server's /account page
+  // Step 6: Verify redirect back to resource server's /account page
   return cy.origin(origin, () => {
     cy.url({ timeout: 30000 }).should("include", "/account");
     cy.contains("Example Account Page", { timeout: 15000 }).should(

@@ -88,6 +88,7 @@ Custom commands come from the `@schemavaults/cypress-e2e-auth-tests-helper-comma
 - `cy.wait_for_page_hydration()` — waits for Next.js hydration
 - `cy.create_app(...)` / `cy.create_api_server(...)` / `cy.create_organization(...)` / `cy.delete_organization(...)`
 - `cy.register(email, password, invite_code)`
+- `cy.verify_email_via_request(email)` — marks a user's e-mail address verified through the real flow (test-only `GET /api/test/email-verification-token/{email}` + public `POST /api/auth/verify-email/confirm`, handling the confirm rate limit). Call it right after creating any user that a spec signs in to a **third-party** client app (the example resource server, a dynamically registered client, an app created by request): while the `require_email_verification_for_third_party_apps` server setting is on (the default), `POST /api/auth/login` / `register` / `mfa/verify` for a third-party `client_app_id` answer `kind: "email_verification_required"` (no `authorization_code`) and park the user on `/auth/verify-email/required`, and `POST /api/auth/session/generate-authorization-code` answers 403 `error_id: "email_verification_required"`. First-party flows (the auth server's own app id) are never gated. `cy.register_via_resource_server_pkce_flow()` / `cy.login_via_resource_server_pkce_flow()` verify the address themselves when they hit the interstitial; every other third-party sign-in must verify up front. The gate itself is pinned by `example_resource_server/EmailVerificationRequiredForThirdPartyApps.cy.ts`.
 
 ## Writing a new test
 

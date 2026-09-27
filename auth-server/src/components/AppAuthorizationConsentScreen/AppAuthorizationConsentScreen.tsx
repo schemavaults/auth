@@ -28,6 +28,7 @@ import {
   parseOAuth2State,
 } from "@schemavaults/auth-common";
 import { formatRedirectDestination } from "@/lib/oauth2/format-redirect-destination";
+import { buildVerifyEmailRequiredHref } from "@/lib/email-verification/verify-email-required-href";
 
 export interface AppAuthorizationConsentScreenProps {
   app_id: string;
@@ -201,6 +202,25 @@ export function AppAuthorizationConsentScreen({
       );
 
       if (!response.ok) {
+        // The session mint applies the same e-mail verification gate a
+        // fresh login does: park the user on the interstitial (with the
+        // flow's parameters) instead of failing the consent screen.
+        let refusal: { error_id?: unknown } | null = null;
+        try {
+          refusal = await response.json();
+        } catch {
+          refusal = null;
+        }
+        if (refusal?.error_id === "email_verification_required") {
+          toast({
+            title: "Almost there",
+            description: "Please verify your email address to continue.",
+          });
+          const flowParams = new URLSearchParams(searchParams.toString());
+          flowParams.set("app_id", app_id);
+          window.location.assign(buildVerifyEmailRequiredHref(flowParams));
+          return;
+        }
         throw new Error("Failed to generate authorization code");
       }
 

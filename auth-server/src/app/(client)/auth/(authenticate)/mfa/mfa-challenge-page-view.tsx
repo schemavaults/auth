@@ -14,6 +14,7 @@ import { AppAuthorizationConsentScreen } from "@/components/AppAuthorizationCons
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
 import { PasskeyChallengeButton } from "@/components/Passkeys";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
+import { buildVerifyEmailRequiredHref } from "@/lib/email-verification/verify-email-required-href";
 
 export interface MfaChallengePageViewProps {
   challenge_id: string;
@@ -21,6 +22,10 @@ export interface MfaChallengePageViewProps {
   expires_at?: number;
   on_successful_authenticate: OnSuccessfulAuthenticateAction;
   redirect_uri: string | null;
+  // The flow's PKCE code challenge (third-party flows only; forwarded by
+  // the login form). Only used to rebuild the flow's entry URL when the
+  // verified challenge is parked behind e-mail verification.
+  code_challenge?: string | null;
   challenge_time: number | null;
   code_challenge_method: "S256" | null;
   // OAuth2 `state` (RFC 6749 §10.12) — echoed back on the third-party
@@ -31,6 +36,8 @@ export interface MfaChallengePageViewProps {
   // flow passes it into the token exchange so the response's nonce echo
   // can be verified.
   nonce?: string | null;
+  // Requested scopes forwarded from the login form (entry-URL rebuild).
+  scope?: string | null;
   // Safe same-origin path (validated by `resolveNextHref` in page.tsx)
   // to land the user on after the account-page flow completes — set
   // when a route guard bounced them to login from a protected page.
@@ -49,10 +56,12 @@ export default function MfaChallengePageView({
   expires_at,
   on_successful_authenticate,
   redirect_uri,
+  code_challenge,
   challenge_time,
   code_challenge_method,
   state,
   nonce,
+  scope,
   next_href,
   app,
 }: MfaChallengePageViewProps): ReactElement {
@@ -329,6 +338,46 @@ export default function MfaChallengePageView({
 
   const clearFactors = useMfaChallengeFactorsStore((s) => s.clearFactors);
 
+  // The verified challenge was accepted but the third-party hand-off is
+  // parked until the account's e-mail address is verified (the verify
+  // response set the auth server session cookie, minted no code). Park
+  // the user on the interstitial with the flow's parameters so it can
+  // resume the hand-off once the address is verified. Mirrors the
+  // non-MFA login form (handle-auth-form-submit.ts).
+  const onEmailVerificationRequired = useCallback((): void => {
+    setSucceeded(true);
+    if (challenge_id) clearFactors(challenge_id);
+    toast({
+      title: "Almost there",
+      description: "Please verify your email address to continue.",
+    });
+    window.location.assign(
+      buildVerifyEmailRequiredHref({
+        app_id: client_app_id,
+        code_challenge,
+        code_challenge_method,
+        challenge_time:
+          typeof challenge_time === "number" ? String(challenge_time) : null,
+        redirect_uri,
+        state,
+        nonce,
+        scope,
+      }),
+    );
+  }, [
+    challenge_id,
+    clearFactors,
+    toast,
+    client_app_id,
+    code_challenge,
+    code_challenge_method,
+    challenge_time,
+    redirect_uri,
+    state,
+    nonce,
+    scope,
+  ]);
+
   const onChallengeExpired = useCallback(() => {
     if (challenge_id) clearFactors(challenge_id);
     router.replace(login_href);
@@ -451,6 +500,7 @@ export default function MfaChallengePageView({
           await onAuthenticated(authorization_code);
         }}
         onChallengeExpired={onChallengeExpired}
+        onEmailVerificationRequired={onEmailVerificationRequired}
         renderPasskeyAction={({ factor_id, onError }) => (
           <PasskeyChallengeButton
             challenge_id={challenge_id}
@@ -463,6 +513,7 @@ export default function MfaChallengePageView({
               await onAuthenticated(authorization_code);
             }}
             onChallengeExpired={onChallengeExpired}
+            onEmailVerificationRequired={onEmailVerificationRequired}
           />
         )}
       />

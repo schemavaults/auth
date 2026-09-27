@@ -162,9 +162,12 @@ describe("Dynamic client registration (RFC 7591)", () => {
   }
 
   /**
-   * Creates a fresh user, signs them in (session cookie), and records
-   * their consent for the registered client — exactly what the consent
-   * screen does when an unknown client sends the user to /auth/login.
+   * Creates a fresh user, signs them in (session cookie), verifies their
+   * e-mail address (a code for a third-party client is refused for
+   * unverified accounts while `require_email_verification_for_third_party_apps`
+   * is on) and records their consent for the registered client — exactly
+   * what the consent screen does when an unknown client sends the user to
+   * /auth/login.
    */
   function createUserAuthorizedForClient(client_id: string): Cypress.Chainable<{
     email: string;
@@ -174,6 +177,11 @@ describe("Dynamic client registration (RFC 7591)", () => {
       cy.create_and_login_as_regular_user(credentials).then((success) => {
         expect(success, "create_and_login_as_regular_user should succeed").to
           .be.true;
+        cy.verify_email_via_request(credentials.email).then(
+          (verified: boolean) => {
+            expect(verified, "email verified").to.be.true;
+          },
+        );
         return cy
           .request({
             method: "POST",

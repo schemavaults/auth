@@ -82,7 +82,10 @@ export interface ISchemaVaultsAuthClient {
 
   // Send credentials to start authentication. Returns the parsed
   // AuthenticateResult discriminated union; callers must branch on `kind`
-  // to handle the `mfa_required` case (see verifyMfaChallenge).
+  // to handle the `mfa_required` case (see verifyMfaChallenge) and the
+  // `email_verification_required` case (a third-party flow parked until
+  // the account's e-mail address is verified: the auth server session is
+  // set but no authorization code is issued).
   //
   // `redirect_uri` is bound to the issued authorization code and
   // verified at the token-exchange step. Pass the same value the SDK
@@ -109,8 +112,10 @@ export interface ISchemaVaultsAuthClient {
    * Submit a TOTP code or recovery code for an in-flight MFA challenge
    * received from sendAuthenticateRequest. Resolves with the resulting
    * AuthenticateResult — `authenticated` on success, `failure` if the
-   * challenge has been exhausted, or `mfa_required` is never returned
-   * here (the server only returns it from the password endpoint).
+   * challenge has been exhausted, `email_verification_required` when a
+   * third-party flow is parked until the e-mail address is verified;
+   * `mfa_required` is never returned here (the server only returns it
+   * from the password endpoint).
    */
   verifyMfaChallenge: (
     challenge_id: string,
