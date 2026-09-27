@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.46.2",
+  "version": "0.46.3",
   "private": true,
   "repository": {
     "type": "git",
@@ -21,8 +21,8 @@
     "@schemavaults/openapi-docs-ui": "workspace:*",
     "@schemavaults/openapi-operations": "workspace:*",
     "@schemavaults/send-email": "0.3.1",
-    "@schemavaults/theme": "0.29.0",
-    "@schemavaults/ui": "0.110.1",
+    "@schemavaults/theme": "0.30.0",
+    "@schemavaults/ui": "0.111.0",
     "@simplewebauthn/browser": "13.3.0",
     "@simplewebauthn/server": "13.3.1",
     "cookies-next": "6.1.1",

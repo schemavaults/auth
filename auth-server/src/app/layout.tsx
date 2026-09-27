@@ -15,6 +15,8 @@ import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import getAuthServerDescription from "@/lib/config/auth-server-description";
 import getAuthServerOwnerOrganizationId from "@/lib/config/auth-server-owner-organization";
 import getAuthServerThemeColors from "@/lib/config/auth-server-theme-colors";
+import createSidebarActiveGradientStyle from "@/lib/config/sidebar-active-gradient-style";
+import type { AuthServerThemeColors } from "@/lib/config/default-auth-server-theme-colors";
 import {
   GENERATED_OPENGRAPH_IMAGE_WIDTH,
   GENERATED_OPENGRAPH_IMAGE_HEIGHT,
@@ -79,9 +81,11 @@ export default async function RootLayout({
   // Same cache-busted /branding/icon URL generateMetadata() links in the
   // document head, threaded to client components (e.g. <Logo />) via context.
   const app_icon_url: string = await resolveBrandingIconUrl();
+  const theme_colors: AuthServerThemeColors = getAuthServerThemeColors();
   return (
     <html
       lang="en"
+      style={createSidebarActiveGradientStyle(theme_colors)}
       className={
         [
           "w-screen min-h-[100dvh]",
@@ -108,9 +112,7 @@ export default async function RootLayout({
           <AuthUiOwnerOrganizationProvider
             owner_organization_id={getAuthServerOwnerOrganizationId()}
           >
-            <AuthServerThemeColorsProvider
-              theme_colors={getAuthServerThemeColors()}
-            >
+            <AuthServerThemeColorsProvider theme_colors={theme_colors}>
               <AuthServerUrlProvider auth_server_url={getAuthServerUrl()}>
                 <AppIconUrlProvider app_icon_url={app_icon_url}>
                   {children}
