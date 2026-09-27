@@ -10,10 +10,9 @@ import {
   ToggleGroup,
   ToggleGroupItem,
   cn,
+  type HistogramScaleId,
 } from "@schemavaults/ui";
-import { useMeasuredWidth } from "@schemavaults/auth-ui";
 import type { TraceTileDescriptor } from "../tiles";
-import type { HistogramScaleId } from "../trace-analytics";
 
 export interface TraceTileCardProps {
   tile: TraceTileDescriptor;
@@ -91,28 +90,5 @@ export function DurationScaleToggle({
       <ToggleGroupItem value="linear">Linear</ToggleGroupItem>
       <ToggleGroupItem value="log">Log</ToggleGroupItem>
     </ToggleGroup>
-  );
-}
-
-/**
- * Renders a pixel-sized chart at the current width of its container. Until
- * the container is measured (on the client, right after mount) a placeholder
- * holds the chart's height: the server render never guesses a width, so the
- * chart neither jumps in size nor renders locale-dependent tick labels in
- * the server's time zone.
- */
-export function MeasuredChart({
-  height,
-  children,
-}: {
-  /** Height of the placeholder shown until the width is known. */
-  height: number;
-  children: (width: number) => ReactNode;
-}): ReactElement {
-  const { ref: container_ref, width } = useMeasuredWidth<HTMLDivElement>(0);
-  return (
-    <div ref={container_ref} className="w-full min-w-0">
-      {width > 0 ? children(width) : <div aria-hidden="true" style={{ height }} />}
-    </div>
   );
 }

@@ -211,132 +211,19 @@ export function niceStep(raw_step: number, min_step: number = 0): number {
   return Math.max(min_step, nice * magnitude);
 }
 
-/** Evenly spaced "nice" tick values covering [min, max] with about `target` intervals. */
-export function niceTicks(min: number, max: number, target: number = 4): number[] {
-  if (!Number.isFinite(min) || !Number.isFinite(max)) {
-    return [];
-  }
-  if (max <= min) {
-    return [min];
-  }
-  const step: number = niceStep((max - min) / Math.max(1, target));
-  const first: number = Math.ceil(min / step) * step;
-  const ticks: number[] = [];
-  for (let value = first; value <= max + step * 1e-9; value += step) {
-    // Round away float drift (0.1 + 0.2) so labels stay clean.
-    ticks.push(Number(value.toPrecision(12)));
-  }
-  return ticks;
-}
-
-export const histogramScaleIds = ["linear", "log"] as const;
-export type HistogramScaleId = (typeof histogramScaleIds)[number];
-
-export interface DurationBucket {
-  /** Inclusive lower bound (ms). */
-  lower: number;
-  /** Exclusive upper bound (ms); `null` for the open-ended overflow bucket. */
-  upper: number | null;
-  count: number;
-}
-
-/** Most bins a linear histogram draws before widening its bins. */
-const MAX_LINEAR_BINS: number = 40;
-const MIN_LINEAR_BINS: number = 8;
-
 /**
- * Linear histogram bounds: bins of a nice width from the smallest duration.
- * When a long tail would squash the bulk of the distribution (max beyond
- * twice the p95), durations past the p95 fold into one overflow bucket; the
- * log scale shows that tail spread out.
+ * Top of a zero-based value axis: the first "nice" tick at or above `max`
+ * when the axis is split into about `target` intervals of at least
+ * `min_step` (1 for whole counts and milliseconds).
  */
-function linearBucketBounds(sorted: readonly number[]): {
-  bounds: number[];
-  overflow_from: number | null;
-} {
-  const min: number = sorted[0]!;
-  const max: number = sorted[sorted.length - 1]!;
-  const p95: number = percentile(sorted, 0.95);
-  const has_long_tail: boolean = sorted.length >= 20 && max > 2 * p95 && p95 > min;
-  const top: number = has_long_tail ? p95 : max;
-  const bins: number = Math.min(
-    MAX_LINEAR_BINS,
-    Math.max(MIN_LINEAR_BINS, Math.ceil(Math.sqrt(sorted.length))),
-  );
-  // Durations are whole milliseconds, so bins narrower than 1 ms are empty.
-  const width: number = niceStep((top - min) / bins, 1);
-  const start: number = Math.floor(min / width) * width;
-  const bounds: number[] = [start];
-  while (bounds[bounds.length - 1]! <= top) {
-    bounds.push(bounds[bounds.length - 1]! + width);
-  }
-  return {
-    bounds,
-    overflow_from: has_long_tail ? bounds[bounds.length - 1]! : null,
-  };
-}
-
-/** Log histogram bounds: 0, 1, 2, 5, 10, 20, 50, … ms up past the largest duration. */
-function logBucketBounds(sorted: readonly number[]): number[] {
-  const max: number = sorted[sorted.length - 1]!;
-  const bounds: number[] = [0, 1];
-  let magnitude: number = 1;
-  while (bounds[bounds.length - 1]! <= max) {
-    for (const multiple of [2, 5, 10]) {
-      bounds.push(multiple * magnitude);
-      if (bounds[bounds.length - 1]! > max) {
-        break;
-      }
-    }
-    magnitude *= 10;
-  }
-  return bounds;
-}
-
-/**
- * Bins `durations` for a histogram. Leading and trailing empty buckets are
- * trimmed; empty buckets inside the range are kept so gaps stay visible.
- */
-export function buildDurationHistogram(
-  durations: readonly number[],
-  scale: HistogramScaleId,
-): DurationBucket[] {
-  if (durations.length === 0) {
-    return [];
-  }
-  const sorted: number[] = [...durations].sort(ascending);
-  const { bounds, overflow_from } =
-    scale === "log"
-      ? { bounds: logBucketBounds(sorted), overflow_from: null }
-      : linearBucketBounds(sorted);
-
-  const buckets: DurationBucket[] = [];
-  for (let i = 0; i < bounds.length - 1; i += 1) {
-    buckets.push({ lower: bounds[i]!, upper: bounds[i + 1]!, count: 0 });
-  }
-  if (overflow_from !== null) {
-    buckets.push({ lower: overflow_from, upper: null, count: 0 });
-  }
-
-  let index: number = 0;
-  for (const value of sorted) {
-    while (
-      index < buckets.length - 1 &&
-      buckets[index]!.upper !== null &&
-      value >= buckets[index]!.upper!
-    ) {
-      index += 1;
-    }
-    buckets[index]!.count += 1;
-  }
-
-  const first: number = buckets.findIndex(
-    (bucket: DurationBucket): boolean => bucket.count > 0,
-  );
-  const last: number = buckets.findLastIndex(
-    (bucket: DurationBucket): boolean => bucket.count > 0,
-  );
-  return buckets.slice(first, last + 1);
+export function niceAxisTop(
+  max: number,
+  target: number = 4,
+  min_step: number = 1,
+): number {
+  const clamped: number = Number.isFinite(max) ? Math.max(0, max) : 0;
+  const step: number = niceStep(clamped / Math.max(1, target), min_step);
+  return Math.max(step, Math.ceil(clamped / step) * step);
 }
 
 /** Candidate time-bucket widths, smallest first. */

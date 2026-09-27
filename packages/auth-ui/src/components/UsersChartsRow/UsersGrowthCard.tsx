@@ -16,7 +16,6 @@ import {
 } from "@schemavaults/ui";
 import type { UserData } from "@schemavaults/auth-common";
 import { useAllUsersList } from "@/components/UsersTable/useAllUsersList";
-import useMeasuredWidth from "@/lib/useMeasuredWidth";
 import {
   USER_GROWTH_RANGE_IDS,
   USER_GROWTH_RANGE_LABELS,
@@ -37,10 +36,6 @@ export interface UsersGrowthCardProps {
   defaultRange?: UserGrowthRangeId;
   className?: string;
 }
-
-/** Widths used for the server render, until the resize observer reports. */
-const SIGNUPS_FALLBACK_WIDTH: number = 560;
-const TOTAL_FALLBACK_WIDTH: number = 240;
 
 const RANGE_TO_SPOKEN_LABEL: Record<UserGrowthRangeId, string> = {
   "7d": "7 days",
@@ -96,11 +91,6 @@ export function UsersGrowthCard(props: UsersGrowthCardProps): ReactElement {
       ),
     [series.buckets],
   );
-
-  const signups_chart = useMeasuredWidth<HTMLDivElement>(
-    SIGNUPS_FALLBACK_WIDTH,
-  );
-  const total_chart = useMeasuredWidth<HTMLDivElement>(TOTAL_FALLBACK_WIDTH);
 
   const loading: boolean = !users.data;
   const first_bucket: UserGrowthBucket | undefined = series.buckets[0];
@@ -169,19 +159,17 @@ export function UsersGrowthCard(props: UsersGrowthCardProps): ReactElement {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <div ref={signups_chart.ref} className="w-full">
-            <Sparkline
-              data={signups_per_bucket}
-              variant="bar"
-              color="default"
-              min={0}
-              width={signups_chart.width}
-              height={72}
-              label={`Sign-ups per ${bucket_label} over ${spoken_range}: ${series.signups} in total`}
-              className={cn("w-full", loading && "animate-pulse opacity-60")}
-              data-testid="users-growth-signups-sparkline"
-            />
-          </div>
+          <Sparkline
+            data={signups_per_bucket}
+            variant="bar"
+            color="default"
+            min={0}
+            width="auto"
+            height={72}
+            label={`Sign-ups per ${bucket_label} over ${spoken_range}: ${series.signups} in total`}
+            className={cn(loading && "animate-pulse opacity-60")}
+            data-testid="users-growth-signups-sparkline"
+          />
           {first_bucket && last_bucket ? (
             <div className="text-muted-foreground flex flex-row justify-between text-xs tabular-nums">
               <span>{formatUtcDay(first_bucket.start)}</span>
@@ -205,15 +193,15 @@ export function UsersGrowthCard(props: UsersGrowthCardProps): ReactElement {
           <span className="text-muted-foreground shrink-0 text-xs font-medium uppercase tracking-wide">
             Total users
           </span>
-          <div ref={total_chart.ref} className="min-w-24 flex-1">
+          <div className="min-w-24 flex-1">
             <Sparkline
               data={cumulative_per_bucket}
               variant="area"
               color="default"
-              width={total_chart.width}
+              width="auto"
               height={32}
               label={`Total registered accounts over ${spoken_range}, ending at ${series.total}`}
-              className={cn("w-full", loading && "animate-pulse opacity-60")}
+              className={cn(loading && "animate-pulse opacity-60")}
               data-testid="users-growth-total-sparkline"
             />
           </div>

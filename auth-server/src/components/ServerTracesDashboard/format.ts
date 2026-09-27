@@ -1,5 +1,7 @@
 /** Display formatting shared by the trace dashboard tiles. */
 
+import type { HistogramBucket } from "@schemavaults/ui";
+
 const integer = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const compact = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -50,6 +52,20 @@ export function formatDurationTick(ms: number): string {
     return `${trimZeros((ms / 1_000).toPrecision(3))}s`;
   }
   return `${trimZeros((ms / 60_000).toPrecision(3))}m`;
+}
+
+/** A duration histogram bucket's range: `under 1 ms`, `12 ms`, `10 ms – 20 ms`, `2.5 s or more`. */
+export function describeDurationBucket(bucket: HistogramBucket): string {
+  if (bucket.upper === null) {
+    return `${formatDuration(bucket.lower)} or more`;
+  }
+  if (bucket.lower === 0 && bucket.upper === 1) {
+    return "under 1 ms";
+  }
+  if (bucket.upper - bucket.lower === 1) {
+    return formatDuration(bucket.lower);
+  }
+  return `${formatDuration(bucket.lower)} – ${formatDuration(bucket.upper)}`;
 }
 
 /** A span of time: `45 s`, `12 min`, `3 h 12 min`, `2 d 4 h`. */

@@ -15,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
   MultiSelect,
-  cn,
   type MultiSelectOption,
 } from "@schemavaults/ui";
 import { AlertTriangle } from "lucide-react";
@@ -34,7 +33,6 @@ import {
 } from "./trace-analytics";
 import { LocalDateTime } from "@schemavaults/auth-ui";
 import { formatCount } from "./format";
-import { TRACE_CHART_COLOR_VARIABLES } from "./trace-categories";
 import {
   TRACE_TILE_IDS,
   TRACE_TILES,
@@ -216,7 +214,7 @@ export function ServerTracesDashboard({
 
   return (
     <div
-      className={cn("flex w-full min-w-0 flex-col gap-4", TRACE_CHART_COLOR_VARIABLES)}
+      className="flex w-full min-w-0 flex-col gap-4"
       data-testid="server-traces-dashboard"
     >
       <Card data-testid="server-traces-controls">
