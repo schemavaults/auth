@@ -85,9 +85,16 @@ export default function register_via_resource_server_pkce_flow(
     },
   );
 
-  // Step 5: Consent screen — click "Authorize & Continue"
+  // Step 5: Consent screen — click "Authorize & Continue". A new account
+  // never authorized the app, so consent is always asked: inline by the
+  // register form (gate off) or on the server-rendered consent page the
+  // resumed flow lands on (gate on). On the latter the button is disabled
+  // until the auth client has hydrated and initialised from the session
+  // cookie, so wait for it to become enabled rather than clicking the
+  // first paint.
   cy.contains("Authorize & Continue", { timeout: 20000 })
     .should("be.visible")
+    .should("not.be.disabled")
     .click();
 
   // Step 6: Verify redirect back to resource server's /account page

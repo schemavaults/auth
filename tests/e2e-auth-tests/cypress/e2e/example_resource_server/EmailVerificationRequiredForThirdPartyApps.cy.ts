@@ -293,8 +293,11 @@ describe("Email verification required before third-party app hand-off", () => {
                 expect(verified, "email verified").to.be.true;
               });
 
+              // The server-rendered consent page keeps the button disabled
+              // until the auth client is ready; wait for it.
               cy.contains("Authorize & Continue", { timeout: 30000 })
                 .should("be.visible")
+                .should("not.be.disabled")
                 .click();
 
               expectResourceServerAccountPage();
@@ -384,6 +387,18 @@ describe("Email verification required before third-party app hand-off", () => {
       cy.create_and_login_as_regular_user_via_request(credentials).then(
         (ok: boolean) => {
           expect(ok, "create_and_login_as_regular_user_via_request").to.be.true;
+        },
+      );
+      // Establish the auth server session through the browser (the login
+      // page on the primary origin) rather than leaving it to the cookies
+      // cy.request set: only a browser-set session cookie reliably travels
+      // with the cross-origin navigation back from the resource server
+      // (see ExampleResourceServer.cy.ts, "auto-completes PKCE flow with
+      // existing auth-server session").
+      cy.logout();
+      cy.login(credentials.email, credentials.password).then(
+        (loggedIn: boolean) => {
+          expect(loggedIn, "login on the auth server").to.be.true;
         },
       );
       cy.is_authenticated().should("equal", true);

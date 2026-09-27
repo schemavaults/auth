@@ -105,8 +105,11 @@ describe("OAuth2State (RFC 6749 §10.12 state parameter)", () => {
                 },
               );
 
+              // On the server-rendered consent page the button is disabled
+              // until the auth client is ready; wait for it.
               cy.contains("Authorize & Continue", { timeout: 20000 })
                 .should("be.visible")
+                .should("not.be.disabled")
                 .click();
 
               // Resource-server callback URL should carry the SAME state.

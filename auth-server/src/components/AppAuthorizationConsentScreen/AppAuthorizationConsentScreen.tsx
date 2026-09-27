@@ -71,6 +71,12 @@ export function AppAuthorizationConsentScreen({
   const [submitting, startSubmitting] = useTransition();
   const redirect_destination: string | null =
     formatRedirectDestination(redirect_uri);
+  // The screen is server-rendered on the already-signed-in authorize path
+  // (`/auth/login?app_id=…`), so it can be on screen before the SDK has
+  // hydrated and initialised from the session cookie. Authorizing needs
+  // the client, so the button stays disabled until then instead of
+  // answering an early click with a "not ready" toast.
+  const authClientReady: boolean = auth.ready && auth.client.current !== null;
 
   function handleDeny(): void {
     router.push("/account");
@@ -373,7 +379,8 @@ export function AppAuthorizationConsentScreen({
               await handleAuthorize();
             });
           }}
-          disabled={submitting}
+          disabled={submitting || !authClientReady}
+          data-testid="consent-authorize-button"
         >
           {submitting ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" role="status" />

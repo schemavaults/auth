@@ -4,6 +4,19 @@ export interface LoginViaResourceServerPkceFlowParams {
   password: string;
 }
 
+/**
+ * Clicks the consent screen's "Authorize & Continue". On the server-rendered
+ * consent page the button stays disabled until the auth client has hydrated
+ * and initialised from the session cookie, so wait for it to become enabled
+ * rather than clicking the first paint.
+ */
+function clickAuthorizeAndContinue(): void {
+  cy.contains("Authorize & Continue", { timeout: 20000 })
+    .should("be.visible")
+    .should("not.be.disabled")
+    .click();
+}
+
 export default function login_via_resource_server_pkce_flow(
   params: LoginViaResourceServerPkceFlowParams,
 ): Cypress.Chainable<boolean> {
@@ -40,6 +53,14 @@ export default function login_via_resource_server_pkce_flow(
   cy.intercept({ method: "POST", url: "**/api/auth/login" }).as(
     "loginViaResourceServerPkceFlow",
   );
+  // The login form asks the server whether the user already authorized the
+  // app right after an `authenticated` answer, and shows the consent screen
+  // only when they have not. Waiting on that request (instead of sniffing
+  // the page text) makes the consent step deterministic.
+  cy.intercept({
+    method: "GET",
+    url: "**/api/apps/*/check-authorization*",
+  }).as("checkAppAuthorizationViaResourceServerPkceFlow");
   cy.get("button[type='submit']").should("not.be.disabled").click();
 
   // Step 4: While the `require_email_verification_for_third_party_apps`
@@ -61,36 +82,59 @@ export default function login_via_resource_server_pkce_flow(
             throw new Error(`Failed to verify the email address '${email}'`);
           }
         });
-        // Resume the flow. The interstitial also polls `whoami` and
-        // auto-continues once the address is verified, so the button may
-        // already be gone by the time we get here: click it natively when
-        // it is still there and otherwise let the auto-continue carry on.
-        cy.get("body").then(($body) => {
-          const $button = $body.find(
-            '[data-testid="continue-after-email-verification-button"]',
-          );
-          const button: HTMLElement | undefined = $button.get(0);
-          if (button) {
-            button.click();
+        // Resuming re-enters /auth/login, whose already-signed-in branch
+        // shows the consent screen unless the user authorized the app
+        // before. Ask the server now (the session cookie is set) so the
+        // consent step below is deterministic.
+        cy.url({ log: false }).then((interstitialUrl: string) => {
+          const app_id: string | null = new URL(interstitialUrl).searchParams.get("app_id");
+          if (!app_id) {
+            throw new Error("The verify-email interstitial URL carries no app_id");
+          }
+          cy.request({
+            method: "GET",
+            url: `/api/apps/${encodeURIComponent(app_id)}/check-authorization`,
+            failOnStatusCode: false,
+            log: false,
+          }).then((response) => {
+            const authorized: boolean = response.body?.authorized === true;
+            // Resume the flow. The interstitial also polls `whoami` and
+            // auto-continues once the address is verified, so the button
+            // may already be gone by the time we get here: click it
+            // natively when it is still there and otherwise let the
+            // auto-continue carry on.
+            cy.get("body").then(($body) => {
+              const $button = $body.find(
+                '[data-testid="continue-after-email-verification-button"]',
+              );
+              const button: HTMLElement | undefined = $button.get(0);
+              if (button) {
+                button.click();
+              }
+            });
+            if (!authorized) {
+              clickAuthorizeAndContinue();
+            }
+          });
+        });
+      } else if (kind === "authenticated") {
+        // Step 5: the form checks the app authorization next; the consent
+        // screen renders only when the user has not authorized the app yet,
+        // otherwise the form redirects straight to the resource server.
+        cy.wait("@checkAppAuthorizationViaResourceServerPkceFlow", {
+          timeout: 20000,
+        }).then((check) => {
+          if (check.response?.body?.authorized !== true) {
+            clickAuthorizeAndContinue();
           }
         });
-      } else if (kind !== "authenticated") {
+      } else {
         throw new Error(
           `Unexpected /api/auth/login response kind: ${String(kind)} (status ${interception.response?.statusCode})`,
         );
       }
     },
   );
-
-  // Step 5: After login, the auth server either shows the consent screen
-  // (first-time app authorization) or redirects directly to the resource
-  // server (already consented — the common case after prior registration).
-  // We handle both by first checking if we're still on the auth server.
-  cy.get("body", { timeout: 15000 }).then(($body) => {
-    if ($body.text().includes("Authorize & Continue")) {
-      cy.contains("Authorize & Continue").should("be.visible").click();
-    }
-  });
 
   // Step 6: Verify redirect back to resource server's /account page
   return cy.origin(origin, () => {
