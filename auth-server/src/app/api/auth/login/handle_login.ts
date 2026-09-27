@@ -38,6 +38,10 @@ import { RedisCache } from "@/lib/redis";
 import { createChallenge } from "@/lib/mfa";
 import { runDummyPasswordVerification } from "@/lib/hash_password";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
+import {
+  EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+  isEmailVerificationRequiredForClientApp,
+} from "@/lib/email-verification/third-party-app-gate";
 
 // Constant message returned for both "no such user" and "wrong password"
 // failures, so that an unauthenticated caller cannot tell whether an email
@@ -421,20 +425,24 @@ export async function handleLogin({
     }
   }
 
-  let authorization_code: string;
+  // E-mail verification gate: a third-party client app gets no
+  // authorization code until the account's address is verified (server
+  // setting, default on). The credentials were accepted, so the auth
+  // server session cookie is still set below — the user is signed in to
+  // the auth server and parked on the "verify your email to continue"
+  // page, which resumes the flow once the address is verified. The auth
+  // server's own /account flow is never gated. Fail closed: if the
+  // setting cannot be read, refuse the hand-off rather than skip the gate.
+  let emailVerificationRequired: boolean;
   try {
-    authorization_code = await userRegistry.generateAuthorizationCode(
-      uid,
+    emailVerificationRequired = await isEmailVerificationRequiredForClientApp({
+      db: dbh.db,
       client_app_id,
-      code_challenge,
-      "S256",
-      challenge_time,
-      redirect_uri,
-      grant_context,
-    );
+      email_verified: user.email_verified === true,
+    });
   } catch (e: unknown) {
     await captureServerException(dbh.db, e, {
-      op_name: "handleLogin.generateAuthorizationCode",
+      op_name: "handleLogin.isEmailVerificationRequiredForClientApp",
       route: ROUTE,
       uid,
       context: { client_app_id },
@@ -443,28 +451,69 @@ export async function handleLogin({
       {
         kind: "failure",
         success: false,
-        message: "Failed to generate authorization code",
+        message: "Failed to check email verification requirements",
       } satisfies AuthenticateResult,
-      {
-        status: 500,
-      },
+      { status: 500 },
+    );
+  }
+
+  let authorization_code: string | null = null;
+  if (!emailVerificationRequired) {
+    try {
+      authorization_code = await userRegistry.generateAuthorizationCode(
+        uid,
+        client_app_id,
+        code_challenge,
+        "S256",
+        challenge_time,
+        redirect_uri,
+        grant_context,
+      );
+    } catch (e: unknown) {
+      await captureServerException(dbh.db, e, {
+        op_name: "handleLogin.generateAuthorizationCode",
+        route: ROUTE,
+        uid,
+        context: { client_app_id },
+      });
+      return NextResponse.json(
+        {
+          kind: "failure",
+          success: false,
+          message: "Failed to generate authorization code",
+        } satisfies AuthenticateResult,
+        {
+          status: 500,
+        },
+      );
+    }
+  } else if (debug) {
+    console.log(
+      `[handleLogin] Parking third-party login for app '${client_app_id}' until the email address of uid '${uid}' is verified`,
     );
   }
 
   const response = NextResponse.json(
-    {
-      kind: "authenticated",
-      success: true,
-      message: "Login successful",
-      authorization_code,
-    } satisfies AuthenticateResult,
+    authorization_code !== null
+      ? ({
+          kind: "authenticated",
+          success: true,
+          message: "Login successful",
+          authorization_code,
+        } satisfies AuthenticateResult)
+      : ({
+          kind: "email_verification_required",
+          success: true,
+          message: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+        } satisfies AuthenticateResult),
     {
       status: 200,
     },
   );
 
   // Set auth-server refresh token cookie so the user is authenticated
-  // for subsequent requests (e.g. the OAuth2 consent screen).
+  // for subsequent requests (e.g. the OAuth2 consent screen, or the
+  // "verify your email to continue" page when the hand-off was parked).
   // Wrapped in try/catch so login never fails due to cookie-setting errors.
   try {
     await setAuthServerRefreshTokenCookie({

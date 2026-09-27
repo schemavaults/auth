@@ -23,6 +23,7 @@ import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
 import uuidSync from "@/lib/uuid/uuidSync";
 import resolveNextHref from "@/lib/next-href";
+import { buildVerifyEmailRequiredHref } from "@/lib/email-verification/verify-email-required-href";
 
 export interface PendingAuthorizationState {
   authorization_code: string;
@@ -305,10 +306,16 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       // client after a successful TOTP/recovery-code submission. Without
       // this, the MFA page has no way to reach the original `redirect_uri`
       // and the OAuth2 callback gets dropped on the floor.
+      // `code_challenge` rides along too: it is not needed to verify the
+      // challenge (the server kept it on the Redis record) but the MFA
+      // page needs it to build the "verify your email to continue"
+      // interstitial, whose resume link re-enters /auth/login with the
+      // complete parameter set.
       for (const key of [
         "redirect_uri",
         "state",
         "challenge_time",
+        "code_challenge",
         "code_challenge_method",
       ] as const) {
         const value = searchParams.get(key);
@@ -344,6 +351,23 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         );
       }
       window.location.assign(`/auth/mfa?${params.toString()}`);
+      return;
+    }
+    if (result.kind === "email_verification_required") {
+      // Third-party flow parked by the server: the credentials were
+      // accepted and the auth server session cookie is set, but no
+      // authorization code was minted because the account's e-mail
+      // address is not verified. Park the user on the interstitial, which
+      // carries the flow's parameters and resumes the hand-off once the
+      // address is verified. (Never returned for the account-page flow.)
+      toast({
+        title:
+          type === "register"
+            ? `Welcome to ${opts.friendly_name}!`
+            : "Almost there",
+        description: "Please verify your email address to continue.",
+      });
+      window.location.assign(buildVerifyEmailRequiredHref(searchParams));
       return;
     }
     if (result.kind !== "authenticated") {

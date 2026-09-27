@@ -22,6 +22,9 @@ export interface PasskeyChallengeButtonProps {
   factor_id: string;
   onAuthenticated: (authorization_code: string) => Promise<void> | void;
   onChallengeExpired?: () => void;
+  // The assertion was accepted but the third-party hand-off is parked
+  // until the account's e-mail address is verified (see MfaChallengeForm).
+  onEmailVerificationRequired?: (message: string) => Promise<void> | void;
   onError: (message: string) => void;
 }
 
@@ -36,6 +39,7 @@ export function PasskeyChallengeButton({
   factor_id,
   onAuthenticated,
   onChallengeExpired,
+  onEmailVerificationRequired,
   onError,
 }: PasskeyChallengeButtonProps): ReactElement {
   const { getWebauthnAuthenticationOptions, submitChallenge } = useMfa();
@@ -77,6 +81,17 @@ export function PasskeyChallengeButton({
       }
       if (result.kind === "failure") {
         onError(result.message || "Passkey verification failed");
+        return;
+      }
+      if (result.kind === "email_verification_required") {
+        if (onEmailVerificationRequired) {
+          await onEmailVerificationRequired(result.message);
+          return;
+        }
+        onError(
+          result.message ||
+            "Please verify your email address before continuing.",
+        );
         return;
       }
       onError(`Unexpected response: ${result.kind}`);

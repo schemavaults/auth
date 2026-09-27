@@ -55,6 +55,7 @@ export {
   mfaRequiredAuthenticateResultSchema,
   authenticateFailureResultSchema,
   challengeExpiredAuthenticateResultSchema,
+  emailVerificationRequiredAuthenticateResultSchema,
   availableMfaFactorSchema,
   collapseWebauthnFactors,
   type AuthenticateResult,
@@ -62,6 +63,7 @@ export {
   type MfaRequiredAuthenticateResult,
   type AuthenticateFailureResult,
   type ChallengeExpiredAuthenticateResult,
+  type EmailVerificationRequiredAuthenticateResult,
   type AvailableMfaFactor,
 } from "./authenticate_result";
 

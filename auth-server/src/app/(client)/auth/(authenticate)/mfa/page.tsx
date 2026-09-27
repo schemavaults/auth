@@ -81,6 +81,11 @@ export default async function MfaChallengePage(props: {
       : "account-page";
 
   const redirect_uri = readString(searchParams, "redirect_uri") ?? null;
+  // The PKCE code challenge of a third-party flow, forwarded by the login
+  // form. Not needed to verify the challenge (the server kept it on the
+  // Redis record) — only to rebuild the flow's entry URL should the
+  // hand-off be parked behind e-mail verification after the challenge.
+  const code_challenge = readString(searchParams, "code_challenge") ?? null;
   const challenge_time_str = readString(searchParams, "challenge_time");
   const challenge_time =
     challenge_time_str && !Number.isNaN(Number(challenge_time_str))
@@ -113,6 +118,9 @@ export default async function MfaChallengePage(props: {
   // SDK context; the server-side grant context lives on the Redis
   // challenge record).
   const nonce: string | null = readString(searchParams, "nonce") ?? null;
+  // Requested scopes, forwarded from the login form for the same reason
+  // as `code_challenge` (rebuilding the flow's entry URL).
+  const scope: string | null = readString(searchParams, "scope") ?? null;
 
   // Post-login destination forwarded from the login form (originally
   // set by a route guard). Unsafe values resolve to null → /account.
@@ -139,10 +147,12 @@ export default async function MfaChallengePage(props: {
       }
       on_successful_authenticate={on_successful_authenticate}
       redirect_uri={redirect_uri}
+      code_challenge={code_challenge}
       challenge_time={challenge_time}
       code_challenge_method={code_challenge_method}
       state={state}
       nonce={nonce}
+      scope={scope}
       next_href={next_href}
       app={app}
     />

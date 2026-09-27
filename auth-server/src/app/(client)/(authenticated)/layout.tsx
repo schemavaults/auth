@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import { useMemo, type PropsWithChildren, type ReactElement } from "react";
 import getAuthenticatedUserDashboardLinks from "./dashboard-links";
 import { useAdmin } from "@schemavaults/auth-react-provider";
+import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 
 type DashboardSidebarLinkProps = Parameters<DashboardLayoutProps["Link"]>[0];
 
@@ -63,6 +64,7 @@ export default function AuthenticatedAuthServerLayout({
       sidebarItems={links}
       usePathname={usePathname}
     >
+      <EmailVerificationBanner className="mb-4" />
       {children}
     </DashboardLayout>
   );

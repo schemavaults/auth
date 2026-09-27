@@ -59,6 +59,7 @@ describe("Admin settings API", () => {
         "private_beta_mode",
         "admin_only_organization_creation",
         "allow_user_owned_resource_creation",
+        "require_email_verification_for_third_party_apps",
         "mail_server_configured",
         "mail_server_api_id",
         "spoofed_superuser_email",

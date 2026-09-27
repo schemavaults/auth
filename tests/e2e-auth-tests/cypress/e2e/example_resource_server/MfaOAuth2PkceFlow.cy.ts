@@ -218,6 +218,13 @@ describe("MFA OAuth2 PKCE redirect", () => {
       // server's PKCE flow) so the example app is NOT yet authorized.
       cy.create_and_login_as_regular_user(credentials).then((ok) => {
         if (!ok) throw new Error("Failed to register/login regular user");
+        // The hand-off to the third-party app (after the MFA challenge)
+        // requires a verified e-mail address; verify it out of band.
+        cy.verify_email_via_request(credentials.email).then(
+          (verified: boolean) => {
+            expect(verified, "email verified").to.be.true;
+          },
+        );
         cy.logout();
 
         cy.enroll_test_user_mfa({ email: credentials.email }).then((mfa) => {

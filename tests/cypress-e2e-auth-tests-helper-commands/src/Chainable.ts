@@ -42,6 +42,13 @@ declare global {
         invite_code?: string,
       ): Chainable<number>;
       reset_rate_limit(): Chainable<boolean>;
+      /**
+       * Marks the user's e-mail address as verified (test-only token +
+       * public confirm endpoint). Required before signing a user in to a
+       * third-party client app while the
+       * `require_email_verification_for_third_party_apps` server setting is on.
+       */
+      verify_email_via_request(email: string): Chainable<boolean>;
       create_and_login_as_superuser(): Chainable<boolean>;
       create_and_login_as_superuser_via_request(): Chainable<boolean>;
       create_and_login_as_regular_user(credentials: {

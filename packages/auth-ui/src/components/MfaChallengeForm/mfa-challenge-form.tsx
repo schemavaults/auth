@@ -38,6 +38,14 @@ export interface MfaChallengeFormProps {
   recovery_codes_available: boolean;
   onAuthenticated: (authorization_code: string) => Promise<void> | void;
   onChallengeExpired?: () => void;
+  // The proof was accepted but the server answered
+  // `email_verification_required`: the auth server session is set, yet no
+  // authorization code was issued because the flow was started by a
+  // third-party client app and the account's e-mail address is not
+  // verified. The host should park the user on the auth server's "verify
+  // your email to continue" page. Without a handler the form shows the
+  // server's message as an error.
+  onEmailVerificationRequired?: (message: string) => Promise<void> | void;
   // Render slot for the passkey (WebAuthn) assertion action, supplied by the
   // auth server. Passkey browser ceremonies live in the auth server (not this
   // package, which has external consumers), so when a `webauthn` factor is
@@ -58,6 +66,7 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
   recovery_codes_available,
   onAuthenticated,
   onChallengeExpired,
+  onEmailVerificationRequired,
   renderPasskeyAction,
 }): ReactElement => {
   const { submitChallenge } = useMfa();
@@ -102,6 +111,17 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
       }
       if (result.kind === "failure") {
         setError(result.message || "Verification failed");
+        return;
+      }
+      if (result.kind === "email_verification_required") {
+        if (onEmailVerificationRequired) {
+          await onEmailVerificationRequired(result.message);
+          return;
+        }
+        setError(
+          result.message ||
+            "Please verify your email address before continuing.",
+        );
         return;
       }
       setError(`Unexpected response kind: ${result.kind}`);

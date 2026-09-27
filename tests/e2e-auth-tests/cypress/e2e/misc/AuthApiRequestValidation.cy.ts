@@ -171,6 +171,13 @@ describe("Auth API request validation", () => {
         cy.create_and_login_as_regular_user_via_request(credentials).then(
           (ok: boolean) => {
             expect(ok).to.be.true;
+            // The successful third-party login below expects an
+            // authorization code, which is only minted for accounts with
+            // a verified e-mail address.
+            cy.verify_email_via_request(credentials.email).then(
+              (verified: boolean) =>
+                expect(verified, "email verified").to.be.true,
+            );
             cy.logout();
           },
         );
@@ -380,6 +387,12 @@ describe("Auth API request validation", () => {
         cy.generate_random_test_user_credentials().then((credentials) => {
           cy.create_and_login_as_regular_user_via_request(credentials).then(
             (ok: boolean) => expect(ok).to.be.true,
+          );
+          // The success case below mints a code for a third-party app,
+          // which requires a verified e-mail address.
+          cy.verify_email_via_request(credentials.email).then(
+            (verified: boolean) =>
+              expect(verified, "email verified").to.be.true,
           );
           cy.request({
             method: "POST",

@@ -5,6 +5,7 @@ import {
   mfaRequiredAuthenticateResultSchema,
   authenticateFailureResultSchema,
   challengeExpiredAuthenticateResultSchema,
+  emailVerificationRequiredAuthenticateResultSchema,
   collapseWebauthnFactors,
   type AvailableMfaFactor,
 } from "./authenticate_result";
@@ -110,6 +111,29 @@ describe("authenticateResultSchema (discriminated union)", () => {
     expect(
       challengeExpiredAuthenticateResultSchema.safeParse(value).success,
     ).toBe(true);
+  });
+
+  test("parses email_verification_required variant", () => {
+    const value = {
+      kind: "email_verification_required" as const,
+      success: true as const,
+      message: "Please verify your email address to continue",
+    };
+    const parsed = authenticateResultSchema.parse(value);
+    expect(parsed.kind).toBe("email_verification_required");
+    expect(
+      emailVerificationRequiredAuthenticateResultSchema.safeParse(value).success,
+    ).toBe(true);
+  });
+
+  test("rejects email_verification_required variant carrying an authorization_code (strict)", () => {
+    const value = {
+      kind: "email_verification_required" as const,
+      success: true as const,
+      message: "Please verify your email address to continue",
+      authorization_code: "a".repeat(43),
+    };
+    expect(authenticateResultSchema.safeParse(value).success).toBe(false);
   });
 
   test("rejects an object missing kind discriminator", () => {

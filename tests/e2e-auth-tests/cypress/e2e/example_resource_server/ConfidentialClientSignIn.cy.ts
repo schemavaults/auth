@@ -169,6 +169,13 @@ describe("ConfidentialClientSignIn (openid-client RP, client_secret_basic)", () 
               (statusCode: number) => {
                 expect(statusCode, "register status code").to.equal(200);
 
+                // The account must have a verified e-mail address before
+                // the auth server hands it off to a third-party app
+                // (`require_email_verification_for_third_party_apps`).
+                cy.verify_email_via_request(email).then((verified: boolean) => {
+                  expect(verified, "email verified").to.be.true;
+                });
+
                 cy.logout();
 
                 signInViaConfidentialClientFlow(email, password, "required");
@@ -197,6 +204,13 @@ describe("ConfidentialClientSignIn (openid-client RP, client_secret_basic)", () 
             cy.register(email, password, inviteCode).then(
               (statusCode: number) => {
                 expect(statusCode, "register status code").to.equal(200);
+
+                // The account must have a verified e-mail address before
+                // the auth server hands it off to a third-party app
+                // (`require_email_verification_for_third_party_apps`).
+                cy.verify_email_via_request(email).then((verified: boolean) => {
+                  expect(verified, "email verified").to.be.true;
+                });
 
                 cy.logout();
 
@@ -235,6 +249,13 @@ describe("ConfidentialClientSignIn (openid-client RP, client_secret_basic)", () 
             cy.register(email, password, inviteCode).then(
               (statusCode: number) => {
                 expect(statusCode, "register status code").to.equal(200);
+
+                // The account must have a verified e-mail address before
+                // the auth server hands it off to a third-party app
+                // (`require_email_verification_for_third_party_apps`).
+                cy.verify_email_via_request(email).then((verified: boolean) => {
+                  expect(verified, "email verified").to.be.true;
+                });
 
                 cy.logout();
 

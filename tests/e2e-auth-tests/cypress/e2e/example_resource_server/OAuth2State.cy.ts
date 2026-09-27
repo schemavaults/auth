@@ -54,10 +54,62 @@ describe("OAuth2State (RFC 6749 §10.12 state parameter)", () => {
               cy.get("input[name='invite_code']")
                 .should("not.be.disabled")
                 .type(inviteCode, { force: true });
+              cy.intercept({ method: "POST", url: "**/api/auth/register" }).as(
+                "registerRequest",
+              );
               cy.get("button[type='submit']").should("not.be.disabled").click();
 
-              cy.contains("Authorize & Continue", { timeout: 15000 })
+              // A brand-new account is unverified, so (with the default
+              // `require_email_verification_for_third_party_apps` setting)
+              // the register response is `email_verification_required` and
+              // the form parks the user on /auth/verify-email/required.
+              // Verify the address out of band and resume the flow, which
+              // re-enters /auth/login with the same PKCE + state params.
+              cy.wait("@registerRequest", { timeout: 20000 }).then(
+                (interception) => {
+                  const kind: unknown = interception.response?.body?.kind;
+                  if (kind === "email_verification_required") {
+                    cy.url({ timeout: 20000 }).should(
+                      "include",
+                      "/auth/verify-email/required",
+                    );
+                    cy.get('[data-testid="email-verification-required-card"]', {
+                      timeout: 15000,
+                    }).should("be.visible");
+                    cy.verify_email_via_request(email).then(
+                      (verified: boolean) => {
+                        if (!verified) {
+                          throw new Error(
+                            `Failed to verify the email address '${email}'`,
+                          );
+                        }
+                      },
+                    );
+                    // The interstitial also auto-continues (whoami poll)
+                    // once verified, so click natively only if the
+                    // button is still there.
+                    cy.get("body").then(($body) => {
+                      const $button = $body.find(
+                        '[data-testid="continue-after-email-verification-button"]',
+                      );
+                      const button: HTMLElement | undefined = $button.get(0);
+                      if (button) {
+                        button.click();
+                      }
+                    });
+                  } else if (kind !== "authenticated") {
+                    throw new Error(
+                      `Unexpected /api/auth/register response kind: ${String(kind)} (status ${interception.response?.statusCode})`,
+                    );
+                  }
+                },
+              );
+
+              // On the server-rendered consent page the button is disabled
+              // until the auth client is ready; wait for it.
+              cy.contains("Authorize & Continue", { timeout: 20000 })
                 .should("be.visible")
+                .should("not.be.disabled")
                 .click();
 
               // Resource-server callback URL should carry the SAME state.

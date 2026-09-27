@@ -102,11 +102,34 @@ export type ChallengeExpiredAuthenticateResult = z.infer<
   typeof challengeExpiredAuthenticateResultSchema
 >;
 
+// Returned by /api/auth/login, /api/auth/register and /api/auth/mfa/verify
+// (HTTP 200) when the credentials were accepted but the flow was started by
+// a THIRD-PARTY client app and the account's e-mail address is not verified
+// yet (the `require_email_verification_for_third_party_apps` server
+// setting). The auth server's own session cookie IS set — the user is signed
+// in to the auth server — but no authorization code is minted for the
+// requesting app: the client must send the user to the auth server's
+// "verify your email to continue" page, which resumes the flow once the
+// address is verified. Never returned for the auth server's own /account
+// flow, which stays open to unverified accounts.
+export const emailVerificationRequiredAuthenticateResultSchema = z
+  .object({
+    kind: z.literal("email_verification_required"),
+    success: z.boolean(),
+    message: z.string(),
+  })
+  .strict();
+
+export type EmailVerificationRequiredAuthenticateResult = z.infer<
+  typeof emailVerificationRequiredAuthenticateResultSchema
+>;
+
 export const authenticateResultSchema = z.discriminatedUnion("kind", [
   authenticatedAuthenticateResultSchema,
   mfaRequiredAuthenticateResultSchema,
   authenticateFailureResultSchema,
   challengeExpiredAuthenticateResultSchema,
+  emailVerificationRequiredAuthenticateResultSchema,
 ]);
 
 export type AuthenticateResult = z.infer<typeof authenticateResultSchema>;

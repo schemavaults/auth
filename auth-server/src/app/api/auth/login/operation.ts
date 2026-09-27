@@ -39,7 +39,7 @@ export const login = defineOperation({
   path: ROUTE,
   summary: "Log in with email and password",
   description:
-    "Verifies the credentials and starts a PKCE authorization-code grant for `client_app_id`: on success the authorization code is bound to the code challenge, the `redirect_uri`, the granted scopes and the nonce, and the auth server's HTTP-only session cookie is set. Accounts with a verified second factor get an `mfa_required` challenge instead (complete it at `POST /api/auth/mfa/verify`). Wrong credentials and unknown accounts answer the same 401. Rate limited per IP + e-mail (a sliding window plus a lockout counter of failed attempts).",
+    "Verifies the credentials and starts a PKCE authorization-code grant for `client_app_id`: on success the authorization code is bound to the code challenge, the `redirect_uri`, the granted scopes and the nonce, and the auth server's HTTP-only session cookie is set. Accounts with a verified second factor get an `mfa_required` challenge instead (complete it at `POST /api/auth/mfa/verify`). A third-party `client_app_id` gets `email_verification_required` (session cookie set, no code) while the account's e-mail address is unverified and the `require_email_verification_for_third_party_apps` server setting is on. Wrong credentials and unknown accounts answer the same 401. Rate limited per IP + e-mail (a sliding window plus a lockout counter of failed attempts).",
   tags: [API_TAGS.authentication],
   auth: publicAccess(
     "Credentials travel in the body. An existing auth server session cookie is only used to refuse signing in as a different user.",
@@ -54,7 +54,8 @@ export const login = defineOperation({
   },
   responses: {
     200: {
-      description: "Authenticated (authorization code issued) or an MFA challenge was created",
+      description:
+        "Authenticated (authorization code issued), an MFA challenge was created, or the third-party hand-off is parked until the e-mail address is verified",
       schema: AuthenticateSuccessResult,
     },
     400: {

@@ -3,6 +3,7 @@ import {
   authenticatedAuthenticateResultSchema,
   authenticateFailureResultSchema,
   challengeExpiredAuthenticateResultSchema,
+  emailVerificationRequiredAuthenticateResultSchema,
   mfaRequiredAuthenticateResultSchema,
   oidcNonceSchema,
   oidcScopeSchema,
@@ -42,11 +43,28 @@ export const MfaChallengeExpiredResult = withOpenApi(challengeExpiredAuthenticat
   },
 );
 
+export const EmailVerificationRequiredResult = withOpenApi(
+  emailVerificationRequiredAuthenticateResultSchema,
+  "EmailVerificationRequiredResult",
+  {
+    description:
+      "The credentials were accepted and the auth server's HTTP-only session cookie was set, but the flow was started by a third-party client app and the account's e-mail address is not verified yet (`require_email_verification_for_third_party_apps` server setting): no authorization code is issued. Send the user to the auth server's `/auth/verify-email/required` page with the flow's parameters; it resumes the hand-off once the address is verified. Never returned for the auth server's own `/account` flow.",
+  },
+);
+
 /** What a successful `POST /api/auth/login` answers. */
 export const AuthenticateSuccessResult = z
-  .union([AuthenticatedResult, MfaRequiredResult])
+  .union([AuthenticatedResult, MfaRequiredResult, EmailVerificationRequiredResult])
   .openapi("AuthenticateSuccessResult", {
-    description: "Discriminated on `kind`: `authenticated` or `mfa_required`.",
+    description:
+      "Discriminated on `kind`: `authenticated`, `mfa_required` or `email_verification_required`.",
+  });
+
+/** What a successful `POST /api/auth/register` or `POST /api/auth/mfa/verify` answers. */
+export const AuthenticatedOrEmailVerificationRequiredResult = z
+  .union([AuthenticatedResult, EmailVerificationRequiredResult])
+  .openapi("AuthenticatedOrEmailVerificationRequiredResult", {
+    description: "Discriminated on `kind`: `authenticated` or `email_verification_required`.",
   });
 
 /**

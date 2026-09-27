@@ -51,6 +51,13 @@ export const SERVER_SETTING_DEFINITIONS = {
     description:
       "Whether only admins can create new organizations. When false, any non-disabled user can create organizations.",
   },
+  require_email_verification_for_third_party_apps: {
+    valueType: "boolean" as const,
+    defaultValue: true,
+    schema: z.boolean(),
+    description:
+      "Whether users must verify their email address before the auth server hands them off to a third-party client application (OAuth2 / OIDC authorization code flows). While on, login, registration and the authorize bridge park unverified accounts on the 'verify your email to continue' page instead of redirecting them to the requesting app. The auth server's own account pages stay accessible to unverified accounts either way.",
+  },
   allow_user_owned_resource_creation: {
     valueType: "boolean" as const,
     defaultValue: true,
