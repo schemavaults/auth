@@ -64,7 +64,7 @@ export default function AuthenticatedAuthServerLayout({
       sidebarItems={links}
       usePathname={usePathname}
     >
-      <EmailVerificationBanner className="mb-4" />
+      <EmailVerificationBanner />
       {children}
     </DashboardLayout>
   );

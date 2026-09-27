@@ -16,6 +16,10 @@ export interface EmailVerificationBannerProps {
  * banner says why it matters and offers to re-send the link. Renders
  * nothing for verified users, service accounts, or before the user data is
  * available.
+ *
+ * Styled as a full-width strip with no outer margin so the page's themed
+ * background starts directly beneath it (the dashboard layout renders it
+ * above each page's <PageContainer />).
  */
 export function EmailVerificationBanner({
   className,
@@ -61,7 +65,7 @@ export function EmailVerificationBanner({
       data-testid="email-verification-banner"
       className={cn(
         "flex flex-row flex-wrap items-center justify-between gap-3",
-        "rounded-md border border-amber-300 bg-amber-50 text-amber-900",
+        "shrink-0 border-b border-amber-300 bg-amber-50 text-amber-900",
         "px-4 py-3 text-sm",
         className,
       )}
