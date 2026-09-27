@@ -29,6 +29,12 @@ export interface AppsPageViewProps {
    * the user is not an admin). Hides the "Create app" button when false.
    */
   can_create_personal_apps: boolean;
+  /**
+   * Whether RFC 7591 dynamic client registration is enabled on this
+   * deployment (`allow_dynamic_client_registration` server setting). Only
+   * read for admins; always false for everyone else.
+   */
+  dynamic_client_registration_enabled: boolean;
   /** Whether the viewer is a global admin (enables the "Platform" filter). */
   is_admin: boolean;
 }
@@ -37,6 +43,7 @@ export default function AppsPageView({
   preloaded_apps,
   managed_organization_ids,
   can_create_personal_apps,
+  dynamic_client_registration_enabled,
   is_admin,
 }: AppsPageViewProps): ReactElement {
   const friendlyName: string = useAuthServerFriendlyName();
@@ -57,6 +64,18 @@ export default function AppsPageView({
   // the user owns no apps and the server does not let them create one.
   const showPersonalFilter: boolean =
     can_create_personal_apps || hasPersonalApps;
+  const dynamicallyRegisteredApps = useOwnerTypeFilteredResources(
+    apps.data,
+    "dynamic-client-registration",
+  );
+  const hasDynamicallyRegisteredApps: boolean =
+    (dynamicallyRegisteredApps?.length ?? 0) > 0;
+  // Likewise for "Dynamic registration": only admins can see such apps, and
+  // with registration disabled no new ones can appear, so the filter is
+  // offered only while it could match something.
+  const showDynamicClientRegistrationFilter: boolean =
+    hasDynamicallyRegisteredApps ||
+    (is_admin && dynamic_client_registration_enabled);
 
   return (
     <PageContainer>
@@ -73,7 +92,7 @@ export default function AppsPageView({
             onValueChange={setOwnerTypeFilter}
             showPersonal={showPersonalFilter}
             showPlatform={is_admin}
-            showDynamicClientRegistration={is_admin}
+            showDynamicClientRegistration={showDynamicClientRegistrationFilter}
           />
         </Card>
         <AppsCard
