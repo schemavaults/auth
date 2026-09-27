@@ -3,6 +3,7 @@
 import Logo from "@/components/Logo";
 import {
   DashboardLayout,
+  type DashboardLayoutProps,
   type DashboardSidebarItemsAndGroupsDefinitions,
 } from "@schemavaults/ui";
 import { Wordmark, useAuthServerFriendlyName } from "@/components/Wordmark";
@@ -12,6 +13,34 @@ import { usePathname } from "next/navigation";
 import { useMemo, type PropsWithChildren, type ReactElement } from "react";
 import getAuthenticatedUserDashboardLinks from "./dashboard-links";
 import { useAdmin } from "@schemavaults/auth-react-provider";
+
+type DashboardSidebarLinkProps = Parameters<DashboardLayoutProps["Link"]>[0];
+
+/**
+ * @description The sidebar's link component. Declared at module scope so
+ * DashboardLayout gets the same component on every render (an inline one would
+ * remount every sidebar link each time this layout re-renders). Forwards
+ * `aria-current`, which DashboardLayout sets to "page" on the link for the
+ * current page.
+ */
+function DashboardSidebarLink({
+  href,
+  className,
+  onClick,
+  "aria-current": ariaCurrent,
+  children,
+}: DashboardSidebarLinkProps): ReactElement {
+  return (
+    <Link
+      href={href}
+      className={className}
+      onClick={onClick}
+      aria-current={ariaCurrent}
+    >
+      {children}
+    </Link>
+  );
+}
 
 export default function AuthenticatedAuthServerLayout({
   children,
@@ -27,13 +56,7 @@ export default function AuthenticatedAuthServerLayout({
   return (
     <DashboardLayout
       wordmark={<Wordmark />}
-      Link={({ href, className, children }): ReactElement => {
-        return (
-          <Link href={href} className={className}>
-            {children}
-          </Link>
-        );
-      }}
+      Link={DashboardSidebarLink}
       brandHref={authServerUrl}
       logo={<Logo width={40} height={40} />}
       topBarTitle={friendlyName}
