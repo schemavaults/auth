@@ -9,6 +9,7 @@ import {
 import { preloadAppsTable, SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations/list-user-organization-memberships";
 import allowUserOwnedResourceCreation from "@/lib/config/allow-user-owned-resource-creation";
+import { isDynamicClientRegistrationEnabled } from "@/lib/oidc/dynamic-client-registration/settings";
 import { withServerTrace } from "@/lib/withServerTrace";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next";
@@ -24,22 +25,31 @@ async function AppsPageServerComponent({
   dbh,
   redis,
 }: IProtectedAuthenticatedServerComponentPageProps): Promise<ReactElement> {
-  const [appsResult, membershipsResult, userOwnedCreationResult] =
-    await withServerTrace({
-      op_name: "GET /apps (preload data)",
-      op_category: "subroutine",
-      event_id: crypto.randomUUID(),
-      callback: async () =>
-        await Promise.allSettled([
-          preloadAppsTable({
-            appsRegistry: new SchemaVaultsAppRegistry(dbh.db),
-            list_apps_query_type: "accessible",
-            user,
-          }),
-          listUserOrganizationMemberships(dbh.db, user.uid, user.admin ?? false),
-          allowUserOwnedResourceCreation(dbh.db, redis.client),
-        ]),
-    });
+  const [
+    appsResult,
+    membershipsResult,
+    userOwnedCreationResult,
+    dynamicClientRegistrationResult,
+  ] = await withServerTrace({
+    op_name: "GET /apps (preload data)",
+    op_category: "subroutine",
+    event_id: crypto.randomUUID(),
+    callback: async () =>
+      await Promise.allSettled([
+        preloadAppsTable({
+          appsRegistry: new SchemaVaultsAppRegistry(dbh.db),
+          list_apps_query_type: "accessible",
+          user,
+        }),
+        listUserOrganizationMemberships(dbh.db, user.uid, user.admin ?? false),
+        allowUserOwnedResourceCreation(dbh.db, redis.client),
+        // Only admins can see dynamically registered clients, so the
+        // setting is irrelevant to everyone else.
+        user.admin === true
+          ? isDynamicClientRegistrationEnabled(dbh.db, redis.client)
+          : Promise.resolve(false),
+      ]),
+  });
 
   // On preload failure the card fetches client-side from
   // GET /api/apps?list_apps_query_type=accessible instead.
@@ -79,11 +89,25 @@ async function AppsPageServerComponent({
       ? userOwnedCreationResult.value
       : true);
 
+  if (dynamicClientRegistrationResult.status === "rejected") {
+    console.error(
+      "Failed to load server setting for allow_dynamic_client_registration on /apps:",
+      dynamicClientRegistrationResult.reason,
+    );
+  }
+  // The setting defaults to off; on failure the "Dynamic registration"
+  // filter is still offered whenever such apps are listed.
+  const dynamic_client_registration_enabled: boolean =
+    dynamicClientRegistrationResult.status === "fulfilled"
+      ? dynamicClientRegistrationResult.value
+      : false;
+
   return (
     <AppsPageView
       preloaded_apps={preloaded_apps}
       managed_organization_ids={managed_organization_ids}
       can_create_personal_apps={can_create_personal_apps}
+      dynamic_client_registration_enabled={dynamic_client_registration_enabled}
       is_admin={user.admin === true}
     />
   );
