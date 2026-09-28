@@ -14,7 +14,7 @@ import {
   Textarea,
   useToast,
 } from "@schemavaults/ui";
-import { type ReactElement, useMemo, useTransition } from "react";
+import { type ReactElement, useMemo, useState, useTransition } from "react";
 
 import {
   DialogDescription,
@@ -35,13 +35,23 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AppWindow } from "lucide-react";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 import { requestedOwnershipToDefinitionFields } from "@/components/CreateAppDialog/requested-ownership-fields";
+import {
+  ResourceOwnershipPicker,
+  describeRequestedResourceOwnership,
+  resourceOwnershipSelectionToRequestedOwnership,
+  useResourceOwnershipChoices,
+  useResourceOwnershipSelection,
+  type CreateResourceOwnershipOptions,
+  type ResourceOwnershipSelection,
+} from "@/components/ResourceOwnershipPicker";
 
 export interface CreateAppFormProps {
   /**
-   * Who the new app will belong to: the platform (admins only), an
-   * organization the user administers, or the user's own account.
+   * Which owners the form's "Owner" field offers (the platform for admins,
+   * organizations the user administers, the user's own account) and which
+   * one it preselects (derived from where the form was opened).
    */
-  ownership: RequestedResourceOwnership;
+  ownership: CreateResourceOwnershipOptions;
   clearFrontendAppsCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
@@ -56,10 +66,14 @@ export default function CreateAppForm({
   uuid,
 }: CreateAppFormProps): ReactElement {
   const friendlyName: string = useAuthUiFriendlyName();
-  const ownershipFields = useMemo(
-    () => requestedOwnershipToDefinitionFields(ownership),
-    [ownership],
+  const { choices, currentUserUid } = useResourceOwnershipChoices(ownership);
+  const { selection, setSelection } = useResourceOwnershipSelection(
+    ownership.defaultOwnership,
+    choices,
   );
+  const [organizationError, setOrganizationError] = useState<
+    string | undefined
+  >(undefined);
   const defaultValues: Partial<SchemaVaultsApp> = useMemo(() => {
     return {
       app_name: "",
@@ -69,9 +83,8 @@ export default function CreateAppForm({
       web: true,
       created_at: Date.now(),
       hardcoded: false,
-      ...ownershipFields,
     };
-  }, [ownershipFields, uuid]);
+  }, [uuid]);
 
   const form = useForm<SchemaVaultsApp>({
     resolver: zodResolver(schemaVaultsAppDefinitionSchema),
@@ -94,14 +107,33 @@ export default function CreateAppForm({
       });
     }
 
+    const requestedOwnership: RequestedResourceOwnership | null = selection
+      ? resourceOwnershipSelectionToRequestedOwnership(
+          selection,
+          currentUserUid,
+        )
+      : null;
+    if (!requestedOwnership) {
+      if (selection?.owner_type === "organization") {
+        setOrganizationError(
+          "Choose the organization that will own this app.",
+        );
+        return;
+      }
+      toast({
+        variant: "destructive",
+        title: "Choose who will own this app",
+      });
+      return;
+    }
+
     startSubmitting(async () => {
       const authClient = auth.ready ? auth.client.current : undefined;
 
       const createAppRequestBody: Partial<SchemaVaultsApp> = {
         ...values,
-        // The owner is fixed by the card this form was opened from, never
-        // by form input.
-        ...ownershipFields,
+        // The owner comes from the "Owner" field only.
+        ...requestedOwnershipToDefinitionFields(requestedOwnership),
       };
 
       // if we're creating it from this form then it must be non-hardcoded/dynamic...
@@ -146,6 +178,11 @@ export default function CreateAppForm({
       toast({
         variant: "default",
         title: "Created new frontend client application successfully",
+        description: describeRequestedResourceOwnership(
+          requestedOwnership,
+          choices,
+          friendlyName,
+        ),
       });
       clearFrontendAppsCache(mutate);
       onSuccess();
@@ -175,6 +212,18 @@ export default function CreateAppForm({
             {friendlyName} APIs.
           </DialogDescription>
         </DialogHeader>
+        <ResourceOwnershipPicker
+          id="create-app-owner"
+          resourceKind="app"
+          choices={choices}
+          value={selection}
+          onValueChange={(next: ResourceOwnershipSelection): void => {
+            setSelection(next);
+            setOrganizationError(undefined);
+          }}
+          disabled={submitting}
+          organizationError={organizationError}
+        />
         <FormField
           control={form.control}
           name="app_name"
@@ -285,7 +334,7 @@ export default function CreateAppForm({
           <Button
             id="submit-create-app-form-button"
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !selection}
           >
             <AppWindow className="h-4 w-4 mr-2" />
             Create client application

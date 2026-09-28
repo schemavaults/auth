@@ -77,8 +77,8 @@ async function ApisPageServerComponent({
     );
   }
   // Admins can always create their own API servers; for everyone else the
-  // create button is offered iff the server setting allows it
-  // (POST /api/apis enforces the setting regardless).
+  // create dialog offers the "Personal" owner iff the server setting allows
+  // it (POST /api/apis enforces the setting regardless).
   const can_create_personal_api_servers: boolean =
     user.admin === true ||
     (userOwnedCreationResult.status === "fulfilled"

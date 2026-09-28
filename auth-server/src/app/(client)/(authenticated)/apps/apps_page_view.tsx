@@ -26,7 +26,9 @@ export interface AppsPageViewProps {
   /**
    * Whether the user may create apps owned by their own account (false when
    * the `allow_user_owned_resource_creation` server setting is disabled and
-   * the user is not an admin). Hides the "Create app" button when false.
+   * the user is not an admin). Disables the "Personal" owner in the create
+   * dialog when false; the "Create app" button stays while the user can
+   * create apps for one of their organizations.
    */
   can_create_personal_apps: boolean;
   /**
@@ -97,16 +99,13 @@ export default function AppsPageView({
         </Card>
         <AppsCard
           cardTitle="Applications"
-          cardDescription={`Client applications you own or can access — registered to your account, to one of your organizations${is_admin ? `, or to the ${friendlyName} platform` : ""}. Personal apps are created here; organization apps from the organization's page.`}
+          cardDescription={`Client applications you own or can access — registered to your account, to one of your organizations${is_admin ? `, or to the ${friendlyName} platform` : ""}. Choose the owner of a new app when you create it.`}
           cardClassName="w-full"
           queryType="accessible"
           preloaded={preloaded_apps}
           managedOrganizationIds={managed_organization_ids}
           ownerTypeFilter={ownerTypeFilter}
-          canCreate={
-            can_create_personal_apps &&
-            (ownerTypeFilter === "all" || ownerTypeFilter === "user")
-          }
+          canCreatePersonal={can_create_personal_apps}
           uuid={uuidSync}
         />
       </div>

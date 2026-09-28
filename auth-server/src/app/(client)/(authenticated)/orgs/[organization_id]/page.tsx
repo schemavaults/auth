@@ -29,6 +29,7 @@ import {
   preloadApiServersTable,
 } from "@/lib/auth-db/apis";
 import redirectWithError from "@/lib/redirect-with-error";
+import allowUserOwnedResourceCreation from "@/lib/config/allow-user-owned-resource-creation";
 import { connection } from "next/server";
 
 function memberToTableData(
@@ -48,7 +49,7 @@ function memberToTableData(
 }
 
 async function PreloadedOrgPage(
-  { user, dbh }: IProtectedAuthenticatedServerComponentPageProps,
+  { user, dbh, redis }: IProtectedAuthenticatedServerComponentPageProps,
   pageParams: PageProps<"/orgs/[organization_id]">,
 ): Promise<ReactElement> {
   const { organization_id: org_id_param } = await pageParams.params;
@@ -93,8 +94,14 @@ async function PreloadedOrgPage(
   const authorizedAppsRegistry = new AuthorizedAppsRegistry(dbh.db);
   const apiServerRegistry = new SchemaVaultsApiServerRegistry(dbh.db);
 
-  // Fetch members, apps, and API servers in parallel
-  const [members, preloaded_apps, preloaded_api_servers] = await Promise.all([
+  // Fetch members, apps, API servers and the personal-ownership setting in
+  // parallel
+  const [
+    members,
+    preloaded_apps,
+    preloaded_api_servers,
+    can_create_personal_resources,
+  ] = await Promise.all([
     registry.listOrganizationMembers(organization_id),
     preloadAppsTable({
       list_apps_query_type: "org",
@@ -109,6 +116,20 @@ async function PreloadedOrgPage(
       apiServerRegistry,
       organization_id,
     }),
+    // Whether the create dialogs offer the "Personal" owner as well as this
+    // organization. Admins are exempt from the setting; on failure the
+    // option stays offered (POST /api/apps and /api/apis enforce it).
+    user.admin === true
+      ? Promise.resolve(true)
+      : allowUserOwnedResourceCreation(dbh.db, redis.client).catch(
+          (e: unknown): boolean => {
+            console.error(
+              "Failed to load server setting for allow_user_owned_resource_creation on /orgs/[organization_id]:",
+              e,
+            );
+            return true;
+          },
+        ),
   ]);
 
   const preloaded_members: readonly OrganizationMemberTableData[] =
@@ -122,6 +143,7 @@ async function PreloadedOrgPage(
       preloaded_api_servers={preloaded_api_servers}
       isOrgOwner={isOrgOwner}
       userRole={userRole}
+      can_create_personal_resources={can_create_personal_resources}
     />
   );
 }

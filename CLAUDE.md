@@ -62,6 +62,7 @@ bun run test --filter @schemavaults/auth-client-sdk  # Run tests in auth-client-
 bun run test --filter @schemavaults/auth-server-sdk  # Run tests in auth-server-sdk package
 bun run test --filter @schemavaults/openapi-operations # Run tests in openapi-operations package
 bun run test --filter @schemavaults/openapi-docs-ui  # Run tests in openapi-docs-ui package
+bun run test --filter @schemavaults/auth-ui          # Run tests in auth-ui package
 ```
 
 ## Architecture
@@ -241,7 +242,7 @@ The sections below used to live in this file. Each now lives in a Claude Code sk
 | Skill | Load it when working on |
 | --- | --- |
 | `white-label-branding` | `SCHEMAVAULTS_AUTH_SERVER_*` env vars, branding assets/copy, error pages, the owner organization, the auth server app id/URL, cookie domains |
-| `app-api-ownership` | who owns / can manage apps and API servers (`owner_type`, user-owned resources, `auth-server/src/lib/ownership/`), app/API list queries, the `/apps` and `/apis` pages |
+| `app-api-ownership` | who owns / can manage apps and API servers (`owner_type`, user-owned resources, `auth-server/src/lib/ownership/`), app/API list queries, the `/apps` and `/apis` pages, the Owner field of the create app / API server dialogs |
 | `mfa` | TOTP, passkeys, recovery codes, the login MFA challenge, the `/mfa` page |
 | `oidc-subject-claim` | the OIDC `sub` claim format on id_token / userinfo / introspection |
 | `plain-oauth2-grants` | authorization requests without `openid` (OAuth-only / MCP clients), scope handling at the authorize and token endpoints |
