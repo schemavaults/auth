@@ -352,7 +352,9 @@ describe("Admin direct organization member assignment API", () => {
         input_mode: "uid",
         identifier: "00000000-0000-4000-8000-000000000000",
       }).then((response) => expect(response.status, "unknown uid").to.eq(404));
-      assign(`${organization_id}-missing`, {
+      // Well-formed but never created: organization ids are capped at 32
+      // characters, so suffixing `organization_id` would be a malformed id (400).
+      assign(`missing-${Math.random().toString(36).slice(2, 10)}`, {
         input_mode: "uid",
         identifier: target.uid,
       }).then((response) => expect(response.status, "unknown organization").to.eq(404));
