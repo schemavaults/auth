@@ -27,8 +27,9 @@ export interface ApisPageViewProps {
   /**
    * Whether the user may create API servers owned by their own account
    * (false when the `allow_user_owned_resource_creation` server setting is
-   * disabled and the user is not an admin). Hides the "Create API" button
-   * when false.
+   * disabled and the user is not an admin). Disables the "Personal" owner in
+   * the create dialog when false; the "Create API" button stays while the
+   * user can create API servers for one of their organizations.
    */
   can_create_personal_api_servers: boolean;
   /** Whether the viewer is a global admin (enables the "Platform" filter). */
@@ -83,16 +84,13 @@ export default function ApisPageView({
         </Card>
         <ApiServersCard
           cardTitle="API Servers"
-          cardDescription={`Backend API servers you own or can access — registered to your account, to one of your organizations${is_admin ? `, or to the ${friendlyName} platform` : ""}. Personal API servers are created here; organization API servers from the organization's page.`}
+          cardDescription={`Backend API servers you own or can access — registered to your account, to one of your organizations${is_admin ? `, or to the ${friendlyName} platform` : ""}. Choose the owner of a new API server when you create it.`}
           cardClassName="w-full"
           queryType="accessible"
           preloaded={preloaded_api_servers}
           managedOrganizationIds={managed_organization_ids}
           ownerTypeFilter={ownerTypeFilter}
-          canCreate={
-            can_create_personal_api_servers &&
-            (ownerTypeFilter === "all" || ownerTypeFilter === "user")
-          }
+          canCreatePersonal={can_create_personal_api_servers}
           showConnectAppToApi
           uuid={uuidSync}
         />

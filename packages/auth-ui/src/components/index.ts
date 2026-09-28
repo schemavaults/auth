@@ -36,6 +36,22 @@ export type {
   OwnerTypeFilterValue,
 } from "./OwnerTypeFilter";
 
+export {
+  ResourceOwnershipPicker,
+  useResourceOwnershipChoices,
+  useResourceOwnershipSelection,
+  CREATABLE_RESOURCE_OWNER_TYPES,
+  computeResourceOwnershipChoices,
+  hasAvailableResourceOwnership,
+  isResourceOwnershipSelectionAvailable,
+  defaultOrganizationForSelection,
+  resolveDefaultResourceOwnershipSelection,
+  resourceOwnershipSelectionToRequestedOwnership,
+  describeRequestedResourceOwnership,
+  preferredResourceOwnershipForList,
+} from "./ResourceOwnershipPicker";
+export type * from "./ResourceOwnershipPicker";
+
 export * from "./SignOutButton";
 export type * from "./SignOutButton";
 

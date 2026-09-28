@@ -7,17 +7,18 @@ import { Dialog, DialogContent } from "@schemavaults/ui";
 import { useSWRConfig } from "swr";
 import { Server } from "lucide-react";
 import CreateApiServerForm from "./CreateApiServerForm";
-import type { RequestedResourceOwnership } from "@schemavaults/app-definitions";
+import type { CreateResourceOwnershipOptions } from "@/components/ResourceOwnershipPicker";
 
 interface CreateApiServerDialogProps {
   clearApiServersCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
   /**
-   * Who the new API server will belong to: the platform (admins only), an
-   * organization the user administers, or the user's own account.
+   * Which owners the dialog's "Owner" field offers (the platform for
+   * admins, organizations the user administers, the user's own account)
+   * and which one it preselects.
    */
-  ownership: RequestedResourceOwnership;
+  ownership: CreateResourceOwnershipOptions;
   open: boolean;
   onOpenChange: (val: boolean) => void;
   uuid: () => string;

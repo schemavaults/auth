@@ -13,10 +13,15 @@ import {
 import type {
   ApiServerId,
   ListApiServersQueryType,
-  RequestedResourceOwnership,
 } from "@schemavaults/app-definitions";
-import { useCurrentUser } from "@schemavaults/auth-react-provider";
 import type { OwnerTypeFilterValue } from "@/components/OwnerTypeFilter";
+import {
+  hasAvailableResourceOwnership,
+  preferredResourceOwnershipForList,
+  useResourceOwnershipChoices,
+  type CreateResourceOwnershipOptions,
+  type PreferredResourceOwnership,
+} from "@/components/ResourceOwnershipPicker";
 import {
   ApiServersTable,
   clearUseApiServersCache,
@@ -40,6 +45,11 @@ export interface ApiServersCardProps {
   cardClassName?: string;
   queryType: ListApiServersQueryType;
   organization_id?: string;
+  /**
+   * Display name of `organization_id` (organization pages), shown in the
+   * create dialog's organization picker.
+   */
+  organization_name?: string;
   preloaded?: PreloadedApiServersTableDataWithDomainRefs;
   uuid: () => string;
   showConnectAppToApi?: boolean;
@@ -50,59 +60,72 @@ export interface ApiServersCardProps {
    * actions).
    */
   managedOrganizationIds?: readonly string[];
-  /** Client-side filter on each row's resolved owner type. */
+  /**
+   * Client-side filter on each row's resolved owner type. Also picks the
+   * owner the create dialog preselects on the "all" / "owned" /
+   * "accessible" lists (e.g. "organization" → an organization).
+   */
   ownerTypeFilter?: OwnerTypeFilterValue;
   /**
-   * Whether the card offers API server creation at all (default true).
-   * Pages set this to false when the `allow_user_owned_resource_creation`
-   * server setting is disabled for a non-admin viewer.
+   * Whether the card offers API server creation at all (default true). The
+   * "Create API" button is also hidden while the viewer cannot pick any
+   * owner in the create dialog.
    */
   canCreate?: boolean;
-}
-
-/**
- * @description Who an API server created from a card of the given query
- * type belongs to: platform-owned from the admin "all" list,
- * organization-owned from an organization page, user-owned from the
- * "owned" (your API servers) card. Returns null when the card cannot
- * create API servers.
- */
-function resolveCreateOwnershipForCard(
-  queryType: ListApiServersQueryType,
-  organization_id: string | undefined,
-  platformOrganizationId: string,
-  currentUserUid: string | undefined,
-): RequestedResourceOwnership | null {
-  switch (queryType) {
-    case "all":
-      return { owner_type: "platform" };
-    case "org":
-      return organization_id && organization_id !== platformOrganizationId
-        ? { owner_type: "organization", owner_organization_id: organization_id }
-        : { owner_type: "platform" };
-    case "owned":
-    case "accessible":
-      // The "accessible" page creates personal API servers;
-      // organization-owned ones are created from the organization's page
-      // and platform-owned ones from the admin console.
-      return currentUserUid
-        ? { owner_type: "user", owner_uid: currentUserUid }
-        : null;
-    default:
-      return null;
-  }
+  /**
+   * Whether the create dialog offers personal (user-owned) API servers:
+   * false when the `allow_user_owned_resource_creation` server setting is
+   * disabled for a non-admin viewer (default true; the server enforces it
+   * regardless).
+   */
+  canCreatePersonal?: boolean;
 }
 
 export function ApiServersCard(props: ApiServersCardProps): ReactElement {
   const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
-  const currentUser = useCurrentUser();
-  const createOwnership: RequestedResourceOwnership | null =
-    resolveCreateOwnershipForCard(
-      props.queryType,
-      props.organization_id,
-      ownerOrganizationId,
-      currentUser?.uid,
-    );
+  // Lists whose rows the viewer may manage (add domains) and to which they
+  // may add API servers.
+  const canManageListedApiServers: boolean =
+    props.queryType === "all" ||
+    props.queryType === "owned" ||
+    props.queryType === "accessible" ||
+    (props.queryType === "org" && !!props.isOrgOwner);
+  // The owner the create dialog preselects follows the list it was opened
+  // from; the dialog's "Owner" field lets the viewer pick another.
+  const defaultCreateOwnership: PreferredResourceOwnership | null =
+    preferredResourceOwnershipForList({
+      queryType: props.queryType,
+      organization_id: props.organization_id,
+      platformOrganizationId: ownerOrganizationId,
+      ownerTypeFilter: props.ownerTypeFilter,
+    });
+  const createOwnershipOptions: CreateResourceOwnershipOptions | null =
+    defaultCreateOwnership
+      ? {
+          defaultOwnership: defaultCreateOwnership,
+          allowPersonal: props.canCreatePersonal ?? true,
+          contextOrganization:
+            props.queryType === "org" &&
+            props.isOrgOwner &&
+            props.organization_id &&
+            props.organization_id !== ownerOrganizationId
+              ? {
+                  organization_id: props.organization_id,
+                  organization_name: props.organization_name ?? null,
+                }
+              : undefined,
+        }
+      : null;
+  const offersCreation: boolean =
+    (props.canCreate ?? true) &&
+    canManageListedApiServers &&
+    !!createOwnershipOptions;
+  const { choices: createOwnershipChoices } = useResourceOwnershipChoices(
+    createOwnershipOptions ?? {},
+    { enabled: offersCreation },
+  );
+  const canCreateApiServers: boolean =
+    offersCreation && hasAvailableResourceOwnership(createOwnershipChoices);
   const cardTitle = props.cardTitle ?? "API Servers";
   const cardDescription =
     props.cardDescription ??
@@ -143,17 +166,17 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
                   isOrgOwner={props.isOrgOwner}
                   managedOrganizationIds={props.managedOrganizationIds}
                   ownerTypeFilter={props.ownerTypeFilter}
-                  canCreate={props.canCreate ?? true}
+                  canCreate={canCreateApiServers}
                 />
               </CardContent>
               <CardFooter>
                 <div className="flex flex-row items-start justify-start gap-2"></div>
               </CardFooter>
             </Card>
-            {(props.canCreate ?? true) && createOwnership && (
+            {canCreateApiServers && createOwnershipOptions && (
               <CreateApiServerDialog
                 clearApiServersCache={clearUseApiServersCache}
-                ownership={createOwnership}
+                ownership={createOwnershipOptions}
                 open={createApiServerDialogOpen}
                 onOpenChange={setCreateApiServerDialogOpen}
                 uuid={props.uuid}
@@ -165,10 +188,7 @@ export function ApiServersCard(props: ApiServersCardProps): ReactElement {
                 onOpenChange={setConnectAppToApiDialogOpen}
               />
             )}
-            {(props.queryType === "all" ||
-              props.queryType === "owned" ||
-              props.queryType === "accessible" ||
-              (props.queryType === "org" && props.isOrgOwner)) && (
+            {canManageListedApiServers && (
               <CreateApiServerDomainDialog
                 open={typeof isAddApiServerDomainDialogOpen === "string"}
                 onOpenChange={(val: boolean): void => {

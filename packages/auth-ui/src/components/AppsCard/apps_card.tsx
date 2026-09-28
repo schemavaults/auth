@@ -15,13 +15,15 @@ import {
   clearUseAppsListCache,
   type PreloadedAppsTableDataWithDomainRefs,
 } from "@/components/AppsTable";
-import type {
-  AppId,
-  ListAppsQueryType,
-  RequestedResourceOwnership,
-} from "@schemavaults/app-definitions";
-import { useCurrentUser } from "@schemavaults/auth-react-provider";
+import type { AppId, ListAppsQueryType } from "@schemavaults/app-definitions";
 import type { OwnerTypeFilterValue } from "@/components/OwnerTypeFilter";
+import {
+  hasAvailableResourceOwnership,
+  preferredResourceOwnershipForList,
+  useResourceOwnershipChoices,
+  type CreateResourceOwnershipOptions,
+  type PreferredResourceOwnership,
+} from "@/components/ResourceOwnershipPicker";
 import CreateAppDialog, {
   CreateAppDialogOpenDispatchContext,
 } from "@/components/CreateAppDialog";
@@ -46,6 +48,11 @@ export interface AppsCardProps {
   queryType: ListAppsQueryType;
   preloaded?: PreloadedAppsTableDataWithDomainRefs;
   organization_id?: string;
+  /**
+   * Display name of `organization_id` (organization pages), shown in the
+   * create dialog's organization picker.
+   */
+  organization_name?: string;
   uuid: () => string;
   isOrgOwner?: boolean;
   /**
@@ -54,66 +61,72 @@ export interface AppsCardProps {
    * actions).
    */
   managedOrganizationIds?: readonly string[];
-  /** Client-side filter on each row's resolved owner type. */
+  /**
+   * Client-side filter on each row's resolved owner type. Also picks the
+   * owner the create dialog preselects on the "all" / "owned" /
+   * "accessible" lists (e.g. "organization" → an organization).
+   */
   ownerTypeFilter?: OwnerTypeFilterValue;
   /**
-   * Whether the card offers app creation at all (default true). Pages set
-   * this to false when the `allow_user_owned_resource_creation` server
-   * setting is disabled for a non-admin viewer.
+   * Whether the card offers app creation at all (default true). The
+   * "Create app" button is also hidden while the viewer cannot pick any
+   * owner in the create dialog.
    */
   canCreate?: boolean;
-}
-
-/**
- * @description Who an app created from a card of the given query type
- * belongs to: platform-owned from the admin "all" list, organization-owned
- * from an organization page, user-owned from the "owned" (your
- * applications) card. Returns null when the card cannot create apps.
- */
-function resolveCreateOwnershipForCard(
-  queryType: ListAppsQueryType,
-  organization_id: string | undefined,
-  platformOrganizationId: string,
-  currentUserUid: string | undefined,
-): RequestedResourceOwnership | null {
-  switch (queryType) {
-    case "all":
-      return { owner_type: "platform" };
-    case "org":
-      return organization_id && organization_id !== platformOrganizationId
-        ? { owner_type: "organization", owner_organization_id: organization_id }
-        : { owner_type: "platform" };
-    case "owned":
-    case "accessible":
-      // The "accessible" page creates personal apps; organization-owned
-      // apps are created from the organization's page and platform-owned
-      // ones from the admin console.
-      return currentUserUid
-        ? { owner_type: "user", owner_uid: currentUserUid }
-        : null;
-    default:
-      return null;
-  }
+  /**
+   * Whether the create dialog offers personal (user-owned) apps: false when
+   * the `allow_user_owned_resource_creation` server setting is disabled for
+   * a non-admin viewer (default true; the server enforces it regardless).
+   */
+  canCreatePersonal?: boolean;
 }
 
 export function AppsCard(props: AppsCardProps): ReactElement {
   const friendlyName: string = useAuthUiFriendlyName();
   const ownerOrganizationId: string = useAuthUiOwnerOrganizationId();
-  const currentUser = useCurrentUser();
-  const createOwnership: RequestedResourceOwnership | null =
-    resolveCreateOwnershipForCard(
-      props.queryType,
-      props.organization_id,
-      ownerOrganizationId,
-      currentUser?.uid,
-    );
-  const canCreateApps: boolean =
+  // Lists whose rows the viewer may manage (add domains) and to which they
+  // may add apps.
+  const canManageListedApps: boolean =
+    props.queryType === "all" ||
+    props.queryType === "owned" ||
+    props.queryType === "accessible" ||
+    (props.queryType === "org" && !!props.isOrgOwner);
+  // The owner the create dialog preselects follows the list it was opened
+  // from; the dialog's "Owner" field lets the viewer pick another.
+  const defaultCreateOwnership: PreferredResourceOwnership | null =
+    preferredResourceOwnershipForList({
+      queryType: props.queryType,
+      organization_id: props.organization_id,
+      platformOrganizationId: ownerOrganizationId,
+      ownerTypeFilter: props.ownerTypeFilter,
+    });
+  const createOwnershipOptions: CreateResourceOwnershipOptions | null =
+    defaultCreateOwnership
+      ? {
+          defaultOwnership: defaultCreateOwnership,
+          allowPersonal: props.canCreatePersonal ?? true,
+          contextOrganization:
+            props.queryType === "org" &&
+            props.isOrgOwner &&
+            props.organization_id &&
+            props.organization_id !== ownerOrganizationId
+              ? {
+                  organization_id: props.organization_id,
+                  organization_name: props.organization_name ?? null,
+                }
+              : undefined,
+        }
+      : null;
+  const offersCreation: boolean =
     (props.canCreate ?? true) &&
-    !!createOwnership &&
-    (props.queryType === "all" ||
-      props.queryType === "owned" ||
-      props.queryType === "accessible" ||
-      (props.queryType === "org" && !!props.isOrgOwner));
+    canManageListedApps &&
+    !!createOwnershipOptions;
+  const { choices: createOwnershipChoices } = useResourceOwnershipChoices(
+    createOwnershipOptions ?? {},
+    { enabled: offersCreation },
+  );
+  const canCreateApps: boolean =
+    offersCreation && hasAvailableResourceOwnership(createOwnershipChoices);
   const cardTitle = props.cardTitle ?? "Applications";
   const cardDescription =
     props.cardDescription ??
@@ -157,7 +170,7 @@ export function AppsCard(props: AppsCardProps): ReactElement {
                     isOrgOwner={props.isOrgOwner}
                     managedOrganizationIds={props.managedOrganizationIds}
                     ownerTypeFilter={props.ownerTypeFilter}
-                    canCreate={props.canCreate ?? true}
+                    canCreate={canCreateApps}
                   />
                 </CardContent>
                 <CardFooter>
@@ -165,10 +178,10 @@ export function AppsCard(props: AppsCardProps): ReactElement {
                 </CardFooter>
               </Card>
               <>
-                {canCreateApps && createOwnership && (
+                {canCreateApps && createOwnershipOptions && (
                   <CreateAppDialog
                     clearFrontendAppsCache={clearUseAppsListCache}
-                    ownership={createOwnership}
+                    ownership={createOwnershipOptions}
                     open={createAppDialogOpen}
                     onOpenChange={setCreateAppDialogOpen}
                     uuid={props.uuid}
@@ -186,7 +199,7 @@ export function AppsCard(props: AppsCardProps): ReactElement {
                     onOpenChange={setConnectAppToApiDialogOpen}
                   />
                 )}
-                {canCreateApps && (
+                {canManageListedApps && (
                   <CreateAppDomainDialog
                     open={typeof isAddAppDomainDialogOpen === "string"}
                     onOpenChange={(val: boolean): void => {

@@ -14,7 +14,7 @@ import {
   Textarea,
   useToast,
 } from "@schemavaults/ui";
-import { useMemo, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 
 import {
   DialogDescription,
@@ -35,16 +35,26 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Server } from "lucide-react";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 import { requestedOwnershipToDefinitionFields } from "@/components/CreateAppDialog/requested-ownership-fields";
+import {
+  ResourceOwnershipPicker,
+  describeRequestedResourceOwnership,
+  resourceOwnershipSelectionToRequestedOwnership,
+  useResourceOwnershipChoices,
+  useResourceOwnershipSelection,
+  type CreateResourceOwnershipOptions,
+  type ResourceOwnershipSelection,
+} from "@/components/ResourceOwnershipPicker";
 
 interface CreateApiServerFormProps {
   clearApiServersCache: (
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
   /**
-   * Who the new API server will belong to: the platform (admins only), an
-   * organization the user administers, or the user's own account.
+   * Which owners the form's "Owner" field offers (the platform for admins,
+   * organizations the user administers, the user's own account) and which
+   * one it preselects (derived from where the form was opened).
    */
-  ownership: RequestedResourceOwnership;
+  ownership: CreateResourceOwnershipOptions;
   uuid: () => string;
   onSuccess: () => void;
 }
@@ -57,10 +67,14 @@ export function CreateApiServerForm({
 }: CreateApiServerFormProps): ReactElement {
   const { toast } = useToast();
   const friendlyName: string = useAuthUiFriendlyName();
-  const ownershipFields = useMemo(
-    () => requestedOwnershipToDefinitionFields(ownership),
-    [ownership],
+  const { choices, currentUserUid } = useResourceOwnershipChoices(ownership);
+  const { selection, setSelection } = useResourceOwnershipSelection(
+    ownership.defaultOwnership,
+    choices,
   );
+  const [organizationError, setOrganizationError] = useState<
+    string | undefined
+  >(undefined);
 
   const defaultValues: Partial<SchemaVaultsApiServerDefinition> =
     useMemo(() => {
@@ -71,9 +85,8 @@ export function CreateApiServerForm({
         public: false,
         created_at: Date.now(),
         hardcoded: false,
-        ...ownershipFields,
       };
-    }, [ownershipFields, uuid]);
+    }, [uuid]);
 
   const form = useForm<SchemaVaultsApiServerDefinition>({
     resolver: zodResolver(schemaVaultsApiServerDefinitionSchema),
@@ -86,6 +99,26 @@ export function CreateApiServerForm({
   async function onSubmit(
     values: SchemaVaultsApiServerDefinition,
   ): Promise<void> {
+    const requestedOwnership: RequestedResourceOwnership | null = selection
+      ? resourceOwnershipSelectionToRequestedOwnership(
+          selection,
+          currentUserUid,
+        )
+      : null;
+    if (!requestedOwnership) {
+      if (selection?.owner_type === "organization") {
+        setOrganizationError(
+          "Choose the organization that will own this API server.",
+        );
+        return;
+      }
+      toast({
+        variant: "destructive",
+        title: "Choose who will own this API server",
+      });
+      return;
+    }
+
     if (environment === "development") {
       console.log("Submitting API creation form...");
       toast({
@@ -101,9 +134,8 @@ export function CreateApiServerForm({
       }
       await authClient.createApiServer({
         ...values,
-        // The owner is fixed by the card this form was opened from, never
-        // by form input.
-        ...ownershipFields,
+        // The owner comes from the "Owner" field only.
+        ...requestedOwnershipToDefinitionFields(requestedOwnership),
       });
     } catch (e: unknown) {
       toast({
@@ -118,6 +150,11 @@ export function CreateApiServerForm({
     toast({
       variant: "default",
       title: "Created new API server successfully",
+      description: describeRequestedResourceOwnership(
+        requestedOwnership,
+        choices,
+        friendlyName,
+      ),
     });
     clearApiServersCache(mutate);
     form.reset({ ...defaultValues, api_server_id: uuid() });
@@ -138,6 +175,17 @@ export function CreateApiServerForm({
             applications can be authorized to access.
           </DialogDescription>
         </DialogHeader>
+        <ResourceOwnershipPicker
+          id="create-api-server-owner"
+          resourceKind="api-server"
+          choices={choices}
+          value={selection}
+          onValueChange={(next: ResourceOwnershipSelection): void => {
+            setSelection(next);
+            setOrganizationError(undefined);
+          }}
+          organizationError={organizationError}
+        />
         <FormField
           control={form.control}
           name="api_server_name"
@@ -214,7 +262,11 @@ export function CreateApiServerForm({
           )}
         />
         <DialogFooter>
-          <Button id="submit-create-api-server-form-button" type="submit">
+          <Button
+            id="submit-create-api-server-form-button"
+            type="submit"
+            disabled={!selection}
+          >
             <Server className="h-4 w-4 mr-2" />
             Create Server Application
           </Button>

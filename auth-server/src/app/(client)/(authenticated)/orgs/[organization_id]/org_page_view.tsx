@@ -26,6 +26,12 @@ export interface OrgPageViewProps {
   preloaded_api_servers: PreloadedApiServersTableDataWithDomainRefs;
   isOrgOwner: boolean;
   userRole?: OrganizationMembershipRoleType;
+  /**
+   * Whether the create app / API server dialogs also offer the "Personal"
+   * owner (the `allow_user_owned_resource_creation` server setting; always
+   * true for admins). They preselect this organization either way.
+   */
+  can_create_personal_resources: boolean;
 }
 
 function OrgTitleCard({ organization, userRole }: Pick<OrgPageViewProps, 'organization' | 'userRole'>): ReactElement {
@@ -53,6 +59,7 @@ export default function OrgPageView({
   preloaded_api_servers,
   isOrgOwner,
   userRole,
+  can_create_personal_resources,
 }: OrgPageViewProps): ReactElement {
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
@@ -116,6 +123,8 @@ export default function OrgPageView({
       <AppsCard
         queryType="org"
         organization_id={organization.organization_id}
+        organization_name={organization.name}
+        canCreatePersonal={can_create_personal_resources}
         cardTitle="Organization Client Applications"
         cardDescription="Applications owned by this organization."
         cardClassName="w-full"
@@ -127,6 +136,8 @@ export default function OrgPageView({
       <ApiServersCard
         queryType="org"
         organization_id={organization.organization_id}
+        organization_name={organization.name}
+        canCreatePersonal={can_create_personal_resources}
         cardTitle="Organization API Servers"
         cardDescription="API servers owned by this organization."
         cardClassName="w-full"

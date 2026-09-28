@@ -81,8 +81,8 @@ async function AppsPageServerComponent({
     );
   }
   // Admins can always create their own apps; for everyone else the create
-  // button is offered iff the server setting allows it (POST /api/apps
-  // enforces the setting regardless).
+  // dialog offers the "Personal" owner iff the server setting allows it
+  // (POST /api/apps enforces the setting regardless).
   const can_create_personal_apps: boolean =
     user.admin === true ||
     (userOwnedCreationResult.status === "fulfilled"

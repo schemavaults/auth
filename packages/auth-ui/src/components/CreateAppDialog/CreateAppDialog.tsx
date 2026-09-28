@@ -6,7 +6,7 @@ import { useContext, type ReactElement } from "react";
 import { Dialog, DialogContent } from "@schemavaults/ui";
 import { useSWRConfig } from "swr";
 import { AppWindow } from "lucide-react";
-import type { RequestedResourceOwnership } from "@schemavaults/app-definitions";
+import type { CreateResourceOwnershipOptions } from "@/components/ResourceOwnershipPicker";
 import CreateAppForm from "./CreateAppForm";
 import CreateAppDialogOpenDispatchContext from "./CreateAppDialogOpenDispatchContext";
 
@@ -15,10 +15,11 @@ interface CreateFrontendAppDialogProps {
     mutate: ReturnType<typeof useSWRConfig>["mutate"],
   ) => void;
   /**
-   * Who the new app will belong to: the platform (admins only), an
-   * organization the user administers, or the user's own account.
+   * Which owners the dialog's "Owner" field offers (the platform for
+   * admins, organizations the user administers, the user's own account)
+   * and which one it preselects.
    */
-  ownership: RequestedResourceOwnership;
+  ownership: CreateResourceOwnershipOptions;
   open: boolean;
   onOpenChange: (val: boolean) => void;
   uuid: () => string;
