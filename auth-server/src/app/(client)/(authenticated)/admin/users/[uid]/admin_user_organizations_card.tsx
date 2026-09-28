@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import {
   Badge,
   Card,
@@ -9,10 +9,19 @@ import {
   CardHeader,
   CardTitle,
   Datatable,
+  useToast,
   type ColumnDef,
 } from "@schemavaults/ui";
 import Link from "next/link";
-import { LocalDateTime } from "@schemavaults/auth-ui";
+import { useRouter } from "next/navigation";
+import {
+  AssignOrganizationMemberDialog,
+  AssignOrganizationMemberDialogDispatchContext,
+  AssignOrganizationMemberDialogTriggerButton,
+  LocalDateTime,
+  type AssignOrganizationMemberDialogOrganizationOption,
+} from "@schemavaults/auth-ui";
+import type { AssignMemberSubmitData, UserData } from "@schemavaults/auth-common";
 
 export interface AdminUserOrganizationMembershipRow {
   membership_declaration_id: string;
@@ -27,8 +36,24 @@ export interface AdminUserOrganizationMembershipRow {
   virtual: boolean;
 }
 
+/** An organization the user can be added to directly. */
+export type AdminUserAssignableOrganization =
+  AssignOrganizationMemberDialogOrganizationOption;
+
 export interface AdminUserOrganizationsCardProps {
+  user: UserData;
   memberships: readonly AdminUserOrganizationMembershipRow[] | null;
+  /**
+   * Organizations the user can be added to; null hides the "Add to
+   * Organization" action.
+   */
+  assignableOrganizations: readonly AdminUserAssignableOrganization[] | null;
+}
+
+function AddToOrganizationButton(): ReactElement {
+  return (
+    <AssignOrganizationMemberDialogTriggerButton triggerButtonLabel="Add to Organization" />
+  );
 }
 
 const columns: ColumnDef<AdminUserOrganizationMembershipRow>[] = [
@@ -98,38 +123,87 @@ const columns: ColumnDef<AdminUserOrganizationMembershipRow>[] = [
 ];
 
 export function AdminUserOrganizationsCard({
+  user,
   memberships,
+  assignableOrganizations,
 }: AdminUserOrganizationsCardProps): ReactElement {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [assignDialogOpen, setAssignDialogOpen] = useState<boolean>(false);
+  const canAssign: boolean = assignableOrganizations !== null;
+
+  // Errors are thrown so the dialog stays open and shows them.
+  async function addToOrganization(data: AssignMemberSubmitData): Promise<void> {
+    const response = await fetch(
+      `/api/organizations/${data.organization_id}/members`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input_mode: "uid",
+          identifier: user.uid,
+          role: data.role,
+        }),
+      },
+    );
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.success) {
+      throw new Error(
+        body.message ?? `Failed to add to organization (response status: ${response.status})`,
+      );
+    }
+    toast({
+      title: "Added to organization",
+      description: body.message ?? `${user.email} is now a member of the organization.`,
+    });
+    // Reload the server-rendered memberships and assignable organizations
+    router.refresh();
+  }
+
   return (
-    <Card className="w-full" data-testid="admin-user-organizations-card">
-      <CardHeader>
-        <CardTitle>Organizations</CardTitle>
-        <CardDescription>
-          Organizations this user is a member of, and their role in each.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {memberships === null ? (
-          <div className="min-h-16 w-full flex items-center justify-center text-sm text-destructive">
-            Failed to load this user&apos;s organization memberships.
-          </div>
-        ) : (
-          <Datatable<AdminUserOrganizationMembershipRow>
-            data={[...memberships]}
-            columns={columns}
-            HeaderButtons={() => <></>}
-            initialVisibleColumns={{
-              organization_name: true,
-              organization_id: true,
-              role: true,
-              membership_created_at: true,
-            }}
-            datatypeLabel="Organization Membership"
-            searchColumn={["organization_id", "organization_name"]}
-          />
-        )}
-      </CardContent>
-    </Card>
+    <AssignOrganizationMemberDialogDispatchContext.Provider value={setAssignDialogOpen}>
+      <Card className="w-full" data-testid="admin-user-organizations-card">
+        <CardHeader>
+          <CardTitle>Organizations</CardTitle>
+          <CardDescription>
+            Organizations this user is a member of, and their role in each.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {memberships === null ? (
+            <div className="min-h-16 w-full flex items-center justify-center text-sm text-destructive">
+              Failed to load this user&apos;s organization memberships.
+            </div>
+          ) : (
+            <Datatable<AdminUserOrganizationMembershipRow>
+              data={[...memberships]}
+              columns={columns}
+              HeaderButtons={canAssign ? AddToOrganizationButton : () => <></>}
+              initialVisibleColumns={{
+                organization_name: true,
+                organization_id: true,
+                role: true,
+                membership_created_at: true,
+              }}
+              datatypeLabel="Organization Membership"
+              searchColumn={["organization_id", "organization_name"]}
+            />
+          )}
+        </CardContent>
+      </Card>
+      {canAssign && (
+        <AssignOrganizationMemberDialog
+          open={assignDialogOpen}
+          onOpenChange={setAssignDialogOpen}
+          user={{ uid: user.uid, email: user.email }}
+          organizations={assignableOrganizations ?? []}
+          onSubmit={addToOrganization}
+        />
+      )}
+    </AssignOrganizationMemberDialogDispatchContext.Provider>
   );
 }
 

@@ -144,6 +144,11 @@ async function PreloadedOrgPage(
       isOrgOwner={isOrgOwner}
       userRole={userRole}
       can_create_personal_resources={can_create_personal_resources}
+      platform_admin={
+        user.admin === true
+          ? { uid: user.uid, email: user.email }
+          : undefined
+      }
     />
   );
 }

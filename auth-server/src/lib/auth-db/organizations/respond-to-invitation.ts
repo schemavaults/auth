@@ -69,12 +69,23 @@ export async function respondToInvitation(
   const newStatus: OrganizationInvitationStatus = action === "accept" ? "accepted" : "declined";
 
   try {
-    // Update invitation status
-    await db
+    // Update invitation status. Conditional on it still being pending: an
+    // administrator's direct assignment (assignOrganizationMembership) may
+    // have revoked it since the lookup above, and accepting it anyway would
+    // add a second membership row.
+    const updateResult = await db
       .updateTable("organization_invitations")
       .set({ status: newStatus, responded_at: now })
       .where("invitation_id", "=", invitation_id)
-      .execute();
+      .where("status", "=", "pending")
+      .executeTakeFirst();
+
+    if (!updateResult || updateResult.numUpdatedRows === BigInt(0)) {
+      return {
+        success: false,
+        message: "Invitation is no longer pending",
+      };
+    }
 
     // If accepting, create the membership
     if (action === "accept") {

@@ -39,7 +39,7 @@ export interface IOrganizationsRegistry {
     org_id: OrganizationID,
     uid: string,
     role: OrganizationMembershipRoleType,
-  ) => Promise<void>;
+  ) => Promise<OrganizationMembershipRoleDefinition>;
 
   updateMemberRole: (
     org_id: OrganizationID,

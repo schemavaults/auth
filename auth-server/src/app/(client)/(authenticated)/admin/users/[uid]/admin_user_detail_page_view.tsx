@@ -14,6 +14,7 @@ import type { UserData } from "@schemavaults/auth-common";
 import { LocalDateTime } from "@schemavaults/auth-ui";
 import AdminUserActionsCard from "./admin_user_actions_card";
 import AdminUserOrganizationsCard, {
+  type AdminUserAssignableOrganization,
   type AdminUserOrganizationMembershipRow,
 } from "./admin_user_organizations_card";
 import { UserTokensCard } from "@/components/UserTokensTable";
@@ -22,6 +23,11 @@ export interface AdminUserDetailPageViewProps {
   user: UserData;
   sessionUid: string;
   organizationMemberships: readonly AdminUserOrganizationMembershipRow[] | null;
+  /**
+   * Organizations the user can be added to directly; null hides the "Add to
+   * Organization" action (service accounts, or the list failed to load).
+   */
+  assignableOrganizations: readonly AdminUserAssignableOrganization[] | null;
 }
 
 function Row({
@@ -60,6 +66,7 @@ export function AdminUserDetailPageView({
   user,
   sessionUid,
   organizationMemberships,
+  assignableOrganizations,
 }: AdminUserDetailPageViewProps): ReactElement {
   const isAdmin = user.admin === true;
 
@@ -113,7 +120,11 @@ export function AdminUserDetailPageView({
             </Row>
           </CardContent>
         </Card>
-        <AdminUserOrganizationsCard memberships={organizationMemberships} />
+        <AdminUserOrganizationsCard
+          user={user}
+          memberships={organizationMemberships}
+          assignableOrganizations={assignableOrganizations}
+        />
         <UserTokensCard uid={user.uid} tokenType="refresh" />
         <UserTokensCard uid={user.uid} tokenType="access" />
         <AdminUserActionsCard user={user} sessionUid={sessionUid} />

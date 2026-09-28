@@ -299,7 +299,7 @@ export class OrganizationsRegistry
     org_id: OrganizationID,
     uid: string,
     role: OrganizationMembershipRoleType,
-  ): Promise<void> {
+  ): Promise<OrganizationMembershipRoleDefinition> {
     return await addOrganizationMembership(this.db, org_id, uid, role);
   }
 

@@ -3,6 +3,7 @@
 import { useSWRConfig } from "swr";
 import {
   OrganizationMembersCard,
+  getOrganizationMembersEndpoint,
   ApiServersCard,
   AppsCard,
   SentInvitationsCard,
@@ -15,7 +16,12 @@ import {
 import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import PageContainer from "@/components/PageContainer";
-import type { InviteMemberSubmitData, OrganizationDefinition, OrganizationMembershipRoleType } from "@schemavaults/auth-common";
+import type {
+  AssignMemberSubmitData,
+  InviteMemberSubmitData,
+  OrganizationDefinition,
+  OrganizationMembershipRoleType,
+} from "@schemavaults/auth-common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, useToast } from "@schemavaults/ui";
 import uuidSync from "@/lib/uuid/uuidSync";
 
@@ -32,6 +38,11 @@ export interface OrgPageViewProps {
    * true for admins). They preselect this organization either way.
    */
   can_create_personal_resources: boolean;
+  /**
+   * Set when the viewer is a platform administrator: they may add members
+   * directly (no invitation), themselves included.
+   */
+  platform_admin?: { uid: string; email: string };
 }
 
 function OrgTitleCard({ organization, userRole }: Pick<OrgPageViewProps, 'organization' | 'userRole'>): ReactElement {
@@ -60,10 +71,50 @@ export default function OrgPageView({
   isOrgOwner,
   userRole,
   can_create_personal_resources,
+  platform_admin,
 }: OrgPageViewProps): ReactElement {
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
   const router = useRouter();
+
+  // Platform administrators add members directly; errors are thrown so the
+  // dialog stays open and shows them.
+  async function assignMember(data: AssignMemberSubmitData): Promise<void> {
+    const response = await fetch(
+      `/api/organizations/${organization.organization_id}/members`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input_mode: data.input_mode,
+          identifier: data.identifier,
+          role: data.role,
+        }),
+      },
+    );
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.success) {
+      throw new Error(
+        body.message ?? `Failed to add member (response status: ${response.status})`,
+      );
+    }
+
+    toast({
+      title: "Member added!",
+      description: body.message ?? "The user is now a member of this organization.",
+    });
+
+    await mutate(getOrganizationMembersEndpoint(organization.organization_id));
+    // Superseded pending invitations were revoked
+    clearSentInvitationsCache(mutate, organization.organization_id);
+    // The viewer's own role may have changed (adding themselves)
+    if (platform_admin && body.data?.member?.uid === platform_admin.uid) {
+      router.refresh();
+    }
+  }
 
   return (
     <PageContainer>
@@ -73,6 +124,9 @@ export default function OrgPageView({
         organization_id={organization.organization_id}
         cardClassName={"w-full"}
         preloaded={preloaded_members}
+        organization_name={organization.name}
+        currentUser={platform_admin}
+        assignMember={platform_admin ? assignMember : undefined}
         inviteMember={isOrgOwner ? async (data: InviteMemberSubmitData) => {
           try {
             const response = await fetch(

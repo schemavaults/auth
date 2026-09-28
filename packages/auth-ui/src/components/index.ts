@@ -164,7 +164,10 @@ export type * from "./CreateOrganizationDialog";
 export { CreateOrganizationForm } from "./CreateOrganizationForm";
 export type { CreateOrganizationFormProps } from "./CreateOrganizationForm";
 
-export { OrganizationMembersTable } from "./OrganizationMembersTable";
+export {
+  OrganizationMembersTable,
+  getOrganizationMembersEndpoint,
+} from "./OrganizationMembersTable";
 export type {
   OrganizationMembersDatatableProps,
   OrganizationMemberTableData,
@@ -172,6 +175,19 @@ export type {
 
 export { OrganizationMembersCard } from "./OrganizationMembersCard";
 export type { OrganizationMembersCardProps } from "./OrganizationMembersCard";
+
+export {
+  AssignOrganizationMemberDialog,
+  AssignOrganizationMemberDialogTriggerButton,
+  AssignOrganizationMemberDialogDispatchContext,
+} from "./AssignOrganizationMemberDialog";
+export type {
+  AssignOrganizationMemberDialogProps,
+  AssignOrganizationMemberDialogOpenTriggerProps,
+  AssignOrganizationMemberDialogUser,
+  AssignOrganizationMemberDialogOrganizationOption,
+  AssignMemberSubmitData,
+} from "./AssignOrganizationMemberDialog";
 
 export { InviteMemberDialog } from "./InviteMemberDialog";
 export type {
