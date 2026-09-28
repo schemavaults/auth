@@ -43,6 +43,15 @@ interface WhoamiResponseBody {
 // Module marker: keeps this spec's top-level declarations file-scoped.
 export {};
 
+/**
+ * The client SDK sends its JSON bodies without a `Content-Type` (so they go
+ * out as `text/plain`, see api_contract/TextPlainJsonBodies.cy.ts), and
+ * Cypress only parses intercepted bodies labelled as JSON.
+ */
+function parseInterceptedBody(body: unknown): CreateApiServerRequestBody {
+  return (typeof body === "string" ? JSON.parse(body) : body) as CreateApiServerRequestBody;
+}
+
 function ownerOption(owner_type: "user" | "organization" | "platform") {
   return cy.get(`[data-testid="${OWNER}-${owner_type}"]`);
 }
@@ -84,7 +93,7 @@ function submitCreateApiServerDialog(
       cy.get(`#${DIALOG_CONTENT_ID}`).should("not.exist");
       return cy.wrap(
         {
-          body: interception.request.body as CreateApiServerRequestBody,
+          body: parseInterceptedBody(interception.request.body),
           api_server_id: api_server_id as string,
         },
         { log: false },
