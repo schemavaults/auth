@@ -40,6 +40,17 @@ export type {
 } from "./invite_member_form";
 
 export {
+  assignableOrganizationMembershipRoles,
+  assignableOrganizationMembershipRoleSchema,
+  assignMemberFormSchema,
+} from "./assign_member_form";
+export type {
+  AssignableOrganizationMembershipRole,
+  AssignMemberFormValues,
+  AssignMemberSubmitData,
+} from "./assign_member_form";
+
+export {
   organizationInvitationStatusTypes,
   organizationInvitationStatusSchema,
   organizationInvitationSchema,

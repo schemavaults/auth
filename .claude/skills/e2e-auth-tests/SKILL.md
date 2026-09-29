@@ -19,7 +19,7 @@ Two workflow files work together (`.github/workflows/`):
 
 ### `run-e2e-tests.yml` (orchestrator)
 
-Called by PR, feature-branch, and main-branch CI workflows via `workflow_call`. It:
+Called via `workflow_call` by the pull request workflow (`on-pull-request.yml`, the only CI for feature branches: pushes to them do not trigger a separate run) and the main-branch workflow (`on-push-main-branch-prod-cicd.yml`). It:
 
 1. **Builds Docker images in parallel** (4 jobs): auth server, postgres DB, e2e test runner, example resource server
 2. **Builds the e2e CLI** (`bun run build:cli --filter @schemavaults/e2e-auth-tests`)

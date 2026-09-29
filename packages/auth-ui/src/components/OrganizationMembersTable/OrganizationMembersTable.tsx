@@ -1,11 +1,12 @@
 "use client";
 
-import type { ReactElement } from "react";
+import type { FC, ReactElement } from "react";
 import type { SWRResponse } from "swr";
 import { Datatable } from "@schemavaults/ui";
 import { columns, type OrganizationMemberTableData } from "./columns";
 import { Loader2 } from "lucide-react";
 import { InviteMemberDialogTriggerButton } from "@/components/InviteMemberDialog";
+import { AssignOrganizationMemberDialogTriggerButton } from "@/components/AssignOrganizationMemberDialog";
 import type { OrganizationID } from "@schemavaults/auth-common";
 import useSWR from "swr";
 
@@ -13,14 +14,49 @@ export interface OrganizationMembersDatatableProps {
   organization_id: OrganizationID;
   preloaded_members?: readonly OrganizationMemberTableData[];
   showInviteButton?: boolean;
+  /**
+   * Shows the platform administrators' "Add Member" button (direct
+   * assignment, no invitation). Needs an
+   * `AssignOrganizationMemberDialogDispatchContext` provider.
+   */
+  showAssignButton?: boolean;
+}
+
+export function getOrganizationMembersEndpoint(
+  organization_id: OrganizationID,
+): string {
+  return `/api/organizations/${organization_id}/members`;
+}
+
+function InviteAndAssignMemberHeaderButtons(): ReactElement {
+  return (
+    <div className="flex flex-row flex-wrap gap-2">
+      <AssignOrganizationMemberDialogTriggerButton />
+      <InviteMemberDialogTriggerButton />
+    </div>
+  );
+}
+
+function headerButtonsFor(
+  showInviteButton: boolean,
+  showAssignButton: boolean,
+): FC | undefined {
+  if (showInviteButton && showAssignButton) {
+    return InviteAndAssignMemberHeaderButtons;
+  }
+  if (showAssignButton) return AssignOrganizationMemberDialogTriggerButton;
+  if (showInviteButton) return InviteMemberDialogTriggerButton;
+  return undefined;
 }
 
 export function OrganizationMembersTable({
   organization_id,
   preloaded_members,
   showInviteButton = true,
+  showAssignButton = false,
 }: OrganizationMembersDatatableProps): ReactElement {
-  const listOrganizationMembersEndpoint = `/api/organizations/${organization_id}/members`;
+  const listOrganizationMembersEndpoint =
+    getOrganizationMembersEndpoint(organization_id);
 
   const {
     data,
@@ -94,7 +130,7 @@ export function OrganizationMembersTable({
         membership_created_at: true,
         uid: false,
       }}
-      HeaderButtons={showInviteButton ? InviteMemberDialogTriggerButton : undefined}
+      HeaderButtons={headerButtonsFor(showInviteButton, showAssignButton)}
       datatypeLabel="Member"
       searchColumn={["email"]}
     />

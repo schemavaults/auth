@@ -1,7 +1,10 @@
 import type { AnyOperationDefinition } from "@schemavaults/openapi-operations";
 import { createOrganizationOperation, listAllOrganizations } from "@/app/api/organizations/operation";
 import { deleteOrganization } from "@/app/api/organizations/[organization_id]/operation";
-import { listOrganizationMembers } from "@/app/api/organizations/[organization_id]/members/operation";
+import {
+  assignOrganizationMember,
+  listOrganizationMembers,
+} from "@/app/api/organizations/[organization_id]/members/operation";
 import {
   getOrganizationMemberRole,
   updateOrganizationMemberRole,
@@ -21,6 +24,7 @@ export const organizationsOperations: readonly AnyOperationDefinition[] = [
   listAllOrganizations,
   deleteOrganization,
   listOrganizationMembers,
+  assignOrganizationMember,
   getOrganizationMemberRole,
   updateOrganizationMemberRole,
   listOrganizationInvitationsOperation,

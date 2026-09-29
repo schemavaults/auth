@@ -32,6 +32,16 @@ export type { InvitationResponseAction, RespondToInvitationResult } from "./resp
 export { revokeInvitation } from "./revoke-invitation";
 export type { RevokeInvitationResult } from "./revoke-invitation";
 export { addOrganizationMembership } from './add-organization-membership';
+export {
+  assignOrganizationMembership,
+  AlreadyOrganizationMemberError,
+  AssignedUserNotFoundError,
+  OrganizationMembershipLimitReachedError,
+} from './assign-organization-membership';
+export type {
+  AssignOrganizationMembershipParams,
+  AssignOrganizationMembershipResult,
+} from './assign-organization-membership';
 export { countUserRealMemberships } from './count-user-real-memberships';
 export { hasUserExceededMaximumOrgMemberships } from './has-user-exceeded-maximum-org-memberships';
 export { listAllOrganizations } from './list-all-organizations';

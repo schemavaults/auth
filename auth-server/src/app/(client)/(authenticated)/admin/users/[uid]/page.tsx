@@ -11,9 +11,16 @@ import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import redirectWithError from "@/lib/redirect-with-error";
 import type { ServerRuntime } from "next";
 import { z } from "zod";
-import type { OrganizationID, UserData } from "@schemavaults/auth-common";
+import {
+  getHardcodedOrgs,
+  type OrganizationID,
+  type UserData,
+} from "@schemavaults/auth-common";
 import { connection } from "next/server";
-import type { AdminUserOrganizationMembershipRow } from "./admin_user_organizations_card";
+import type {
+  AdminUserAssignableOrganization,
+  AdminUserOrganizationMembershipRow,
+} from "./admin_user_organizations_card";
 
 const uidSchema = z.guid();
 
@@ -48,14 +55,48 @@ async function PreloadedAdminUserDetailPage(
 
   const organizationMemberships: readonly AdminUserOrganizationMembershipRow[] | null =
     await loadOrganizationMembershipRows(dbh.db, targetUser);
+  const assignableOrganizations: readonly AdminUserAssignableOrganization[] | null =
+    targetUser.service_account === true || organizationMemberships === null
+      ? null
+      : await loadAssignableOrganizations(dbh.db, organizationMemberships);
 
   return (
     <AdminUserDetailPageView
       user={targetUser}
       sessionUid={user.uid}
       organizationMemberships={organizationMemberships}
+      assignableOrganizations={assignableOrganizations}
     />
   );
+}
+
+/**
+ * The organizations the target user could be added to directly: every
+ * organization except system organizations (membership there follows the
+ * admin flag) and the ones they already belong to. Returns null (no "Add
+ * to organization" action) if the organizations could not be listed.
+ */
+async function loadAssignableOrganizations(
+  db: ConstructorParameters<typeof OrganizationsRegistry>[0],
+  memberships: readonly AdminUserOrganizationMembershipRow[],
+): Promise<readonly AdminUserAssignableOrganization[] | null> {
+  const excluded = new Set<OrganizationID>([
+    ...getHardcodedOrgs().map((org) => org.organization_id),
+    ...memberships.map((membership) => membership.organization_id),
+  ]);
+  try {
+    const organizations = await new OrganizationsRegistry(db).listAllOrganizations();
+    return organizations
+      .filter((org) => !excluded.has(org.organization_id))
+      .map((org) => ({ organization_id: org.organization_id, name: org.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } catch (e: unknown) {
+    console.error(
+      "[AdminUserDetailPage] Failed to list organizations for the add to organization dialog: ",
+      e,
+    );
+    return null;
+  }
 }
 
 /**

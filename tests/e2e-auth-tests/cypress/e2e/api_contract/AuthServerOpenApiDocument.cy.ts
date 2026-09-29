@@ -121,6 +121,12 @@ describe("GET /api/openapi.json (auth server)", () => {
       const settings = doc.paths["/api/admin/settings/{key}"]?.patch;
       expect(settings?.["x-schemavaults-auth"]?.routeGuard).to.eq("admin");
 
+      // Adding organization members directly (no invitation) is admin-only,
+      // while listing them is open to the organization's members.
+      const members = doc.paths["/api/organizations/{organization_id}/members"];
+      expect(members?.post?.["x-schemavaults-auth"]?.routeGuard).to.eq("admin");
+      expect(members?.get?.["x-schemavaults-auth"]?.routeGuard).to.eq("authenticated");
+
       // Public operations carry no security requirement.
       for (const [path, method] of [
         ["/api/auth/login", "post"],

@@ -5,13 +5,15 @@ import { isValidOrganizationMembershipRoleType, type OrganizationMembershipRoleT
 import isValidUuid from "@/lib/is-valid-uuid";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import type { OrganizationMembershipRoleDefinition } from "./organization-membership-role-definition";
 
+/** Inserts a membership row and returns it. */
 export async function addOrganizationMembership(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   org_id: OrganizationID,
   uid: string,
   role: OrganizationMembershipRoleType,
-): Promise<void> {
+): Promise<OrganizationMembershipRoleDefinition> {
 
   const parsed_org_id = await organizationIdSchema.safeParseAsync(org_id);
   if (!parsed_org_id.success) {
@@ -33,18 +35,21 @@ export async function addOrganizationMembership(
     );
   }
 
+  const membership: OrganizationMembershipRoleDefinition = {
+    membership_declaration_id: crypto.randomUUID(),
+    organization_id,
+    uid,
+    role,
+    created_at: Date.now(),
+  };
+
   try {
     const roleInsertionQuery = db
       .insertInto("organization_membership_roles")
-      .values({
-        membership_declaration_id: crypto.randomUUID(),
-        organization_id,
-        uid,
-        role,
-        created_at: Date.now(),
-      });
+      .values(membership);
 
     await roleInsertionQuery.executeTakeFirstOrThrow();
+    return membership;
   } catch (e: unknown) {
     console.error(
       `Failed to add new user membership role '${role}' for user '${uid}' to organization '${organization_id}': `,

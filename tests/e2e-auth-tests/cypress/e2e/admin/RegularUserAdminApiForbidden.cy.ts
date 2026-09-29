@@ -291,6 +291,31 @@ describe("Regular User Admin API Forbidden", () => {
     });
   });
 
+  it("POST /api/organizations/:organization_id/members (direct member assignment) returns 403 for authenticated non-admin", () => {
+    // The caller creates the organization, so they are its owner: owners
+    // must still invite, only platform administrators assign directly.
+    const organization_id = `non-admin-assign-${Math.random().toString(36).slice(2, 10)}`;
+    cy.create_organization_via_request({
+      organization_id,
+      name: `Non-admin assign ${organization_id}`,
+    });
+    cy.request({
+      method: "POST",
+      url: `/api/organizations/${organization_id}/members`,
+      failOnStatusCode: false,
+      body: { input_mode: "uid", identifier: fakeUid, role: "owner" },
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+    cy.request({
+      method: "DELETE",
+      url: `/api/organizations/${organization_id}`,
+    })
+      .its("status")
+      .should("eq", 200);
+  });
+
   it("GET /api/organizations (admin-only listing) returns 403 for authenticated non-admin", () => {
     cy.request({
       method: "GET",
