@@ -21,6 +21,9 @@ import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import {
   ServerlessDatabase,
   UserRegistry,
+  getUserTokensValidAfter,
+  isTokenIatRevoked,
+  isTokenRevoked,
   type UserDocument,
 } from "@/lib/auth-db";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
@@ -81,8 +84,12 @@ export async function handleOidcUserinfoPreflight(): Promise<NextResponse> {
  * token issued by /api/oidc/token as a Bearer credential, decrypts and
  * verifies it server-side (only the auth server holds the
  * `oidc-userinfo` keyset), and returns the claims permitted by the
- * token's granted scope. Tokens whose grant did not include `openid`
- * (plain OAuth 2.1 grants) are refused with `insufficient_scope`.
+ * token's granted scope. A token that verified but has since been
+ * revoked — its jti revoked by logout, or minted before the user's
+ * `tokens_valid_after` watermark (password reset, disabled account) —
+ * is refused with `invalid_token`, exactly as at introspection and the
+ * route guards. Tokens whose grant did not include `openid` (plain
+ * OAuth 2.1 grants) are refused with `insufficient_scope`.
  *
  * Served for GET and POST alike (OIDC Core §5.3.1 allows POST with the
  * token in the Authorization header; form-body token delivery is not
@@ -140,6 +147,35 @@ export async function handleOidcUserinfoRequest(request: NextRequest): Promise<N
 
   if (decoded.disabled) {
     return unauthorized("Account is disabled");
+  }
+
+  // Revocation: cryptographic validity is not enough. The token is also
+  // refused when its jti was revoked (the RP's logout revokes the access
+  // tokens issued alongside the session's refresh token) or when it
+  // predates the user's `tokens_valid_after` watermark (password reset,
+  // account disabled) — the same two signals the route guards and the
+  // introspection endpoint consult. Like introspection, no
+  // rotation-reuse grace applies here: access tokens are never
+  // rotation-revoked, so a revoked one is refused immediately.
+  try {
+    if (decoded.jti && (await isTokenRevoked(dbh.db, decoded.jti))) {
+      return unauthorized("Token has been revoked");
+    }
+    const tokens_valid_after: number = await getUserTokensValidAfter(
+      dbh.db,
+      decoded.uid,
+    );
+    if (isTokenIatRevoked(decoded.iat, tokens_valid_after)) {
+      return unauthorized("Token has been revoked");
+    }
+  } catch (e: unknown) {
+    // Fail closed: if the revocation state cannot be read, the token's
+    // standing is unknown and it must not be honoured.
+    console.error(
+      "[/api/oidc/userinfo] Failed to check token revocation:",
+      e,
+    );
+    return unauthorized("Token could not be validated");
   }
 
   // Claims filtered by the granted scope embedded in the token; `sub`

@@ -9,11 +9,20 @@
 //      the refresh token, a missing/malformed Authorization header and an
 //      undecodable token);
 //   5. POST /api/oidc/introspect reports both tokens active with their
-//      metadata, and a different client's credentials see them as inactive.
+//      metadata, and a different client's credentials see them as inactive;
+//   6. a revoked access token is refused at userinfo: after the client's
+//      session is logged out (jti revocation) and after the account is
+//      disabled (`tokens_valid_after` watermark), even though the token
+//      still decrypts and verifies. A security audit found that userinfo
+//      checked cryptographic validity only.
 // The `active: true` introspection path and POST userinfo were untested.
 
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
-import { PKCE_ProofKeyManager, type CodeChallengeWithDetails } from "@schemavaults/auth-common";
+import {
+  PKCE_ProofKeyManager,
+  RefreshTokenCookieName,
+  type CodeChallengeWithDetails,
+} from "@schemavaults/auth-common";
 
 const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
 
@@ -150,127 +159,253 @@ function userinfo(
   });
 }
 
+interface TestUserCredentials {
+  email: string;
+  password: string;
+}
+
+interface MintedSession {
+  credentials: TestUserCredentials;
+  access_token: string;
+  refresh_token: string;
+}
+
+/**
+ * Creates a fresh regular user, has them authorize `client`, mints an
+ * authorization code for it and redeems the code at the token endpoint
+ * with client_secret_post. Yields the user's credentials and the issued
+ * tokens; the browser is signed out of the auth server when this yields.
+ */
+function mintSessionForFreshUser(
+  client: ConfidentialClient,
+): Cypress.Chainable<MintedSession> {
+  return cy.generate_random_test_user_credentials().then((credentials) => {
+    cy.create_and_login_as_regular_user_via_request(credentials).then(
+      (ok: boolean) => expect(ok).to.be.true,
+    );
+    // A code for a third-party client is refused (403
+    // email_verification_required) while the account's e-mail address
+    // is unverified; verify it out of band first.
+    cy.verify_email_via_request(credentials.email).then(
+      (verified: boolean) => expect(verified, "email verified").to.be.true,
+    );
+    cy.request({
+      method: "POST",
+      url: `/api/apps/${client.client_id}/authorize`,
+    }).then((response) => expect(response.status, "consent").to.eq(200));
+
+    const verifier = PKCE_ProofKeyManager.createCodeVerifier(Date.now());
+    return cy
+      .wrap<Promise<CodeChallengeWithDetails>, CodeChallengeWithDetails>(
+        PKCE_ProofKeyManager.createCodeChallenge(verifier),
+        { log: false },
+      )
+      .then((challenge) =>
+        cy.request({
+          method: "POST",
+          url: "/api/auth/session/generate-authorization-code",
+          body: {
+            client_app_id: client.client_id,
+            code_challenge: challenge.code_challenge,
+            code_challenge_method: "S256",
+            challenge_time: challenge.challenge_time,
+            redirect_uri: REDIRECT_URI,
+            nonce: `e2e-nonce-${Date.now()}`,
+            scope: SCOPE,
+          },
+        }),
+      )
+      .then((codeResponse) => {
+        expect(codeResponse.status).to.eq(200);
+        const code: string = codeResponse.body.authorization_code;
+        cy.logout();
+
+        return cy.request<TokenResponseBody>({
+          method: "POST",
+          url: "/api/oidc/token",
+          form: true,
+          body: {
+            grant_type: "authorization_code",
+            client_id: client.client_id,
+            client_secret: client.client_secret,
+            code,
+            code_verifier: verifier.code_verifier,
+            redirect_uri: REDIRECT_URI,
+          },
+          headers: { Accept: "application/json" },
+        });
+      })
+      .then((tokenResponse) => {
+        expect(tokenResponse.status, "token exchange").to.eq(200);
+        expect(tokenResponse.body.token_type).to.eq("Bearer");
+        expect(tokenResponse.body.scope).to.eq(SCOPE);
+        expect(tokenResponse.body.id_token).to.be.a("string");
+        const access_token = tokenResponse.body.access_token as string;
+        const refresh_token = tokenResponse.body.refresh_token as string;
+        expect(access_token).to.be.a("string");
+        expect(refresh_token).to.be.a("string");
+        return cy.wrap<MintedSession>(
+          { credentials, access_token, refresh_token },
+          { log: false },
+        );
+      });
+  });
+}
+
+/**
+ * Ends the client app's session the way a relying party's logout does:
+ * POST /api/auth/logout/{client_id} with the app's refresh token cookie
+ * (the token endpoint returned the refresh token inline, so the spec
+ * plants the cookie itself) from the app's registered origin. The server
+ * revokes the refresh token's jti and the access tokens minted with it.
+ */
+function logoutOfClientApp(client: ConfidentialClient, refresh_token: string): void {
+  cy.setCookie(RefreshTokenCookieName(client.client_id), refresh_token);
+  cy.request({
+    method: "POST",
+    url: `/api/auth/logout/${client.client_id}`,
+    headers: { Origin: CLIENT_ORIGIN },
+  }).then((response) => {
+    expect(response.status, "client app logout").to.eq(200);
+    expect(response.body.success).to.eq(true);
+  });
+  cy.clearCookies();
+}
+
+function expectRevokedAtUserinfo(access_token: string, label: string): void {
+  for (const method of ["GET", "POST"] as const) {
+    userinfo(method, { Authorization: `Bearer ${access_token}` }).then(
+      (response) => {
+        expect(response.status, `${method} userinfo ${label}`).to.eq(401);
+        expect(response.body.error).to.eq("invalid_token");
+        expect(String(response.headers["www-authenticate"])).to.include(
+          'error="invalid_token"',
+        );
+        expect(response.body, "no claims leak").to.not.have.property("sub");
+      },
+    );
+  }
+}
+
 describe("OIDC confidential client flow (management API only)", () => {
   it("redeems a code with client_secret_post, then serves userinfo and introspection", () => {
     createConfidentialClient().then((client) => {
-      cy.generate_random_test_user_credentials().then((credentials) => {
-        cy.create_and_login_as_regular_user_via_request(credentials).then(
-          (ok: boolean) => expect(ok).to.be.true,
-        );
-        // A code for a third-party client is refused (403
-        // email_verification_required) while the account's e-mail address
-        // is unverified; verify it out of band first.
-        cy.verify_email_via_request(credentials.email).then(
-          (verified: boolean) => expect(verified, "email verified").to.be.true,
-        );
-        cy.request({
-          method: "POST",
-          url: `/api/apps/${client.client_id}/authorize`,
-        }).then((response) => expect(response.status, "consent").to.eq(200));
-
-        const verifier = PKCE_ProofKeyManager.createCodeVerifier(Date.now());
-        cy.wrap<Promise<CodeChallengeWithDetails>, CodeChallengeWithDetails>(
-          PKCE_ProofKeyManager.createCodeChallenge(verifier),
-          { log: false },
-        ).then((challenge) => {
-          cy.request({
-            method: "POST",
-            url: "/api/auth/session/generate-authorization-code",
-            body: {
-              client_app_id: client.client_id,
-              code_challenge: challenge.code_challenge,
-              code_challenge_method: "S256",
-              challenge_time: challenge.challenge_time,
-              redirect_uri: REDIRECT_URI,
-              nonce: `e2e-nonce-${Date.now()}`,
-              scope: SCOPE,
+      mintSessionForFreshUser(client).then(
+        ({ credentials, access_token, refresh_token }) => {
+          const expectedSubPrefix = `${AUTH_APP_ID}|`;
+          userinfo("GET", { Authorization: `Bearer ${access_token}` }).then(
+            (response) => {
+              expect(response.status, "GET userinfo").to.eq(200);
+              expect(response.body.sub).to.match(
+                new RegExp(`^${expectedSubPrefix.replace("|", "\\|")}`),
+              );
+              expect(response.body.email).to.eq(credentials.email);
+              expect(response.body.email_verified).to.eq(true);
             },
-          }).then((codeResponse) => {
-            expect(codeResponse.status).to.eq(200);
-            const code: string = codeResponse.body.authorization_code;
-            cy.logout();
+          );
+          userinfo("POST", { Authorization: `Bearer ${access_token}` }).then(
+            (response) => {
+              expect(response.status, "POST userinfo").to.eq(200);
+              expect(response.body.email).to.eq(credentials.email);
+            },
+          );
+          userinfo("GET", { Authorization: `Bearer ${refresh_token}` }).then(
+            (response) => {
+              expect(response.status, "refresh token at userinfo").to.eq(401);
+              expect(response.body.error).to.eq("invalid_token");
+            },
+          );
 
-            cy.request<TokenResponseBody>({
-              method: "POST",
-              url: "/api/oidc/token",
-              form: true,
-              body: {
-                grant_type: "authorization_code",
-                client_id: client.client_id,
-                client_secret: client.client_secret,
-                code,
-                code_verifier: verifier.code_verifier,
-                redirect_uri: REDIRECT_URI,
-              },
-              headers: { Accept: "application/json" },
-            }).then((tokenResponse) => {
-              expect(tokenResponse.status, "token exchange").to.eq(200);
-              expect(tokenResponse.body.token_type).to.eq("Bearer");
-              expect(tokenResponse.body.scope).to.eq(SCOPE);
-              expect(tokenResponse.body.id_token).to.be.a("string");
-              const access_token = tokenResponse.body.access_token as string;
-              const refresh_token = tokenResponse.body.refresh_token as string;
-              expect(access_token).to.be.a("string");
-              expect(refresh_token).to.be.a("string");
+          introspect(client, access_token).then((response) => {
+            expect(response.status).to.eq(200);
+            expect(response.body.active).to.eq(true);
+            expect(response.body.client_id).to.eq(client.client_id);
+            expect(response.body.token_type).to.eq("Bearer");
+            expect(response.body.scope).to.eq(SCOPE);
+            expect(response.body.sub).to.match(
+              new RegExp(`^${expectedSubPrefix.replace("|", "\\|")}`),
+            );
+            expect(response.body.exp).to.be.a("number");
+            expect(response.body.iat).to.be.a("number");
+            expect(response.body.iss).to.eq(
+              new URL(Cypress.env("AUTH_SERVER_URL")).origin,
+            );
+            expect(response.body.jti).to.be.a("string");
+          });
+          introspect(client, refresh_token, {
+            token_type_hint: "refresh_token",
+          }).then((response) => {
+            expect(response.status).to.eq(200);
+            expect(response.body.active).to.eq(true);
+            expect(response.body.client_id).to.eq(client.client_id);
+          });
 
-              const expectedSubPrefix = `${AUTH_APP_ID}|`;
-              userinfo("GET", { Authorization: `Bearer ${access_token}` }).then(
-                (response) => {
-                  expect(response.status, "GET userinfo").to.eq(200);
-                  expect(response.body.sub).to.match(
-                    new RegExp(`^${expectedSubPrefix.replace("|", "\\|")}`),
-                  );
-                  expect(response.body.email).to.eq(credentials.email);
-                  expect(response.body.email_verified).to.eq(true);
-                },
-              );
-              userinfo("POST", { Authorization: `Bearer ${access_token}` }).then(
-                (response) => {
-                  expect(response.status, "POST userinfo").to.eq(200);
-                  expect(response.body.email).to.eq(credentials.email);
-                },
-              );
-              userinfo("GET", { Authorization: `Bearer ${refresh_token}` }).then(
-                (response) => {
-                  expect(response.status, "refresh token at userinfo").to.eq(401);
-                  expect(response.body.error).to.eq("invalid_token");
-                },
-              );
-
-              introspect(client, access_token).then((response) => {
-                expect(response.status).to.eq(200);
-                expect(response.body.active).to.eq(true);
-                expect(response.body.client_id).to.eq(client.client_id);
-                expect(response.body.token_type).to.eq("Bearer");
-                expect(response.body.scope).to.eq(SCOPE);
-                expect(response.body.sub).to.match(
-                  new RegExp(`^${expectedSubPrefix.replace("|", "\\|")}`),
-                );
-                expect(response.body.exp).to.be.a("number");
-                expect(response.body.iat).to.be.a("number");
-                expect(response.body.iss).to.eq(
-                  new URL(Cypress.env("AUTH_SERVER_URL")).origin,
-                );
-                expect(response.body.jti).to.be.a("string");
-              });
-              introspect(client, refresh_token, {
-                token_type_hint: "refresh_token",
-              }).then((response) => {
-                expect(response.status).to.eq(200);
-                expect(response.body.active).to.eq(true);
-                expect(response.body.client_id).to.eq(client.client_id);
-              });
-
-              // Another confidential client cannot learn about these tokens.
-              createConfidentialClient(false).then((otherClient) => {
-                introspect(otherClient, access_token).then((response) => {
-                  expect(response.status).to.eq(200);
-                  expect(response.body).to.deep.equal({ active: false });
-                });
-              });
+          // Another confidential client cannot learn about these tokens.
+          createConfidentialClient(false).then((otherClient) => {
+            introspect(otherClient, access_token).then((response) => {
+              expect(response.status).to.eq(200);
+              expect(response.body).to.deep.equal({ active: false });
             });
           });
+        },
+      );
+    });
+  });
+
+  it("refuses a logged-out session's access token at userinfo (jti revocation)", () => {
+    createConfidentialClient().then((client) => {
+      mintSessionForFreshUser(client).then(({ access_token, refresh_token }) => {
+        // Sanity: the token is honoured until the session ends.
+        userinfo("GET", { Authorization: `Bearer ${access_token}` }).then(
+          (response) => expect(response.status, "before logout").to.eq(200),
+        );
+
+        logoutOfClientApp(client, refresh_token);
+
+        // The token still decrypts and verifies — only the revocation
+        // lookup can refuse it now. Introspection already did; userinfo
+        // must agree.
+        expectRevokedAtUserinfo(access_token, "after logout");
+        introspect(client, access_token).then((response) => {
+          expect(response.status).to.eq(200);
+          expect(response.body, "introspection after logout").to.deep.equal({
+            active: false,
+          });
         });
+      });
+    });
+  });
+
+  it("refuses a disabled account's access token at userinfo (tokens_valid_after watermark)", () => {
+    createConfidentialClient().then((client) => {
+      mintSessionForFreshUser(client).then(({ access_token }) => {
+        userinfo("GET", { Authorization: `Bearer ${access_token}` }).then(
+          (response) => {
+            expect(response.status, "before disable").to.eq(200);
+            // `<auth_server_app_id>|<uid>`
+            const uid: string = String(response.body.sub).split("|")[1];
+            expect(uid, "uid from sub").to.be.a("string").and.not.be.empty;
+
+            // Disabling pins the account's tokens_valid_after watermark
+            // above every possible iat. The access token was minted
+            // BEFORE the disable, so its `disabled` claim is still
+            // false: only the watermark check can refuse it.
+            cy.clearCookies();
+            cy.create_and_login_as_superuser_via_request().then((ok: boolean) => {
+              if (!ok) throw new Error("Failed to login as superuser");
+            });
+            cy.request({
+              method: "POST",
+              url: `/api/admin/users/${uid}/disable`,
+            }).then((disableResponse) => {
+              expect(disableResponse.status, "disable user").to.eq(200);
+              expect(disableResponse.body.resource_id).to.eq(uid);
+            });
+            cy.clearCookies();
+
+            expectRevokedAtUserinfo(access_token, "after disable");
+          },
+        );
       });
     });
   });
