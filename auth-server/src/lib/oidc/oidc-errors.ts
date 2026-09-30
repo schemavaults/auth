@@ -28,7 +28,11 @@ export type OidcTokenErrorCode =
   | "invalid_scope"
   // RFC 8707 §2: the requested `resource` is invalid, unknown, or not
   // permitted for this client.
-  | "invalid_target";
+  | "invalid_target"
+  // Unexpected failure (500). RFC 6749 §5.2 defines no code for it; this
+  // borrows the authorization endpoint's `server_error` (§4.1.2.1), which
+  // /api/oidc/register already answers with.
+  | "server_error";
 
 /**
  * RFC 6749 §4.1.2.1 error redirect back to the RP's redirect_uri.

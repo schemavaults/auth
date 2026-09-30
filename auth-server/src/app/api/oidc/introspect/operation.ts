@@ -78,7 +78,7 @@ export const postOidcIntrospect = defineOperation({
       schema: OAuthErrorResponse,
       headers: wwwAuthenticateHeaders,
     },
-    500: { description: "The introspection request could not be processed", schema: OAuthErrorResponse },
+    500: { description: "The introspection request could not be processed (`server_error`)", schema: OAuthErrorResponse },
   },
   handler: (ctx) => handleOidcIntrospectRequest(toNextRequest(ctx.request)),
 });
