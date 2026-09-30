@@ -6,4 +6,5 @@ export {
 } from "./is-token-revoked";
 export { cleanupExpiredRevocations } from "./cleanup-expired-revocations";
 export { revokeTokensIssuedWithRefreshToken } from "./revoke-tokens-issued-with-refresh-token";
+export { revokeTokensIssuedToClientApp } from "./revoke-tokens-issued-to-client-app";
 export type * from "./token-revocations-table";

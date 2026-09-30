@@ -172,6 +172,16 @@ describe("Unauthenticated API Requests", () => {
       });
     });
 
+    it("DELETE /api/apps/:appId/authorize returns 401", () => {
+      cy.request({
+        method: "DELETE",
+        url: `/api/apps/${fakeAppId}/authorize`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
     it("GET /api/apps/:appId/check-authorization returns 401", () => {
       cy.request({
         method: "GET",

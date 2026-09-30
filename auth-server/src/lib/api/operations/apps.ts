@@ -1,7 +1,7 @@
 import type { AnyOperationDefinition } from "@schemavaults/openapi-operations";
 import { createApp, listApps } from "@/app/api/apps/operation";
 import { deleteApp, getApp } from "@/app/api/apps/[app_id]/operation";
-import { authorizeApp } from "@/app/api/apps/[app_id]/authorize/operation";
+import { authorizeApp, revokeAppAuthorization } from "@/app/api/apps/[app_id]/authorize/operation";
 import { checkAppAuthorization } from "@/app/api/apps/[app_id]/check-authorization/operation";
 import { createAppDomain, listAppDomains } from "@/app/api/apps/[app_id]/domains/operation";
 import {
@@ -29,6 +29,7 @@ export const appsOperations: readonly AnyOperationDefinition[] = [
   deleteApp,
   checkAppAuthorization,
   authorizeApp,
+  revokeAppAuthorization,
   listAppDomains,
   createAppDomain,
   listAppCallbackUrls,

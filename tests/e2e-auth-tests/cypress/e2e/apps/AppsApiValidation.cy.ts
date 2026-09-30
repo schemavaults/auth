@@ -10,10 +10,12 @@
 //   GET/POST   /api/apps/[app_id]/domains -> 404 unknown, 403 non-member,
 //                                            400 body/path id mismatch,
 //                                            409 duplicate domain + environment
-//   GET  /api/apps/[app_id]/check-authorization + POST /api/apps/[app_id]/authorize
+//   GET  /api/apps/[app_id]/check-authorization + POST/DELETE /api/apps/[app_id]/authorize
 //                                         -> the false -> authorize -> true
-//                                            round trip and the request-body
-//                                            validation of the consent POST
+//                                            -> revoke -> false round trip,
+//                                            the request-body validation of
+//                                            the consent POST and the
+//                                            idempotent revocation DELETE
 
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 
@@ -25,6 +27,8 @@ interface ApiResponseBody {
   resource_id?: string;
   list?: unknown[];
   authorized?: boolean;
+  was_authorized?: boolean;
+  revoked_token_count?: number;
 }
 
 // Module marker: keeps this spec's top-level interfaces file-scoped.
@@ -310,9 +314,10 @@ describe("Apps API validation", () => {
       });
       expectStatus("GET", `/api/apps/${MALFORMED_APP_ID}/check-authorization`, 400);
       expectStatus("POST", `/api/apps/${MALFORMED_APP_ID}/authorize`, 400);
+      expectStatus("DELETE", `/api/apps/${MALFORMED_APP_ID}/authorize`, 400);
     });
 
-    it("flips check-authorization from false to true once the app is authorized", () => {
+    it("flips check-authorization from false to true once the app is authorized, and back once revoked", () => {
       const app_id = randomAppId();
       loginAsFreshRegularUser();
       expectStatus("POST", "/api/apps", 200, appBody(app_id));
@@ -361,6 +366,34 @@ describe("Apps API validation", () => {
 
       // Authorizing again is idempotent.
       expectStatus("POST", `/api/apps/${app_id}/authorize`, 200);
+
+      cy.request<ApiResponseBody>({
+        method: "DELETE",
+        url: `/api/apps/${app_id}/authorize`,
+      }).then((response) => {
+        expect(response.status, "revoke").to.eq(200);
+        expect(response.body.success).to.eq(true);
+        expect(response.body.resource_id).to.eq(app_id);
+        expect(response.body.was_authorized).to.eq(true);
+        // No token was ever issued to the app.
+        expect(response.body.revoked_token_count).to.eq(0);
+      });
+
+      cy.request<ApiResponseBody>({
+        method: "GET",
+        url: `/api/apps/${app_id}/check-authorization`,
+      }).then((response) => {
+        expect(response.body.authorized, "after revocation").to.eq(false);
+      });
+
+      // Revoking again is idempotent and reports there was nothing to revoke.
+      cy.request<ApiResponseBody>({
+        method: "DELETE",
+        url: `/api/apps/${app_id}/authorize`,
+      }).then((response) => {
+        expect(response.status, "repeated revoke").to.eq(200);
+        expect(response.body.was_authorized).to.eq(false);
+      });
     });
   });
 });

@@ -2,7 +2,7 @@ import { oauth2StateSchema } from "@schemavaults/auth-common";
 import { z, requireAuth } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import { sessionSchemes } from "@/lib/api/auth-schemes";
-import { appIdParams } from "@/lib/api/domain-schemas/apps";
+import { AppAuthorizationRevocationResponse, appIdParams } from "@/lib/api/domain-schemas/apps";
 import {
   ErrorResponse,
   ResourceCreationResponse,
@@ -10,7 +10,10 @@ import {
   validationErrorResponse,
 } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
-import AuthorizedAppsRegistry from "@/lib/auth-db/apps/authorized-apps-registry";
+import AuthorizedAppsRegistry, {
+  removeAppAuthorizationForUser,
+} from "@/lib/auth-db/apps/authorized-apps-registry";
+import { revokeTokensIssuedToClientApp } from "@/lib/auth-db/token-revocations";
 import captureServerException from "@/lib/captureServerException";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 
@@ -97,6 +100,67 @@ export const authorizeApp = defineOperation({
         context: { app_id },
       });
       return ctx.json(500, { success: false, message: "Failed to authorize frontend application" });
+    }
+  },
+});
+
+export const revokeAppAuthorization = defineOperation({
+  method: "delete",
+  path: ROUTE,
+  summary: "Revoke a client application's authorization",
+  description:
+    "Withdraws the caller's consent for a client application to receive tokens on their behalf, and revokes the app's unexpired access and refresh tokens issued for the caller. From then on the app's refresh tokens are refused at the token endpoint, token introspection reports its tokens inactive, and signing in to the app asks for consent again. Idempotent: `was_authorized` is false when there was nothing to revoke. The auth server's own app is always authorized and cannot be de-authorized (403).",
+  tags: [API_TAGS.apps],
+  auth: requireAuth({ schemes: sessionSchemes }),
+  request: { params: appIdParams },
+  responses: {
+    200: { description: "The app is no longer authorized for the caller", schema: AppAuthorizationRevocationResponse },
+    ...validationErrorResponse,
+    ...sessionErrorResponses,
+    500: { description: "Failed to revoke the authorization", schema: ErrorResponse },
+  },
+  handler: async (ctx) => {
+    const user = ctx.auth.user;
+    const { db, debug } = ctx.context;
+    const { app_id } = ctx.params;
+
+    if (app_id === getAuthServerAppId()) {
+      return ctx.json(403, {
+        success: false,
+        message: "The auth app is always authorized and cannot be de-authorized",
+      });
+    }
+
+    try {
+      // One transaction: the consent and the tokens it granted go together.
+      const { was_authorized, revoked_token_count } = await db
+        .transaction()
+        .execute(async (trx) => ({
+          was_authorized: await removeAppAuthorizationForUser(trx, user.uid, app_id, debug),
+          revoked_token_count: await revokeTokensIssuedToClientApp(trx, user.uid, app_id),
+        }));
+      if (debug) {
+        console.log(
+          `[/api/apps/${app_id}/authorize] DELETE: removed authorization=${was_authorized}, revoked ${revoked_token_count} token(s) for user '${user.uid}'`,
+        );
+      }
+      return ctx.json(200, {
+        success: true,
+        message: was_authorized
+          ? "Revoked the client application's authorization to receive tokens on your behalf"
+          : "The client application was not authorized to receive tokens on your behalf",
+        resource_id: app_id,
+        was_authorized,
+        revoked_token_count,
+      });
+    } catch (e: unknown) {
+      await captureServerException(db, e, {
+        op_name: "DELETE_revoke_client_application_authorization",
+        route: "/api/apps/[app_id]/authorize",
+        uid: user.uid,
+        context: { app_id },
+      });
+      return ctx.json(500, { success: false, message: "Failed to revoke the client application's authorization" });
     }
   },
 });
