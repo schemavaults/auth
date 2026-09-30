@@ -54,6 +54,22 @@ export const AppAuthorizationStatusResponse = z
   })
   .openapi("AppAuthorizationStatusResponse");
 
+export const AppAuthorizationRevocationResponse = z
+  .object({
+    success: z.literal(true),
+    message: z.string(),
+    resource_id: z.string().openapi({ description: "The client application id" }),
+    was_authorized: z
+      .boolean()
+      .openapi({ description: "Whether the caller had authorized the app before this request; false means there was nothing to revoke" }),
+    revoked_token_count: z
+      .number()
+      .int()
+      .nonnegative()
+      .openapi({ description: "How many of the app's unexpired access and refresh tokens issued on the caller's behalf this request revoked; tokens already revoked (e.g. by logout) are not counted" }),
+  })
+  .openapi("AppAuthorizationRevocationResponse");
+
 /** Metadata only: the secret itself is never retrievable after generation. */
 export const ClientSecretMetadataResponse = z
   .object({

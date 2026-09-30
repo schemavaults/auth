@@ -54,7 +54,7 @@ export const postOidcIntrospect = defineOperation({
   path: ROUTE,
   summary: "Token introspection",
   description:
-    "The OAuth 2.0 token introspection endpoint (RFC 7662), advertised as `introspection_endpoint`. A confidential client POSTs an access or refresh token issued by this server and learns whether it is currently active plus its metadata (scope, client, subject, expiry). Tokens minted for other resource-API audiences, tokens issued to a different client, expired and revoked tokens all yield `{ \"active\": false }`. " +
+    "The OAuth 2.0 token introspection endpoint (RFC 7662), advertised as `introspection_endpoint`. A confidential client POSTs an access or refresh token issued by this server and learns whether it is currently active plus its metadata (scope, client, subject, expiry). Tokens minted for other resource-API audiences, tokens issued to a different client, tokens of a client app the user has since de-authorized, expired and revoked tokens all yield `{ \"active\": false }`. " +
     "Public (PKCE-only) clients cannot introspect: without client authentication the endpoint would be open to token scanning. Responses carry `Cache-Control: no-store` and `Access-Control-Allow-Origin: *`.",
   tags: [API_TAGS.oidc],
   auth: publicAccess(
@@ -78,7 +78,7 @@ export const postOidcIntrospect = defineOperation({
       schema: OAuthErrorResponse,
       headers: wwwAuthenticateHeaders,
     },
-    500: { description: "The introspection request could not be processed", schema: OAuthErrorResponse },
+    500: { description: "The introspection request could not be processed (`server_error`)", schema: OAuthErrorResponse },
   },
   handler: (ctx) => handleOidcIntrospectRequest(toNextRequest(ctx.request)),
 });

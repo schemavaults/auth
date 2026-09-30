@@ -8,12 +8,17 @@ import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 
+/**
+ * Deletes the user's authorization of a client app. Returns whether an
+ * authorization existed. Does not revoke the app's outstanding tokens:
+ * callers pair it with `revokeTokensIssuedToClientApp`.
+ */
 export async function removeAppAuthorizationForUser(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   uid: string,
   app_id: AppId,
   debug: boolean = false
-): Promise<void> {
+): Promise<boolean> {
   if (app_id === getAuthServerAppId()) {
     throw new Error(
       `The auth app "${app_id}" is always authorized and cannot be de-authorized`,
@@ -39,10 +44,12 @@ export async function removeAppAuthorizationForUser(
   }
 
   try {
-    await db.deleteFrom('authorized_apps')
+    const result = await db.deleteFrom('authorized_apps')
       .where('uid', '=', uid)
       .where('app_id', '=', app_id)
-      .executeTakeFirstOrThrow();
+      .executeTakeFirst();
+    // false: the user had not authorized the app (nothing to delete)
+    return Number(result.numDeletedRows ?? 0) > 0;
   } catch (e: unknown) {
     console.error("[removeAppAuthorizationForUser] Failed to delete app authorization: ", e);
     throw new Error("Failed to delete app authorization!");

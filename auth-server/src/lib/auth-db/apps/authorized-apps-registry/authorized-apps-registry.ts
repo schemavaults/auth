@@ -26,7 +26,7 @@ export class AuthorizedAppsRegistry {
   public async removeAppAuthorizationForUser(
     uid: string,
     app_id: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const removeAppAuthorizationForUser = await import("./remove-app-authorization-for-user").then(mod => mod.default);
     return await removeAppAuthorizationForUser(this.db, uid, app_id, this.debug);
   }

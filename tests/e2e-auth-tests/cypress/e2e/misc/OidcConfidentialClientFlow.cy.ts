@@ -14,7 +14,11 @@
 //      session is logged out (jti revocation) and after the account is
 //      disabled (`tokens_valid_after` watermark), even though the token
 //      still decrypts and verifies. A security audit found that userinfo
-//      checked cryptographic validity only.
+//      checked cryptographic validity only;
+//   7. the user revoking the app's authorization (DELETE
+//      /api/apps/{client_id}/authorize) deactivates the app's tokens:
+//      introspection reports them inactive, the refresh grant refuses the
+//      refresh token and userinfo refuses the access token.
 // The `active: true` introspection path and POST userinfo were untested.
 
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
@@ -56,6 +60,14 @@ interface IntrospectionResponseBody {
   iss?: string;
   jti?: string;
   username?: string;
+}
+
+interface AppAuthorizationRevocationBody {
+  success: boolean;
+  message?: string;
+  resource_id?: string;
+  was_authorized?: boolean;
+  revoked_token_count?: number;
 }
 
 // Module marker: keeps this spec's top-level interfaces file-scoped.
@@ -407,6 +419,81 @@ describe("OIDC confidential client flow (management API only)", () => {
           },
         );
       });
+    });
+  });
+
+  it("revoking the app's authorization deactivates its tokens (introspection, refresh grant, userinfo)", () => {
+    createConfidentialClient().then((client) => {
+      mintSessionForFreshUser(client).then(
+        ({ credentials, access_token, refresh_token }) => {
+          introspect(client, access_token).then((response) => {
+            expect(response.body.active, "before revocation").to.eq(true);
+          });
+
+          cy.clearCookies();
+          cy.login_via_request(credentials.email, credentials.password).then(
+            (ok: boolean) => expect(ok, "user login").to.be.true,
+          );
+          cy.request<AppAuthorizationRevocationBody>({
+            method: "DELETE",
+            url: `/api/apps/${client.client_id}/authorize`,
+          }).then((response) => {
+            expect(response.status, "revoke authorization").to.eq(200);
+            expect(response.body.success).to.eq(true);
+            expect(response.body.resource_id).to.eq(client.client_id);
+            expect(response.body.was_authorized).to.eq(true);
+            // The access + refresh token minted above.
+            expect(response.body.revoked_token_count).to.eq(2);
+          });
+          cy.request({
+            method: "GET",
+            url: `/api/apps/${client.client_id}/check-authorization`,
+          }).then((response) => {
+            expect(response.body.authorized, "after revocation").to.eq(false);
+          });
+          // Idempotent: nothing left to revoke.
+          cy.request<AppAuthorizationRevocationBody>({
+            method: "DELETE",
+            url: `/api/apps/${client.client_id}/authorize`,
+          }).then((response) => {
+            expect(response.status, "repeated revocation").to.eq(200);
+            expect(response.body.was_authorized).to.eq(false);
+            expect(response.body.revoked_token_count).to.eq(0);
+          });
+          cy.clearCookies();
+
+          introspect(client, access_token).then((response) => {
+            expect(response.status).to.eq(200);
+            expect(response.body, "access token introspection").to.deep.equal({
+              active: false,
+            });
+          });
+          introspect(client, refresh_token).then((response) => {
+            expect(response.status).to.eq(200);
+            expect(response.body, "refresh token introspection").to.deep.equal({
+              active: false,
+            });
+          });
+          cy.request<TokenResponseBody>({
+            method: "POST",
+            url: "/api/oidc/token",
+            form: true,
+            body: {
+              grant_type: "refresh_token",
+              client_id: client.client_id,
+              client_secret: client.client_secret,
+              refresh_token,
+            },
+            headers: { Accept: "application/json" },
+            failOnStatusCode: false,
+          }).then((response) => {
+            expect(response.status, "refresh grant").to.eq(400);
+            expect(response.body.error).to.eq("invalid_grant");
+            expect(response.body).to.not.have.property("access_token");
+          });
+          expectRevokedAtUserinfo(access_token, "after authorization revocation");
+        },
+      );
     });
   });
 

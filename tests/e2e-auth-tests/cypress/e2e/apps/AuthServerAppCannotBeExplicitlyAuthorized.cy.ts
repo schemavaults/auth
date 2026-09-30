@@ -44,3 +44,44 @@ describe("POST /api/apps/:auth_server_app_id/authorize", () => {
     });
   });
 });
+
+// The same guard protects the revocation DELETE: the auth server's own app
+// can never be de-authorized, since signing in to it IS the user's session.
+describe("DELETE /api/apps/:auth_server_app_id/authorize", () => {
+  it("returns 403 because the auth server's own app cannot be de-authorized", () => {
+    const AUTH_SERVER_APP_ID = getAuthServerAppIdFromCypressEnv();
+
+    cy.generate_random_test_user_credentials().then((credentials) => {
+      cy.create_and_login_as_regular_user_via_request(credentials).then(
+        (loggedIn: boolean) => {
+          expect(loggedIn, "regular user login should succeed").to.be.true;
+
+          cy.request({
+            method: "DELETE",
+            url: `/api/apps/${AUTH_SERVER_APP_ID}/authorize`,
+            failOnStatusCode: false,
+          }).then((response) => {
+            expect(
+              response.status,
+              "de-authorizing the auth server's own app must be refused",
+            ).to.eq(403);
+            expect(response.body).to.have.property("success", false);
+            expect(
+              String(response.body.message ?? "").toLowerCase(),
+              "message should explain the auth app is always authorized",
+            ).to.include("always authorized");
+          });
+
+          // The session is untouched.
+          cy.request({
+            method: "GET",
+            url: `/api/apps/${AUTH_SERVER_APP_ID}/check-authorization`,
+          }).then((response) => {
+            expect(response.status).to.eq(200);
+            expect(response.body.authorized).to.eq(true);
+          });
+        },
+      );
+    });
+  });
+});

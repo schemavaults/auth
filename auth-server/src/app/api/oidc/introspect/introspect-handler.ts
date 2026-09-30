@@ -165,7 +165,7 @@ export async function handleOidcIntrospectRequest(request: NextRequest): Promise
       context: { client_app_id },
     });
     return oidcTokenErrorResponse(
-      "invalid_request",
+      "server_error",
       "Failed to process the introspection request.",
       500,
     );

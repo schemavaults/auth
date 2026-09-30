@@ -26,6 +26,7 @@ import {
   isTokenRevoked,
   type ServerlessDatabase,
 } from "@/lib/auth-db";
+import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import { getAuthServerUri } from "@/lib/auth_server_uri";
 
@@ -91,6 +92,9 @@ export interface IntrospectOidcTokenOptions {
  *    no per-user tokens_valid_after watermark (password reset, disabled
  *    account), and the
  *    account is not disabled
+ *  - the user still authorizes the client app: §2.2 defines `active` as
+ *    "has not been revoked by the resource owner", and the refresh grant
+ *    refuses a de-authorized app's tokens too
  */
 export async function introspectOidcToken({
   dbh,
@@ -170,6 +174,14 @@ export async function introspectOidcToken({
     decoded.uid,
   );
   if (isTokenIatRevoked(decoded.iat, tokens_valid_after)) {
+    return { active: false };
+  }
+  // Revoking the app's authorization (DELETE /api/apps/{app_id}/authorize)
+  // also revokes its tracked tokens by jti, but issued-token tracking is
+  // best-effort, so the consent itself is checked here as well. A service
+  // account's authorization row is created with it, so client_credentials
+  // tokens pass.
+  if (!(await isAppAuthorizedForUser(dbh.db, decoded.uid, client_app_id))) {
     return { active: false };
   }
 
