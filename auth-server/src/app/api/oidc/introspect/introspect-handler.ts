@@ -23,7 +23,7 @@ import {
   introspectOidcToken,
   type OidcIntrospectionCaller,
   type OidcIntrospectionResponseBody,
-} from "@/lib/oidc/introspect-token";
+} from "@/lib/oidc/introspection";
 
 const ROUTE = "/api/oidc/introspect";
 
