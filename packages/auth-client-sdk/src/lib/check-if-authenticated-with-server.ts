@@ -1,16 +1,23 @@
 import { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import { UserData, userDataSchema } from "@schemavaults/auth-common";
+import type { AppId } from "@schemavaults/app-definitions";
+import { createUserDataSchema, UserData } from "@schemavaults/auth-common";
 
 export interface ICheckIfAuthenticatedWithServerOpts {
   auth_server_uri: string;
   adapter: ISchemaVaultsAuthClientAdapter;
   client_app_id: string;
+  /**
+   * Prefixes a bare-uuid `sub` from an older auth server, which predates
+   * `UserData.sub` being the OIDC subject `<auth_server_app_id>|<uid>`.
+   */
+  auth_server_app_id: AppId;
 }
 
 export default async function checkIfAuthenticatedWithServer({
   auth_server_uri,
   adapter,
   client_app_id,
+  auth_server_app_id,
 }: ICheckIfAuthenticatedWithServerOpts): Promise<UserData | null> {
   const supportsHttpOnlyCookies: boolean =
     typeof adapter.doesSupportHttpOnlyRefreshToken === "function" &&
@@ -62,7 +69,9 @@ export default async function checkIfAuthenticatedWithServer({
         "Expected there to be a 'user' property in whoami API response!",
       );
     }
-    const parsed_user = await userDataSchema.safeParseAsync(body.user);
+    const parsed_user = await createUserDataSchema({
+      auth_server_app_id,
+    }).safeParseAsync(body.user);
     if (!parsed_user.success) {
       throw parsed_user.error;
     }

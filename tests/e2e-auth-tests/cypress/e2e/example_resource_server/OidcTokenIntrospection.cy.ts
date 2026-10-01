@@ -104,11 +104,15 @@ describe("OIDC token introspection endpoint (RFC 7662)", () => {
           "introspection_endpoint",
         ).to.equal(`${response.body.issuer}/api/oidc/introspect`);
         // "none" is deliberately absent: introspection requires a
-        // confidential client (RFC 7662 §2.1).
+        // confidential client or an API server (RFC 7662 §2.1).
         expect(
           response.body.introspection_endpoint_auth_methods_supported,
           "introspection_endpoint_auth_methods_supported",
-        ).to.deep.equal(["client_secret_basic", "client_secret_post"]);
+        ).to.deep.equal([
+          "client_secret_basic",
+          "client_secret_post",
+          "private_key_jwt",
+        ]);
       },
     );
   });
@@ -118,7 +122,7 @@ describe("OIDC token introspection endpoint (RFC 7662)", () => {
       (response) => {
         expectInvalidClient(
           response,
-          "Client authentication is required to introspect tokens (client_secret_basic or client_secret_post).",
+          "Client authentication is required to introspect tokens (client_secret_basic, client_secret_post or private_key_jwt).",
         );
       },
     );

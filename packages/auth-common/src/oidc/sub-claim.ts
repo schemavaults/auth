@@ -5,11 +5,12 @@ import { appIdSchema, type AppId } from "@schemavaults/app-definitions";
 // `<auth_server_app_id>|<uid>` (e.g. "schemavaults-auth|4f7c…"). The
 // prefix marks which auth deployment a subject came from, so RPs that
 // aggregate identities from several issuers / white-label deployments
-// can't collide or confuse them. It applies ONLY at the OIDC boundary —
-// the id_token, /api/oidc/userinfo, and RFC 7662 introspection, which
-// OIDC Core §5.3.2 requires to agree exactly — never inside the
-// platform's own encrypted access/refresh token payloads, whose
-// `sub === uid` invariant (payload_data.ts) resource servers rely on.
+// can't collide or confuse them. The id_token, /api/oidc/userinfo, and
+// RFC 7662 introspection report it (OIDC Core §5.3.2 requires them to
+// agree exactly), and `UserData.sub` carries it too (see
+// user_data/user_data.ts) — but never the platform's own encrypted
+// access/refresh token payloads, which keep `sub === uid` on the wire
+// (payload_data.ts) for resource servers on older SDKs.
 // The app id charset ([a-z0-9_-]) can never contain the delimiter, so
 // the encoding is unambiguous.
 

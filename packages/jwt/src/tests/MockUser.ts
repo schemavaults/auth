@@ -1,4 +1,5 @@
-import type { UserData } from "@schemavaults/auth-common";
+import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
+import { formatOidcSubClaim, type UserData } from "@schemavaults/auth-common";
 
 export class MockUser implements UserData {
   public uid: string;
@@ -17,8 +18,9 @@ export class MockUser implements UserData {
     this.disabled = false;
   }
 
+  // UserData.sub is the OIDC subject `<auth_server_app_id>|<uid>`.
   public get sub(): string {
-    return this.uid;
+    return formatOidcSubClaim(DEFAULT_AUTH_SERVER_APP_ID, this.uid);
   }
 }
 

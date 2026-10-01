@@ -17,8 +17,8 @@ import {
   RefreshTokenExpiryCookieName,
   type UserData,
   accessTokenDataSchema,
+  createUserDataSchema,
   refreshTokenDataSchema,
-  userDataSchema,
 } from "@schemavaults/auth-common";
 import { type ISchemaVaultsAuthClientAdapter } from "@schemavaults/auth-client-sdk";
 import {
@@ -678,8 +678,16 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     return;
   } // end of clearAuthTokens()
 
+  /**
+   * UserData schema that upgrades a bare-uuid `sub` with this adapter's auth
+   * server app id (browsers cannot read SCHEMAVAULTS_AUTH_SERVER_APP_ID).
+   */
+  private userDataSchema() {
+    return createUserDataSchema({ auth_server_app_id: this.auth_server_app_id });
+  }
+
   public storeUserData(userData: UserData): void {
-    const parsed = userDataSchema.safeParse(userData);
+    const parsed = this.userDataSchema().safeParse(userData);
     if (!parsed.success) {
       console.error(
         "Invalid user data to store with ReactAuthClientSdkAdapter: ",
@@ -698,7 +706,7 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     try {
       window.localStorage.setItem(
         AuthClientSdkAdapterLocalStorageKeys.USER_DATA,
-        JSON.stringify(userData),
+        JSON.stringify(data),
       );
     } catch (e: unknown) {
       console.error(e);
@@ -723,7 +731,9 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
         return null;
       }
       const user_data = JSON.parse(user_data_str);
-      const parsed = userDataSchema.safeParse(user_data);
+      // Cached by an older SDK, `sub` may still be the bare uid; parsing
+      // upgrades it to `<auth_server_app_id>|<uid>`.
+      const parsed = this.userDataSchema().safeParse(user_data);
       if (!parsed.success) {
         console.error(
           "Invalid user data loaded from window.localStorage: ",

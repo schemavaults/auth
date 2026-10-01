@@ -48,6 +48,46 @@ changes, and only for tokens whose header names one of the listed URLs
 (`resolveExpectedTokenAudience()`). Tokens with any other `aud` fail as
 before.
 
+## Introspecting access tokens (RFC 7662)
+
+Local verification (route guards, `decodeJWTsWithKeyManager`) proves a token is
+authentic and unexpired, but cannot see what happened after it was issued: a
+logout, a password reset, a disabled account, the user de-authorizing the client
+app, or the app being disconnected from your API server. `introspectToken()` asks
+the auth server, authenticating with your JWKS access key (`private_key_jwt`: a
+fresh single-use JWKS access assertion per call):
+
+```ts
+import { introspectToken, loadJwksAccessPrivateKey, getAuthServerUrl } from "@schemavaults/auth-server-sdk";
+
+const result = await introspectToken({
+  auth_server_url: getAuthServerUrl(),
+  api_server_id: process.env.SCHEMAVAULTS_API_SERVER_ID!,
+  jwks_access_private_key: await loadJwksAccessPrivateKey(),
+  token: accessToken,
+});
+if (result.active) {
+  result.uid;       // platform user id
+  result.sub;       // OIDC subject `<auth_server_app_id>|<uid>`
+  result.client_id; // the client app the token was issued to
+  result.scope;     // granted scope, if any
+}
+```
+
+Only access tokens minted for your API server (its id, or one of its RFC 8707
+resource URLs, as `aud`) can come back active; everything else is `{ active: false }`.
+A refused request (e.g. a JWKS access key that is not your active one) throws.
+Each call is a round trip to the auth server, so reserve it for requests where
+revocation must be honoured immediately.
+
+## `UserData.sub`
+
+`UserData.sub` is the OIDC subject `<auth_server_app_id>|<uid>` (the value the
+id_token, userinfo and introspection report); use `uid` for the platform user id.
+The access tokens themselves still carry the bare uid as `sub`, so older SDK
+versions keep verifying them; `userDataSchema` upgrades a bare-uuid `sub` with
+`SCHEMAVAULTS_AUTH_SERVER_APP_ID` (default `schemavaults-auth`).
+
 ## Auth resolvers for `@schemavaults/openapi-operations`
 
 Resource servers that declare their API with

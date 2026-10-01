@@ -37,9 +37,14 @@ export const OidcProviderMetadata = z
     token_endpoint_auth_methods_supported: z
       .array(z.string())
       .openapi({ example: ["none", "client_secret_basic", "client_secret_post"] }),
-    introspection_endpoint_auth_methods_supported: z
+    introspection_endpoint_auth_methods_supported: z.array(z.string()).openapi({
+      description:
+        "Client secrets for confidential client apps; `private_key_jwt` (a JWKS access assertion) for API servers introspecting the access tokens minted for them.",
+      example: ["client_secret_basic", "client_secret_post", "private_key_jwt"],
+    }),
+    introspection_endpoint_auth_signing_alg_values_supported: z
       .array(z.string())
-      .openapi({ example: ["client_secret_basic", "client_secret_post"] }),
+      .openapi({ example: ["RS256"] }),
     code_challenge_methods_supported: z.array(z.string()).openapi({ example: ["S256"] }),
     claims_supported: z.array(z.string()),
     authorization_response_iss_parameter_supported: z

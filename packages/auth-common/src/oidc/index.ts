@@ -35,6 +35,8 @@ export type {
 } from "./profile-claims";
 
 export { OIDC_ENDPOINT_PATHS, getOidcEndpointUrl } from "./endpoints";
+
+export { OAUTH_JWT_BEARER_CLIENT_ASSERTION_TYPE } from "./client-assertion";
 export type { OidcEndpointName } from "./endpoints";
 
 export {

@@ -40,6 +40,12 @@ export type OidcProviderMetadata = {
   scopes_supported: string[];
   token_endpoint_auth_methods_supported: string[];
   introspection_endpoint_auth_methods_supported: string[];
+  /**
+   * RFC 8414 §2: the signing algorithms accepted for `private_key_jwt`
+   * client assertions at the introspection endpoint (API servers sign
+   * theirs with their RS256 JWKS access key).
+   */
+  introspection_endpoint_auth_signing_alg_values_supported: string[];
   code_challenge_methods_supported: string[];
   claims_supported: string[];
   authorization_response_iss_parameter_supported: boolean;
@@ -115,11 +121,16 @@ export function buildOidcProviderMetadata(
     ],
     // RFC 7662 token introspection (advertised per RFC 8414 §2). "none"
     // is deliberately absent: §2.1 requires the endpoint to be
-    // authorized, so only confidential clients may introspect.
+    // authorized, so only confidential clients may introspect (with their
+    // client secret) and API servers may introspect the access tokens
+    // minted for them (`private_key_jwt`, signed with their JWKS access
+    // key; see client-assertion.ts).
     introspection_endpoint_auth_methods_supported: [
       "client_secret_basic",
       "client_secret_post",
+      "private_key_jwt",
     ],
+    introspection_endpoint_auth_signing_alg_values_supported: ["RS256"],
     code_challenge_methods_supported: ["S256"],
     claims_supported: [
       "sub",

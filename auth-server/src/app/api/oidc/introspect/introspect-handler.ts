@@ -1,13 +1,18 @@
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  apiServerIdSchema,
   appIdSchema,
   getAppEnvironment,
+  type ApiServerId,
   type AppId,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import { OAUTH_JWT_BEARER_CLIENT_ASSERTION_TYPE } from "@schemavaults/auth-common";
+import verifyJwksAccessAssertion from "@/app/api/jwks/[audience]/verifyJwksAccessAssertion";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import {
   authenticateTokenEndpointClient,
   parseBasicClientCredentials,
@@ -16,6 +21,7 @@ import {
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import {
   introspectOidcToken,
+  type OidcIntrospectionCaller,
   type OidcIntrospectionResponseBody,
 } from "@/lib/oidc/introspect-token";
 
@@ -38,15 +44,107 @@ export async function handleOidcIntrospectPreflight(): Promise<NextResponse> {
 }
 
 /**
+ * The issuer (`iss`) of a client assertion, read WITHOUT verifying it: it
+ * only names the API server whose JWKS access key the assertion is then
+ * verified against. Returns null when the assertion is not a JWT with a
+ * string `iss`.
+ */
+function getUnverifiedAssertionIssuer(assertion: string): string | null {
+  const parts: string[] = assertion.split(".");
+  if (parts.length !== 3 || !parts[1]) {
+    return null;
+  }
+  try {
+    const payload: unknown = JSON.parse(
+      Buffer.from(parts[1], "base64url").toString("utf8"),
+    );
+    if (
+      typeof payload === "object" &&
+      payload !== null &&
+      "iss" in payload &&
+      typeof payload.iss === "string"
+    ) {
+      return payload.iss;
+    }
+  } catch {
+    // Not a JWT.
+  }
+  return null;
+}
+
+function invalidClientResponse(error_description: string): NextResponse {
+  return oidcTokenErrorResponse("invalid_client", error_description, 401, {
+    "WWW-Authenticate": TOKEN_ENDPOINT_WWW_AUTHENTICATE,
+  });
+}
+
+type ClientAuthenticationOutcome =
+  | { ok: true; caller: OidcIntrospectionCaller }
+  | { ok: false; response: NextResponse };
+
+/**
+ * `private_key_jwt` (RFC 7523 §2.2) for API servers: the assertion is a
+ * JWKS access proof token (`createJwksAccessProofToken()` from
+ * @schemavaults/jwt) signed with the API server's JWKS access key — `iss` =
+ * `sub` = the API server id, `aud` = the auth server URL (the issuer),
+ * single-use `jti`, 60s lifetime. `client_id`, when sent, must name the same
+ * API server (RFC 7521 §4.2).
+ */
+async function authenticateApiServer(
+  dbh: ServerlessDatabase,
+  client_assertion: string,
+  raw_client_id: string | null,
+): Promise<ClientAuthenticationOutcome> {
+  const issuer: string | null = getUnverifiedAssertionIssuer(client_assertion);
+  const parsed_api_server_id = apiServerIdSchema.safeParse(issuer);
+  if (!parsed_api_server_id.success) {
+    return {
+      ok: false,
+      response: invalidClientResponse(
+        "The client assertion must be a JWT whose 'iss' is the API server id.",
+      ),
+    };
+  }
+  const api_server_id: ApiServerId = parsed_api_server_id.data;
+  if (raw_client_id !== null && raw_client_id !== api_server_id) {
+    return {
+      ok: false,
+      response: invalidClientResponse(
+        "The client assertion's issuer does not match the request's client_id.",
+      ),
+    };
+  }
+  // The auth server never holds a JWKS access key (its key management
+  // endpoints refuse it).
+  if (
+    api_server_id === getAuthServerAppId() ||
+    !(await verifyJwksAccessAssertion(client_assertion, api_server_id, dbh.db))
+  ) {
+    return {
+      ok: false,
+      response: invalidClientResponse("Invalid client assertion."),
+    };
+  }
+  return { ok: true, caller: { kind: "api_server", api_server_id } };
+}
+
+/**
  * The OAuth 2.0 token introspection endpoint (RFC 7662), advertised as
- * `introspection_endpoint` in the discovery document. A confidential
- * client (an app with a registered client secret) POSTs a token it was
- * issued by the OIDC surface — access or refresh — and learns whether
- * the token is currently active, plus its metadata when it is.
+ * `introspection_endpoint` in the discovery document. Two kinds of caller
+ * may introspect, and each sees only its own tokens:
  *
- * §2.1 requires the endpoint to be authorized: client authentication
- * uses the same client_secret_basic / client_secret_post machinery as
- * the token endpoint. Public (PKCE-only) clients have no credentials to
+ *  - a confidential client (an app with a registered client secret) POSTs
+ *    a token it was issued by the OIDC surface — access or refresh;
+ *  - an API server POSTs an access token minted for it, authenticating
+ *    with `private_key_jwt`: a JWKS access assertion signed with its JWKS
+ *    access key (see {@link authenticateApiServer}).
+ *
+ * The caller learns whether the token is currently active, plus its
+ * metadata when it is.
+ *
+ * §2.1 requires the endpoint to be authorized: client apps authenticate
+ * with the same client_secret_basic / client_secret_post machinery as the
+ * token endpoint. Public (PKCE-only) clients have no credentials to
  * authenticate with and are rejected — accepting anonymous callers
  * would open the endpoint to token scanning.
  *
@@ -92,6 +190,34 @@ export async function handleOidcIntrospectRequest(request: NextRequest): Promise
     );
   }
 
+  const client_assertion_type: string | null = param("client_assertion_type");
+  const client_assertion: string | null = param("client_assertion");
+  const uses_client_assertion: boolean =
+    client_assertion_type !== null || client_assertion !== null;
+
+  if (uses_client_assertion) {
+    // RFC 6749 §2.3: clients MUST NOT use more than one authentication
+    // method in each request.
+    if (basic_credentials || param("client_secret")) {
+      return oidcTokenErrorResponse(
+        "invalid_request",
+        "Multiple client authentication methods used; send either a client secret or a client assertion, not both.",
+      );
+    }
+    if (client_assertion_type !== OAUTH_JWT_BEARER_CLIENT_ASSERTION_TYPE) {
+      return oidcTokenErrorResponse(
+        "invalid_request",
+        `Unsupported 'client_assertion_type'; expected '${OAUTH_JWT_BEARER_CLIENT_ASSERTION_TYPE}'.`,
+      );
+    }
+    if (client_assertion === null) {
+      return oidcTokenErrorResponse(
+        "invalid_request",
+        "Missing 'client_assertion' parameter.",
+      );
+    }
+  }
+
   // client_secret_basic clients may identify themselves solely through
   // the Authorization header (RFC 6749 §2.3.1); fall back to it when
   // the form omits client_id. A request identifying no client at all is
@@ -99,55 +225,68 @@ export async function handleOidcIntrospectRequest(request: NextRequest): Promise
   // endpoint accepts no anonymous callers.
   const raw_client_id: string | null =
     param("client_id") ?? basic_credentials?.client_id ?? null;
-  if (raw_client_id === null) {
-    return oidcTokenErrorResponse(
-      "invalid_client",
-      "Client authentication is required to introspect tokens (client_secret_basic or client_secret_post).",
-      401,
-      { "WWW-Authenticate": TOKEN_ENDPOINT_WWW_AUTHENTICATE },
-    );
+
+  let client_app_id: AppId | null = null;
+  if (!uses_client_assertion) {
+    if (raw_client_id === null) {
+      return invalidClientResponse(
+        "Client authentication is required to introspect tokens (client_secret_basic, client_secret_post or private_key_jwt).",
+      );
+    }
+    const parsed_client_id = appIdSchema.safeParse(raw_client_id);
+    if (!parsed_client_id.success) {
+      return oidcTokenErrorResponse(
+        "invalid_request",
+        "Malformed 'client_id' parameter.",
+      );
+    }
+    client_app_id = parsed_client_id.data;
   }
-  const parsed_client_id = appIdSchema.safeParse(raw_client_id);
-  if (!parsed_client_id.success) {
-    return oidcTokenErrorResponse(
-      "invalid_request",
-      "Malformed 'client_id' parameter.",
-    );
-  }
-  const client_app_id: AppId = parsed_client_id.data;
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
   try {
-    const clientAuth = await authenticateTokenEndpointClient({
-      db: dbh.db,
-      client_app_id,
-      basic_credentials,
-      post_client_secret: param("client_secret"),
-    });
-    if (!clientAuth.ok) {
-      return oidcTokenErrorResponse(
-        clientAuth.error,
-        clientAuth.error_description,
-        clientAuth.status,
-        clientAuth.status === 401
-          ? { "WWW-Authenticate": TOKEN_ENDPOINT_WWW_AUTHENTICATE }
-          : {},
+    let caller: OidcIntrospectionCaller;
+    if (uses_client_assertion) {
+      const outcome = await authenticateApiServer(
+        dbh,
+        client_assertion!,
+        raw_client_id,
       );
-    }
-    if (!clientAuth.confidential) {
-      return oidcTokenErrorResponse(
-        "invalid_client",
-        "Token introspection requires a confidential client; register a client secret for this app.",
-        401,
-        { "WWW-Authenticate": TOKEN_ENDPOINT_WWW_AUTHENTICATE },
-      );
+      if (!outcome.ok) {
+        return outcome.response;
+      }
+      caller = outcome.caller;
+    } else {
+      const app_id: AppId = client_app_id!;
+      const clientAuth = await authenticateTokenEndpointClient({
+        db: dbh.db,
+        client_app_id: app_id,
+        basic_credentials,
+        post_client_secret: param("client_secret"),
+      });
+      if (!clientAuth.ok) {
+        return oidcTokenErrorResponse(
+          clientAuth.error,
+          clientAuth.error_description,
+          clientAuth.status,
+          clientAuth.status === 401
+            ? { "WWW-Authenticate": TOKEN_ENDPOINT_WWW_AUTHENTICATE }
+            : {},
+        );
+      }
+      if (!clientAuth.confidential) {
+        return invalidClientResponse(
+          "Token introspection requires a confidential client; register a client secret for this app.",
+        );
+      }
+      caller = { kind: "client_app", client_app_id: app_id };
     }
 
     const body: OidcIntrospectionResponseBody = await introspectOidcToken({
       dbh,
       token,
-      client_app_id,
+      caller,
       environment,
     });
     return NextResponse.json(body, {
@@ -162,7 +301,12 @@ export async function handleOidcIntrospectRequest(request: NextRequest): Promise
     await captureServerException(dbh.db, e, {
       op_name: "oidcIntrospect.POST",
       route: ROUTE,
-      context: { client_app_id },
+      context: {
+        client_id: raw_client_id,
+        client_authentication: uses_client_assertion
+          ? "private_key_jwt"
+          : "client_secret",
+      },
     });
     return oidcTokenErrorResponse(
       "server_error",

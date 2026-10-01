@@ -25,17 +25,40 @@ describe("customJwtPayloadToUserData", () => {
   };
 
   it("should extract only UserData fields from a CustomJWTPayload", () => {
-    const result = customJwtPayloadToUserData(fullPayload);
+    const result = customJwtPayloadToUserData(fullPayload, "schemavaults-auth");
 
     expect(result).toEqual({
       uid: fullPayload.uid,
-      sub: fullPayload.sub,
+      // The wire `sub` is the bare uid; UserData.sub is the OIDC subject.
+      sub: `schemavaults-auth|${fullPayload.uid}`,
       email: fullPayload.email,
       email_verified: fullPayload.email_verified,
       admin: fullPayload.admin,
       disabled: fullPayload.disabled,
       created_at: fullPayload.created_at,
     });
+  });
+
+  it("prefixes `sub` with the given auth server app id", () => {
+    expect(customJwtPayloadToUserData(fullPayload, "acme-corp-auth").sub).toBe(
+      `acme-corp-auth|${uid}`,
+    );
+  });
+
+  it("defaults the `sub` prefix from SCHEMAVAULTS_AUTH_SERVER_APP_ID", () => {
+    const original = process.env.SCHEMAVAULTS_AUTH_SERVER_APP_ID;
+    process.env.SCHEMAVAULTS_AUTH_SERVER_APP_ID = "white-label-auth";
+    try {
+      expect(customJwtPayloadToUserData(fullPayload).sub).toBe(
+        `white-label-auth|${uid}`,
+      );
+    } finally {
+      if (original === undefined) {
+        delete process.env.SCHEMAVAULTS_AUTH_SERVER_APP_ID;
+      } else {
+        process.env.SCHEMAVAULTS_AUTH_SERVER_APP_ID = original;
+      }
+    }
   });
 
   it("carries the service_account marker through, and only when set", () => {

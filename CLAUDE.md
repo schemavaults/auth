@@ -244,9 +244,9 @@ The sections below used to live in this file. Each now lives in a Claude Code sk
 | `white-label-branding` | `SCHEMAVAULTS_AUTH_SERVER_*` env vars, branding assets/copy, error pages, the owner organization, the auth server app id/URL, cookie domains |
 | `app-api-ownership` | who owns / can manage apps and API servers (`owner_type`, user-owned resources, `auth-server/src/lib/ownership/`), app/API list queries, the `/apps` and `/apis` pages, the Owner field of the create app / API server dialogs |
 | `mfa` | TOTP, passkeys, recovery codes, the login MFA challenge, the `/mfa` page |
-| `oidc-subject-claim` | the OIDC `sub` claim format on id_token / userinfo / introspection |
+| `oidc-subject-claim` | the OIDC `sub` claim format on id_token / userinfo / introspection, `UserData.sub` (OIDC form, lazily upgraded from a bare uuid) |
 | `plain-oauth2-grants` | authorization requests without `openid` (OAuth-only / MCP clients), scope handling at the authorize and token endpoints |
-| `oidc-confidential-clients` | client secrets, `client_secret_basic`/`_post`, explicit callback URL allowlists, `redirect_uri` validation |
+| `oidc-confidential-clients` | client secrets, `client_secret_basic`/`_post`, token introspection callers (apps by secret, API servers by `private_key_jwt`), explicit callback URL allowlists, `redirect_uri` validation |
 | `client-credentials-grant` | `grant_type=client_credentials` M2M tokens, per-app service accounts (`USERS.service_account_app_id`, the `service_account` token claim), the `/api/apps/[app_id]/service-account` management surface |
 | `dynamic-client-registration` | RFC 7591 `POST /api/oidc/register` (MCP clients), the `allow_dynamic_client_registration` setting, the ownerless `dynamic-client-registration` owner type, RFC 8707 resource-URL audiences (`allow_dynamic_clients` / `resource_url_match_mode` on API servers, `aud` = resource URL, `accepted_audiences` in the server SDK), the `dynamic_client_registration` E2E suite |
 | `client-sdk-token-flows` | `@schemavaults/auth-client-sdk` code/refresh exchange via `openid-client`, the token-endpoint extensions, the discovery document |

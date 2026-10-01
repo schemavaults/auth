@@ -22,6 +22,7 @@ interface DiscoveryDocument {
   scopes_supported: string[];
   token_endpoint_auth_methods_supported: string[];
   introspection_endpoint_auth_methods_supported: string[];
+  introspection_endpoint_auth_signing_alg_values_supported: string[];
   code_challenge_methods_supported: string[];
   claims_supported: string[];
   authorization_response_iss_parameter_supported: boolean;
@@ -84,7 +85,11 @@ describe("GET /api/oidc/openid-configuration", () => {
       expect(doc.introspection_endpoint_auth_methods_supported).to.include.members([
         "client_secret_basic",
         "client_secret_post",
+        "private_key_jwt",
       ]);
+      expect(
+        doc.introspection_endpoint_auth_signing_alg_values_supported,
+      ).to.deep.equal(["RS256"]);
       expect(doc.authorization_response_iss_parameter_supported).to.eq(true);
       // JAR is refused by the authorize endpoint, so both must be false.
       expect(doc.request_parameter_supported).to.eq(false);
