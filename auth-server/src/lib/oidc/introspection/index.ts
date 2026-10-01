@@ -1,10 +1,13 @@
 import "server-only";
 
 /**
- * RFC 7662 token introspection (`POST /api/oidc/introspect`), behind the
- * endpoint's client authentication:
+ * RFC 7662 token introspection (`POST /api/oidc/introspect`):
  *
- *   - introspect-oidc-token.ts: the entry point, chaining the steps below
+ *   - client-authentication/: who is asking — parse the request and verify
+ *     its client secret (client apps) or `private_key_jwt` assertion (API
+ *     servers)
+ *   - introspect-oidc-token.ts: what the caller learns, chaining the steps
+ *     below
  *   - caller-visibility.ts: which tokens each caller (client app / API
  *     server) may see — pure rules
  *   - decode-introspectable-token.ts: verify the token with the keyset the
@@ -13,6 +16,25 @@ import "server-only";
  *     connection checks
  *   - build-active-introspection-response.ts: the §2.2 metadata — pure
  */
+
+export {
+  authenticateApiServer,
+  authenticateClientApp,
+  authenticateIntrospectionCaller,
+  getUnverifiedAssertionIssuer,
+  invalidIntrospectionClient,
+  invalidIntrospectionRequest,
+  parseIntrospectionRequest,
+} from "./client-authentication";
+export type {
+  AuthenticateApiServerOptions,
+  AuthenticateClientAppOptions,
+  AuthenticateIntrospectionCallerResult,
+  IntrospectionClientCredentials,
+  IntrospectionRequestError,
+  ParsedIntrospectionRequest,
+  ParseIntrospectionRequestResult,
+} from "./client-authentication";
 
 export { introspectOidcToken } from "./introspect-oidc-token";
 export type { IntrospectOidcTokenOptions } from "./introspect-oidc-token";
