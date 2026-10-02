@@ -38,8 +38,13 @@ describe("buildOidcProviderMetadata", () => {
       "client_secret_basic",
       "client_secret_post",
     ]);
-    expect(md.introspection_endpoint_auth_methods_supported).not.toContain(
-      "none",
+    expect(md.introspection_endpoint_auth_methods_supported).toEqual([
+      "client_secret_basic",
+      "client_secret_post",
+      "private_key_jwt",
+    ]);
+    expect(md.introspection_endpoint_auth_signing_alg_values_supported).toEqual(
+      ["RS256"],
     );
     expect(md.authorization_response_iss_parameter_supported).toBe(true);
     expect(md.request_parameter_supported).toBe(false);

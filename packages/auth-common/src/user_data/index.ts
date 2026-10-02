@@ -1,7 +1,13 @@
 
 export {
   userDataSchema,
-  type UserData
+  createUserDataSchema,
+  isUserDataSubClaim,
+  toUserDataSubClaim,
+  uidFromUserDataSubClaim,
+  type UserData,
+  type CreateUserDataSchemaOptions,
+  type UserDataAuthServerAppIdSource,
 } from './user_data';
 
 export {

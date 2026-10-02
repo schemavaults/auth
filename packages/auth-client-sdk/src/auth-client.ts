@@ -776,6 +776,7 @@ export class SchemaVaultsAuthClient
       adapter: this.adapter,
       auth_server_uri: this.auth_server_uri,
       client_app_id: this.app_id,
+      auth_server_app_id: this._auth_server_app_id,
     });
   }
 
@@ -1462,6 +1463,7 @@ export class SchemaVaultsAuthClient
       adapter: this.adapter,
       auth_server_uri: this.auth_server_uri,
       client_app_id: this.app_id,
+      auth_server_app_id: this._auth_server_app_id,
     });
 
     // Sync the server's answer into the local user-data cache so claims that

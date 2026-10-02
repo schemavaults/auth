@@ -348,7 +348,8 @@ describe("OAuth2 client credentials grant (RFC 6749 §4.4)", () => {
       const access_token = expectAccessTokenOnlyResponse(response);
 
       // Tokens for resource-API audiences are verified by the resource
-      // server itself (introspection only covers the userinfo audience).
+      // server itself (which may also introspect them with its JWKS access
+      // key; see ApiServerTokenIntrospection.cy.ts).
       // The example resource server's route guard verifies the JWE
       // against the auth server's JWKS and its own API server id.
       cy.request<{

@@ -126,6 +126,49 @@ async function validateOneAudience(
   return "api-resource-server";
 }
 
+/**
+ * @description Whether `client_app_id` may currently hold access tokens for
+ * API server `api_server_id`: the same app-to-API connection rule the token
+ * endpoints apply when minting (dynamically registered clients pass when the
+ * API server allows dynamic clients). Token introspection uses it so that
+ * disconnecting an app from an API server deactivates the access tokens
+ * already issued to it for that server.
+ */
+export async function isClientAppPermittedForApiServer(
+  client_app_id: AppId,
+  api_server_id: ApiServerId,
+  dbh: ServerlessDatabase,
+  debug: boolean = shouldEnableDebug(),
+): Promise<boolean> {
+  const client_app: SchemaVaultsApp | null = await getApp(
+    dbh.db,
+    client_app_id,
+    debug,
+  );
+  if (!client_app) {
+    return false;
+  }
+  try {
+    const result: ValidateAudienceOutput = await validateOneAudience(
+      client_app,
+      {
+        kind: "api-server-id",
+        token_audience: api_server_id,
+        api_server_id,
+        api_server: null,
+      },
+      dbh,
+      debug,
+    );
+    return result === "api-resource-server";
+  } catch (e: unknown) {
+    if (e instanceof AppNotConnectedToApiServerError) {
+      return false;
+    }
+    throw e;
+  }
+}
+
 export type ValidatedAudiences =
   | { ok: true; resolved: readonly ResolvedTokenAudience[] }
   | { ok: false };

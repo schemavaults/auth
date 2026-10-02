@@ -72,6 +72,16 @@ export {
 // Check user organization membership from auth server (for resource servers)
 export { isUserInOrganization } from "./isUserInOrganization";
 
+// RFC 7662 token introspection of this API server's access tokens
+export {
+  introspectToken,
+  tokenIntrospectionResultSchema,
+} from "./introspectToken";
+export type {
+  IIntrospectTokenOptions,
+  TokenIntrospectionResult,
+} from "./introspectToken";
+
 // Re-export user data types
 export { userDataSchema } from "@schemavaults/auth-common";
 export type { UserData } from "@schemavaults/auth-common";

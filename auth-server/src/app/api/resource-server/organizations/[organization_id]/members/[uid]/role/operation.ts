@@ -1,5 +1,6 @@
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
 import {
+  formatOidcSubClaim,
   organizationIdSchema,
   organizationMembershipRoleTypeSchema,
   type UserData,
@@ -13,6 +14,7 @@ import verifyJwksAccessAssertion from "@/app/api/jwks/[audience]/verifyJwksAcces
 import SchemaVaultsApiServerRegistry from "@/lib/auth-db/apis";
 import getUserByUID from "@/lib/auth-db/users/get-user-by-uid";
 import captureServerException from "@/lib/captureServerException";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 
 const ROUTE = "/api/resource-server/organizations/{organization_id}/members/{uid}/role";
@@ -129,7 +131,10 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
         return ctx.json(200, { success: true, data: { organization_id, uid, role: null } });
       }
 
-      const userData: UserData = { ...userDoc, sub: userDoc.uid };
+      const userData: UserData = {
+        ...userDoc,
+        sub: formatOidcSubClaim(getAuthServerAppId(), userDoc.uid),
+      };
       const role = await isUserInOrganization(db, userData, organization_id);
 
       return ctx.json(200, {

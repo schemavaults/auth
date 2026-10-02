@@ -1,4 +1,5 @@
-import { type UserData, userDataSchema } from "@schemavaults/auth-common";
+import { formatOidcSubClaim, type UserData, userDataSchema } from "@schemavaults/auth-common";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type { UserRegistry } from "./user-registry";
 
 export async function loadUserData(uid: string, userRegistry: UserRegistry): Promise<UserData> {
@@ -9,7 +10,7 @@ export async function loadUserData(uid: string, userRegistry: UserRegistry): Pro
   // Make sure the user data is valid
   const parsed = await userDataSchema.safeParseAsync({
     uid: user.uid,
-    sub: user.uid,
+    sub: formatOidcSubClaim(getAuthServerAppId(), user.uid),
     email: user.email,
     email_verified: user.email_verified ?? false,
     created_at: user.created_at,

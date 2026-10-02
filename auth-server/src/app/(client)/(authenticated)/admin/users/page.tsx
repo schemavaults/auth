@@ -8,13 +8,14 @@ import {
 } from "@/lib/withAdminRouteGuard";
 import { UserRegistry, type UserDocument } from "@/lib/auth-db";
 import type { ServerRuntime } from "next";
-import type { UserData } from "@schemavaults/auth-common";
+import { formatOidcSubClaim, type UserData } from "@schemavaults/auth-common";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { connection } from "next/server";
 
 function userDocumentToUserData(doc: UserDocument): UserData {
   return {
     uid: doc.uid,
-    sub: doc.uid,
+    sub: formatOidcSubClaim(getAuthServerAppId(), doc.uid),
     email: doc.email,
     email_verified: doc.email_verified,
     admin: doc.admin,

@@ -1,7 +1,7 @@
 import "server-only";
 import type { ServerRuntime } from "next";
 import { apiRouteHandlers } from "@/lib/api/app";
-import { handleOidcIntrospectPreflight } from "./introspect-handler";
+import { handleOidcIntrospectPreflight } from "./cors";
 import { postOidcIntrospect } from "./operation";
 
 // POST, OPTIONS /api/oidc/introspect

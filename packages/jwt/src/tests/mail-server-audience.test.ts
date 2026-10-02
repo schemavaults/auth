@@ -44,7 +44,8 @@ async function isGenerateAndDecodeTokenForMailServerSuccess(
   });
 
   expect(decoded.uid).toBe(user.uid);
-  expect(decoded.sub).toBe(user.sub);
+  // The token payload keeps the bare uid as `sub` on the wire.
+  expect(decoded.sub).toBe(user.uid);
   expect(decoded.aud).toBe(audience);
   expect(decoded.email).toBe(user.email);
   expect(decoded.admin).toBe(user.admin);

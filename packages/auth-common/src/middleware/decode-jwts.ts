@@ -1,7 +1,7 @@
 import type { PotentiallyValidTokenSource } from "./token-source";
 import type { AuthTokenTypes } from "@/token-data";
 import type { DecodeTokenFn } from "./decode-token-type";
-import type { UserData } from "@/user_data";
+import { uidFromUserDataSubClaim, type UserData } from "@/user_data";
 
 export interface IDecodeSeveralJwtsInputOptions<TDecoded = UserData> {
   token_sources: readonly PotentiallyValidTokenSource[];
@@ -130,8 +130,10 @@ export async function decodeJWTs<TDecoded = UserData>(
       const user: UserData = getUserData(decoded);
       uids_set.add(user.uid);
       subs_set.add(user.sub);
-      if (user.uid !== user.sub) {
-        throw new Error("uid not equal to sub");
+      // `sub` is the OIDC form `<auth_server_app_id>|<uid>` (or, from an
+      // older decoder, the bare uid); either way it must name the uid.
+      if (uidFromUserDataSubClaim(user.sub) !== user.uid) {
+        throw new Error("sub does not name the uid");
       }
       emails_set.add(user.email);
     }

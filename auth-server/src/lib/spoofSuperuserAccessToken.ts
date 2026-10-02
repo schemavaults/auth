@@ -5,7 +5,8 @@ import { type I_JWT_Keys, JWT_Factory } from "@schemavaults/jwt";
 import { AuthServerJwtKeysManager } from "@/lib/AuthServerJwtKeysManager";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { type AccessToken } from "@schemavaults/auth-common";
+import { type AccessToken, formatOidcSubClaim } from "@schemavaults/auth-common";
+import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import spoofedSuperuserEmail from "@/lib/config/spoofed-superuser-email";
 import type Redis from "ioredis";
@@ -43,7 +44,7 @@ export default async function spoofSuperuserAccessToken(
     user: {
       email: spoofed_email,
       email_verified: false,
-      sub: fakeSuperuserUid,
+      sub: formatOidcSubClaim(getAuthServerAppId(), fakeSuperuserUid),
       uid: fakeSuperuserUid,
       admin: true,
       created_at: Date.now(),
