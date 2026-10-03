@@ -25,4 +25,5 @@ export {
   insertClientError,
   deleteClientErrorById,
   deleteClientErrorsBefore,
+  sumClientErrorSizeBytes,
 } from "./write-client-errors";

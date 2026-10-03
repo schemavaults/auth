@@ -23,6 +23,8 @@ export interface ClientErrorsTable {
   /** The signed-in user as the client reported it (not verified). */
   reported_uid: string | null;
   context: Record<string, unknown> | null;
+  /** Size of the row's contents in bytes (see lib/client-errors/row-size.ts). */
+  size_bytes: number;
 }
 
 export type ClientErrorRow = Selectable<ClientErrorsTable>;

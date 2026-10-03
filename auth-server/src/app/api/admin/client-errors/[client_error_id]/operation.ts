@@ -11,6 +11,7 @@ import {
 import { API_TAGS } from "@/lib/api/tags";
 import { deleteClientErrorById, getClientErrorById, type ClientErrorRow } from "@/lib/auth-db/client-errors";
 import captureServerException from "@/lib/captureServerException";
+import { forgetStoredClientErrorBytes } from "@/lib/client-errors/intake-policy";
 
 const ROUTE = "/api/admin/client-errors/{client_error_id}";
 
@@ -82,6 +83,7 @@ export const deleteClientError = defineOperation({
     try {
       const deleted = await deleteClientErrorById(db, client_error_id);
       if (!deleted) return ctx.json(404, { success: false, message: "Client error not found" });
+      await forgetStoredClientErrorBytes(ctx.context.redis.client);
     } catch (e: unknown) {
       await captureServerException(db, e, {
         op_name: "DELETE_client_error_by_id_handler.deleteClientErrorById",

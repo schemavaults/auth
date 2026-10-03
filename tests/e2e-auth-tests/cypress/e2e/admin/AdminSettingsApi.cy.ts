@@ -64,6 +64,9 @@ describe("Admin settings API", () => {
         "mail_server_api_id",
         "spoofed_superuser_email",
         "service_account_email_domain",
+        "accept_client_error_reports",
+        "client_error_reports_max_storage_mb",
+        "client_error_reports_retention_days",
       ]) {
         expect(keys, `settings include ${expected}`).to.include(expected);
       }
@@ -71,6 +74,7 @@ describe("Admin settings API", () => {
         expect(setting.valueType, `${setting.key} valueType`).to.be.oneOf([
           "boolean",
           "string",
+          "number",
         ]);
         expect(typeof setting.value, `${setting.key} value type`).to.eq(
           setting.valueType,

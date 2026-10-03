@@ -89,7 +89,11 @@ the app environment and the signed-in user's uid. Reports are sent without
 credentials as `text/plain` JSON (a CORS simple request, so no preflight) and
 are only accepted from origins registered for the app. The SDK reports an
 error once, at most once a minute for the same error, at most 25 times per
-client instance, and backs off when the server rate limits it.
+client instance, and backs off for `Retry-After` when the server rate limits
+it (429) or its report storage is full (503). After a 403 or 404 (reporting
+turned off by the auth server's administrators, an origin not registered for
+the app, an unknown app) or three network failures in a row, the client stops
+reporting.
 
 Apps can report their own errors through the same channel:
 

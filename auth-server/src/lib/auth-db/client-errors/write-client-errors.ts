@@ -25,3 +25,12 @@ export async function deleteClientErrorsBefore(db: Db, before_ms: number): Promi
     .executeTakeFirst();
   return Number(result.numDeletedRows ?? 0);
 }
+
+/** Total `size_bytes` of the stored reports (what the storage limit is checked against). */
+export async function sumClientErrorSizeBytes(db: Db): Promise<number> {
+  const row = await db
+    .selectFrom("client_errors")
+    .select((eb) => eb.fn.coalesce(eb.fn.sum<string | number>("size_bytes"), eb.lit(0)).as("total"))
+    .executeTakeFirst();
+  return Number(row?.total ?? 0);
+}

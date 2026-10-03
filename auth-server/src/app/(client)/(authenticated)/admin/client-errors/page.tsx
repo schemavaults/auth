@@ -15,6 +15,11 @@ import {
   parseClientErrorPageFilters,
 } from "@/lib/client-errors/client-error-page-filters";
 import type { ClientErrorsSnapshot } from "@/components/ClientErrorsDashboard";
+import {
+  loadClientErrorStorageStatus,
+  purgeExpiredClientErrors,
+} from "@/lib/client-errors/intake-policy";
+import { RedisCache } from "@/lib/redis";
 import { connection } from "next/server";
 
 async function PreloadedAdminClientErrorsPage(
@@ -35,13 +40,19 @@ async function PreloadedAdminClientErrorsPage(
     q: filters.q ?? undefined,
   };
 
-  const [stats, page] = await Promise.all([
+  await using redis = RedisCache.createConnection();
+  // Apply the retention period first (at most hourly) so the view never shows expired reports.
+  const settings = await loadClientErrorStorageStatus(dbh.db, redis.client);
+  const purged: number | null = await purgeExpiredClientErrors(dbh.db, redis.client, settings.retention_days, fetched_at);
+
+  const [stats, page, storage] = await Promise.all([
     getClientErrorStats(dbh.db, queryFilters, fetched_at),
     listClientErrors(dbh.db, {
       ...queryFilters,
       limit: CLIENT_ERRORS_PAGE_SIZE,
       offset: (filters.page - 1) * CLIENT_ERRORS_PAGE_SIZE,
     }),
+    purged ? loadClientErrorStorageStatus(dbh.db, redis.client) : Promise.resolve(settings),
   ]);
 
   const snapshot: ClientErrorsSnapshot = {
@@ -49,6 +60,7 @@ async function PreloadedAdminClientErrorsPage(
     stats,
     errors: page.errors,
     total: page.total,
+    storage,
     fetched_at,
   };
 

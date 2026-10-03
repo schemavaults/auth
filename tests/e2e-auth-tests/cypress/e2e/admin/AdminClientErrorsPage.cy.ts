@@ -70,6 +70,8 @@ describe("Admin Client Errors Pages", () => {
         cy.visit(`/admin/client-errors?range=24h&q=${encodeURIComponent(message)}`);
         cy.wait_for_page_hydration();
         cy.get('[data-testid="client-errors-dashboard"]').should("exist");
+        cy.get('[data-testid="client-errors-intake-status"]').should("contain.text", "Accepting reports");
+        cy.get('[data-testid="client-errors-storage-meter"]').should("exist");
         cy.get('[data-testid="client-errors-stat-errors"]').should("contain.text", "1");
         cy.get('[data-testid="client-errors-top-groups"]').should("contain.text", message);
         cy.get('[data-testid="client-errors-search"]').should("have.value", message);

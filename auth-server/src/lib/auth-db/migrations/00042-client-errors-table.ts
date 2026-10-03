@@ -11,6 +11,9 @@
 //   lib/client-errors/fingerprint.ts); the stats queries group on it.
 // - reported_uid is whatever user the client says was signed in. It is not
 //   verified, so it is TEXT and not a foreign key to USERS.
+// - size_bytes is the size of the row's contents, computed at insert
+//   (lib/client-errors/row-size.ts); their sum is checked against the
+//   client_error_reports_max_storage_mb server setting.
 
 import type { Kysely } from "@schemavaults/dbh";
 import { sql } from "@/sql";
@@ -34,7 +37,8 @@ export async function up(db: Kysely<any>): Promise<void> {
       origin TEXT,
       user_agent TEXT,
       reported_uid TEXT,
-      context JSONB
+      context JSONB,
+      size_bytes INTEGER NOT NULL DEFAULT 0
     );
   `.execute(db);
 

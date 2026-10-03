@@ -28,6 +28,7 @@ export type ClientErrorReportSkipReason =
   | "duplicate"
   | "session_limit"
   | "backoff"
+  | "stopped"
   | "failed";
 
 export type ClientErrorReportOutcome =
@@ -62,7 +63,13 @@ function defaultPageUrl(): string | undefined {
  *   once per {@link ClientErrorReporter.DEDUPE_WINDOW_MS};
  * - at most {@link ClientErrorReporter.MAX_REPORTS} reports leave one
  *   reporter (one page load, usually);
- * - after a 429 nothing is sent until `Retry-After` has passed.
+ * - after a 429 (rate limited) or a 503 (the server's report storage is
+ *   full) nothing is sent until `Retry-After` has passed;
+ * - after a 403 or 404 (reporting disabled on the server, an origin not
+ *   registered for the app, an unknown app) or
+ *   {@link ClientErrorReporter.MAX_CONSECUTIVE_FAILURES} network failures in
+ *   a row (a refusal without CORS headers reads as one), nothing more is
+ *   sent by this reporter.
  *
  * Reports are sent as `text/plain` JSON without credentials: a CORS simple
  * request, so the browser sends no preflight, and `keepalive` so a report
@@ -73,12 +80,18 @@ export class ClientErrorReporter {
   public static readonly DEDUPE_WINDOW_MS: number = 60_000;
   /** Backoff when a 429 carries no usable `Retry-After`. */
   public static readonly DEFAULT_BACKOFF_MS: number = 60_000;
+  /** Backoff when a 503 (storage full) carries no usable `Retry-After`. */
+  public static readonly DEFAULT_UNAVAILABLE_BACKOFF_MS: number = 60 * 60_000;
+  /** Network failures in a row after which a reporter stops sending. */
+  public static readonly MAX_CONSECUTIVE_FAILURES: number = 3;
 
   private readonly opts: ClientErrorReporterOptions;
   private readonly reported: WeakSet<object> = new WeakSet<object>();
   private readonly lastSentAt: Map<string, number> = new Map<string, number>();
   private sentCount: number = 0;
   private backoffUntil: number = 0;
+  private consecutiveFailures: number = 0;
+  private stopped: boolean = false;
 
   public constructor(opts: ClientErrorReporterOptions) {
     this.opts = opts;
@@ -86,6 +99,11 @@ export class ClientErrorReporter {
 
   public get enabled(): boolean {
     return !this.opts.disabled;
+  }
+
+  /** Whether the server refused reports for good (see the class docs); nothing more is sent. */
+  public get isStopped(): boolean {
+    return this.stopped;
   }
 
   private now(): number {
@@ -138,6 +156,10 @@ export class ClientErrorReporter {
       return { sent: false, reason: "disabled" };
     }
 
+    if (this.stopped) {
+      return { sent: false, reason: "stopped" };
+    }
+
     if (this.markReported(error)) {
       return { sent: false, reason: "already_reported" };
     }
@@ -172,21 +194,35 @@ export class ClientErrorReporter {
     this.lastSentAt.set(dedupeKey, now);
     this.sentCount += 1;
 
-    const response: Response = await this.opts.adapter.fetch(this.endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=UTF-8" },
-      body: JSON.stringify(report),
-      credentials: "omit",
-      keepalive: true,
-    });
+    let response: Response;
+    try {
+      response = await this.opts.adapter.fetch(this.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        body: JSON.stringify(report),
+        credentials: "omit",
+        keepalive: true,
+      });
+    } catch (e: unknown) {
+      this.consecutiveFailures += 1;
+      if (this.consecutiveFailures >= ClientErrorReporter.MAX_CONSECUTIVE_FAILURES) {
+        this.stopped = true;
+      }
+      throw e;
+    }
+    this.consecutiveFailures = 0;
 
-    if (response.status === 429) {
+    if (response.status === 403 || response.status === 404) {
+      this.stopped = true;
+    } else if (response.status === 429 || response.status === 503) {
       const retryAfterSeconds: number = Number.parseInt(response.headers.get("Retry-After") ?? "", 10);
       this.backoffUntil =
         now +
         (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
           ? retryAfterSeconds * 1000
-          : ClientErrorReporter.DEFAULT_BACKOFF_MS);
+          : response.status === 429
+            ? ClientErrorReporter.DEFAULT_BACKOFF_MS
+            : ClientErrorReporter.DEFAULT_UNAVAILABLE_BACKOFF_MS);
     }
     if (this.opts.debug && !response.ok) {
       console.warn(

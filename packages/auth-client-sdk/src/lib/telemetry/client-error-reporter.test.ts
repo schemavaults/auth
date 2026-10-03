@@ -109,6 +109,52 @@ describe("ClientErrorReporter", () => {
     expect(requests).toHaveLength(2);
   });
 
+  test("stops for good after a 403 or 404", async () => {
+    for (const status of [403, 404]) {
+      const { reporter, requests, advance } = createReporter({}, () => new Response(null, { status }));
+      expect(await reporter.send(new Error("a"))).toEqual({ sent: true, status });
+      expect(reporter.isStopped).toBe(true);
+      advance(24 * 60 * 60 * 1000);
+      expect(await reporter.send(new Error("b"))).toEqual({ sent: false, reason: "stopped" });
+      expect(requests).toHaveLength(1);
+    }
+  });
+
+  test("backs off after a 503 (storage full), for Retry-After or an hour", async () => {
+    const withHeader = createReporter({}, () => new Response(null, { status: 503, headers: { "Retry-After": "120" } }));
+    await withHeader.reporter.send(new Error("a"));
+    withHeader.advance(119_000);
+    expect(await withHeader.reporter.send(new Error("b"))).toEqual({ sent: false, reason: "backoff" });
+    withHeader.advance(1_000);
+    expect((await withHeader.reporter.send(new Error("c"))).sent).toBe(true);
+
+    const withoutHeader = createReporter({}, () => new Response(null, { status: 503 }));
+    await withoutHeader.reporter.send(new Error("a"));
+    withoutHeader.advance(ClientErrorReporter.DEFAULT_UNAVAILABLE_BACKOFF_MS - 1);
+    expect(await withoutHeader.reporter.send(new Error("b"))).toEqual({ sent: false, reason: "backoff" });
+    expect(withoutHeader.reporter.isStopped).toBe(false);
+  });
+
+  test("stops after consecutive network failures, which a success resets", async () => {
+    let fail = true;
+    const { reporter, requests } = createReporter({}, () => {
+      if (fail) throw new TypeError("Failed to fetch");
+      return new Response(null, { status: 202 });
+    });
+    for (let i = 1; i < ClientErrorReporter.MAX_CONSECUTIVE_FAILURES; i++) {
+      expect(await reporter.send(new Error(`fail ${i}`))).toEqual({ sent: false, reason: "failed" });
+    }
+    fail = false;
+    expect((await reporter.send(new Error("ok"))).sent).toBe(true);
+    fail = true;
+    for (let i = 1; i <= ClientErrorReporter.MAX_CONSECUTIVE_FAILURES; i++) {
+      await reporter.send(new Error(`fail again ${i}`));
+    }
+    expect(reporter.isStopped).toBe(true);
+    expect(await reporter.send(new Error("after"))).toEqual({ sent: false, reason: "stopped" });
+    expect(requests).toHaveLength(2 * ClientErrorReporter.MAX_CONSECUTIVE_FAILURES);
+  });
+
   test("never throws when the request or the uid lookup fails", async () => {
     const { reporter } = createReporter(
       {

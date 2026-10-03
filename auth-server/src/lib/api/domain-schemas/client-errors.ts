@@ -50,8 +50,21 @@ export const AdminClientError = z
     user_agent: z.string().nullable().openapi({ description: "The report request's `User-Agent` header" }),
     reported_uid: z.string().nullable().openapi({ description: "The signed-in user as the client reported it (not verified)" }),
     context: z.record(z.string(), z.unknown()).nullable(),
+    size_bytes: z.number().int().nonnegative().openapi({ description: "Size of the report's contents, counted against the storage limit" }),
   })
   .openapi("AdminClientError");
+
+/** The intake's settings and storage use. */
+export const AdminClientErrorStorage = z
+  .object({
+    accepting_reports: z.boolean().openapi({ description: "The `accept_client_error_reports` server setting" }),
+    used_bytes: z.number().int().nonnegative().openapi({ description: "Total size of the stored reports" }),
+    max_bytes: z.number().int().positive().openapi({ description: "The `client_error_reports_max_storage_mb` server setting, in bytes" }),
+    retention_days: z.number().int().nonnegative().openapi({
+      description: "The `client_error_reports_retention_days` server setting (0: reports are kept until deleted)",
+    }),
+  })
+  .openapi("AdminClientErrorStorage");
 
 export const AdminClientErrorStats = z
   .object({
@@ -102,6 +115,7 @@ export const AdminClientErrorStats = z
       }),
     ),
     by_operation: z.array(z.object({ operation: z.string().nullable(), count: z.number().int().nonnegative() })),
+    storage: AdminClientErrorStorage.openapi({ description: "The intake's settings and storage use (not filtered)" }),
   })
   .openapi("AdminClientErrorStats");
 

@@ -15,6 +15,7 @@ import {
   type ClientErrorsPage,
 } from "@/lib/auth-db/client-errors";
 import captureServerException from "@/lib/captureServerException";
+import { forgetStoredClientErrorBytes } from "@/lib/client-errors/intake-policy";
 import { CLIENT_ERRORS_DEFAULT_LIMIT } from "@/lib/client-errors/client-error-page-filters";
 
 const ROUTE = "/api/admin/client-errors";
@@ -115,6 +116,7 @@ export const purgeClientErrorsBefore = defineOperation({
 
     try {
       const deleted_count = await deleteClientErrorsBefore(db, before_ms);
+      if (deleted_count > 0) await forgetStoredClientErrorBytes(ctx.context.redis.client);
       return ctx.json(200, {
         success: true,
         message: `Deleted ${deleted_count} client error${deleted_count === 1 ? "" : "s"} received before ${new Date(before_ms).toISOString()}.`,

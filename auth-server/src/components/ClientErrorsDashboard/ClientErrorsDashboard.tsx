@@ -11,6 +11,7 @@ import {
 } from "@/lib/client-errors/client-error-page-filters";
 import { ClientErrorBreakdowns } from "./ClientErrorBreakdowns";
 import { ClientErrorStatCards } from "./ClientErrorStatCards";
+import { ClientErrorStorageCard } from "./ClientErrorStorageCard";
 import { ClientErrorsFilterBar } from "./ClientErrorsFilterBar";
 import { ClientErrorsTable } from "./ClientErrorsTable";
 import { ClientErrorTimeline } from "./ClientErrorTimeline";
@@ -87,6 +88,8 @@ export function ClientErrorsDashboard({ snapshot }: ClientErrorsDashboardProps):
       </Card>
 
       <ClientErrorStatCards totals={stats.totals} ranged={filters.range !== "all"} loading={false} />
+
+      <ClientErrorStorageCard storage={snapshot.storage} />
 
       <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
         <ClientErrorTimeline stats={stats} loading={loading} />

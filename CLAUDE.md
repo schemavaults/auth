@@ -177,13 +177,20 @@ lifecycle errors, see `src/lib/telemetry/expected-errors.ts`) and whatever apps 
 `POST /api/client-errors/{client_app_id}` (`auth-server/src/app/api/client-errors/[client_app_id]/`). The
 `disable_telemetry` constructor option (threaded through `<SchemaVaultsAuthProvider disable_telemetry>`) turns
 all of it off. The SDK's `ClientErrorReporter` sends `text/plain` JSON without credentials and with `keepalive`
-(a CORS simple request: no preflight), dedupes, caps reports per client and backs off on 429. Server side,
-`gate.ts` applies the per-client-app CORS policy before anything is stored (unknown app 404, unregistered origin
-403, body > 64 KiB 413, per-IP rate limit `CLIENT_ERROR_REPORT_RATE_LIMIT`), then the operation stores a row in
-`CLIENT_ERRORS` (migration 00042, `src/lib/auth-db/client-errors/`) with a fingerprint grouping equal errors
-(`src/lib/client-errors/fingerprint.ts`) and the page URL stripped of its query string. The report shape and size
+(a CORS simple request: no preflight), dedupes, caps reports per client, backs off on 429/503 (`Retry-After`,
+exposed via `Access-Control-Expose-Headers`) and stops after a 403/404 or 3 network failures in a row. Server side,
+`gate.ts` runs cheap checks before database work: body > 64 KiB 413, the `accept_client_error_reports` server
+setting (off: 403 `client_error_reporting_disabled`, `Access-Control-Allow-Origin: *`), per-IP rate limit
+`CLIENT_ERROR_REPORT_RATE_LIMIT` (20/min), then the per-client-app CORS policy (unknown app 404, unregistered origin
+403), the per-app quota `CLIENT_ERROR_REPORT_APP_RATE_LIMIT` (1000/hour, key source `client_app_id`) and the storage
+cap (`client_error_reports_max_storage_mb`: 503 `client_error_storage_full` once the stored reports' `size_bytes`
+sum reaches it; the total is cached in Redis by `src/lib/client-errors/intake-policy.ts`, and every deletion must
+call `forgetStoredClientErrorBytes()`). The operation stores a row in `CLIENT_ERRORS` (migration 00042,
+`src/lib/auth-db/client-errors/`) with a fingerprint grouping equal errors (`src/lib/client-errors/fingerprint.ts`),
+the page URL stripped of its query string and its `size_bytes` (`row-size.ts`), and at most hourly deletes reports
+older than `client_error_reports_retention_days` (also checked when the dashboard loads). The report shape and size
 limits (`clientErrorReportSchema`, `CLIENT_ERROR_REPORT_LIMITS`) live in `@schemavaults/auth-common` so the SDK and
-the server agree. Admins browse reports and summary statistics on `/admin/client-errors` (filters kept in the URL,
+the server agree. Admins browse reports, summary statistics and the intake's storage use on `/admin/client-errors` (filters kept in the URL,
 `src/lib/client-errors/client-error-page-filters.ts`; components in `src/components/ClientErrorsDashboard/`) and
 `/admin/client-errors/[client_error_id]`, backed by `GET /api/admin/client-errors`, `.../stats`,
 `.../{client_error_id}` and the matching `DELETE`s. E2E: `api_contract/ClientErrorReportsApi.cy.ts`,

@@ -12,7 +12,11 @@
 // - the OPTIONS preflight follows the same per-app origin policy;
 // - the stored page URL keeps no query string or fragment;
 // - the admin endpoints list, summarize, fetch and delete reports, and are
-//   refused without an administrator session.
+//   refused without an administrator session;
+// - the `accept_client_error_reports` server setting turns the intake off
+//   (403 `client_error_reporting_disabled`, readable by any origin), and
+//   `client_error_reports_max_storage_mb` caps the stored reports (503
+//   `client_error_storage_full` with an exposed `Retry-After`).
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 
 const AUTH_APP_ID: string = getAuthServerAppIdFromCypressEnv();
@@ -62,6 +66,13 @@ function sendReport(
   });
 }
 
+function setSetting(key: string, value: unknown): Cypress.Chainable<Cypress.Response<unknown>> {
+  return cy.request({ method: "PATCH", url: `/api/admin/settings/${key}`, body: { value } }).then((response) => {
+    expect(response.status, `PATCH ${key}`).to.eq(200);
+    return response;
+  });
+}
+
 function findReports(q: string): Cypress.Chainable<AdminClientError[]> {
   return cy
     .request<{ data: { errors: AdminClientError[]; total: number } }>(
@@ -82,6 +93,15 @@ describe("Client error reports API", () => {
     );
   });
 
+  afterEach(() => {
+    // Put the intake settings back to their defaults whatever a test did.
+    cy.create_and_login_as_superuser_via_request().then((ok: boolean) => {
+      expect(ok, "superuser login").to.be.true;
+      setSetting("accept_client_error_reports", true);
+      setSetting("client_error_reports_max_storage_mb", 100);
+    });
+  });
+
   it("accepts a text/plain report from a registered origin, with CORS headers, and stores it", () => {
     const message = unique("Token exchange failed");
     sendReport({
@@ -96,6 +116,7 @@ describe("Client error reports API", () => {
     }).then((response) => {
       expect(response.status).to.eq(202);
       expect(response.headers["access-control-allow-origin"]).to.eq(AUTH_SERVER_ORIGIN);
+      expect(String(response.headers["access-control-expose-headers"])).to.include("Retry-After");
       const accepted = response.body as ReportAccepted;
       expect(accepted.success).to.eq(true);
       expect(accepted.client_error_id).to.match(/^[0-9a-f-]{36}$/);
@@ -194,6 +215,70 @@ describe("Client error reports API", () => {
           .should("eq", 404);
       });
     });
+  });
+
+  it("refuses every report while accept_client_error_reports is off, readably from any origin", () => {
+    setSetting("accept_client_error_reports", false);
+    const message = unique("Report while the intake is off");
+    sendReport({ name: "Error", message }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect((response.body as { error?: string }).error).to.eq("client_error_reporting_disabled");
+      expect(response.headers["access-control-allow-origin"]).to.eq("*");
+    });
+    // Refused before the origin check: a foreign origin learns the same.
+    sendReport({ name: "Error", message }, { origin: FOREIGN_ORIGIN }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect((response.body as { error?: string }).error).to.eq("client_error_reporting_disabled");
+    });
+    findReports(message).then((errors) => expect(errors).to.have.length(0));
+    cy.request<{ data: { storage: { accepting_reports: boolean } } }>("/api/admin/client-errors/stats")
+      .its("body.data.storage.accepting_reports")
+      .should("eq", false);
+
+    setSetting("accept_client_error_reports", true);
+    sendReport({ name: "Error", message }).its("status").should("eq", 202);
+  });
+
+  it("refuses reports once the stored reports reach client_error_reports_max_storage_mb", () => {
+    setSetting("client_error_reports_max_storage_mb", 1);
+    const tag = unique("Storage fill");
+    // ~26 KB each: 1 MB fills within ~40 reports.
+    const bigReport = (i: number) => ({
+      name: "Error",
+      message: `${tag} ${i} ${"m".repeat(1_900)}`,
+      stack: "s".repeat(16_000),
+      context: { blob: "c".repeat(8_000) },
+    });
+
+    // Sends reports until one is refused, then pins the refusal.
+    const fillUntilRefused = (i: number): void => {
+      if (i % 15 === 0) cy.request("POST", "/api/test/reset-rate-limit");
+      sendReport(bigReport(i)).then((response) => {
+        if (response.status === 202 && i < 80) {
+          fillUntilRefused(i + 1);
+          return;
+        }
+        expect(response.status).to.eq(503);
+        expect((response.body as { error?: string }).error).to.eq("client_error_storage_full");
+        expect(Number(response.headers["retry-after"])).to.be.greaterThan(0);
+        expect(response.headers["access-control-allow-origin"]).to.eq(AUTH_SERVER_ORIGIN);
+        expect(String(response.headers["access-control-expose-headers"])).to.include("Retry-After");
+      });
+    };
+    fillUntilRefused(0);
+
+    cy.request<{ data: { storage: { used_bytes: number; max_bytes: number } } }>("/api/admin/client-errors/stats").then(
+      (response) => {
+        const { used_bytes, max_bytes } = response.body.data.storage;
+        expect(max_bytes).to.eq(1024 * 1024);
+        expect(used_bytes).to.be.at.least(max_bytes);
+      },
+    );
+
+    // Deleting reports frees the space again.
+    cy.request({ method: "DELETE", url: `/api/admin/client-errors?before=${Date.now() + 1000}` }).its("status").should("eq", 200);
+    cy.request("POST", "/api/test/reset-rate-limit");
+    sendReport({ name: "Error", message: unique("After the purge") }).its("status").should("eq", 202);
   });
 
   it("refuses the admin endpoints without an administrator session", () => {

@@ -5,7 +5,8 @@ export type RateLimitKeySource =
   | "email"
   | "ip+email"
   | "uid"
-  | "ip+uid";
+  | "ip+uid"
+  | "client_app_id";
 
 export interface RateLimitConfig {
   readonly name: string;
@@ -30,4 +31,7 @@ export interface RateLimitIdentifiers {
   // Authenticated subject. Used by uid / ip+uid key sources so per-account
   // limits can't be shared or bypassed across IPs.
   readonly uid?: string;
+  // Client application a request is attributed to. Used by the
+  // client_app_id key source for per-app quotas.
+  readonly client_app_id?: string;
 }
