@@ -26,6 +26,8 @@ export interface UseAuthClientInitializationOptions {
   default_audiences?: InitializeAuthClientOptions["default_audiences"];
   environment: SchemaVaultsAppEnvironment;
   invite_code_required?: boolean;
+  /** Turn off the SDK's error reporting to the auth server. */
+  disable_telemetry?: boolean;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
 
@@ -60,6 +62,8 @@ export function useAuthClientInitialization(
       ? opts.invite_code_required
       : true;
 
+  const disable_telemetry: boolean = opts.disable_telemetry === true;
+
   // Auth client initialization side-effect
   useEffect(
     function initializeAuthClientEffect(): void {
@@ -91,6 +95,7 @@ export function useAuthClientInitialization(
             app_id,
             auth_server_app_id,
             invite_code_required,
+            disable_telemetry,
             fetch: httpFetch,
           });
 
@@ -144,6 +149,7 @@ export function useAuthClientInitialization(
       authClientRef,
       default_audiences,
       invite_code_required,
+      disable_telemetry,
       httpFetch,
     ],
   ); // end of auth client initialization side-effect

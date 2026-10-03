@@ -115,3 +115,15 @@ export const WEBAUTHN_STEP_UP_RATE_LIMIT: RateLimitConfig = {
   windowSeconds: 60,
   keySource: "ip+uid",
 };
+
+/**
+ * Client error reports at POST /api/client-errors/{client_app_id}, per IP.
+ * The client SDK sends at most a handful of reports per page load and backs
+ * off on 429, so this only bounds abuse of the public intake.
+ */
+export const CLIENT_ERROR_REPORT_RATE_LIMIT: RateLimitConfig = {
+  name: "client-error-report",
+  maxAttempts: 60,
+  windowSeconds: 60,
+  keySource: "ip",
+};

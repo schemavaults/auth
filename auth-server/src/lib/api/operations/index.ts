@@ -8,6 +8,7 @@ import { authenticationOperations } from "./authentication";
 import { oidcOperations } from "./oidc";
 import { mfaOperations } from "./mfa";
 import { resource_serversOperations } from "./resource-servers";
+import { telemetryOperations } from "./telemetry";
 import { configurationOperations } from "./configuration";
 import { test_environmentOperations } from "./test-environment";
 
@@ -36,6 +37,7 @@ export const operations: readonly AnyOperationDefinition[] = [
   ...organizationsOperations,
   ...adminOperations,
   ...resource_serversOperations,
+  ...telemetryOperations,
   ...configurationOperations,
   ...test_environmentOperations,
 ];

@@ -19,6 +19,7 @@ import type {
   SchemaVaultsAuthErrorId,
 } from "@schemavaults/auth-common";
 import type { Credentials } from "@/types/credentials";
+import type { ReportErrorOptions } from "@/lib/telemetry/build-client-error-report";
 import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-type";
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
 import type {
@@ -52,6 +53,13 @@ export interface ISchemaVaultsAuthClient {
   version: string;
   app_id: AppId;
   auth_server_url: string;
+
+  // Whether errors are reported to the auth server (false when constructed
+  // with `disable_telemetry: true`)
+  telemetryEnabled: boolean;
+  // Report an error to the auth server's client error intake. Fire and
+  // forget; does nothing when telemetry is disabled.
+  reportError: (error: unknown, opts?: ReportErrorOptions) => void;
 
   // Authenticate the user. `scope` (space-delimited, RFC 6749 §3.3)
   // defaults to DEFAULT_AUTH_SCOPE ("openid email profile").

@@ -1,12 +1,12 @@
 import "server-only";
 
-import type { NextRequest } from "next/server";
 import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
-export function extractClientIp(req: NextRequest): string | null {
+/** Accepts any request-like value (a `NextRequest`, a fetch `Request`, ...): only its headers are read. */
+export function extractClientIp(req: { readonly headers: Headers }): string | null {
   const realIp = req.headers.get("X-Real-IP");
   if (realIp) {
     return realIp;

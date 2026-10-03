@@ -24,6 +24,7 @@ export {
   MFA_ENROLL_RATE_LIMIT,
   WEBAUTHN_ENROLL_RATE_LIMIT,
   WEBAUTHN_STEP_UP_RATE_LIMIT,
+  CLIENT_ERROR_REPORT_RATE_LIMIT,
 } from "./rate-limit-configs";
 export {
   rateLimitResponse,

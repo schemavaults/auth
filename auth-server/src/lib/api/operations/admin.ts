@@ -14,6 +14,9 @@ import { listBrandingAssets } from "@/app/api/admin/branding/operation";
 import { removeBrandingAsset, uploadBrandingAsset } from "@/app/api/admin/branding/[asset]/operation";
 import { deleteError } from "@/app/api/admin/errors/[error_id]/operation";
 import { purgeErrorsBefore } from "@/app/api/admin/errors/operation";
+import { listClientErrors, purgeClientErrorsBefore } from "@/app/api/admin/client-errors/operation";
+import { getClientErrorSummaryStats } from "@/app/api/admin/client-errors/stats/operation";
+import { deleteClientError, getClientError } from "@/app/api/admin/client-errors/[client_error_id]/operation";
 import { listServerTraces } from "@/app/api/admin/server-traces/operation";
 import { listServerTraceOperations } from "@/app/api/admin/server-traces/operations/operation";
 import { sendDailyReportViaGet, sendDailyReportViaPost } from "@/app/api/admin/send-daily-report/operation";
@@ -43,6 +46,11 @@ export const adminOperations: readonly AnyOperationDefinition[] = [
   // Diagnostics
   purgeErrorsBefore,
   deleteError,
+  listClientErrors,
+  getClientErrorSummaryStats,
+  getClientError,
+  deleteClientError,
+  purgeClientErrorsBefore,
   listServerTraces,
   listServerTraceOperations,
   sendDailyReportViaGet,

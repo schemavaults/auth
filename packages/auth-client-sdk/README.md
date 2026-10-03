@@ -72,6 +72,41 @@ request an access token for a resource server **by URL** (`resource=<the
 resource server's URL>`); the token's `aud` is that URL, and the API server
 must allow dynamic clients (`client.updateApiServerDynamicClientPolicy()`).
 
+## Error reporting
+
+The SDK reports the failures of its own auth flows (the login / register
+redirect, callback handling, access-token acquisition, session checks,
+`refreshUserData()`, app authorization) to the auth server's client error
+intake, `POST /api/client-errors/{app_id}`. Platform administrators browse the
+reports and their summary statistics on the auth server's
+`/admin/client-errors` page. Expected session lifecycle errors (nobody signed
+in, an expired or revoked session) are not reported.
+
+A report carries the error's name, message and stack trace (with its `cause`
+chain), the SDK method that failed, the page's origin and path (never its
+query string or fragment, which carry authorization codes), the SDK version,
+the app environment and the signed-in user's uid. Reports are sent without
+credentials as `text/plain` JSON (a CORS simple request, so no preflight) and
+are only accepted from origins registered for the app. The SDK reports an
+error once, at most once a minute for the same error, at most 25 times per
+client instance, and backs off when the server rate limits it.
+
+Apps can report their own errors through the same channel:
+
+```ts
+client.reportError(error, { operation: "checkout", context: { items: 3 } });
+```
+
+Set `disable_telemetry: true` to send nothing (`reportError()` then does
+nothing either; `client.telemetryEnabled` tells which mode a client is in):
+
+```ts
+const client = new SchemaVaultsAuthClient({
+  // ...
+  disable_telemetry: true,
+});
+```
+
 ## Dependencies
 
 - [@schemavaults/auth](https://github.com/schemavaults/auth)

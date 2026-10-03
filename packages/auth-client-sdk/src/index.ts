@@ -23,6 +23,13 @@ export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateR
 
 export type { UserData } from "@/types/UserData";
 
+// Error reporting (see `reportError()` and the `disable_telemetry` option)
+export type { ReportErrorOptions } from "./lib/telemetry/build-client-error-report";
+export {
+  CLIENT_ERROR_REPORT_LIMITS,
+  type ClientErrorReport,
+} from "@schemavaults/auth-common";
+
 // Access / Refresh Token Types
 export type { AccessToken, RefreshToken } from "@schemavaults/auth-common";
 

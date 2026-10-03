@@ -31,5 +31,7 @@ export type * from "./server-traces";
 
 export type * from "./errors";
 
+export type * from "./client-errors";
+
 export * from "./mfa";
 export type * from "./mfa";

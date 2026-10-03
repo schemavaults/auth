@@ -45,6 +45,16 @@ export interface IAuthClientConstructorOptions {
 
   // Whether we should enforce invite code presence during registration flows
   invite_code_required?: boolean;
+
+  // Opt out of error reporting. By default the SDK reports the failures of
+  // its own auth flows (login redirect, callback handling, token acquisition,
+  // session checks) to the auth server's client error intake
+  // (POST /api/client-errors/{app_id}), where platform administrators browse
+  // them. A report carries the error's name, message and stack, the page's
+  // origin and path (never its query string), the SDK version, the app
+  // environment and the signed-in user's uid. Set to true to send nothing;
+  // `reportError()` then does nothing either.
+  disable_telemetry?: boolean;
 }
 
 export type { IAuthClientConstructorOptions as InitializeAuthClientOptions };
