@@ -10,6 +10,11 @@ describe("Unauthenticated Redirects", () => {
       cy.url().should("not.match", /\/orgs(\/|\?|$)/);
     });
 
+    it("is redirected off the create organization page", () => {
+      cy.visit("/orgs/new");
+      cy.url().should("not.match", /\/orgs\/new(\?|$)/);
+    });
+
     it("is redirected off the org page", () => {
       cy.visit("/orgs/fake-org-id");
       cy.url().should("not.include", "/orgs/fake-org-id");
