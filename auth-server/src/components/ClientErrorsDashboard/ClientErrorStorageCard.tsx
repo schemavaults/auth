@@ -13,7 +13,8 @@ import {
   Meter,
 } from "@schemavaults/ui";
 import { Settings } from "lucide-react";
-import { formatBytes, type ClientErrorStorageStatus } from "@/lib/client-errors/row-size";
+import type { ClientErrorStorageStatus } from "@/lib/client-errors/row-size";
+import { formatBytes } from "@/lib/format-bytes";
 
 export interface ClientErrorStorageCardProps {
   storage: ClientErrorStorageStatus;

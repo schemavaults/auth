@@ -10,7 +10,8 @@ import type {
   ClientErrorGroupStats,
   ClientErrorStats,
 } from "@/lib/auth-db/client-errors";
-import { formatBytes, type ClientErrorStorageStatus } from "@/lib/client-errors/row-size";
+import type { ClientErrorStorageStatus } from "@/lib/client-errors/row-size";
+import { formatBytes } from "@/lib/format-bytes";
 import {
   clientErrorPageFiltersToSearchParams,
   DEFAULT_CLIENT_ERROR_PAGE_FILTERS,
