@@ -93,6 +93,9 @@ import exchangeAuthTokens from "@/lib/exchange-auth-tokens";
 import handleSuccessfulAuthentication from "@/lib/handle-successful-authentication";
 import handleSuccessfulExchangeAuthTokensResponse from "@/lib/handle-successful-exchange-auth-tokens-response";
 import isSameUserData from "@/lib/is-same-user-data";
+import { ClientErrorReporter } from "@/lib/telemetry/client-error-reporter";
+import type { ReportErrorOptions } from "@/lib/telemetry/build-client-error-report";
+import { isExpectedAuthClientError } from "@/lib/telemetry/expected-errors";
 
 /**
  * The SchemaVaultsAuthClient is a client SDK for the SchemaVaults Auth Server
@@ -139,6 +142,10 @@ export class SchemaVaultsAuthClient
   private readonly _default_audiences: readonly string[];
 
   private readonly _invite_code_required: boolean;
+
+  // Sends the errors of the SDK's own flows (and `reportError()`) to the auth
+  // server, unless the 'disable_telemetry' constructor option is set
+  private readonly _errorReporter: ClientErrorReporter;
 
   // Initialize the auth client
   constructor(opts: IAuthClientConstructorOptions) {
@@ -300,6 +307,31 @@ export class SchemaVaultsAuthClient
         ? opts.invite_code_required
         : true;
 
+    // Error reporting (on unless the app maintainer opts out)
+    if (
+      typeof opts.disable_telemetry !== "boolean" &&
+      typeof opts.disable_telemetry !== "undefined"
+    ) {
+      throw new Error(
+        `Expected 'disable_telemetry' to be a boolean or undefined, received type '${typeof opts.disable_telemetry}'`,
+      );
+    }
+    this._errorReporter = new ClientErrorReporter({
+      adapter: this._adapter,
+      auth_server_url: this._auth_server_url,
+      client_app_id: this._app_id,
+      app_env: this.environment,
+      sdk_version: AUTH_CLIENT_SDK_VERSION,
+      disabled: opts.disable_telemetry === true,
+      debug: this.DEBUG,
+      getCurrentUid: (): string | null => this._adapter.getUserData()?.uid ?? null,
+    });
+    if (this.DEBUG && opts.disable_telemetry === true) {
+      console.log(
+        "[SchemaVaultsAuthClient] Telemetry disabled: errors will not be reported to the auth server.",
+      );
+    }
+
     // Set up auth state change listener
     this.addEventListener(
       "authStateChanged" as const satisfies AuthClientEvent,
@@ -359,6 +391,48 @@ export class SchemaVaultsAuthClient
    */
   public get version(): string {
     return AUTH_CLIENT_SDK_VERSION;
+  }
+
+  /**
+   * @name telemetryEnabled
+   * @description Whether errors are reported to the auth server (false when
+   *   the client was constructed with `disable_telemetry: true`).
+   */
+  public get telemetryEnabled(): boolean {
+    return this._errorReporter.enabled;
+  }
+
+  /**
+   * @name reportError
+   * @description Report an error to the auth server's client error intake
+   *   (`POST /api/client-errors/{app_id}`), where platform administrators can
+   *   browse it. The SDK already reports the failures of its own flows; use
+   *   this for the app's own errors. Fire and forget: never throws, and does
+   *   nothing when the client was constructed with `disable_telemetry: true`.
+   *   Only the error's name, message and stack, the page's origin and path,
+   *   the signed-in user's uid and the given `context` are sent.
+   */
+  public reportError(error: unknown, opts?: ReportErrorOptions): void {
+    this._errorReporter.report(error, opts);
+  }
+
+  /**
+   * Runs one of the SDK's auth flows, reporting what it throws (except
+   * expected session lifecycle errors, e.g. nobody being signed in) before
+   * rethrowing it unchanged.
+   */
+  private async withErrorReporting<T>(
+    operation: string,
+    task: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await task();
+    } catch (e: unknown) {
+      if (!isExpectedAuthClientError(e)) {
+        this._errorReporter.report(e, { operation });
+      }
+      throw e;
+    }
   }
 
   public get app_id(): AppId {
@@ -556,7 +630,9 @@ export class SchemaVaultsAuthClient
       );
     }
     try {
-      return await this.authenticateWithRedirect("login", opts);
+      return await this.withErrorReporting("login", () =>
+        this.authenticateWithRedirect("login", opts),
+      );
     } catch (e: unknown) {
       console.error("Failed to authenticate with redirect to login: ", e);
       if (e instanceof Error) throw e;
@@ -575,7 +651,9 @@ export class SchemaVaultsAuthClient
       );
     }
     try {
-      return await this.authenticateWithRedirect("register", opts);
+      return await this.withErrorReporting("register", () =>
+        this.authenticateWithRedirect("register", opts),
+      );
     } catch (e: unknown) {
       console.error("Failed to authenticate with redirect to register: ", e);
       if (e instanceof Error) throw e;
@@ -737,31 +815,33 @@ export class SchemaVaultsAuthClient
           : cfgAuthorizeUri;
       }
     }
-    return await handleSuccessfulAuthentication({
-      authorization_code,
-      challenge_time,
-      code_verifier,
-      received_state: received_state ?? null,
-      received_iss: received_iss ?? null,
-      expected_nonce: expected_nonce ?? null,
-      redirect_uri,
-      loadCodeVerifier: this.loadCodeVerifier.bind(this),
-      loadOAuth2State: this.loadOAuth2State.bind(this),
-      loadOidcNonce: this.loadOidcNonce.bind(this),
-      auth_server_url: this.auth_server_uri,
-      auth_server_app_id: this._auth_server_app_id,
-      client_app_id: this.app_id,
-      adapter: this.adapter,
-      storeUserData: this.storeUserData.bind(this),
-      storeRefreshToken: this.storeRefreshToken.bind(this),
-      storeMultipleAccessTokens: this.storeMultipleAccessTokens.bind(this),
-      exchangeAuthTokens: this.exchangeAuthTokens.bind(this),
-      fetchUserData: this.fetchUserDataFromServer.bind(this),
-      environment: this.environment,
-      debug: this.DEBUG,
-      triggerAuthStateChanged: this.triggerAuthStateChanged.bind(this),
-      defaultTokenAudiences: this.defaultTokenAudiences,
-    });
+    return await this.withErrorReporting("handleSuccessfulAuthentication", () =>
+      handleSuccessfulAuthentication({
+        authorization_code,
+        challenge_time,
+        code_verifier,
+        received_state: received_state ?? null,
+        received_iss: received_iss ?? null,
+        expected_nonce: expected_nonce ?? null,
+        redirect_uri,
+        loadCodeVerifier: this.loadCodeVerifier.bind(this),
+        loadOAuth2State: this.loadOAuth2State.bind(this),
+        loadOidcNonce: this.loadOidcNonce.bind(this),
+        auth_server_url: this.auth_server_uri,
+        auth_server_app_id: this._auth_server_app_id,
+        client_app_id: this.app_id,
+        adapter: this.adapter,
+        storeUserData: this.storeUserData.bind(this),
+        storeRefreshToken: this.storeRefreshToken.bind(this),
+        storeMultipleAccessTokens: this.storeMultipleAccessTokens.bind(this),
+        exchangeAuthTokens: this.exchangeAuthTokens.bind(this),
+        fetchUserData: this.fetchUserDataFromServer.bind(this),
+        environment: this.environment,
+        debug: this.DEBUG,
+        triggerAuthStateChanged: this.triggerAuthStateChanged.bind(this),
+        defaultTokenAudiences: this.defaultTokenAudiences,
+      }),
+    );
   } // handleSuccessfulAuthentication()
 
   /**
@@ -791,7 +871,11 @@ export class SchemaVaultsAuthClient
       this.adapter.clearUserData() satisfies void;
     } catch (e: unknown) {
       console.error(e);
-      throw new Error("Failed to clear local data for logout");
+      const error = new Error("Failed to clear local data for logout", {
+        cause: e,
+      });
+      this._errorReporter.report(error, { operation: "logout" });
+      throw error;
     }
 
     if (this.DEBUG) {
@@ -1033,6 +1117,14 @@ export class SchemaVaultsAuthClient
    * @see this.exchangeAuthTokens()
    */
   public async acquireAccessToken(
+    opts: AcquireAccessTokenOptions,
+  ): Promise<AccessToken> {
+    return await this.withErrorReporting("acquireAccessToken", () =>
+      this.acquireAccessTokenWithoutReporting(opts),
+    );
+  }
+
+  private async acquireAccessTokenWithoutReporting(
     opts: AcquireAccessTokenOptions,
   ): Promise<AccessToken> {
     const auth_server_url: string = this.auth_server_url;
@@ -1459,12 +1551,16 @@ export class SchemaVaultsAuthClient
   }
 
   public async checkIfAuthenticatedWithServer(): Promise<UserData | null> {
-    const user: UserData | null = await checkIfAuthenticatedWithServer({
-      adapter: this.adapter,
-      auth_server_uri: this.auth_server_uri,
-      client_app_id: this.app_id,
-      auth_server_app_id: this._auth_server_app_id,
-    });
+    const user: UserData | null = await this.withErrorReporting(
+      "checkIfAuthenticatedWithServer",
+      () =>
+        checkIfAuthenticatedWithServer({
+          adapter: this.adapter,
+          auth_server_uri: this.auth_server_uri,
+          client_app_id: this.app_id,
+          auth_server_app_id: this._auth_server_app_id,
+        }),
+    );
 
     // Sync the server's answer into the local user-data cache so claims that
     // changed since login (roles, email_verified, ...) propagate to
@@ -1494,6 +1590,12 @@ export class SchemaVaultsAuthClient
   }
 
   public async refreshUserData(): Promise<UserData | null> {
+    return await this.withErrorReporting("refreshUserData", () =>
+      this.refreshUserDataWithoutReporting(),
+    );
+  }
+
+  private async refreshUserDataWithoutReporting(): Promise<UserData | null> {
     const adapter: ISchemaVaultsAuthClientAdapter = this.adapter;
     if (!adapter.hasRefreshToken()) {
       // Not logged in (in this browser context) — nothing to refresh.
@@ -1538,7 +1640,10 @@ export class SchemaVaultsAuthClient
       await import("@/lib/send-authorize-client-application-request").then(
         (mod) => mod.default,
       );
-    return await sendAuthorizeRequest({ app_id, adapter: this.adapter, state });
+    return await this.withErrorReporting(
+      "sendAuthorizeClientApplicationRequest",
+      () => sendAuthorizeRequest({ app_id, adapter: this.adapter, state }),
+    );
   }
 
   public async checkAppAuthorization(app_id: AppId): Promise<boolean> {

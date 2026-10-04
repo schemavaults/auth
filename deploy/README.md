@@ -51,6 +51,30 @@ full stack starts with a plain `docker compose up`. Set `COMPOSE_PROFILES=`
 (empty) to run only postgres/redis/auth-server, e.g. behind a host-level
 nginx (next section).
 
+## Scheduled jobs
+
+The auth server exposes two endpoints meant to run on a schedule. On Vercel
+they are declared as crons in `auth-server/vercel.json`; this stack has no
+scheduler, so run them from the host's crontab. Both accept the deployment's
+cron secret instead of an administrator session: set `CRON_SECRET` in `.env`
+(`openssl rand -hex 32`) and restart the auth server
+(`docker compose up -d schemavaults-auth`).
+
+| Endpoint | Schedule (UTC) | What it does |
+| --- | --- | --- |
+| `/api/admin/client-errors/purge-expired` | daily, 03:17 | Deletes client error reports older than the `client_error_reports_retention_days` server setting (default 30) |
+| `/api/admin/send-daily-report` | daily, 21:00 | E-mails the 24-hour activity report to the administrator mailing list |
+
+```cron
+# crontab -e (replace the URL with SCHEMAVAULTS_AUTH_SERVER_URL; keep the secret out of shared files)
+17 3 * * * curl -fsS -H "Authorization: Bearer $(cat /etc/schemavaults-auth/cron-secret)" https://auth.example.com/api/admin/client-errors/purge-expired > /dev/null
+0 21 * * * curl -fsS -H "Authorization: Bearer $(cat /etc/schemavaults-auth/cron-secret)" https://auth.example.com/api/admin/send-daily-report > /dev/null
+```
+
+Without the purge job, expired client error reports are still deleted while
+reports keep arriving or the `/admin/client-errors` dashboard is open (at most
+once an hour); the job guarantees the retention period when neither happens.
+
 ## Database
 
 The stack includes a `postgres-db` service, initialized on first start from

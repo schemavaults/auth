@@ -26,6 +26,8 @@ export interface IAuthClientFactoryInitOpts {
   authorize_uri: string;
   error_page_uri: string;
   invite_code_required?: boolean;
+  /** Turn off the SDK's error reporting to the auth server. */
+  disable_telemetry?: boolean;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
 
@@ -42,6 +44,7 @@ export class AuthClientFactory {
   private readonly authorize_uri: string;
   private readonly error_page_uri: string;
   private readonly invite_code_required: boolean;
+  private readonly disable_telemetry: boolean;
   private readonly fetch: (
     url: string,
     init: RequestInit | undefined,
@@ -86,6 +89,7 @@ export class AuthClientFactory {
       typeof opts.invite_code_required === "boolean"
         ? opts.invite_code_required
         : true;
+    this.disable_telemetry = opts.disable_telemetry === true;
     this.fetch = fetch;
   }
 
@@ -144,6 +148,7 @@ export class AuthClientFactory {
       debug: this.debug,
       app_env: environment,
       invite_code_required: this.invite_code_required,
+      disable_telemetry: this.disable_telemetry,
     };
 
     const auth: ISchemaVaultsAuthClient = new SchemaVaultsAuthClient(

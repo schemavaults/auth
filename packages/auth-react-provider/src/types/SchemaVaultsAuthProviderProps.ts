@@ -51,5 +51,13 @@ export interface SchemaVaultsAuthProviderProps
 
   invite_code_required?: boolean;
 
+  /**
+   * Stop the auth client SDK from reporting the errors of its auth flows to
+   * the auth server (`POST /api/client-errors/{app_id}`), and make
+   * `reportError()` a no-op.
+   * @default false
+   */
+  disable_telemetry?: boolean;
+
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }

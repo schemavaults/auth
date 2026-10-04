@@ -49,6 +49,12 @@ function buildKey(
       const ipPart = identifiers.ip ?? "unknown-ip";
       return `${prefix}:${ipPart}:${identifiers.uid}`;
     }
+    case "client_app_id": {
+      if (!identifiers.client_app_id) {
+        throw new Error(`Rate limit '${config.name}' requires client_app_id`);
+      }
+      return `${prefix}:${identifiers.client_app_id}`;
+    }
   }
 }
 

@@ -112,6 +112,27 @@ export const SERVER_SETTING_DEFINITIONS = {
     description:
       "Domain of the synthetic email addresses given to client applications' service accounts (the subjects of OAuth2 client_credentials tokens), e.g. service-accounts.auth.example.com. Nobody can register an account under this domain (nor under the built-in default, service-accounts.invalid). Use a domain you control, or leave the reserved .invalid default, which can never receive mail.",
   },
+  accept_client_error_reports: {
+    valueType: "boolean" as const,
+    defaultValue: true,
+    schema: z.boolean(),
+    description:
+      "Whether the auth server stores the error reports client applications send to POST /api/client-errors/{client_app_id} (the auth client SDK reports its own failures unless an app sets disable_telemetry). While off, reports are refused with 403 and the SDK stops sending them; reports already stored stay browsable on /admin/client-errors.",
+  },
+  client_error_reports_max_storage_mb: {
+    valueType: "number" as const,
+    defaultValue: 100,
+    schema: z.number().int().min(1).max(1_000_000),
+    description:
+      "Most storage, in megabytes, that client error reports may take up (the size of their contents). Once reached, new reports are refused with 503 until reports are deleted (on /admin/client-errors, or by the retention period) or the limit is raised.",
+  },
+  client_error_reports_retention_days: {
+    valueType: "number" as const,
+    defaultValue: 30,
+    schema: z.number().int().min(0).max(3650),
+    description:
+      "How many days client error reports are kept; older reports are deleted automatically by the daily scheduled job (GET /api/admin/client-errors/purge-expired) and, at most once an hour, while reports arrive or the dashboard is open. 0 keeps reports until an administrator deletes them.",
+  },
 } as const satisfies Record<
   string,
   {
