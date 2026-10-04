@@ -94,7 +94,10 @@ describe("Client error reports API", () => {
   });
 
   afterEach(() => {
-    // Put the intake settings back to their defaults whatever a test did.
+    // Put the intake settings back to their defaults whatever a test did. A
+    // test may end signed in (as the superuser, or as a regular user), and
+    // the login helper requires a signed-out browser: drop the session first.
+    cy.clearAllCookies();
     cy.create_and_login_as_superuser_via_request().then((ok: boolean) => {
       expect(ok, "superuser login").to.be.true;
       setSetting("accept_client_error_reports", true);
