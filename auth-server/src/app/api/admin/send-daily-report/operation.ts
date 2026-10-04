@@ -13,7 +13,7 @@ const AUTH_NOTES =
   "Scheduled jobs may call this without a session by sending the deployment's cron secret as `Authorization: Bearer <CRON_SECRET>`; that check runs before the session guard (see the route's cron bypass middleware). Every other caller needs an administrator session.";
 
 const description =
-  "Builds the last 24 hours' activity report (new users, organizations, captured errors, most active users, most popular apps and APIs) and e-mails it to the administrator mailing list. Both GET and POST trigger it so it can be wired to simple cron schedulers.";
+  "Builds the last 24 hours' activity report (new users, organizations, captured server errors, summary statistics of the client error reports received, most active users, most popular apps and APIs, with links into the admin console) and e-mails it to the administrator mailing list. Both GET and POST trigger it so it can be wired to simple cron schedulers.";
 
 /** Session-guarded path: an administrator triggered the report by hand. */
 function runForAdministrator(ctx: GuardedOperationContext): OperationHandlerResult {

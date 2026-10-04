@@ -1,10 +1,32 @@
 import "server-only";
-import { brandColors } from "@schemavaults/theme";
+import { getThemeToken, themeTokenDefault } from "@schemavaults/theme/tokens";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import type { TopMostActiveUserRow, UserDocument } from "@/lib/auth-db/users";
 import type { ErrorRow } from "@/lib/auth-db/errors";
 import type { TopMostPopularAppRow } from "@/lib/auth-db/apps";
 import type { TopMostPopularApiRow } from "@/lib/auth-db/apis";
+import type {
+  ClientErrorAppStats,
+  ClientErrorGroupStats,
+  ClientErrorStats,
+} from "@/lib/auth-db/client-errors";
+import type { ClientErrorStorageStatus } from "@/lib/client-errors/row-size";
+import { formatBytes } from "@/lib/format-bytes";
+import {
+  clientErrorPageFiltersToSearchParams,
+  DEFAULT_CLIENT_ERROR_PAGE_FILTERS,
+  type ClientErrorPageFilters,
+} from "@/lib/client-errors/client-error-page-filters";
+
+/** The client error reports received during the report window, summarized. */
+export interface DailyReportClientErrors {
+  /** `getClientErrorStats()` over the report window. */
+  stats: ClientErrorStats;
+  /** Intake settings and storage use, as of the report. */
+  storage: ClientErrorStorageStatus;
+  /** Names of the apps in `stats.by_app`, keyed by client app id (missing: the id is shown). */
+  appNames: ReadonlyMap<string, string>;
+}
 
 interface BuildReportOpts {
   authServerUri: string;
@@ -24,6 +46,7 @@ interface BuildReportOpts {
    * is meaningless (always 0) for every other API and is rendered as "N/A".
    */
   authServerApiServerId: string;
+  clientErrors: DailyReportClientErrors;
 }
 
 interface ReportContent {
@@ -31,8 +54,13 @@ interface ReportContent {
   html: string;
 }
 
-const BRAND_BLUE = brandColors["schemavaults-brand-blue"];
-const BRAND_RED = brandColors["schemavaults-brand-red"];
+/**
+ * Email clients have no stylesheet to resolve the `var(--schemavaults-brand-*)`
+ * references `brandColors` holds (links and headings rendered uncolored), so
+ * the report inlines the theme's light-mode values.
+ */
+const BRAND_BLUE: string = themeTokenDefault(getThemeToken("brand-blue"), "light") ?? "#60a5fa";
+const BRAND_RED: string = themeTokenDefault(getThemeToken("brand-red"), "light") ?? "#dc2626";
 const TEXT_COLOR = "#111827";
 const MUTED_COLOR = "#6b7280";
 const BORDER_COLOR = "#e5e7eb";
@@ -50,6 +78,291 @@ function formatTimestamp(ms: number): string {
   return new Date(ms).toISOString().replace("T", " ").slice(0, 19) + " UTC";
 }
 
+/** Admin console pages the report links to, in the order of the footer's quick links. */
+const ADMIN_PAGES = {
+  dashboard: { path: "/admin", label: "Dashboard" },
+  users: { path: "/admin/users", label: "Users" },
+  organizations: { path: "/admin/organizations", label: "Organizations" },
+  apps: { path: "/admin/apps", label: "Applications" },
+  apis: { path: "/admin/apis", label: "APIs" },
+  errors: { path: "/admin/errors", label: "Server errors" },
+  client_errors: { path: "/admin/client-errors", label: "Client errors" },
+  traces: { path: "/admin/traces", label: "Traces" },
+  settings: { path: "/admin/settings", label: "Settings" },
+} as const satisfies Record<string, { path: string; label: string }>;
+
+type AdminPage = keyof typeof ADMIN_PAGES;
+
+const ADMIN_PAGE_ORDER = Object.keys(ADMIN_PAGES) as AdminPage[];
+
+/** Error groups and applications the client errors section lists at most; the dashboard has the rest. */
+export const DAILY_REPORT_CLIENT_ERROR_TOP_N: number = 5;
+
+/** Longest client error name / message the report quotes (reports allow far longer ones). */
+const CLIENT_ERROR_NAME_MAX_LENGTH: number = 100;
+const CLIENT_ERROR_MESSAGE_MAX_LENGTH: number = 200;
+
+/** Share of the storage limit (percent) from which the report flags the client error storage. */
+const CLIENT_ERROR_STORAGE_WARNING_PERCENT: number = 80;
+
+/**
+ * The client errors dashboard showing the last 24 hours (the report's window,
+ * as of when the administrator opens it), optionally narrowed to one app or
+ * error group.
+ */
+function clientErrorsDashboardUrl(
+  authServerUri: string,
+  filters: Partial<Pick<ClientErrorPageFilters, "client_app_id" | "fingerprint">> = {},
+): string {
+  const params: URLSearchParams = clientErrorPageFiltersToSearchParams({
+    ...DEFAULT_CLIENT_ERROR_PAGE_FILTERS,
+    range: "24h",
+    ...filters,
+  });
+  return `${authServerUri}${ADMIN_PAGES.client_errors.path}?${params.toString()}`;
+}
+
+/** A link to `href`; `labelHtml` must already be escaped. */
+function linkHtml(href: string, labelHtml: string, style: string = ""): string {
+  return `<a href="${escapeHtml(href)}" style="color:${BRAND_BLUE};text-decoration:none;${style}">${labelHtml}</a>`;
+}
+
+/** A section heading with a link to the admin page holding the full picture. */
+function sectionHeadingHtml(title: string, color: string, href: string, linkLabel: string): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">
+          <tr>
+            <td align="left" valign="bottom"><h2 style="margin:0;font-size:16px;color:${color};">${escapeHtml(title)}</h2></td>
+            <td align="right" valign="bottom" style="padding-left:12px;white-space:nowrap;">${linkHtml(href, `${escapeHtml(linkLabel)} &rarr;`, "font-size:13px;")}</td>
+          </tr>
+        </table>`;
+}
+
+function headerCellHtml(label: string, color: string, align: "left" | "right" = "left"): string {
+  return `<th align="${align}" style="padding:8px 12px;border-bottom:2px solid ${color};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(label)}</th>`;
+}
+
+function countCellHtml(value: number): string {
+  return `<td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${value.toLocaleString("en-US")}</td>`;
+}
+
+/** `1 report`, `1,284 reports`. */
+function pluralize(count: number, singular: string, plural: string = `${singular}s`): string {
+  return `${count.toLocaleString("en-US")} ${count === 1 ? singular : plural}`;
+}
+
+/** `value` on one line, cut to `maxLength` characters. */
+function truncateOneLine(value: string, maxLength: number): string {
+  const line: string = value.replace(/\s+/g, " ").trim();
+  return line.length > maxLength ? `${line.slice(0, maxLength - 1)}…` : line;
+}
+
+/** `+12 vs. previous 24h (30)`; null when there is no previous period to compare with. */
+function describeChange(current: number, previous: number | null): string | null {
+  if (previous === null) return null;
+  const diff: number = current - previous;
+  const sign: string = diff > 0 ? "+" : diff < 0 ? "-" : "±";
+  return `${sign}${Math.abs(diff).toLocaleString("en-US")} vs. previous 24h (${previous.toLocaleString("en-US")})`;
+}
+
+function statTileHtml(value: number, label: string, note: { text: string; color: string } | null = null): string {
+  const noteHtml: string = note
+    ? `\n                <div style="margin-top:6px;font-size:12px;color:${note.color};">${escapeHtml(note.text)}</div>`
+    : "";
+  return `<td width="25%" valign="top" style="padding:12px;background:#f9fafb;border:1px solid ${BORDER_COLOR};border-radius:6px;">
+                <div style="font-size:22px;font-weight:700;color:${TEXT_COLOR};">${value.toLocaleString("en-US")}</div>
+                <div style="margin-top:2px;font-size:11px;color:${MUTED_COLOR};text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(label)}</div>${noteHtml}
+              </td>`;
+}
+
+interface ClientErrorIntakeSummary {
+  status: string;
+  /** New reports are being refused although the intake is on. */
+  refusingReports: boolean;
+  storage: string;
+  /** Storage use is at or above {@link CLIENT_ERROR_STORAGE_WARNING_PERCENT}. */
+  storageNearlyFull: boolean;
+  retention: string;
+}
+
+function summarizeClientErrorIntake(storage: ClientErrorStorageStatus): ClientErrorIntakeSummary {
+  const full: boolean = storage.used_bytes >= storage.max_bytes;
+  // Rounded down so a store that still accepts reports never reads 100%.
+  const percent: number = storage.max_bytes > 0
+    ? Math.min(100, Math.floor((storage.used_bytes / storage.max_bytes) * 100))
+    : 100;
+  return {
+    status: !storage.accepting_reports
+      ? "Not accepting reports"
+      : full
+        ? "Storage full: new reports are refused"
+        : "Accepting reports",
+    refusingReports: storage.accepting_reports && full,
+    storage: `${formatBytes(storage.used_bytes)} of ${formatBytes(storage.max_bytes)} used (${percent}%)`,
+    storageNearlyFull: full || percent >= CLIENT_ERROR_STORAGE_WARNING_PERCENT,
+    retention: storage.retention_days > 0
+      ? `Reports are deleted after ${pluralize(storage.retention_days, "day")}`
+      : "Reports are kept until an administrator deletes them",
+  };
+}
+
+interface ReportSection {
+  html: string;
+  text: readonly string[];
+}
+
+/** Summary statistics of the client error reports received during the window; the details stay on the dashboard. */
+function buildClientErrorsSection(
+  authServerUri: string,
+  { stats, storage, appNames }: DailyReportClientErrors,
+): ReportSection {
+  const { totals } = stats;
+  const dashboardUrl: string = clientErrorsDashboardUrl(authServerUri);
+  const settingsUrl: string = `${authServerUri}${ADMIN_PAGES.settings.path}`;
+  const intake: ClientErrorIntakeSummary = summarizeClientErrorIntake(storage);
+  const change: string | null = describeChange(totals.errors, totals.previous_period_errors);
+  const increased: boolean = totals.previous_period_errors !== null && totals.errors > totals.previous_period_errors;
+  const groups: readonly ClientErrorGroupStats[] = stats.top_groups.slice(0, DAILY_REPORT_CLIENT_ERROR_TOP_N);
+  const apps: readonly ClientErrorAppStats[] = stats.by_app.slice(0, DAILY_REPORT_CLIENT_ERROR_TOP_N);
+  const moreGroups: number = Math.max(0, totals.groups - groups.length);
+  const moreApps: number = Math.max(0, totals.apps - apps.length);
+
+  const groupUrl = (g: ClientErrorGroupStats): string =>
+    clientErrorsDashboardUrl(authServerUri, { fingerprint: g.fingerprint });
+  const appUrl = (a: ClientErrorAppStats): string =>
+    clientErrorsDashboardUrl(authServerUri, { client_app_id: a.client_app_id });
+  const appName = (a: ClientErrorAppStats): string | null => {
+    const name: string | undefined = appNames.get(a.client_app_id);
+    return name && name !== a.client_app_id ? name : null;
+  };
+  const groupName = (g: ClientErrorGroupStats): string => truncateOneLine(g.name, CLIENT_ERROR_NAME_MAX_LENGTH);
+  const groupMessage = (g: ClientErrorGroupStats): string =>
+    truncateOneLine(g.message, CLIENT_ERROR_MESSAGE_MAX_LENGTH);
+
+  const previousNote: string = totals.previous_period_errors
+    ? ` (${pluralize(totals.previous_period_errors, "report")} in the previous 24 hours)`
+    : "";
+
+  let bodyHtml: string;
+  if (totals.errors === 0) {
+    bodyHtml = `<p style="margin:0;padding:12px;color:${MUTED_COLOR};font-style:italic;">No client errors were reported in the last 24 hours${escapeHtml(previousNote)}.</p>`;
+  } else {
+    const groupRows: string = groups
+      .map((g) => {
+        const message: string = groupMessage(g);
+        const label: string = `<strong>${escapeHtml(groupName(g))}</strong>${message ? `: ${escapeHtml(message)}` : ""}`;
+        const operation: string = g.operation
+          ? `<div style="margin-top:2px;font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(truncateOneLine(g.operation, CLIENT_ERROR_NAME_MAX_LENGTH))}</div>`
+          : "";
+        return `<tr>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};">${linkHtml(groupUrl(g), label)}${operation}</td>
+  ${countCellHtml(g.count)}
+  ${countCellHtml(g.apps)}
+  ${countCellHtml(g.users)}
+</tr>`;
+      })
+      .join("\n");
+
+    const appRows: string = apps
+      .map((a) => {
+        const name: string | null = appName(a);
+        const label: string = name
+          ? `${linkHtml(appUrl(a), escapeHtml(name))}<div style="margin-top:2px;font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.client_app_id)}</div>`
+          : linkHtml(appUrl(a), escapeHtml(a.client_app_id), "font-family:monospace;font-size:12px;");
+        return `<tr>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};">${label}</td>
+  ${countCellHtml(a.count)}
+  ${countCellHtml(a.groups)}
+</tr>`;
+      })
+      .join("\n");
+
+    const moreNote = (count: number, singular: string): string =>
+      count > 0
+        ? `\n        <p style="margin:8px 0 0;font-size:12px;">${linkHtml(dashboardUrl, `+${escapeHtml(pluralize(count, `more ${singular}`))} on the dashboard`)}</p>`
+        : "";
+
+    bodyHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:8px 0;">
+          <tr>
+              ${statTileHtml(totals.errors, "Reports", change ? { text: change, color: increased ? BRAND_RED : MUTED_COLOR } : null)}
+              ${statTileHtml(totals.groups, "Error groups")}
+              ${statTileHtml(totals.apps, "Applications")}
+              ${statTileHtml(totals.users, "Users affected")}
+          </tr>
+        </table>
+        <h3 style="margin:20px 0 8px;font-size:14px;color:${TEXT_COLOR};">Top error groups</h3>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <thead>
+            <tr>
+              ${headerCellHtml("Error", BRAND_RED)}
+              ${headerCellHtml("Reports", BRAND_RED, "right")}
+              ${headerCellHtml("Apps", BRAND_RED, "right")}
+              ${headerCellHtml("Users", BRAND_RED, "right")}
+            </tr>
+          </thead>
+          <tbody>
+${groupRows}
+          </tbody>
+        </table>${moreNote(moreGroups, "error group")}
+        <h3 style="margin:20px 0 8px;font-size:14px;color:${TEXT_COLOR};">By application</h3>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <thead>
+            <tr>
+              ${headerCellHtml("Application", BRAND_RED)}
+              ${headerCellHtml("Reports", BRAND_RED, "right")}
+              ${headerCellHtml("Error groups", BRAND_RED, "right")}
+            </tr>
+          </thead>
+          <tbody>
+${appRows}
+          </tbody>
+        </table>${moreNote(moreApps, "application")}`;
+  }
+
+  const html = `<tr>
+      <td style="padding:8px 32px 24px;">
+        ${sectionHeadingHtml(`Client errors (${totals.errors.toLocaleString("en-US")})`, BRAND_RED, dashboardUrl, "Client errors dashboard")}
+        <p style="margin:0 0 12px;color:${MUTED_COLOR};font-size:13px;">Errors that client applications reported to the auth server.</p>
+        ${bodyHtml}
+        <p style="margin:16px 0 0;color:${MUTED_COLOR};font-size:12px;line-height:1.6;">
+          Intake: <strong style="color:${intake.refusingReports ? BRAND_RED : TEXT_COLOR};">${escapeHtml(intake.status)}</strong>
+          &middot; Storage: <span style="${intake.storageNearlyFull ? `color:${BRAND_RED};font-weight:600;` : ""}">${escapeHtml(intake.storage)}</span>
+          &middot; ${escapeHtml(intake.retention)}
+          &middot; ${linkHtml(settingsUrl, "Settings")}
+        </p>
+      </td>
+    </tr>`;
+
+  const text: string[] = [];
+  text.push(`Client errors (${totals.errors.toLocaleString("en-US")}):`);
+  text.push(`  → Client errors dashboard: ${dashboardUrl}`);
+  if (totals.errors === 0) {
+    text.push(`  (none${previousNote})`);
+  } else {
+    text.push(
+      `  ${pluralize(totals.errors, "report")}${change ? ` (${change})` : ""} · ${pluralize(totals.groups, "error group")} · ${pluralize(totals.apps, "application")} · ${pluralize(totals.users, "user")} affected`,
+    );
+    text.push("  Top error groups:");
+    groups.forEach((g, i) => {
+      const message: string = groupMessage(g);
+      text.push(
+        `    ${i + 1}. ${groupName(g)}${message ? `: ${message}` : ""}${g.operation ? ` [${truncateOneLine(g.operation, CLIENT_ERROR_NAME_MAX_LENGTH)}]` : ""} — ${pluralize(g.count, "report")}, ${pluralize(g.apps, "app")}, ${pluralize(g.users, "user")} — ${groupUrl(g)}`,
+      );
+    });
+    if (moreGroups > 0) text.push(`    (+${pluralize(moreGroups, "more error group")} on the dashboard)`);
+    text.push("  By application:");
+    apps.forEach((a, i) => {
+      const name: string | null = appName(a);
+      text.push(
+        `    ${i + 1}. ${name ? `${name} [${a.client_app_id}]` : a.client_app_id} — ${pluralize(a.count, "report")}, ${pluralize(a.groups, "error group")} — ${appUrl(a)}`,
+      );
+    });
+    if (moreApps > 0) text.push(`    (+${pluralize(moreApps, "more application")} on the dashboard)`);
+  }
+  text.push(`  Intake: ${intake.status} · Storage: ${intake.storage} · ${intake.retention} — ${settingsUrl}`);
+
+  return { html, text };
+}
+
 export function buildDailyAdminReport({
   authServerUri,
   friendlyName,
@@ -62,7 +375,10 @@ export function buildDailyAdminReport({
   topMostPopularApps,
   topMostPopularApis,
   authServerApiServerId,
+  clientErrors,
 }: BuildReportOpts): ReportContent {
+  const adminUrl = (page: AdminPage): string => `${authServerUri}${ADMIN_PAGES[page].path}`;
+  const clientErrorsSection: ReportSection = buildClientErrorsSection(authServerUri, clientErrors);
   const windowLabel = `${formatTimestamp(windowStart.getTime())} → ${formatTimestamp(windowEnd.getTime())}`;
 
   /**
@@ -120,7 +436,7 @@ export function buildDailyAdminReport({
         .map((a, i) => {
           return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;width:48px;">#${i + 1}</td>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};">${escapeHtml(a.app_name)}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};">${linkHtml(`${authServerUri}/apps/${encodeURIComponent(a.client_app_id)}`, escapeHtml(a.app_name))}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.client_app_id)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.access_token_count.toLocaleString("en-US")}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.refresh_token_count.toLocaleString("en-US")}</td>
@@ -137,7 +453,7 @@ export function buildDailyAdminReport({
             : `<td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};text-align:right;" title="Refresh tokens are only issued for the auth server audience.">N/A</td>`;
           return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;width:48px;">#${i + 1}</td>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};">${escapeHtml(a.api_server_name)}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};">${linkHtml(`${authServerUri}/apis/${encodeURIComponent(a.api_server_id)}`, escapeHtml(a.api_server_name))}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.api_server_id)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.access_token_count.toLocaleString("en-US")}</td>
   ${refreshCell}
@@ -146,7 +462,7 @@ export function buildDailyAdminReport({
         .join("\n");
 
   const errorsRows = newErrors.length === 0
-    ? `<tr><td colspan="4" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No new errors in the last 24 hours.</td></tr>`
+    ? `<tr><td colspan="4" style="padding:12px;color:${MUTED_COLOR};font-style:italic;">No new server errors in the last 24 hours.</td></tr>`
     : newErrors
         .map((e) => {
           const link = `${authServerUri}/admin/errors/${encodeURIComponent(e.error_id)}`;
@@ -172,7 +488,7 @@ export function buildDailyAdminReport({
     </tr>
     <tr>
       <td style="padding:24px 32px;">
-        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">New sign-ups (${newUsers.length})</h2>
+        ${sectionHeadingHtml(`New sign-ups (${newUsers.length})`, BRAND_BLUE, adminUrl("users"), "All users")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -189,7 +505,7 @@ ${usersRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">New organizations (${newOrganizations.length})</h2>
+        ${sectionHeadingHtml(`New organizations (${newOrganizations.length})`, BRAND_BLUE, adminUrl("organizations"), "All organizations")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -206,7 +522,7 @@ ${organizationsRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">Top most-active users (${topMostActiveUsers.length})</h2>
+        ${sectionHeadingHtml(`Top most-active users (${topMostActiveUsers.length})`, BRAND_BLUE, adminUrl("users"), "All users")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -226,7 +542,7 @@ ${topMostActiveRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">Most popular applications (${topMostPopularApps.length})</h2>
+        ${sectionHeadingHtml(`Most popular applications (${topMostPopularApps.length})`, BRAND_BLUE, adminUrl("apps"), "All applications")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -245,7 +561,7 @@ ${topPopularAppsRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_BLUE};">Most popular APIs (${topMostPopularApis.length})</h2>
+        ${sectionHeadingHtml(`Most popular APIs (${topMostPopularApis.length})`, BRAND_BLUE, adminUrl("apis"), "All APIs")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -265,7 +581,7 @@ ${topPopularApisRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        <h2 style="margin:0 0 12px;font-size:16px;color:${BRAND_RED};">New errors (${newErrors.length})</h2>
+        ${sectionHeadingHtml(`New server errors (${newErrors.length})`, BRAND_RED, adminUrl("errors"), "All server errors")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -281,6 +597,13 @@ ${errorsRows}
         </table>
       </td>
     </tr>
+    ${clientErrorsSection.html}
+    <tr>
+      <td style="padding:16px 32px 24px;border-top:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};font-size:12px;line-height:1.8;">
+        <strong style="color:${TEXT_COLOR};">Admin console:</strong>
+        ${ADMIN_PAGE_ORDER.map((page) => linkHtml(adminUrl(page), escapeHtml(ADMIN_PAGES[page].label))).join(" &middot; ")}
+      </td>
+    </tr>
   </table>
 </body>
 </html>`;
@@ -290,6 +613,7 @@ ${errorsRows}
   textLines.push(windowLabel);
   textLines.push("");
   textLines.push(`New sign-ups (${newUsers.length}):`);
+  textLines.push(`  → All users: ${adminUrl("users")}`);
   if (newUsers.length === 0) {
     textLines.push("  (none)");
   } else {
@@ -301,6 +625,7 @@ ${errorsRows}
   }
   textLines.push("");
   textLines.push(`New organizations (${newOrganizations.length}):`);
+  textLines.push(`  → All organizations: ${adminUrl("organizations")}`);
   if (newOrganizations.length === 0) {
     textLines.push("  (none)");
   } else {
@@ -312,6 +637,7 @@ ${errorsRows}
   }
   textLines.push("");
   textLines.push(`Top most-active users (${topMostActiveUsers.length}):`);
+  textLines.push(`  → All users: ${adminUrl("users")}`);
   if (topMostActiveUsers.length === 0) {
     textLines.push("  (none)");
   } else {
@@ -323,17 +649,19 @@ ${errorsRows}
   }
   textLines.push("");
   textLines.push(`Most popular applications (${topMostPopularApps.length}):`);
+  textLines.push(`  → All applications: ${adminUrl("apps")}`);
   if (topMostPopularApps.length === 0) {
     textLines.push("  (none)");
   } else {
     topMostPopularApps.forEach((a, i) => {
       textLines.push(
-        `  ${i + 1}. ${a.app_name} [${a.client_app_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${a.refresh_token_count.toLocaleString("en-US")} refresh`,
+        `  ${i + 1}. ${a.app_name} [${a.client_app_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${a.refresh_token_count.toLocaleString("en-US")} refresh — ${authServerUri}/apps/${a.client_app_id}`,
       );
     });
   }
   textLines.push("");
   textLines.push(`Most popular APIs (${topMostPopularApis.length}):`);
+  textLines.push(`  → All APIs: ${adminUrl("apis")}`);
   if (topMostPopularApis.length === 0) {
     textLines.push("  (none)");
   } else {
@@ -342,7 +670,7 @@ ${errorsRows}
         ? `${a.refresh_token_count.toLocaleString("en-US")} refresh`
         : "N/A refresh";
       textLines.push(
-        `  ${i + 1}. ${a.api_server_name} [${a.api_server_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${refreshLabel}`,
+        `  ${i + 1}. ${a.api_server_name} [${a.api_server_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${refreshLabel} — ${authServerUri}/apis/${a.api_server_id}`,
       );
     });
     textLines.push(
@@ -350,7 +678,8 @@ ${errorsRows}
     );
   }
   textLines.push("");
-  textLines.push(`New errors (${newErrors.length}):`);
+  textLines.push(`New server errors (${newErrors.length}):`);
+  textLines.push(`  → All server errors: ${adminUrl("errors")}`);
   if (newErrors.length === 0) {
     textLines.push("  (none)");
   } else {
@@ -359,6 +688,13 @@ ${errorsRows}
         `  - ${e.name}: ${e.message} (${e.route ?? "—"}) — ${formatTimestamp(e.created_at)} — ${authServerUri}/admin/errors/${e.error_id}`,
       );
     }
+  }
+  textLines.push("");
+  textLines.push(...clientErrorsSection.text);
+  textLines.push("");
+  textLines.push("Admin console:");
+  for (const page of ADMIN_PAGE_ORDER) {
+    textLines.push(`  ${ADMIN_PAGES[page].label}: ${adminUrl(page)}`);
   }
 
   return { text: textLines.join("\n"), html };

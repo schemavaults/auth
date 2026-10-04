@@ -7,7 +7,6 @@ export type { ClientErrorQueryFilters } from "./client-error-filters";
 export {
   listClientErrors,
   getClientErrorById,
-  countClientErrorsCreatedSince,
   type ListClientErrorsOptions,
   type ClientErrorsPage,
 } from "./list-client-errors";

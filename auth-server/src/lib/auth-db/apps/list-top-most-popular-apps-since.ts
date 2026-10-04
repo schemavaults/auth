@@ -1,8 +1,8 @@
 import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
-import { isHardcodedAppId, getHardcodedApp } from "@schemavaults/app-definitions";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { countTokensIssuedSinceGroupedByColumn } from "@/lib/auth-db/issued-tokens";
+import { resolveAppNames } from "./resolve-app-names";
 
 export interface TopMostPopularAppRow {
   client_app_id: string;
@@ -48,25 +48,10 @@ export async function listTopMostPopularAppsSince(
   if (ranked.length === 0) return [];
 
   // Resolve human-readable names for the top apps only.
-  const nameById = new Map<string, string>();
-  const dbAppIds: string[] = [];
-  for (const r of ranked) {
-    if (isHardcodedAppId(r.client_app_id)) {
-      nameById.set(r.client_app_id, getHardcodedApp(r.client_app_id).app_name);
-    } else {
-      dbAppIds.push(r.client_app_id);
-    }
-  }
-  if (dbAppIds.length > 0) {
-    const appRows = await db
-      .selectFrom("apps")
-      .where("app_id", "in", dbAppIds)
-      .select(["app_id", "app_name"])
-      .execute();
-    for (const row of appRows) {
-      nameById.set(row.app_id, row.app_name);
-    }
-  }
+  const nameById = await resolveAppNames(
+    db,
+    ranked.map((r) => r.client_app_id),
+  );
 
   return ranked.map((r) => ({
     client_app_id: r.client_app_id,

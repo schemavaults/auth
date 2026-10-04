@@ -67,13 +67,3 @@ export async function getClientErrorById(
     .executeTakeFirst();
   return row ? normalizeClientErrorRow(row) : null;
 }
-
-/** Errors received after `since_ms`; feeds the daily admin report. */
-export async function countClientErrorsCreatedSince(db: Db, since_ms: number): Promise<number> {
-  const row = await db
-    .selectFrom("client_errors")
-    .select((eb) => eb.fn.countAll().as("total"))
-    .where("created_at", ">", since_ms)
-    .executeTakeFirst();
-  return toNumber(row?.total ?? 0);
-}

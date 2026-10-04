@@ -6,3 +6,4 @@ export { getDefinitionForAuthorizedDeclaration } from './get-app-from-authorized
 export { preloadAppsTable } from './preload-apps-table';
 export { listTopMostPopularAppsSince } from './list-top-most-popular-apps-since';
 export type { TopMostPopularAppRow } from './list-top-most-popular-apps-since';
+export { resolveAppNames } from './resolve-app-names';

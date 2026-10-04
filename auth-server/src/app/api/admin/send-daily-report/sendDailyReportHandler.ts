@@ -12,11 +12,13 @@ import {
 } from "@/lib/auth-db/users";
 import { listErrorsCreatedSince } from "@/lib/auth-db/errors";
 import { listOrganizationsCreatedSince } from "@/lib/auth-db/organizations";
-import { listTopMostPopularAppsSince } from "@/lib/auth-db/apps";
+import { listTopMostPopularAppsSince, resolveAppNames } from "@/lib/auth-db/apps";
 import { listTopMostPopularApisSince } from "@/lib/auth-db/apis";
+import { getClientErrorStats } from "@/lib/auth-db/client-errors";
+import { loadClientErrorStorageStatus } from "@/lib/client-errors/intake-policy";
 import sendEmailViaMailServer from "@/lib/mail/send-email-via-mail-server";
 import captureServerException from "@/lib/captureServerException";
-import { buildDailyAdminReport } from "./buildReportHtml";
+import { buildDailyAdminReport, DAILY_REPORT_CLIENT_ERROR_TOP_N } from "./buildReportHtml";
 import type { RedisCache } from "@/lib/redis";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
@@ -48,6 +50,8 @@ export async function sendDailyReportHandler({
       topMostActiveUsers,
       topMostPopularApps,
       topMostPopularApis,
+      clientErrorStats,
+      clientErrorStorage,
     ] = await Promise.all([
       listUsersCreatedSince(dbh.db, windowStart.getTime()),
       listOrganizationsCreatedSince(dbh.db, windowStart.getTime()),
@@ -55,7 +59,16 @@ export async function sendDailyReportHandler({
       listTopMostActiveUsersSince(dbh.db, windowStart.getTime(), 10),
       listTopMostPopularAppsSince(dbh.db, windowStart.getTime(), 10),
       listTopMostPopularApisSince(dbh.db, windowStart.getTime(), 10),
+      getClientErrorStats(dbh.db, { since_ms: windowStart.getTime() }, windowEnd.getTime()),
+      loadClientErrorStorageStatus(dbh.db, redis.client),
     ]);
+    // Client error reports only carry the app id; name the apps the report lists.
+    const clientErrorAppNames = await resolveAppNames(
+      dbh.db,
+      clientErrorStats.by_app
+        .slice(0, DAILY_REPORT_CLIENT_ERROR_TOP_N)
+        .map((a) => a.client_app_id),
+    );
 
     const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
     const authServerUri: string = getAuthServerUrl(appEnv);
@@ -77,6 +90,11 @@ export async function sendDailyReportHandler({
       topMostPopularApps,
       topMostPopularApis,
       authServerApiServerId,
+      clientErrors: {
+        stats: clientErrorStats,
+        storage: clientErrorStorage,
+        appNames: clientErrorAppNames,
+      },
     });
 
     const dateLabel = windowEnd.toISOString().slice(0, 10);
@@ -99,6 +117,8 @@ export async function sendDailyReportHandler({
       top_most_active_users_count: topMostActiveUsers.length,
       top_most_popular_apps_count: topMostPopularApps.length,
       top_most_popular_apis_count: topMostPopularApis.length,
+      client_errors_count: clientErrorStats.totals.errors,
+      client_error_groups_count: clientErrorStats.totals.groups,
       window_start: windowStart.toISOString(),
       window_end: windowEnd.toISOString(),
     });
