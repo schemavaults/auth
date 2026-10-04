@@ -123,6 +123,11 @@ export const DailyAdminReportResult = z
     top_most_active_users_count: z.number().int(),
     top_most_popular_apps_count: z.number().int(),
     top_most_popular_apis_count: z.number().int(),
+    client_errors_count: z.number().int().openapi({ description: "Client error reports received during the window" }),
+    client_error_groups_count: z
+      .number()
+      .int()
+      .openapi({ description: "Distinct client error groups (fingerprints) among those reports" }),
     window_start: z.iso.datetime().openapi({ description: "Start of the 24h reporting window" }),
     window_end: z.iso.datetime().openapi({ description: "End of the 24h reporting window (now)" }),
   })

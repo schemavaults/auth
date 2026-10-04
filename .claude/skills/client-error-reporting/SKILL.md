@@ -109,11 +109,18 @@ returns `BIGINT` / `COUNT` as strings: normalize with `toNumber`.
   `GET`/`DELETE /api/admin/client-errors/{client_error_id}`, `GET`/`POST /api/admin/client-errors/purge-expired`
   (the retention job; also cron secret). Catalogued in `lib/api/operations/admin.ts`; the intake
   is the `Telemetry` tag (`lib/api/operations/telemetry.ts`).
+- Daily admin report (`auth-server/src/app/api/admin/send-daily-report/`): a "Client errors" section built from
+  `getClientErrorStats()` over the 24-hour window plus `loadClientErrorStorageStatus()`. Summary statistics only
+  (totals with the change from the previous 24 hours, the top `DAILY_REPORT_CLIENT_ERROR_TOP_N` groups and apps,
+  intake / storage / retention); every row links to the dashboard filtered to it (`range=24h` + `group` / `app`).
+  Report text is escaped and shortened to one line; the response counts `client_errors_count` /
+  `client_error_groups_count`.
 
 ## Tests
 
 - Unit: `auth-common/src/client-errors/*.test.ts`, `auth-client-sdk/src/lib/telemetry/*.test.ts` (includes a
-  client-level test with a fake adapter), `auth-server/src/lib/client-errors/*.test.ts`.
+  client-level test with a fake adapter), `auth-server/src/lib/client-errors/*.test.ts`, and the daily report's
+  section in `auth-server/src/app/api/admin/send-daily-report/buildReportHtml.test.ts`.
 - E2E: `api_contract/ClientErrorReportsApi.cy.ts` (wire contract, CORS, refusals, off switch, storage cap filled to
   503, admin API) and `admin/AdminClientErrorsPage.cy.ts`. Reports are rate limited per IP and every spec shares
   one: call `POST /api/test/reset-rate-limit` before sending many. Specs that change the intake settings must restore
