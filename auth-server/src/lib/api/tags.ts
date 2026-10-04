@@ -12,6 +12,7 @@ export const API_TAGS = {
   organizations: "Organizations",
   admin: "Administration",
   resourceServers: "Resource servers",
+  telemetry: "Telemetry",
   configuration: "Configuration",
   testEnvironment: "Test environment",
 } as const;
@@ -60,6 +61,11 @@ export const API_TAG_DESCRIPTIONS: readonly { name: ApiTag; description: string 
     name: API_TAGS.resourceServers,
     description:
       "Endpoints resource servers call on their own behalf with a JWKS access assertion: signing keys, allowed origins, membership lookups.",
+  },
+  {
+    name: API_TAGS.telemetry,
+    description:
+      "Error reports client applications send to the auth server (the auth client SDK reports its own failures unless an app sets `disable_telemetry`).",
   },
   {
     name: API_TAGS.configuration,

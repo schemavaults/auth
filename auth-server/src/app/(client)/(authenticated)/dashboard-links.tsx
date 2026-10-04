@@ -7,6 +7,7 @@ import {
   Activity,
   AlertTriangle,
   AppWindow,
+  Bug,
   Building2,
   HelpCircle,
   Server,
@@ -160,6 +161,15 @@ export function getAuthenticatedUserDashboardLinks(
           url: "/admin/errors",
           icon: ({ className }: { className: string }): ReactElement => (
             <AlertTriangle className={className} />
+          ),
+        },
+        {
+          type: "dashboard-sidebar-item-definition" as const,
+          title: "Client Errors",
+          tooltip: "Errors reported by client applications",
+          url: "/admin/client-errors",
+          icon: ({ className }: { className: string }): ReactElement => (
+            <Bug className={className} />
           ),
         },
         {

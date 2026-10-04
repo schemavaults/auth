@@ -10,6 +10,10 @@
     {
       "path": "/api/admin/send-daily-report",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/admin/client-errors/purge-expired",
+      "schedule": "17 3 * * *"
     }
   ]
 }

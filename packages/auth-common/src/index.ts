@@ -176,6 +176,12 @@ export {
 
 export { isOriginInAllowedList } from "./cors";
 
+export {
+  CLIENT_ERROR_REPORT_LIMITS,
+  clientErrorReportSchema,
+} from "./client-errors";
+export type { ClientErrorReport } from "./client-errors";
+
 export { isRedirectUriInCallbackAllowlist } from "./oauth2";
 
 export {

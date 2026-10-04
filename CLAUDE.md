@@ -251,6 +251,7 @@ The sections below used to live in this file. Each now lives in a Claude Code sk
 | `dynamic-client-registration` | RFC 7591 `POST /api/oidc/register` (MCP clients), the `allow_dynamic_client_registration` setting, the ownerless `dynamic-client-registration` owner type, RFC 8707 resource-URL audiences (`allow_dynamic_clients` / `resource_url_match_mode` on API servers, `aud` = resource URL, `accepted_audiences` in the server SDK), the `dynamic_client_registration` E2E suite |
 | `client-sdk-token-flows` | `@schemavaults/auth-client-sdk` code/refresh exchange via `openid-client`, the token-endpoint extensions, the discovery document |
 | `docker-deployment` | `auth-server/Dockerfile` targets, the `deploy/` compose stack, nginx configuration |
+| `client-error-reporting` | the SDK's error reporting (`reportError()`, `disable_telemetry`), the `POST /api/client-errors/{client_app_id}` intake and its limits, the `CLIENT_ERRORS` table and the `client_error_reports_*` / `accept_client_error_reports` settings, the `/admin/client-errors` dashboard |
 | `e2e-auth-tests` | writing, debugging, or running the Cypress suite |
 | `verify` | booting and driving the auth-server locally to verify a change |
 | `commit-changes` | committing (package version bumps and the `<package>:<version> - <summary>` subject convention) |

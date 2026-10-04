@@ -33,6 +33,7 @@ import type { TokenRevocationsTable } from "./token-revocations";
 import type { IssuedTokensTable } from "./issued-tokens";
 import type { ServerTracesTable } from "./server-traces";
 import type { ErrorsTable } from "./errors";
+import type { ClientErrorsTable } from "./client-errors";
 import type {
   UserMfaFactorsTable,
   UserMfaRecoveryCodesTable,
@@ -68,6 +69,7 @@ export type AuthDatabase = {
   server_branding_assets: ServerBrandingAssetsTable;
   server_traces: ServerTracesTable;
   errors: ErrorsTable;
+  client_errors: ClientErrorsTable;
   user_mfa_factors: UserMfaFactorsTable;
   user_mfa_recovery_codes: UserMfaRecoveryCodesTable;
   user_webauthn_credentials: UserWebauthnCredentialsTable;
