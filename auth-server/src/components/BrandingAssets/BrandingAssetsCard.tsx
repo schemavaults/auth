@@ -21,6 +21,7 @@ import {
 } from "@schemavaults/ui";
 import { Trash2, Upload } from "lucide-react";
 import type { BrandingAssetMetadataRecord } from "@/lib/auth-db/branding/types";
+import { formatBytes } from "@/lib/format-bytes";
 import {
   buildBrandingAssetAcceptAttribute,
   resolveBrandingAssetUploadContentType,
@@ -35,13 +36,6 @@ export interface BrandingAssetsCardProps {
   cardDescription?: string;
   cardClassName?: string;
   preloaded?: readonly BrandingAssetMetadataRecord[];
-}
-
-function formatMaxSize(maxSizeBytes: number): string {
-  if (maxSizeBytes >= 1024 * 1024) {
-    return `${(maxSizeBytes / (1024 * 1024)).toFixed(maxSizeBytes % (1024 * 1024) === 0 ? 0 : 1)} MB`;
-  }
-  return `${Math.round(maxSizeBytes / 1024)} KB`;
 }
 
 /**
@@ -119,7 +113,7 @@ function BrandingAssetRow({
         <p className="text-sm text-muted-foreground">{asset.description}</p>
         <p className="text-xs text-muted-foreground">
           Recommended: {asset.recommendedDimensions} &middot; Max size:{" "}
-          {formatMaxSize(asset.maxSizeBytes)}
+          {formatBytes(asset.maxSizeBytes)}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -195,7 +189,7 @@ export function BrandingAssetsCard(
         toast({
           variant: "destructive",
           title: "File too large",
-          description: `${asset.label} uploads are limited to ${formatMaxSize(asset.maxSizeBytes)}`,
+          description: `${asset.label} uploads are limited to ${formatBytes(asset.maxSizeBytes)}`,
         });
         return;
       }

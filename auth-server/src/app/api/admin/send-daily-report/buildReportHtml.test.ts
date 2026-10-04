@@ -179,13 +179,13 @@ describe("buildDailyAdminReport client errors", () => {
 
   test("reports the intake status, storage use and retention", () => {
     expect(build().text).toContain(
-      `Intake: Accepting reports · Storage: 3.0 MB of 100 MB used (3%) · Reports are deleted after 30 days — ${AUTH_SERVER_URI}/admin/settings`,
+      `Intake: Accepting reports · Storage: 3 MB of 100 MB used (3%) · Reports are deleted after 30 days — ${AUTH_SERVER_URI}/admin/settings`,
     );
     expect(build({ storage: { ...STORAGE, used_bytes: 100 * MB } }).text).toContain(
       "Intake: Storage full: new reports are refused · Storage: 100 MB of 100 MB used (100%)",
     );
     expect(build({ storage: { ...STORAGE, accepting_reports: false, retention_days: 0 } }).text).toContain(
-      "Intake: Not accepting reports · Storage: 3.0 MB of 100 MB used (3%) · Reports are kept until an administrator deletes them",
+      "Intake: Not accepting reports · Storage: 3 MB of 100 MB used (3%) · Reports are kept until an administrator deletes them",
     );
   });
 });
