@@ -84,8 +84,7 @@ bun run test --filter @schemavaults/auth-ui          # Run tests in auth-ui pack
        │                                                sub-export (`createSchemaVaultsAuthResolvers()`)
        │         └─ @schemavaults/trpc-backend-init   ← tRPC router factory with access-token validation
        │                                                (peerDeps: auth-server-sdk, app-definitions)
-       ├─ @schemavaults/auth-client-sdk               ← Client SDK for API calls to auth server (uses openid-client);
-       │                                                reports its flows' errors to the auth server (`disable_telemetry`)
+       ├─ @schemavaults/auth-client-sdk               ← Client SDK for API calls to auth server (uses openid-client)
        │    └─ @schemavaults/auth-react-provider      ← React hooks/context for auth state (uses SWR)
        │         ├─ @schemavaults/auth-ui             ← React components for auth flows (login, register, etc.)
        │         └─ @schemavaults/auth-resource-server-codegen-templates
@@ -168,33 +167,6 @@ Every `auth-server/src/app/api/**/route.ts` is served by `@schemavaults/openapi-
   and the `/docs` pages (`src/app/docs/`, via `@schemavaults/openapi-docs-ui`) are generated from the catalogue.
   The E2E suite `tests/e2e-auth-tests/cypress/e2e/api_contract/` pins the document, the docs pages and the wire
   contract of the API (credential sources, envelopes, text/plain JSON bodies).
-
-### Client error reporting (telemetry)
-
-`@schemavaults/auth-client-sdk` reports the failures of its own auth flows (login/register redirect, callback
-handling, `acquireAccessToken`, session checks, `refreshUserData`, app authorization; not expected session
-lifecycle errors, see `src/lib/telemetry/expected-errors.ts`) and whatever apps pass to `client.reportError()` to
-`POST /api/client-errors/{client_app_id}` (`auth-server/src/app/api/client-errors/[client_app_id]/`). The
-`disable_telemetry` constructor option (threaded through `<SchemaVaultsAuthProvider disable_telemetry>`) turns
-all of it off. The SDK's `ClientErrorReporter` sends `text/plain` JSON without credentials and with `keepalive`
-(a CORS simple request: no preflight), dedupes, caps reports per client, backs off on 429/503 (`Retry-After`,
-exposed via `Access-Control-Expose-Headers`) and stops after a 403/404 or 3 network failures in a row. Server side,
-`gate.ts` runs cheap checks before database work: body > 64 KiB 413, the `accept_client_error_reports` server
-setting (off: 403 `client_error_reporting_disabled`, `Access-Control-Allow-Origin: *`), per-IP rate limit
-`CLIENT_ERROR_REPORT_RATE_LIMIT` (20/min), then the per-client-app CORS policy (unknown app 404, unregistered origin
-403), the per-app quota `CLIENT_ERROR_REPORT_APP_RATE_LIMIT` (1000/hour, key source `client_app_id`) and the storage
-cap (`client_error_reports_max_storage_mb`: 503 `client_error_storage_full` once the stored reports' `size_bytes`
-sum reaches it; the total is cached in Redis by `src/lib/client-errors/intake-policy.ts`, and every deletion must
-call `forgetStoredClientErrorBytes()`). The operation stores a row in `CLIENT_ERRORS` (migration 00042,
-`src/lib/auth-db/client-errors/`) with a fingerprint grouping equal errors (`src/lib/client-errors/fingerprint.ts`),
-the page URL stripped of its query string and its `size_bytes` (`row-size.ts`), and at most hourly deletes reports
-older than `client_error_reports_retention_days` (also checked when the dashboard loads). The report shape and size
-limits (`clientErrorReportSchema`, `CLIENT_ERROR_REPORT_LIMITS`) live in `@schemavaults/auth-common` so the SDK and
-the server agree. Admins browse reports, summary statistics and the intake's storage use on `/admin/client-errors` (filters kept in the URL,
-`src/lib/client-errors/client-error-page-filters.ts`; components in `src/components/ClientErrorsDashboard/`) and
-`/admin/client-errors/[client_error_id]`, backed by `GET /api/admin/client-errors`, `.../stats`,
-`.../{client_error_id}` and the matching `DELETE`s. E2E: `api_contract/ClientErrorReportsApi.cy.ts`,
-`admin/AdminClientErrorsPage.cy.ts`.
 
 ### auth-server Structure
 - `src/app/` - Next.js App Directory
@@ -279,6 +251,7 @@ The sections below used to live in this file. Each now lives in a Claude Code sk
 | `dynamic-client-registration` | RFC 7591 `POST /api/oidc/register` (MCP clients), the `allow_dynamic_client_registration` setting, the ownerless `dynamic-client-registration` owner type, RFC 8707 resource-URL audiences (`allow_dynamic_clients` / `resource_url_match_mode` on API servers, `aud` = resource URL, `accepted_audiences` in the server SDK), the `dynamic_client_registration` E2E suite |
 | `client-sdk-token-flows` | `@schemavaults/auth-client-sdk` code/refresh exchange via `openid-client`, the token-endpoint extensions, the discovery document |
 | `docker-deployment` | `auth-server/Dockerfile` targets, the `deploy/` compose stack, nginx configuration |
+| `client-error-reporting` | the SDK's error reporting (`reportError()`, `disable_telemetry`), the `POST /api/client-errors/{client_app_id}` intake and its limits, the `CLIENT_ERRORS` table and the `client_error_reports_*` / `accept_client_error_reports` settings, the `/admin/client-errors` dashboard |
 | `e2e-auth-tests` | writing, debugging, or running the Cypress suite |
 | `verify` | booting and driving the auth-server locally to verify a change |
 | `commit-changes` | committing (package version bumps and the `<package>:<version> - <summary>` subject convention) |
