@@ -11,7 +11,15 @@ send their own errors through the same channel; platform administrators browse t
 ## Report shape (`packages/auth-common/src/client-errors/`)
 
 `clientErrorReportSchema` and `CLIENT_ERROR_REPORT_LIMITS` (field lengths, 8 KiB `context` JSON, 64 KiB request body)
-are shared by the SDK, which truncates to fit, and the server, which refuses anything larger (400 / 413). Adding a
+are shared by the SDK, which truncates to fit, and the server, which refuses anything larger (400 / 413).
+
+`redactClientErrorReport()` (`redact-client-error-secrets.ts`) replaces credentials in `message`, `stack` and `context`
+with `[redacted]`: JWS/JWE compact tokens, `Bearer`/`DPoP`/`Basic` credentials, the values of secret-looking keys
+(`isClientErrorSecretKey()`: `*token*`, `*secret*`, `password`, `authorization`, `cookie`, `code_verifier`, ...) in
+`key=value`, `key: value` and (escaped) JSON, and `code=` parameters. The SDK applies it before sending and the
+intake again before storing (older SDKs and other clients do not), so the fingerprint is computed from the redacted
+message. The patterns must stay linear (the intake runs them on unauthenticated input) and free of lookbehind (older
+Safari cannot parse it); over-redaction is accepted. Adding a
 field means touching, in order: the schema and limits in auth-common, the SDK's `buildClientErrorReport()`, migration
 00042 / `ClientErrorsTable`, `estimateClientErrorRowBytes()` (`row-size.ts`), the intake operation's row, and the
 `AdminClientError` response schema (`auth-server/src/lib/api/domain-schemas/client-errors.ts`).
@@ -32,7 +40,10 @@ field means touching, in order: the schema and limits in auth-common, the SDK's 
   client, backs off for `Retry-After` on 429 / 503, and stops for good after a 403 / 404 or three network failures in
   a row (a refusal without CORS headers reads as a network failure).
 - `buildClientErrorReport()` appends the `cause` chain to the stack as `Caused by:` sections and keeps only the
-  page's origin + path: callback query strings carry authorization codes and `state`.
+  page's origin + path: callback query strings carry authorization codes and `state`. A thrown value or `cause` that
+  is not an `Error` is never serialized (only a string `message` member or its key names): `openid-client`
+  (oauth4webapi) attaches the token response (`{ body }`) or the id_token claims (`{ claims }`) that way when it
+  rejects them.
 
 ## Intake (`auth-server/src/app/api/client-errors/[client_app_id]/`)
 

@@ -1,6 +1,6 @@
 import "server-only";
 import { appIdSchema } from "@schemavaults/app-definitions";
-import { CLIENT_ERROR_REPORT_LIMITS } from "@schemavaults/auth-common";
+import { CLIENT_ERROR_REPORT_LIMITS, redactClientErrorReport } from "@schemavaults/auth-common";
 import { publicAccess, z, withOpenApi } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import { ClientErrorReport, ClientErrorReportAccepted } from "@/lib/api/domain-schemas/client-errors";
@@ -33,7 +33,7 @@ export const reportClientError = defineOperation({
   description:
     "Error reporting intake for client applications. The auth client SDK (`@schemavaults/auth-client-sdk`) reports the errors of its own flows here unless the app sets `disable_telemetry: true`; apps can report their own through `reportError()`. Administrators browse the reports on `/admin/client-errors`.\n\n" +
     "CORS follows the app's registered origins: a report from a browser must come from an origin registered for `client_app_id` in this environment (403 otherwise) and its response carries the CORS headers; web apps must send an `Origin`, native apps may omit it. The body may be labelled `text/plain` (a CORS simple request, which the SDK uses to skip the preflight); answer `OPTIONS` for callers that send `application/json`. " +
-    `Reports are rate limited per IP and per app (429); bodies over ${CLIENT_ERROR_REPORT_LIMITS.max_body_bytes / 1024} KiB are refused with 413. The page URL is stored without its query string or fragment.\n\n` +
+    `Reports are rate limited per IP and per app (429); bodies over ${CLIENT_ERROR_REPORT_LIMITS.max_body_bytes / 1024} KiB are refused with 413. The page URL is stored without its query string or fragment, and credentials in the message, stack and context (JWTs, \`Authorization\` values, the values of keys such as \`access_token\`, \`password\` or \`code_verifier\`, and \`code\` query parameters) are replaced with \`[redacted]\`.\n\n` +
     "Administrators control the intake with server settings: `accept_client_error_reports` (while off: 403 with `error: \"client_error_reporting_disabled\"`), `client_error_reports_max_storage_mb` (once the stored reports reach it: 503 with `error: \"client_error_storage_full\"` and `Retry-After`) and `client_error_reports_retention_days` (older reports are deleted automatically). Refusals made before the origin check (intake off, IP rate limit) carry `Access-Control-Allow-Origin: *`; `Retry-After` is exposed to cross-origin callers.",
   tags: [API_TAGS.telemetry],
   auth: publicAccess("Needs no credentials: the report is attributed to `client_app_id` after the `Origin` check."),
@@ -62,7 +62,9 @@ export const reportClientError = defineOperation({
   },
   handler: async (ctx) => {
     const { client_app_id } = ctx.params;
-    const report = ctx.body;
+    // Older SDKs and other clients do not redact their reports: never store
+    // a token or password a report carries.
+    const report = redactClientErrorReport(ctx.body);
 
     const contents: ClientErrorRowContents = {
       client_app_id,

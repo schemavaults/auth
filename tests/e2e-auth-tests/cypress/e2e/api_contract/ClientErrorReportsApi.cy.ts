@@ -10,7 +10,9 @@
 //   stored, an unknown app is 404, a web app's report without an Origin is
 //   403, an invalid report is 400 and a body over 64 KiB is 413;
 // - the OPTIONS preflight follows the same per-app origin policy;
-// - the stored page URL keeps no query string or fragment;
+// - the stored page URL keeps no query string or fragment, and credentials
+//   in the message, stack and context of a report (sent as an older or
+//   third-party client would, unredacted) are stored redacted;
 // - the admin endpoints list, summarize, fetch and delete reports, and are
 //   refused without an administrator session;
 // - the `accept_client_error_reports` server setting turns the intake off
@@ -40,6 +42,7 @@ interface AdminClientError {
   name: string;
   message: string;
   operation: string | null;
+  stack: string | null;
   page_url: string | null;
   origin: string | null;
   sdk_version: string | null;
@@ -147,6 +150,29 @@ describe("Client error reports API", () => {
           expect(one.status).to.eq(200);
           expect(one.body.data.message).to.eq(message);
         });
+      });
+    });
+  });
+
+  it("stores the credentials a report carries redacted", () => {
+    const message = unique("Token exchange failed");
+    const jwt = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.c2lnbmF0dXJl";
+    sendReport({
+      name: "OperationProcessingError",
+      message: `${message} {"access_token":"AT-${Date.now()}","refresh_token":"RT-secret"}`,
+      stack: `Error: ${message}\n    at f (https://app.example.com/cb?code=code-secret&state=s:1:1)\nCaused by: ${jwt}`,
+      context: { status: 400, headers: { Authorization: "Bearer bearer-secret" }, password: "pw-secret" },
+    }).then((response) => {
+      expect(response.status).to.eq(202);
+      const { client_error_id } = response.body as ReportAccepted;
+      cy.request<{ data: AdminClientError }>(`/api/admin/client-errors/${client_error_id}`).then((one) => {
+        expect(one.status).to.eq(200);
+        const stored = one.body.data;
+        expect(JSON.stringify(stored)).not.to.match(/AT-|RT-secret|code-secret|bearer-secret|pw-secret|eyJzdWIi/);
+        expect(stored.message).to.eq(`${message} {"access_token":"[redacted]","refresh_token":"[redacted]"}`);
+        expect(stored.stack).to.include("?code=[redacted]&state=s");
+        expect(stored.stack).to.include("Caused by: [redacted]");
+        expect(stored.context).to.deep.eq({ status: 400, headers: { Authorization: "[redacted]" }, password: "[redacted]" });
       });
     });
   });

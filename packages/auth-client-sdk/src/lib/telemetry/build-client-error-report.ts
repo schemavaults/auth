@@ -1,6 +1,8 @@
 import {
   CLIENT_ERROR_REPORT_LIMITS,
   type ClientErrorReport,
+  redactClientErrorContext,
+  redactClientErrorText,
 } from "@schemavaults/auth-common";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 
@@ -9,6 +11,9 @@ export const AUTH_CLIENT_SDK_NAME = "@schemavaults/auth-client-sdk" as const;
 
 /** How many `cause` links are appended to a report's stack trace. */
 const MAX_CAUSE_DEPTH: number = 3;
+
+/** How many keys of a thrown non-Error object a report names. */
+const MAX_DESCRIBED_KEYS: number = 20;
 
 const UUID_REGEX: RegExp =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -35,13 +40,35 @@ function truncate(value: string, max_length: number): string {
   return value.length <= max_length ? value : `${value.slice(0, max_length - 1)}…`;
 }
 
-function stringifyThrown(value: unknown): string {
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value) ?? String(value);
-  } catch {
-    return String(value);
+/**
+ * `value` with credentials redacted, within `max_length`. Only twice the
+ * limit is inspected: the rest would be cut anyway.
+ */
+function redactAndTruncate(value: string, max_length: number): string {
+  return truncate(redactClientErrorText(value.slice(0, max_length * 2)), max_length);
+}
+
+/**
+ * The name and message of a thrown value that is not an `Error`. Objects
+ * are never serialized: libraries attach response bodies and token claims
+ * as non-Error `cause`s (oauth4webapi's `{ body }` holds the whole token
+ * response), so only a string `message` member and the key names are kept.
+ */
+function describeNonError(value: unknown): { name: string; message: string } {
+  if (typeof value === "string") return { name: "UnknownError", message: value };
+  if (typeof value === "function") return { name: "UnknownError", message: "Non-Error function" };
+  if (value === null || typeof value !== "object") return { name: "UnknownError", message: String(value) };
+  const { name, message } = value as { name?: unknown; message?: unknown };
+  if (typeof message === "string") {
+    return { name: typeof name === "string" && name ? name : "UnknownError", message };
   }
+  const keys: string[] = Object.keys(value);
+  const listed: string =
+    keys.slice(0, MAX_DESCRIBED_KEYS).join(", ") + (keys.length > MAX_DESCRIBED_KEYS ? ", …" : "");
+  return {
+    name: "UnknownError",
+    message: keys.length > 0 ? `Non-Error object with keys: ${listed}` : "Non-Error object",
+  };
 }
 
 /** The name, message and stack of a thrown value (an `Error` or anything else). */
@@ -49,7 +76,7 @@ function describeThrown(value: unknown): { name: string; message: string; stack?
   if (value instanceof Error) {
     return { name: value.name || "Error", message: value.message, stack: value.stack };
   }
-  return { name: "UnknownError", message: stringifyThrown(value) };
+  return describeNonError(value);
 }
 
 /**
@@ -74,11 +101,12 @@ function stackWithCauses(error: unknown): string | undefined {
 
 /**
  * `context` made safe to send: JSON round-tripped (functions, symbols and
- * undefined values dropped), and replaced with a note when it cannot be
- * serialized or exceeds the server's limit.
+ * undefined values dropped) with credentials redacted, and replaced with a
+ * note when it cannot be serialized or exceeds the server's limit.
  */
 function sanitizeContext(context: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!context) return undefined;
+  const tooLarge = { context_dropped: `larger than ${CLIENT_ERROR_REPORT_LIMITS.context_json} characters` };
   let serialized: string | undefined;
   try {
     serialized = JSON.stringify(context);
@@ -86,10 +114,10 @@ function sanitizeContext(context: Record<string, unknown> | undefined): Record<s
     return { context_dropped: "not JSON-serializable" };
   }
   if (serialized === undefined) return undefined;
-  if (serialized.length > CLIENT_ERROR_REPORT_LIMITS.context_json) {
-    return { context_dropped: `larger than ${CLIENT_ERROR_REPORT_LIMITS.context_json} characters` };
-  }
-  return JSON.parse(serialized) as Record<string, unknown>;
+  if (serialized.length > CLIENT_ERROR_REPORT_LIMITS.context_json) return tooLarge;
+  const redacted = redactClientErrorContext(JSON.parse(serialized) as Record<string, unknown>);
+  // Redaction can lengthen a short value ("pw" becomes "[redacted]").
+  return JSON.stringify(redacted).length > CLIENT_ERROR_REPORT_LIMITS.context_json ? tooLarge : redacted;
 }
 
 /** Origin and path of `page_url`: query strings and fragments of auth callbacks carry codes and tokens. */
@@ -120,8 +148,8 @@ export function buildClientErrorReport(
 
   return {
     name: truncate(name, L.name),
-    message: truncate(message, L.message),
-    ...(stack ? { stack: truncate(stack, L.stack) } : {}),
+    message: redactAndTruncate(message, L.message),
+    ...(stack ? { stack: redactAndTruncate(stack, L.stack) } : {}),
     ...(operation ? { operation: truncate(operation, L.operation) } : {}),
     occurred_at: Math.max(0, Math.floor(environment.now)),
     sdk_name: AUTH_CLIENT_SDK_NAME,
