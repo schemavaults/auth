@@ -16,6 +16,10 @@ import { deleteError } from "@/app/api/admin/errors/[error_id]/operation";
 import { purgeErrorsBefore } from "@/app/api/admin/errors/operation";
 import { listClientErrors, purgeClientErrorsBefore } from "@/app/api/admin/client-errors/operation";
 import { getClientErrorSummaryStats } from "@/app/api/admin/client-errors/stats/operation";
+import {
+  purgeExpiredClientErrorsViaGet,
+  purgeExpiredClientErrorsViaPost,
+} from "@/app/api/admin/client-errors/purge-expired/operation";
 import { deleteClientError, getClientError } from "@/app/api/admin/client-errors/[client_error_id]/operation";
 import { listServerTraces } from "@/app/api/admin/server-traces/operation";
 import { listServerTraceOperations } from "@/app/api/admin/server-traces/operations/operation";
@@ -51,6 +55,8 @@ export const adminOperations: readonly AnyOperationDefinition[] = [
   getClientError,
   deleteClientError,
   purgeClientErrorsBefore,
+  purgeExpiredClientErrorsViaGet,
+  purgeExpiredClientErrorsViaPost,
   listServerTraces,
   listServerTraceOperations,
   sendDailyReportViaGet,

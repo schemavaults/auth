@@ -1,6 +1,6 @@
 ---
 name: client-error-reporting
-description: Client error reporting (telemetry): the auth client SDK's `ClientErrorReporter`, `reportError()` and the `disable_telemetry` option (also on `<SchemaVaultsAuthProvider>`), the public intake `POST /api/client-errors/{client_app_id}` with its gate (CORS, rate limits, per-app quota, storage cap), the `CLIENT_ERRORS` table (migration 00042), the `accept_client_error_reports` / `client_error_reports_max_storage_mb` / `client_error_reports_retention_days` server settings, the `/admin/client-errors` dashboard and its admin API, and the shared `clientErrorReportSchema` in `@schemavaults/auth-common`. Use when touching any of these, adding a field to error reports, changing which SDK errors are reported, or changing intake limits.
+description: Client error reporting (telemetry): the auth client SDK's `ClientErrorReporter`, `reportError()` and the `disable_telemetry` option (also on `<SchemaVaultsAuthProvider>`), the public intake `POST /api/client-errors/{client_app_id}` with its gate (CORS, rate limits, per-app quota, storage cap), the `CLIENT_ERRORS` table (migration 00042), the `accept_client_error_reports` / `client_error_reports_max_storage_mb` / `client_error_reports_retention_days` server settings and the scheduled retention job (`/api/admin/client-errors/purge-expired`), the `/admin/client-errors` dashboard and its admin API, and the shared `clientErrorReportSchema` in `@schemavaults/auth-common`. Use when touching any of these, adding a field to error reports, changing which SDK errors are reported, or changing intake limits.
 ---
 
 # Client error reporting
@@ -67,8 +67,13 @@ Then it adds the size to the cached total and runs the retention purge.
 - The total is cached in Redis (`client-errors:stored-bytes`, 5-minute TTL, recomputed from `SUM(size_bytes)` when
   missing). **Every code path that deletes reports must call `forgetStoredClientErrorBytes()`**; the admin deletes
   and the retention purge do.
-- `purgeExpiredClientErrors()` deletes reports older than `client_error_reports_retention_days` (0 = keep), at most
-  once an hour across instances (Redis `SET NX` lock), from the intake and from the dashboard page.
+- Retention (`client_error_reports_retention_days`, 0 = keep) is enforced twice. The scheduled job
+  `GET`/`POST /api/admin/client-errors/purge-expired` (`deleteExpiredClientErrors()`, no lock) runs daily: a
+  Vercel cron in `auth-server/vercel.json`, a host crontab entry for the `deploy/` stack (`deploy/README.md`
+  "Scheduled jobs"). It takes `Authorization: Bearer <CRON_SECRET>` via the route's `cron-bypass.ts` middleware
+  (ahead of the admin guard, like `/api/admin/send-daily-report`) or an admin session. Between runs,
+  `purgeExpiredClientErrors()` applies the same cutoff at most once an hour across instances (Redis `SET NX` lock)
+  from the intake and the dashboard page.
 - The three settings are declared in `server-setting-keys.ts`; the two number settings are what made
   `admin/AdminSettingsApi.cy.ts` allow `number` value types.
 
@@ -90,7 +95,8 @@ returns `BIGINT` / `COUNT` as strings: normalize with `toNumber`.
   becomes a link.
 - API (`routeGuard: "admin"`): `GET`/`DELETE /api/admin/client-errors` (list / purge before a cutoff),
   `GET /api/admin/client-errors/stats` (includes the unfiltered `storage` status),
-  `GET`/`DELETE /api/admin/client-errors/{client_error_id}`. Catalogued in `lib/api/operations/admin.ts`; the intake
+  `GET`/`DELETE /api/admin/client-errors/{client_error_id}`, `GET`/`POST /api/admin/client-errors/purge-expired`
+  (the retention job; also cron secret). Catalogued in `lib/api/operations/admin.ts`; the intake
   is the `Telemetry` tag (`lib/api/operations/telemetry.ts`).
 
 ## Tests

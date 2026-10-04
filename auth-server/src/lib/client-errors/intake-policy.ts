@@ -88,11 +88,38 @@ export async function forgetStoredClientErrorBytes(redis: Redis): Promise<void> 
   }
 }
 
+export interface ExpiredClientErrorsPurge {
+  deleted: number;
+  /** Reports received before this instant (Unix epoch ms) were deleted. */
+  cutoff_ms: number;
+}
+
 /**
- * Deletes the reports older than the retention period, at most once per
+ * Deletes the reports older than `retention_days` right away, dropping the
+ * cached stored total when anything was deleted. Returns null when
+ * retention is off (0). Throws when the database fails.
+ */
+export async function deleteExpiredClientErrors(
+  db: Db,
+  redis: Redis,
+  retention_days: number,
+  now_ms: number = Date.now(),
+): Promise<ExpiredClientErrorsPurge | null> {
+  if (retention_days <= 0) return null;
+  const cutoff_ms: number = now_ms - retention_days * DAY_MS;
+  const deleted: number = await deleteClientErrorsBefore(db, cutoff_ms);
+  if (deleted > 0) await forgetStoredClientErrorBytes(redis);
+  return { deleted, cutoff_ms };
+}
+
+/**
+ * The opportunistic retention purge of the intake and the dashboard:
+ * {@link deleteExpiredClientErrors} at most once per
  * {@link RETENTION_PURGE_INTERVAL_SECONDS} across all server instances (a
- * Redis lock). Returns how many reports were deleted, or null when the purge
- * was not due or retention is off. Never throws.
+ * Redis lock). The scheduled `GET /api/admin/client-errors/purge-expired`
+ * job guarantees the retention period even without traffic. Returns how
+ * many reports were deleted, or null when the purge was not due or
+ * retention is off. Never throws.
  */
 export async function purgeExpiredClientErrors(
   db: Db,
@@ -104,9 +131,8 @@ export async function purgeExpiredClientErrors(
   try {
     const acquired = await redis.set(RETENTION_PURGE_LOCK_KEY, String(now_ms), "EX", RETENTION_PURGE_INTERVAL_SECONDS, "NX");
     if (acquired !== "OK") return null;
-    const deleted: number = await deleteClientErrorsBefore(db, now_ms - retention_days * DAY_MS);
-    if (deleted > 0) await forgetStoredClientErrorBytes(redis);
-    return deleted;
+    const purge = await deleteExpiredClientErrors(db, redis, retention_days, now_ms);
+    return purge?.deleted ?? null;
   } catch (e: unknown) {
     console.error("[client-errors] Retention purge failed:", e);
     return null;

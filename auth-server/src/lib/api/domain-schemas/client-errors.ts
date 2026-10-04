@@ -161,3 +161,20 @@ export const clientErrorPageQuerySchema = clientErrorFilterQuerySchema.extend({
     .optional()
     .openapi({ description: "Matching errors to skip, newest first (default 0).", example: "0" }),
 });
+
+/** What a run of the scheduled retention purge deleted. */
+export const ClientErrorRetentionPurgeResult = z
+  .object({
+    success: z.literal(true),
+    message: z.string(),
+    data: z.object({
+      deleted: z.number().int().nonnegative().openapi({ description: "Reports deleted by this run" }),
+      retention_days: z.number().int().nonnegative().openapi({
+        description: "The `client_error_reports_retention_days` server setting (0: retention is off and nothing is deleted)",
+      }),
+      cutoff: epochMs("Reports received before this instant were deleted").nullable().openapi({
+        description: "Reports received before this instant (Unix epoch milliseconds) were deleted; null when retention is off",
+      }),
+    }),
+  })
+  .openapi("ClientErrorRetentionPurgeResult");

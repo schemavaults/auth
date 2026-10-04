@@ -131,7 +131,7 @@ export const SERVER_SETTING_DEFINITIONS = {
     defaultValue: 30,
     schema: z.number().int().min(0).max(3650),
     description:
-      "How many days client error reports are kept; older reports are deleted automatically (checked at most once an hour). 0 keeps reports until an administrator deletes them.",
+      "How many days client error reports are kept; older reports are deleted automatically by the daily scheduled job (GET /api/admin/client-errors/purge-expired) and, at most once an hour, while reports arrive or the dashboard is open. 0 keeps reports until an administrator deletes them.",
   },
 } as const satisfies Record<
   string,
