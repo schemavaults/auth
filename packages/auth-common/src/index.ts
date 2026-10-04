@@ -179,6 +179,11 @@ export { isOriginInAllowedList } from "./cors";
 export {
   CLIENT_ERROR_REPORT_LIMITS,
   clientErrorReportSchema,
+  CLIENT_ERROR_REDACTED,
+  isClientErrorSecretKey,
+  redactClientErrorContext,
+  redactClientErrorReport,
+  redactClientErrorText,
 } from "./client-errors";
 export type { ClientErrorReport } from "./client-errors";
 

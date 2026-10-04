@@ -85,7 +85,12 @@ in, an expired or revoked session) are not reported.
 A report carries the error's name, message and stack trace (with its `cause`
 chain), the SDK method that failed, the page's origin and path (never its
 query string or fragment, which carry authorization codes), the SDK version,
-the app environment and the signed-in user's uid. Reports are sent without
+the app environment and the signed-in user's uid. Credentials are redacted
+from the message, stack and `context` before sending (and again by the auth
+server before storing): JWTs, `Authorization` values, the values of keys such
+as `access_token`, `password` or `code_verifier`, and `code` query parameters
+become `[redacted]`. A `cause` that is not an `Error` (libraries attach
+response bodies this way) is described by its key names, never serialized. Reports are sent without
 credentials as `text/plain` JSON (a CORS simple request, so no preflight) and
 are only accepted from origins registered for the app. The SDK reports an
 error once, at most once a minute for the same error, at most 25 times per

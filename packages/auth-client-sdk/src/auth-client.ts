@@ -410,7 +410,8 @@ export class SchemaVaultsAuthClient
    *   this for the app's own errors. Fire and forget: never throws, and does
    *   nothing when the client was constructed with `disable_telemetry: true`.
    *   Only the error's name, message and stack, the page's origin and path,
-   *   the signed-in user's uid and the given `context` are sent.
+   *   the signed-in user's uid and the given `context` are sent, with
+   *   credentials (tokens, passwords, `Authorization` values) redacted.
    */
   public reportError(error: unknown, opts?: ReportErrorOptions): void {
     this._errorReporter.report(error, opts);

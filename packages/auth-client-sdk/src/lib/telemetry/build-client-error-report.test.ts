@@ -45,7 +45,53 @@ describe("buildClientErrorReport", () => {
       name: "UnknownError",
       message: "plain string",
     });
-    expect(buildClientErrorReport({ code: 42 }, {}, environment).message).toBe('{"code":42}');
+    // Objects are never serialized: only their key names, or a string `message`.
+    expect(buildClientErrorReport({ code: 42, body: { secret: "s" } }, {}, environment)).toMatchObject({
+      name: "UnknownError",
+      message: "Non-Error object with keys: code, body",
+    });
+    expect(buildClientErrorReport({ name: "HttpError", message: "Bad gateway" }, {}, environment)).toMatchObject({
+      name: "HttpError",
+      message: "Bad gateway",
+    });
+  });
+
+  test("never sends a token response attached as a non-Error cause", () => {
+    // The shape openid-client (oauth4webapi) throws when it rejects a token
+    // response: an OperationProcessingError whose `cause` holds the body.
+    const rejected = new Error('"response" body "scope" property must be a string', {
+      cause: { body: { access_token: "AT_SECRET", refresh_token: "RT_SECRET", id_token: "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln", scope: 1 } },
+    });
+    const claimsRejected = new Error('unexpected JWT "exp" (expiration time) claim value', {
+      cause: { claims: { email: "user@example.com", nonce: "n" }, claim: "exp" },
+    });
+    for (const root of [rejected, claimsRejected]) {
+      const wrapped = new Error("Failed to exchange authorization code for access token: x", { cause: root });
+      const report = buildClientErrorReport(wrapped, { operation: "handleSuccessfulAuthentication" }, environment);
+      const sent = JSON.stringify(report);
+      for (const secret of ["AT_SECRET", "RT_SECRET", "eyJzdWIiOiJ1In0", "user@example.com"]) {
+        expect(sent).not.toContain(secret);
+      }
+      expect(report.stack).toContain(`Caused by: Error: ${root.message}`);
+    }
+    expect(buildClientErrorReport(new Error("x", { cause: rejected }), {}, environment).stack).toContain(
+      "Caused by: UnknownError: Non-Error object with keys: body",
+    );
+  });
+
+  test("redacts credentials in the message, stack and context", () => {
+    const error = new Error('Request failed: {"refresh_token":"RT_SECRET"} Authorization: Bearer AT_SECRET_123');
+    error.stack = `Error: GET https://api.example.com/x?access_token=AT_SECRET_456 failed\n    at f (app.js:1:1)`;
+    const report = buildClientErrorReport(
+      error,
+      { context: { status: 401, headers: { authorization: "Bearer x" }, password: "pw" } },
+      environment,
+    );
+    expect(JSON.stringify(report)).not.toMatch(/SECRET|"pw"|Bearer x/);
+    expect(report.message).toBe('Request failed: {"refresh_token":"[redacted]"} Authorization: [redacted] [redacted]');
+    expect(report.stack).toContain("?access_token=[redacted] failed");
+    expect(report.context).toEqual({ status: 401, headers: { authorization: "[redacted]" }, password: "[redacted]" });
+    expect(clientErrorReportSchema.safeParse(report).success).toBe(true);
   });
 
   test("truncates every field to what the server accepts", () => {
