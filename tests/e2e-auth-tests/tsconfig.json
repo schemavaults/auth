@@ -9,6 +9,12 @@
     "sourceMap": true,
     "types": ["cypress", "node"],
   },
-  "include": ["cypress/**/*.ts", "cypress.config.ts", "e2e-auth-tests-cli.ts"],
+  "include": [
+    "cypress/**/*.ts",
+    "cypress.config.ts",
+    "e2e-auth-tests-cli.ts",
+    "e2e-shards.ts",
+    "e2e-spec-durations.ts"
+  ],
   "exclude": ["node_modules", "dist"],
 }

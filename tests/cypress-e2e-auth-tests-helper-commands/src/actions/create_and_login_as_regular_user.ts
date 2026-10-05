@@ -1,11 +1,5 @@
-import { createInviteCodeAsAdmin } from "./create_invite_code";
+import provisionInviteCodeViaRequest from "./provision_invite_code_via_request";
 
-/**
- * Creates a regular user by:
- * Registering as a new regular user with that invite code
- *
- * Returns the credentials of the newly created user
- */
 export interface UserCredentials {
   email: string;
   password: string;
@@ -17,11 +11,11 @@ export interface UserCredentialsMaybeWithInviteCode {
   invite_code?: string;
 }
 
-const INVITE_CODE_LENGTH = 24;
-function generateRandomInviteCode(): Cypress.Chainable<string> {
-  return cy.generate_random_code(INVITE_CODE_LENGTH);
-}
-
+/**
+ * Creates a regular user by registering through the registration form. When
+ * an invite code is required and none was supplied, one is first created
+ * through the admin API as the superuser.
+ */
 export default function createAndLoginAsRegularUser(
   credentials: UserCredentialsMaybeWithInviteCode,
 ): Cypress.Chainable<boolean> {
@@ -64,19 +58,7 @@ export default function createAndLoginAsRegularUser(
   }
 
   function createInviteCodeAndThenRegisterIfOneNotProvided(): Cypress.Chainable<boolean> {
-    return cy
-      .as_admin((): Cypress.Chainable<string> => {
-        return generateRandomInviteCode().then((invite_code: string) => {
-          return cy
-            .create_invite_code(invite_code, 1)
-            .then((success: boolean) => {
-              if (!success) {
-                throw new Error("Failed to create new invite code!");
-              }
-              return cy.wrap(invite_code, { log: false });
-            });
-        });
-      })
+    return provisionInviteCodeViaRequest()
       .then((invite_code: string) => {
         return onCreateUserReady({
           ...credentials,

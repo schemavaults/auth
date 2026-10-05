@@ -5,6 +5,8 @@ import { Command } from "commander";
 import { spawnSync } from "node:child_process";
 import { readdirSync, existsSync } from "node:fs";
 import { join, normalize } from "node:path";
+import { parseShardSelector, planShards, type Shard } from "./e2e-shards";
+import { E2E_SPEC_DURATIONS_SECONDS } from "./e2e-spec-durations";
 
 const dockerComposeFilePath = join(process.cwd(), "docker-compose.yml");
 if (!existsSync(dockerComposeFilePath)) {
@@ -53,6 +55,21 @@ function listTestSuites(): readonly string[] {
   return test_suites;
 }
 
+/** The suite's spec files (names relative to its folder), sorted. */
+function listSuiteSpecs(test_suite_name: string): string[] {
+  return readdirSync(join(e2e_test_suites_directory, test_suite_name))
+    .filter((filename) => filename.endsWith(".cy.ts"))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function planSuiteShards(test_suite_name: string, total: number): Shard[] {
+  return planShards(
+    listSuiteSpecs(test_suite_name),
+    E2E_SPEC_DURATIONS_SECONDS[test_suite_name] ?? {},
+    total,
+  );
+}
+
 /**
  * Suites that run against the example Next.js resource server as well as
  * the auth server: any suite named after it, plus the dynamic client
@@ -71,6 +88,8 @@ export function suiteNeedsExampleResourceServer(test_suite_name: string): boolea
 async function launchDockerComposeTests(
   test_suite_name: string,
   docker_compose_profile: string,
+  /** Spec files of the suite to run; every spec when omitted. */
+  specs: readonly string[] | undefined,
   ...args: readonly string[]
 ): Promise<void> {
   const dockerComposeCommand: string[] = [
@@ -91,6 +110,14 @@ async function launchDockerComposeTests(
     ...process.env,
     TEST_SUITE_NAME: test_suite_name,
   };
+
+  if (specs) {
+    // docker-compose.yml hands this to `cypress run --spec` (comma-separated
+    // paths relative to the test runner's working directory).
+    environmentVariables["E2E_SPEC_PATTERN"] = specs
+      .map((spec) => `./cypress/e2e/${test_suite_name}/${spec}`)
+      .join(",");
+  }
 
   if (suiteNeedsExampleResourceServer(test_suite_name)) {
     // we need to set up jwks access keys for the example resource server
@@ -159,11 +186,31 @@ e2eAuthTestsCli
     "Skip building Docker images (use pre-built images already loaded into Docker)",
     false,
   )
+  .option(
+    "--shard <index/total>",
+    "Run only one shard of the suite, e.g. '2/4': its specs are split into <total> shards of similar duration (see the 'shards' command)",
+  )
   .action(async (test_suite_name: string, options): Promise<void> => {
     const test_suites: readonly string[] = listTestSuites();
     if (!test_suites.includes(test_suite_name)) {
       console.error(`No test suite found with name '${test_suite_name}'!`);
       process.exit(404);
+    }
+
+    let specs: string[] | undefined;
+    if (typeof options.shard === "string") {
+      const { index, total } = parseShardSelector(options.shard);
+      const shard = planSuiteShards(test_suite_name, total)[index - 1];
+      if (shard.specs.length === 0) {
+        console.warn(
+          `[e2e-auth-tests-cli] Shard ${index}/${total} of suite '${test_suite_name}' has no specs (the suite has fewer specs than shards); nothing to run.`,
+        );
+        process.exit(0);
+      }
+      console.log(
+        `[e2e-auth-tests-cli] Running shard ${index}/${total} of suite '${test_suite_name}' (~${Math.round(shard.estimated_seconds / 60)} min of specs):\n${shard.specs.map((spec) => `\t- ${spec}`).join("\n")}`,
+      );
+      specs = shard.specs;
     }
 
     const dockerComposeProfile: string = suiteNeedsExampleResourceServer(
@@ -200,6 +247,7 @@ e2eAuthTestsCli
     await launchDockerComposeTests(
       test_suite_name,
       dockerComposeProfile,
+      specs,
       ...args,
     );
     return;
@@ -216,6 +264,32 @@ e2eAuthTestsCli
     for (const suite of test_suites) {
       console.log(`\t- ${suite}`);
     }
+  });
+
+e2eAuthTestsCli
+  .command("shards")
+  .description(
+    "Show how 'e2e <test_suite> --shard <index>/<total>' splits a suite's specs",
+  )
+  .argument("<test_suite>", "Name of the test suite")
+  .argument("<total>", "Number of shards")
+  .action((test_suite_name: string, total: string): void => {
+    if (!listTestSuites().includes(test_suite_name)) {
+      console.error(`No test suite found with name '${test_suite_name}'!`);
+      process.exit(404);
+    }
+    const shards = planSuiteShards(test_suite_name, Number(total));
+    shards.forEach((shard, i) => {
+      console.log(
+        `Shard ${i + 1}/${shards.length} (~${Math.round(shard.estimated_seconds)}s):`,
+      );
+      for (const spec of shard.specs) {
+        const recorded = E2E_SPEC_DURATIONS_SECONDS[test_suite_name]?.[spec];
+        console.log(
+          `\t- ${spec} (${recorded === undefined ? "no recorded duration" : `${recorded}s`})`,
+        );
+      }
+    });
   });
 
 async function main(): Promise<void> {

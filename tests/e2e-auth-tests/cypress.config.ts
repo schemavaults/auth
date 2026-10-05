@@ -222,6 +222,21 @@ export default defineConfig({
           return;
         }
       });
+
+      // Logs this run's spec durations in the shape of e2e-spec-durations.ts,
+      // the table `e2e-auth-tests-cli e2e --shard` balances shards with.
+      on("after:run", (results) => {
+        if (!("runs" in results)) return;
+        const durations = Object.fromEntries(
+          results.runs.map((run) => [
+            run.spec.relative.split("/").pop(),
+            Math.max(1, Math.round((run.stats.duration ?? 0) / 1000)),
+          ]),
+        );
+        console.log(
+          `[e2e-spec-durations] ${JSON.stringify({ [config.env["TEST_SUITE_NAME"] || "unknown"]: durations })}`,
+        );
+      });
     },
   },
   env: {

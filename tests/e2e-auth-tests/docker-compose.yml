@@ -37,13 +37,15 @@ services:
     profiles:
       - e2e
       - e2e_with_resource_server
+    # Every spec of the suite, or just one shard's specs (a comma-separated
+    # list set by e2e-auth-tests-cli's `--shard` option).
     command:
       [
         "bun",
         "run",
         "e2e",
         "--spec",
-        "./cypress/e2e/${TEST_SUITE_NAME:?error}/**.cy.ts",
+        "${E2E_SPEC_PATTERN:-./cypress/e2e/${TEST_SUITE_NAME:?error}/**.cy.ts}",
       ]
 
   example-nextjs-resource-server:
