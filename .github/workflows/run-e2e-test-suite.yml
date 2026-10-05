@@ -21,6 +21,16 @@ on:
         required: false
         type: boolean
         default: false
+      shard-index:
+        description: "Which shard of the suite to run (1-based, see shard-total)"
+        required: false
+        type: number
+        default: 1
+      shard-total:
+        description: "Split the suite's specs into this many shards of similar duration and run only shard-index (1 runs the whole suite)"
+        required: false
+        type: number
+        default: 1
 
 jobs:
   Run-E2E-Test-Suite:
@@ -59,10 +69,17 @@ jobs:
 
       - name: Load Docker images
         if: ${{ inputs.skip-docker-build }}
+        shell: bash
         run: |
-          for f in /tmp/docker-images/*.tar.gz; do
+          # Load the images in parallel; fail if any of them fails to load.
+          pids=()
+          for f in /tmp/docker-images/*.tar.zst; do
             echo "Loading $f..."
-            docker load < "$f"
+            (zstd -dc "$f" | docker load) &
+            pids+=("$!")
+          done
+          for pid in "${pids[@]}"; do
+            wait "$pid"
           done
           echo "Loaded images:"
           docker images
@@ -91,7 +108,7 @@ jobs:
 
       - name: Run Tests with Docker Compose
         run: |
-          bun run cli e2e ${{ inputs.test-suite-name }}${{ runner.debug == '1' && ' --verbose' || '' }}${{ inputs.skip-docker-build && ' --skip-build' || '' }}
+          bun run cli e2e ${{ inputs.test-suite-name }}${{ inputs.shard-total > 1 && format(' --shard {0}/{1}', inputs.shard-index, inputs.shard-total) || '' }}${{ runner.debug == '1' && ' --verbose' || '' }}${{ inputs.skip-docker-build && ' --skip-build' || '' }}
         working-directory: tests/e2e-auth-tests
 
       - name: Check if screenshots directory exists
@@ -107,7 +124,7 @@ jobs:
       - name: Upload screenshots of failing tests
         uses: actions/upload-artifact@v6
         with:
-          name: failed-${{ inputs.test-suite-name }}-test-screenshots-${{ github.sha }}
+          name: failed-${{ inputs.test-suite-name }}${{ inputs.shard-total > 1 && format('-shard-{0}-of-{1}', inputs.shard-index, inputs.shard-total) || '' }}-test-screenshots-${{ github.sha }}
           path: tests/e2e-auth-tests/cypress/screenshots/
           retention-days: 1.5
         if: always() && steps.check_screenshots_existence.outputs.exists == 'true'

@@ -21,16 +21,19 @@ jobs:
             schemavaults-auth
 
       - name: Save auth server Docker image
+        shell: bash
         run: |
           docker save schemavaults/auth-server:local \
-            | gzip > /tmp/e2e-auth-server-test-image.tar.gz
+            | zstd -T0 -q -o /tmp/e2e-auth-server-test-image.tar.zst
 
       - name: Upload auth server image artifact
         uses: actions/upload-artifact@v6
         with:
           name: docker-image-auth-server-test
-          path: /tmp/e2e-auth-server-test-image.tar.gz
+          path: /tmp/e2e-auth-server-test-image.tar.zst
           retention-days: 1
+          # Already zstd-compressed: skip zipping it a second time.
+          compression-level: 0
 
   Build-Postgres-DB-Docker-Image:
     runs-on: ubuntu-latest
@@ -44,16 +47,19 @@ jobs:
             postgres-db
 
       - name: Save postgres DB Docker image
+        shell: bash
         run: |
           docker save schemavaults/postgres-db:local \
-            | gzip > /tmp/e2e-postgres-db-image.tar.gz
+            | zstd -T0 -q -o /tmp/e2e-postgres-db-image.tar.zst
 
       - name: Upload postgres DB image artifact
         uses: actions/upload-artifact@v6
         with:
           name: e2e-docker-image-postgres-db
-          path: /tmp/e2e-postgres-db-image.tar.gz
+          path: /tmp/e2e-postgres-db-image.tar.zst
           retention-days: 1
+          # Already zstd-compressed: skip zipping it a second time.
+          compression-level: 0
 
   Build-E2E-Auth-Tests-Docker-Image:
     runs-on: ubuntu-latest
@@ -67,16 +73,19 @@ jobs:
             schemavaults-e2e-auth-tests
 
       - name: Save E2E auth tests Docker image
+        shell: bash
         run: |
           docker save schemavaults/e2e-auth-tests:local \
-            | gzip > /tmp/e2e-auth-tests-image.tar.gz
+            | zstd -T0 -q -o /tmp/e2e-auth-tests-image.tar.zst
 
       - name: Upload E2E auth tests image artifact
         uses: actions/upload-artifact@v6
         with:
           name: e2e-docker-image-e2e-auth-tests
-          path: /tmp/e2e-auth-tests-image.tar.gz
+          path: /tmp/e2e-auth-tests-image.tar.zst
           retention-days: 1
+          # Already zstd-compressed: skip zipping it a second time.
+          compression-level: 0
 
   Build-Resource-Server-Docker-Image:
     runs-on: ubuntu-latest
@@ -91,17 +100,20 @@ jobs:
             build example-nextjs-resource-server
 
       - name: Save resource server Docker image
+        shell: bash
         run: |
           docker save \
             schemavaults/example-nextjs-resource-server:local \
-            | gzip > /tmp/e2e-resource-server-image.tar.gz
+            | zstd -T0 -q -o /tmp/e2e-resource-server-image.tar.zst
 
       - name: Upload resource server image artifact
         uses: actions/upload-artifact@v6
         with:
           name: e2e-docker-images-resource-server
-          path: /tmp/e2e-resource-server-image.tar.gz
+          path: /tmp/e2e-resource-server-image.tar.zst
           retention-days: 1
+          # Already zstd-compressed: skip zipping it a second time.
+          compression-level: 0
 
   Build-E2E-Auth-Tests-CLI:
     runs-on: ubuntu-latest
@@ -238,16 +250,23 @@ jobs:
       skip-docker-build: true
 
   Run-Organizations-E2E-Tests:
+    name: Run-Organizations-E2E-Tests (shard ${{ matrix.shard }}/4)
     needs:
       - Build-Auth-Server-Test-Docker-Image
       - Build-Postgres-DB-Docker-Image
       - Build-E2E-Auth-Tests-Docker-Image
       - Build-E2E-Auth-Tests-CLI
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: organizations
       skip-docker-build: true
+      shard-index: ${{ matrix.shard }}
+      shard-total: 4
 
   Run-Resource-Management-E2E-Tests:
     needs:
@@ -274,17 +293,24 @@ jobs:
       skip-docker-build: true
 
   Run-Example-Resource-Server-E2E-Tests:
+    name: Run-Example-Resource-Server-E2E-Tests (shard ${{ matrix.shard }}/3)
     needs:
       - Build-Auth-Server-Test-Docker-Image
       - Build-Postgres-DB-Docker-Image
       - Build-E2E-Auth-Tests-Docker-Image
       - Build-E2E-Auth-Tests-CLI
       - Build-Resource-Server-Docker-Image
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: example_resource_server
       skip-docker-build: true
+      shard-index: ${{ matrix.shard }}
+      shard-total: 3
       load-resource-server-image: true
 
   Run-Dynamic-Client-Registration-E2E-Tests:
@@ -314,16 +340,23 @@ jobs:
       skip-docker-build: true
 
   Run-Admin-Functionality-E2E-Tests:
+    name: Run-Admin-Functionality-E2E-Tests (shard ${{ matrix.shard }}/2)
     needs:
       - Build-Auth-Server-Test-Docker-Image
       - Build-Postgres-DB-Docker-Image
       - Build-E2E-Auth-Tests-Docker-Image
       - Build-E2E-Auth-Tests-CLI
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     uses: ./.github/workflows/run-e2e-test-suite.yml
     with:
       BUN_VERSION: ${{ inputs.BUN_VERSION }}
       test-suite-name: admin
       skip-docker-build: true
+      shard-index: ${{ matrix.shard }}
+      shard-total: 2
 
   Run-White-Label-E2E-Tests:
     needs:

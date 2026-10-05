@@ -21,11 +21,21 @@ Two workflow files work together (`.github/workflows/`):
 
 Called via `workflow_call` by the pull request workflow (`on-pull-request.yml`, the only CI for feature branches: pushes to them do not trigger a separate run) and the main-branch workflow (`on-push-main-branch-prod-cicd.yml`). It:
 
-1. **Builds Docker images in parallel** (4 jobs): auth server, postgres DB, e2e test runner, example resource server
+1. **Builds Docker images in parallel** (4 jobs): auth server, postgres DB, e2e test runner, example resource server. Each image is uploaded as a zstd archive (`docker save | zstd`, artifact `compression-level: 0` so it is not compressed twice)
 2. **Builds the e2e CLI** (`bun run build:cli --filter @schemavaults/e2e-auth-tests`)
 3. **Fans out to per-suite jobs** — each suite is a separate job that calls the reusable `run-e2e-test-suite.yml` workflow with `test-suite-name: <folder_name>` and `skip-docker-build: true` (uses the pre-built image artifacts)
 
 Each suite job runs on its own CI runner in parallel. The `example_resource_server` suite additionally depends on `Build-Resource-Server-Docker-Image` and passes `load-resource-server-image: true`.
+
+### Sharded suites
+
+The longest suites are split across several runners so no single job dominates the run: `organizations` (4 shards), `example_resource_server` (3) and `admin` (2). Their job has a `strategy.matrix` over shard numbers (`fail-fast: false`) and passes `shard-index: ${{ matrix.shard }}` and `shard-total: <N>` to `run-e2e-test-suite.yml`, which runs `bun run cli e2e <suite> --shard <index>/<N>`.
+
+- The CLI (`e2e-shards.ts`) splits the suite's spec files into N shards of similar estimated duration (longest spec first, onto the least-loaded shard) using the per-spec seconds in `tests/e2e-auth-tests/e2e-spec-durations.ts`. A spec without an entry counts as the suite's median, so new specs need no entry; every spec lands in exactly one shard (the CLI throws otherwise). `bun run cli shards <suite> <N>` prints the plan.
+- The shard's specs reach Cypress through the `E2E_SPEC_PATTERN` env var, which `docker-compose.yml` interpolates into `cypress run --spec` (it falls back to the whole suite folder). `TEST_SUITE_NAME` stays the suite name, so per-suite setup in `cypress.config.ts` (seeding, white-label env) runs on every shard.
+- Each shard gets its own fresh stack and database, so a spec must never depend on another spec of its suite having run first.
+- Every run logs a `[e2e-spec-durations] {...}` JSON line (`after:run` hook in `cypress.config.ts`); copy those numbers into `e2e-spec-durations.ts` when a suite's shards drift apart.
+- To shard another suite, add the same `name`/`strategy`/`shard-index`/`shard-total` lines to its job. Pick N so each shard stays below the longest unsharded suite; each extra runner costs ~2 minutes of image download/load before its first spec.
 
 The `api_contract` suite pins the wire contract of the auth server's `/api/*` routes independently of the UI: success-path response envelopes, every accepted credential source (session cookie, bearer access token, access-token cookie), `text/plain` JSON bodies, the service-account lifecycle, and the generated `GET /api/openapi.json` document + `/docs` pages. Extend it whenever an endpoint's request/response shape changes.
 
@@ -35,10 +45,10 @@ If creating new fresh test suite then it will need to be added to this `run-e2e-
 
 Reusable workflow that:
 
-1. Downloads pre-built Docker image artifacts and loads them into Docker
+1. Downloads pre-built Docker image artifacts and loads them into Docker (in parallel)
 2. Downloads the pre-built CLI artifact
-3. Runs: `bun run cli e2e <test-suite-name> [--verbose] [--skip-build]`
-4. Uploads Cypress screenshots as artifacts on failure (1.5 day retention)
+3. Runs: `bun run cli e2e <test-suite-name> [--shard <index>/<total>] [--verbose] [--skip-build]`
+4. Uploads Cypress screenshots as artifacts on failure (1.5 day retention; the artifact name carries `-shard-<i>-of-<N>` for sharded suites)
 
 ### Adding a new suite to CI
 
@@ -57,6 +67,10 @@ bun run cli e2e login
 
 # Run with verbose output (all container logs, not just test runner)
 bun run cli e2e login --verbose
+
+# Run one shard of a suite, as CI does, and show how a suite is sharded
+bun run cli e2e organizations --shard 2/4
+bun run cli shards organizations 4
 
 # Skip Docker image builds (use pre-built images)
 bun run cli e2e login --skip-build
@@ -111,14 +125,16 @@ Custom commands come from the `@schemavaults/cypress-e2e-auth-tests-helper-comma
 | File | Purpose |
 | ---- | ------- |
 | `tests/e2e-auth-tests/cypress.config.ts` | Cypress config, setup hooks, env vars |
-| `tests/e2e-auth-tests/e2e-auth-tests-cli.ts` | CLI for listing/running suites via Docker Compose |
+| `tests/e2e-auth-tests/e2e-auth-tests-cli.ts` | CLI for listing/running suites (or one shard of a suite) via Docker Compose |
+| `tests/e2e-auth-tests/e2e-shards.ts` | Splits a suite's specs into shards of similar duration (`--shard`) |
+| `tests/e2e-auth-tests/e2e-spec-durations.ts` | Per-spec CI durations the shard planner balances with |
 | `tests/e2e-auth-tests/docker-compose.yml` | Docker services (auth server, postgres, test runner, resource server) |
 | `tests/e2e-auth-tests/cypress/support/commands.ts` | Registers custom Cypress commands |
 | `tests/e2e-auth-tests/cypress/support/e2e.ts` | Cypress support entry point |
 | `tests/e2e-auth-tests/cypress/support/triggerTestEnvironmentDbMigration.ts` | DB migration with retry logic |
 | `tests/e2e-auth-tests/cypress/support/pre-register-superuser.ts` | Pre-creates superuser for non-superuser suites |
 | `tests/e2e-auth-tests/cypress/support/seed-app-and-api-for-example-resource-server.ts` | Seeds example resource server data |
-| `.github/workflows/run-e2e-tests.yml` | CI orchestrator: builds images, fans out to per-suite jobs |
+| `.github/workflows/run-e2e-tests.yml` | CI orchestrator: builds images, fans out to per-suite (and per-shard) jobs |
 | `.github/workflows/run-e2e-test-suite.yml` | CI per-suite executor: loads images, runs CLI, uploads artifacts |
 
 ## White-label app id in specs
