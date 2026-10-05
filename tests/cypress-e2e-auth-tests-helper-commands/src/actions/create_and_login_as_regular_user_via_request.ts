@@ -1,19 +1,11 @@
 import type { UserCredentialsMaybeWithInviteCode } from "./create_and_login_as_regular_user";
-
-const INVITE_CODE_LENGTH = 24;
-
-function generateRandomInviteCode(): Cypress.Chainable<string> {
-  return cy.generate_random_code(INVITE_CODE_LENGTH);
-}
+import provisionInviteCodeViaRequest from "./provision_invite_code_via_request";
 
 /**
  * Faster equivalent of cy.create_and_login_as_regular_user(): registers via
- * cy.register_via_request instead of driving the registration form.
- *
- * The invite-code provisioning path (when one is required and none was
- * supplied) still goes through the admin UI because no API equivalent exists
- * yet — but tests that already pass an invite_code get an end-to-end
- * request-only flow.
+ * cy.register_via_request instead of driving the registration form. When an
+ * invite code is required and none was supplied, one is created through the
+ * admin API as the superuser, so the whole flow is request-only.
  */
 export default function createAndLoginAsRegularUserViaRequest(
   credentials: UserCredentialsMaybeWithInviteCode,
@@ -53,25 +45,8 @@ export default function createAndLoginAsRegularUserViaRequest(
         return registerAndAssert(credentials);
       }
 
-      // Need an invite code; the admin invite-code endpoint is UI-only today,
-      // so fall through to cy.as_admin to provision one. This keeps the test
-      // green at the cost of one slow UI traversal per invocation.
-      return cy
-        .as_admin((): Cypress.Chainable<string> => {
-          return generateRandomInviteCode().then((invite_code: string) => {
-            return cy
-              .create_invite_code(invite_code, 1)
-              .then((success: boolean) => {
-                if (!success) {
-                  throw new Error("Failed to create new invite code!");
-                }
-                return cy.wrap(invite_code, { log: false });
-              });
-          });
-        })
-        .then((invite_code: string) => {
-          cy.logout();
-          return registerAndAssert({ ...credentials, invite_code });
-        });
+      return provisionInviteCodeViaRequest().then((invite_code: string) =>
+        registerAndAssert({ ...credentials, invite_code }),
+      );
     });
 }

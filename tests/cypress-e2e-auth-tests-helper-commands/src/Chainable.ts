@@ -65,10 +65,17 @@ declare global {
       // returns a list of all the text content within any active toasts. also prints it to the Cypress console.
       log_active_toasts(): Chainable<readonly string[]>;
       logout(): Chainable<void>;
+      /** Signs out through the logout API instead of the account page. */
+      logout_via_request(): Chainable<void>;
       is_authenticated(): Chainable<boolean>;
       is_admin(): Chainable<boolean>;
       as_admin<T>(run_once_admin: () => Chainable<T>): Chainable<T>;
       create_invite_code(
+        invite_code: string,
+        max_uses: number,
+      ): Chainable<boolean>;
+      /** Creates an invite code through the admin API (needs an admin session). */
+      create_invite_code_via_request(
         invite_code: string,
         max_uses: number,
       ): Chainable<boolean>;

@@ -82,9 +82,9 @@ The `TEST_SUITE_NAME` environment variable (set by the CLI and passed through Do
 Custom commands come from the `@schemavaults/cypress-e2e-auth-tests-helper-commands` package, registered in `cypress/support/commands.ts` via `registerAllActionCommands()`. Key commands:
 
 - `cy.create_and_login_as_superuser()` — registers or logs in as superuser
-- `cy.create_and_login_as_regular_user(credentials)` — creates and logs in a regular user
+- `cy.create_and_login_as_regular_user(credentials)` — creates and logs in a regular user through the registration form; `cy.create_and_login_as_regular_user_via_request(credentials)` does the same by request (prefer it unless the spec is about the form). When an invite code is required and `credentials` has none, both create one through `POST /api/admin/invite-codes` as the superuser (`cy.create_invite_code()` is the `/admin/invite_codes` UI flow, kept for specs about that page)
 - `cy.generate_random_test_user_credentials()` — generates random email/password
-- `cy.login(email, password)` / `cy.logout()`
+- `cy.login(email, password)` / `cy.logout()` (UI flows) and their faster `cy.login_via_request()` / `cy.logout_via_request()` equivalents
 - `cy.wait_for_page_hydration()` — waits for Next.js hydration
 - `cy.create_app(...)` / `cy.create_api_server(...)` / `cy.create_organization(...)` / `cy.delete_organization(...)`
 - `cy.register(email, password, invite_code)`
