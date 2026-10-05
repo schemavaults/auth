@@ -8,6 +8,7 @@ import type {
   AppCallbackUrlsTable,
   AppClientSecretsTable,
   AppDomainsTable,
+  AppServiceAccountOrganizationRolesTable,
   AppsTable,
   AuthorizedAppsTable,
 } from "./apps";
@@ -45,6 +46,7 @@ export type AuthDatabase = {
   app_domains: AppDomainsTable;
   app_callback_urls: AppCallbackUrlsTable;
   app_client_secrets: AppClientSecretsTable;
+  app_service_account_organization_roles: AppServiceAccountOrganizationRolesTable;
   api_servers: ApiServersTable;
   api_server_domains: ApiServerDomainsTable;
   authorized_apps: AuthorizedAppsTable;

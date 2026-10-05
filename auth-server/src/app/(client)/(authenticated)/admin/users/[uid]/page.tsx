@@ -7,7 +7,10 @@ import {
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import { UserRegistry, loadUserData } from "@/lib/auth-db";
-import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
+import {
+  OrganizationsRegistry,
+  getVirtualOrganizationMembershipSource,
+} from "@/lib/auth-db/organizations";
 import redirectWithError from "@/lib/redirect-with-error";
 import type { ServerRuntime } from "next";
 import { z } from "zod";
@@ -101,7 +104,8 @@ async function loadAssignableOrganizations(
 
 /**
  * Loads the target user's organization memberships (including the virtual
- * owner-organization membership derived from the admin flag) and resolves
+ * owner-organization membership derived from the admin flag, and a service
+ * account's virtual membership of its app's organization) and resolves
  * each organization's display name. Returns null if the memberships could
  * not be loaded, so the view can show an error state instead of an empty
  * list.
@@ -151,8 +155,8 @@ async function loadOrganizationMembershipRows(
             membership.organization_id,
           role: membership.role,
           membership_created_at: membership.created_at,
-          virtual: membership.membership_declaration_id.startsWith(
-            "admin-virtual-",
+          virtual: getVirtualOrganizationMembershipSource(
+            membership.membership_declaration_id,
           ),
         }),
       )

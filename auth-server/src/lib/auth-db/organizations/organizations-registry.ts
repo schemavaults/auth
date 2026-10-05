@@ -28,7 +28,7 @@ import addOrganizationMembership from "./add-organization-membership";
 import countUserRealMemberships from "./count-user-real-memberships";
 import { hasUserExceededMaximumOrgMemberships } from "./has-user-exceeded-maximum-org-memberships";
 import { listAllOrganizations } from './list-all-organizations';
-import { listUserOrganizationMemberships } from './list-user-organization-memberships';
+import { ADMIN_VIRTUAL_MEMBERSHIP_ID_PREFIX, listUserOrganizationMemberships } from './list-user-organization-memberships';
 
 export class OrganizationsRegistry
   implements IOrganizationsRegistry
@@ -263,7 +263,7 @@ export class OrganizationsRegistry
         for (const adminUser of adminUsers) {
           if (!existingMemberUids.has(adminUser.uid)) {
             members.push({
-              membership_declaration_id: `admin-virtual-${adminUser.uid}`,
+              membership_declaration_id: `${ADMIN_VIRTUAL_MEMBERSHIP_ID_PREFIX}${adminUser.uid}`,
               organization_id: ownerOrganizationId,
               uid: adminUser.uid,
               role: "admin" as OrganizationMembershipRoleType,

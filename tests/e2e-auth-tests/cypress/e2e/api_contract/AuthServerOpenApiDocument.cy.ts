@@ -66,6 +66,7 @@ describe("GET /api/openapi.json (auth server)", () => {
         "/api/apps",
         "/api/apps/{app_id}",
         "/api/apps/{app_id}/service-account",
+        "/api/apps/{app_id}/service-account/organization-membership",
         "/api/apis",
         "/api/apis/{api_server_id}/connect_app/{client_app_id}",
         "/api/organizations",

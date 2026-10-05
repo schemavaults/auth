@@ -1,12 +1,14 @@
 import { formatOidcSubClaim, type UserData, userDataSchema } from "@schemavaults/auth-common";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
+import type { UserDocument } from "./parse-user-document";
 import type { UserRegistry } from "./user-registry";
 
-export async function loadUserData(uid: string, userRegistry: UserRegistry): Promise<UserData> {
-  // Load user data from the database
-  const user = await userRegistry.getUserByUID(uid);
-  if (!user) throw new Error(`User not found with uid ${uid}`);
-
+/**
+ * The UserData of a loaded user document: the database-only columns are
+ * dropped (`service_account_app_id` becomes `service_account: true`) so
+ * the result passes the strict `userDataSchema`.
+ */
+export async function userDocumentToUserData(user: UserDocument): Promise<UserData> {
   // Make sure the user data is valid
   const parsed = await userDataSchema.safeParseAsync({
     uid: user.uid,
@@ -27,6 +29,14 @@ export async function loadUserData(uid: string, userRegistry: UserRegistry): Pro
       : {}),
   } satisfies UserData)
 
-  if (!parsed.success) throw new Error(`Invalid user data for uid ${uid}`);
+  if (!parsed.success) throw new Error(`Invalid user data for uid ${user.uid}`);
   return parsed.data;
+}
+
+export async function loadUserData(uid: string, userRegistry: UserRegistry): Promise<UserData> {
+  // Load user data from the database
+  const user = await userRegistry.getUserByUID(uid);
+  if (!user) throw new Error(`User not found with uid ${uid}`);
+
+  return await userDocumentToUserData(user);
 }

@@ -41,7 +41,7 @@ export { markEmailVerified } from "./mark-email-verified";
 export { validateAndConsumeEmailVerificationToken } from "./validate-and-consume-email-verification-token";
 
 // Existing exports
-export { loadUserData } from "./load-user-by-uid";
+export { loadUserData, userDocumentToUserData } from "./load-user-by-uid";
 export { lookupInviteCode } from "./lookup-invite-code";
 export { countInviteCodeUsages } from "./count-invite-code-usages";
 export { default as doesSomeAdminUserExist } from "./does-some-admin-user-exist";

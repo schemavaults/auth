@@ -17,9 +17,10 @@ import {
   type DynamicClientRegistrationMetadataFields,
 } from "@schemavaults/app-definitions";
 import type { AppClientSecret } from "./app-client-secrets-table";
+import type { AppServiceAccountOrganizationRole } from "./app-service-account-organization-roles-table";
 import type { GetOrCreateAppServiceAccountResult } from "./app-service-accounts";
 import type { UserDocument } from "@/lib/auth-db/users";
-import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
+import { organizationIdSchema, type AssignableOrganizationMembershipRole, type OrganizationID, type UserData } from "@schemavaults/auth-common";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { toOwnershipDatabaseColumns } from "@/lib/ownership/ownership-columns";
 import type { NewApp } from "./apps-table";
@@ -492,6 +493,39 @@ export class SchemaVaultsAppRegistry {
       (m) => m.deleteAppServiceAccount,
     );
     return await fn(this.db, app_id, debug);
+  }
+
+  /**
+   * The organization role configured for the app's service account (a
+   * virtual membership of the organization that owns the app), or null.
+   */
+  public async getServiceAccountOrganizationRole(
+    app_id: AppId,
+  ): Promise<AppServiceAccountOrganizationRole | null> {
+    const fn = await import("./app-service-account-organization-roles").then(
+      (m) => m.getAppServiceAccountOrganizationRole,
+    );
+    return await fn(this.db, app_id);
+  }
+
+  public async setServiceAccountOrganizationRole(
+    app_id: AppId,
+    role: AssignableOrganizationMembershipRole,
+    updated_by: string | null,
+  ): Promise<void> {
+    const fn = await import("./app-service-account-organization-roles").then(
+      (m) => m.setAppServiceAccountOrganizationRole,
+    );
+    return await fn(this.db, app_id, role, updated_by);
+  }
+
+  public async deleteServiceAccountOrganizationRole(
+    app_id: AppId,
+  ): Promise<boolean> {
+    const fn = await import("./app-service-account-organization-roles").then(
+      (m) => m.deleteAppServiceAccountOrganizationRole,
+    );
+    return await fn(this.db, app_id);
   }
 
   public async addAppDomain(

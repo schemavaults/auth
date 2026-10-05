@@ -12,6 +12,7 @@ import redirectWithError from "@/lib/redirect-with-error";
 import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { accessLevelSatisfies, getUserAccessLevelForResource, type OwnedResourceAccessLevel } from "@/lib/ownership/resource-access";
+import { summarizeServiceAccountOrganizationMembership } from "@/lib/ownership/service-account-organization-membership";
 import type { ServerRuntime } from "next/types";
 import { connection } from "next/server";
 
@@ -68,6 +69,9 @@ export default async function AppDetailPage(
       const callback_urls: readonly SchemaVaultsAppCallbackUrlRef[] = await app_registry.getAppCallbackUrls(client_app_id);
       const client_secret_record = hardcoded ? null : await app_registry.getClientSecretRecord(client_app_id);
       const service_account = hardcoded ? null : await app_registry.getServiceAccount(client_app_id);
+      const service_account_organization_role = hardcoded
+        ? null
+        : await app_registry.getServiceAccountOrganizationRole(client_app_id);
 
       const current_environment = getAppEnvironment();
 
@@ -96,6 +100,10 @@ export default async function AppDetailPage(
                 }
               : null
           }
+          service_account_organization_membership={summarizeServiceAccountOrganizationMembership(
+            app,
+            service_account_organization_role,
+          )}
           hardcoded={hardcoded}
           isOrgOwner={canManage}
           current_environment={current_environment}

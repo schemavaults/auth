@@ -5,10 +5,16 @@
 // client_credentials grant (RFC 6749 §4.4) are issued to. The service
 // account is created lazily by the first grant; these operations let an
 // app's managers inspect it, create it ahead of time (so its uid can be
-// granted permissions on resource servers up front) and remove it.
+// granted permissions on resource servers up front), remove it, and make
+// the service account of an organization-owned app a member of that
+// organization (service accounts cannot accept invitations).
 
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import { appIdSchema, type AppId } from "@schemavaults/app-definitions";
+import {
+  assignableOrganizationMembershipRoles,
+  type AssignableOrganizationMembershipRole,
+} from "@schemavaults/auth-common";
 
 export interface ClientApplicationServiceAccount {
   /** The service account's user id — the `sub`/`uid` of its tokens. */
@@ -21,6 +27,23 @@ export interface ClientApplicationServiceAccount {
   disabled: boolean;
 }
 
+/**
+ * Whether the app's service account is a member of the organization that
+ * owns the app (resource servers' organization membership checks then
+ * accept its client_credentials tokens).
+ */
+export interface ClientApplicationServiceAccountOrganizationMembership {
+  /**
+   * Whether the app is owned by an organization: only the service account
+   * of an organization-owned app can join one (its owner).
+   */
+  available: boolean;
+  /** The organization that owns the app; null when it is not organization-owned. */
+  organization_id: string | null;
+  /** The service account's role in that organization; null when it is not a member. */
+  role: AssignableOrganizationMembershipRole | null;
+}
+
 export interface ClientApplicationServiceAccountStatus {
   /** Null until the first client_credentials grant or explicit creation. */
   service_account: ClientApplicationServiceAccount | null;
@@ -29,6 +52,16 @@ export interface ClientApplicationServiceAccountStatus {
    * may therefore use the client_credentials grant.
    */
   has_client_secret: boolean;
+  /**
+   * The service account's membership of the organization that owns the
+   * app. Null when the auth server predates the setting.
+   */
+  organization_membership: ClientApplicationServiceAccountOrganizationMembership | null;
+}
+
+export interface UpdatedClientApplicationServiceAccountOrganizationMembership {
+  organization_membership: ClientApplicationServiceAccountOrganizationMembership;
+  message: string;
 }
 
 export interface CreatedClientApplicationServiceAccount {
@@ -94,6 +127,40 @@ function parseServiceAccount(raw: unknown): ClientApplicationServiceAccount {
   };
 }
 
+function isAssignableRole(
+  role: unknown,
+): role is AssignableOrganizationMembershipRole {
+  return (
+    typeof role === "string" &&
+    (assignableOrganizationMembershipRoles as readonly string[]).includes(role)
+  );
+}
+
+function parseOrganizationMembership(
+  raw: unknown,
+): ClientApplicationServiceAccountOrganizationMembership {
+  if (
+    typeof raw !== "object" ||
+    !raw ||
+    typeof (raw as { available?: unknown }).available !== "boolean"
+  ) {
+    throw new Error("Invalid service account organization membership in response");
+  }
+  const membership = raw as {
+    available: boolean;
+    organization_id?: unknown;
+    role?: unknown;
+  };
+  return {
+    available: membership.available,
+    organization_id:
+      typeof membership.organization_id === "string"
+        ? membership.organization_id
+        : null,
+    role: isAssignableRole(membership.role) ? membership.role : null,
+  };
+}
+
 export async function getClientApplicationServiceAccount({
   adapter,
   auth_server_uri,
@@ -127,6 +194,7 @@ export async function getClientApplicationServiceAccount({
   const status = body as {
     service_account: unknown;
     has_client_secret: boolean;
+    organization_membership?: unknown;
   };
   return {
     service_account:
@@ -134,6 +202,11 @@ export async function getClientApplicationServiceAccount({
         ? null
         : parseServiceAccount(status.service_account),
     has_client_secret: status.has_client_secret,
+    organization_membership:
+      status.organization_membership === undefined ||
+      status.organization_membership === null
+        ? null
+        : parseOrganizationMembership(status.organization_membership),
   };
 }
 
@@ -210,4 +283,103 @@ export async function deleteClientApplicationServiceAccount({
   ) {
     throw new Error("Service account deletion response indicated failure");
   }
+}
+
+function serviceAccountOrganizationMembershipEndpoint(
+  auth_server_uri: string,
+  app_id: AppId,
+): string {
+  return new URL(
+    `/api/apps/${app_id}/service-account/organization-membership`,
+    auth_server_uri,
+  ).toString();
+}
+
+async function parseOrganizationMembershipUpdate(
+  response: Response,
+): Promise<UpdatedClientApplicationServiceAccountOrganizationMembership> {
+  const body: unknown = await response.json();
+  if (
+    typeof body !== "object" ||
+    !body ||
+    !(body as { success: boolean }).success
+  ) {
+    throw new Error(
+      "Invalid response from service account organization membership endpoint",
+    );
+  }
+  const updated = body as {
+    organization_membership: unknown;
+    message?: unknown;
+  };
+  return {
+    organization_membership: parseOrganizationMembership(
+      updated.organization_membership,
+    ),
+    message:
+      typeof updated.message === "string"
+        ? updated.message
+        : "Service account organization membership updated.",
+  };
+}
+
+/**
+ * Make the service account of an organization-owned app a member of the
+ * organization that owns the app (or change its role). Refused for apps
+ * that are not organization-owned.
+ */
+export async function setClientApplicationServiceAccountOrganizationMembership({
+  adapter,
+  auth_server_uri,
+  app_id,
+  role = "member",
+}: IClientApplicationServiceAccountOpts & {
+  role?: AssignableOrganizationMembershipRole;
+}): Promise<UpdatedClientApplicationServiceAccountOrganizationMembership> {
+  await assertValidAppId(app_id);
+  if (!isAssignableRole(role)) {
+    throw new TypeError("Invalid organization role");
+  }
+
+  const response = await adapter.fetch(
+    serviceAccountOrganizationMembershipEndpoint(auth_server_uri, app_id),
+    {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      await extractFailureMessage(
+        response,
+        `Failed to update service account organization membership: ${response.status}`,
+      ),
+    );
+  }
+  return await parseOrganizationMembershipUpdate(response);
+}
+
+/** Take the app's service account out of the organization that owns the app. */
+export async function deleteClientApplicationServiceAccountOrganizationMembership({
+  adapter,
+  auth_server_uri,
+  app_id,
+}: IClientApplicationServiceAccountOpts): Promise<UpdatedClientApplicationServiceAccountOrganizationMembership> {
+  await assertValidAppId(app_id);
+
+  const response = await adapter.fetch(
+    serviceAccountOrganizationMembershipEndpoint(auth_server_uri, app_id),
+    { method: "DELETE", credentials: "include" },
+  );
+  if (!response.ok) {
+    throw new Error(
+      await extractFailureMessage(
+        response,
+        `Failed to remove service account organization membership: ${response.status}`,
+      ),
+    );
+  }
+  return await parseOrganizationMembershipUpdate(response);
 }

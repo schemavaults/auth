@@ -2,7 +2,12 @@
 
 import { useTransition, type FC, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { AppId } from "@schemavaults/app-definitions";
+import {
+  assignableOrganizationMembershipRoles,
+  type AssignableOrganizationMembershipRole,
+} from "@schemavaults/auth-common";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,11 +24,30 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   useToast,
 } from "@schemavaults/ui";
 import { useAuth } from "@schemavaults/auth-react-provider";
 import { LocalDateTime } from "@schemavaults/auth-ui";
-import { Bot, Trash2 } from "lucide-react";
+import { Bot, Building2, Trash2 } from "lucide-react";
+import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
+
+/** Select value for "not a member" (roles are the other values). */
+const NOT_A_MEMBER = "none";
+
+const ORGANIZATION_ROLE_LABELS: Record<AssignableOrganizationMembershipRole, string> = {
+  member: "Member",
+  owner: "Owner",
+};
+
+function isAssignableRole(value: string): value is AssignableOrganizationMembershipRole {
+  return (assignableOrganizationMembershipRoles as readonly string[]).includes(value);
+}
 
 export interface AppServiceAccountCardProps {
   app_id: AppId;
@@ -34,6 +58,11 @@ export interface AppServiceAccountCardProps {
     created_at: number;
     disabled: boolean;
   } | null;
+  /**
+   * Whether the service account is a member of the organization that owns
+   * the app (only organization-owned apps offer the setting).
+   */
+  organization_membership: ServiceAccountOrganizationMembershipSummary;
   /** Whether the app is a confidential client (may use the grant). */
   has_client_secret: boolean;
   /** Whether the viewer may create/remove the service account. */
@@ -45,11 +74,15 @@ export interface AppServiceAccountCardProps {
  * machine identity that access tokens obtained through the OAuth2
  * client_credentials grant are issued to. The grant is only available
  * to confidential clients, so the card points at the client secret card
- * when the app has none.
+ * when the app has none. For an organization-owned app, the card also
+ * makes the service account a member of that organization (service
+ * accounts cannot accept invitations), so resource servers that require
+ * organization membership accept its tokens.
  */
 export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
   app_id,
   service_account,
+  organization_membership,
   has_client_secret,
   canManage,
 }): ReactElement => {
@@ -98,6 +131,44 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
       }
     });
   }
+
+  function updateOrganizationRole(value: string): void {
+    const current: string = organization_membership.role ?? NOT_A_MEMBER;
+    if (value === current) {
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const authClient = auth.ready ? auth.client.current : undefined;
+        if (!authClient) {
+          throw new Error("Auth client is not available");
+        }
+        const result = isAssignableRole(value)
+          ? await authClient.setClientApplicationServiceAccountOrganizationMembership(
+              app_id,
+              value,
+            )
+          : await authClient.deleteClientApplicationServiceAccountOrganizationMembership(
+              app_id,
+            );
+        toast({
+          variant: "default",
+          title: "Organization membership updated",
+          description: result.message,
+        });
+        router.refresh();
+      } catch (e: unknown) {
+        toast({
+          variant: "destructive",
+          title: "Failed to update organization membership",
+          description:
+            e instanceof Error ? e.message : "Failed to send network request",
+        });
+      }
+    });
+  }
+
+  const organization_id: string | null = organization_membership.organization_id;
 
   return (
     <Card data-testid="app-service-account-card">
@@ -196,6 +267,80 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+            )}
+          </div>
+        )}
+
+        {organization_membership.available && organization_id !== null && (
+          <div
+            className="space-y-2 border-t pt-4 text-sm"
+            data-testid="service-account-organization-membership"
+          >
+            <div className="flex items-center gap-2 font-medium">
+              <Building2 className="h-4 w-4" />
+              Organization membership
+            </div>
+            <p
+              className="text-muted-foreground"
+              data-testid="service-account-organization-membership-status"
+            >
+              {organization_membership.role ? (
+                <>
+                  The service account is{" "}
+                  {organization_membership.role === "owner" ? "an" : "a"}{" "}
+                  <span className="font-medium text-foreground">
+                    {ORGANIZATION_ROLE_LABELS[organization_membership.role].toLowerCase()}
+                  </span>{" "}
+                  of{" "}
+                  <Link href={`/orgs/${organization_id}`} className="text-primary hover:underline">
+                    {organization_id}
+                  </Link>
+                  , the organization that owns this app: resource servers
+                  that require membership of the organization accept its
+                  client credentials tokens.
+                </>
+              ) : (
+                <>
+                  The service account is not a member of{" "}
+                  <Link href={`/orgs/${organization_id}`} className="text-primary hover:underline">
+                    {organization_id}
+                  </Link>
+                  , the organization that owns this app. Service accounts
+                  cannot accept invitations: add it here so resource servers
+                  that require membership of the organization accept its
+                  client credentials tokens.
+                </>
+              )}
+            </p>
+            {canManage && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="service-account-organization-role">
+                  Role in {organization_id}
+                </Label>
+                <Select
+                  value={organization_membership.role ?? NOT_A_MEMBER}
+                  onValueChange={updateOrganizationRole}
+                  disabled={busy}
+                >
+                  <SelectTrigger
+                    id="service-account-organization-role"
+                    className="w-56"
+                    data-testid="service-account-organization-role"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NOT_A_MEMBER}>Not a member</SelectItem>
+                    {assignableOrganizationMembershipRoles.map(
+                      (role: AssignableOrganizationMembershipRole): ReactElement => (
+                        <SelectItem key={role} value={role}>
+                          {ORGANIZATION_ROLE_LABELS[role]}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
         )}

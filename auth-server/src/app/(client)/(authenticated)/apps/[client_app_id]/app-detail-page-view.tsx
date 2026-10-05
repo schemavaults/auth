@@ -6,6 +6,7 @@ import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { AppCallbackUrlsCard, AppClientSecretCard, AppServiceAccountCard } from "@/components/AppOAuthSecurity";
 import { uuidSync } from "@/lib/uuid/uuidSync";
+import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
 import { ExternalLink, Plus, Trash2, Unplug } from "lucide-react";
@@ -39,6 +40,8 @@ export interface AppDetailPageViewProps {
   client_secret_metadata: AppClientSecretMetadataProps;
   /** The app's client_credentials service account, if one exists. */
   service_account: AppServiceAccountProps | null;
+  /** Whether the service account is a member of the organization that owns the app. */
+  service_account_organization_membership: ServiceAccountOrganizationMembershipSummary;
   hardcoded: boolean;
   isOrgOwner: boolean;
   current_environment: SchemaVaultsAppEnvironment;
@@ -103,6 +106,7 @@ export default function AppDetailPageView({
   callback_urls,
   client_secret_metadata,
   service_account,
+  service_account_organization_membership,
   hardcoded,
   isOrgOwner,
   current_environment,
@@ -228,6 +232,7 @@ export default function AppDetailPageView({
         <AppServiceAccountCard
           app_id={app.app_id}
           service_account={service_account}
+          organization_membership={service_account_organization_membership}
           has_client_secret={client_secret_metadata.has_client_secret}
           canManage={isOrgOwner}
         />

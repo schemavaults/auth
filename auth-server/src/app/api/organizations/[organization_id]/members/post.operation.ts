@@ -55,7 +55,7 @@ export const assignOrganizationMember = defineOperation({
   path: MEMBERS_ROUTE,
   summary: "Add a member directly (administrators)",
   description:
-    "Makes an existing user (looked up by e-mail address or user id, the caller included) a member of the organization immediately, without an invitation to accept. Platform administrators only: organization owners invite members with `POST /api/organizations/{organization_id}/invitations`. Any pending invitation of the user to the organization is revoked. Refused for system organizations, service accounts, users that already are members and users at the membership limit.",
+    "Makes an existing user (looked up by e-mail address or user id, the caller included) a member of the organization immediately, without an invitation to accept. Platform administrators only: organization owners invite members with `POST /api/organizations/{organization_id}/invitations`. Any pending invitation of the user to the organization is revoked. Refused for system organizations, service accounts (an organization-owned app's service account joins its organization through `PUT /api/apps/{app_id}/service-account/organization-membership` instead), users that already are members and users at the membership limit.",
   tags: [API_TAGS.organizations],
   auth: requireAuth({
     schemes: sessionSchemes,
@@ -134,7 +134,8 @@ export const assignOrganizationMember = defineOperation({
     if (assignee.service_account_app_id) {
       return ctx.json(400, {
         success: false,
-        message: "Service accounts cannot be members of an organization",
+        message:
+          "Service accounts cannot be added to an organization directly. The service account of an organization-owned app joins its organization through the app's service account settings (PUT /api/apps/{app_id}/service-account/organization-membership).",
       });
     }
     const assignee_uid: string = assignee.uid;

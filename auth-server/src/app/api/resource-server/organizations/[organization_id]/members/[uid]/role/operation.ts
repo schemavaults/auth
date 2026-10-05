@@ -1,6 +1,5 @@
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
 import {
-  formatOidcSubClaim,
   organizationIdSchema,
   organizationMembershipRoleTypeSchema,
   type UserData,
@@ -13,8 +12,8 @@ import { API_TAGS } from "@/lib/api/tags";
 import verifyJwksAccessAssertion from "@/app/api/jwks/[audience]/verifyJwksAccessAssertion";
 import SchemaVaultsApiServerRegistry from "@/lib/auth-db/apis";
 import getUserByUID from "@/lib/auth-db/users/get-user-by-uid";
+import { userDocumentToUserData } from "@/lib/auth-db/users/load-user-by-uid";
 import captureServerException from "@/lib/captureServerException";
-import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 
 const ROUTE = "/api/resource-server/organizations/{organization_id}/members/{uid}/role";
@@ -45,7 +44,7 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
   path: ROUTE,
   summary: "Look up a user's organization role",
   description:
-    "Tells a resource server which role (`owner`, `member`, ...) a user holds in an organization, or null when they are not a member or do not exist. Only the API server that the organization owns may ask about it: the calling API server names itself in the `X-Api-Server-Id` header and proves it with a single-use JWKS access assertion signed with its JWKS access private key. Resource servers built on `@schemavaults/auth-server-sdk` call this through `isUserInOrganization()`.",
+    "Tells a resource server which role (`owner`, `member`, ...) a user holds in an organization, or null when they are not a member or do not exist. The service account of a client application (the subject of its `client_credentials` tokens) holds the role its app's managers configured with `PUT /api/apps/{app_id}/service-account/organization-membership` in the organization that owns the app, and no role anywhere else. Only the API server that the organization owns may ask about it: the calling API server names itself in the `X-Api-Server-Id` header and proves it with a single-use JWKS access assertion signed with its JWKS access private key. Resource servers built on `@schemavaults/auth-server-sdk` call this through `isUserInOrganization()`.",
   tags: [API_TAGS.resourceServers],
   auth: publicAccess(
     "Requires `Authorization: Bearer <JWKS access assertion>` (the `schemavaults-jwks-access-assertion` scheme) signed by the API server named in `X-Api-Server-Id`; the handler verifies it after the path and header validation, so a malformed request is refused with 400 before the credential is examined, a missing or invalid assertion with 401. The API server must belong to `organization_id` (403 otherwise).",
@@ -131,10 +130,9 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
         return ctx.json(200, { success: true, data: { organization_id, uid, role: null } });
       }
 
-      const userData: UserData = {
-        ...userDoc,
-        sub: formatOidcSubClaim(getAuthServerAppId(), userDoc.uid),
-      };
+      // Converted rather than spread: the strict UserData schema refuses
+      // the database-only `service_account_app_id` of a service account.
+      const userData: UserData = await userDocumentToUserData(userDoc);
       const role = await isUserInOrganization(db, userData, organization_id);
 
       return ctx.json(200, {

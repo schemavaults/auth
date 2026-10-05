@@ -16,8 +16,10 @@ export type {
 } from "@/lib/client-application-secret";
 export type {
   ClientApplicationServiceAccount,
+  ClientApplicationServiceAccountOrganizationMembership,
   ClientApplicationServiceAccountStatus,
   CreatedClientApplicationServiceAccount,
+  UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
 export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
 
