@@ -57,7 +57,8 @@ describe("SchemaVaultsAuthClient error reporting", () => {
     expect(reports()).toHaveLength(1);
     expect(reports()[0]!.url).toBe(`${AUTH_SERVER_URL}/api/client-errors/my-web-app`);
     expect(JSON.parse(String(reports()[0]!.init?.body))).toMatchObject({
-      name: "Error",
+      name: "WhoamiRequestFailedError",
+      message: expect.stringContaining("the auth server answered HTTP 502"),
       operation: "checkIfAuthenticatedWithServer",
       sdk_name: "@schemavaults/auth-client-sdk",
       sdk_version: client.version,
