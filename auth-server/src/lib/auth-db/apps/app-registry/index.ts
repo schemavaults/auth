@@ -4,6 +4,7 @@ export type * from './apps-table';
 export type * from './app-domains-table';
 export type * from './app-callback-urls-table';
 export type * from './app-client-secrets-table';
+export type * from './app-service-account-organization-roles-table';
 
 export { getApp } from "./get-app";
 export {
@@ -11,3 +12,4 @@ export {
   serviceAccountEmailForApp,
 } from './app-service-accounts';
 export type { GetOrCreateAppServiceAccountResult } from './app-service-accounts';
+export type { ServiceAccountVirtualOrganizationMembership } from './app-service-account-organization-roles';

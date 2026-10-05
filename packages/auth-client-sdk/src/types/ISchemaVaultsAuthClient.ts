@@ -42,7 +42,9 @@ import type {
 import type {
   ClientApplicationServiceAccountStatus,
   CreatedClientApplicationServiceAccount,
+  UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
+import type { AssignableOrganizationMembershipRole } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
 import type {
   DynamicClientRegistrationRequest,
@@ -589,6 +591,34 @@ export interface ISchemaVaultsAuthClient {
    * @returns A promise resolving if deletion succeeds
    */
   deleteClientApplicationServiceAccount: (app_id: AppId) => Promise<void>;
+
+  /**
+   * @name setClientApplicationServiceAccountOrganizationMembership
+   * @description Make the service account of an organization-owned client
+   * application a member of the organization that owns the app (or change
+   * its role), so resource servers' organization membership checks accept
+   * its client_credentials tokens. Service accounts cannot accept
+   * invitations; this is how they join an organization. Refused for apps
+   * that are not owned by an organization.
+   * @argument app_id The unique ID of the client application
+   * @argument role The service account's role in the organization (default `member`)
+   * @returns A promise resolving to the updated membership
+   */
+  setClientApplicationServiceAccountOrganizationMembership: (
+    app_id: AppId,
+    role?: AssignableOrganizationMembershipRole,
+  ) => Promise<UpdatedClientApplicationServiceAccountOrganizationMembership>;
+
+  /**
+   * @name deleteClientApplicationServiceAccountOrganizationMembership
+   * @description Take a client application's service account out of the
+   * organization that owns the app.
+   * @argument app_id The unique ID of the client application
+   * @returns A promise resolving to the updated membership
+   */
+  deleteClientApplicationServiceAccountOrganizationMembership: (
+    app_id: AppId,
+  ) => Promise<UpdatedClientApplicationServiceAccountOrganizationMembership>;
 
   /**
    * @name listApiServerDomains

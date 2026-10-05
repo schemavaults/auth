@@ -2,7 +2,9 @@
 // (auth-server/src/app/api/apps/[app_id]/service-account/route.ts). Only
 // GET was covered directly (client_credentials suite); the POST (201 on
 // creation, 200 when it already exists), the GET shape afterwards and the
-// DELETE (200, then 404) were not.
+// DELETE (200, then 404) were not. The organization membership of an
+// organization-owned app's service account is covered end to end by
+// resource_management/ServiceAccountOrganizationMembership.cy.ts.
 
 interface ServiceAccountSummary {
   uid: string;
@@ -17,6 +19,11 @@ interface ServiceAccountResponse {
   service_account?: ServiceAccountSummary | null;
   has_client_secret?: boolean;
   created?: boolean;
+  organization_membership?: {
+    available: boolean;
+    organization_id: string | null;
+    role: string | null;
+  };
 }
 
 // Module marker: keeps this spec's top-level interfaces file-scoped.
@@ -78,6 +85,32 @@ describe("App service account API lifecycle", () => {
       expect(response.body.success).to.eq(true);
       expect(response.body.service_account).to.eq(null);
       expect(response.body.has_client_secret).to.eq(false);
+      // A platform-owned app's service account cannot join an organization.
+      expect(response.body.organization_membership).to.deep.equal({
+        available: false,
+        organization_id: null,
+        role: null,
+      });
+    });
+  });
+
+  it("refuses organization membership for an app that no organization owns (409)", () => {
+    cy.request<ServiceAccountResponse>({
+      method: "PUT",
+      url: `/api/apps/${app_id}/service-account/organization-membership`,
+      body: { role: "member" },
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(409);
+      expect(response.body.success).to.eq(false);
+    });
+    cy.request<ServiceAccountResponse>({
+      method: "DELETE",
+      url: `/api/apps/${app_id}/service-account/organization-membership`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(404);
+      expect(response.body.success).to.eq(false);
     });
   });
 

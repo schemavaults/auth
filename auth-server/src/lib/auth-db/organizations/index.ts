@@ -46,7 +46,13 @@ export { countUserRealMemberships } from './count-user-real-memberships';
 export { hasUserExceededMaximumOrgMemberships } from './has-user-exceeded-maximum-org-memberships';
 export { listAllOrganizations } from './list-all-organizations';
 export { listOrganizationsCreatedSince } from './list-organizations-created-since';
-export { listUserOrganizationMemberships } from './list-user-organization-memberships';
+export {
+  listUserOrganizationMemberships,
+  getVirtualOrganizationMembershipSource,
+  ADMIN_VIRTUAL_MEMBERSHIP_ID_PREFIX,
+  SERVICE_ACCOUNT_VIRTUAL_MEMBERSHIP_ID_PREFIX,
+} from './list-user-organization-memberships';
+export type { VirtualOrganizationMembershipSource } from './list-user-organization-memberships';
 export { listUserOrganizationMembershipDetails } from './list-user-organization-membership-details';
 export type { ListUserOrganizationMembershipDetailsOptions } from './list-user-organization-membership-details';
 export { listUserOrganizations } from './list-user-organizations';

@@ -2,6 +2,11 @@ import type { z } from "@schemavaults/openapi-operations";
 import type { AppServiceAccountSummary } from "@/lib/api/domain-schemas/apps";
 import type { UserDocument } from "@/lib/auth-db/users";
 
+export {
+  owningOrganizationIdOfApp,
+  summarizeServiceAccountOrganizationMembership,
+} from "@/lib/ownership/service-account-organization-membership";
+
 /** Route label used for exception capture by the service account operations. */
 export const SERVICE_ACCOUNT_ROUTE = "/api/apps/[app_id]/service-account";
 

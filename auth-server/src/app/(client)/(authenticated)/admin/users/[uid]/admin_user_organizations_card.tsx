@@ -30,10 +30,13 @@ export interface AdminUserOrganizationMembershipRow {
   role: string;
   membership_created_at: number;
   /**
-   * True for the implicit owner-organization membership derived from the
-   * user's server admin flag rather than a database membership row.
+   * Set for a membership without a database membership row: `"admin"` for
+   * the implicit owner-organization membership derived from the user's
+   * server admin flag, `"service_account"` for a service account's
+   * membership of the organization that owns its app (enabled on the
+   * app's page). Null for a real membership.
    */
-  virtual: boolean;
+  virtual: "admin" | "service_account" | null;
 }
 
 /** An organization the user can be added to directly. */
@@ -102,7 +105,11 @@ const columns: ColumnDef<AdminUserOrganizationMembershipRow>[] = [
           {membership.virtual ? (
             <Badge
               variant="secondary"
-              title="Implicit membership derived from this user's server admin status"
+              title={
+                membership.virtual === "service_account"
+                  ? "Membership of the organization that owns this service account's app, enabled on the app's page"
+                  : "Implicit membership derived from this user's server admin status"
+              }
             >
               Virtual
             </Badge>

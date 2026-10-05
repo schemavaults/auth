@@ -11,19 +11,26 @@ import { API_TAGS } from "@/lib/api/tags";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import captureServerException from "@/lib/captureServerException";
 import loadAppForManagement from "@/lib/load-app-for-management";
-import { SERVICE_ACCOUNT_ROUTE, summarizeServiceAccount } from "./service-account-summary";
+import {
+  SERVICE_ACCOUNT_ROUTE,
+  summarizeServiceAccount,
+  summarizeServiceAccountOrganizationMembership,
+} from "./service-account-summary";
 
 export const getAppServiceAccount = defineOperation({
   method: "get",
   path: "/api/apps/{app_id}/service-account",
   summary: "Get an app's service account",
   description:
-    "Returns the client application's service account (the machine identity `grant_type=client_credentials` tokens are minted for), if any, and whether the app is currently a confidential client, i.e. eligible for that grant. Requires management access; hardcoded apps cannot be configured.",
+    "Returns the client application's service account (the machine identity `grant_type=client_credentials` tokens are minted for), if any, whether the app is currently a confidential client, i.e. eligible for that grant, and whether the service account is a member of the organization that owns the app (see `PUT /api/apps/{app_id}/service-account/organization-membership`). Requires management access; hardcoded apps cannot be configured.",
   tags: [API_TAGS.apps],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: { params: appIdParams },
   responses: {
-    200: { description: "The service account (or null) and the app's client secret status", schema: AppServiceAccountResponse },
+    200: {
+      description: "The service account (or null), the app's client secret status and the service account's organization membership",
+      schema: AppServiceAccountResponse,
+    },
     ...validationErrorResponse,
     ...sessionErrorResponses,
     ...appManagementErrorResponses,
@@ -44,14 +51,16 @@ export const getAppServiceAccount = defineOperation({
 
     try {
       const appRegistry = new SchemaVaultsAppRegistry(db);
-      const [service_account, secret] = await Promise.all([
+      const [service_account, secret, organization_role] = await Promise.all([
         appRegistry.getServiceAccount(app_id),
         appRegistry.getClientSecretRecord(app_id),
+        appRegistry.getServiceAccountOrganizationRole(app_id),
       ]);
       return ctx.json(200, {
         success: true,
         service_account: service_account ? summarizeServiceAccount(service_account) : null,
         has_client_secret: secret !== null,
+        organization_membership: summarizeServiceAccountOrganizationMembership(guard.app, organization_role),
       });
     } catch (e: unknown) {
       await captureServerException(db, e, {

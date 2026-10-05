@@ -55,7 +55,9 @@ import type {
 import type {
   ClientApplicationServiceAccountStatus,
   CreatedClientApplicationServiceAccount,
+  UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
+import type { AssignableOrganizationMembershipRole } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
 import type {
   DynamicClientRegistrationRequest,
@@ -1882,6 +1884,40 @@ export class SchemaVaultsAuthClient
     );
     const fn = await import("@/lib/client-application-service-account").then(
       (m) => m.deleteClientApplicationServiceAccount,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async setClientApplicationServiceAccountOrganizationMembership(
+    app_id: AppId,
+    role: AssignableOrganizationMembershipRole = "member",
+  ): Promise<UpdatedClientApplicationServiceAccountOrganizationMembership> {
+    this.assertAppAndApiManagementWriteAccess(
+      "setClientApplicationServiceAccountOrganizationMembership",
+    );
+    const fn = await import("@/lib/client-application-service-account").then(
+      (m) => m.setClientApplicationServiceAccountOrganizationMembership,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+      role,
+    });
+  }
+
+  public async deleteClientApplicationServiceAccountOrganizationMembership(
+    app_id: AppId,
+  ): Promise<UpdatedClientApplicationServiceAccountOrganizationMembership> {
+    this.assertAppAndApiManagementWriteAccess(
+      "deleteClientApplicationServiceAccountOrganizationMembership",
+    );
+    const fn = await import("@/lib/client-application-service-account").then(
+      (m) => m.deleteClientApplicationServiceAccountOrganizationMembership,
     );
     return await fn({
       adapter: this.adapter,

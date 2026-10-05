@@ -4,6 +4,7 @@ import {
   schemaVaultsAppDefinitionSchema,
   schemaVaultsAppDomainRefSchema,
 } from "@schemavaults/app-definitions";
+import { assignableOrganizationMembershipRoles } from "@schemavaults/auth-common";
 import { z, withOpenApi } from "@schemavaults/openapi-operations";
 import { ErrorResponse } from "@/lib/api/schemas";
 
@@ -115,6 +116,29 @@ export const AppServiceAccountSummary = z
   })
   .openapi("AppServiceAccountSummary");
 
+/**
+ * Whether the app's service account is a (virtual) member of the
+ * organization that owns the app. Service accounts cannot accept
+ * invitations, so this setting is how one joins its organization.
+ */
+export const AppServiceAccountOrganizationMembership = z
+  .object({
+    available: z.boolean().openapi({
+      description:
+        "Whether the app is owned by an organization. Only the service account of an organization-owned app can be a member of an organization (its owner)",
+    }),
+    organization_id: z.string().nullable().openapi({
+      description: "The organization that owns the app, which the service account joins; null when the app is not organization-owned",
+      example: "acme",
+    }),
+    role: z.enum(assignableOrganizationMembershipRoles).nullable().openapi({
+      description:
+        "The service account's role in that organization, as reported to resource servers' organization membership checks; null when it is not a member",
+      example: "member",
+    }),
+  })
+  .openapi("AppServiceAccountOrganizationMembership");
+
 export const AppServiceAccountResponse = z
   .object({
     success: z.literal(true),
@@ -124,8 +148,26 @@ export const AppServiceAccountResponse = z
     has_client_secret: z
       .boolean()
       .openapi({ description: "Whether the app can use the client_credentials grant right now (has a client secret)" }),
+    organization_membership: AppServiceAccountOrganizationMembership,
   })
   .openapi("AppServiceAccountResponse");
+
+export const SetAppServiceAccountOrganizationMembershipRequest = z
+  .object({
+    role: z.enum(assignableOrganizationMembershipRoles).default("member").openapi({
+      description: "Role of the service account in the organization that owns the app (default `member`)",
+      example: "member",
+    }),
+  })
+  .openapi("SetAppServiceAccountOrganizationMembershipRequest");
+
+export const AppServiceAccountOrganizationMembershipResponse = z
+  .object({
+    success: z.literal(true),
+    message: z.string(),
+    organization_membership: AppServiceAccountOrganizationMembership,
+  })
+  .openapi("AppServiceAccountOrganizationMembershipResponse");
 
 export const AppServiceAccountCreationResponse = z
   .object({
