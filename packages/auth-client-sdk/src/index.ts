@@ -78,6 +78,12 @@ export type {
   AuthMiddlewareError,
 } from "@schemavaults/auth-common";
 
+// Thrown by checkIfAuthenticatedWithServer (and the user data sync after
+// login / token refresh) when the whoami endpoint could not be read;
+// `reason` says which step failed.
+export { WhoamiRequestFailedError } from "./lib/whoami-request-failed-error";
+export type { WhoamiRequestFailureReason } from "./lib/whoami-request-failed-error";
+
 // RFC 7591 dynamic client registration helper (see registerDynamicClient on
 // the client) and the API server dynamic-client policy update shape.
 export {
