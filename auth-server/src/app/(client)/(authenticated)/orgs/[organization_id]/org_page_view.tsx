@@ -184,6 +184,7 @@ export default function OrgPageView({
         cardClassName="w-full"
         preloaded={preloaded_apps}
         uuid={uuidSync}
+        showConnectAppToApi={isOrgOwner}
         isOrgOwner={isOrgOwner}
       />
 

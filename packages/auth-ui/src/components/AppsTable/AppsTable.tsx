@@ -39,6 +39,11 @@ export interface AppsDatatableProps {
   ownerTypeFilter?: OwnerTypeFilterValue;
   /** Whether the "Create app" button is offered (default true). */
   canCreate?: boolean;
+  /**
+   * Offer "Connect this app to an API" in the actions of the rows the viewer
+   * manages (always offered on the admin "all" list).
+   */
+  showConnectAppToApi?: boolean;
 }
 
 interface AppsTableHeaderButtonsProps {
@@ -82,6 +87,7 @@ export function AppsTable({
   managedOrganizationIds,
   ownerTypeFilter,
   canCreate = true,
+  showConnectAppToApi,
 }: AppsDatatableProps): ReactElement {
   const auth = useAuth();
   const authClient = auth.ready ? auth.client.current : undefined;
@@ -99,8 +105,15 @@ export function AppsTable({
       preloaded,
       isOrgOwner,
       managedOrganizationIds,
+      showConnectAppToApi,
     );
-  }, [queryType, preloaded, isOrgOwner, managedOrganizationIds]);
+  }, [
+    queryType,
+    preloaded,
+    isOrgOwner,
+    managedOrganizationIds,
+    showConnectAppToApi,
+  ]);
 
   const HeaderButtons: FC = useMemo(() => {
     return function AppsTableHeaderButtonsWithQueryType() {

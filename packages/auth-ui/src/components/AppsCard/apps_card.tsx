@@ -56,6 +56,11 @@ export interface AppsCardProps {
   uuid: () => string;
   isOrgOwner?: boolean;
   /**
+   * Offer "Connect this app to an API" in the actions of the rows the viewer
+   * manages (always offered on the admin "all" list).
+   */
+  showConnectAppToApi?: boolean;
+  /**
    * For the "accessible" query: ids of the organizations in which the
    * viewer is an owner/admin (decides which rows expose management
    * actions).
@@ -171,6 +176,7 @@ export function AppsCard(props: AppsCardProps): ReactElement {
                     managedOrganizationIds={props.managedOrganizationIds}
                     ownerTypeFilter={props.ownerTypeFilter}
                     canCreate={canCreateApps}
+                    showConnectAppToApi={props.showConnectAppToApi}
                   />
                 </CardContent>
                 <CardFooter>

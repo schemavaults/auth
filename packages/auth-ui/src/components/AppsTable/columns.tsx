@@ -20,6 +20,7 @@ export function getAppsTableColumns(
   preloaded?: PreloadedAppsTableDataWithDomainRefs,
   isOrgOwner?: boolean,
   managedOrganizationIds?: readonly string[],
+  showConnectAppToApi?: boolean,
 ): ColumnDef<SchemaVaultsApp>[] {
   const columns: ColumnDef<SchemaVaultsApp>[] = [
     {
@@ -153,6 +154,7 @@ export function getAppsTableColumns(
             queryType={queryType}
             isOrgOwner={isOrgOwner}
             managedOrganizationIds={managedOrganizationIds}
+            showConnectAppToApi={showConnectAppToApi}
           />
         );
       },

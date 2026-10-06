@@ -8,8 +8,8 @@ import { AppCallbackUrlsCard, AppClientSecretCard, AppServiceAccountCard } from 
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
-import { ExternalLink, Plus, Trash2, Unplug } from "lucide-react";
+import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
+import { ExternalLink, Plus, PlugZap, Trash2, Unplug } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -114,6 +114,15 @@ export default function AppDetailPageView({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addDomainDialogOpen, setAddDomainDialogOpen] = useState(false);
   const [apiServers, setApiServers] = useState<readonly ConnectedApiServer[]>(connected_api_servers);
+  // Disconnecting removes a row locally; connecting refreshes the server
+  // component, whose new connected_api_servers list replaces the local one.
+  const [renderedConnectedApiServers, setRenderedConnectedApiServers] =
+    useState<readonly ConnectedApiServer[]>(connected_api_servers);
+  if (renderedConnectedApiServers !== connected_api_servers) {
+    setRenderedConnectedApiServers(connected_api_servers);
+    setApiServers(connected_api_servers);
+  }
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApiServer | null>(null);
   const router = useRouter();
 
@@ -122,6 +131,10 @@ export default function AppDetailPageView({
   // hardcoded apps take their domains from the server's environment rather
   // than a database row. The server enforces this on POST regardless.
   const canAddDomain: boolean = !hardcoded && isOrgOwner;
+  // Connecting requires managing the app (and the API server, which the
+  // server checks on submit). Hardcoded apps keep their compiled-in API
+  // audiences.
+  const canConnectApiServer: boolean = !hardcoded && isOrgOwner;
 
   const activeDomains = connected_domains.filter((d) => d.environment === current_environment);
   const inactiveDomains = connected_domains.filter((d) => d.environment !== current_environment);
@@ -295,8 +308,30 @@ export default function AppDetailPageView({
               })}
             </div>
           )}
+          {canConnectApiServer && (
+            <Button
+              variant="outline"
+              className="mt-4"
+              id="connect-app-to-api-server-button"
+              onClick={() => setConnectDialogOpen(true)}
+            >
+              <PlugZap className="h-4 w-4 mr-2" />
+              Connect API server
+            </Button>
+          )}
         </CardContent>
       </Card>
+
+      {canConnectApiServer && (
+        <ConnectAppToApiDialog
+          open={connectDialogOpen}
+          onOpenChange={setConnectDialogOpen}
+          preselectedClientAppId={app.app_id}
+          // Connected API servers on this page come from server-side props,
+          // so re-render the server component to show the new row.
+          onConnected={() => router.refresh()}
+        />
+      )}
 
       {disconnectTarget && (
         <DisconnectAppToApiDialog
