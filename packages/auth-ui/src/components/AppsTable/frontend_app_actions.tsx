@@ -55,6 +55,11 @@ interface FrontendApplicationActionsProps {
   queryType: ListAppsQueryType;
   isOrgOwner?: boolean;
   managedOrganizationIds?: readonly string[];
+  /**
+   * Offer "Connect this app to an API" on the rows the viewer manages (e.g.
+   * on an organization page). The admin list ("all") always offers it.
+   */
+  showConnectAppToApi?: boolean;
 }
 
 class CantCopyWithinInsecureContextError extends Error {}
@@ -64,6 +69,7 @@ export function FrontendApplicationActions({
   queryType,
   isOrgOwner,
   managedOrganizationIds,
+  showConnectAppToApi,
 }: FrontendApplicationActionsProps): ReactElement {
   const app_id: AppId = app.app_id;
   const { toast } = useToast();
@@ -151,7 +157,12 @@ export function FrontendApplicationActions({
       queryType === "org" ||
       queryType === "owned" ||
       queryType === "accessible");
-  const showConnectApi: boolean = admin && queryType === "all";
+  // Connecting an app requires managing it (and the API server, which the
+  // server checks when the dialog submits), so only offer it on rows the
+  // viewer manages. Hardcoded apps keep their compiled-in API audiences.
+  const showConnectApi: boolean =
+    (admin && queryType === "all") ||
+    (!!showConnectAppToApi && !app.hardcoded && canManageApp);
 
   return (
     <>
@@ -295,7 +306,7 @@ export function FrontendApplicationActions({
               }}
               data-testid="connect-app-to-api-menu-item"
             >
-              <PlugZap className="h-4 w-4" /> Connect to API
+              <PlugZap className="h-4 w-4" /> Connect this app to an API
             </DropdownMenuItem>
           )}
 

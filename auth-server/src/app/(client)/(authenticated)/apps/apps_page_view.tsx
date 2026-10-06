@@ -106,6 +106,7 @@ export default function AppsPageView({
           managedOrganizationIds={managed_organization_ids}
           ownerTypeFilter={ownerTypeFilter}
           canCreatePersonal={can_create_personal_apps}
+          showConnectAppToApi
           uuid={uuidSync}
         />
       </div>

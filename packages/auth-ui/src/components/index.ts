@@ -227,6 +227,9 @@ export type { DeleteAppDialogProps } from "./DeleteAppDialog";
 export { DeleteApiServerDialog } from "./DeleteApiServerDialog";
 export type { DeleteApiServerDialogProps } from "./DeleteApiServerDialog";
 
+export { ConnectAppToApiDialog } from "./ConnectAppToApiDialog";
+export type { ConnectAppToApiDialogProps } from "./ConnectAppToApiDialog";
+
 export { DisconnectAppToApiDialog } from "./DisconnectAppToApiDialog";
 export type {
   DisconnectAppToApiDialogProps,

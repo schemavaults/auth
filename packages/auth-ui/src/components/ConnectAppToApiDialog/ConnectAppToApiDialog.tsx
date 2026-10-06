@@ -47,6 +47,14 @@ export interface ConnectAppToApiDialogProps {
    * client application's row actions.
    */
   preselectedClientAppId?: string;
+  /**
+   * Called after the connection was created (before the dialog closes),
+   * e.g. to refresh a server-rendered list of connected API servers.
+   */
+  onConnected?: (connection: {
+    api_server_id: string;
+    client_app_id: string;
+  }) => void;
 }
 
 export function ConnectAppToApiDialog({
@@ -54,6 +62,7 @@ export function ConnectAppToApiDialog({
   onOpenChange,
   preselectedApiServerId,
   preselectedClientAppId,
+  onConnected,
 }: ConnectAppToApiDialogProps): ReactElement {
   const { toast } = useToast();
   const friendlyName: string = useAuthUiFriendlyName();
@@ -125,6 +134,10 @@ export function ConnectAppToApiDialog({
       variant: "default",
       title: "Connected app to API server successfully!",
       description: "It can now send the API server authenticated requests.",
+    });
+    onConnected?.({
+      api_server_id: values.api_server_id,
+      client_app_id: values.client_app_id,
     });
     form.reset();
     onOpenChange(false);
