@@ -293,6 +293,12 @@ describe("Service account organization membership", () => {
     resourceServerRole(f, f.service_account_uid).should("eq", null);
     getServiceAccount(f.app_id).its("body.organization_membership.role").should("eq", null);
     deleteMembership(f.app_id).its("status").should("eq", 404);
+    // Without a service account there is nothing to make a member.
+    putMembership(f.app_id, { role: "member" }).then((response) => {
+      expect(response.status).to.eq(409);
+      expect(response.body.success).to.eq(false);
+    });
+    getServiceAccount(f.app_id).its("body.organization_membership.role").should("eq", null);
 
     recreateServiceAccount();
     cy.wrap(null, { log: false }).then(() =>

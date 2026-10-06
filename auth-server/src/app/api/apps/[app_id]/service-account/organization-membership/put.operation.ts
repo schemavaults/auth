@@ -23,7 +23,7 @@ export const setAppServiceAccountOrganizationMembership = defineOperation({
   path: "/api/apps/{app_id}/service-account/organization-membership",
   summary: "Make an app's service account a member of its organization",
   description:
-    "Makes the service account of an organization-owned client application a member of the organization that owns the app, with the given role (default `member`), or changes its role. Service accounts cannot accept invitations, so this is how the machine identity behind the app's `client_credentials` tokens passes organization membership checks, such as the `required_organization` / `organization` route guards of resource servers built on `@schemavaults/auth-server-sdk` (they ask `GET /api/resource-server/organizations/{organization_id}/members/{uid}/role`). The membership follows the app's owner and does not count against the organization membership limit. The setting is stored for the app: it applies to the service account whether it already exists or is created later, and is cleared when the service account is removed. Requires management access; hardcoded apps cannot be configured.",
+    "Makes the service account of an organization-owned client application a member of the organization that owns the app, with the given role (default `member`), or changes its role. Service accounts cannot accept invitations, so this is how the machine identity behind the app's `client_credentials` tokens passes organization membership checks, such as the `required_organization` / `organization` route guards of resource servers built on `@schemavaults/auth-server-sdk` (they ask `GET /api/resource-server/organizations/{organization_id}/members/{uid}/role`). The membership follows the app's owner and does not count against the organization membership limit. The service account must exist (create it with `POST /api/apps/{app_id}/service-account` first); removing it clears the membership, so a recreated service account starts outside the organization. Requires management access; hardcoded apps cannot be configured.",
   tags: [API_TAGS.apps],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {
@@ -39,7 +39,8 @@ export const setAppServiceAccountOrganizationMembership = defineOperation({
     ...sessionErrorResponses,
     ...appManagementErrorResponses,
     409: {
-      description: "The app is not owned by an organization (platform-owned, user-owned or dynamically registered)",
+      description:
+        "The app is not owned by an organization (platform-owned, user-owned or dynamically registered), or has no service account yet",
       schema: ErrorResponse,
     },
   },
@@ -69,6 +70,13 @@ export const setAppServiceAccountOrganizationMembership = defineOperation({
 
     try {
       const appRegistry = new SchemaVaultsAppRegistry(db);
+      if (!(await appRegistry.getServiceAccount(app_id))) {
+        return ctx.json(409, {
+          success: false,
+          message:
+            "This app has no service account yet: create it first, then make it a member of the organization.",
+        });
+      }
       await appRegistry.setServiceAccountOrganizationRole(app_id, role, user.uid);
       return ctx.json(200, {
         success: true,

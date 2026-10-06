@@ -146,6 +146,14 @@ export async function getOrCreateAppServiceAccount(
         })
         .executeTakeFirstOrThrow();
       await authorizeAppForUser(trx, uid, app_id, debug);
+      // A new service account starts outside the app's organization. The
+      // membership endpoint refuses apps without a service account and
+      // deleteUser() clears the role with it, so a row here can only be
+      // stale (stored before those rules, or by a call racing a removal).
+      await trx
+        .deleteFrom("app_service_account_organization_roles")
+        .where("app_id", "=", app_id)
+        .execute();
     });
   } catch (e: unknown) {
     if (isUniqueViolation(e)) {
