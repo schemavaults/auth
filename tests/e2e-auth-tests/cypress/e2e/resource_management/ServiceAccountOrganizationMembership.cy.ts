@@ -337,7 +337,10 @@ describe("Service account organization membership", () => {
     cy.wait_for_page_hydration();
 
     // Nothing to be a member yet: the section only appears with the account.
-    cy.get('[data-testid="app-service-account-card"]').should("be.visible");
+    // The card sits below the fold of the 1280x720 viewport.
+    cy.get('[data-testid="app-service-account-card"]', { timeout: 15000 })
+      .scrollIntoView()
+      .should("be.visible");
     cy.get('[data-testid="service-account-organization-membership"]').should("not.exist");
     cy.contains("button", "Create service account").click();
     cy.get('[data-testid="service-account-organization-membership-status"]').should(
