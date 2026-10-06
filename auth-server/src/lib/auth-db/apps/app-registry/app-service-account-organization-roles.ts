@@ -8,7 +8,8 @@
 // `listUserOrganizationMemberships` adds it (like the platform admins'
 // virtual membership of the owner organization) from the row stored here
 // and the app's CURRENT owner, so it applies only while the app is owned
-// by an organization and always names that organization.
+// by an organization and always names that organization. Removing the
+// service account clears the row (deleteUser).
 
 import "server-only";
 import {

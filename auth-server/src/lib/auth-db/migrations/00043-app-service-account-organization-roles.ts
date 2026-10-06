@@ -14,9 +14,8 @@
 // not an ORGANIZATION_MEMBERSHIP_ROLES row, and the organization is not
 // stored here. It is read from the app's current owner at lookup time, so
 // it only applies while the app is organization-owned, never counts
-// against the membership limit, and survives the service account being
-// removed and recreated (the setting belongs to the app). It goes with
-// the app (ON DELETE CASCADE).
+// against the membership limit. It goes with the app (ON DELETE CASCADE),
+// and deleteUser() clears it when the service account is removed.
 
 import type { Kysely } from "@schemavaults/dbh";
 import { sql } from "@/sql";

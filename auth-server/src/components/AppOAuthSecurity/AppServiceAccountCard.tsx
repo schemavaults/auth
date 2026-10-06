@@ -328,6 +328,9 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
                       creates a new service account with a different id, so
                       any permissions granted to the current id on resource
                       servers will no longer apply.
+                      {organization_membership.role &&
+                        organization_id !== null &&
+                        ` Its membership of ${organization_id} is removed as well.`}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

@@ -35,7 +35,10 @@ export interface DeleteUserResult {
  * with organizations the user leaves behind: organizations where the
  * user was the sole member are deleted here (cascading to their apps and
  * API servers), while organizations with other members are kept intact —
- * only the user's membership rows disappear.
+ * only the user's membership rows disappear. A service account's
+ * organization role (APP_SERVICE_ACCOUNT_ORGANIZATION_ROLES, keyed by its
+ * app rather than its uid) is cleared here too, so a service account
+ * created later for the same app starts outside the organization.
  *
  * The deleted uid is tombstoned in DELETED_USER_UIDS (same transaction)
  * so it can never be reassigned to a new user — third-party resource
@@ -72,7 +75,7 @@ export async function deleteUser(
   ): Promise<DeleteUserResult> => {
       const existingUser = await trx
         .selectFrom("users")
-        .select("uid")
+        .select(["uid", "service_account_app_id"])
         .where("uid", "=", uid)
         .executeTakeFirst();
       if (!existingUser) {
@@ -123,6 +126,13 @@ export async function deleteUser(
         throw new Error(
           `Expected exactly one user row to be deleted, but '${numDeletedRows}' rows were deleted!`,
         );
+      }
+
+      if (existingUser.service_account_app_id) {
+        await trx
+          .deleteFrom("app_service_account_organization_roles")
+          .where("app_id", "=", existingUser.service_account_app_id)
+          .execute();
       }
 
       // Permanently reserve the uid: third-party resource servers may
