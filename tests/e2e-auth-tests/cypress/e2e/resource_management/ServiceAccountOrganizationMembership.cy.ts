@@ -291,6 +291,56 @@ describe("Service account organization membership", () => {
     });
   });
 
+  it("is set from the app page with an explicit Save, once the service account exists", () => {
+    cy.request({ method: "DELETE", url: `/api/apps/${f.app_id}/service-account` })
+      .its("status")
+      .should("eq", 200);
+    cy.intercept({
+      method: "PUT",
+      url: `**${membershipUrl(f.app_id)}`,
+    }).as("saveMembership");
+    cy.visit(`/apps/${f.app_id}`);
+    cy.wait_for_page_hydration();
+
+    // Nothing to be a member yet: the section only appears with the account.
+    cy.get('[data-testid="app-service-account-card"]').should("be.visible");
+    cy.get('[data-testid="service-account-organization-membership"]').should("not.exist");
+    cy.contains("button", "Create service account").click();
+    cy.get('[data-testid="service-account-organization-membership-status"]').should(
+      "contain.text",
+      "not a member",
+    );
+    cy.get('[data-testid="service-account-uid"]')
+      .invoke("text")
+      .then((uid) => {
+        f.service_account_uid = uid.trim();
+      });
+
+    // Picking a role sends nothing until Save.
+    cy.get('[data-testid="service-account-organization-role-save"]').should("be.disabled");
+    cy.get('[data-testid="service-account-organization-role"]').click();
+    cy.get('[data-testid="service-account-organization-role-option-member"]').click();
+    cy.get('[data-testid="service-account-organization-role"]').should("contain.text", "Member");
+    cy.get("@saveMembership.all").should("have.length", 0);
+    cy.get('[data-testid="service-account-organization-membership-status"]').should(
+      "contain.text",
+      "not a member",
+    );
+
+    cy.get('[data-testid="service-account-organization-role-save"]').should("be.enabled").click();
+    cy.wait("@saveMembership").then((interception) => {
+      expect(interception.request.body).to.deep.eq({ role: "member" });
+      expect(interception.response?.statusCode).to.eq(200);
+    });
+    cy.get('[data-testid="service-account-organization-membership-status"]')
+      .should("not.contain.text", "not a member")
+      .and("contain.text", "a member of");
+    cy.get('[data-testid="service-account-organization-role-save"]').should("be.disabled");
+    cy.wrap(null, { log: false }).then(() =>
+      resourceServerRole(f, f.service_account_uid).should("eq", "member"),
+    );
+  });
+
   it("is refused for apps that no organization owns", () => {
     const app_id = randomId("e2e-saorg-user-app");
     cy.request({
