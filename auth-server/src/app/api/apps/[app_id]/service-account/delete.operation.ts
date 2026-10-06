@@ -19,7 +19,7 @@ export const deleteAppServiceAccount = defineOperation({
   path: "/api/apps/{app_id}/service-account",
   summary: "Remove an app's service account",
   description:
-    "Removes the client application's service account. Its issued-token records go with it; the next client_credentials grant creates a fresh identity with a new uid. Requires management access; hardcoded apps cannot be configured.",
+    "Removes the client application's service account. Its issued-token records and its membership of the organization that owns the app go with it; the next client_credentials grant creates a fresh identity with a new uid. Requires management access; hardcoded apps cannot be configured.",
   tags: [API_TAGS.apps],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: { params: appIdParams },

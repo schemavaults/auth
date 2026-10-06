@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, type FC, type ReactElement } from "react";
+import { useState, useTransition, type FC, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { AppId } from "@schemavaults/app-definitions";
@@ -34,7 +34,7 @@ import {
 } from "@schemavaults/ui";
 import { useAuth } from "@schemavaults/auth-react-provider";
 import { LocalDateTime } from "@schemavaults/auth-ui";
-import { Bot, Building2, Trash2 } from "lucide-react";
+import { Bot, Building2, Save, Trash2 } from "lucide-react";
 import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
 
 /** Select value for "not a member" (roles are the other values). */
@@ -48,6 +48,79 @@ const ORGANIZATION_ROLE_LABELS: Record<AssignableOrganizationMembershipRole, str
 function isAssignableRole(value: string): value is AssignableOrganizationMembershipRole {
   return (assignableOrganizationMembershipRoles as readonly string[]).includes(value);
 }
+
+interface OrganizationRoleFormProps {
+  organization_id: string;
+  /** The saved role, or NOT_A_MEMBER. */
+  saved_role: string;
+  busy: boolean;
+  onSave: (role: string) => void;
+}
+
+/**
+ * Role select of the service account in the owning organization. Picking
+ * a role only changes the selection: nothing is sent until "Save". The
+ * card keys it on the saved role, so the selection resets whenever the
+ * saved role changes.
+ */
+const OrganizationRoleForm: FC<OrganizationRoleFormProps> = ({
+  organization_id,
+  saved_role,
+  busy,
+  onSave,
+}): ReactElement => {
+  const [selected_role, setSelectedRole] = useState<string>(saved_role);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor="service-account-organization-role">
+        Role in {organization_id}
+      </Label>
+      <div className="flex flex-row flex-wrap items-center gap-2">
+        <Select
+          value={selected_role}
+          onValueChange={setSelectedRole}
+          disabled={busy}
+        >
+          <SelectTrigger
+            id="service-account-organization-role"
+            className="w-56"
+            data-testid="service-account-organization-role"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              value={NOT_A_MEMBER}
+              data-testid={`service-account-organization-role-option-${NOT_A_MEMBER}`}
+            >
+              Not a member
+            </SelectItem>
+            {assignableOrganizationMembershipRoles.map(
+              (role: AssignableOrganizationMembershipRole): ReactElement => (
+                <SelectItem
+                  key={role}
+                  value={role}
+                  data-testid={`service-account-organization-role-option-${role}`}
+                >
+                  {ORGANIZATION_ROLE_LABELS[role]}
+                </SelectItem>
+              ),
+            )}
+          </SelectContent>
+        </Select>
+        <Button
+          disabled={busy || selected_role === saved_role}
+          onClick={() => onSave(selected_role)}
+          data-testid="service-account-organization-role-save"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          Save
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 export interface AppServiceAccountCardProps {
   app_id: AppId;
@@ -74,10 +147,10 @@ export interface AppServiceAccountCardProps {
  * machine identity that access tokens obtained through the OAuth2
  * client_credentials grant are issued to. The grant is only available
  * to confidential clients, so the card points at the client secret card
- * when the app has none. For an organization-owned app, the card also
- * makes the service account a member of that organization (service
- * accounts cannot accept invitations), so resource servers that require
- * organization membership accept its tokens.
+ * when the app has none. For an organization-owned app, once the service
+ * account exists, the card also makes it a member of that organization
+ * (service accounts cannot accept invitations), so resource servers that
+ * require organization membership accept its tokens.
  */
 export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
   app_id,
@@ -132,9 +205,10 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
     });
   }
 
-  function updateOrganizationRole(value: string): void {
-    const current: string = organization_membership.role ?? NOT_A_MEMBER;
-    if (value === current) {
+  const saved_role: string = organization_membership.role ?? NOT_A_MEMBER;
+
+  function saveOrganizationRole(value: string): void {
+    if (value === saved_role) {
       return;
     }
     startTransition(async () => {
@@ -254,6 +328,9 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
                       creates a new service account with a different id, so
                       any permissions granted to the current id on resource
                       servers will no longer apply.
+                      {organization_membership.role &&
+                        organization_id !== null &&
+                        ` Its membership of ${organization_id} is removed as well.`}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -271,7 +348,7 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
           </div>
         )}
 
-        {organization_membership.available && organization_id !== null && (
+        {service_account && organization_membership.available && organization_id !== null && (
           <div
             className="space-y-2 border-t pt-4 text-sm"
             data-testid="service-account-organization-membership"
@@ -313,34 +390,13 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
               )}
             </p>
             {canManage && (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="service-account-organization-role">
-                  Role in {organization_id}
-                </Label>
-                <Select
-                  value={organization_membership.role ?? NOT_A_MEMBER}
-                  onValueChange={updateOrganizationRole}
-                  disabled={busy}
-                >
-                  <SelectTrigger
-                    id="service-account-organization-role"
-                    className="w-56"
-                    data-testid="service-account-organization-role"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NOT_A_MEMBER}>Not a member</SelectItem>
-                    {assignableOrganizationMembershipRoles.map(
-                      (role: AssignableOrganizationMembershipRole): ReactElement => (
-                        <SelectItem key={role} value={role}>
-                          {ORGANIZATION_ROLE_LABELS[role]}
-                        </SelectItem>
-                      ),
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+              <OrganizationRoleForm
+                key={saved_role}
+                organization_id={organization_id}
+                saved_role={saved_role}
+                busy={busy}
+                onSave={saveOrganizationRole}
+              />
             )}
           </div>
         )}

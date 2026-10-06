@@ -171,7 +171,7 @@ function deleteMembership(app_id: string): Cypress.Chainable<Cypress.Response<Se
 }
 
 describe("Service account organization membership", () => {
-  // Built once in before(); the recreation test replaces the service account uid.
+  // Built once in before(); the tests that recreate the service account replace its uid.
   let f: Fixture;
 
   function loginAsSuperuser(): void {
@@ -272,13 +272,8 @@ describe("Service account organization membership", () => {
     resourceServerRole(f, f.service_account_uid).should("eq", null);
   });
 
-  it("belongs to the app: a recreated service account is a member as well", () => {
-    putMembership(f.app_id, { role: "member" }).its("status").should("eq", 200);
-    cy.request({ method: "DELETE", url: `/api/apps/${f.app_id}/service-account` })
-      .its("status")
-      .should("eq", 200);
-    // The old uid is gone, and with it the membership.
-    resourceServerRole(f, f.service_account_uid).should("eq", null);
+  /** Creates the app's service account again and makes it the fixture's uid. */
+  function recreateServiceAccount(): void {
     cy.request<ServiceAccountResponseBody>({
       method: "POST",
       url: `/api/apps/${f.app_id}/service-account`,
@@ -287,8 +282,100 @@ describe("Service account organization membership", () => {
       const new_uid = created.body.service_account?.uid as string;
       expect(new_uid).to.not.eq(f.service_account_uid);
       f.service_account_uid = new_uid;
-      resourceServerRole(f, new_uid).should("eq", "member");
     });
+  }
+
+  it("is cleared with the service account: a recreated one starts outside the organization", () => {
+    putMembership(f.app_id, { role: "owner" }).its("status").should("eq", 200);
+    cy.request({ method: "DELETE", url: `/api/apps/${f.app_id}/service-account` })
+      .its("status")
+      .should("eq", 200);
+    resourceServerRole(f, f.service_account_uid).should("eq", null);
+    getServiceAccount(f.app_id).its("body.organization_membership.role").should("eq", null);
+    deleteMembership(f.app_id).its("status").should("eq", 404);
+    // Without a service account there is nothing to make a member.
+    putMembership(f.app_id, { role: "member" }).then((response) => {
+      expect(response.status).to.eq(409);
+      expect(response.body.success).to.eq(false);
+    });
+    getServiceAccount(f.app_id).its("body.organization_membership.role").should("eq", null);
+
+    recreateServiceAccount();
+    cy.wrap(null, { log: false }).then(() =>
+      resourceServerRole(f, f.service_account_uid).should("eq", null),
+    );
+  });
+
+  it("is cleared when an administrator deletes the service account's user", () => {
+    putMembership(f.app_id, { role: "member" }).its("status").should("eq", 200);
+    cy.wrap(null, { log: false }).then(() =>
+      cy
+        .request({ method: "DELETE", url: `/api/admin/users/${f.service_account_uid}` })
+        .its("status")
+        .should("eq", 200),
+    );
+    getServiceAccount(f.app_id).then((response) => {
+      expect(response.body.service_account).to.eq(null);
+      expect(response.body.organization_membership?.role).to.eq(null);
+    });
+
+    recreateServiceAccount();
+    cy.wrap(null, { log: false }).then(() =>
+      resourceServerRole(f, f.service_account_uid).should("eq", null),
+    );
+  });
+
+  it("is set from the app page with an explicit Save, once the service account exists", () => {
+    cy.request({ method: "DELETE", url: `/api/apps/${f.app_id}/service-account` })
+      .its("status")
+      .should("eq", 200);
+    cy.intercept({
+      method: "PUT",
+      url: `**${membershipUrl(f.app_id)}`,
+    }).as("saveMembership");
+    cy.visit(`/apps/${f.app_id}`);
+    cy.wait_for_page_hydration();
+
+    // Nothing to be a member yet: the section only appears with the account.
+    // The card sits below the fold of the 1280x720 viewport.
+    cy.get('[data-testid="app-service-account-card"]', { timeout: 15000 })
+      .scrollIntoView()
+      .should("be.visible");
+    cy.get('[data-testid="service-account-organization-membership"]').should("not.exist");
+    cy.contains("button", "Create service account").click();
+    cy.get('[data-testid="service-account-organization-membership-status"]').should(
+      "contain.text",
+      "not a member",
+    );
+    cy.get('[data-testid="service-account-uid"]')
+      .invoke("text")
+      .then((uid) => {
+        f.service_account_uid = uid.trim();
+      });
+
+    // Picking a role sends nothing until Save.
+    cy.get('[data-testid="service-account-organization-role-save"]').should("be.disabled");
+    cy.get('[data-testid="service-account-organization-role"]').click();
+    cy.get('[data-testid="service-account-organization-role-option-member"]').click();
+    cy.get('[data-testid="service-account-organization-role"]').should("contain.text", "Member");
+    cy.get("@saveMembership.all").should("have.length", 0);
+    cy.get('[data-testid="service-account-organization-membership-status"]').should(
+      "contain.text",
+      "not a member",
+    );
+
+    cy.get('[data-testid="service-account-organization-role-save"]').should("be.enabled").click();
+    cy.wait("@saveMembership").then((interception) => {
+      expect(interception.request.body).to.deep.eq({ role: "member" });
+      expect(interception.response?.statusCode).to.eq(200);
+    });
+    cy.get('[data-testid="service-account-organization-membership-status"]')
+      .should("not.contain.text", "not a member")
+      .and("contain.text", "a member of");
+    cy.get('[data-testid="service-account-organization-role-save"]').should("be.disabled");
+    cy.wrap(null, { log: false }).then(() =>
+      resourceServerRole(f, f.service_account_uid).should("eq", "member"),
+    );
   });
 
   it("is refused for apps that no organization owns", () => {
