@@ -77,6 +77,7 @@ describe("GET /api/openapi.json (auth server)", () => {
         "/api/resource-server/apis/{api_server_id}/allowed-origins",
         "/api/environment",
         "/api/config/branding",
+        "/api/config/app-id",
       ]);
       // The document does not describe itself.
       expect(doc.paths).to.not.have.property("/api/openapi.json");
@@ -133,6 +134,7 @@ describe("GET /api/openapi.json (auth server)", () => {
         ["/api/auth/login", "post"],
         ["/api/oidc/token", "post"],
         ["/api/environment", "get"],
+        ["/api/config/app-id", "get"],
       ] as const) {
         const operation = doc.paths[path]?.[method];
         expect(operation?.["x-schemavaults-auth"]?.public, `${method} ${path} public`).to.eq(true);

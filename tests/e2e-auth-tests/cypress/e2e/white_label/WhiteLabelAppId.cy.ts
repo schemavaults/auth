@@ -6,6 +6,7 @@
 //   - refresh-token cookies carry the custom app id suffix, and no
 //     default-id cookies are created
 //   - the whoami endpoint responds for the custom app id, not the default
+//   - GET /api/config/app-id publishes the custom app id
 
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import {
@@ -17,6 +18,16 @@ import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
 const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
 
 describe("White-label custom app id sessions", () => {
+  it("GET /api/config/app-id publishes the custom app id", () => {
+    expect(AUTH_APP_ID, "the suite runs with a custom app id").to.not.eq(
+      DEFAULT_AUTH_SERVER_APP_ID,
+    );
+    cy.request({ method: "GET", url: "/api/config/app-id" }).then((response) => {
+      expect(response.status).to.eq(200);
+      expect(response.body).to.have.nested.property("data.app_id", AUTH_APP_ID);
+    });
+  });
+
   it("superuser can log in via the UI with cookies scoped to the custom app id", () => {
     cy.create_and_login_as_superuser().then((success: boolean) => {
       if (!success) {

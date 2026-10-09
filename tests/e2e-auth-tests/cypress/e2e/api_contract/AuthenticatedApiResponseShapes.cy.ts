@@ -6,15 +6,14 @@
 // handlers move onto @schemavaults/openapi-operations. Messages are not
 // asserted verbatim: only the fields clients read.
 
+import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
+
 interface Envelope {
   success?: boolean;
   message?: string;
   data?: Record<string, unknown>;
   [key: string]: unknown;
 }
-
-// Module marker: keeps this spec's top-level interfaces file-scoped.
-export {};
 
 function get(url: string): Cypress.Chainable<Cypress.Response<Envelope>> {
   return cy.request<Envelope>({ method: "GET", url, failOnStatusCode: false });
@@ -232,6 +231,16 @@ describe("Authenticated API response shapes", () => {
         expect(response.status).to.eq(200);
         expect(response.body.data).to.be.an("object");
         expect((response.body.data as Record<string, unknown>).friendly_name).to.be.a("string");
+      });
+    });
+
+    it("GET /api/config/app-id -> { data: { app_id } }", () => {
+      get("/api/config/app-id").then((response) => {
+        expect(response.status).to.eq(200);
+        expect(response.body.success).to.eq(true);
+        expect((response.body.data as Record<string, unknown>).app_id).to.eq(
+          getAuthServerAppIdFromCypressEnv(),
+        );
       });
     });
   });
