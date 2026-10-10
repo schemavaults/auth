@@ -139,6 +139,43 @@ describe("API token type separation (access vs refresh)", () => {
     });
   });
 
+  it("whoami accepts the client app refresh token as a bearer credential (SDK inline-delivery path)", () => {
+    // SDK clients whose refresh token is not an HTTP-only cookie authenticate
+    // their whoami call with `Authorization: Bearer <refresh token>`. whoami
+    // decodes it as a refresh token (so the token-type separation above holds
+    // elsewhere) and accepts it for this client_app_id.
+    currentRefreshToken().then((refresh_token) => {
+      cy.clearCookies();
+      getWith(`/api/auth/whoami/${AUTH_APP_ID}`, {
+        Authorization: `Bearer ${refresh_token}`,
+      }).then((response) => {
+        expect(response.status, "whoami with a bearer refresh token").to.eq(200);
+        expect(response.body.success).to.eq(true);
+        expect(
+          (response.body as { user?: { uid?: string } }).user?.uid,
+        ).to.be.a("string");
+      });
+    });
+  });
+
+  it("whoami refuses a refresh token issued to a different client app (app-bound)", () => {
+    // The bearer header carries no per-app binding, so the token's `app`
+    // claim must match the path's client_app_id; a valid refresh token for
+    // another app resolves nobody.
+    const OTHER_APP_ID = "11111111-2222-4333-8444-555555555555";
+    currentRefreshToken().then((refresh_token) => {
+      cy.clearCookies();
+      getWith(`/api/auth/whoami/${OTHER_APP_ID}`, {
+        Authorization: `Bearer ${refresh_token}`,
+      }).then((response) => {
+        expect(
+          response.status,
+          "whoami for another app with this app's refresh token",
+        ).to.eq(401);
+      });
+    });
+  });
+
   it("an auth-server access token presented as a refresh token is refused (invalid_grant)", () => {
     mintAuthServerAccessToken().then((access_token) => {
       cy.clearCookies();
