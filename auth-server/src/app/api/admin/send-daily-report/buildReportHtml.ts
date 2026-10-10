@@ -1,5 +1,4 @@
 import "server-only";
-import { getThemeToken, themeTokenDefault } from "@schemavaults/theme/tokens";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import type { TopMostActiveUserRow, UserDocument } from "@/lib/auth-db/users";
 import type { ErrorRow } from "@/lib/auth-db/errors";
@@ -32,6 +31,11 @@ interface BuildReportOpts {
   authServerUri: string;
   /** White-label deployment name rendered in the report heading. */
   friendlyName: string;
+  /**
+   * Inlined CSS color of the header, section headings and links: the
+   * deployment's theme accent, from `getAuthServerEmailAccentColor()`.
+   */
+  accentColor: string;
   windowStart: Date;
   windowEnd: Date;
   newUsers: readonly UserDocument[];
@@ -55,12 +59,10 @@ interface ReportContent {
 }
 
 /**
- * Email clients have no stylesheet to resolve the `var(--schemavaults-brand-*)`
- * references `brandColors` holds (links and headings rendered uncolored), so
- * the report inlines the theme's light-mode values.
+ * Errors and warnings stay red whatever the deployment's theme colors: the
+ * color marks a status, not the brand.
  */
-const BRAND_BLUE: string = themeTokenDefault(getThemeToken("brand-blue"), "light") ?? "#60a5fa";
-const BRAND_RED: string = themeTokenDefault(getThemeToken("brand-red"), "light") ?? "#dc2626";
+const ALERT_COLOR = "#dc2626";
 const TEXT_COLOR = "#111827";
 const MUTED_COLOR = "#6b7280";
 const BORDER_COLOR = "#e5e7eb";
@@ -122,17 +124,23 @@ function clientErrorsDashboardUrl(
   return `${authServerUri}${ADMIN_PAGES.client_errors.path}?${params.toString()}`;
 }
 
-/** A link to `href`; `labelHtml` must already be escaped. */
-function linkHtml(href: string, labelHtml: string, style: string = ""): string {
-  return `<a href="${escapeHtml(href)}" style="color:${BRAND_BLUE};text-decoration:none;${style}">${labelHtml}</a>`;
+/** A link to `href` in the accent color; `labelHtml` must already be escaped. */
+function linkHtml(accentColor: string, href: string, labelHtml: string, style: string = ""): string {
+  return `<a href="${escapeHtml(href)}" style="color:${accentColor};text-decoration:none;${style}">${labelHtml}</a>`;
 }
 
-/** A section heading with a link to the admin page holding the full picture. */
-function sectionHeadingHtml(title: string, color: string, href: string, linkLabel: string): string {
+/** A section heading (in `color`) with a link to the admin page holding the full picture. */
+function sectionHeadingHtml(
+  accentColor: string,
+  title: string,
+  href: string,
+  linkLabel: string,
+  color: string = accentColor,
+): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">
           <tr>
             <td align="left" valign="bottom"><h2 style="margin:0;font-size:16px;color:${color};">${escapeHtml(title)}</h2></td>
-            <td align="right" valign="bottom" style="padding-left:12px;white-space:nowrap;">${linkHtml(href, `${escapeHtml(linkLabel)} &rarr;`, "font-size:13px;")}</td>
+            <td align="right" valign="bottom" style="padding-left:12px;white-space:nowrap;">${linkHtml(accentColor, href, `${escapeHtml(linkLabel)} &rarr;`, "font-size:13px;")}</td>
           </tr>
         </table>`;
 }
@@ -213,6 +221,7 @@ interface ReportSection {
 /** Summary statistics of the client error reports received during the window; the details stay on the dashboard. */
 function buildClientErrorsSection(
   authServerUri: string,
+  accentColor: string,
   { stats, storage, appNames }: DailyReportClientErrors,
 ): ReportSection {
   const { totals } = stats;
@@ -254,7 +263,7 @@ function buildClientErrorsSection(
           ? `<div style="margin-top:2px;font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(truncateOneLine(g.operation, CLIENT_ERROR_NAME_MAX_LENGTH))}</div>`
           : "";
         return `<tr>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};">${linkHtml(groupUrl(g), label)}${operation}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};">${linkHtml(accentColor, groupUrl(g), label)}${operation}</td>
   ${countCellHtml(g.count)}
   ${countCellHtml(g.apps)}
   ${countCellHtml(g.users)}
@@ -266,8 +275,8 @@ function buildClientErrorsSection(
       .map((a) => {
         const name: string | null = appName(a);
         const label: string = name
-          ? `${linkHtml(appUrl(a), escapeHtml(name))}<div style="margin-top:2px;font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.client_app_id)}</div>`
-          : linkHtml(appUrl(a), escapeHtml(a.client_app_id), "font-family:monospace;font-size:12px;");
+          ? `${linkHtml(accentColor, appUrl(a), escapeHtml(name))}<div style="margin-top:2px;font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.client_app_id)}</div>`
+          : linkHtml(accentColor, appUrl(a), escapeHtml(a.client_app_id), "font-family:monospace;font-size:12px;");
         return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};">${label}</td>
   ${countCellHtml(a.count)}
@@ -278,12 +287,12 @@ function buildClientErrorsSection(
 
     const moreNote = (count: number, singular: string): string =>
       count > 0
-        ? `\n        <p style="margin:8px 0 0;font-size:12px;">${linkHtml(dashboardUrl, `+${escapeHtml(pluralize(count, `more ${singular}`))} on the dashboard`)}</p>`
+        ? `\n        <p style="margin:8px 0 0;font-size:12px;">${linkHtml(accentColor, dashboardUrl, `+${escapeHtml(pluralize(count, `more ${singular}`))} on the dashboard`)}</p>`
         : "";
 
     bodyHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:8px 0;">
           <tr>
-              ${statTileHtml(totals.errors, "Reports", change ? { text: change, color: increased ? BRAND_RED : MUTED_COLOR } : null)}
+              ${statTileHtml(totals.errors, "Reports", change ? { text: change, color: increased ? ALERT_COLOR : MUTED_COLOR } : null)}
               ${statTileHtml(totals.groups, "Error groups")}
               ${statTileHtml(totals.apps, "Applications")}
               ${statTileHtml(totals.users, "Users affected")}
@@ -293,10 +302,10 @@ function buildClientErrorsSection(
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
-              ${headerCellHtml("Error", BRAND_RED)}
-              ${headerCellHtml("Reports", BRAND_RED, "right")}
-              ${headerCellHtml("Apps", BRAND_RED, "right")}
-              ${headerCellHtml("Users", BRAND_RED, "right")}
+              ${headerCellHtml("Error", ALERT_COLOR)}
+              ${headerCellHtml("Reports", ALERT_COLOR, "right")}
+              ${headerCellHtml("Apps", ALERT_COLOR, "right")}
+              ${headerCellHtml("Users", ALERT_COLOR, "right")}
             </tr>
           </thead>
           <tbody>
@@ -307,9 +316,9 @@ ${groupRows}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
-              ${headerCellHtml("Application", BRAND_RED)}
-              ${headerCellHtml("Reports", BRAND_RED, "right")}
-              ${headerCellHtml("Error groups", BRAND_RED, "right")}
+              ${headerCellHtml("Application", ALERT_COLOR)}
+              ${headerCellHtml("Reports", ALERT_COLOR, "right")}
+              ${headerCellHtml("Error groups", ALERT_COLOR, "right")}
             </tr>
           </thead>
           <tbody>
@@ -320,14 +329,14 @@ ${appRows}
 
   const html = `<tr>
       <td style="padding:8px 32px 24px;">
-        ${sectionHeadingHtml(`Client errors (${totals.errors.toLocaleString("en-US")})`, BRAND_RED, dashboardUrl, "Client errors dashboard")}
+        ${sectionHeadingHtml(accentColor, `Client errors (${totals.errors.toLocaleString("en-US")})`, dashboardUrl, "Client errors dashboard", ALERT_COLOR)}
         <p style="margin:0 0 12px;color:${MUTED_COLOR};font-size:13px;">Errors that client applications reported to the auth server.</p>
         ${bodyHtml}
         <p style="margin:16px 0 0;color:${MUTED_COLOR};font-size:12px;line-height:1.6;">
-          Intake: <strong style="color:${intake.refusingReports ? BRAND_RED : TEXT_COLOR};">${escapeHtml(intake.status)}</strong>
-          &middot; Storage: <span style="${intake.storageNearlyFull ? `color:${BRAND_RED};font-weight:600;` : ""}">${escapeHtml(intake.storage)}</span>
+          Intake: <strong style="color:${intake.refusingReports ? ALERT_COLOR : TEXT_COLOR};">${escapeHtml(intake.status)}</strong>
+          &middot; Storage: <span style="${intake.storageNearlyFull ? `color:${ALERT_COLOR};font-weight:600;` : ""}">${escapeHtml(intake.storage)}</span>
           &middot; ${escapeHtml(intake.retention)}
-          &middot; ${linkHtml(settingsUrl, "Settings")}
+          &middot; ${linkHtml(accentColor, settingsUrl, "Settings")}
         </p>
       </td>
     </tr>`;
@@ -366,6 +375,7 @@ ${appRows}
 export function buildDailyAdminReport({
   authServerUri,
   friendlyName,
+  accentColor,
   windowStart,
   windowEnd,
   newUsers,
@@ -378,7 +388,7 @@ export function buildDailyAdminReport({
   clientErrors,
 }: BuildReportOpts): ReportContent {
   const adminUrl = (page: AdminPage): string => `${authServerUri}${ADMIN_PAGES[page].path}`;
-  const clientErrorsSection: ReportSection = buildClientErrorsSection(authServerUri, clientErrors);
+  const clientErrorsSection: ReportSection = buildClientErrorsSection(authServerUri, accentColor, clientErrors);
   const windowLabel = `${formatTimestamp(windowStart.getTime())} → ${formatTimestamp(windowEnd.getTime())}`;
 
   /**
@@ -395,7 +405,7 @@ export function buildDailyAdminReport({
           const link = `${authServerUri}/admin/users/${encodeURIComponent(u.uid)}`;
           return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(u.uid)}</td>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${BRAND_BLUE};text-decoration:none;">${escapeHtml(u.email)}</a></td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${accentColor};text-decoration:none;">${escapeHtml(u.email)}</a></td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};font-size:13px;">${formatTimestamp(u.created_at)}</td>
 </tr>`;
         })
@@ -408,7 +418,7 @@ export function buildDailyAdminReport({
           const link = `${authServerUri}/orgs/${encodeURIComponent(o.organization_id)}`;
           return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(o.organization_id)}</td>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${BRAND_BLUE};text-decoration:none;">${escapeHtml(o.name)}</a></td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${accentColor};text-decoration:none;">${escapeHtml(o.name)}</a></td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};font-size:13px;">${formatTimestamp(o.created_at)}</td>
 </tr>`;
         })
@@ -422,7 +432,7 @@ export function buildDailyAdminReport({
           return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;width:48px;">#${i + 1}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(u.uid)}</td>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${BRAND_BLUE};text-decoration:none;">${escapeHtml(u.email)}</a></td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${accentColor};text-decoration:none;">${escapeHtml(u.email)}</a></td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${u.sign_in_count.toLocaleString("en-US")}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${u.access_token_count.toLocaleString("en-US")}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${u.refresh_token_count.toLocaleString("en-US")}</td>
@@ -436,7 +446,7 @@ export function buildDailyAdminReport({
         .map((a, i) => {
           return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;width:48px;">#${i + 1}</td>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};">${linkHtml(`${authServerUri}/apps/${encodeURIComponent(a.client_app_id)}`, escapeHtml(a.app_name))}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};">${linkHtml(accentColor, `${authServerUri}/apps/${encodeURIComponent(a.client_app_id)}`, escapeHtml(a.app_name))}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.client_app_id)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.access_token_count.toLocaleString("en-US")}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.refresh_token_count.toLocaleString("en-US")}</td>
@@ -453,7 +463,7 @@ export function buildDailyAdminReport({
             : `<td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};text-align:right;" title="Refresh tokens are only issued for the auth server audience.">N/A</td>`;
           return `<tr>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;width:48px;">#${i + 1}</td>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};">${linkHtml(`${authServerUri}/apis/${encodeURIComponent(a.api_server_id)}`, escapeHtml(a.api_server_name))}</td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};">${linkHtml(accentColor, `${authServerUri}/apis/${encodeURIComponent(a.api_server_id)}`, escapeHtml(a.api_server_name))}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(a.api_server_id)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};font-weight:600;text-align:right;">${a.access_token_count.toLocaleString("en-US")}</td>
   ${refreshCell}
@@ -468,7 +478,7 @@ export function buildDailyAdminReport({
           const link = `${authServerUri}/admin/errors/${encodeURIComponent(e.error_id)}`;
           const route = e.route ? escapeHtml(e.route) : "—";
           return `<tr>
-  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${BRAND_BLUE};text-decoration:none;font-family:monospace;font-size:12px;">${escapeHtml(e.error_id)}</a></td>
+  <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};"><a href="${link}" style="color:${accentColor};text-decoration:none;font-family:monospace;font-size:12px;">${escapeHtml(e.error_id)}</a></td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${TEXT_COLOR};"><strong>${escapeHtml(e.name)}</strong>: ${escapeHtml(e.message)}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};font-size:13px;">${route}</td>
   <td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};font-size:13px;">${formatTimestamp(e.created_at)}</td>
@@ -481,20 +491,20 @@ export function buildDailyAdminReport({
 <body style="margin:0;padding:24px;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:${TEXT_COLOR};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:720px;margin:0 auto;background:#ffffff;border-radius:8px;border:1px solid ${BORDER_COLOR};">
     <tr>
-      <td style="padding:24px 32px;border-bottom:4px solid ${BRAND_BLUE};">
-        <h1 style="margin:0;font-size:22px;color:${BRAND_BLUE};">${escapeHtml(friendlyName)} Daily Admin Report</h1>
+      <td style="padding:24px 32px;border-bottom:4px solid ${accentColor};">
+        <h1 style="margin:0;font-size:22px;color:${accentColor};">${escapeHtml(friendlyName)} Daily Admin Report</h1>
         <p style="margin:6px 0 0;color:${MUTED_COLOR};font-size:13px;">${escapeHtml(windowLabel)}</p>
       </td>
     </tr>
     <tr>
       <td style="padding:24px 32px;">
-        ${sectionHeadingHtml(`New sign-ups (${newUsers.length})`, BRAND_BLUE, adminUrl("users"), "All users")}
+        ${sectionHeadingHtml(accentColor, `New sign-ups (${newUsers.length})`, adminUrl("users"), "All users")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">UID</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Email</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Created at</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">UID</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Email</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Created at</th>
             </tr>
           </thead>
           <tbody>
@@ -505,13 +515,13 @@ ${usersRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        ${sectionHeadingHtml(`New organizations (${newOrganizations.length})`, BRAND_BLUE, adminUrl("organizations"), "All organizations")}
+        ${sectionHeadingHtml(accentColor, `New organizations (${newOrganizations.length})`, adminUrl("organizations"), "All organizations")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Organization ID</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Name</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Created at</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Organization ID</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Name</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Created at</th>
             </tr>
           </thead>
           <tbody>
@@ -522,16 +532,16 @@ ${organizationsRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        ${sectionHeadingHtml(`Top most-active users (${topMostActiveUsers.length})`, BRAND_BLUE, adminUrl("users"), "All users")}
+        ${sectionHeadingHtml(accentColor, `Top most-active users (${topMostActiveUsers.length})`, adminUrl("users"), "All users")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Rank</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">UID</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Email</th>
-              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Sign-ins</th>
-              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Access tokens</th>
-              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Refresh tokens</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Rank</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">UID</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Email</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Sign-ins</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Access tokens</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Refresh tokens</th>
             </tr>
           </thead>
           <tbody>
@@ -542,15 +552,15 @@ ${topMostActiveRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        ${sectionHeadingHtml(`Most popular applications (${topMostPopularApps.length})`, BRAND_BLUE, adminUrl("apps"), "All applications")}
+        ${sectionHeadingHtml(accentColor, `Most popular applications (${topMostPopularApps.length})`, adminUrl("apps"), "All applications")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Rank</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Application</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Client app ID</th>
-              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Access tokens</th>
-              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Refresh tokens</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Rank</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Application</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Client app ID</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Access tokens</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Refresh tokens</th>
             </tr>
           </thead>
           <tbody>
@@ -561,15 +571,15 @@ ${topPopularAppsRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        ${sectionHeadingHtml(`Most popular APIs (${topMostPopularApis.length})`, BRAND_BLUE, adminUrl("apis"), "All APIs")}
+        ${sectionHeadingHtml(accentColor, `Most popular APIs (${topMostPopularApis.length})`, adminUrl("apis"), "All APIs")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Rank</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">API</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Audience (API server ID)</th>
-              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Access tokens</th>
-              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${BRAND_BLUE};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Refresh tokens</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Rank</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">API</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Audience (API server ID)</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Access tokens</th>
+              <th align="right" style="padding:8px 12px;border-bottom:2px solid ${accentColor};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Refresh tokens</th>
             </tr>
           </thead>
           <tbody>
@@ -581,14 +591,14 @@ ${topPopularApisRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        ${sectionHeadingHtml(`New server errors (${newErrors.length})`, BRAND_RED, adminUrl("errors"), "All server errors")}
+        ${sectionHeadingHtml(accentColor, `New server errors (${newErrors.length})`, adminUrl("errors"), "All server errors", ALERT_COLOR)}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_RED};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Error ID</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_RED};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Message</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_RED};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Route</th>
-              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${BRAND_RED};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Created at</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${ALERT_COLOR};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Error ID</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${ALERT_COLOR};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Message</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${ALERT_COLOR};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Route</th>
+              <th align="left" style="padding:8px 12px;border-bottom:2px solid ${ALERT_COLOR};color:${TEXT_COLOR};font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Created at</th>
             </tr>
           </thead>
           <tbody>
@@ -601,7 +611,7 @@ ${errorsRows}
     <tr>
       <td style="padding:16px 32px 24px;border-top:1px solid ${BORDER_COLOR};color:${MUTED_COLOR};font-size:12px;line-height:1.8;">
         <strong style="color:${TEXT_COLOR};">Admin console:</strong>
-        ${ADMIN_PAGE_ORDER.map((page) => linkHtml(adminUrl(page), escapeHtml(ADMIN_PAGES[page].label))).join(" &middot; ")}
+        ${ADMIN_PAGE_ORDER.map((page) => linkHtml(accentColor, adminUrl(page), escapeHtml(ADMIN_PAGES[page].label))).join(" &middot; ")}
       </td>
     </tr>
   </table>

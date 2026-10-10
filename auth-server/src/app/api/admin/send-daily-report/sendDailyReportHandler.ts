@@ -21,6 +21,7 @@ import captureServerException from "@/lib/captureServerException";
 import { buildDailyAdminReport, DAILY_REPORT_CLIENT_ERROR_TOP_N } from "./buildReportHtml";
 import type { RedisCache } from "@/lib/redis";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
+import getAuthServerEmailAccentColor from "@/lib/config/email-accent-color";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
@@ -73,6 +74,8 @@ export async function sendDailyReportHandler({
     const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
     const authServerUri: string = getAuthServerUrl(appEnv);
     const friendlyName: string = getAuthServerFriendlyName();
+    // SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1, as a literal color email clients render.
+    const accentColor: string = getAuthServerEmailAccentColor();
     // Refresh tokens are always recorded against the auth server's own
     // audience, so the report needs the id to know which row's refresh count is
     // meaningful (all other rows render "N/A").
@@ -81,6 +84,7 @@ export async function sendDailyReportHandler({
     const { text, html } = buildDailyAdminReport({
       authServerUri,
       friendlyName,
+      accentColor,
       windowStart,
       windowEnd,
       newUsers,
