@@ -34,14 +34,6 @@ export function createJwtPayloadSchema(
       env: schemaVaultsAppEnvironmentSchema,
       jti: z.guid().optional(),
       iat: z.number().nonnegative(), // unix seconds (jose's setIssuedAt output)
-      // "access" | "refresh": the type the token was minted as, mirrored
-      // from the inner signature (whose `type` claim verifyJWTSignature
-      // enforces) so decodeJWT can refuse a mis-presented token before
-      // verifying the signature. Set on every token minted since
-      // @schemavaults/jwt 0.14.3; optional so tokens minted before then stay
-      // decodable until they expire (refresh tokens live two weeks), after
-      // which it can become required.
-      type: z.enum(["access", "refresh"]).optional(),
       // Space-delimited granted scopes (RFC 6749 §3.3). Set on every
       // access/refresh token issued since scopes became first-class;
       // kept optional so tokens issued before then remain decodable

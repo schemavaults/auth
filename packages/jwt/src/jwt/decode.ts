@@ -273,17 +273,6 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     );
   }
 
-  // The outer payload's `type` (minted since @schemavaults/jwt 0.14.3) must
-  // be the type this token is being decoded as. The signature's own `type`
-  // claim, enforced by verifyJWTSignature below, is the authority — this is
-  // the early refusal; tokens minted before the outer claim existed carry
-  // none and fall through to the signature check alone.
-  if (payload.type !== undefined && payload.type !== type) {
-    throw new Error(
-      `Token type mismatch: expected a(n) ${type} token, received a(n) ${payload.type} token!`,
-    );
-  }
-
   const signature: string = payload.sig;
   if (!signature || typeof signature !== "string") {
     throw new Error("JWT 'sig' field is missing or not a string!");

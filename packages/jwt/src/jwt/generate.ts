@@ -242,7 +242,6 @@ export async function generateJWT<T extends AuthTokenTypes>(
 
   try {
     const additionalClaims: Partial<CustomJWTPayload> = {
-      type,
       uid: user.uid,
       admin: user.admin ?? false,
       email: user.email,
