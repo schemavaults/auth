@@ -50,6 +50,33 @@ export const clientAppSessionCookieScheme = defineAuthScheme({
 });
 
 /**
+ * The same per-client-app refresh token presented as
+ * `Authorization: Bearer <refresh token>` instead of the cookie. SDK
+ * clients that hold the refresh token outside an HTTP-only cookie (inline
+ * delivery — any app but the auth server's own) send it this way on their
+ * `whoami` call. It is decoded as a refresh token (never an access token)
+ * and accepted only when it was issued to the `client_app_id` in the path,
+ * so it unlocks nothing an access token would: every other session-guarded
+ * operation accepts only `accessTokenBearerScheme` for the Authorization
+ * header, which rejects a refresh token outright.
+ */
+export const clientAppRefreshTokenBearerScheme = defineAuthScheme({
+  name: "schemavaults-client-app-refresh-token-bearer",
+  principal: "user",
+  title: "Client app session (refresh token bearer)",
+  description:
+    "The client application's refresh token presented as `Authorization: Bearer <refresh token>` (for SDK clients that hold it outside an HTTP-only cookie). Accepted only by `GET /api/auth/whoami/{client_app_id}`, and only when the token was issued to that `client_app_id`.",
+  securityScheme: {
+    type: "http",
+    scheme: "bearer",
+    bearerFormat: "JWT",
+    description:
+      "Client application refresh token as a bearer credential (whoami only).",
+  },
+  challenge: 'Bearer realm="schemavaults-client-app-session"',
+});
+
+/**
  * A JWKS access assertion: a short-lived JWT signed by an API server's JWKS
  * access private key (see `POST /api/apis/{api_server_id}/jwks-access-key`),
  * presented as a bearer token by resource servers calling the auth server

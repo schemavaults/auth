@@ -29,3 +29,6 @@ package.json.tmp
 /tmp
 
 .npmrc
+
+# Redis snapshot (e.g. a local redis-server started for verification)
+dump.rdb

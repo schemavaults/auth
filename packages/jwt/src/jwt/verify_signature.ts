@@ -151,6 +151,18 @@ export async function verifyJWTSignature<TokenType extends AuthTokenTypes>({
       throw new Error("App environment mismatch!");
     }
 
+    // signJWT puts the token's type into the signature payload. It MUST
+    // match the type the caller is verifying for: access and refresh
+    // tokens minted for the auth server's own audience are otherwise
+    // indistinguishable (same `aud`, `iss`, keyset and subject), so without
+    // this check a refresh token passes as a first-party access token and
+    // an access token can be redeemed as a refresh token.
+    if (verify_result.payload.type !== opts.type) {
+      throw new Error(
+        "Token type mismatch between expected type and signature!",
+      );
+    }
+
     if (opts.jti && verify_result.payload.jti !== opts.jti) {
       throw new Error("JTI mismatch between outer token and signature!");
     }
