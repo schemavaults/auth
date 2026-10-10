@@ -4,7 +4,11 @@ import { userDataSchema, type UserData } from "@schemavaults/auth-common";
 import { requireAuth, z, withOpenApi } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import captureServerException from "@/lib/captureServerException";
-import { clientAppSessionCookieScheme, sessionSchemes } from "@/lib/api/auth-schemes";
+import {
+  clientAppRefreshTokenBearerScheme,
+  clientAppSessionCookieScheme,
+  sessionSchemes,
+} from "@/lib/api/auth-schemes";
 import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
 import { UserRegistry, loadUserData } from "@/lib/auth-db";
@@ -19,9 +23,13 @@ export const whoami = defineOperation({
     "Returns the complete, current `UserData` of the caller (reloaded from the database rather than taken from the token's claims). Besides the auth server's own session and access tokens it accepts the per-client-app refresh token cookie issued to `client_app_id` during the OAuth2 grant, so SDK clients can sync their current user without an auth server session. Browser callers from an origin registered for the app receive credentialed CORS headers on every response (401 included); an authenticated request from an unregistered origin is refused with 403. Answer `OPTIONS` for the CORS preflight.",
   tags: [API_TAGS.authentication],
   auth: requireAuth({
-    schemes: [clientAppSessionCookieScheme, ...sessionSchemes],
+    schemes: [
+      clientAppSessionCookieScheme,
+      clientAppRefreshTokenBearerScheme,
+      ...sessionSchemes,
+    ],
     notes:
-      "Credentials are checked before the path parameter, so an unauthenticated caller always gets 401 whatever `client_app_id` it sent.",
+      "Credentials are checked before the path parameter, so an unauthenticated caller always gets 401 whatever `client_app_id` it sent. The client app's refresh token is accepted both as the `refresh_token_<client_app_id>` cookie and, for SDK clients that hold it outside a cookie, as `Authorization: Bearer`; either way it is decoded as a refresh token and must have been issued to `client_app_id`.",
   }),
   request: {
     params: z.object({

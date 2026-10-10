@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import {
   DEFAULT_AUTH_SERVER_APP_ID,
+  getAuthServerUrl,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
@@ -230,5 +231,96 @@ describe("evaluateTokenRevocation", () => {
   it("is not revoked for an empty token list", async () => {
     const result = await evaluateTokenRevocation(async () => true, []);
     expect(result.revoked).toBe(false);
+  });
+});
+
+describe("RouteGuardFactory access / refresh token type separation", () => {
+  // Access and refresh tokens for the auth server's own audience share
+  // `aud`, `iss`, keyset and subject; only their `type` claim differs. A
+  // refresh token presented where an access token is expected (the
+  // `Authorization: Bearer` header) therefore verifies cryptographically,
+  // and used to build a guard — handing any holder of a client app's
+  // refresh token the auth server's first-party API, admin routes included
+  // when the subject is an admin. The reverse direction is what the token
+  // endpoint's refresh grant relies on to refuse an access token.
+  async function mintTokensFor(user: UserData): Promise<{
+    keys_manager: MockJwtKeyManager;
+    refresh_token: string;
+    access_token: string;
+  }> {
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: DEFAULT_AUTH_SERVER_APP_ID,
+      environment,
+    });
+    const store = new MockJwtKeySetsStore();
+    await store.storeKeySet(jwt_keys);
+    const factory = new JWT_Factory({
+      user,
+      client_app_id: DEFAULT_AUTH_SERVER_APP_ID,
+      jwt_keys,
+      environment,
+      user_organizations: [],
+    });
+    return {
+      keys_manager: new MockJwtKeyManager(store),
+      refresh_token: (await factory.refresh()).token,
+      access_token: (await factory.access(getAuthServerUrl(environment))).token,
+    };
+  }
+
+  it("refuses an admin's refresh token presented as an access token, for both guard types", async () => {
+    const admin: UserData = { ...createMockUser(), admin: true };
+    const { keys_manager, refresh_token, access_token } = await mintTokensFor(admin);
+    const factory = new RouteGuardFactory({
+      environment,
+      is_auth_server: true,
+      jwt_keys_manager: keys_manager,
+    });
+
+    for (const guard_type of ["authenticated", "admin"] as const) {
+      const guard = await factory.createGuardFromTokenSources(
+        guard_type,
+        [{ sourceHint: "Auth Header Access Token", type: "access", token: refresh_token }],
+        DEFAULT_AUTH_SERVER_APP_ID,
+      );
+      expect(guard.user, `${guard_type} guard from a refresh token`).toBeNull();
+      expect(guard.isAccessAllowed()).toBe(false);
+    }
+
+    // Control: the genuine access token builds both guards.
+    const admin_guard = await factory.createGuardFromTokenSources(
+      "admin",
+      [{ sourceHint: "Auth Header Access Token", type: "access", token: access_token }],
+      DEFAULT_AUTH_SERVER_APP_ID,
+    );
+    expect(admin_guard.user?.uid).toBe(admin.uid);
+    expect(admin_guard.isAccessAllowed()).toBe(true);
+  });
+
+  it("refuses an access token presented as a refresh token", async () => {
+    const user = createMockUser();
+    const { keys_manager, refresh_token, access_token } = await mintTokensFor(user);
+    const factory = new RouteGuardFactory({
+      environment,
+      is_auth_server: true,
+      jwt_keys_manager: keys_manager,
+    });
+
+    const guard = await factory.createGuardFromTokenSources(
+      "authenticated",
+      [{ sourceHint: "Auth Server Refresh Token", type: "refresh", token: access_token }],
+      DEFAULT_AUTH_SERVER_APP_ID,
+    );
+    expect(guard.user).toBeNull();
+    expect(guard.isAccessAllowed()).toBe(false);
+
+    // Control: the genuine refresh token still authenticates the session.
+    const session_guard = await factory.createGuardFromTokenSources(
+      "authenticated",
+      refreshSource(refresh_token),
+      DEFAULT_AUTH_SERVER_APP_ID,
+    );
+    expect(session_guard.user?.uid).toBe(user.uid);
+    expect(session_guard.isAccessAllowed()).toBe(true);
   });
 });

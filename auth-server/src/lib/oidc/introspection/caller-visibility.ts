@@ -48,7 +48,9 @@ export interface ResolveIntrospectionDecodePlanOptions {
  *    for the reserved `oidc-userinfo` audience (opaque to the RP; redeemable
  *    at /api/oidc/userinfo) and refresh tokens minted for the auth server's
  *    own audience. Tokens for resource-API audiences belong to those API
- *    servers.
+ *    servers. An ACCESS token for the auth server's audience is first-party
+ *    only; decoded as a refresh token it fails the type check in
+ *    `@schemavaults/jwt` and so reads as inactive, never as a refresh token.
  *  - An API server introspects the access tokens minted for it: its id as
  *    the audience, or an RFC 8707 resource URL that resolved to it at
  *    issuance. Either way the token is decrypted with the caller's own
