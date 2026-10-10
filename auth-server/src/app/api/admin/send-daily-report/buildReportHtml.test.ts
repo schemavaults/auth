@@ -11,6 +11,7 @@ const API_ID = "44444444-4444-4444-8444-444444444444";
 const WINDOW_END = new Date("2026-10-04T12:00:00.000Z");
 const WINDOW_START = new Date(WINDOW_END.getTime() - 24 * 60 * 60 * 1000);
 const MB = 1024 * 1024;
+const ACCENT_COLOR = "#7c3aed";
 
 function fingerprint(i: number): string {
   return i.toString(16).padStart(32, "0");
@@ -67,6 +68,7 @@ function build(clientErrors: Partial<DailyReportClientErrors> = {}) {
   return buildDailyAdminReport({
     authServerUri: AUTH_SERVER_URI,
     friendlyName: "Example Auth",
+    accentColor: ACCENT_COLOR,
     windowStart: WINDOW_START,
     windowEnd: WINDOW_END,
     newUsers: [],
@@ -88,6 +90,15 @@ function build(clientErrors: Partial<DailyReportClientErrors> = {}) {
     },
   });
 }
+
+describe("buildDailyAdminReport colors", () => {
+  test("headings and links use the deployment's accent color, not the default brand blue", () => {
+    const { html } = build();
+    expect(html).toContain(`<h1 style="margin:0;font-size:22px;color:${ACCENT_COLOR};">Example Auth Daily Admin Report</h1>`);
+    expect(html).toContain(`href="${AUTH_SERVER_URI}/apps/${APP_ID}" style="color:${ACCENT_COLOR};`);
+    expect(html).not.toContain("#60a5fa");
+  });
+});
 
 describe("buildDailyAdminReport links", () => {
   test("every section links to the admin page with the full picture", () => {

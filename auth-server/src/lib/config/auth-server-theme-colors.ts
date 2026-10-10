@@ -11,8 +11,10 @@ import {
  * server deployment from the SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_1 and
  * SCHEMAVAULTS_AUTH_SERVER_THEME_COLOR_2 environment variables. These colors
  * configure the page container background gradient and the <Wordmark /> text
- * gradient, so white-label deployments can rebrand the color scheme. Any CSS
- * color string works (e.g. "#0f172a", "rgb(15 23 42)", "var(--my-color)").
+ * gradient, so white-label deployments can rebrand the color scheme; the first
+ * one is also the accent of the daily admin report email (see
+ * getAuthServerEmailAccentColor()). Any CSS color string works (e.g. "#0f172a",
+ * "rgb(15 23 42)", "var(--my-color)"), but email needs a literal color.
  * Defaults to the schemavaults-brand-blue and schemavaults-brand-red colors
  * from @schemavaults/theme when unset.
  */
