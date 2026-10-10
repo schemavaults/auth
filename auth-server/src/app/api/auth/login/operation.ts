@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { AuthenticateResult } from "@schemavaults/auth-common";
 import { publicAccess, z } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
+import captureServerException from "@/lib/captureServerException";
 import {
   AuthenticateBadRequest,
   AuthenticateFailureResult,
@@ -143,6 +144,7 @@ export const login = defineOperation({
       return response;
     } catch (e: unknown) {
       console.error("Internal server error attempting to handle /api/auth/login request", e);
+      await captureServerException(ctx.context.db, e, { op_name: "POST_login_handler", route: ROUTE });
       return NextResponse.json(
         {
           kind: "failure",

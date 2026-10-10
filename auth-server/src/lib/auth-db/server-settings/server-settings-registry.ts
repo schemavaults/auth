@@ -15,6 +15,7 @@ import {
   SERVER_SETTING_DEFINITIONS,
 } from "./server-setting-keys";
 import type Redis from "ioredis";
+import captureServerException from "@/lib/captureServerException";
 
 interface CacheEntry<T> {
   value: T;
@@ -71,7 +72,7 @@ export class ServerSettingsRegistry {
         `[ServerSettingsRegistry] Failed to query setting "${key}":`,
         e
       );
-      throw new Error(`Error attempting to query server setting with key '${key}'`)
+      throw new Error(`Error attempting to query server setting with key '${key}'`, { cause: e })
     }
     return row;
   }
@@ -219,7 +220,7 @@ export class ServerSettingsRegistry {
         `[ServerSettingsRegistry] Failed to set setting "${key}":`,
         e
       );
-      throw new Error(`Failed to set setting "${key}"`);
+      throw new Error(`Failed to set setting "${key}"`, { cause: e });
     }
   }
 
@@ -252,7 +253,7 @@ export class ServerSettingsRegistry {
         `[ServerSettingsRegistry] Failed to delete setting "${key}":`,
         e
       );
-      throw new Error(`Failed to delete setting "${key}"`);
+      throw new Error(`Failed to delete setting "${key}"`, { cause: e });
     }
   }
 
@@ -275,6 +276,11 @@ export class ServerSettingsRegistry {
         "[ServerSettingsRegistry] Failed to list settings from database:",
         e
       );
+      // Every setting is then listed with its default value.
+      await captureServerException(this.db, e, {
+        op_name: "ServerSettingsRegistry.listAllSettings",
+        context: { nonFatal: true },
+      });
       dbRows = [];
     }
 

@@ -5,6 +5,7 @@ import sendEmailViaMailServer from "@/lib/mail/send-email-via-mail-server";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type { RedisCache } from "@/lib/redis";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
+import captureServerException from "@/lib/captureServerException";
 
 export type MfaSecurityAlertAction =
   | "enabled"
@@ -33,8 +34,9 @@ function buildSummary(
   return SUMMARY[action];
 }
 
-// Best-effort security alert. Never throws — failures are logged so the
-// caller's MFA mutation completes regardless of mail-server health.
+// Best-effort security alert. Never throws — failures are recorded to the
+// ERRORS table so the caller's MFA mutation completes regardless of
+// mail-server health.
 export async function sendMfaSecurityAlertEmail(args: {
   to: string;
   action: MfaSecurityAlertAction;
@@ -66,5 +68,9 @@ export async function sendMfaSecurityAlertEmail(args: {
       `[sendMfaSecurityAlertEmail] Failed to send '${args.action}' alert to ${args.to}:`,
       e,
     );
+    await captureServerException(args.db, e, {
+      op_name: "sendMfaSecurityAlertEmail",
+      context: { action: args.action, nonFatal: true },
+    });
   }
 }

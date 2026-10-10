@@ -118,9 +118,16 @@ export async function handleOidcRefreshTokenGrant({
   // Locate + decode: keyset id and audience come from the token header;
   // refresh tokens are always signed with the auth server's own keyset.
   const auth_app_id = getAuthServerAppId();
-  let decoded: CustomJWTPayload;
+  const invalidRefreshToken = (): OidcGrantOutcome =>
+    fail(
+      oidcTokenErrorResponse(
+        "invalid_grant",
+        "Invalid or expired refresh token.",
+      ),
+    );
+  let keyset_id: string;
   try {
-    const keyset_id: string = getKeysetIdFromToken(refresh_token);
+    keyset_id = getKeysetIdFromToken(refresh_token);
     const token_audience: string = getAudienceFromToken(
       refresh_token,
       environment,
@@ -136,9 +143,20 @@ export async function handleOidcRefreshTokenGrant({
         ),
       );
     }
-    const keyset: I_JWT_Keys = await new AuthServerJwtKeysManager(
-      dbh.db,
-    ).getKeyset(auth_app_id, keyset_id);
+  } catch {
+    return invalidRefreshToken();
+  }
+  // A failed keyset lookup (database) is left to propagate: the token
+  // endpoint records it and answers 500. Answering `invalid_grant` would
+  // make the client discard a refresh token that is still good.
+  const keyset: I_JWT_Keys | null = await new AuthServerJwtKeysManager(
+    dbh.db,
+  ).findKeyset(auth_app_id, keyset_id);
+  if (!keyset) {
+    return invalidRefreshToken();
+  }
+  let decoded: CustomJWTPayload;
+  try {
     decoded = await decodeJWT({
       type: "refresh",
       jwt: refresh_token,
@@ -146,12 +164,7 @@ export async function handleOidcRefreshTokenGrant({
       env: environment,
     });
   } catch {
-    return fail(
-      oidcTokenErrorResponse(
-        "invalid_grant",
-        "Invalid or expired refresh token.",
-      ),
-    );
+    return invalidRefreshToken();
   }
 
   // The refresh token must have been issued to this client...

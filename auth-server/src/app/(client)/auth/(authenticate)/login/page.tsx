@@ -20,6 +20,7 @@ import {
 import { doesSsrContextHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import validateAppIdSearchParamOrRedirectWithError from "../validateAppIdSearchParamOrRedirectWithError";
@@ -155,6 +156,11 @@ export default async function LoginPage(props: {
     inviteCodeRequired = await inviteCodesRequired(dbh.db);
   } catch (e: unknown) {
     console.error("Failed to load server config setting on whether invite codes are required: ", e);
+    await reportServerException(e, {
+      op_name: "LoginPage.inviteCodesRequired",
+      route: "/auth/login",
+      context: { app_id: app?.app_id ?? null },
+    });
     redirectWithError(500, "load_server_config_failure");
   }
 

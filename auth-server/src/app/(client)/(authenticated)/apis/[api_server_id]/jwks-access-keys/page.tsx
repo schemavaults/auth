@@ -13,6 +13,7 @@ import {
 } from "@schemavaults/app-definitions";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import { loadApiServerDefinitionFromDatabase } from "@/lib/auth-db/apis";
 import { canUserManageResource } from "@/lib/ownership/resource-access";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
@@ -76,6 +77,12 @@ export default async function JwksAccessKeysPage(
         key_metadata = await jwks_access_key_registry.getKeyMetadata(api_server_id);
       } catch (e: unknown) {
         console.error(`Error loading key metadata for API server with ID '${api_server_id}': `, e);
+        await reportServerException(e, {
+          op_name: "JwksAccessKeysPage.getKeyMetadata",
+          route: "/apis/[api_server_id]/jwks-access-keys",
+          uid: user.uid,
+          context: { api_server_id },
+        });
         redirectWithError(500, 'internal_server_error');
       }
 

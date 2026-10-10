@@ -84,14 +84,20 @@ describe("hashPasswordV3 (argon2id)", () => {
   });
 
   test("a malformed stored hash fails verification instead of throwing", async () => {
+    const errors: unknown[] = [];
     await expect(
       verifyPassword({
         uid: TEST_UID,
         password: TEST_PASSWORD,
         savedHash: "0".repeat(64),
         version: 3,
+        onVerifyError: (error) => {
+          errors.push(error);
+        },
       }),
     ).resolves.toBe(false);
+    // ...and reports why, so the caller can record it.
+    expect(errors).toHaveLength(1);
   });
 
   test("still verifies after the configured params change (self-describing hash)", async () => {

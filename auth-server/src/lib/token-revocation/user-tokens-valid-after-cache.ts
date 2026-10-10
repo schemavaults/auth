@@ -81,11 +81,14 @@ export async function getUserTokensValidAfterCached(
  * `tokens_valid_after` (password reset, disabling or re-enabling an account)
  * so the route guards see the
  * new value immediately instead of after the cache TTL. Never throws: a
- * failed invalidation only means the TTL bounds the staleness window.
+ * failed invalidation only means the TTL bounds the staleness window, and
+ * is handed to `onError` so the caller can record it (revoked sessions
+ * stay usable for that window).
  */
 export async function invalidateUserTokensValidAfterCache(
   redis: RedisCache | null | undefined,
   uid: string,
+  onError?: (error: unknown) => void | Promise<void>,
 ): Promise<void> {
   if (!redis) return;
   try {
@@ -95,5 +98,10 @@ export async function invalidateUserTokensValidAfterCache(
       `[invalidateUserTokensValidAfterCache] Failed to drop cached watermark for uid '${uid}' (stale for at most ${USER_TOKENS_VALID_AFTER_CACHE_TTL_SECONDS}s):`,
       e,
     );
+    try {
+      await onError?.(e);
+    } catch {
+      // never throws
+    }
   }
 }

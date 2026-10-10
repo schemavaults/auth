@@ -27,6 +27,9 @@ import {
   type UserDocument,
 } from "@/lib/auth-db";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
+import captureServerException from "@/lib/captureServerException";
+
+const ROUTE = "/api/oidc/userinfo";
 
 // CORS: browser-based RPs call userinfo cross-origin with a Bearer
 // token (no cookies), so a wildcard origin is safe.
@@ -121,7 +124,7 @@ export async function handleOidcUserinfoRequest(request: NextRequest): Promise<N
   // claims are read fresh from the USERS row rather than the token.
   await using dbh = ServerlessDatabase.createDBH();
 
-  let decoded: CustomJWTPayload;
+  let keyset_id: string;
   try {
     // The token header names its keyset and audience; only tokens
     // minted for the reserved OIDC audience are accepted here.
@@ -129,11 +132,32 @@ export async function handleOidcUserinfoRequest(request: NextRequest): Promise<N
     if (token_audience !== OIDC_USERINFO_AUDIENCE_ID) {
       return unauthorized("Token audience is not the OIDC userinfo audience");
     }
-    const keyset_id: string = getKeysetIdFromToken(token);
+    keyset_id = getKeysetIdFromToken(token);
+  } catch {
+    return unauthorized("Token could not be validated");
+  }
 
-    const keyset: I_JWT_Keys = await new AuthServerJwtKeysManager(
-      dbh.db,
-    ).getKeyset(OIDC_USERINFO_AUDIENCE_ID, keyset_id);
+  let keyset: I_JWT_Keys | null;
+  try {
+    keyset = await new AuthServerJwtKeysManager(dbh.db).findKeyset(
+      OIDC_USERINFO_AUDIENCE_ID,
+      keyset_id,
+    );
+  } catch (e: unknown) {
+    // Fail closed, but record it: this is an outage, not a bad token.
+    await captureServerException(dbh.db, e, {
+      op_name: "oidcUserinfo.findKeyset",
+      route: ROUTE,
+      context: { keyset_id },
+    });
+    return unauthorized("Token could not be validated");
+  }
+  if (!keyset) {
+    return unauthorized("Token could not be validated");
+  }
+
+  let decoded: CustomJWTPayload;
+  try {
     decoded = await decodeJWT({
       type: "access",
       jwt: token,
@@ -175,6 +199,11 @@ export async function handleOidcUserinfoRequest(request: NextRequest): Promise<N
       "[/api/oidc/userinfo] Failed to check token revocation:",
       e,
     );
+    await captureServerException(dbh.db, e, {
+      op_name: "oidcUserinfo.checkRevocation",
+      route: ROUTE,
+      uid: decoded.uid,
+    });
     return unauthorized("Token could not be validated");
   }
 
@@ -213,6 +242,12 @@ export async function handleOidcUserinfoRequest(request: NextRequest): Promise<N
         "[/api/oidc/userinfo] Failed to load profile claims:",
         e,
       );
+      await captureServerException(dbh.db, e, {
+        op_name: "oidcUserinfo.loadProfileClaims",
+        route: ROUTE,
+        uid: decoded.uid,
+        context: { nonFatal: true },
+      });
     }
   }
 

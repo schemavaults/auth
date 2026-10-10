@@ -21,6 +21,7 @@ import { isEmailVerificationRequiredForClientApp } from "@/lib/email-verificatio
 import { buildResumeAuthorizeFlowHref } from "@/lib/email-verification/verify-email-required-href";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import toPartialAppInfo from "@/lib/PartialAppInfo";
 import EmailVerificationRequiredView from "./EmailVerificationRequiredView";
@@ -84,6 +85,12 @@ export default async function EmailVerificationRequiredPage(props: {
       `[EmailVerificationRequiredPage] Failed to load app with ID "${app_id}": `,
       e,
     );
+    await reportServerException(e, {
+      op_name: "EmailVerificationRequiredPage.getApp",
+      route: "/auth/verify-email/required",
+      uid: session.uid,
+      context: { app_id },
+    });
     redirectWithError(500, "internal_server_error");
   }
   if (!app) {
@@ -98,6 +105,12 @@ export default async function EmailVerificationRequiredPage(props: {
       `[EmailVerificationRequiredPage] Failed to load user '${session.uid}': `,
       e,
     );
+    await reportServerException(e, {
+      op_name: "EmailVerificationRequiredPage.getUserByUID",
+      route: "/auth/verify-email/required",
+      uid: session.uid,
+      context: { app_id },
+    });
     redirectWithError(500, "load_user_data_failure");
   }
   if (!user) {
@@ -116,6 +129,12 @@ export default async function EmailVerificationRequiredPage(props: {
       "[EmailVerificationRequiredPage] Failed to check email verification requirements: ",
       e,
     );
+    await reportServerException(e, {
+      op_name: "EmailVerificationRequiredPage.isEmailVerificationRequiredForClientApp",
+      route: "/auth/verify-email/required",
+      uid: session.uid,
+      context: { app_id },
+    });
     redirectWithError(500, "load_server_config_failure");
   }
   if (!gated) {

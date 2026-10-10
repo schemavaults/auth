@@ -11,6 +11,7 @@ import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations/lis
 import allowUserOwnedResourceCreation from "@/lib/config/allow-user-owned-resource-creation";
 import { isDynamicClientRegistrationEnabled } from "@/lib/oidc/dynamic-client-registration/settings";
 import { withServerTrace } from "@/lib/withServerTrace";
+import reportServerException from "@/lib/reportServerException";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next";
 
@@ -57,6 +58,12 @@ async function AppsPageServerComponent({
     appsResult.status === "fulfilled" ? appsResult.value : undefined;
   if (appsResult.status === "rejected") {
     console.error("Failed to preload accessible apps for /apps:", appsResult.reason);
+    await reportServerException(appsResult.reason, {
+      op_name: "AppsPage.preloadAppsTable",
+      route: "/apps",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
 
   // Organizations the user administers, so organization-owned rows can
@@ -72,6 +79,12 @@ async function AppsPageServerComponent({
       "Failed to preload organization memberships for /apps:",
       membershipsResult.reason,
     );
+    await reportServerException(membershipsResult.reason, {
+      op_name: "AppsPage.listUserOrganizationMemberships",
+      route: "/apps",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
 
   if (userOwnedCreationResult.status === "rejected") {
@@ -79,6 +92,12 @@ async function AppsPageServerComponent({
       "Failed to load server setting for allow_user_owned_resource_creation on /apps:",
       userOwnedCreationResult.reason,
     );
+    await reportServerException(userOwnedCreationResult.reason, {
+      op_name: "AppsPage.allowUserOwnedResourceCreation",
+      route: "/apps",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   // Admins can always create their own apps; for everyone else the create
   // dialog offers the "Personal" owner iff the server setting allows it
@@ -94,6 +113,12 @@ async function AppsPageServerComponent({
       "Failed to load server setting for allow_dynamic_client_registration on /apps:",
       dynamicClientRegistrationResult.reason,
     );
+    await reportServerException(dynamicClientRegistrationResult.reason, {
+      op_name: "AppsPage.isDynamicClientRegistrationEnabled",
+      route: "/apps",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   // The setting defaults to off; on failure the "Dynamic registration"
   // filter is still offered whenever such apps are listed.

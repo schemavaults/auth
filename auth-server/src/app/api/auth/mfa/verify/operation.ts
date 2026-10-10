@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { mfaVerifyBodySchema, type AuthenticateResult } from "@schemavaults/auth-common";
 import { publicAccess, withOpenApi } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
+import captureServerException from "@/lib/captureServerException";
 import {
   AuthenticateBadRequest,
   AuthenticatedOrEmailVerificationRequiredResult,
@@ -107,6 +108,7 @@ export const verifyMfaChallenge = defineOperation({
       });
     } catch (e: unknown) {
       console.error("Internal server error attempting /api/auth/mfa/verify", e);
+      await captureServerException(ctx.context.db, e, { op_name: "POST_mfa_verify_handler", route: ROUTE });
       return NextResponse.json(
         {
           kind: "failure",

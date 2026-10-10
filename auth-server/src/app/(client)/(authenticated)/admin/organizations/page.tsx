@@ -10,6 +10,7 @@ import {
   listUserOrganizationMembershipDetails,
   OrganizationsRegistry,
 } from "@/lib/auth-db";
+import reportServerException from "@/lib/reportServerException";
 import type { ServerRuntime } from "next";
 import type {
   OrganizationDefinition,
@@ -55,6 +56,12 @@ async function PreloadedOrganizationsPage({
       "Failed to preload the admin's own organization memberships for /admin/organizations:",
       myMembershipsResult.reason,
     );
+    await reportServerException(myMembershipsResult.reason, {
+      op_name: "AdminOrganizationsPage.listUserOrganizationMembershipDetails",
+      route: "/admin/organizations",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
 
   return (

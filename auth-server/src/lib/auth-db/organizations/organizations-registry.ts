@@ -17,6 +17,7 @@ import {
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import type { OrganizationRow } from "./organizations-table";
 import isValidUuid from "@/lib/is-valid-uuid";
+import captureServerException from "@/lib/captureServerException";
 import {
   isValidOrganizationMembershipRoleType,
   type OrganizationMembershipRoleType,
@@ -457,6 +458,10 @@ export class OrganizationsRegistry
         `Failed to delete organization '${organization_id}': `,
         e,
       );
+      await captureServerException(this.db, e, {
+        op_name: "OrganizationsRegistry.deleteOrganization",
+        context: { organization_id },
+      });
       return {
         success: false,
         message: "Failed to delete organization",

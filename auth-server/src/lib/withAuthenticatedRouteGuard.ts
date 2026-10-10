@@ -9,7 +9,7 @@ import {
 import { ServerlessDatabase } from "./auth-db";
 import { RedisCache } from "./redis";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
-import AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
+import { RouteGuardJwtKeysManager } from "./AuthServerJwtKeysManager";
 import isUserInOrganization from "./isUserInOrganization";
 import { createRouteGuardTokenRevocationCheck } from "./token-revocation";
 
@@ -34,7 +34,7 @@ export async function withAuthenticatedServerComponentRouteGuard(
 ) {
   await using dbh = ServerlessDatabase.createDBH();
   await using redis = RedisCache.createConnection();
-  const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db)
+  const jwt_keys_manager = new RouteGuardJwtKeysManager(dbh.db)
   return _withAuthenticatedServerComponentRouteGuard<IProtectedAuthenticatedServerComponentPageProps>(
     server_component,
     {

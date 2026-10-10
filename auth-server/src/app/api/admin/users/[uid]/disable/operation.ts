@@ -63,13 +63,21 @@ async function setDisabled(ctx: SetDisabledContext, disabled: boolean): Promise<
   // the route guards' cached copy so the revocation applies immediately,
   // not after the cache TTL. Best effort: a Redis outage only delays
   // enforcement by that TTL.
+  const recordInvalidationFailure = (e: unknown): Promise<void> =>
+    captureServerException(ctx.context.db, e, {
+      op_name: "setDisabled.invalidateUserTokensValidAfterCache",
+      route: "/api/admin/users/[uid]/disable",
+      uid: user.uid,
+      context: { target_uid, disabled, nonFatal: true },
+    });
   try {
-    await invalidateUserTokensValidAfterCache(ctx.context.redis, target_uid);
+    await invalidateUserTokensValidAfterCache(ctx.context.redis, target_uid, recordInvalidationFailure);
   } catch (e: unknown) {
     console.warn(
       `[setDisabled] Could not invalidate the cached tokens_valid_after watermark for uid '${target_uid}': `,
       e,
     );
+    await recordInvalidationFailure(e);
   }
 
   return ctx.json(200, {
