@@ -102,6 +102,28 @@ export async function notifyMailingListOfError(err: Error, context: string): Pro
 
 Escape user-supplied values before embedding them in `html` if they can contain `<` / `>` / `&` -- the mail-server does not sanitize this for you.
 
+## Usage -- attachments
+
+Pass `attachments` next to `body` (works for both the template and raw forms). Binary content (`Uint8Array` / `Buffer` / `ArrayBuffer`) and plain text (`encoding: "utf8"`) are base64-encoded for you; a bare string is assumed to be base64 already. On Node/Bun, `createEmailAttachmentFromFile()` (own subpath, since it reads from disk) turns a file path into an attachment:
+
+```ts
+import { sendEmailToMailingList } from "@schemavaults/send-email";
+import { createEmailAttachmentFromFile } from "@schemavaults/send-email/create-email-attachment-from-file";
+
+await sendEmailToMailingList({
+  body: {
+    subject: "[ops] nightly backup finished",
+    message: { text: "Backup log attached.", html: "<p>Backup log attached.</p>" },
+  },
+  attachments: [
+    await createEmailAttachmentFromFile("/tmp/backup.log"),
+    { filename: "summary.json", content: JSON.stringify(summary), encoding: "utf8", contentType: "application/json" },
+  ],
+});
+```
+
+Limits: at most 20 attachments per email, totalling at most 25 MiB once decoded (the mail-server or its host may allow less). Remember the file goes to *every* subscriber -- keep it small, and prefer a link for anything large.
+
 ## Usage -- passing a mailing list ID explicitly
 
 By default `sendEmailToMailingList` reads the mailing list UUID from the `SCHEMAVAULTS_MAILING_LIST_ID` env var. You can override this per-call:
@@ -147,6 +169,12 @@ bunx schemavaults-send-email send-to-mailing-list \
   --subject "weekly digest" \
   --text-file /tmp/digest.txt \
   --html-file /tmp/digest.html
+
+# Attach files (--attach is repeatable; the basename becomes the attachment filename)
+bunx schemavaults-send-email send-to-mailing-list \
+  --subject "[ops] nightly backup finished" \
+  --text "Backup log attached." --html "<p>Backup log attached.</p>" \
+  --attach /tmp/backup.log
 
 # Or supply the entire request body as a JSON file (validated server-side)
 bunx schemavaults-send-email send-to-mailing-list --body-file /tmp/payload.json
@@ -257,6 +285,14 @@ type MailingListNotificationBody = {
   replyTo?: string;   // optional reply-to override
   dryRun?: boolean;   // server validates without dispatching
   transport?: string; // which mail-server transport to deliver with
+  attachments?: EmailAttachment[]; // 1-20 files, <= 25 MiB total once decoded
+};
+
+type EmailAttachment = {
+  filename: string;     // shown to the recipient; no path separators
+  content: string;      // base64-encoded bytes
+  contentType?: string; // MIME type; derived from the filename when omitted
+  contentId?: string;   // marks the file inline; reference as cid:<contentId>
 };
 
 // Full call signature:
@@ -268,6 +304,7 @@ type ISendEmailToMailingListOpts = {
   environment?: "production" | "development" | "staging";
   dryRun?: boolean;       // convenience; sets body.dryRun
   transport?: string;     // convenience; sets body.transport
+  attachments?: EmailAttachmentInput[]; // convenience; bytes/text encoded + appended to body.attachments
 };
 ```
 
@@ -299,6 +336,7 @@ Common failure modes:
 | `This API key is not permitted...` (HTTP 403) | The API key is allowlisted to a different mailing list than the one targeted. |
 | `Failed to parse request body!` (HTTP 400) | Server-side Zod parsing failed; usually a template `template_props` shape mismatch. |
 | Unknown-transport error (HTTP 400) | `transport` named a transport the mail-server does not have configured. The client only checks that the name is well-formed; the server decides whether it exists. |
+| `Invalid email attachment '<filename>': …` | An `attachments` entry failed validation -- bad filename (path separators, control characters), content that is not valid base64 (did you mean `encoding: "utf8"`?), empty content, or a malformed `contentType` / `contentId`. |
 
 ## Environment targeting
 
@@ -337,4 +375,5 @@ Source files inside the installed package (`node_modules/@schemavaults/send-emai
 - `send-email-to-mailing-list.{d.ts,js}` -- the `sendEmailToMailingList()` helper and its `ISendEmailToMailingListOpts` interface.
 - `send-email.{d.ts,js}` -- the underlying `sendEmail()` implementation, including `getSchemaVaultsMailApiKey()` and server-URL resolution.
 - `send-email-request-body-schema.{d.ts,js}` -- the Zod schema (`createSendEmailRequestBodySchema`) that both the client helper and the mail-server route use to validate bodies.
+- `create-email-attachment.{d.ts,js}` / `create-email-attachment-from-file.{d.ts,js}` / `validators/email-attachment-schema.{d.ts,js}` -- attachment helpers, the Node/Bun file helper, and the attachment schema with its limits.
 - `index.d.ts` -- package entry point; lists every exported symbol.
