@@ -15,6 +15,10 @@ import resolveMailServerUrl from "./resolve-mail-server-url";
 import type { RedisCache } from "@/lib/redis";
 import resolveMailServerId from "./resolve-mail-server-id";
 import getAuthServerEmailFromAddress from "@/lib/config/email-from-address";
+import {
+  MailServerSendError,
+  parseMailServerErrorEnvelope,
+} from "@/lib/error/MailServerSendError";
 
 const sendEmailRequestBodySchema = createSendEmailRequestBodySchema(true);
 
@@ -22,9 +26,17 @@ const sendEmailRequestBodySchema = createSendEmailRequestBodySchema(true);
  * @description Send a raw email plaintext/html message (or use a template ID from @schemavaults/mail-server).
  * This will spoof a superuser access token to convince the mail-server that we're allowed to send emails.
  *
+ * Every failure is logged here, at the one place all outbound mail goes
+ * through, before it is thrown: most callers (verification, password reset,
+ * invitation emails) only record the thrown error in the ERRORS table, so
+ * without this line a mail-server outage leaves no trace in the server log.
+ * A non-2xx answer throws a {@link MailServerSendError} carrying the status
+ * and the mail server's error code (`token_revoked`, `validation_error`, ...).
+ *
  * @param email_options Object defining the email to be sent. E.g. to, from, message/template ID
  * @params db We need access to the database to load jwt keys to spoof an access token for the mail-server audience.
  * @returns A promise resolving if the message is sent successfully
+ * @throws MailServerSendError when the mail server refuses the email
  */
 export async function sendEmailViaMailServer(
   email_options: SendEmailRequestBody,
@@ -75,18 +87,46 @@ export async function sendEmailViaMailServer(
     console.log(`[sendEmailViaMailServer] Sending email via "${endpoint}" with options: ${JSON.stringify(email_options)}`)
   }
 
-  const response = await fetch(
-    endpoint,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify(email_options)
-    }
-  );
+  let response: Response;
+  try {
+    response = await fetch(
+      endpoint,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(email_options)
+      }
+    );
+  } catch (e: unknown) {
+    console.error(`[sendEmailViaMailServer] Request to "${endpoint}" failed before the mail server answered:`, e);
+    throw e;
+  }
   if (response.ok && response.status >= 200 && response.status < 300) {
     return;
   }
-  throw new Error(`Failed to send email via mail server /api/send endpoint: ${response.status} ${response.statusText}`)
+
+  const error = new MailServerSendError({
+    endpoint,
+    status: response.status,
+    statusText: response.statusText,
+    envelope: parseMailServerErrorEnvelope(await readJsonBody(response)),
+  });
+  console.error(
+    `[sendEmailViaMailServer] Mail server refused the email (${error.status} ${error.statusText}` +
+      (error.code ? `, ${error.code}` : "") +
+      `) at "${endpoint}"` +
+      (error.mailServerMessage ? `: ${error.mailServerMessage}` : ""),
+  );
+  throw error;
+}
+
+/** The response body as JSON, or null when it is not JSON (or not readable). */
+async function readJsonBody(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
 }
 
 export default sendEmailViaMailServer;
