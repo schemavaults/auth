@@ -12,8 +12,9 @@ import "server-only";
  *     server) may see — pure rules
  *   - decode-introspectable-token.ts: verify the token with the keyset the
  *     caller's rules name
- *   - is-introspected-token-active.ts: revocation, consent and app-to-API
- *     connection checks
+ *   - introspected-token-activity.ts: revocation, consent and app-to-API
+ *     connection rules — pure, over injected signals
+ *   - is-introspected-token-active.ts: those rules bound to the database
  *   - build-active-introspection-response.ts: the §2.2 metadata — pure
  */
 
@@ -50,6 +51,12 @@ export type {
 
 export { decodeIntrospectableToken } from "./decode-introspectable-token";
 export type { DecodeIntrospectableTokenOptions } from "./decode-introspectable-token";
+
+export { evaluateIntrospectedTokenActivity } from "./introspected-token-activity";
+export type {
+  EvaluateIntrospectedTokenActivityOptions,
+  IntrospectedTokenActivitySignals,
+} from "./introspected-token-activity";
 
 export { isIntrospectedTokenActive } from "./is-introspected-token-active";
 export type { IsIntrospectedTokenActiveOptions } from "./is-introspected-token-active";
