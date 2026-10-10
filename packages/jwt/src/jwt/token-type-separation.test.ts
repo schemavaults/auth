@@ -105,6 +105,40 @@ describe("access / refresh token type separation", () => {
       }),
     ).rejects.toThrow();
   });
+
+  // Backward compatibility: the fix adds NO claim to the outer JWE payload,
+  // so a token on the wire looks exactly as it did before the fix (and as
+  // every token still in circulation does). Type is enforced purely from the
+  // inner signature's `type` claim, which has been minted since well beyond
+  // the longest token lifetime. A legacy-shaped token must therefore decode
+  // for its own type while still being refused for the other type.
+  it("decodes a legacy-shaped token (no outer `type` claim) and still enforces type from the signature", async () => {
+    const jwt_keys = await authServerKeyset();
+    const user: UserData = new MockUser();
+    const refresh_token = await mint("refresh", jwt_keys, user);
+
+    const decoded = await decodeJWT({
+      type: "refresh",
+      jwt: refresh_token,
+      jwt_keys,
+      env,
+    });
+    expect(decoded.uid).toBe(user.uid);
+    // The token carries no `type` on its outer payload (the strict payload
+    // schema has no such field): nothing was added to the wire format.
+    expect((decoded as Record<string, unknown>).type).toBeUndefined();
+
+    // ...yet the same unchanged token is still refused as the wrong type.
+    expect(
+      decodeJWT({
+        type: "access",
+        jwt: refresh_token,
+        audience: auth_server_url,
+        jwt_keys,
+        env,
+      }),
+    ).rejects.toThrow();
+  });
 });
 
 describe("signature 'type' claim enforcement", () => {
