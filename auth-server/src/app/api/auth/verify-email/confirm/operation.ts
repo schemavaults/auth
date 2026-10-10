@@ -3,6 +3,7 @@ import { toNextRequest } from "@/lib/api/next-request";
 import { NextRequest, NextResponse } from "next/server";
 import { publicAccess, z } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
+import captureServerException from "@/lib/captureServerException";
 import { authRateLimitedResponse, ValidationIssuesErrorResponse } from "@/lib/api/domain-schemas/authentication";
 import { ErrorResponse, SuccessMessageResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
@@ -87,6 +88,7 @@ export const confirmEmailVerification = defineOperation({
       });
     } catch (e: unknown) {
       console.error("Internal server error attempting to handle /api/auth/verify-email/confirm", e);
+      await captureServerException(ctx.context.db, e, { op_name: "POST_verify_email_confirm_handler", route: ROUTE });
       return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
     }
   },

@@ -12,6 +12,7 @@ import {
   getVirtualOrganizationMembershipSource,
 } from "@/lib/auth-db/organizations";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import type { ServerRuntime } from "next";
 import { z } from "zod";
 import {
@@ -98,6 +99,11 @@ async function loadAssignableOrganizations(
       "[AdminUserDetailPage] Failed to list organizations for the add to organization dialog: ",
       e,
     );
+    await reportServerException(e, {
+      op_name: "AdminUserDetailPage.loadAssignableOrganizations",
+      route: "/admin/users/[uid]",
+      context: { nonFatal: true },
+    });
     return null;
   }
 }
@@ -137,6 +143,15 @@ async function loadOrganizationMembershipRows(
                 `[AdminUserDetailPage] Failed to lookup organization '${org_id}': `,
                 e,
               );
+              await reportServerException(e, {
+                op_name: "AdminUserDetailPage.lookupOrganization",
+                route: "/admin/users/[uid]",
+                context: {
+                  organization_id: org_id,
+                  target_uid: targetUser.uid,
+                  nonFatal: true,
+                },
+              });
               // Fall back to displaying the ID as the name
               return [org_id, org_id];
             }
@@ -166,6 +181,11 @@ async function loadOrganizationMembershipRows(
       `[AdminUserDetailPage] Failed to load organization memberships for user '${targetUser.uid}': `,
       e,
     );
+    await reportServerException(e, {
+      op_name: "AdminUserDetailPage.loadOrganizationMembershipRows",
+      route: "/admin/users/[uid]",
+      context: { target_uid: targetUser.uid, nonFatal: true },
+    });
     return null;
   }
 }

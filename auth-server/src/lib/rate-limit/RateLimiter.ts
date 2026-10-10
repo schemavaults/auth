@@ -1,6 +1,7 @@
 import "server-only";
 
 import type Redis from "ioredis";
+import reportServerException from "@/lib/reportServerException";
 import type {
   RateLimitConfig,
   RateLimitIdentifiers,
@@ -92,6 +93,23 @@ function allowedResult(config: RateLimitConfig): RateLimitResult {
   };
 }
 
+/**
+ * Rate limits fail open while Redis is unreachable, which silently turns
+ * off brute-force protection: record it (once a minute per limiter, since
+ * every request hits this path during an outage).
+ */
+async function recordRedisFailure(
+  operation: string,
+  config: RateLimitConfig,
+  error: unknown,
+): Promise<void> {
+  await reportServerException(error, {
+    op_name: `rateLimit.${operation}:${config.name}`,
+    context: { limiter: config.name, fails_open: true },
+    throttle_ms: 60_000,
+  });
+}
+
 export async function checkRateLimit(
   redis: Redis,
   config: RateLimitConfig,
@@ -109,6 +127,7 @@ export async function checkRateLimit(
     return toResult(current, ttl, config);
   } catch (e: unknown) {
     console.error(`[rate-limit] Redis error during checkRateLimit for '${config.name}':`, e);
+    await recordRedisFailure("checkRateLimit", config, e);
     return allowedResult(config);
   }
 }
@@ -128,6 +147,7 @@ export async function checkRateLimitCount(
     return toResult(current, ttl, config);
   } catch (e: unknown) {
     console.error(`[rate-limit] Redis error during checkRateLimitCount for '${config.name}':`, e);
+    await recordRedisFailure("checkRateLimitCount", config, e);
     return allowedResult(config);
   }
 }
@@ -147,5 +167,6 @@ export async function incrementRateLimitCounter(
     );
   } catch (e: unknown) {
     console.error(`[rate-limit] Redis error during incrementRateLimitCounter for '${config.name}':`, e);
+    await recordRedisFailure("incrementRateLimitCounter", config, e);
   }
 }

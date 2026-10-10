@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { passwordSchema } from "@schemavaults/auth-common";
 import { publicAccess, z, withOpenApi } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
+import captureServerException from "@/lib/captureServerException";
 import { authRateLimitedResponse, ValidationIssuesErrorResponse } from "@/lib/api/domain-schemas/authentication";
 import { ErrorResponse, SuccessMessageResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
@@ -89,6 +90,7 @@ export const confirmPasswordReset = defineOperation({
       });
     } catch (e: unknown) {
       console.error("Internal server error attempting to handle /api/auth/reset-password/confirm", e);
+      await captureServerException(ctx.context.db, e, { op_name: "POST_reset_password_confirm_handler", route: ROUTE });
       return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
     }
   },

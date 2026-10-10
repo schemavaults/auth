@@ -3,6 +3,7 @@ import type { UserData } from "@schemavaults/auth-common";
 import type { NextRequest } from "next/server";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
 import { ServerlessDatabase } from "./auth-db";
+import reportServerException from "@/lib/reportServerException";
 import { RefreshTokenExpiryCookieName, RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTokenCookieNames";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
@@ -51,6 +52,13 @@ async function doesCookiesStoreHaveValidRefreshToken(
       "[doesCookiesStoreHaveValidRefreshToken] Failed to check if user is already authenticated, treating as not authenticated:",
       e
     );
+    // A token that does not verify yields no user; a throw is an outage or
+    // a misconfiguration that silently disables the "already signed in"
+    // checks of the login and register flows.
+    await reportServerException(e, {
+      op_name: "doesCookiesStoreHaveValidRefreshToken",
+      context: { nonFatal: true },
+    });
     return false;
   }
 }

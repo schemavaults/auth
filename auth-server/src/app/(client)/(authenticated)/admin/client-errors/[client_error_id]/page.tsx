@@ -7,6 +7,7 @@ import {
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import type { ServerRuntime } from "next";
 import { type ClientErrorRow, getClientErrorById } from "@/lib/auth-db/client-errors";
 import { z } from "zod";
@@ -33,6 +34,12 @@ async function PreloadedAdminClientErrorDetailPage(
     row = await getClientErrorById(dbh.db, parsed.data);
   } catch (e: unknown) {
     console.error(`[AdminClientErrorDetailPage] Failed to load client error '${parsed.data}': `, e);
+    await reportServerException(e, {
+      op_name: "AdminClientErrorDetailPage.getClientErrorById",
+      route: "/admin/client-errors/[client_error_id]",
+      uid: user.uid,
+      context: { client_error_id: parsed.data },
+    });
     redirectWithError(500, "internal_server_error");
   }
 

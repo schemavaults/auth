@@ -5,6 +5,7 @@ import { OperationError, type UserAuthPrincipal } from "@schemavaults/openapi-op
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isUserInOrganization from "@/lib/isUserInOrganization";
 import RouteGuardFactory from "@/lib/RouteGuardFactory";
+import reportServerException from "@/lib/reportServerException";
 import type { AuthServerApiContext } from "../context";
 
 /**
@@ -33,9 +34,15 @@ export async function principalFromTokenSource(
       getAuthServerAppId(),
     );
   } catch (e: unknown) {
-    if (context.debug) {
-      console.warn(`[api/auth-resolvers] ${source.sourceHint ?? source.type} did not verify:`, e);
-    }
+    // A token that does not verify yields a guard without a user; a throw
+    // here is a misconfiguration (auth server app id, key manager) or a
+    // bug, which would otherwise only look like "Authentication required".
+    console.error(`[api/auth-resolvers] Could not verify ${source.sourceHint ?? source.type}:`, e);
+    await reportServerException(e, {
+      op_name: "principalFromTokenSource.createGuardFromTokenSources",
+      context: { scheme: schemeName, token_source: source.sourceHint ?? source.type },
+      throttle_ms: 60_000,
+    });
     return null;
   }
 

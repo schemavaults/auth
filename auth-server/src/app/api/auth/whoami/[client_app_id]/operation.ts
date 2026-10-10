@@ -3,6 +3,7 @@ import { appIdSchema } from "@schemavaults/app-definitions";
 import { userDataSchema, type UserData } from "@schemavaults/auth-common";
 import { requireAuth, z, withOpenApi } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
+import captureServerException from "@/lib/captureServerException";
 import {
   clientAppRefreshTokenBearerScheme,
   clientAppSessionCookieScheme,
@@ -75,6 +76,12 @@ export const whoami = defineOperation({
         `[/api/auth/whoami/${client_app_id}] Failed to load user data for uid '${user_from_token.uid}':`,
         e,
       );
+      await captureServerException(db, e, {
+        op_name: "GET_whoami.loadUserData",
+        route: ROUTE,
+        uid: user_from_token.uid,
+        context: { client_app_id },
+      });
       return ctx.json(500, { success: false, error: true, message: "Internal server error" });
     }
 
@@ -83,6 +90,12 @@ export const whoami = defineOperation({
     const parseResult = await userDataSchema.safeParseAsync(user);
     if (!parseResult.success) {
       console.error(`[/api/auth/whoami/${client_app_id}] User object failed validation:`, parseResult.error);
+      await captureServerException(db, parseResult.error, {
+        op_name: "GET_whoami.validateUserData",
+        route: ROUTE,
+        uid: user_from_token.uid,
+        context: { client_app_id },
+      });
       return ctx.json(500, { success: false, error: true, message: "Internal server error" });
     }
 

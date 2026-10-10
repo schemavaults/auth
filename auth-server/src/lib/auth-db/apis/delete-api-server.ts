@@ -1,6 +1,7 @@
 import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import captureServerException from "@/lib/captureServerException";
 import { type ApiServerId, apiServerIdSchema, isHardcodedApiServerId } from "@schemavaults/app-definitions";
 
 export async function deleteApiServer(
@@ -29,6 +30,7 @@ export async function deleteApiServer(
     return { success: true, message: "API server deleted successfully" };
   } catch (e: unknown) {
     console.error("Failed to delete API server:", e);
+    await captureServerException(db, e, { op_name: "deleteApiServer", context: { api_server_id } });
     return { success: false, message: "Failed to delete API server" };
   }
 }
