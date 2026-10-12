@@ -28,7 +28,7 @@ async function PreloadedInviteCodesPage({
     invite_codes = await registry.listAllInviteCodes();
   } catch (e: unknown) {
     console.error("Error listing invite codes:", e)
-   throw new Error("Error listing invite codes in server component!")
+   throw new Error("Error listing invite codes in server component!", { cause: e })
   }
 
   return <InviteCodesPageView preloaded={invite_codes} />;

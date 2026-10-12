@@ -10,6 +10,7 @@ import {
 } from "@schemavaults/jwt";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
+import captureServerException from "@/lib/captureServerException";
 import {
   isTokenIssuedToCaller,
   resolveIntrospectionDecodePlan,
@@ -37,7 +38,8 @@ export interface DecodeIntrospectableTokenOptions {
  * Returns null — never throws — for anything the caller must see as
  * inactive (§2.2): malformed input, an audience the caller may not see,
  * a token issued to another client, an unknown keyset, or a token that
- * fails verification.
+ * fails verification. A keyset lookup that fails (database) is inactive
+ * too, and recorded to the ERRORS table.
  */
 export async function decodeIntrospectableToken({
   db,
@@ -45,8 +47,10 @@ export async function decodeIntrospectableToken({
   caller,
   environment,
 }: DecodeIntrospectableTokenOptions): Promise<DecodedIntrospectableToken | null> {
+  let plan: IntrospectionDecodePlan | null;
+  let keyset_id: string;
   try {
-    const plan: IntrospectionDecodePlan | null = resolveIntrospectionDecodePlan({
+    plan = resolveIntrospectionDecodePlan({
       caller,
       token_audience: getAudienceFromToken(token, environment),
       environment,
@@ -54,11 +58,32 @@ export async function decodeIntrospectableToken({
     if (!plan) {
       return null;
     }
+    keyset_id = getKeysetIdFromToken(token);
+  } catch {
+    return null;
+  }
 
-    const jwt_keys: I_JWT_Keys = await new AuthServerJwtKeysManager(db).getKeyset(
+  let jwt_keys: I_JWT_Keys | null;
+  try {
+    jwt_keys = await new AuthServerJwtKeysManager(db).findKeyset(
       plan.keyset_audience_id,
-      getKeysetIdFromToken(token),
+      keyset_id,
     );
+  } catch (e: unknown) {
+    // Still inactive to the caller, but recorded: a failed keyset lookup
+    // is an outage, not a token that fails verification.
+    await captureServerException(db, e, {
+      op_name: "decodeIntrospectableToken.findKeyset",
+      route: "/api/oidc/introspect",
+      context: { keyset_audience_id: plan.keyset_audience_id, keyset_id },
+    });
+    return null;
+  }
+  if (!jwt_keys) {
+    return null;
+  }
+
+  try {
     const payload: CustomJWTPayload =
       plan.kind === "access"
         ? await decodeJWT({

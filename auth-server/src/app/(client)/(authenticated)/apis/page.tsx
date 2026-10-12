@@ -13,6 +13,7 @@ import {
 import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations/list-user-organization-memberships";
 import allowUserOwnedResourceCreation from "@/lib/config/allow-user-owned-resource-creation";
 import { withServerTrace } from "@/lib/withServerTrace";
+import reportServerException from "@/lib/reportServerException";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next";
 
@@ -53,6 +54,12 @@ async function ApisPageServerComponent({
       "Failed to preload accessible API servers for /apis:",
       apiServersResult.reason,
     );
+    await reportServerException(apiServersResult.reason, {
+      op_name: "ApisPage.preloadApiServersTable",
+      route: "/apis",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
 
   // Organizations the user administers, so organization-owned rows can
@@ -68,6 +75,12 @@ async function ApisPageServerComponent({
       "Failed to preload organization memberships for /apis:",
       membershipsResult.reason,
     );
+    await reportServerException(membershipsResult.reason, {
+      op_name: "ApisPage.listUserOrganizationMemberships",
+      route: "/apis",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
 
   if (userOwnedCreationResult.status === "rejected") {
@@ -75,6 +88,12 @@ async function ApisPageServerComponent({
       "Failed to load server setting for allow_user_owned_resource_creation on /apis:",
       userOwnedCreationResult.reason,
     );
+    await reportServerException(userOwnedCreationResult.reason, {
+      op_name: "ApisPage.allowUserOwnedResourceCreation",
+      route: "/apis",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   // Admins can always create their own API servers; for everyone else the
   // create dialog offers the "Personal" owner iff the server setting allows

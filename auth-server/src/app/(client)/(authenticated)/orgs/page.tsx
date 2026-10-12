@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth-db/organizations";
 import adminOnlyOrganizationCreation from "@/lib/config/admin-only-organization-creation";
 import { withServerTrace } from "@/lib/withServerTrace";
+import reportServerException from "@/lib/reportServerException";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next";
 
@@ -52,18 +53,36 @@ async function UserOrganizationsPageServerComponent({
       "Failed to preload user organization memberships for /orgs:",
       membershipsResult.reason,
     );
+    await reportServerException(membershipsResult.reason, {
+      op_name: "UserOrganizationsPage.listUserOrganizationMembershipDetails",
+      route: "/orgs",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   if (invitationsResult.status === "rejected") {
     console.error(
       "Failed to preload pending organization invitations for /orgs:",
       invitationsResult.reason,
     );
+    await reportServerException(invitationsResult.reason, {
+      op_name: "UserOrganizationsPage.listUserPendingInvitations",
+      route: "/orgs",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   if (adminOnlyOrgCreationResult.status === "rejected") {
     console.error(
       "Failed to load server setting for admin_only_organization_creation on /orgs:",
       adminOnlyOrgCreationResult.reason,
     );
+    await reportServerException(adminOnlyOrgCreationResult.reason, {
+      op_name: "UserOrganizationsPage.adminOnlyOrganizationCreation",
+      route: "/orgs",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   // If the setting can't be loaded, fall back to showing the button;
   // POST /api/organizations enforces the restriction regardless.

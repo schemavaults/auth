@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z, publicAccess } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
+import captureServerException from "@/lib/captureServerException";
 import { API_TAGS } from "@/lib/api/tags";
 import { buildOidcDiscoveryDocument } from "@/lib/oidc/discovery-document";
 import { isDynamicClientRegistrationEnabled } from "@/lib/oidc/dynamic-client-registration";
@@ -77,6 +78,11 @@ export const getOpenIdConfiguration = defineOperation({
         `[${ROUTE}] Failed to read the dynamic client registration setting; not advertising registration_endpoint:`,
         e,
       );
+      await captureServerException(ctx.context.db, e, {
+        op_name: "GET_openid_configuration.isDynamicClientRegistrationEnabled",
+        route: ROUTE,
+        context: { nonFatal: true },
+      });
     }
     return NextResponse.json(buildOidcDiscoveryDocument(undefined, { registration_endpoint }), {
       headers: {

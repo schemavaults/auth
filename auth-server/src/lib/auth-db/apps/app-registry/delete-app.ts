@@ -1,6 +1,7 @@
 import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import captureServerException from "@/lib/captureServerException";
 import { appIdSchema, isHardcodedAppId } from "@schemavaults/app-definitions";
 
 export async function deleteApp(
@@ -29,6 +30,7 @@ export async function deleteApp(
     return { success: true, message: "App deleted successfully" };
   } catch (e: unknown) {
     console.error("Failed to delete app:", e);
+    await captureServerException(db, e, { op_name: "deleteApp", context: { app_id } });
     return { success: false, message: "Failed to delete app" };
   }
 }

@@ -95,7 +95,9 @@ export const removePasskey = defineOperation({
         await mfaRegistry.deleteFactor({ uid: user.uid, factor_id });
       }
 
-      void sendMfaSecurityAlertEmail({
+      // Awaited (it never throws): the request's db / redis are released
+      // once the response is produced, which would cut a detached send off.
+      await sendMfaSecurityAlertEmail({
         to: user.email,
         action: "removed",
         db,

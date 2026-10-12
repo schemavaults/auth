@@ -15,6 +15,7 @@ import resolveNextHref from "@/lib/next-href";
 import { SchemaVaultsAppRegistry, ServerlessDatabase } from "@/lib/auth-db";
 import { appIdSchema, type SchemaVaultsApp } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import toPartialAppInfo, { type PartialAppInfo } from "@/lib/PartialAppInfo";
 
 function readString(
@@ -46,6 +47,11 @@ async function loadConsentAppInfo(client_app_id: string): Promise<PartialAppInfo
       `[MfaChallengePage] Failed to load app with ID "${client_app_id}": `,
       e,
     );
+    await reportServerException(e, {
+      op_name: "MfaChallengePage.loadConsentAppInfo",
+      route: "/auth/mfa",
+      context: { client_app_id },
+    });
     redirectWithError(500, "internal_server_error");
   }
   if (!app) {

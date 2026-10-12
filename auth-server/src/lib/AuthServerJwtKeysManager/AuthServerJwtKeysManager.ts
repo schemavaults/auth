@@ -79,7 +79,7 @@ export class AuthServerJwtKeysManager
       await this.storeKeySet(newKeySet);
     } catch (e: unknown) {
       console.error("Failed to store key set after successful creation: ", e);
-      throw new Error("Failed to store key set after successful creation!")
+      throw new Error("Failed to store key set after successful creation!", { cause: e });
     }
 
     return newKeySet;
@@ -128,7 +128,7 @@ export class AuthServerJwtKeysManager
         return await this.createAndSaveNewJwtKeySet(audience_id);
       } catch (error) {
         console.error("Failed to create or save new JWT key set:", error);
-        throw new Error("Failed to create or save new JWT key set");
+        throw new Error("Failed to create or save new JWT key set", { cause: error });
       }
     }
 
@@ -156,6 +156,27 @@ export class AuthServerJwtKeysManager
     }
     if (keyset.keyset_expiry <= Date.now()) {
       throw new Error(`Keyset with ID '${keyset_id}' has expired`);
+    }
+    return keyset;
+  }
+
+  /**
+   * @description The keyset a presented token names, or null when it names
+   * none this server can verify with (malformed id, unknown or expired
+   * keyset) — an expected outcome for a caller-supplied token. Unlike
+   * {@link getKeyset}, a database failure is the only thing that throws, so
+   * callers can tell a bad token from an outage.
+   */
+  public async findKeyset(
+    audience_id: string,
+    keyset_id: string,
+  ): Promise<I_JWT_Keys | null> {
+    if (!this.isValidApiServerId(audience_id) || !this.isValidKeysetId(keyset_id)) {
+      return null;
+    }
+    const keyset = await this.store.get(audience_id, keyset_id);
+    if (!keyset || keyset.keyset_expiry <= Date.now()) {
+      return null;
     }
     return keyset;
   }

@@ -1,7 +1,7 @@
 import "server-only";
 import { getAppEnvironment } from "@schemavaults/app-definitions";
 import { RouteGuardFactory as BaseRouteGuardFactory } from "@schemavaults/auth-server-sdk";
-import { AuthServerJwtKeysManager } from "./AuthServerJwtKeysManager";
+import { RouteGuardJwtKeysManager } from "./AuthServerJwtKeysManager";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import type { RedisCache } from "@/lib/redis";
@@ -19,7 +19,7 @@ export class RouteGuardFactory extends BaseRouteGuardFactory {
     super({
       environment: getAppEnvironment(),
       is_auth_server: true,
-      jwt_keys_manager: new AuthServerJwtKeysManager(db),
+      jwt_keys_manager: new RouteGuardJwtKeysManager(db),
       is_token_revoked: createRouteGuardTokenRevocationCheck({ db, redis }),
     });
   }

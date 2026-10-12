@@ -7,6 +7,7 @@ import {
   withAdminServerComponentRouteGuard,
 } from "@/lib/withAdminRouteGuard";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import type { ServerRuntime } from "next";
 import type { ErrorRow } from "@/lib/auth-db/errors";
 import { z } from "zod";
@@ -43,6 +44,12 @@ async function PreloadedAdminErrorDetailPage(
       `[AdminErrorDetailPage] Failed to load error '${error_id}': `,
       e,
     );
+    await reportServerException(e, {
+      op_name: "AdminErrorDetailPage.loadErrorRow",
+      route: "/admin/errors/[error_id]",
+      uid: user.uid,
+      context: { error_id },
+    });
     redirectWithError(500, "internal_server_error");
   }
 

@@ -29,6 +29,7 @@ import {
   preloadApiServersTable,
 } from "@/lib/auth-db/apis";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import allowUserOwnedResourceCreation from "@/lib/config/allow-user-owned-resource-creation";
 import { connection } from "next/server";
 
@@ -122,11 +123,17 @@ async function PreloadedOrgPage(
     user.admin === true
       ? Promise.resolve(true)
       : allowUserOwnedResourceCreation(dbh.db, redis.client).catch(
-          (e: unknown): boolean => {
+          async (e: unknown): Promise<boolean> => {
             console.error(
               "Failed to load server setting for allow_user_owned_resource_creation on /orgs/[organization_id]:",
               e,
             );
+            await reportServerException(e, {
+              op_name: "ViewOrganizationPage.allowUserOwnedResourceCreation",
+              route: "/orgs/[organization_id]",
+              uid: user.uid,
+              context: { organization_id, nonFatal: true },
+            });
             return true;
           },
         ),

@@ -24,6 +24,7 @@ import {
   oidcAuthorizeErrorRedirect,
 } from "./oidc-errors";
 import isValidUrl from "@/lib/is-valid-url";
+import captureServerException from "@/lib/captureServerException";
 
 export interface ValidatedOidcAuthorizeRequest {
   client_app_id: AppId;
@@ -82,6 +83,11 @@ export async function validateOidcAuthorizeRequest(
       `[validateOidcAuthorizeRequest] Failed to load app '${client_app_id}':`,
       e,
     );
+    await captureServerException(dbh.db, e, {
+      op_name: "validateOidcAuthorizeRequest.getApp",
+      route: "/api/oidc/authorize",
+      context: { client_app_id },
+    });
     return {
       kind: "response",
       response: oidcAuthorizeDirectError(

@@ -6,6 +6,7 @@ import type {
   IsTokenRevokedFn,
 } from "@schemavaults/auth-server-sdk/route_guards";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
+import captureServerException from "@/lib/captureServerException";
 import {
   isTokenRevoked,
   REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
@@ -80,13 +81,17 @@ export interface CreateRouteGuardTokenRevocationCheckOptions {
  * grant, so requests already in flight with the just-rotated cookie are not
  * failed; logout revocations (reason NULL) are always immediate, and access
  * tokens are never rotation-revoked so they get no grace at all.
+ *
+ * A lookup that fails is recorded to the ERRORS table before it is
+ * rethrown: the SDK guards fail such requests closed as "revoked" (a 401,
+ * or a redirect to the login page) without surfacing the error.
  */
 export function createRouteGuardTokenRevocationCheck({
   db,
   redis,
   debug = false,
 }: CreateRouteGuardTokenRevocationCheckOptions): IsTokenRevokedFn {
-  return buildTokenRevocationCheck({
+  const check: IsTokenRevokedFn = buildTokenRevocationCheck({
     isJtiRevoked: (jti, type) =>
       isTokenRevoked(
         db,
@@ -98,6 +103,18 @@ export function createRouteGuardTokenRevocationCheck({
     getTokensValidAfter: (uid) =>
       getUserTokensValidAfterCached(db, uid, redis, debug),
   });
+  return async (token) => {
+    try {
+      return await check(token);
+    } catch (e: unknown) {
+      await captureServerException(db, e, {
+        op_name: "isRouteGuardTokenRevoked",
+        uid: token.uid,
+        context: { token_type: token.type, jti: token.jti ?? null },
+      });
+      throw e;
+    }
+  };
 }
 
 export default createRouteGuardTokenRevocationCheck;

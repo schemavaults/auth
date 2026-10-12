@@ -26,6 +26,7 @@ import {
   type ResolvedTokenAudience,
 } from "@/lib/oidc/resolve-token-audience";
 import { z } from "zod";
+import captureServerException from "@/lib/captureServerException";
 
 export type ValidateAudienceOutput =
   | "auth-server-only"
@@ -76,6 +77,10 @@ async function validateOneAudience(
           `[validateOneAudience] Failed to load API server '${aud}' to evaluate its dynamic-client policy: `,
           e,
         );
+        await captureServerException(dbh.db, e, {
+          op_name: "validateOneAudience.getApiServer",
+          context: { client_app_id, audience: aud },
+        });
         return false;
       }
     }
@@ -120,6 +125,10 @@ async function validateOneAudience(
       "Failed to check if frontend application has permission to access API server: ",
       e,
     );
+    await captureServerException(dbh.db, e, {
+      op_name: "validateOneAudience.isAllowed",
+      context: { client_app_id, audience: aud },
+    });
     return false;
   }
 

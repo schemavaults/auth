@@ -38,6 +38,7 @@ export abstract class AbstractJsonWebKeySetsStore
       );
       throw new Error(
         `There was an error listing the active keysets for audience '${audienceId}'`,
+        { cause: e },
       );
     }
 

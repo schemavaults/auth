@@ -29,10 +29,9 @@ function toProfileNames(user: UserDocument): UserProfileNames {
 }
 
 /** The strict `{ success, profile }` payload, or null when it fails to serialize. */
-function serializeProfile(user: UserDocument): UserProfileResponse | null {
+function serializeProfile(user: UserDocument) {
   const payload: UserProfileResponse = { success: true, profile: toProfileNames(user) };
-  const parsed = userProfileResponseSchema.safeParse(payload);
-  return parsed.success ? parsed.data : null;
+  return userProfileResponseSchema.safeParse(payload);
 }
 
 const SERIALIZE_FAILURE = { success: false, message: "Failed to serialize user profile" } as const;
@@ -57,8 +56,16 @@ export const getUserProfile = defineOperation({
     try {
       const userDoc = await new UserRegistry(db).getUserByUID(user.uid);
       if (!userDoc) return ctx.json(404, { success: false, message: "User not found" });
-      const payload = serializeProfile(userDoc);
-      return payload ? ctx.json(200, payload) : ctx.json(500, SERIALIZE_FAILURE);
+      const serialized = serializeProfile(userDoc);
+      if (!serialized.success) {
+        await captureServerException(db, serialized.error, {
+          op_name: "GET_profile_handler.serializeProfile",
+          route: ROUTE,
+          uid: user.uid,
+        });
+        return ctx.json(500, SERIALIZE_FAILURE);
+      }
+      return ctx.json(200, serialized.data);
     } catch (e: unknown) {
       await captureServerException(db, e, { op_name: "GET_profile_handler", route: ROUTE, uid: user.uid });
       return ctx.json(500, { success: false, message: "Failed to load user profile" });
@@ -95,8 +102,16 @@ export const updateUserProfile = defineOperation({
     const { db } = ctx.context;
     try {
       const updated = await new UserRegistry(db).updateUserProfile(user.uid, ctx.body);
-      const payload = serializeProfile(updated);
-      return payload ? ctx.json(200, payload) : ctx.json(500, SERIALIZE_FAILURE);
+      const serialized = serializeProfile(updated);
+      if (!serialized.success) {
+        await captureServerException(db, serialized.error, {
+          op_name: "PUT_profile_handler.serializeProfile",
+          route: ROUTE,
+          uid: user.uid,
+        });
+        return ctx.json(500, SERIALIZE_FAILURE);
+      }
+      return ctx.json(200, serialized.data);
     } catch (e: unknown) {
       if (e instanceof UsernameTakenError) {
         return ctx.json(409, { success: false, message: "That username is already taken." });

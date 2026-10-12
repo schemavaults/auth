@@ -270,8 +270,14 @@ export async function verifyPassword(opts: {
   password: string;
   savedHash: string;
   version: number;
+  /**
+   * Told about a v3 verification that threw (a malformed stored hash, an
+   * argon2 failure), which is answered as a mismatch, so the caller can
+   * record it.
+   */
+  onVerifyError?: (error: unknown) => void | Promise<void>;
 }): Promise<boolean> {
-  const { uid, password, savedHash, version } = opts;
+  const { uid, password, savedHash, version, onVerifyError } = opts;
 
   let computedHex: string;
   switch (version) {
@@ -296,6 +302,7 @@ export async function verifyPassword(opts: {
           "[verifyPassword] Failed to verify v3 (argon2id) password hash: ",
           e,
         );
+        await onVerifyError?.(e);
         return false;
       }
     }

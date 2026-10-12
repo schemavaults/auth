@@ -5,6 +5,7 @@ import {
   doesStoredHashNeedUpgrade,
   verifyPassword,
 } from "@/lib/hash_password";
+import captureServerException from "@/lib/captureServerException";
 import { getPasswordRecord } from "./get-password-hash";
 
 export interface ComparePasswordResult {
@@ -37,6 +38,12 @@ export async function comparePassword(
       password,
       savedHash: record.password,
       version: record.password_hash_version,
+      onVerifyError: (error) =>
+        captureServerException(db, error, {
+          op_name: "comparePassword.verifyPassword",
+          uid,
+          context: { password_hash_version: record.password_hash_version },
+        }),
     });
     const needsUpgrade: boolean =
       matches &&
@@ -58,7 +65,7 @@ export async function comparePassword(
       "[comparePassword] There was an error comparing passwords: ",
       e,
     );
-    throw new Error("Error comparing passwords");
+    throw new Error("Error comparing passwords", { cause: e });
   }
 }
 

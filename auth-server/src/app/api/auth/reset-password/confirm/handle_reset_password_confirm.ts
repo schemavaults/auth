@@ -79,14 +79,22 @@ export async function handleResetPasswordConfirm({
   // password transaction; drop the route guards' cached copy so every
   // pre-reset session is rejected immediately, not after the cache TTL.
   // Best effort: a Redis outage only delays enforcement by that TTL.
+  const recordInvalidationFailure = (e: unknown): Promise<void> =>
+    captureServerException(dbh.db, e, {
+      op_name: "handleResetPasswordConfirm.invalidateUserTokensValidAfterCache",
+      route: ROUTE,
+      uid: result.uid,
+      context: { nonFatal: true },
+    });
   try {
     await using redis = RedisCache.createConnection();
-    await invalidateUserTokensValidAfterCache(redis, result.uid);
+    await invalidateUserTokensValidAfterCache(redis, result.uid, recordInvalidationFailure);
   } catch (e: unknown) {
     console.warn(
       `[handleResetPasswordConfirm] Could not invalidate the cached tokens_valid_after watermark for uid '${result.uid}': `,
       e,
     );
+    await recordInvalidationFailure(e);
   }
 
   return NextResponse.json(

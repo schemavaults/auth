@@ -8,6 +8,7 @@ import {
 } from "@/lib/withAuthenticatedRouteGuard";
 import adminOnlyOrganizationCreation from "@/lib/config/admin-only-organization-creation";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next/types";
 
@@ -22,6 +23,11 @@ async function CreateOrganizationPageServerComponent(
       "Failed to load server setting for admin_only_organization_creation on create-organization page: ",
       e,
     );
+    await reportServerException(e, {
+      op_name: "CreateOrganizationPage.adminOnlyOrganizationCreation",
+      route: "/orgs/new",
+      uid: user.uid,
+    });
     redirectWithError(500, "load_server_config_failure");
   }
 

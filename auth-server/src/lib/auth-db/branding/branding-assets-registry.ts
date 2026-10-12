@@ -15,6 +15,7 @@ import {
   getAllBrandingAssetKeys,
   getBrandingAssetDefinition,
 } from "./branding-asset-keys";
+import captureServerException from "@/lib/captureServerException";
 
 /**
  * Redis payload for a cached branding asset. A `miss: true` sentinel is
@@ -300,6 +301,11 @@ export class BrandingAssetsRegistry {
         "[BrandingAssetsRegistry] Failed to list assets from database:",
         e,
       );
+      // Every asset is then listed as the default.
+      await captureServerException(this.db, e, {
+        op_name: "BrandingAssetsRegistry.listAssets",
+        context: { nonFatal: true },
+      });
       rows = [];
     }
 

@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { ServerlessDatabase } from "@/lib/auth-db/serverless-database";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import redirectWithError from "@/lib/redirect-with-error";
+import reportServerException from "@/lib/reportServerException";
 import HelpPageView from "./HelpPageView";
 
 export default async function HelpPage(): Promise<ReactElement> {
@@ -19,6 +20,10 @@ export default async function HelpPage(): Promise<ReactElement> {
       "Failed to load server setting for invite_code_required on help page: ",
       e,
     );
+    await reportServerException(e, {
+      op_name: "HelpPage.inviteCodesRequired",
+      route: "/help",
+    });
     redirectWithError(500, "load_server_config_failure");
   }
 

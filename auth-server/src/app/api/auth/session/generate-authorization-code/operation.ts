@@ -10,6 +10,7 @@ import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challen
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import { requireAuth, z, withOpenApi } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
+import captureServerException from "@/lib/captureServerException";
 import { sessionSchemes } from "@/lib/api/auth-schemes";
 import { ErrorResponse, sessionErrorResponses, ValidationErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
@@ -170,6 +171,12 @@ export const generateAuthorizationCodeOperation = defineOperation({
       }
     } catch (e: unknown) {
       console.error("[generate-authorization-code] Failed to check email verification requirements:", e);
+      await captureServerException(dbh.db, e, {
+        op_name: "POST_generate_authorization_code.checkEmailVerification",
+        route: ROUTE,
+        uid: user.uid,
+        context: { client_app_id: body.client_app_id },
+      });
       return ctx.json(500, { success: false, message: "Failed to check email verification requirements" });
     }
 
@@ -195,6 +202,12 @@ export const generateAuthorizationCodeOperation = defineOperation({
       return ctx.json(200, { success: true, authorization_code });
     } catch (e: unknown) {
       console.error("[generate-authorization-code] Failed to generate authorization code:", e);
+      await captureServerException(dbh.db, e, {
+        op_name: "POST_generate_authorization_code.generateAuthorizationCode",
+        route: ROUTE,
+        uid: user.uid,
+        context: { client_app_id: body.client_app_id },
+      });
       return ctx.json(500, { success: false, message: "Failed to generate authorization code" });
     }
   },

@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import type { ServerRuntime } from "next/types";
 import ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import { RedisCache } from "@/lib/redis";
+import reportServerException from "@/lib/reportServerException";
 import {
   BrandingAssetsRegistry,
   isValidBrandingAssetKey,
@@ -162,6 +163,14 @@ export async function GET(
       `[/branding/${asset}] Failed to load custom branding asset, serving default:`,
       e,
     );
+    // Requested by every page view (favicon, logo): record at most once a
+    // minute per asset.
+    await reportServerException(e, {
+      op_name: `brandingAsset.load:${asset}`,
+      route: "/branding/[asset]",
+      context: { asset, nonFatal: true },
+      throttle_ms: 60_000,
+    });
   }
 
   if (custom) {

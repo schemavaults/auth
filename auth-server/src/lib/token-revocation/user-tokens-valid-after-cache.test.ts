@@ -111,6 +111,14 @@ describe("getUserTokensValidAfterCached", () => {
     await expect(
       invalidateUserTokensValidAfterCache(redis, UID),
     ).resolves.toBeUndefined();
+    const errors: unknown[] = [];
+    await expect(
+      invalidateUserTokensValidAfterCache(redis, UID, (error) => {
+        errors.push(error);
+        throw new Error("the reporter failed too");
+      }),
+    ).resolves.toBeUndefined();
+    expect(errors).toHaveLength(1);
     await expect(
       invalidateUserTokensValidAfterCache(null, UID),
     ).resolves.toBeUndefined();

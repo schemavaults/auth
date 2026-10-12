@@ -157,7 +157,9 @@ export class AuthServerJwtKeysStore
         `Error querying JWT keys for keyset ID ${keyset_id}:`,
         error,
       );
-      throw new Error(`Failed to query JWT keys for keyset ID '${keyset_id}'`);
+      throw new Error(`Failed to query JWT keys for keyset ID '${keyset_id}'`, {
+        cause: error,
+      });
     }
 
     if (!rows.length) {
@@ -212,6 +214,7 @@ export class AuthServerJwtKeysStore
       );
       throw new Error(
         `Failed to check existence of JWT keys for keyset ID '${keyset_id}'`,
+        { cause: error },
       );
     }
   }
@@ -252,7 +255,7 @@ export class AuthServerJwtKeysStore
         `Error deleting JWT keys for keyset with ID '${keyset_id}':`,
         e,
       );
-      throw new Error(`Failed to delete keyset with ID: '${keyset_id}'`);
+      throw new Error(`Failed to delete keyset with ID: '${keyset_id}'`, { cause: e });
     }
   }
 
@@ -294,7 +297,7 @@ export class AuthServerJwtKeysStore
       rows = result.map(this.parseJwtKeyRow);
     } catch (e: unknown) {
       console.error(`Error listing active JWT keys:`, e);
-      throw new Error(`Failed to list active JWT keys`);
+      throw new Error(`Failed to list active JWT keys`, { cause: e });
     }
 
     // Split by keyset_id, assert that there are 4 keys in each keyset
@@ -337,7 +340,7 @@ export class AuthServerJwtKeysStore
         .execute();
     } catch (e: unknown) {
       console.error(`Error clearing outdated JWT keys:`, e);
-      throw new Error(`Failed to clear outdated JWT keys`);
+      throw new Error(`Failed to clear outdated JWT keys`, { cause: e });
     }
   }
 }

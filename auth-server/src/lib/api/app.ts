@@ -2,6 +2,8 @@ import "server-only";
 import type { UserData } from "@schemavaults/auth-common";
 import {
   createOperationsApp,
+  jsonResponse,
+  OPERATION_ERROR_CODES,
   openApiPathToHonoPath,
   operationHttpMethods,
   toNextRouteHandlers,
@@ -13,6 +15,7 @@ import {
   type OperationFailureInfo,
 } from "@schemavaults/openapi-operations";
 import captureServerException from "@/lib/captureServerException";
+import reportServerException from "@/lib/reportServerException";
 import { authResolvers } from "./auth-resolvers";
 import type { AuthServerApiContext } from "./context";
 import { AuthServerRequestContext } from "./request-context";
@@ -59,25 +62,67 @@ async function reportFailure(
     `[api] ${operation.method.toUpperCase()} ${operation.path} (${operation.operationId}) failed:`,
     error,
   );
-  const db = context?.db;
-  if (!db) return;
-  await captureServerException(db, error, {
-    op_name: operation.operationId,
-    route: operation.path,
-  });
+  const opts = { op_name: operation.operationId, route: operation.path };
+  // Reuse the request's database handle when one is open. Otherwise (the
+  // operation never needed one, the context could not be built, or the
+  // failure is in releasing the context, which already closed it) record
+  // through a handle of our own: reading `context.db` would lazily open a
+  // handle that nothing releases.
+  const opened =
+    context instanceof AuthServerRequestContext ? context.openedDatabase : null;
+  if (opened) {
+    await captureServerException(opened.db, error, opts);
+    return;
+  }
+  await reportServerException(error, opts);
+}
+
+/**
+ * Handles what the operations runtime does not: errors thrown by the
+ * route's own middleware (`configure`), its CORS `preflight` handler or an
+ * alias, which run outside the per-operation try/catch and would otherwise
+ * only reach Hono's default handler (console + text 500).
+ */
+function handleRouteError(
+  operations: readonly AnyOperationDefinition[],
+): (error: Error, c: HonoContext) => Promise<Response> {
+  return async (error, c) => {
+    const getResponse: unknown = (error as { getResponse?: unknown }).getResponse;
+    if (typeof getResponse === "function") {
+      // Hono's HTTPException carries its own response.
+      return (getResponse as () => Response).call(error);
+    }
+    const method: string = c.req.method.toUpperCase();
+    const pathname: string = new URL(c.req.url).pathname;
+    const operation: AnyOperationDefinition | undefined =
+      operations.find((candidate) => candidate.method.toUpperCase() === method) ?? operations[0];
+    const stage: string = method === "OPTIONS" ? "preflight" : "middleware";
+    console.error(`[api] ${method} ${pathname} failed in the route's ${stage}:`, error);
+    await reportServerException(error, {
+      op_name: `${operation?.operationId ?? "api"}.${stage}`,
+      route: operation?.path ?? pathname,
+      context: { method, path: pathname },
+    });
+    return jsonResponse(500, {
+      success: false,
+      error: OPERATION_ERROR_CODES.internal,
+      message: "Internal Server Error",
+    });
+  };
 }
 
 /**
  * Builds the Hono app serving `operations` with the auth server's shared
  * runtime: the credential resolvers, a per-request context whose database
  * / Redis handles open lazily and are released after the response, and
- * exception capture to the ERRORS table for unexpected failures.
+ * exception capture to the ERRORS table for unexpected failures (in the
+ * operations and in the route's preflight / middleware alike).
  */
 export function createApiApp(
   operations: readonly AnyOperationDefinition[],
   options: ApiRouteOptions = {},
 ): Hono {
-  return createOperationsApp<AuthServerApiContext, UserData>({
+  const honoApp: Hono = createOperationsApp<AuthServerApiContext, UserData>({
     operations,
     authResolvers,
     context: () => new AuthServerRequestContext(),
@@ -102,6 +147,8 @@ export function createApiApp(
       }
     },
   });
+  honoApp.onError(handleRouteError(operations));
+  return honoApp;
 }
 
 /**

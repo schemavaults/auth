@@ -26,6 +26,7 @@ import {
 import type { PreloadedAppsTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import adminOnlyOrganizationCreation from "@/lib/config/admin-only-organization-creation";
 import { withServerTrace } from "@/lib/withServerTrace";
+import reportServerException from "@/lib/reportServerException";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next";
 
@@ -40,7 +41,7 @@ async function attemptToPreloadAppsAndDomains(
     authorizedAppsRegistry = new AuthorizedAppsRegistry(dbh.db);
   } catch (e: unknown) {
     console.error(e);
-    throw new Error("Failed to load app registries");
+    throw new Error("Failed to load app registries", { cause: e });
   }
 
   if (appsRegistry && authorizedAppsRegistry && userData) {
@@ -132,21 +133,45 @@ async function AuthServerAccountDashboardPageServerComponent(
 
   if (appsResult.status === "rejected") {
     console.error("Failed to preload authorized apps:", appsResult.reason);
+    await reportServerException(appsResult.reason, {
+      op_name: "AccountPage.preloadAuthorizedApps",
+      route: "/account",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   if (orgsResult.status === "rejected") {
     console.error(
       "Failed to preload user organization memberships:",
       orgsResult.reason,
     );
+    await reportServerException(orgsResult.reason, {
+      op_name: "AccountPage.preloadUserOrganizationMemberships",
+      route: "/account",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   if (profileResult.status === "rejected") {
     console.error("Failed to preload user profile:", profileResult.reason);
+    await reportServerException(profileResult.reason, {
+      op_name: "AccountPage.preloadUserProfile",
+      route: "/account",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   if (adminOnlyOrgCreationResult.status === "rejected") {
     console.error(
       "Failed to load server setting for admin_only_organization_creation on account page:",
       adminOnlyOrgCreationResult.reason,
     );
+    await reportServerException(adminOnlyOrgCreationResult.reason, {
+      op_name: "AccountPage.adminOnlyOrganizationCreation",
+      route: "/account",
+      uid: user.uid,
+      context: { nonFatal: true },
+    });
   }
   // If the setting can't be loaded, fall back to showing the button;
   // POST /api/organizations enforces the restriction regardless.
