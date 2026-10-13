@@ -20,4 +20,13 @@ describe("resolveRefreshTokenDeliveryMode", () => {
     );
     expect(resolveRefreshTokenDeliveryMode("my-app", "inline", true)).toBe("inline");
   });
+  test("a refresh token presented as the app's cookie is never answered inline", () => {
+    for (const requested of ["inline", "http_only_cookie"] as const) {
+      for (const secure of [true, false]) {
+        expect(resolveRefreshTokenDeliveryMode("my-app", requested, secure, true)).toBe(
+          "http_only_cookie",
+        );
+      }
+    }
+  });
 });

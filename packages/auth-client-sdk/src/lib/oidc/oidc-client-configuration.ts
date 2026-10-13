@@ -17,6 +17,7 @@ import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import { isInsecureTransportAllowed } from "./is-insecure-transport-allowed";
 import { normalizeOidcIssuer } from "./normalize-oidc-issuer";
+import { getSessionRouteUrl, sessionRouteEndpoint } from "@/lib/session-route";
 
 export interface CreateOidcClientConfigurationOptions {
   /**
@@ -49,7 +50,10 @@ export interface CreateOidcClientConfigurationOptions {
  *   (browser, Node, React Native) supplies its own implementation.
  *   Token-endpoint requests are sent with `credentials: "include"` so
  *   the auth server's HTTP-only refresh-token cookie travels with the
- *   refresh grant and the `Set-Cookie` on the response is honored.
+ *   refresh grant and the `Set-Cookie` on the response is honored. When
+ *   the adapter has a same-origin auth session route
+ *   (`getSessionRouteUrl()`), token-endpoint requests go to
+ *   `<route>/token` instead, which holds the refresh token.
  * - Plain-HTTP issuers (local dev / the docker-compose test network)
  *   are allowed ONLY in the `development` and `test` environments;
  *   openid-client refuses non-TLS endpoints otherwise, and this function
@@ -95,19 +99,27 @@ export function createOidcClientConfiguration({
     config.timeout = timeout_seconds;
   }
 
+  // An app serving a same-origin auth session route redeems codes and
+  // refresh tokens through it (the route holds the refresh token).
+  const session_route: string | null = getSessionRouteUrl(adapter);
+
   config[oidc.customFetch] = async (
     url: string,
     options: oidc.CustomFetchOptions,
   ): Promise<Response> => {
     const isTokenEndpoint: boolean = url === token_endpoint;
-    return await adapter.fetch(url, {
-      method: options.method,
-      headers: options.headers,
-      body: options.body,
-      redirect: options.redirect,
-      signal: options.signal,
-      credentials: isTokenEndpoint ? "include" : "same-origin",
-    });
+    const via_session_route: boolean = isTokenEndpoint && session_route !== null;
+    return await adapter.fetch(
+      via_session_route ? sessionRouteEndpoint(session_route as string, "token") : url,
+      {
+        method: options.method,
+        headers: options.headers,
+        body: options.body,
+        redirect: options.redirect,
+        signal: options.signal,
+        credentials: isTokenEndpoint && !via_session_route ? "include" : "same-origin",
+      },
+    );
   };
 
   return config;

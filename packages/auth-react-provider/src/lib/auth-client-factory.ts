@@ -28,6 +28,8 @@ export interface IAuthClientFactoryInitOpts {
   invite_code_required?: boolean;
   /** Turn off the SDK's error reporting to the auth server. */
   disable_telemetry?: boolean;
+  /** The app's same-origin auth session route, e.g. "/auth/session". */
+  session_route_uri?: string;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
 
@@ -45,6 +47,7 @@ export class AuthClientFactory {
   private readonly error_page_uri: string;
   private readonly invite_code_required: boolean;
   private readonly disable_telemetry: boolean;
+  private readonly session_route_uri: string | undefined;
   private readonly fetch: (
     url: string,
     init: RequestInit | undefined,
@@ -90,6 +93,7 @@ export class AuthClientFactory {
         ? opts.invite_code_required
         : true;
     this.disable_telemetry = opts.disable_telemetry === true;
+    this.session_route_uri = opts.session_route_uri;
     this.fetch = fetch;
   }
 
@@ -120,6 +124,7 @@ export class AuthClientFactory {
       debug: this.debug,
       client_app_id: this.app_id,
       auth_server_app_id: this.auth_server_app_id,
+      session_route_uri: this.session_route_uri,
       fetch: this.fetch,
     });
   }

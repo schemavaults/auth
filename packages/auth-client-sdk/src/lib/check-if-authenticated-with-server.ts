@@ -2,6 +2,7 @@ import { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientA
 import type { AppId } from "@schemavaults/app-definitions";
 import { createUserDataSchema, UserData } from "@schemavaults/auth-common";
 import { AUTH_CLIENT_SDK_VERSION } from "@/generated/version";
+import { getSessionRouteUrl, sessionRouteEndpoint } from "@/lib/session-route";
 import {
   WhoamiRequestFailedError,
   type WhoamiRequestFailureReason,
@@ -85,8 +86,12 @@ export default async function checkIfAuthenticatedWithServer({
     return null;
   }
 
+  // An app serving a same-origin auth session route asks it: the route
+  // presents the refresh token it holds to the auth server's whoami.
+  const session_route: string | null = getSessionRouteUrl(adapter);
+
   const headers = new Headers();
-  if (!supportsHttpOnlyCookies) {
+  if (!supportsHttpOnlyCookies && session_route === null) {
     const token: string | undefined = adapter.getRefreshToken()?.token;
     if (!token) {
       return null;
@@ -94,10 +99,10 @@ export default async function checkIfAuthenticatedWithServer({
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const url: string = new URL(
-    `/api/auth/whoami/${client_app_id}`,
-    auth_server_uri,
-  ).toString();
+  const url: string =
+    session_route !== null
+      ? sessionRouteEndpoint(session_route, "whoami")
+      : new URL(`/api/auth/whoami/${client_app_id}`, auth_server_uri).toString();
 
   function failure(
     reason: WhoamiRequestFailureReason,
@@ -118,7 +123,8 @@ export default async function checkIfAuthenticatedWithServer({
       // (e.g. left by an SDK that kept this app's session in one) would
       // otherwise answer for, or with a revoked token fail, the session
       // being checked.
-      credentials: supportsHttpOnlyCookies ? "include" : "omit",
+      credentials:
+        session_route !== null ? "same-origin" : supportsHttpOnlyCookies ? "include" : "omit",
       headers,
     });
   } catch (e: unknown) {

@@ -34,6 +34,11 @@ export interface DeliverOidcTokensOptions {
   client_app_id: AppId;
   /** The client's requested `refresh_token_delivery` mode. */
   requested_delivery: OidcRefreshTokenDeliveryMode;
+  /**
+   * The grant redeemed a refresh token presented as the app's HTTP-only
+   * cookie: its replacement goes back into the cookie, never inline.
+   */
+  refresh_token_presented_via_cookie?: boolean;
   environment: SchemaVaultsAppEnvironment;
   debug?: boolean;
 }
@@ -52,6 +57,7 @@ export async function deliverOidcTokens({
   issued,
   client_app_id,
   requested_delivery,
+  refresh_token_presented_via_cookie = false,
   environment,
   debug = false,
 }: DeliverOidcTokensOptions): Promise<NextResponse> {
@@ -61,6 +67,7 @@ export async function deliverOidcTokens({
     client_app_id,
     requested_delivery,
     secure,
+    refresh_token_presented_via_cookie,
   );
 
   if (mode === "inline" || issued.refresh_token === null) {

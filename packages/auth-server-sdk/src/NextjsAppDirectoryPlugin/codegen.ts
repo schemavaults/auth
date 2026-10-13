@@ -25,32 +25,38 @@ export interface IAuthResourceServerCodegenOptions {
   debug?: boolean;
 }
 
-interface ITemplateAuthPage {
-  /** Path of the page within the generated `auth/` directory. */
-  auth_relative_path: string;
+interface ITemplateAuthFile {
+  /** Path of the generated file within the generated `auth/` directory. */
+  auth_relative_file: string;
   codegen_template_path: string;
 }
 
-const pagesToCreate: readonly ITemplateAuthPage[] = [
+const filesToCreate: readonly ITemplateAuthFile[] = [
   {
-    auth_relative_path: "login",
+    auth_relative_file: "login/page.tsx",
     codegen_template_path: "auth/login/page.tsx",
   },
   {
-    auth_relative_path: "register",
+    auth_relative_file: "register/page.tsx",
     codegen_template_path: "auth/register/page.tsx",
   },
   {
-    auth_relative_path: "logout",
+    auth_relative_file: "logout/page.tsx",
     codegen_template_path: "auth/logout/page.tsx",
   },
   {
-    auth_relative_path: "authorize",
+    auth_relative_file: "authorize/page.tsx",
     codegen_template_path: "auth/authorize/page.tsx",
   },
   {
-    auth_relative_path: "error",
+    auth_relative_file: "error/page.tsx",
     codegen_template_path: "auth/error/page.tsx",
+  },
+  {
+    // The auth session route: keeps the refresh token in an HTTP-only
+    // cookie on the app's own domain (see auth-provider.tsx).
+    auth_relative_file: "session/[action]/route.ts",
+    codegen_template_path: "auth/session/[action]/route.ts",
   },
 ];
 
@@ -76,9 +82,9 @@ function formatVersionTransition(oldVersion: string | null): string {
 }
 
 function createClientPages(authDirectory: string, templatesDir: string) {
-  for (const page of pagesToCreate) {
-    const destPath: string = join(authDirectory, page.auth_relative_path, "page.tsx");
-    const relPath = `auth/${page.auth_relative_path}/page.tsx`;
+  for (const page of filesToCreate) {
+    const destPath: string = join(authDirectory, page.auth_relative_file);
+    const relPath = `auth/${page.auth_relative_file}`;
 
     if (existsSync(destPath)) {
       if (isCodegenManagedFile(destPath)) {

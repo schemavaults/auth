@@ -28,6 +28,13 @@ export interface IAppAuthProviderProps extends PropsWithChildren {
   successful_logout_redirect_uri: string;
   successful_authentication_redirect_uri: string;
   authorize_uri: string;
+  /**
+   * The app's auth session route (generated at `auth/session/[action]/route.ts`),
+   * which keeps the refresh token in an HTTP-only cookie on the app's own
+   * domain. Defaults to "/auth/session"; `null` keeps the refresh token in
+   * the browser instead (not recommended).
+   */
+  session_route_uri?: string | null;
   autoreacquire_access_tokens?: boolean;
   authMiddlewareRules?: SchemaVaultsAuthProviderProps["authMiddlewareRules"];
   onLogout?: SchemaVaultsAuthProviderProps["onLogout"];
@@ -58,6 +65,11 @@ export default function AppAuthProvider({
         props.successful_authentication_redirect_uri
       }
       authorize_uri={props.authorize_uri}
+      session_route_uri={
+        props.session_route_uri === null
+          ? undefined
+          : (props.session_route_uri ?? "/auth/session")
+      }
       router={router}
       path={path}
       default_audiences={props.default_audiences}

@@ -83,6 +83,47 @@ describe("createOidcClientConfiguration", () => {
     expect(calls[1]?.init?.credentials).toBe("same-origin");
   });
 
+  test("sends token requests to the app's session route when it has one", async () => {
+    type AdapterFetchInit = Parameters<
+      ISchemaVaultsAuthClientAdapter["fetch"]
+    >[1];
+    const calls: { url: string; init: AdapterFetchInit }[] = [];
+    const config = createOidcClientConfiguration({
+      auth_server_url: "https://auth.example.com",
+      client_app_id: "my-app",
+      environment: "production",
+      adapter: {
+        ...makeAdapter(async (url, init) => {
+          calls.push({ url, init });
+          return new Response("{}", {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }),
+        getSessionRouteUrl: () => "https://game.example.ca/auth/session/",
+      },
+    });
+    const customFetch = config[oidc.customFetch];
+    if (!customFetch) throw new Error("unreachable");
+
+    await customFetch("https://auth.example.com/api/oidc/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: "grant_type=refresh_token",
+      redirect: "manual",
+    });
+    await customFetch("https://auth.example.com/api/oidc/jwks", {
+      method: "GET",
+      headers: {},
+      body: undefined,
+      redirect: "manual",
+    });
+
+    expect(calls[0]?.url).toBe("https://game.example.ca/auth/session/token");
+    expect(calls[0]?.init?.credentials).toBe("same-origin");
+    expect(calls[1]?.url).toBe("https://auth.example.com/api/oidc/jwks");
+  });
+
   test("refuses plain-HTTP issuers outside development and test", () => {
     for (const environment of ["staging", "production"] as const) {
       expect(() =>

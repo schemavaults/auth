@@ -59,5 +59,17 @@ export interface SchemaVaultsAuthProviderProps
    */
   disable_telemetry?: boolean;
 
+  /**
+   * Path (or absolute URL) of the app's same-origin auth session route,
+   * e.g. "/auth/session", served by `createAuthSessionRouteHandler()` from
+   * `@schemavaults/auth-server-sdk/auth-session-route` (the
+   * `auth-server-sdk codegen` CLI writes it). The SDK then redeems codes,
+   * refreshes tokens, loads the user and logs out through it, and the
+   * refresh token lives in an HTTP-only cookie on the app's own domain:
+   * never readable by the page's scripts, and first-party, so browsers that
+   * block third-party cookies (Safari, every iOS browser) keep it.
+   */
+  session_route_uri?: string;
+
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }

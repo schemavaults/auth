@@ -8,8 +8,9 @@ TypeScript SDK for SchemaVaults Auth Server and Resource Server API backends.
 bunx @schemavaults/auth-server-sdk codegen [options]
 ```
 
-Generates the auth pages (`login`, `register`, `logout`, `authorize`, `error`)
-and the `auth-provider.tsx` into your Next.js App Router project.
+Generates the auth pages (`login`, `register`, `logout`, `authorize`, `error`),
+the auth session route (`session/[action]/route.ts`, see below) and the
+`auth-provider.tsx` into your Next.js App Router project.
 
 ### Options
 
@@ -28,6 +29,42 @@ and the `auth-provider.tsx` into your Next.js App Router project.
 - `--debug` — Enable debug logging.
 - `--help`, `-h` — Show help.
 - `--version`, `-v` — Show package name and version.
+
+## Auth session route (refresh token in a first-party HTTP-only cookie)
+
+`createAuthSessionRouteHandler()` (`@schemavaults/auth-server-sdk/auth-session-route`)
+serves the browser SDK's token, whoami and logout requests from the app's own
+origin (`<route>/token`, `<route>/whoami`, `<route>/logout`) and forwards them
+to the auth server. The refresh token is kept in an HTTP-only,
+`SameSite=Strict` cookie on the app's own domain and is never returned to the
+page, so:
+
+- page scripts (an XSS payload included) can never read or exfiltrate it;
+- it is a first-party cookie, which browsers that block third-party cookies
+  (Safari, every iOS browser) keep. The auth server's own cookie would be a
+  third-party cookie for an app on another site.
+
+The codegen writes it to `auth/session/[action]/route.ts`:
+
+```ts
+import { createAuthSessionRouteHandler } from "@schemavaults/auth-server-sdk/auth-session-route";
+
+const handler = createAuthSessionRouteHandler();
+export { handler as GET, handler as POST };
+export const dynamic = "force-dynamic";
+```
+
+and the generated `auth-provider.tsx` points the SDK at it
+(`session_route_uri="/auth/session"` on `<AuthProvider>`; pass
+`session_route_uri={null}` to the generated provider to opt out). The route
+reads `SCHEMAVAULTS_CLIENT_APP_ID`, `SCHEMAVAULTS_APP_ENVIRONMENT` and
+`SCHEMAVAULTS_AUTH_SERVER_URL` (or the environment's default auth server); the
+cookie is `Secure` outside development/test. It refuses cross-origin requests
+(`Origin` / `Sec-Fetch-Site` checks) and serves only its own app's
+`authorization_code` and `refresh_token` grants.
+
+The auth server rate-limits refresh grants per IP; proxied through the route,
+they count against the app server's IP.
 
 ## Accepting resource-URL token audiences
 

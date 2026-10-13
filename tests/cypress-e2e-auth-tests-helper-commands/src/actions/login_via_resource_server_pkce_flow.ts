@@ -24,10 +24,11 @@ export default function login_via_resource_server_pkce_flow(
   const origin: string = new URL(resource_server_origin).origin;
 
   // Step 1: Clear stored auth state from the resource server's origin,
-  // then visit its home page and click "Login". In development/test the
-  // resource server stores refresh tokens in localStorage (not HTTP-only
-  // cookies), so we must clear localStorage from within the resource
-  // server's origin context for it to take effect.
+  // then visit its home page and click "Login". The resource server's
+  // session route keeps the refresh token in an HTTP-only cookie on its
+  // own domain (cleared with every other cookie); the SDK's PKCE state and
+  // cached user data are in localStorage, which must be cleared from
+  // within the resource server's origin context to take effect.
   cy.clearAllCookies();
   cy.origin(origin, () => {
     localStorage.clear();

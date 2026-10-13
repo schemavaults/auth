@@ -389,6 +389,48 @@ describe("OIDC confidential client flow (management API only)", () => {
     });
   });
 
+  it("rotates a refresh token presented as the app's cookie back into the cookie, never into the body", () => {
+    createConfidentialClient().then((client) => {
+      mintSessionForFreshUser(client).then(({ refresh_token }) => {
+        // A script on the client's page can make the browser send the
+        // HTTP-only cookie but must never read the refresh token: a refresh
+        // grant without a `refresh_token` field (and without asking for
+        // cookie delivery) used to answer it inline.
+        cy.clearCookies();
+        cy.setCookie(RefreshTokenCookieName(client.client_id), refresh_token);
+        cy.request<TokenResponseBody & { refresh_token_expires_in?: number }>({
+          method: "POST",
+          url: "/api/oidc/token",
+          form: true,
+          body: {
+            grant_type: "refresh_token",
+            client_id: client.client_id,
+            client_secret: client.client_secret,
+          },
+          headers: { Accept: "application/json" },
+        }).then((response) => {
+          expect(response.status, "cookie-authenticated refresh grant").to.eq(200);
+          expect(response.body.access_token).to.be.a("string");
+          expect(response.body, "no refresh token in the body").to.not.have.property(
+            "refresh_token",
+          );
+          expect(response.body.refresh_token_expires_in).to.be.a("number");
+          const set_cookie: string[] = ([] as string[]).concat(
+            response.headers["set-cookie"] ?? [],
+          );
+          const rotated: string | undefined = set_cookie
+            .find((cookie) => cookie.startsWith(`${RefreshTokenCookieName(client.client_id)}=`))
+            ?.split(";")[0]
+            ?.split("=")[1];
+          expect(rotated, "rotated refresh token set as the app's cookie").to.be.a("string").and.not
+            .be.empty;
+          expect(rotated).to.not.eq(refresh_token);
+        });
+        cy.clearCookies();
+      });
+    });
+  });
+
   it("a logout presenting the refresh token as a Bearer revokes the session, for its own app only", () => {
     createConfidentialClient().then((client) => {
       mintSessionForFreshUser(client).then(({ access_token, refresh_token }) => {

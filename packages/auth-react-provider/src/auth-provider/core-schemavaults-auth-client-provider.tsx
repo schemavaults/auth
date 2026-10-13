@@ -105,6 +105,7 @@ export default function CoreSchemaVaultsAuthClientProvider(
           ? props.invite_code_required
           : true,
       disable_telemetry: props.disable_telemetry === true,
+      session_route_uri: props.session_route_uri,
       fetch: props.fetch,
     };
 

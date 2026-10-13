@@ -28,6 +28,8 @@ export interface UseAuthClientInitializationOptions {
   invite_code_required?: boolean;
   /** Turn off the SDK's error reporting to the auth server. */
   disable_telemetry?: boolean;
+  /** The app's same-origin auth session route, e.g. "/auth/session". */
+  session_route_uri?: string;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
 
@@ -63,6 +65,7 @@ export function useAuthClientInitialization(
       : true;
 
   const disable_telemetry: boolean = opts.disable_telemetry === true;
+  const session_route_uri: string | undefined = opts.session_route_uri;
 
   // Auth client initialization side-effect
   useEffect(
@@ -96,6 +99,7 @@ export function useAuthClientInitialization(
             auth_server_app_id,
             invite_code_required,
             disable_telemetry,
+            session_route_uri,
             fetch: httpFetch,
           });
 
@@ -150,6 +154,7 @@ export function useAuthClientInitialization(
       default_audiences,
       invite_code_required,
       disable_telemetry,
+      session_route_uri,
       httpFetch,
     ],
   ); // end of auth client initialization side-effect

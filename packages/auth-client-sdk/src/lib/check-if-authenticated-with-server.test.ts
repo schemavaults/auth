@@ -183,4 +183,25 @@ describe("checkIfAuthenticatedWithServer", () => {
     expect(requests[1]?.credentials).toBe("omit");
     expect(new Headers(requests[1]?.headers).get("Authorization")).toBe("Bearer the-refresh-token");
   });
+
+  test("asks the app's session route, which holds the refresh token, when it has one", async () => {
+    const calls: { url: string; init: Parameters<ISchemaVaultsAuthClientAdapter["fetch"]>[1] }[] = [];
+    const user = await checkIfAuthenticatedWithServer({
+      auth_server_uri: AUTH_SERVER,
+      adapter: {
+        ...adapterFetching(respond(200, "")),
+        fetch: async (url, init) => {
+          calls.push({ url, init });
+          return new Response(JSON.stringify({ success: true, user: USER }), { status: 200 });
+        },
+        getSessionRouteUrl: () => "https://game.example.ca/auth/session",
+      },
+      client_app_id: CLIENT_APP_ID,
+      auth_server_app_id: "schemavaults",
+    });
+    expect(user?.uid).toBe(UID);
+    expect(calls[0]?.url).toBe("https://game.example.ca/auth/session/whoami");
+    expect(calls[0]?.init?.credentials).toBe("same-origin");
+    expect(new Headers(calls[0]?.init?.headers).has("Authorization")).toBe(false);
+  });
 });
