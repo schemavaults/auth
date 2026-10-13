@@ -17,7 +17,8 @@ import { buildOidcProviderMetadata } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import { isInsecureTransportAllowed } from "./is-insecure-transport-allowed";
 import { normalizeOidcIssuer } from "./normalize-oidc-issuer";
-import { getSessionRouteUrl, sessionRouteEndpoint } from "@/lib/session-route";
+import { getSessionRouteUrls } from "@/lib/session-route";
+import type { AuthSessionRoutes } from "@/types/AuthSessionRoutes";
 
 export interface CreateOidcClientConfigurationOptions {
   /**
@@ -51,9 +52,9 @@ export interface CreateOidcClientConfigurationOptions {
  *   Token-endpoint requests are sent with `credentials: "include"` so
  *   the auth server's HTTP-only refresh-token cookie travels with the
  *   refresh grant and the `Set-Cookie` on the response is honored. When
- *   the adapter has a same-origin auth session route
- *   (`getSessionRouteUrl()`), token-endpoint requests go to
- *   `<route>/token` instead, which holds the refresh token.
+ *   the adapter has same-origin auth session routes
+ *   (`getSessionRouteUrls()`), token-endpoint requests go to its `token`
+ *   route instead, which holds the refresh token.
  * - Plain-HTTP issuers (local dev / the docker-compose test network)
  *   are allowed ONLY in the `development` and `test` environments;
  *   openid-client refuses non-TLS endpoints otherwise, and this function
@@ -99,18 +100,20 @@ export function createOidcClientConfiguration({
     config.timeout = timeout_seconds;
   }
 
-  // An app serving a same-origin auth session route redeems codes and
-  // refresh tokens through it (the route holds the refresh token).
-  const session_route: string | null = getSessionRouteUrl(adapter);
+  // An app serving same-origin auth session routes redeems codes and
+  // refresh tokens through its token route (which holds the refresh token).
+  const session_routes: AuthSessionRoutes | null = getSessionRouteUrls(adapter);
 
   config[oidc.customFetch] = async (
     url: string,
     options: oidc.CustomFetchOptions,
   ): Promise<Response> => {
     const isTokenEndpoint: boolean = url === token_endpoint;
-    const via_session_route: boolean = isTokenEndpoint && session_route !== null;
+    const session_token_route: string | null =
+      isTokenEndpoint && session_routes !== null ? session_routes.token : null;
+    const via_session_route: boolean = session_token_route !== null;
     return await adapter.fetch(
-      via_session_route ? sessionRouteEndpoint(session_route as string, "token") : url,
+      session_token_route ?? url,
       {
         method: options.method,
         headers: options.headers,

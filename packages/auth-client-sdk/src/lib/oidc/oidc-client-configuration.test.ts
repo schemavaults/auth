@@ -83,7 +83,7 @@ describe("createOidcClientConfiguration", () => {
     expect(calls[1]?.init?.credentials).toBe("same-origin");
   });
 
-  test("sends token requests to the app's session route when it has one", async () => {
+  test("sends token requests to the app's token session route when it has one", async () => {
     type AdapterFetchInit = Parameters<
       ISchemaVaultsAuthClientAdapter["fetch"]
     >[1];
@@ -100,7 +100,11 @@ describe("createOidcClientConfiguration", () => {
             headers: { "content-type": "application/json" },
           });
         }),
-        getSessionRouteUrl: () => "https://game.example.ca/auth/session/",
+        getSessionRouteUrls: () => ({
+          token: "https://game.example.ca/session/token",
+          whoami: "https://game.example.ca/session/whoami",
+          logout: "https://game.example.ca/session/logout",
+        }),
       },
     });
     const customFetch = config[oidc.customFetch];
@@ -119,7 +123,7 @@ describe("createOidcClientConfiguration", () => {
       redirect: "manual",
     });
 
-    expect(calls[0]?.url).toBe("https://game.example.ca/auth/session/token");
+    expect(calls[0]?.url).toBe("https://game.example.ca/session/token");
     expect(calls[0]?.init?.credentials).toBe("same-origin");
     expect(calls[1]?.url).toBe("https://auth.example.com/api/oidc/jwks");
   });

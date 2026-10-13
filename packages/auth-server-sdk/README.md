@@ -9,7 +9,7 @@ bunx @schemavaults/auth-server-sdk codegen [options]
 ```
 
 Generates the auth pages (`login`, `register`, `logout`, `authorize`, `error`),
-the auth session route (`session/[action]/route.ts`, see below) and the
+the auth session routes (`session/{token,whoami,logout}/route.ts`, see below) and the
 `auth-provider.tsx` into your Next.js App Router project.
 
 ### Options
@@ -30,41 +30,52 @@ the auth session route (`session/[action]/route.ts`, see below) and the
 - `--help`, `-h` — Show help.
 - `--version`, `-v` — Show package name and version.
 
-## Auth session route (refresh token in a first-party HTTP-only cookie)
+## Auth session routes (refresh token in a first-party HTTP-only cookie)
 
-`createAuthSessionRouteHandler()` (`@schemavaults/auth-server-sdk/auth-session-route`)
-serves the browser SDK's token, whoami and logout requests from the app's own
-origin (`<route>/token`, `<route>/whoami`, `<route>/logout`) and forwards them
-to the auth server. The refresh token is kept in an HTTP-only,
-`SameSite=Strict` cookie on the app's own domain and is never returned to the
-page, so:
+`@schemavaults/auth-server-sdk/auth-session-route` serves the browser SDK's
+token, whoami and logout requests from the app's own origin and forwards them
+to the auth server, one route handler each:
+
+| Route (codegen path) | Factory | Method |
+| --- | --- | --- |
+| token (`/auth/session/token`) | `createAuthSessionTokenRoute()` | `POST` (authorization code and refresh grants) |
+| whoami (`/auth/session/whoami`) | `createAuthSessionWhoamiRoute()` | `GET` |
+| logout (`/auth/session/logout`) | `createAuthSessionLogoutRoute()` | `POST` |
+
+The refresh token is kept in an HTTP-only, `SameSite=Strict` cookie on the
+app's own domain, scoped to the routes' common parent path (`/auth/session`
+for codegen's routes; pass the same `cookie_path` to all three factories when
+your routes share no parent), and is never returned to the page, so:
 
 - page scripts (an XSS payload included) can never read or exfiltrate it;
 - it is a first-party cookie, which browsers that block third-party cookies
   (Safari, every iOS browser) keep. The auth server's own cookie would be a
   third-party cookie for an app on another site.
 
-The codegen writes it to `auth/session/[action]/route.ts`:
+The codegen writes one route file per action, e.g.
+`auth/session/token/route.ts`:
 
 ```ts
-import { createAuthSessionRouteHandler } from "@schemavaults/auth-server-sdk/auth-session-route";
+import { createAuthSessionTokenRoute } from "@schemavaults/auth-server-sdk/auth-session-route";
 
-const handler = createAuthSessionRouteHandler();
-export { handler as GET, handler as POST };
+export const { POST } = createAuthSessionTokenRoute();
 export const dynamic = "force-dynamic";
 ```
 
-and the generated `auth-provider.tsx` points the SDK at it
-(`session_route_uri="/auth/session"` on `<AuthProvider>`; pass
-`session_route_uri={null}` to the generated provider to opt out). The route
-reads `SCHEMAVAULTS_CLIENT_APP_ID`, `SCHEMAVAULTS_APP_ENVIRONMENT` and
+(`auth/session/whoami/route.ts` exports `{ GET }` from
+`createAuthSessionWhoamiRoute()`, `auth/session/logout/route.ts` exports
+`{ POST }` from `createAuthSessionLogoutRoute()`),
+and the generated `auth-provider.tsx` points the SDK at each of them
+(`session_routes={AUTH_SESSION_ROUTE_PATHS}` on `<AuthProvider>`, one path per
+route; pass `session_routes={null}` to the generated provider to opt out). The
+routes read `SCHEMAVAULTS_CLIENT_APP_ID`, `SCHEMAVAULTS_APP_ENVIRONMENT` and
 `SCHEMAVAULTS_AUTH_SERVER_URL` (or the environment's default auth server); the
-cookie is `Secure` outside development/test. It refuses cross-origin requests
-(`Origin` / `Sec-Fetch-Site` checks) and serves only its own app's
-`authorization_code` and `refresh_token` grants.
+cookie is `Secure` outside development/test. They refuse cross-origin requests
+(`Origin` / `Sec-Fetch-Site` checks), and the token route serves only its own
+app's `authorization_code` and `refresh_token` grants.
 
-The auth server rate-limits refresh grants per IP; proxied through the route,
-they count against the app server's IP.
+The auth server rate-limits refresh grants per IP; proxied through the token
+route, they count against the app server's IP.
 
 ## Accepting resource-URL token audiences
 

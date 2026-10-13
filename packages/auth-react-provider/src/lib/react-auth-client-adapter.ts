@@ -20,7 +20,10 @@ import {
   createUserDataSchema,
   refreshTokenDataSchema,
 } from "@schemavaults/auth-common";
-import { type ISchemaVaultsAuthClientAdapter } from "@schemavaults/auth-client-sdk";
+import {
+  type AuthSessionRoutes,
+  type ISchemaVaultsAuthClientAdapter,
+} from "@schemavaults/auth-client-sdk";
 import {
   deleteCookie,
   getCookie,
@@ -58,8 +61,8 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
   // The auth server deployment's own app id (white-label deployments override
   // the default via the 'auth_server_app_id' init option)
   private readonly auth_server_app_id: AppId;
-  // The app's same-origin auth session route ("/auth/session"), if it has one
-  private readonly session_route_uri: string | undefined;
+  // The app's same-origin auth session routes, each by its own path, if it has them
+  private readonly session_routes: AuthSessionRoutes | undefined;
 
   private readonly _fetch: (
     url: string,
@@ -114,31 +117,37 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     } else {
       this.auth_server_app_id = DEFAULT_AUTH_SERVER_APP_ID;
     }
-    if (
-      typeof opts.session_route_uri === "string" &&
-      opts.session_route_uri.length > 0
-    ) {
-      if (!/^(\/|https?:\/\/)/.test(opts.session_route_uri)) {
-        throw new TypeError(
-          "Expected 'session_route_uri' to be a path starting with '/' or an absolute http(s) URL!",
-        );
+    if (opts.session_routes) {
+      for (const name of ["token", "whoami", "logout"] as const) {
+        const route: unknown = opts.session_routes[name];
+        if (typeof route !== "string" || !/^(\/|https?:\/\/)/.test(route)) {
+          throw new TypeError(
+            `Expected session route '${name}' to be a path starting with '/' or an absolute http(s) URL!`,
+          );
+        }
       }
-      this.session_route_uri = opts.session_route_uri;
+      this.session_routes = opts.session_routes;
     }
     this._fetch = opts.fetch.bind(window);
   }
 
   /**
-   * Absolute URL of the app's same-origin auth session route, which keeps
+   * Absolute URLs of the app's same-origin auth session routes, which keep
    * the refresh token in an HTTP-only cookie on the app's own domain (see
-   * `createAuthSessionRouteHandler()` in @schemavaults/auth-server-sdk).
+   * @schemavaults/auth-server-sdk/auth-session-route).
    */
-  public getSessionRouteUrl(): string | null {
-    const uri: string | undefined = this.session_route_uri;
-    if (!uri) {
+  public getSessionRouteUrls(): AuthSessionRoutes | null {
+    const routes: AuthSessionRoutes | undefined = this.session_routes;
+    if (!routes) {
       return null;
     }
-    return uri.startsWith("/") ? `${window.location.origin}${uri}` : uri;
+    const absolute = (route: string): string =>
+      route.startsWith("/") ? `${window.location.origin}${route}` : route;
+    return {
+      token: absolute(routes.token),
+      whoami: absolute(routes.whoami),
+      logout: absolute(routes.logout),
+    };
   }
 
   private get ssl_enabled(): boolean {
@@ -677,21 +686,21 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
   }
 
   public async clearHttpOnlyRefreshToken(): Promise<void> {
-    const session_route: string | null = this.getSessionRouteUrl();
-    if (session_route) {
+    const session_routes: AuthSessionRoutes | null = this.getSessionRouteUrls();
+    if (session_routes) {
       try {
         // Revokes the session at the auth server and clears the app's cookie.
-        await this.fetch(`${session_route.replace(/\/+$/, "")}/logout`, {
+        await this.fetch(session_routes.logout, {
           method: "POST",
           credentials: "same-origin",
         });
       } catch (e: unknown) {
         console.error(
-          "Failed to log out through the app's auth session route: ",
+          "Failed to log out through the app's logout session route: ",
           e,
         );
         throw new Error(
-          "Failed to log out through the app's auth session route",
+          "Failed to log out through the app's logout session route",
         );
       }
       // A session an older SDK kept in the auth server's own cookie for
@@ -904,9 +913,9 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     if (isAuthServer) {
       return true;
     }
-    // The app's own session route keeps the refresh token in a first-party
+    // The app's own session routes keep the refresh token in a first-party
     // HTTP-only cookie, in every environment and on every browser.
-    if (this.getSessionRouteUrl() !== null) {
+    if (this.getSessionRouteUrls() !== null) {
       return true;
     }
     // else, this is a client application

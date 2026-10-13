@@ -8,6 +8,10 @@ export type { SchemaVaultsAuthProviderProps } from "./auth-provider";
 export type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 export type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
 
+// The app's same-origin auth session routes (`session_routes` prop)
+export { AUTH_SESSION_ROUTE_PATHS } from "@schemavaults/auth-client-sdk";
+export type { AuthSessionRoutes } from "@schemavaults/auth-client-sdk";
+
 export * from "./hooks";
 export type * from "./hooks";
 

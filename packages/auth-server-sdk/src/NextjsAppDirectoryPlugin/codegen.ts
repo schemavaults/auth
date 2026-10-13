@@ -52,11 +52,19 @@ const filesToCreate: readonly ITemplateAuthFile[] = [
     auth_relative_file: "error/page.tsx",
     codegen_template_path: "auth/error/page.tsx",
   },
+  // The auth session routes: keep the refresh token in an HTTP-only cookie
+  // on the app's own domain (see auth-provider.tsx).
   {
-    // The auth session route: keeps the refresh token in an HTTP-only
-    // cookie on the app's own domain (see auth-provider.tsx).
-    auth_relative_file: "session/[action]/route.ts",
-    codegen_template_path: "auth/session/[action]/route.ts",
+    auth_relative_file: "session/token/route.ts",
+    codegen_template_path: "auth/session/token/route.ts",
+  },
+  {
+    auth_relative_file: "session/whoami/route.ts",
+    codegen_template_path: "auth/session/whoami/route.ts",
+  },
+  {
+    auth_relative_file: "session/logout/route.ts",
+    codegen_template_path: "auth/session/logout/route.ts",
   },
 ];
 

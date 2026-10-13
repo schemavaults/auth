@@ -2,6 +2,7 @@ import type {
   AppId,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
+import type { AuthSessionRoutes } from "@schemavaults/auth-client-sdk";
 
 export interface IReactAuthClientSdkAdapterInitOptions {
   uuid?: () => string;
@@ -12,9 +13,9 @@ export interface IReactAuthClientSdkAdapterInitOptions {
   /** The auth server deployment's own app id; defaults to "schemavaults-auth" */
   auth_server_app_id?: AppId;
   /**
-   * Path (or absolute URL) of the app's same-origin auth session route,
-   * e.g. "/auth/session" (see `getSessionRouteUrl()` on the SDK adapter).
+   * The app's same-origin auth session routes, each by its own path (or
+   * absolute URL); see `getSessionRouteUrls()` on the SDK adapter.
    */
-  session_route_uri?: string;
+  session_routes?: AuthSessionRoutes;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }

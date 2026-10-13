@@ -1,31 +1,39 @@
+import type { AuthSessionRoutes } from "@/types/AuthSessionRoutes";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 
-export type SessionRouteAction = "token" | "whoami" | "logout";
+/**
+ * Where `auth-server-sdk codegen` writes the auth session routes
+ * (`app/auth/session/{token,whoami,logout}/route.ts`).
+ */
+export const AUTH_SESSION_ROUTE_PATHS = {
+  token: "/auth/session/token",
+  whoami: "/auth/session/whoami",
+  logout: "/auth/session/logout",
+} as const satisfies AuthSessionRoutes;
+
+const ROUTE_NAMES = ["token", "whoami", "logout"] as const satisfies readonly (keyof AuthSessionRoutes)[];
 
 /**
- * The hosting app's same-origin auth session route, if its adapter has one
- * (see `ISchemaVaultsAuthClientAdapter.getSessionRouteUrl`), without a
- * trailing slash.
+ * The absolute URLs of the hosting app's auth session routes, if its adapter
+ * has them (see `ISchemaVaultsAuthClientAdapter.getSessionRouteUrls`).
  */
-export function getSessionRouteUrl(
+export function getSessionRouteUrls(
   adapter: ISchemaVaultsAuthClientAdapter,
-): string | null {
-  if (typeof adapter.getSessionRouteUrl !== "function") {
+): AuthSessionRoutes | null {
+  if (typeof adapter.getSessionRouteUrls !== "function") {
     return null;
   }
-  const url: string | null = adapter.getSessionRouteUrl();
-  if (typeof url !== "string" || url.length === 0) {
+  const urls: AuthSessionRoutes | null = adapter.getSessionRouteUrls();
+  if (!urls) {
     return null;
   }
-  if (!/^https?:\/\//.test(url)) {
-    throw new TypeError(
-      `Expected the adapter's session route to be an absolute http(s) URL, got '${url}'`,
-    );
+  for (const name of ROUTE_NAMES) {
+    const url: unknown = urls[name];
+    if (typeof url !== "string" || !/^https?:\/\//.test(url)) {
+      throw new TypeError(
+        `Expected the adapter's '${name}' session route to be an absolute http(s) URL, got '${String(url)}'`,
+      );
+    }
   }
-  return url.replace(/\/+$/, "");
-}
-
-/** URL of one action of the session route. */
-export function sessionRouteEndpoint(route: string, action: SessionRouteAction): string {
-  return `${route}/${action}`;
+  return urls;
 }
