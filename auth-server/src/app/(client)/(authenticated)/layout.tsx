@@ -63,6 +63,7 @@ export default function AuthenticatedAuthServerLayout({
       topBarTitle={friendlyName}
       sidebarItems={links}
       usePathname={usePathname}
+      printHidden
     >
       <EmailVerificationBanner />
       {children}
