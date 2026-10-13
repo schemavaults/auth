@@ -11,7 +11,8 @@
 //   5. POST /api/oidc/introspect reports both tokens active with their
 //      metadata, and a different client's credentials see them as inactive;
 //   6. a revoked access token is refused at userinfo: after the client's
-//      session is logged out (jti revocation) and after the account is
+//      session is logged out (jti revocation; the refresh token presented
+//      as the app's cookie or as a Bearer) and after the account is
 //      disabled (`tokens_valid_after` watermark), even though the token
 //      still decrypts and verifies. A security audit found that userinfo
 //      checked cryptographic validity only;
@@ -384,6 +385,38 @@ describe("OIDC confidential client flow (management API only)", () => {
             active: false,
           });
         });
+      });
+    });
+  });
+
+  it("a logout presenting the refresh token as a Bearer revokes the session, for its own app only", () => {
+    createConfidentialClient().then((client) => {
+      mintSessionForFreshUser(client).then(({ access_token, refresh_token }) => {
+        // SDK clients on another site than the auth server hold the refresh
+        // token themselves (as an HTTP-only cookie it would be a third-party
+        // cookie, which WebKit drops) and present it as a Bearer to log out.
+        const logoutWithBearer = (client_id: string) => {
+          cy.clearCookies();
+          cy.request({
+            method: "POST",
+            url: `/api/auth/logout/${client_id}`,
+            headers: { Origin: CLIENT_ORIGIN, Authorization: `Bearer ${refresh_token}` },
+          }).then((response) => {
+            expect(response.status, `logout of ${client_id}`).to.eq(200);
+            expect(response.body.success).to.eq(true);
+          });
+        };
+
+        createConfidentialClient().then((otherClient) => {
+          logoutWithBearer(otherClient.client_id);
+          userinfo("GET", { Authorization: `Bearer ${access_token}` }).then(
+            (response) =>
+              expect(response.status, "after logging out of another app").to.eq(200),
+          );
+        });
+
+        logoutWithBearer(client.client_id);
+        expectRevokedAtUserinfo(access_token, "after a Bearer logout");
       });
     });
   });

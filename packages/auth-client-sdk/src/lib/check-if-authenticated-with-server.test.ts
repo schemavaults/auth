@@ -151,4 +151,36 @@ describe("checkIfAuthenticatedWithServer", () => {
     expect(error.message).not.toContain("teal");
     expect(error.cause).toBeDefined();
   });
+
+  test("sends cookies only when the session lives in an HTTP-only cookie", async () => {
+    const requests: Parameters<ISchemaVaultsAuthClientAdapter["fetch"]>[1][] = [];
+    const recordingFetch: ISchemaVaultsAuthClientAdapter["fetch"] = async (_url, init) => {
+      requests.push(init);
+      return new Response(JSON.stringify({ success: true, user: USER }), { status: 200 });
+    };
+
+    await checkIfAuthenticatedWithServer({
+      auth_server_uri: AUTH_SERVER,
+      adapter: { ...adapterFetching(respond(200, "")), fetch: recordingFetch },
+      client_app_id: CLIENT_APP_ID,
+      auth_server_app_id: "schemavaults",
+    });
+    expect(requests[0]?.credentials).toBe("include");
+    expect(new Headers(requests[0]?.headers).has("Authorization")).toBe(false);
+
+    await checkIfAuthenticatedWithServer({
+      auth_server_uri: AUTH_SERVER,
+      adapter: {
+        fetch: recordingFetch,
+        hasRefreshToken: (): boolean => true,
+        doesSupportHttpOnlyRefreshToken: (): boolean => false,
+        getRefreshToken: () => ({ token: "the-refresh-token" }),
+      } as unknown as ISchemaVaultsAuthClientAdapter,
+      client_app_id: CLIENT_APP_ID,
+      auth_server_app_id: "schemavaults",
+    });
+    // A stale refresh-token cookie must not shadow the Bearer token.
+    expect(requests[1]?.credentials).toBe("omit");
+    expect(new Headers(requests[1]?.headers).get("Authorization")).toBe("Bearer the-refresh-token");
+  });
 });

@@ -19,10 +19,10 @@ export const logout = defineOperation({
   path: ROUTE,
   summary: "Log out of a client application",
   description:
-    "Ends the browser's session with `client_app_id`: when the app's refresh token cookie is present and verifies, that refresh token and the access tokens minted with it are revoked server-side (other devices and other apps stay signed in), then the app's refresh token cookies are cleared. Browser callers (an `Origin` header is present) must come from an origin registered for the app and receive credentialed CORS headers; web apps must always send an `Origin`. Answer `OPTIONS` for the CORS preflight.",
+    "Ends the browser's session with `client_app_id`: when the app's refresh token cookie (or, for SDK clients that hold the refresh token themselves, `Authorization: Bearer <refresh token>` issued to `client_app_id`) is present and verifies, that refresh token and the access tokens minted with it are revoked server-side (other devices and other apps stay signed in), then the app's refresh token cookies are cleared. Browser callers (an `Origin` header is present) must come from an origin registered for the app and receive credentialed CORS headers; web apps must always send an `Origin`. Answer `OPTIONS` for the CORS preflight.",
   tags: [API_TAGS.authentication],
   auth: publicAccess(
-    "Needs no credentials: an expired or missing refresh token still clears the cookies.",
+    "Needs no credentials: an expired or missing refresh token still clears the cookies. A Bearer refresh token issued to another app is ignored.",
   ),
   request: {
     params: z.object({

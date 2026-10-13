@@ -113,7 +113,12 @@ export default async function checkIfAuthenticatedWithServer({
   try {
     response = await adapter.fetch(url, {
       method: "GET",
-      credentials: "include",
+      // A Bearer-authenticated call sends no cookies: whoami tries the
+      // app's refresh-token cookie before the header, so a stale cookie
+      // (e.g. left by an SDK that kept this app's session in one) would
+      // otherwise answer for, or with a revoked token fail, the session
+      // being checked.
+      credentials: supportsHttpOnlyCookies ? "include" : "omit",
       headers,
     });
   } catch (e: unknown) {

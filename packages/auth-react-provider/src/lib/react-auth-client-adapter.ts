@@ -29,6 +29,10 @@ import {
 } from "cookies-next/client";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
 import isClientRuntime from "@/lib/isClientRuntime";
+import {
+  documentCookieDomainProbe,
+  isSameSiteAsAuthServer,
+} from "@/lib/same-site-as-auth-server";
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
@@ -668,11 +672,50 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     return;
   }
 
+  /**
+   * Ends a localStorage-held session server-side, as the cookie mode's
+   * logout does: the logout endpoint revokes the refresh token presented as
+   * a Bearer (and the access tokens minted with it). Sent with credentials
+   * so it also clears an HTTP-only refresh-token cookie that an older SDK
+   * (which used cookies for every app outside development/test) left on the
+   * auth server. Best effort: a local logout never waits on the network.
+   */
+  private async revokeLocalStorageRefreshToken(): Promise<void> {
+    const refresh_token: RefreshToken | null = this.getLocalStorageRefreshToken();
+    const has_legacy_cookie_session: boolean =
+      typeof getCookie(RefreshTokenExpiryCookieName(this.client_app_id)) ===
+      "string";
+    if (!refresh_token && !has_legacy_cookie_session) {
+      return;
+    }
+    const headers = new Headers();
+    if (refresh_token) {
+      headers.set("Authorization", `Bearer ${refresh_token.token}`);
+    }
+    try {
+      await this.fetch(
+        `${this.auth_server_uri}/api/auth/logout/${this.client_app_id}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers,
+        },
+      );
+    } catch (e: unknown) {
+      console.error(
+        "[ReactAuthClientSdkAdapter] Failed to revoke the refresh token at the auth server: ",
+        e,
+      );
+    }
+    this.clearHttpOnlyRefreshTokenMarker();
+  }
+
   public async clearAuthTokens(): Promise<void> {
     this.clearAccessTokens();
     if (this.doesSupportHttpOnlyRefreshToken()) {
       await this.clearHttpOnlyRefreshToken();
     } else {
+      await this.revokeLocalStorageRefreshToken();
       this.clearLocalStorageRefreshToken();
     }
     return;
@@ -811,7 +854,39 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     if (environment === "development" || environment === "test") {
       return false;
     }
-    return true;
+    // ...and only where the cookie is first-party: the auth server sets it
+    // on its own host, so for a page on another site it is a third-party
+    // cookie, which Safari and every iOS browser drop (the login then fails
+    // right after the code exchange). Such pages keep the refresh token in
+    // localStorage instead, like any browser OAuth client.
+    return this.isSameSiteAsAuthServer();
+  }
+
+  private _same_site_as_auth_server: boolean | undefined = undefined;
+
+  private isSameSiteAsAuthServer(): boolean {
+    if (typeof this._same_site_as_auth_server === "boolean") {
+      return this._same_site_as_auth_server;
+    }
+    if (!isClientRuntime()) {
+      return false;
+    }
+    const same_site: boolean = isSameSiteAsAuthServer(
+      window.location,
+      this.auth_server_uri,
+      documentCookieDomainProbe,
+    );
+    if (this.debug) {
+      console.log(
+        `[ReactAuthClientSdkAdapter] This page (${window.location.hostname}) and the auth server (${this.auth_server_uri}) are ${
+          same_site
+            ? "the same site: the refresh token is kept in an HTTP-only cookie"
+            : "different sites: the refresh token is kept in localStorage (an HTTP-only cookie would be a third-party cookie)"
+        }`,
+      );
+    }
+    this._same_site_as_auth_server = same_site;
+    return same_site;
   }
 
   /**

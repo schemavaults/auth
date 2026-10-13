@@ -29,7 +29,11 @@ The SDK talks to the auth server's **standard OIDC surface** through the
   refresh token is set as an HTTP-only cookie on the auth server's domain and
   never exposed to JavaScript; the SDK only tracks its expiry through the
   `refresh_token_expires_in` response field. Otherwise the refresh token is
-  inlined and stored through the adapter.
+  inlined and stored through the adapter, and presented as
+  `Authorization: Bearer` (whoami calls then send no cookies). The React
+  provider's adapter uses the cookie only for the auth server's own app and
+  for pages on the same site as the auth server: for a page on another site
+  it would be a third-party cookie, which Safari and every iOS browser drop.
 - The platform's full `UserData` (`currentUser`) is synced from
   `GET /api/auth/whoami/[client_app_id]` after every login and refresh.
 
