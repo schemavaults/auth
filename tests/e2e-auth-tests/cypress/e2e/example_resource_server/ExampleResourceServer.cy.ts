@@ -236,8 +236,9 @@ describe("ExampleResourceServer", () => {
                 // The refresh token is in the session route's HTTP-only
                 // cookie, and never in storage page scripts can read.
                 cy.getCookies().then((cookies) => {
+                  // `__Host-`-prefixed outside development/test.
                   const sessionCookie = cookies.find((cookie) =>
-                    cookie.name.startsWith("schemavaults_refresh_token_"),
+                    /^(__Host-)?schemavaults_refresh_token_/.test(cookie.name),
                   );
                   expect(sessionCookie, "session route cookie").to.exist;
                   expect(sessionCookie?.httpOnly, "HTTP-only").to.be.true;

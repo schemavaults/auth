@@ -43,14 +43,6 @@ export interface AuthSessionRouteOptions {
   fetch?: AuthSessionUpstreamFetch;
   /** Timeout of each request to the auth server, in milliseconds (default 30s). */
   upstream_timeout_ms?: number;
-  /**
-   * `Path` of the session cookie: a path prefix of all three session routes,
-   * so the browser sends the cookie to each of them (and nowhere else).
-   * Default: the parent path of the route serving the request
-   * (`/auth/session` for `/auth/session/token`), right when the three routes
-   * share a parent, as codegen's do. Give every route the same value.
-   */
-  cookie_path?: string;
 }
 
 /** A route handler: a Web `Request → Response` function. */
@@ -144,16 +136,6 @@ function isSameOriginRequest(request: Request): boolean {
 }
 
 /**
- * The session routes' common parent path (`/auth/session` for
- * `/auth/session/token`): the cookie's default `Path`, so the browser sends
- * it to all three routes and nowhere else.
- */
-function sessionRoutesPath(pathname: string): string {
-  const trimmed: string = pathname.replace(/\/+$/, "");
-  return trimmed.slice(0, trimmed.lastIndexOf("/")) || "/";
-}
-
-/**
  * Wraps one session route's logic with what every route shares: the
  * same-origin check, the configuration (resolved per request: environment
  * variables may be unset while a framework builds the route module), the
@@ -188,10 +170,7 @@ export function createSessionRoute(
     };
     const cookie: SessionCookie = {
       name: AuthSessionRefreshTokenCookieName(config.client_app_id, secure),
-      attrs: {
-        path: options.cookie_path ?? sessionRoutesPath(new URL(request.url).pathname),
-        secure,
-      },
+      attrs: { secure },
     };
     return await handle({
       request,

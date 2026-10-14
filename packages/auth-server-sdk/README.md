@@ -42,10 +42,12 @@ to the auth server, one route handler each:
 | whoami (`/auth/session/whoami`) | `createAuthSessionWhoamiRoute()` | `GET` |
 | logout (`/auth/session/logout`) | `createAuthSessionLogoutRoute()` | `POST` |
 
-The refresh token is kept in an HTTP-only, `SameSite=Strict` cookie on the
-app's own domain, scoped to the routes' common parent path (`/auth/session`
-for codegen's routes; pass the same `cookie_path` to all three factories when
-your routes share no parent), and is never returned to the page, so:
+The refresh token is kept in an HTTP-only, `SameSite=Strict`, host-only cookie
+on the app's own host (`__Host-schemavaults_refresh_token_<app>`: the
+`__Host-` prefix makes browsers refuse any such cookie that carries a `Domain`
+or a narrower `Path`, so a sibling subdomain cannot plant one; a request that
+carries the cookie twice is treated as having no session), and is never
+returned to the page, so:
 
 - page scripts (an XSS payload included) can never read or exfiltrate it;
 - it is a first-party cookie, which browsers that block third-party cookies

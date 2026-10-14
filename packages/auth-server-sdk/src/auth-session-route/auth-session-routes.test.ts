@@ -11,7 +11,7 @@ import {
 const APP = "my-game";
 const APP_ORIGIN = "https://game.example.ca";
 const AUTH = "https://auth.example.com";
-const COOKIE = `__Secure-schemavaults_refresh_token_${APP}`;
+const COOKIE = `__Host-schemavaults_refresh_token_${APP}`;
 
 interface UpstreamCall {
   url: string;
@@ -132,7 +132,7 @@ describe("auth session routes", () => {
     expect(body.id_token).toBe("id-token");
     expect(body.refresh_token_expires_in).toBe(2_592_000);
     expect(response.headers.get("Set-Cookie")).toBe(
-      `${COOKIE}=refresh-1; Max-Age=2592000; Path=/auth/session; HttpOnly; SameSite=Strict; Secure`,
+      `${COOKIE}=refresh-1; Max-Age=2592000; Path=/; HttpOnly; SameSite=Strict; Secure`,
     );
   });
 
@@ -242,7 +242,7 @@ describe("auth session routes", () => {
 
     const refused = await whoami(pageRequest("whoami", { cookie: `${COOKIE}=refresh-1` }));
     expect(refused.status).toBe(401);
-    expect(refused.headers.get("Set-Cookie")).toStartWith(`${COOKIE}=; Max-Age=0; Path=/auth/session;`);
+    expect(refused.headers.get("Set-Cookie")).toStartWith(`${COOKIE}=; Max-Age=0; Path=/;`);
 
     const signed_out = await whoami(pageRequest("whoami"));
     expect(signed_out.status).toBe(401);
@@ -257,8 +257,7 @@ describe("auth session routes", () => {
     expect(calls[0]?.headers.get("Authorization")).toBe("Bearer refresh-1");
     expect(calls[0]?.headers.get("Origin")).toBe(APP_ORIGIN);
     expect(response.status).toBe(200);
-    // Path: the routes' common parent, as the token route set it.
-    expect(response.headers.get("Set-Cookie")).toStartWith(`${COOKIE}=; Max-Age=0; Path=/auth/session;`);
+    expect(response.headers.get("Set-Cookie")).toStartWith(`${COOKIE}=; Max-Age=0; Path=/;`);
   });
 
   test("logout still clears the cookie when the auth server is unreachable", async () => {
@@ -281,21 +280,40 @@ describe("auth session routes", () => {
     expect((await bodyOf(response)).error).toBe("temporarily_unavailable");
   });
 
-  test("an explicit cookie_path covers routes that share no parent", async () => {
+  test("the session cookie is host-only under __Host- (no Domain, Path=/, Secure)", async () => {
     const { fetch } = upstreamAnswering(jsonResponse(200, ISSUED));
-    const response = await route("token", fetch, { cookie_path: "/" })(
+    const response = await route("token", fetch)(
       pageRequest("token", { body: form({ grant_type: "authorization_code", client_id: APP, code: "c" }) }),
     );
-    expect(response.headers.get("Set-Cookie")).toContain("; Path=/; ");
+    const set_cookie: string = response.headers.get("Set-Cookie") ?? "";
+    expect(set_cookie).toStartWith("__Host-");
+    expect(set_cookie).toContain("; Path=/;");
+    expect(set_cookie).toContain("; Secure");
+    expect(set_cookie.toLowerCase()).not.toContain("domain=");
   });
 
-  test("plain-HTTP development cookies drop Secure and the __Secure- prefix", async () => {
+  test("a planted duplicate of the session cookie is never used", async () => {
+    // The Cookie header carries no attributes: with two cookies of the same
+    // name the route cannot tell its own from one another host planted.
+    const { calls, fetch } = upstreamAnswering();
+    const planted = `${COOKIE}=attacker-refresh; ${COOKIE}=refresh-1`;
+    const refresh = await route("token", fetch)(
+      pageRequest("token", { cookie: planted, body: form({ grant_type: "refresh_token", client_id: APP }) }),
+    );
+    expect(refresh.status).toBe(400);
+    expect((await bodyOf(refresh)).error).toBe("invalid_grant");
+    const whoami = await route("whoami", fetch)(pageRequest("whoami", { cookie: planted }));
+    expect(whoami.status).toBe(401);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("plain-HTTP development cookies drop Secure and the __Host- prefix", async () => {
     const { fetch } = upstreamAnswering(jsonResponse(200, ISSUED));
     const response = await route("token", fetch, { environment: "development" })(
       pageRequest("token", { body: form({ grant_type: "authorization_code", client_id: APP, code: "c" }) }),
     );
     expect(response.headers.get("Set-Cookie")).toBe(
-      `schemavaults_refresh_token_${APP}=refresh-1; Max-Age=2592000; Path=/auth/session; HttpOnly; SameSite=Strict`,
+      `schemavaults_refresh_token_${APP}=refresh-1; Max-Age=2592000; Path=/; HttpOnly; SameSite=Strict`,
     );
   });
 });
