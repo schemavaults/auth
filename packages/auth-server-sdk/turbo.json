@@ -2,7 +2,14 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "inputs": ["src/**", "package.json", "tsconfig.json"],
+      "inputs": [
+        "src/**",
+        "package.json",
+        "tsconfig.json",
+        "copy-codegen-templates.sh",
+        "prepare-cli.sh",
+        "$TURBO_ROOT$/packages/auth-resource-server-codegen-templates/src/**"
+      ],
       "outputs": ["dist/**"],
       "persistent": false,
       "cache": true

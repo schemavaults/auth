@@ -114,7 +114,9 @@ dependents of dependents.
 `auth-server-sdk` build script (`copy-codegen-templates.sh`) copies the codegen
 templates' source into `auth-server-sdk/dist/codegen-templates/` and bundles them
 into the published CLI. There is no `package.json` edge between the two (the
-coupling is build-time only), so `grep` won't reveal it. Any change to
+coupling is build-time only), so `grep` won't reveal it. (Turbo does know:
+`packages/auth-server-sdk/turbo.json` lists the templates' `src/**` among the
+build's `inputs`, so a template edit invalidates `auth-server-sdk`'s cached build.) Any change to
 `auth-resource-server-codegen-templates` (including updating one of its own
 dependencies, like `@schemavaults/ui`) requires republishing `auth-server-sdk` so
 consumers of the CLI pick up the new template content. The edge only runs this
