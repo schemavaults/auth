@@ -31,9 +31,11 @@ The SDK talks to the auth server's **standard OIDC surface** through the
   `refresh_token_expires_in` response field. Otherwise the refresh token is
   inlined and stored through the adapter, and presented as
   `Authorization: Bearer` (whoami calls then send no cookies). The React
-  provider's adapter uses the cookie only for the auth server's own app and
-  for pages on the same site as the auth server: for a page on another site
-  it would be a third-party cookie, which Safari and every iOS browser drop.
+  provider's adapter uses the auth server's cookie only for the auth server's
+  own app: for a client app on another site it would be a third-party cookie,
+  which Safari and every iOS browser drop. Client apps get an HTTP-only
+  refresh token through session routes (below), else it is kept in
+  localStorage.
 - When the adapter has same-origin auth session routes
   (`getSessionRouteUrls()`: one URL per route, `token`, `whoami` and
   `logout`; `session_routes` on the React provider; served by the route

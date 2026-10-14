@@ -32,10 +32,6 @@ import {
 } from "cookies-next/client";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
 import isClientRuntime from "@/lib/isClientRuntime";
-import {
-  documentCookieDomainProbe,
-  isSameSiteAsAuthServer,
-} from "@/lib/same-site-as-auth-server";
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
@@ -918,45 +914,13 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     if (this.getSessionRouteUrls() !== null) {
       return true;
     }
-    // else, this is a client application
-    // we only use http-only refresh tokens in secure contexts
-    const environment: SchemaVaultsAppEnvironment = this.environment;
-    if (environment === "development" || environment === "test") {
-      return false;
-    }
-    // ...and only where the cookie is first-party: the auth server sets it
-    // on its own host, so for a page on another site it is a third-party
-    // cookie, which Safari and every iOS browser drop (the login then fails
-    // right after the code exchange). Such pages keep the refresh token in
-    // localStorage instead, like any browser OAuth client.
-    return this.isSameSiteAsAuthServer();
-  }
-
-  private _same_site_as_auth_server: boolean | undefined = undefined;
-
-  private isSameSiteAsAuthServer(): boolean {
-    if (typeof this._same_site_as_auth_server === "boolean") {
-      return this._same_site_as_auth_server;
-    }
-    if (!isClientRuntime()) {
-      return false;
-    }
-    const same_site: boolean = isSameSiteAsAuthServer(
-      window.location,
-      this.auth_server_uri,
-      documentCookieDomainProbe,
-    );
-    if (this.debug) {
-      console.log(
-        `[ReactAuthClientSdkAdapter] This page (${window.location.hostname}) and the auth server (${this.auth_server_uri}) are ${
-          same_site
-            ? "the same site: the refresh token is kept in an HTTP-only cookie"
-            : "different sites: the refresh token is kept in localStorage (an HTTP-only cookie would be a third-party cookie)"
-        }`,
-      );
-    }
-    this._same_site_as_auth_server = same_site;
-    return same_site;
+    // Any other client app keeps the refresh token in localStorage. The auth
+    // server's own cookie is not used for it: set on the auth server's host,
+    // it is a third-party cookie for an app on another site, which Safari
+    // and every iOS browser drop (the login then fails right after the code
+    // exchange). Session routes are how a client app gets an HTTP-only
+    // refresh token.
+    return false;
   }
 
   /**
