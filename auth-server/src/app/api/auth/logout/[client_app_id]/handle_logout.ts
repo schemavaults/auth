@@ -32,7 +32,8 @@ import captureServerException from "@/lib/captureServerException";
 
 /**
  * POST /api/auth/logout/{client_app_id}: revokes the presented refresh
- * token (and the access tokens minted with it) when it verifies, then
+ * token(s) — the app's cookie and/or a Bearer refresh token issued to the
+ * app — and the access tokens minted with them when they verify, then
  * clears the client app's refresh token cookies. Behaviour predates the
  * operations runtime and is kept as-is (the runtime validates the id).
  */
@@ -102,9 +103,23 @@ export async function handleLogout(req: NextRequest, client_app_id: AppId): Prom
   // password-reset remedy and would end the user's sessions in every other
   // client app and on every other device, and kill any authorization code
   // a relying party is about to redeem.
-  try {
-    const refresh_token_value = req.cookies.get(refresh_token_cookie_name)?.value;
-    if (refresh_token_value) {
+  //
+  // The refresh token comes from the app's cookie or, for SDK clients that
+  // hold it themselves (inline delivery, e.g. apps on another site than the
+  // auth server), from `Authorization: Bearer`. The header carries no
+  // per-app binding the way the cookie name does, so a bearer token is only
+  // revoked when it was issued to `client_app_id`.
+  const presented_refresh_tokens: { token: string; from_bearer: boolean }[] = [];
+  const refresh_token_cookie_value = req.cookies.get(refresh_token_cookie_name)?.value;
+  if (refresh_token_cookie_value) {
+    presented_refresh_tokens.push({ token: refresh_token_cookie_value, from_bearer: false });
+  }
+  const bearer_refresh_token = /^Bearer\s+(\S+)$/i.exec(req.headers.get("Authorization") ?? "")?.[1];
+  if (bearer_refresh_token) {
+    presented_refresh_tokens.push({ token: bearer_refresh_token, from_bearer: true });
+  }
+  for (const { token: refresh_token_value, from_bearer } of presented_refresh_tokens) {
+    try {
       const keyset_id = getKeysetIdFromToken(refresh_token_value);
       const jwt_keys_manager = new AuthServerJwtKeysManager(dbh.db);
       const keyset = await jwt_keys_manager.getKeyset(getAuthServerAppId(), keyset_id);
@@ -114,6 +129,14 @@ export async function handleLogout(req: NextRequest, client_app_id: AppId): Prom
         jwt_keys: keyset,
         env: environment,
       });
+      if (from_bearer && decoded.app !== client_app_id) {
+        if (debug) {
+          console.warn(
+            `[/api/auth/logout/${client_app_id}] Ignoring a Bearer refresh token issued to another app ('${decoded.app}')`,
+          );
+        }
+        continue;
+      }
       if (decoded.jti) {
         const expires_at = Date.now() + refreshTokenExpiry * 1000;
         await revokeToken(dbh.db, decoded.jti, decoded.uid, expires_at);
@@ -124,15 +147,15 @@ export async function handleLogout(req: NextRequest, client_app_id: AppId): Prom
         );
         if (debug) {
           console.log(
-            `[/api/auth/logout/${client_app_id}] Revoked refresh token jti '${decoded.jti}' and ${siblings_revoked} access token(s) issued with it for user '${decoded.uid}'`,
+            `[/api/auth/logout/${client_app_id}] Revoked refresh token jti '${decoded.jti}' (from ${from_bearer ? "Bearer" : "cookie"}) and ${siblings_revoked} access token(s) issued with it for user '${decoded.uid}'`,
           );
         }
       }
-    }
-  } catch (e: unknown) {
-    // Token may be expired, invalid, or missing -- still proceed with cookie clearing
-    if (debug) {
-      console.warn("[logout] Could not revoke session server-side (token may be expired/invalid): ", e);
+    } catch (e: unknown) {
+      // Token may be expired, invalid, or missing -- still proceed with cookie clearing
+      if (debug) {
+        console.warn("[logout] Could not revoke session server-side (token may be expired/invalid): ", e);
+      }
     }
   }
 

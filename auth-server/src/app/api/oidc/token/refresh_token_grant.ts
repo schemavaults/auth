@@ -67,6 +67,22 @@ export function extractPresentedRefreshToken(
 }
 
 /**
+ * Whether {@link extractPresentedRefreshToken} takes the refresh token
+ * from the app's cookie (no `refresh_token` form parameter). Such a grant
+ * must rotate the token back into the cookie, never inline.
+ */
+export function isRefreshTokenPresentedViaCookie(
+  param: OidcTokenFormParam,
+  cookies: OidcGrantContext["request"]["cookies"],
+  client_app_id: AppId,
+): boolean {
+  return (
+    !param("refresh_token") &&
+    extractPresentedRefreshToken(param, cookies, client_app_id) !== null
+  );
+}
+
+/**
  * grant_type=refresh_token (RFC 6749 §6 / OIDC Core §12): redeems a
  * refresh token for a fresh token set (no id_token — OIDC Core §12.2
  * permits omitting it). The token's granted scope (possibly none, for a

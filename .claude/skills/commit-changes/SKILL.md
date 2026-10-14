@@ -69,7 +69,7 @@ cascade.
 | `auth-react-provider`                    | `app-definitions`, `auth-common`, `auth-client-sdk`                                             |
 | `auth-ui`                                | `app-definitions`, `auth-common`, `auth-react-provider` (all peerDeps)                          |
 | `openapi-operations`                     | `auth-common`                                                                                   |
-| `auth-resource-server-codegen-templates` | `auth-react-provider` (the templates import it; devDep). Its devDeps on `jwt`, `auth-common` and `auth-client-sdk` are type-check only; the templates never import them |
+| `auth-resource-server-codegen-templates` | `auth-react-provider` (the templates import it; devDep). Its devDeps on `jwt`, `auth-common` and `auth-client-sdk` are type-check only; the templates never import them. Its devDep on `auth-server-sdk` is type-check only too: the generated `auth/session/{token,whoami,logout}/route.ts` import `@schemavaults/auth-server-sdk/auth-session-route`, which the consuming app resolves to the `auth-server-sdk` it already runs codegen from (no cascade edge, see the note below) |
 | `auth-server-sdk`                        | `app-definitions`, `auth-common`, `jwt`, `openapi-operations` (optional peerDep + devDep, for the `/openapi-operations` sub-export); **`auth-resource-server-codegen-templates` (build-time copy, see note)** |
 | `trpc-backend-init`                      | `app-definitions`, `auth-server-sdk` (both peerDeps)                                            |
 | `openapi-docs-ui`                        | (none; peerDep on the external `@schemavaults/ui` only)                                          |
@@ -114,12 +114,16 @@ dependents of dependents.
 `auth-server-sdk` build script (`copy-codegen-templates.sh`) copies the codegen
 templates' source into `auth-server-sdk/dist/codegen-templates/` and bundles them
 into the published CLI. There is no `package.json` edge between the two (the
-coupling is build-time only), so `grep` won't reveal it. Any change to
+coupling is build-time only), so `grep` won't reveal it. (Turbo does know:
+`packages/auth-server-sdk/turbo.json` lists the templates' `src/**` among the
+build's `inputs`, so a template edit invalidates `auth-server-sdk`'s cached build.) Any change to
 `auth-resource-server-codegen-templates` (including updating one of its own
 dependencies, like `@schemavaults/ui`) requires republishing `auth-server-sdk` so
 consumers of the CLI pick up the new template content. The edge only runs this
-way: the templates do not depend on `auth-server-sdk`, so an `auth-server-sdk`
-change does **not** bump the templates.
+way: the templates' devDependency on `auth-server-sdk` exists only to type-check
+the generated session route (which imports the consumer's own
+`auth-server-sdk`), so an `auth-server-sdk` change does **not** bump the
+templates.
 
 **Note on `auth-react-provider` → `auth-resource-server-codegen-templates`:** the
 generated pages import hooks from `@schemavaults/auth-react-provider` (and

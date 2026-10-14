@@ -79,6 +79,8 @@ bun run test --filter @schemavaults/auth-ui          # Run tests in auth-ui pack
   └─ @schemavaults/auth-common                        ← Shared auth types, middleware rules, PKCE, hashing
        ├─ @schemavaults/jwt                           ← JWT key management, token signing/verification (uses jose)
        │    └─ @schemavaults/auth-server-sdk          ← Server-side middleware, route protection for resource servers,
+       │                                                the auth session route (`/auth-session-route`: keeps a resource
+       │                                                server's refresh token in a first-party HTTP-only cookie),
        │                                                `auth-server-sdk codegen` CLI; its build bundles the codegen templates below.
        │                                                Optional peerDep on openapi-operations for its `/openapi-operations`
        │                                                sub-export (`createSchemaVaultsAuthResolvers()`)

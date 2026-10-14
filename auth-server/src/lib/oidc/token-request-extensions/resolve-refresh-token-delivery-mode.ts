@@ -9,6 +9,11 @@ import getAuthServerAppId from "@/lib/config/auth-server-app-id";
  *
  *   - the auth server's own frontend ALWAYS gets an HTTP-only cookie
  *     (its server-rendered route guards read the cookie);
+ *   - a refresh grant that presented its refresh token as the app's
+ *     HTTP-only cookie gets the rotated token back in the cookie, whatever
+ *     it requested: answering inline would hand a script on the client's
+ *     page (which can make the browser send the cookie, but never read it)
+ *     the refresh token the cookie exists to keep from it;
  *   - other clients get a cookie only when they ask for one AND the
  *     deployment is secure (cross-site cookies require `SameSite=None;
  *     Secure`, which plain-HTTP dev/test deployments cannot set), else
@@ -18,8 +23,12 @@ export function resolveRefreshTokenDeliveryMode(
   client_app_id: AppId,
   requested: OidcRefreshTokenDeliveryMode,
   secure: boolean,
+  presented_via_cookie: boolean = false,
 ): OidcRefreshTokenDeliveryMode {
   if (client_app_id === getAuthServerAppId()) {
+    return "http_only_cookie";
+  }
+  if (presented_via_cookie) {
     return "http_only_cookie";
   }
   if (requested === "http_only_cookie" && secure) {

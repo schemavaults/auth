@@ -151,4 +151,61 @@ describe("checkIfAuthenticatedWithServer", () => {
     expect(error.message).not.toContain("teal");
     expect(error.cause).toBeDefined();
   });
+
+  test("sends cookies only when the session lives in an HTTP-only cookie", async () => {
+    const requests: Parameters<ISchemaVaultsAuthClientAdapter["fetch"]>[1][] = [];
+    const recordingFetch: ISchemaVaultsAuthClientAdapter["fetch"] = async (_url, init) => {
+      requests.push(init);
+      return new Response(JSON.stringify({ success: true, user: USER }), { status: 200 });
+    };
+
+    await checkIfAuthenticatedWithServer({
+      auth_server_uri: AUTH_SERVER,
+      adapter: { ...adapterFetching(respond(200, "")), fetch: recordingFetch },
+      client_app_id: CLIENT_APP_ID,
+      auth_server_app_id: "schemavaults",
+    });
+    expect(requests[0]?.credentials).toBe("include");
+    expect(new Headers(requests[0]?.headers).has("Authorization")).toBe(false);
+
+    await checkIfAuthenticatedWithServer({
+      auth_server_uri: AUTH_SERVER,
+      adapter: {
+        fetch: recordingFetch,
+        hasRefreshToken: (): boolean => true,
+        doesSupportHttpOnlyRefreshToken: (): boolean => false,
+        getRefreshToken: () => ({ token: "the-refresh-token" }),
+      } as unknown as ISchemaVaultsAuthClientAdapter,
+      client_app_id: CLIENT_APP_ID,
+      auth_server_app_id: "schemavaults",
+    });
+    // A stale refresh-token cookie must not shadow the Bearer token.
+    expect(requests[1]?.credentials).toBe("omit");
+    expect(new Headers(requests[1]?.headers).get("Authorization")).toBe("Bearer the-refresh-token");
+  });
+
+  test("asks the app's whoami session route, which holds the refresh token, when it has one", async () => {
+    const calls: { url: string; init: Parameters<ISchemaVaultsAuthClientAdapter["fetch"]>[1] }[] = [];
+    const user = await checkIfAuthenticatedWithServer({
+      auth_server_uri: AUTH_SERVER,
+      adapter: {
+        ...adapterFetching(respond(200, "")),
+        fetch: async (url, init) => {
+          calls.push({ url, init });
+          return new Response(JSON.stringify({ success: true, user: USER }), { status: 200 });
+        },
+        getSessionRouteUrls: () => ({
+          token: "https://game.example.ca/auth/session/token",
+          whoami: "https://game.example.ca/api/me",
+          logout: "https://game.example.ca/auth/session/logout",
+        }),
+      },
+      client_app_id: CLIENT_APP_ID,
+      auth_server_app_id: "schemavaults",
+    });
+    expect(user?.uid).toBe(UID);
+    expect(calls[0]?.url).toBe("https://game.example.ca/api/me");
+    expect(calls[0]?.init?.credentials).toBe("same-origin");
+    expect(new Headers(calls[0]?.init?.headers).has("Authorization")).toBe(false);
+  });
 });

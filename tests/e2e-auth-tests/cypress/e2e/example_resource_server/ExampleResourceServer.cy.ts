@@ -222,7 +222,8 @@ describe("ExampleResourceServer", () => {
             }).then(() => {
               // User is now authenticated on the example resource server.
               // Clear all access token cookies to simulate expired access tokens,
-              // while keeping the refresh token in localStorage intact.
+              // while keeping the refresh token intact: the app's auth session
+              // route holds it in an HTTP-only cookie on the app's own domain.
               cy.origin(exampleAppOrigin, () => {
                 cy.getCookies().then((cookies) => {
                   for (const cookie of cookies) {
@@ -232,13 +233,23 @@ describe("ExampleResourceServer", () => {
                   }
                 });
 
-                // Verify refresh token still exists in localStorage
+                // The refresh token is in the session route's HTTP-only
+                // cookie, and never in storage page scripts can read.
+                cy.getCookies().then((cookies) => {
+                  // `__Host-`-prefixed outside development/test.
+                  const sessionCookie = cookies.find((cookie) =>
+                    /^(__Host-)?schemavaults_refresh_token_/.test(cookie.name),
+                  );
+                  expect(sessionCookie, "session route cookie").to.exist;
+                  expect(sessionCookie?.httpOnly, "HTTP-only").to.be.true;
+                });
                 cy.window().then((win) => {
                   const keys = Object.keys(win.localStorage);
                   const hasRefreshToken = keys.some((k) =>
                     k.startsWith("refresh_token_"),
                   );
-                  expect(hasRefreshToken).to.be.true;
+                  expect(hasRefreshToken, "refresh token in localStorage").to.be
+                    .false;
                 });
 
                 cy.visit("/auth/login");

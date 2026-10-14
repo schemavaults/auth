@@ -1,3 +1,4 @@
+import type { AuthSessionRoutes } from "@/types/AuthSessionRoutes";
 import type {
   AccessToken,
   RefreshToken,
@@ -46,6 +47,21 @@ interface AuthClientAuthTokensActions {
 
   doesSupportHttpOnlyRefreshToken?: undefined | (() => boolean);
   clearHttpOnlyRefreshToken?: () => Promise<void>;
+
+  /**
+   * @name getSessionRouteUrls
+   * @description Absolute URLs of the hosting app's same-origin auth
+   * session routes, one per route (codegen serves them at
+   * `AUTH_SESSION_ROUTE_PATHS`, with the route factories of
+   * `@schemavaults/auth-server-sdk/auth-session-route`), or null when the
+   * app serves none. When set, the SDK sends its token requests to `token`,
+   * its whoami calls to `whoami` and logout to `logout` instead of the auth
+   * server: the routes keep the refresh token in an HTTP-only cookie on the
+   * app's own domain (a first-party cookie, which browsers that block
+   * third-party cookies keep) and never return it to the page. The adapter
+   * should then report `doesSupportHttpOnlyRefreshToken()`.
+   */
+  getSessionRouteUrls?: () => AuthSessionRoutes | null;
 
   /**
    * @name storeHttpOnlyRefreshTokenMarker

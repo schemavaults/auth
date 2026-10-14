@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type AuthSessionRoutes,
   type ISchemaVaultsAuthClient,
   type InitializeAuthClientOptions,
 } from "@schemavaults/auth-client-sdk";
@@ -28,6 +29,8 @@ export interface UseAuthClientInitializationOptions {
   invite_code_required?: boolean;
   /** Turn off the SDK's error reporting to the auth server. */
   disable_telemetry?: boolean;
+  /** The app's same-origin auth session routes (each by its own path). */
+  session_routes?: AuthSessionRoutes;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
 
@@ -63,6 +66,7 @@ export function useAuthClientInitialization(
       : true;
 
   const disable_telemetry: boolean = opts.disable_telemetry === true;
+  const session_routes: AuthSessionRoutes | undefined = opts.session_routes;
 
   // Auth client initialization side-effect
   useEffect(
@@ -96,6 +100,7 @@ export function useAuthClientInitialization(
             auth_server_app_id,
             invite_code_required,
             disable_telemetry,
+            session_routes,
             fetch: httpFetch,
           });
 
@@ -150,6 +155,7 @@ export function useAuthClientInitialization(
       default_audiences,
       invite_code_required,
       disable_telemetry,
+      session_routes,
       httpFetch,
     ],
   ); // end of auth client initialization side-effect

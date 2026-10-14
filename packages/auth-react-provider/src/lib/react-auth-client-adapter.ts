@@ -20,7 +20,10 @@ import {
   createUserDataSchema,
   refreshTokenDataSchema,
 } from "@schemavaults/auth-common";
-import { type ISchemaVaultsAuthClientAdapter } from "@schemavaults/auth-client-sdk";
+import {
+  type AuthSessionRoutes,
+  type ISchemaVaultsAuthClientAdapter,
+} from "@schemavaults/auth-client-sdk";
 import {
   deleteCookie,
   getCookie,
@@ -54,6 +57,8 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
   // The auth server deployment's own app id (white-label deployments override
   // the default via the 'auth_server_app_id' init option)
   private readonly auth_server_app_id: AppId;
+  // The app's same-origin auth session routes, each by its own path, if it has them
+  private readonly session_routes: AuthSessionRoutes | undefined;
 
   private readonly _fetch: (
     url: string,
@@ -108,7 +113,37 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     } else {
       this.auth_server_app_id = DEFAULT_AUTH_SERVER_APP_ID;
     }
+    if (opts.session_routes) {
+      for (const name of ["token", "whoami", "logout"] as const) {
+        const route: unknown = opts.session_routes[name];
+        if (typeof route !== "string" || !/^(\/|https?:\/\/)/.test(route)) {
+          throw new TypeError(
+            `Expected session route '${name}' to be a path starting with '/' or an absolute http(s) URL!`,
+          );
+        }
+      }
+      this.session_routes = opts.session_routes;
+    }
     this._fetch = opts.fetch.bind(window);
+  }
+
+  /**
+   * Absolute URLs of the app's same-origin auth session routes, which keep
+   * the refresh token in an HTTP-only cookie on the app's own domain (see
+   * @schemavaults/auth-server-sdk/auth-session-route).
+   */
+  public getSessionRouteUrls(): AuthSessionRoutes | null {
+    const routes: AuthSessionRoutes | undefined = this.session_routes;
+    if (!routes) {
+      return null;
+    }
+    const absolute = (route: string): string =>
+      route.startsWith("/") ? `${window.location.origin}${route}` : route;
+    return {
+      token: absolute(routes.token),
+      whoami: absolute(routes.whoami),
+      logout: absolute(routes.logout),
+    };
   }
 
   private get ssl_enabled(): boolean {
@@ -647,6 +682,36 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
   }
 
   public async clearHttpOnlyRefreshToken(): Promise<void> {
+    const session_routes: AuthSessionRoutes | null = this.getSessionRouteUrls();
+    if (session_routes) {
+      try {
+        // Revokes the session at the auth server and clears the app's cookie.
+        await this.fetch(session_routes.logout, {
+          method: "POST",
+          credentials: "same-origin",
+        });
+      } catch (e: unknown) {
+        console.error(
+          "Failed to log out through the app's logout session route: ",
+          e,
+        );
+        throw new Error(
+          "Failed to log out through the app's logout session route",
+        );
+      }
+      // A session an older SDK kept in the auth server's own cookie for
+      // this app: revoke and clear it too. Best effort.
+      try {
+        await this.fetch(
+          `${this.auth_server_uri}/api/auth/logout/${this.client_app_id}`,
+          { method: "POST", credentials: "include" },
+        );
+      } catch (e: unknown) {
+        void e;
+      }
+      this.clearHttpOnlyRefreshTokenMarker();
+      return;
+    }
     try {
       await this.fetch(
         `${this.auth_server_uri}/api/auth/logout/${this.client_app_id}`,
@@ -668,11 +733,50 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     return;
   }
 
+  /**
+   * Ends a localStorage-held session server-side, as the cookie mode's
+   * logout does: the logout endpoint revokes the refresh token presented as
+   * a Bearer (and the access tokens minted with it). Sent with credentials
+   * so it also clears an HTTP-only refresh-token cookie that an older SDK
+   * (which used cookies for every app outside development/test) left on the
+   * auth server. Best effort: a local logout never waits on the network.
+   */
+  private async revokeLocalStorageRefreshToken(): Promise<void> {
+    const refresh_token: RefreshToken | null = this.getLocalStorageRefreshToken();
+    const has_legacy_cookie_session: boolean =
+      typeof getCookie(RefreshTokenExpiryCookieName(this.client_app_id)) ===
+      "string";
+    if (!refresh_token && !has_legacy_cookie_session) {
+      return;
+    }
+    const headers = new Headers();
+    if (refresh_token) {
+      headers.set("Authorization", `Bearer ${refresh_token.token}`);
+    }
+    try {
+      await this.fetch(
+        `${this.auth_server_uri}/api/auth/logout/${this.client_app_id}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers,
+        },
+      );
+    } catch (e: unknown) {
+      console.error(
+        "[ReactAuthClientSdkAdapter] Failed to revoke the refresh token at the auth server: ",
+        e,
+      );
+    }
+    this.clearHttpOnlyRefreshTokenMarker();
+  }
+
   public async clearAuthTokens(): Promise<void> {
     this.clearAccessTokens();
     if (this.doesSupportHttpOnlyRefreshToken()) {
       await this.clearHttpOnlyRefreshToken();
     } else {
+      await this.revokeLocalStorageRefreshToken();
       this.clearLocalStorageRefreshToken();
     }
     return;
@@ -805,13 +909,18 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     if (isAuthServer) {
       return true;
     }
-    // else, this is a client application
-    // we only use http-only refresh tokens in secure contexts
-    const environment: SchemaVaultsAppEnvironment = this.environment;
-    if (environment === "development" || environment === "test") {
-      return false;
+    // The app's own session routes keep the refresh token in a first-party
+    // HTTP-only cookie, in every environment and on every browser.
+    if (this.getSessionRouteUrls() !== null) {
+      return true;
     }
-    return true;
+    // Any other client app keeps the refresh token in localStorage. The auth
+    // server's own cookie is not used for it: set on the auth server's host,
+    // it is a third-party cookie for an app on another site, which Safari
+    // and every iOS browser drop (the login then fails right after the code
+    // exchange). Session routes are how a client app gets an HTTP-only
+    // refresh token.
+    return false;
   }
 
   /**

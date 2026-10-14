@@ -2,6 +2,8 @@ import { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientA
 import type { AppId } from "@schemavaults/app-definitions";
 import { createUserDataSchema, UserData } from "@schemavaults/auth-common";
 import { AUTH_CLIENT_SDK_VERSION } from "@/generated/version";
+import { getSessionRouteUrls } from "@/lib/session-route";
+import type { AuthSessionRoutes } from "@/types/AuthSessionRoutes";
 import {
   WhoamiRequestFailedError,
   type WhoamiRequestFailureReason,
@@ -85,8 +87,12 @@ export default async function checkIfAuthenticatedWithServer({
     return null;
   }
 
+  // An app serving same-origin auth session routes asks its whoami route,
+  // which presents the refresh token it holds to the auth server's whoami.
+  const session_routes: AuthSessionRoutes | null = getSessionRouteUrls(adapter);
+
   const headers = new Headers();
-  if (!supportsHttpOnlyCookies) {
+  if (!supportsHttpOnlyCookies && session_routes === null) {
     const token: string | undefined = adapter.getRefreshToken()?.token;
     if (!token) {
       return null;
@@ -94,10 +100,10 @@ export default async function checkIfAuthenticatedWithServer({
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const url: string = new URL(
-    `/api/auth/whoami/${client_app_id}`,
-    auth_server_uri,
-  ).toString();
+  const url: string =
+    session_routes !== null
+      ? session_routes.whoami
+      : new URL(`/api/auth/whoami/${client_app_id}`, auth_server_uri).toString();
 
   function failure(
     reason: WhoamiRequestFailureReason,
@@ -113,7 +119,13 @@ export default async function checkIfAuthenticatedWithServer({
   try {
     response = await adapter.fetch(url, {
       method: "GET",
-      credentials: "include",
+      // A Bearer-authenticated call sends no cookies: whoami tries the
+      // app's refresh-token cookie before the header, so a stale cookie
+      // (e.g. left by an SDK that kept this app's session in one) would
+      // otherwise answer for, or with a revoked token fail, the session
+      // being checked.
+      credentials:
+        session_routes !== null ? "same-origin" : supportsHttpOnlyCookies ? "include" : "omit",
       headers,
     });
   } catch (e: unknown) {

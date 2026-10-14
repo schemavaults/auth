@@ -35,7 +35,9 @@ import {
 } from "@/lib/rate-limit";
 import handleOidcAuthorizationCodeGrant from "./authorization_code_grant";
 import handleOidcClientCredentialsGrant from "./client_credentials_grant";
-import handleOidcRefreshTokenGrant from "./refresh_token_grant";
+import handleOidcRefreshTokenGrant, {
+  isRefreshTokenPresentedViaCookie,
+} from "./refresh_token_grant";
 import {
   applyOidcTokenCors,
   CORS_HEADERS,
@@ -261,6 +263,9 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
         issued: outcome.issued,
         client_app_id,
         requested_delivery,
+        refresh_token_presented_via_cookie:
+          grant_type === "refresh_token" &&
+          isRefreshTokenPresentedViaCookie(param, request.cookies, client_app_id),
         environment,
         debug,
       }),

@@ -85,8 +85,9 @@ describe("Email verification required before third-party app hand-off", () => {
 
   /**
    * Starts the example resource server's login flow: clears the SDK's
-   * stored state on the RP origin (refresh tokens live in localStorage in
-   * test), visits its home page and clicks "Login", which redirects to the
+   * stored state on the RP origin (callers clear its cookies, where the
+   * session route keeps the refresh token), visits its home page and
+   * clicks "Login", which redirects to the
    * auth server's /auth/login with the PKCE params. Auth server cookies
    * are left alone so callers decide whether a session is present.
    */

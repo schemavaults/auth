@@ -1,6 +1,7 @@
 "use client";
 
 import SchemaVaultsAuthClient, {
+  type AuthSessionRoutes,
   type InitializeAuthClientOptions,
   type ISchemaVaultsAuthClient,
   type ISchemaVaultsAuthClientAdapter,
@@ -28,6 +29,8 @@ export interface IAuthClientFactoryInitOpts {
   invite_code_required?: boolean;
   /** Turn off the SDK's error reporting to the auth server. */
   disable_telemetry?: boolean;
+  /** The app's same-origin auth session routes (each by its own path). */
+  session_routes?: AuthSessionRoutes;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
 
@@ -45,6 +48,7 @@ export class AuthClientFactory {
   private readonly error_page_uri: string;
   private readonly invite_code_required: boolean;
   private readonly disable_telemetry: boolean;
+  private readonly session_routes: AuthSessionRoutes | undefined;
   private readonly fetch: (
     url: string,
     init: RequestInit | undefined,
@@ -90,6 +94,7 @@ export class AuthClientFactory {
         ? opts.invite_code_required
         : true;
     this.disable_telemetry = opts.disable_telemetry === true;
+    this.session_routes = opts.session_routes;
     this.fetch = fetch;
   }
 
@@ -120,6 +125,7 @@ export class AuthClientFactory {
       debug: this.debug,
       client_app_id: this.app_id,
       auth_server_app_id: this.auth_server_app_id,
+      session_routes: this.session_routes,
       fetch: this.fetch,
     });
   }

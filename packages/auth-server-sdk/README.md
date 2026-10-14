@@ -8,8 +8,9 @@ TypeScript SDK for SchemaVaults Auth Server and Resource Server API backends.
 bunx @schemavaults/auth-server-sdk codegen [options]
 ```
 
-Generates the auth pages (`login`, `register`, `logout`, `authorize`, `error`)
-and the `auth-provider.tsx` into your Next.js App Router project.
+Generates the auth pages (`login`, `register`, `logout`, `authorize`, `error`),
+the auth session routes (`session/{token,whoami,logout}/route.ts`, see below) and the
+`auth-provider.tsx` into your Next.js App Router project.
 
 ### Options
 
@@ -28,6 +29,55 @@ and the `auth-provider.tsx` into your Next.js App Router project.
 - `--debug` — Enable debug logging.
 - `--help`, `-h` — Show help.
 - `--version`, `-v` — Show package name and version.
+
+## Auth session routes (refresh token in a first-party HTTP-only cookie)
+
+`@schemavaults/auth-server-sdk/auth-session-route` serves the browser SDK's
+token, whoami and logout requests from the app's own origin and forwards them
+to the auth server, one route handler each:
+
+| Route (codegen path) | Factory | Method |
+| --- | --- | --- |
+| token (`/auth/session/token`) | `createAuthSessionTokenRoute()` | `POST` (authorization code and refresh grants) |
+| whoami (`/auth/session/whoami`) | `createAuthSessionWhoamiRoute()` | `GET` |
+| logout (`/auth/session/logout`) | `createAuthSessionLogoutRoute()` | `POST` |
+
+The refresh token is kept in an HTTP-only, `SameSite=Strict`, host-only cookie
+on the app's own host (`__Host-schemavaults_refresh_token_<app>`: the
+`__Host-` prefix makes browsers refuse any such cookie that carries a `Domain`
+or a narrower `Path`, so a sibling subdomain cannot plant one; a request that
+carries the cookie twice is treated as having no session), and is never
+returned to the page, so:
+
+- page scripts (an XSS payload included) can never read or exfiltrate it;
+- it is a first-party cookie, which browsers that block third-party cookies
+  (Safari, every iOS browser) keep. The auth server's own cookie would be a
+  third-party cookie for an app on another site.
+
+The codegen writes one route file per action, e.g.
+`auth/session/token/route.ts`:
+
+```ts
+import { createAuthSessionTokenRoute } from "@schemavaults/auth-server-sdk/auth-session-route";
+
+export const { POST } = createAuthSessionTokenRoute();
+export const dynamic = "force-dynamic";
+```
+
+(`auth/session/whoami/route.ts` exports `{ GET }` from
+`createAuthSessionWhoamiRoute()`, `auth/session/logout/route.ts` exports
+`{ POST }` from `createAuthSessionLogoutRoute()`),
+and the generated `auth-provider.tsx` points the SDK at each of them
+(`session_routes={AUTH_SESSION_ROUTE_PATHS}` on `<AuthProvider>`, one path per
+route; pass `session_routes={null}` to the generated provider to opt out). The
+routes read `SCHEMAVAULTS_CLIENT_APP_ID`, `SCHEMAVAULTS_APP_ENVIRONMENT` and
+`SCHEMAVAULTS_AUTH_SERVER_URL` (or the environment's default auth server); the
+cookie is `Secure` outside development/test. They refuse cross-origin requests
+(`Origin` / `Sec-Fetch-Site` checks), and the token route serves only its own
+app's `authorization_code` and `refresh_token` grants.
+
+The auth server rate-limits refresh grants per IP; proxied through the token
+route, they count against the app server's IP.
 
 ## Accepting resource-URL token audiences
 

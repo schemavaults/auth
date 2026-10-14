@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  AUTH_SESSION_ROUTE_PATHS,
+  type AuthSessionRoutes,
   AuthProvider,
   type SchemaVaultsAppEnvironment,
   type AppId,
@@ -28,6 +30,14 @@ export interface IAppAuthProviderProps extends PropsWithChildren {
   successful_logout_redirect_uri: string;
   successful_authentication_redirect_uri: string;
   authorize_uri: string;
+  /**
+   * The app's auth session routes, each by its own path (generated at
+   * `auth/session/{token,whoami,logout}/route.ts`), which keep the refresh
+   * token in an HTTP-only cookie on the app's own domain. Defaults to
+   * `AUTH_SESSION_ROUTE_PATHS`; `null` keeps the refresh token in the
+   * browser instead (not recommended).
+   */
+  session_routes?: AuthSessionRoutes | null;
   autoreacquire_access_tokens?: boolean;
   authMiddlewareRules?: SchemaVaultsAuthProviderProps["authMiddlewareRules"];
   onLogout?: SchemaVaultsAuthProviderProps["onLogout"];
@@ -58,6 +68,11 @@ export default function AppAuthProvider({
         props.successful_authentication_redirect_uri
       }
       authorize_uri={props.authorize_uri}
+      session_routes={
+        props.session_routes === null
+          ? undefined
+          : (props.session_routes ?? AUTH_SESSION_ROUTE_PATHS)
+      }
       router={router}
       path={path}
       default_audiences={props.default_audiences}

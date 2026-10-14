@@ -4,6 +4,8 @@ export {
 } from "./auth-client";
 
 export type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
+export type { AuthSessionRoutes } from "@/types/AuthSessionRoutes";
+export { AUTH_SESSION_ROUTE_PATHS } from "./lib/session-route";
 
 export type {
   InitializeAuthClientOptions,

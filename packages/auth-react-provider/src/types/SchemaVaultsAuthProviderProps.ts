@@ -3,7 +3,10 @@ import type {
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { AuthMiddlewareRules } from "@schemavaults/auth-common";
-import type { InitializeAuthClientOptions } from "@schemavaults/auth-client-sdk";
+import type {
+  AuthSessionRoutes,
+  InitializeAuthClientOptions,
+} from "@schemavaults/auth-client-sdk";
 import type { useRouter } from "next/navigation";
 import type { PropsWithChildren } from "react";
 import type { AuthMiddlewareRulesBuilderFn } from "@/types/AuthMiddlewareRulesBuilderFn";
@@ -58,6 +61,19 @@ export interface SchemaVaultsAuthProviderProps
    * @default false
    */
   disable_telemetry?: boolean;
+
+  /**
+   * The app's same-origin auth session routes, each by its own path (or
+   * absolute URL), e.g. `AUTH_SESSION_ROUTE_PATHS` where the
+   * `auth-server-sdk codegen` CLI writes them, served by the route factories
+   * of `@schemavaults/auth-server-sdk/auth-session-route`. The SDK then
+   * redeems codes and refreshes tokens through `token`, loads the user
+   * through `whoami` and logs out through `logout`, and the refresh token
+   * lives in an HTTP-only cookie on the app's own domain: never readable by
+   * the page's scripts, and first-party, so browsers that block third-party
+   * cookies (Safari, every iOS browser) keep it.
+   */
+  session_routes?: AuthSessionRoutes;
 
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
