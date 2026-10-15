@@ -70,4 +70,36 @@ export function classifyOidcTokenError(e: unknown): ClassifiedOidcTokenError {
   };
 }
 
+/**
+ * Thrown when a token endpoint request (authorization code or refresh
+ * grant) fails for a reason other than the session being gone. Carries the
+ * classified failure so callers can react to the RFC 6749 §5.2 error code
+ * (e.g. `invalid_target`: the client app is not connected to the requested
+ * API server) instead of parsing the message.
+ */
+export class TokenEndpointRequestFailedError extends Error {
+  /** RFC 6749 §5.2 error code when the server returned one. */
+  public readonly oauth_error: string | null;
+  public readonly error_description: string | null;
+  /** HTTP status of the response, or null when none was received. */
+  public readonly status: number | null;
+  public readonly session_lost: boolean;
+
+  public constructor(
+    message: string,
+    classified: ClassifiedOidcTokenError,
+    options: { cause?: unknown } = {},
+  ) {
+    super(
+      message,
+      options.cause === undefined ? undefined : { cause: options.cause },
+    );
+    this.name = "TokenEndpointRequestFailedError";
+    this.oauth_error = classified.error;
+    this.error_description = classified.error_description;
+    this.status = classified.status;
+    this.session_lost = classified.session_lost;
+  }
+}
+
 export default classifyOidcTokenError;

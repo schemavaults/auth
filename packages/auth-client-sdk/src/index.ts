@@ -88,6 +88,18 @@ export type {
 export { WhoamiRequestFailedError } from "./lib/whoami-request-failed-error";
 export type { WhoamiRequestFailureReason } from "./lib/whoami-request-failed-error";
 
+// Thrown when the token endpoint refuses a code or refresh grant for a
+// reason other than a lost session; `oauth_error` is its RFC 6749 §5.2
+// error code (e.g. `invalid_target`: the app is not connected to the
+// requested API server). `resolveLoginErrorPage()` maps a failed sign-in
+// to the error page entry apps redirect to instead of retrying the login.
+export { TokenEndpointRequestFailedError } from "./lib/oidc";
+export {
+  isTokenEndpointRequestFailedError,
+  resolveLoginErrorPage,
+} from "./lib/login-error-page";
+export type { LoginErrorPageTarget } from "./lib/login-error-page";
+
 // RFC 7591 dynamic client registration helper (see registerDynamicClient on
 // the client) and the API server dynamic-client policy update shape.
 export {

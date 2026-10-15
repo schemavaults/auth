@@ -34,6 +34,35 @@ stood up without containers:
    to `.env.development`).
 4. Then `bun run dev:migrate` and `bun run dev:server` as usual.
 
+### Test environment + example resource server (resource-server sign-in flows)
+
+To drive a client app's sign-in (codegen'd `/auth/{login,authorize,error}`
+pages), mirror `tests/e2e-auth-tests/docker-compose.yml` instead:
+
+- Run the auth server with `SCHEMAVAULTS_APP_ENVIRONMENT=test` (the
+  `/api/test/*` seed routes refuse other environments) and the compose
+  file's env, plus `SCHEMAVAULTS_DBH_ADAPTER=postgres` + `POSTGRES_HOST=127.0.0.1`
+  / `POSTGRES_PORT=5432` (direct TCP: no WS proxy needed) and
+  `MIGRATIONS_PATH=<auth-server>/dist/migrations` (`bun run build:migrations`).
+- The test environment's defaults are hostnames: the auth server URL is
+  `http://schemavaults-auth` (port 80) and Redis is `schemavaults-auth-redis`
+  (REDIS_URL is not enough). Map `schemavaults-auth`,
+  `schemavaults-auth-redis` and `example-nextjs-resource-server` to 127.0.0.1
+  in `/etc/hosts`.
+- `POST /api/test/seed/migrate-test-environment-db`, then
+  `POST /api/test/seed/create-test-nextjs-app/00000000-0000-0000-0000-000000000000`
+  with `{ url: "http://example-nextjs-resource-server:3007", jwks_access_public_key }`
+  (key pair from `generateJwtSigningKeyPair()` in `@schemavaults/jwt`; the
+  example app takes the private key as base64url in
+  `SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY`, plus the compose file's other env).
+- Use production builds (`next build` + `next start`, `NODE_ENV=production`)
+  for both apps: in this sandbox `next dev` pages render but never hydrate
+  (the hydration marker stays `data-hydrated="false"`). `bun run build:packages`
+  first so the apps pick up package changes. `next dev` also writes
+  `AGENTS.md`/`CLAUDE.md` into the app directory; delete them.
+- Launch Chromium with `--no-proxy-server` (it otherwise sends WebSockets
+  through the sandbox proxy).
+
 ## Driving flows
 
 - Chromium for Playwright lives at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`

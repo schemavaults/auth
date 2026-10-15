@@ -14,6 +14,8 @@ const ERROR_IDS = [
   "pkce_challenge_expired",
   "invalid_redirect_uri",
   "email_verification_required",
+  "app_not_connected_to_api_server",
+  "login_failure",
 ] as const satisfies readonly string[];
 
 export type SchemaVaultsAuthErrorId = (typeof ERROR_IDS)[number];
@@ -44,6 +46,10 @@ export const ERROR_MESSAGE_CATALOG: Record<SchemaVaultsAuthErrorId, string> = {
     "The redirect URI presented by the requesting application is not registered for it. For your safety, login has been blocked.",
   email_verification_required:
     "Please verify your email address before continuing to the requesting application.",
+  app_not_connected_to_api_server:
+    "This application is not connected to the API server it requested access to, so you could not be signed in. If you are the site admin, connect the application to the API server on the auth server.",
+  login_failure:
+    "We could not finish signing you in to this application. Please try again, and contact the site admin if the problem persists.",
 };
 
 export function isValidErrorId(id: string): id is SchemaVaultsAuthErrorId {

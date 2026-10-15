@@ -4,7 +4,11 @@ import type { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import type { HookStatus } from "@/types/hook-status";
 import { useAppEnvironment } from "./use-app-environment";
-import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
+import {
+  type ISchemaVaultsAuthClient,
+  type LoginErrorPageTarget,
+  resolveLoginErrorPage,
+} from "@schemavaults/auth-client-sdk";
 import { useDebugWithSpecifiedBooleanOrLookupDefault } from "./use-debug";
 
 const enum AuthorizePageSearchParam {
@@ -15,6 +19,28 @@ const enum AuthorizePageSearchParam {
   // response; the SDK verifies it against the configured auth server URL
   // (authorization-server mix-up protection).
   Issuer = "iss",
+}
+
+type TradeAuthorizationCodeResult = HookStatus<{ auth_state_set: boolean }>;
+
+/**
+ * The exchange started for each authorization code on this page load. React
+ * re-runs the effect (StrictMode in development, changed dependencies), and
+ * every run must act on the outcome of the one redemption: a code can be
+ * redeemed only once, so a second attempt fails whatever the first one's
+ * outcome was.
+ */
+const exchangesByAuthorizationCode: Map<
+  string,
+  Promise<TradeAuthorizationCodeResult>
+> = new Map();
+
+/** The callback URL lacks (or carries malformed) authorization parameters. */
+class InvalidAuthorizeCallbackError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "InvalidAuthorizeCallbackError";
+  }
 }
 
 export interface IUseTradeAuthorizationCodeForTokensEffectOptions {
@@ -98,6 +124,27 @@ export function useTradeAuthorizationCodeForTokensEffect(
       return;
     }
 
+    // Where to send the user when the code cannot be traded for tokens: the
+    // error page, never back into the login flow. Retrying the login would
+    // fail the same way (e.g. the app is not connected to its default
+    // audience's API server) and, while the auth server's session cookie
+    // is valid, bounce between the login and authorize pages forever.
+    function buildErrorPageUrlForFailure(e: unknown): string {
+      const target: LoginErrorPageTarget =
+        e instanceof InvalidAuthorizeCallbackError
+          ? { error_id: "bad_request", error_code: 400 }
+          : resolveLoginErrorPage(e);
+      try {
+        return auth.buildErrorPageUrl(target.error_id, target.error_code);
+      } catch (buildError: unknown) {
+        console.error(
+          "[useTradeAuthorizationCodeForTokensEffect] Failed to build error page URL: ",
+          buildError,
+        );
+        return auth.error_page_uri;
+      }
+    }
+
     function onAuthHandlerFail(e?: unknown): void {
       if (tradeCodeEffectCancelled) return;
       if (typeof toast === "function") {
@@ -111,7 +158,13 @@ export function useTradeAuthorizationCodeForTokensEffect(
         });
       }
 
-      router.replace(auth.successful_logout_redirect_uri ?? "/");
+      const errorPageUrl: string = buildErrorPageUrlForFailure(e);
+      if (debug) {
+        console.log(
+          `[useTradeAuthorizationCodeForTokensEffect] Redirecting to error page "${errorPageUrl}"`,
+        );
+      }
+      router.replace(errorPageUrl);
       return;
     }
 
@@ -125,11 +178,10 @@ export function useTradeAuthorizationCodeForTokensEffect(
         });
       }
       onAuthHandlerSuccess();
+      return cancelEffectUnsubscribeFn;
     }
 
-    async function tradeAuthorizationCodeForTokensHandler(): Promise<
-      HookStatus<{ auth_state_set: boolean }>
-    > {
+    async function tradeAuthorizationCodeForTokensHandler(): Promise<TradeAuthorizationCodeResult> {
       if (debug) {
         console.log("[tradeAuthorizationCodeForTokensHandler] running...");
       }
@@ -167,7 +219,7 @@ export function useTradeAuthorizationCodeForTokensEffect(
         return {
           success: false,
           loading: false,
-          error: new Error(
+          error: new InvalidAuthorizeCallbackError(
             "Missing authorization code or challenge time within query parameters!",
           ),
         };
@@ -190,7 +242,9 @@ export function useTradeAuthorizationCodeForTokensEffect(
         return {
           success: false,
           loading: false,
-          error: new Error("Failed to parse PKCE challenge time!"),
+          error: new InvalidAuthorizeCallbackError(
+            "Failed to parse PKCE challenge time!",
+          ),
         };
       }
 
@@ -261,6 +315,7 @@ export function useTradeAuthorizationCodeForTokensEffect(
 
             throw new Error(
               "Failed to exchange authorization code for refresh token using auth client!",
+              { cause: e },
             );
           }
         }
@@ -285,8 +340,28 @@ export function useTradeAuthorizationCodeForTokensEffect(
       );
     }
 
-    tradeAuthorizationCodeForTokensHandler()
-      .then((init_result: HookStatus<{ auth_state_set: boolean }>): void => {
+    const authorization_code_param: string | null = searchParams.get(
+      AuthorizePageSearchParam.AuthorizationCode,
+    );
+    let exchange: Promise<TradeAuthorizationCodeResult> | undefined =
+      authorization_code_param
+        ? exchangesByAuthorizationCode.get(authorization_code_param)
+        : undefined;
+    if (exchange) {
+      if (debug) {
+        console.log(
+          "[useTradeAuthorizationCodeForTokensEffect] Awaiting the exchange already started for this authorization code...",
+        );
+      }
+    } else {
+      exchange = tradeAuthorizationCodeForTokensHandler();
+      if (authorization_code_param) {
+        exchangesByAuthorizationCode.set(authorization_code_param, exchange);
+      }
+    }
+
+    exchange
+      .then((init_result: TradeAuthorizationCodeResult): void => {
         if (tradeCodeEffectCancelled) {
           if (debug) {
             console.log(

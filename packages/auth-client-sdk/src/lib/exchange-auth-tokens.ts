@@ -26,6 +26,7 @@ import {
   classifyOidcTokenError,
   createOidcClientConfiguration,
   normalizeOidcIssuer,
+  TokenEndpointRequestFailedError,
   tokenEndpointResponseToTokensRecord,
 } from "./oidc";
 
@@ -213,9 +214,11 @@ export async function exchangeAuthTokens({
         // unrecoverable session by the "expired" keyword in the message.
         throw new Error("Refresh token has expired!", { cause: e });
       }
-      throw new Error(`Token exchange failed: ${classified.message}`, {
-        cause: e,
-      });
+      throw new TokenEndpointRequestFailedError(
+        `Token exchange failed: ${classified.message}`,
+        classified,
+        { cause: e },
+      );
     }
 
     let record: SuccessfullyGeneratedTokensRecord;

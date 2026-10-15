@@ -3,7 +3,10 @@
 import { useRouter } from "next/navigation";
 import useAuth from "@/hooks/use-auth";
 import { useEffect } from "react";
-import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
+import {
+  type ISchemaVaultsAuthClient,
+  resolveLoginErrorPage,
+} from "@schemavaults/auth-client-sdk";
 import useAppEnvironment, {
   type SchemaVaultsAppEnvironment,
 } from "@/hooks/use-app-environment";
@@ -162,7 +165,25 @@ export function useStartLoginOauthPKCEFlow({
               }
               return;
             }
-            throw e;
+            // Still signed in, but the default audiences' access tokens
+            // cannot be minted (e.g. the app is not connected to that API
+            // server): show the error page instead of leaving the user on
+            // this loading page.
+            const { error_id, error_code } = resolveLoginErrorPage(e);
+            const errorPageUrl: string = auth.buildErrorPageUrl(
+              error_id,
+              error_code,
+            );
+            console.error(
+              `[useStartLoginOauthPKCEFlow] Failed to acquire default access tokens. Redirecting to "${errorPageUrl}".`,
+              e,
+            );
+            if (cancelLoginEffect) {
+              return;
+            }
+            onError(e);
+            router.push(errorPageUrl);
+            return;
           }
         }
 
