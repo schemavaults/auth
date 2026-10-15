@@ -11,7 +11,11 @@ import {
   type JWT_Keys,
 } from "@schemavaults/jwt";
 import { decodeJWTsWithKeyManager } from "./decode-jwts-with-key-manager";
-import { DatabaseConnectedJwtKeyManager } from "@/JwtKeyManager";
+import {
+  DatabaseConnectedJwtKeyManager,
+  JwtKeyManagerMisconfigurationError,
+  type IJwtKeyManager,
+} from "@/JwtKeyManager";
 import MockJwtKeySetsStore from "@/JwtKeyManager/JsonWebKeySetsStore/MockJwtKeySetsStore";
 
 const environment = "test" as const satisfies SchemaVaultsAppEnvironment;
@@ -172,5 +176,58 @@ describe("decodeJWTsWithKeyManager", () => {
 
     expect(decoded_user).not.toBeNull();
     expect(decoded_user?.uid).toBe(user.uid);
+  });
+
+  describe("when the key manager cannot load keys", () => {
+    async function mintAccessToken(): Promise<string> {
+      const { jwt_keys } = await createKeysAndManager();
+      const factory = new JWT_Factory({
+        user: createMockUser(),
+        client_app_id: DEFAULT_AUTH_SERVER_APP_ID,
+        jwt_keys,
+        environment,
+        user_organizations: [],
+      });
+      const access_token = await factory.access(
+        getTokenAudienceForApiServerId(DEFAULT_AUTH_SERVER_APP_ID, environment),
+      );
+      return access_token.token;
+    }
+
+    function failingKeysManager(error: Error): IJwtKeyManager {
+      return {
+        loadJwks: () => Promise.reject(error),
+        isConfigured: () => true,
+      };
+    }
+
+    it("throws the misconfiguration instead of reporting no user", async () => {
+      const token = await mintAccessToken();
+      const misconfiguration = new JwtKeyManagerMisconfigurationError(
+        "jwks_download_refused",
+        "refused",
+        { status: 401 },
+      );
+
+      await expect(
+        decodeJWTsWithKeyManager(
+          failingKeysManager(misconfiguration),
+          [{ sourceHint: "access cookie", type: "access", token }],
+          DEFAULT_AUTH_SERVER_APP_ID,
+          environment,
+        ),
+      ).rejects.toBe(misconfiguration);
+    });
+
+    it("still reports no user when the keys failed to load for another reason", async () => {
+      const token = await mintAccessToken();
+      const decoded = await decodeJWTsWithKeyManager(
+        failingKeysManager(new Error("503 Service Unavailable")),
+        [{ sourceHint: "access cookie", type: "access", token }],
+        DEFAULT_AUTH_SERVER_APP_ID,
+        environment,
+      );
+      expect(decoded.user).toBeNull();
+    });
   });
 });

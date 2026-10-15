@@ -7,6 +7,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { type JWKS, importAsymmetricJWK } from "@schemavaults/jwt";
 import { JwtDecodingKeysetNotFoundError } from "./JwtDecodingKeysetNotFoundError";
+import { JwtKeyManagerMisconfigurationError } from "./JwtKeyManagerMisconfigurationError";
 
 export interface ILoadJwtDecodingKeysOptions {
   audience_id: ApiServerId;
@@ -141,7 +142,10 @@ export async function loadJwtDecodingKeys({
     jwks = await keys_manager.loadJwks(audience_id);
   } catch (e: unknown) {
     console.error("Failed to load JWKS from key manager: ", e);
-    throw new Error("Failed to load JWKS from key manager!");
+    if (e instanceof JwtKeyManagerMisconfigurationError) {
+      throw e;
+    }
+    throw new Error("Failed to load JWKS from key manager!", { cause: e });
   }
 
   if (

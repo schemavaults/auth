@@ -14,3 +14,5 @@ export {
 } from "./loadJwtDecodingKeys";
 
 export { JwtDecodingKeysetNotFoundError } from "./JwtDecodingKeysetNotFoundError";
+export { JwtKeyManagerMisconfigurationError } from "./JwtKeyManagerMisconfigurationError";
+export type { JwtKeyManagerMisconfigurationReason } from "./JwtKeyManagerMisconfigurationError";

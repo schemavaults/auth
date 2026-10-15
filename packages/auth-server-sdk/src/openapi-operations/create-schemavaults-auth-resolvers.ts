@@ -26,6 +26,7 @@ import loadJwksAccessPrivateKey, {
 } from "@/env/loadJwksAccessPrivateKey";
 import isUserInOrganization from "@/isUserInOrganization";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
+import { JwtKeyManagerMisconfigurationError } from "@/JwtKeyManager/JwtKeyManagerMisconfigurationError";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
 import RouteGuardFactory from "@/route_guards/route-guard-factory";
 import type { IsTokenRevokedFn } from "@/route_guards/token-revocation";
@@ -173,7 +174,8 @@ export function bearerTokenFromAuthorizationHeader(
  * - answers 403 (`account_disabled`) for a disabled account;
  * - answers 500 (`auth_not_configured`) with a clear message when
  *   `SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY` (or the API server id /
- *   auth server URL) is missing: a token is never waved through silently;
+ *   auth server URL) is missing, the key is unusable, or the auth server
+ *   refuses the JWKS download: a token is never waved through silently;
  * - otherwise resolves `{ scheme, user, isAdmin: user.admin === true,
  *   scope, getOrganizationRole }`, where `getOrganizationRole` asks the
  *   auth server (`isUserInOrganization`) with the JWKS access key.
@@ -291,6 +293,16 @@ export function createSchemaVaultsAuthResolvers<TContext = unknown>(
     try {
       guard = await guardFactory.createGuardFromTokenSources("authenticated", [source], audience);
     } catch (e: unknown) {
+      if (e instanceof JwtKeyManagerMisconfigurationError) {
+        // A 401 would send the client to sign in again for a token this
+        // server cannot verify either.
+        throw notConfigured(
+          e.reason === "jwks_download_refused"
+            ? `the auth server refused to send this API server's JWKS (check '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}' and the API server id)`
+            : `the '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}' environment variable does not hold a usable private key`,
+          e,
+        );
+      }
       if (debug) {
         console.warn(
           `[createSchemaVaultsAuthResolvers] ${source.sourceHint ?? source.type} did not verify:`,

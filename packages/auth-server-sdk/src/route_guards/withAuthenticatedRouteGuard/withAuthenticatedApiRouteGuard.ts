@@ -30,6 +30,7 @@ import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
 import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
 import getSchemavaultsApiServerId from "@/env/get-schemavaults-api-server-id";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
+import { JwtKeyManagerMisconfigurationError } from "@/JwtKeyManager/JwtKeyManagerMisconfigurationError";
 import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType";
 import type { IBaseProtectedAuthenticatedApiRouteInputs } from "./IBaseProtectedAuthenticatedApiRouteInputs";
 import initDefaultJwtKeyManagerForAuthenticatedRouteGuard from "./initDefaultJwtKeyManagerForAuthenticatedRouteGuard";
@@ -289,17 +290,38 @@ export function withAuthenticatedApiRouteGuard<
       );
     }
 
-    const route_guard: IRouteGuard = await new RouteGuardFactory({
-      environment,
-      is_auth_server: api_server_id === auth_server_app_id,
-      jwt_keys_manager,
-      is_token_revoked: opts?.is_token_revoked,
-      debug,
-    }).createGuardFromTokenSources(
-      route_guard_type,
-      token_sources,
-      api_server_id,
-    );
+    let route_guard: IRouteGuard;
+    try {
+      route_guard = await new RouteGuardFactory({
+        environment,
+        is_auth_server: api_server_id === auth_server_app_id,
+        jwt_keys_manager,
+        is_token_revoked: opts?.is_token_revoked,
+        debug,
+      }).createGuardFromTokenSources(
+        route_guard_type,
+        token_sources,
+        api_server_id,
+      );
+    } catch (e: unknown) {
+      if (e instanceof JwtKeyManagerMisconfigurationError) {
+        // A 401 would send the client to sign in again for a token this
+        // server cannot verify either.
+        console.error(
+          `[withAuthenticatedApiRouteGuard] Cannot verify tokens for api_server_id='${api_server_id}' (${e.reason}): `,
+          e,
+        );
+        return json(
+          {
+            success: false,
+            error: true,
+            message: "Server does not appear to be properly configured!",
+          },
+          { status: 500 },
+        );
+      }
+      throw e;
+    }
 
     if (route_guard.revoked === true) {
       return json(

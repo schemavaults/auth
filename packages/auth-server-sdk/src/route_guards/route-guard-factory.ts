@@ -230,6 +230,10 @@ export class RouteGuardFactory {
    * @throws {TypeError} If `jwt_audience` is not a valid API server ID.
    * @throws {Error} If no JWT key manager is available, or none of the tokens
    *   verify successfully.
+   * @throws {JwtKeyManagerMisconfigurationError} If none of the tokens could
+   *   be checked because the JWT key manager is misconfigured (refused JWKS
+   *   download, unusable JWKS access private key). Report a server
+   *   misconfiguration rather than sending the user to sign in again.
    */
   public async createGuardFromTokenSources(
     type: RouteGuardType,

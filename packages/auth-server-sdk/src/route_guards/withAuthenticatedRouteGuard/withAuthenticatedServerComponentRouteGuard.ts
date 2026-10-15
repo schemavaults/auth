@@ -28,6 +28,7 @@ import { RefreshTokenCookieName } from "@/RefreshTokenCookieNames";
 import getSchemavaultsApiServerId from "@/env/get-schemavaults-api-server-id";
 import { JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME } from "@/env/loadJwksAccessPrivateKey";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
+import { JwtKeyManagerMisconfigurationError } from "@/JwtKeyManager/JwtKeyManagerMisconfigurationError";
 import redirectToLogin from "@/redirect-to-login";
 import assertValidRouteGuardType from "@/route_guards/assertValidRouteGuardType";
 import type { IBaseProtectedAuthenticatedServerComponentPageProps } from "./IBaseProtectedAuthenticatedServerComponentPageProps";
@@ -333,12 +334,25 @@ export async function withAuthenticatedServerComponentRouteGuard<
     is_token_revoked: opts?.is_token_revoked,
     debug,
   });
-  const route_guard: IRouteGuard =
-    await route_guard_factory.createGuardFromTokenSources(
+  let route_guard: IRouteGuard;
+  try {
+    route_guard = await route_guard_factory.createGuardFromTokenSources(
       route_guard_type,
       token_sources,
       api_server_id,
     );
+  } catch (e: unknown) {
+    if (e instanceof JwtKeyManagerMisconfigurationError) {
+      // Not the login page: signing in again would only mint another token
+      // this server cannot verify, and the browser would loop.
+      console.error(
+        `[${name}] Cannot verify session tokens for api_server_id='${api_server_id}' (${e.reason}). Redirecting to error page with 'server_misconfiguration'. Underlying error: `,
+        e,
+      );
+      redirectToErrorPage(500, "server_misconfiguration");
+    }
+    throw e;
+  }
 
   if (route_guard.revoked === true) {
     // The session verified cryptographically but has been revoked (logout

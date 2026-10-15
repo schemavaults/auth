@@ -98,6 +98,27 @@ changes, and only for tokens whose header names one of the listed URLs
 (`resolveExpectedTokenAudience()`). Tokens with any other `aud` fail as
 before.
 
+## When the JWKS cannot be loaded
+
+Route guards verify tokens with the JWKS that `RemoteJwtKeyManager` downloads from the
+auth server using your JWKS access key. When the auth server refuses that download (a 4xx:
+the key is not the API server's active one, or the API server id is wrong) or
+`SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY` is not a usable private key, the key manager
+throws `JwtKeyManagerMisconfigurationError` (`reason`: `jwks_download_refused` /
+`jwks_access_private_key_unusable`). No token can verify until the configuration is fixed,
+so the guards report a server misconfiguration instead of an unauthenticated request
+(signing in again would only mint another token the server cannot verify, and the browser
+would loop through the login flow):
+
+- `withAuthenticatedServerComponentRouteGuard` redirects to the codegen'd error page,
+  `/auth/error?error=500&error_id=server_misconfiguration` (or your `error_page_url`);
+- `withAuthenticatedApiRouteGuard` answers 500;
+- `RouteGuardFactory.createGuardFromTokenSources()` and `decodeJWTsWithKeyManager()`
+  throw the error when no token verified.
+
+Outages (5xx, 408, 429, network errors) are not misconfigurations: the request is still
+treated as unauthenticated. The cause is logged on the server.
+
 ## Introspecting access tokens (RFC 7662)
 
 Local verification (route guards, `decodeJWTsWithKeyManager`) proves a token is
@@ -176,7 +197,8 @@ Per request:
 - A token that fails verification is 401 `invalid_token`; a revoked one (`isTokenRevoked`)
   401 `token_revoked`; a disabled account 403 `account_disabled`.
 - A missing `SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY` (or API server id / auth server
-  URL) is 500 `auth_not_configured` with a message naming it, never a silent pass. With no
+  URL), an unusable key, or a JWKS download the auth server refuses is 500
+  `auth_not_configured` with a message naming the cause, never a silent pass. With no
   credential at all the operations runtime still answers 401 + `WWW-Authenticate`.
 - The principal is `{ scheme, user, isAdmin: user.admin === true, scope,
   getOrganizationRole }`; `getOrganizationRole` validates the id and asks the auth server
