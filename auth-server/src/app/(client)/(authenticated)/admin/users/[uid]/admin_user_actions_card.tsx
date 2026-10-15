@@ -21,6 +21,8 @@ import { Ban, CheckCircle2, Mail, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactElement, useCallback, useState, useTransition } from "react";
 import type { UserData } from "@schemavaults/auth-common";
+import { useSWRConfig } from "swr";
+import { getUserEmailLogEndpoint } from "@/components/UserEmailLog";
 
 export interface AdminUserActionsCardProps {
   user: UserData;
@@ -33,6 +35,7 @@ export function AdminUserActionsCard({
 }: AdminUserActionsCardProps): ReactElement {
   const router = useRouter();
   const { toast } = useToast();
+  const { mutate } = useSWRConfig();
   const [resending, startResending] = useTransition();
   const [togglingDisabled, startTogglingDisabled] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
@@ -76,8 +79,10 @@ export function AdminUserActionsCard({
             e instanceof Error ? e.message : "An unknown error occurred",
         });
       }
+      // Sent or not, the attempt is now in the email log.
+      await mutate(getUserEmailLogEndpoint(user.uid));
     });
-  }, [toast, user.email, user.uid]);
+  }, [mutate, toast, user.email, user.uid]);
 
   const handleConfirmOpenChange = useCallback(
     (open: boolean): void => {

@@ -521,7 +521,9 @@ export async function handleRegister({
       email,
       rawToken,
       db: dbh.db,
-      redis
+      redis,
+      uid: newUser.uid,
+      source: "registration",
     });
     if (debug) {
       console.log(`[handleRegister] Verification email sent to: ${email}`);

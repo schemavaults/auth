@@ -18,6 +18,7 @@ import AdminUserOrganizationsCard, {
   type AdminUserOrganizationMembershipRow,
 } from "./admin_user_organizations_card";
 import { UserTokensCard } from "@/components/UserTokensTable";
+import { UserEmailLogCard } from "@/components/UserEmailLog";
 
 export interface AdminUserDetailPageViewProps {
   user: UserData;
@@ -125,6 +126,7 @@ export function AdminUserDetailPageView({
           memberships={organizationMemberships}
           assignableOrganizations={assignableOrganizations}
         />
+        <UserEmailLogCard uid={user.uid} />
         <UserTokensCard uid={user.uid} tokenType="refresh" />
         <UserTokensCard uid={user.uid} tokenType="access" />
         <AdminUserActionsCard user={user} sessionUid={sessionUid} />

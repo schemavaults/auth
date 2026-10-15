@@ -7,6 +7,7 @@ import { disableUser, enableUser } from "@/app/api/admin/users/[uid]/disable/ope
 import { listUserMfaFactorTypes, resetUserMfa } from "@/app/api/admin/users/[uid]/mfa/operation";
 import { resendUserVerificationEmail } from "@/app/api/admin/users/[uid]/resend-verification/operation";
 import { listUserIssuedTokens } from "@/app/api/admin/users/[uid]/tokens/operation";
+import { listUserEmailLog } from "@/app/api/admin/users/[uid]/email-log/operation";
 import { promoteUserToAdmin } from "@/app/api/admin/promote/[uid]/operation";
 import { createInviteCode, listInviteCodes } from "@/app/api/admin/invite-codes/operation";
 import { countInviteCodeUsages } from "@/app/api/admin/invite-codes/[invite_code]/usages/operation";
@@ -36,6 +37,7 @@ export const adminOperations: readonly AnyOperationDefinition[] = [
   resetUserMfa,
   resendUserVerificationEmail,
   listUserIssuedTokens,
+  listUserEmailLog,
   promoteUserToAdmin,
   // Invite codes
   listInviteCodes,
