@@ -31,6 +31,10 @@ describe("Sign-in when the app is not connected to its default audience", () => 
   const exampleAppOrigin: string = new URL(exampleAppUrl).origin;
 
   function setExampleAppConnectedToItsApiServer(connected: boolean): void {
+    // create_and_login_as_superuser() requires nobody to be signed in, and
+    // the test ends signed in to the auth server as its own user (test
+    // isolation does not clear cookies before `after` hooks).
+    cy.clearAllCookies();
     cy.create_and_login_as_superuser().then((success: boolean) => {
       if (!success) {
         throw new Error("Failed to login as superuser");
