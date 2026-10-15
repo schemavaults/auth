@@ -12,5 +12,8 @@ export type {
 
 export { uidFromOidcSubClaim } from "./uid-from-oidc-sub-claim";
 
-export { classifyOidcTokenError } from "./oidc-token-error";
+export {
+  classifyOidcTokenError,
+  TokenEndpointRequestFailedError,
+} from "./oidc-token-error";
 export type { ClassifiedOidcTokenError } from "./oidc-token-error";

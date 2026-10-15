@@ -30,6 +30,7 @@ import {
   classifyOidcTokenError,
   createOidcClientConfiguration,
   normalizeOidcIssuer,
+  TokenEndpointRequestFailedError,
   tokenEndpointResponseToTokensRecord,
   uidFromOidcSubClaim,
 } from "./oidc";
@@ -463,8 +464,9 @@ export async function handleSuccessfulAuthentication({
     if (debug) {
       console.error(e);
     }
-    throw new Error(
+    throw new TokenEndpointRequestFailedError(
       `Failed to exchange authorization code for access token: ${classified.message}`,
+      classified,
       { cause: e },
     );
   }

@@ -57,6 +57,37 @@ client's `app_env` is `development` or `test`; in `staging` and
 `production` an `http://` auth server URL is rejected before any token
 request is made.
 
+## When a sign-in fails
+
+A token endpoint refusal that does not end the session (anything but
+`invalid_grant` / `invalid_client` / `unauthorized_client` / 401 / 403 on a
+refresh grant) throws `TokenEndpointRequestFailedError`, with the RFC 6749
+§5.2 `oauth_error`, `error_description` and HTTP `status`. The usual one at
+sign-in is `invalid_target`: the app asked for an access token for a default
+audience whose API server it is not connected to.
+
+Restarting the login flow after such a failure does not help: while the user
+is signed in to the auth server, it mints a new authorization code at once
+and the exchange fails the same way again. Send the user to the app's error
+page instead. `resolveLoginErrorPage(error)` looks through the error's
+`cause` chain and picks the entry to show (`app_not_connected_to_api_server`
+for `invalid_target`, otherwise `login_failure`):
+
+```ts
+import { resolveLoginErrorPage } from "@schemavaults/auth-client-sdk";
+
+try {
+  await client.handleSuccessfulAuthentication(code, challenge_time, undefined, state, undefined, iss);
+} catch (error: unknown) {
+  const { error_id, error_code } = resolveLoginErrorPage(error);
+  window.location.replace(client.buildErrorPageUrl(error_id, error_code));
+}
+```
+
+The React provider's `useTradeAuthorizationCodeForTokensEffect()` (the
+generated `/auth/authorize` page) and `useStartLoginOauthPKCEFlow()` (the
+generated `/auth/login` page) do this for you.
+
 ## Dynamic client registration (RFC 7591)
 
 Auth servers that enable the `allow_dynamic_client_registration` setting
