@@ -25,11 +25,12 @@ export interface DeleteUserResult {
  * codes, password-reset + email-verification tokens, org membership
  * roles, org invitations (as inviter or invitee), authorized apps,
  * issued-token records, token revocations, MFA factors, WebAuthn
- * credentials, and MFA recovery codes. Audit-style references
- * (SERVER_SETTINGS.updated_by, SERVER_BRANDING_ASSETS.updated_by,
- * app-to-API permission created_by, ORGANIZATIONS.created_by,
- * INVITE_CODES.created_by) are set to NULL by their FKs instead, and
- * ERRORS.uid is intentionally unconstrained so error logs survive.
+ * credentials, MFA recovery codes, and the user's e-mail log. Audit-style
+ * references (SERVER_SETTINGS.updated_by, SERVER_BRANDING_ASSETS.updated_by,
+ * USER_EMAIL_LOG.requested_by, app-to-API permission created_by,
+ * ORGANIZATIONS.created_by, INVITE_CODES.created_by) are set to NULL by
+ * their FKs instead, and ERRORS.uid is intentionally unconstrained so
+ * error logs survive.
  *
  * The only cleanup the database cannot decide on its own is what to do
  * with organizations the user leaves behind: organizations where the

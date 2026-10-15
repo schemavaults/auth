@@ -291,6 +291,17 @@ describe("Regular User Admin API Forbidden", () => {
     });
   });
 
+  it("GET /api/admin/users/:uid/email-log returns 403 for authenticated non-admin", () => {
+    cy.request({
+      method: "GET",
+      url: `/api/admin/users/${fakeUid}/email-log`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(403);
+      expect(response.body).to.have.property("success", false);
+    });
+  });
+
   it("POST /api/organizations/:organization_id/members (direct member assignment) returns 403 for authenticated non-admin", () => {
     // The caller creates the organization, so they are its owner: owners
     // must still invite, only platform administrators assign directly.

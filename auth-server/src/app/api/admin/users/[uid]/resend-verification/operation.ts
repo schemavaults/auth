@@ -59,7 +59,15 @@ export const resendUserVerificationEmail = defineOperation({
 
     try {
       const rawToken: string = await registry.createEmailVerificationToken(targetUser.uid);
-      await sendVerificationEmail({ email: targetUser.email, rawToken, db, redis });
+      await sendVerificationEmail({
+        email: targetUser.email,
+        rawToken,
+        db,
+        redis,
+        uid: targetUser.uid,
+        source: "admin_request",
+        requested_by: user.uid,
+      });
     } catch (e: unknown) {
       await captureServerException(db, e, {
         op_name: "POST_resend_verification_handler.sendVerificationEmail",

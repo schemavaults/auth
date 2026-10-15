@@ -772,9 +772,9 @@ describe("Unauthenticated API Requests", () => {
   });
 
   // Admin routes that were previously missing from this table. Note that
-  // users/:uid/disable, users/:uid/resend-verification and users/:uid/tokens
-  // parse their route/query parameters BEFORE the admin guard, so a
-  // well-formed uid is used here to reach the guard's 401.
+  // users/:uid/disable, users/:uid/resend-verification, users/:uid/tokens and
+  // users/:uid/email-log parse their route/query parameters BEFORE the admin
+  // guard, so a well-formed uid is used here to reach the guard's 401.
   describe("Additional admin API routes", () => {
     it("GET /api/admin/branding returns 401", () => {
       cy.request({
@@ -872,6 +872,16 @@ describe("Unauthenticated API Requests", () => {
       cy.request({
         method: "GET",
         url: `/api/admin/users/${fakeUid}/tokens?token_type=refresh`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("GET /api/admin/users/:uid/email-log returns 401", () => {
+      cy.request({
+        method: "GET",
+        url: `/api/admin/users/${fakeUid}/email-log`,
         failOnStatusCode: false,
       }).then((response) => {
         expect(response.status).to.eq(401);

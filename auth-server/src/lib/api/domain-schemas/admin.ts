@@ -2,13 +2,18 @@ import { inviteCodeDefinitionSchema, mfaFactorTypeSchema } from "@schemavaults/a
 import { z, withOpenApi } from "@schemavaults/openapi-operations";
 import { getAllBrandingAssetKeys, type BrandingAssetKey } from "@/lib/auth-db/branding";
 import { userDocumentSchema } from "@/lib/auth-db/users";
+import {
+  userEmailLogEmailTypes,
+  userEmailLogSources,
+  userEmailLogStatuses,
+} from "@/lib/auth-db/user-email-log/user-email-log-table";
 import { serverTraceOpCategories, serverTraceSchema } from "@/lib/server-trace-schema";
 
 /**
  * Schemas shared by the "admin" domain operations (`src/app/api/admin/**`).
  * Response shapes mirror what the pre-migration handlers returned; the
  * client hooks (`useAllUsersList`, `useBrandingAssets`, `useUserTokens`,
- * `useServerTraces`) parse exactly these fields.
+ * `useUserEmailLog`, `useServerTraces`) parse exactly these fields.
  */
 
 /** A user row as the administrator user list returns it. */
@@ -109,6 +114,31 @@ export const AdminIssuedToken = z
       .openapi({ description: "For access tokens: the jti of the refresh token minted in the same grant; null otherwise" }),
   })
   .openapi("AdminIssuedToken");
+
+/** A row of the `USER_EMAIL_LOG` table: one attempt to e-mail a user a verification or password reset link. */
+export const AdminUserEmailLogEntry = z
+  .object({
+    email_log_id: z.string(),
+    uid: z.string(),
+    email_type: z.enum(userEmailLogEmailTypes).openapi({ description: "Which e-mail was sent" }),
+    source: z.enum(userEmailLogSources).openapi({
+      description:
+        "What triggered it: the verification e-mail sent at sign-up, a request the user made, or an administrator's resend",
+    }),
+    recipient: z.string().openapi({ description: "Address the e-mail was sent to, as it was at the time" }),
+    status: z.enum(userEmailLogStatuses).openapi({ description: "Whether the mail server accepted the e-mail" }),
+    failure_reason: z.string().nullable().openapi({ description: "Why a failed attempt failed; null for sent e-mails" }),
+    requested_by: z
+      .string()
+      .nullable()
+      .openapi({ description: "uid of the administrator behind an `admin_request`; null otherwise" }),
+    requested_by_email: z
+      .string()
+      .nullable()
+      .openapi({ description: "Current e-mail address of the `requested_by` administrator (null if none, or their account was deleted)" }),
+    created_at: z.number().openapi({ description: "Unix epoch milliseconds" }),
+  })
+  .openapi("AdminUserEmailLogEntry");
 
 /** The verified MFA factor kinds of a user, as the admin MFA endpoint lists them. */
 export const adminMfaFactorTypesSchema = z.array(mfaFactorTypeSchema).readonly();

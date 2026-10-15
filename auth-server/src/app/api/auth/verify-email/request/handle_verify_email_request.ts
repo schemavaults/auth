@@ -94,7 +94,9 @@ export async function handleVerifyEmailRequest({
       email,
       rawToken,
       db: dbh.db,
-      redis
+      redis,
+      uid: user.uid,
+      source: "user_request",
     });
 
     if (debug) {
