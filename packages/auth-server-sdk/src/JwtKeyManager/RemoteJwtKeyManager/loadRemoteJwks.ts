@@ -4,6 +4,17 @@ import {
   type ApiServerId,
   apiServerIdSchema,
 } from "@schemavaults/app-definitions";
+import { JwtKeyManagerMisconfigurationError } from "@/JwtKeyManager/JwtKeyManagerMisconfigurationError";
+import { JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME } from "@/env/loadJwksAccessPrivateKey";
+
+/**
+ * A 4xx answer is the auth server refusing this request (an assertion it
+ * does not accept, an unknown or reserved API server id); 408 and 429 are
+ * transient.
+ */
+export function isJwksDownloadRefusal(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
 
 export interface ILoadRemoteJwksOpts {
   auth_server_url: string;
@@ -43,8 +54,11 @@ export async function loadRemoteJwks({
       private_key: jwks_access_private_key,
     });
   } catch (e: unknown) {
-    console.error(e);
-    throw new Error("Failed to create JWKS Access Proof Token!");
+    throw new JwtKeyManagerMisconfigurationError(
+      "jwks_access_private_key_unusable",
+      `Failed to sign a JWKS access assertion with the JWKS access private key ('${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}'): ${e instanceof Error ? e.message : String(e)}`,
+      { cause: e },
+    );
   }
 
   const endpoint: URL = new URL(
@@ -57,6 +71,21 @@ export async function loadRemoteJwks({
       Authorization: `Bearer ${jwks_access_proof_token}`,
     }),
   });
+  if (isJwksDownloadRefusal(response.status)) {
+    // Retrying cannot help: the auth server will refuse every assertion
+    // until the key or the API server id is fixed.
+    let detail: string = "";
+    try {
+      detail = (await response.text()).slice(0, 500);
+    } catch {
+      /* the status alone is enough */
+    }
+    throw new JwtKeyManagerMisconfigurationError(
+      "jwks_download_refused",
+      `The auth server at '${auth_server_url}' refused to send the JWKS of API server '${api_server_id}' (${response.status} ${response.statusText}${detail ? `: ${detail}` : ""}). Check that '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}' holds the API server's active JWKS access private key and that the API server id is correct.`,
+      { status: response.status },
+    );
+  }
   if (!response.ok || response.status !== 200) {
     throw new Error(
       `Failed to load jwks.json from auth server: ${response.status} ${response.statusText}`,

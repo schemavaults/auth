@@ -10,6 +10,7 @@ import getSchemaVaultsAuthServerUri from "@/env/get-schemavaults-auth-server-url
 import loadJwksAccessPrivateKey, {
   JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME,
 } from "@/env/loadJwksAccessPrivateKey";
+import { JwtKeyManagerMisconfigurationError } from "@/JwtKeyManager/JwtKeyManagerMisconfigurationError";
 
 const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -61,9 +62,10 @@ export class RemoteJwtKeyManager implements ICacheableJwtKeyManager {
     try {
       jwks_access_private_key = await loadJwksAccessPrivateKey(process.env);
     } catch (e: unknown) {
-      console.error(e);
-      throw new TypeError(
-        "Failed to load JWKS access private key from environment variables!",
+      throw new JwtKeyManagerMisconfigurationError(
+        "jwks_access_private_key_unusable",
+        `Failed to load the JWKS access private key from the '${JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME}' environment variable: ${e instanceof Error ? e.message : String(e)}`,
+        { cause: e },
       );
     }
     return jwks_access_private_key;

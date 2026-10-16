@@ -8,6 +8,7 @@ import {
 import {
   type IDecodeAuthTokenKeys,
   JwtDecodingKeysetNotFoundError,
+  JwtKeyManagerMisconfigurationError,
   loadJwtDecodingKeys,
   type IJwtKeyManager,
 } from "@/JwtKeyManager";
@@ -65,6 +66,16 @@ export interface DecodeJWTsWithKeyManagerOptions {
   accepted_audiences?: readonly string[];
 }
 
+/**
+ * Decodes and verifies the token sources with the keys from `keys_manager`;
+ * `user` is null when none of them verifies.
+ *
+ * @throws {JwtKeyManagerMisconfigurationError} When no token verified and the
+ *   key manager could not load the keys because of the server's
+ *   configuration (refused JWKS download, unusable JWKS access private
+ *   key): the request is not unauthenticated, this server cannot verify
+ *   any token until it is fixed.
+ */
 export async function decodeJWTsWithKeyManager(
   keys_manager: IJwtKeyManager,
   token_sources: readonly PotentiallyValidTokenSource[],
@@ -106,6 +117,10 @@ export async function decodeJWTsWithKeyManager(
   // Claims of every token that verified, collected as decodeJWTs works
   // through the sources (it only returns the first successful decode).
   const verified_tokens: DecodedTokenClaims[] = [];
+  // Set when a token could not be checked because the key manager is
+  // misconfigured (as opposed to the token not verifying).
+  let key_manager_misconfiguration: JwtKeyManagerMisconfigurationError | null =
+    null;
 
   let decoded_result: DecodedTokenWithScope | null = null;
   try {
@@ -170,6 +185,9 @@ export async function decodeJWTsWithKeyManager(
             if (e instanceof JwtDecodingKeysetNotFoundError) {
               throw e;
             }
+            if (e instanceof JwtKeyManagerMisconfigurationError) {
+              key_manager_misconfiguration = e;
+            }
             throw new Error(
               `Failed to load keys associated with token-associated keyset! (${sourceDescription})`,
               { cause: e },
@@ -233,6 +251,9 @@ export async function decodeJWTsWithKeyManager(
 
     decoded_result = decoded;
   } catch (e: unknown) {
+    if (key_manager_misconfiguration && verified_tokens.length === 0) {
+      throw key_manager_misconfiguration;
+    }
     if (e instanceof JwtDecodingKeysetNotFoundError) {
       console.warn(
         `[createdGuardFromTokenSources] Failed to load keyset '${e.keyset_id}' associated with provided token: `,

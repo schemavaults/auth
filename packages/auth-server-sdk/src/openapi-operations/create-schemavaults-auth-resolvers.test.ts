@@ -13,7 +13,10 @@ import {
   schemaVaultsAccessTokenCookieScheme,
   z,
 } from "@schemavaults/openapi-operations";
-import { DatabaseConnectedJwtKeyManager } from "@/JwtKeyManager";
+import {
+  DatabaseConnectedJwtKeyManager,
+  JwtKeyManagerMisconfigurationError,
+} from "@/JwtKeyManager";
 import MockJwtKeySetsStore from "@/JwtKeyManager/JsonWebKeySetsStore/MockJwtKeySetsStore";
 import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
 import {
@@ -265,6 +268,31 @@ describe("createSchemaVaultsAuthResolvers", () => {
     // No credential at all is still the runtime's 401, not a 500.
     const anonymous = await app.request("/api/whoami");
     expect(anonymous.status).toBe(401);
+  });
+
+  it("answers 500 instead of 401 when the auth server refuses the JWKS download or the JWKS access key is unusable", async () => {
+    const { token } = await mint(mockUser());
+    const cases = [
+      {
+        error: new JwtKeyManagerMisconfigurationError("jwks_download_refused", "refused", { status: 401 }),
+        message: "refused to send this API server's JWKS",
+      },
+      {
+        error: new JwtKeyManagerMisconfigurationError("jwks_access_private_key_unusable", "unusable"),
+        message: "SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY",
+      },
+    ];
+    for (const { error, message } of cases) {
+      const app = appWith(new MockJwtKeySetsStore(), {
+        jwtKeysManager: { loadJwks: () => Promise.reject(error), isConfigured: () => true },
+      });
+      const res = await app.request("/api/whoami", { headers: { authorization: `Bearer ${token}` } });
+      expect(res.status).toBe(500);
+      expect(await res.json()).toMatchObject({
+        error: "auth_not_configured",
+        message: expect.stringContaining(message),
+      });
+    }
   });
 
   it("answers 500 when the API server id cannot be determined, but only once a credential is presented", async () => {
