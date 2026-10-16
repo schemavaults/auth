@@ -59,6 +59,7 @@ import type {
 } from "@/lib/client-application-service-account";
 import type { AssignableOrganizationMembershipRole } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
+import type { OrganizationMembershipVisibility } from "@schemavaults/app-definitions";
 import type {
   DynamicClientRegistrationRequest,
   DynamicClientRegistrationResponse,
@@ -2011,6 +2012,24 @@ export class SchemaVaultsAuthClient
     });
   }
 
+  public async setApiServerOrganizationMembershipVisibility(
+    api_server_id: ApiServerId,
+    organization_membership_visibility: OrganizationMembershipVisibility,
+  ): Promise<SchemaVaultsApiServerDefinition> {
+    this.assertAppAndApiManagementWriteAccess(
+      "setApiServerOrganizationMembershipVisibility",
+    );
+    const fn = await import(
+      "@/lib/set-api-server-organization-membership-visibility"
+    ).then((m) => m.default);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      organization_membership_visibility,
+    });
+  }
+
   public async registerDynamicClient(
     metadata: DynamicClientRegistrationRequest,
   ): Promise<DynamicClientRegistrationResponse> {
@@ -2084,12 +2103,10 @@ export class SchemaVaultsAuthClient
     const fn = await import("@/lib/list-my-organization-memberships").then(
       (m) => m.default,
     );
-    const acquireAccessToken = this.acquireAccessToken.bind(this);
     return await fn({
       adapter: this.adapter,
       auth_server_uri: this.auth_server_uri,
       is_auth_server: this.isClientForAuthServer,
-      acquireAccessToken,
       debug: this.debug,
     });
   }

@@ -201,8 +201,39 @@ Per request:
   `auth_not_configured` with a message naming the cause, never a silent pass. With no
   credential at all the operations runtime still answers 401 + `WWW-Authenticate`.
 - The principal is `{ scheme, user, isAdmin: user.admin === true, scope,
-  getOrganizationRole }`; `getOrganizationRole` validates the id and asks the auth server
-  (`isUserInOrganization`) with the JWKS access key.
+  getOrganizationRole, listOrganizationMemberships }`. `getOrganizationRole` validates the
+  id and asks the auth server (`isUserInOrganization`); `listOrganizationMemberships()`
+  lists the user's memberships (`listUserOrganizations`, the same
+  `OrganizationMembershipRoleDetails` shape as `/api/me/organizations`). Both sign a JWKS
+  access assertion with the JWKS access key and forward the token the user presented in
+  `X-Subject-Token`.
+
+### Organization memberships
+
+By default an API server only sees memberships of the organization that owns it:
+`getOrganizationRole` for any other organization fails (the auth server answers 403) and
+`listOrganizationMemberships()` returns at most that one membership. A multi-tenant
+platform service that serves every organization (e.g. a registry) needs a platform
+administrator to set its API server's organization membership visibility to
+`all_organizations` (`PUT /api/apis/{api_server_id}/organization-membership-visibility`
+on the auth server). Lookups outside the owning organization are then answered only
+for a user who presents an active access token for the API server, which the resolvers
+forward automatically; outside operation handlers, pass it yourself:
+
+```ts
+import { isUserInOrganization, listUserOrganizations } from "@schemavaults/auth-server-sdk";
+
+const role = await isUserInOrganization(authServerUrl, apiServerId, jwksAccessKey, uid, "acme", {
+  subject_token: accessToken, // the user's access token for this API server
+});
+const memberships = await listUserOrganizations({
+  auth_server_url: authServerUrl,
+  api_server_id: apiServerId,
+  jwks_access_private_key: jwksAccessKey,
+  uid,
+  subject_token: accessToken,
+});
+```
 
 `AccessTokenCookieName(apiServerId)` / `AccessTokenExpiryCookieName(apiServerId)` are
 exported from the package index too, so the cookie scheme can be declared without a

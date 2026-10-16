@@ -24,7 +24,9 @@ import { ConflictError } from "@/lib/error/ConflictError";
 import {
   isHardcodedApiServerId,
   isValidApiServerId,
+  organizationMembershipVisibilitySchema,
   resourceUrlMatchModeSchema,
+  type OrganizationMembershipVisibility,
   type ResourceUrlMatchMode,
 } from "@schemavaults/app-definitions";
 
@@ -427,6 +429,32 @@ export class SchemaVaultsApiServerRegistry {
     await this.db
       .updateTable("api_servers")
       .set(update)
+      .where("api_server_id", "=", api_server_id)
+      .execute();
+    return await this.getApiServer(api_server_id);
+  }
+
+  /**
+   * @description Sets which organizations' memberships the API server may
+   * look up on the resource-server endpoints (migration 00045). Only
+   * platform administrators may call the route that uses this; hardcoded
+   * API servers have no row and cannot be updated.
+   */
+  public async setApiServerOrganizationMembershipVisibility(
+    api_server_id: ApiServerId,
+    visibility: OrganizationMembershipVisibility,
+  ): Promise<SchemaVaultsApiServerDefinition | null> {
+    if (!isValidApiServerId(api_server_id)) {
+      throw new TypeError("Received invalid API server ID!");
+    }
+    if (isHardcodedApiServerId(api_server_id)) {
+      throw new Error("Cannot update the organization membership visibility of a hardcoded API server");
+    }
+    const organization_membership_visibility: OrganizationMembershipVisibility =
+      organizationMembershipVisibilitySchema.parse(visibility);
+    await this.db
+      .updateTable("api_servers")
+      .set({ organization_membership_visibility })
       .where("api_server_id", "=", api_server_id)
       .execute();
     return await this.getApiServer(api_server_id);

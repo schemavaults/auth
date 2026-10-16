@@ -1,4 +1,8 @@
-import { apiServerIdSchema } from "@schemavaults/app-definitions";
+import {
+  apiServerIdSchema,
+  getOrganizationMembershipAccess,
+  type OrganizationMembershipAccess,
+} from "@schemavaults/app-definitions";
 import {
   organizationIdSchema,
   organizationMembershipRoleTypeSchema,
@@ -15,6 +19,7 @@ import getUserByUID from "@/lib/auth-db/users/get-user-by-uid";
 import { userDocumentToUserData } from "@/lib/auth-db/users/load-user-by-uid";
 import captureServerException from "@/lib/captureServerException";
 import isUserInOrganization from "@/lib/isUserInOrganization";
+import { verifyResourceServerSubjectToken } from "@/lib/resource-server/verify-subject-token";
 
 const ROUTE = "/api/resource-server/organizations/{organization_id}/members/{uid}/role";
 
@@ -44,10 +49,10 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
   path: ROUTE,
   summary: "Look up a user's organization role",
   description:
-    "Tells a resource server which role (`owner`, `member`, ...) a user holds in an organization, or null when they are not a member or do not exist. The service account of a client application (the subject of its `client_credentials` tokens) holds the role its app's managers configured with `PUT /api/apps/{app_id}/service-account/organization-membership` in the organization that owns the app, and no role anywhere else. Only the API server that the organization owns may ask about it: the calling API server names itself in the `X-Api-Server-Id` header and proves it with a single-use JWKS access assertion signed with its JWKS access private key. Resource servers built on `@schemavaults/auth-server-sdk` call this through `isUserInOrganization()`.",
+    "Tells a resource server which role (`owner`, `member`, ...) a user holds in an organization, or null when they are not a member or do not exist. The service account of a client application (the subject of its `client_credentials` tokens) holds the role its app's managers configured with `PUT /api/apps/{app_id}/service-account/organization-membership` in the organization that owns the app, and no role anywhere else. The calling API server names itself in the `X-Api-Server-Id` header and proves it with a single-use JWKS access assertion signed with its JWKS access private key. It may always ask about the organization that owns it. It may ask about any other organization only when a platform administrator set its organization membership visibility to `all_organizations` (`PUT /api/apis/{api_server_id}/organization-membership-visibility`), and then only about a user who presents an active access token for the API server, forwarded in `X-Subject-Token`. Resource servers built on `@schemavaults/auth-server-sdk` call this through `isUserInOrganization()`.",
   tags: [API_TAGS.resourceServers],
   auth: publicAccess(
-    "Requires `Authorization: Bearer <JWKS access assertion>` (the `schemavaults-jwks-access-assertion` scheme) signed by the API server named in `X-Api-Server-Id`; the handler verifies it after the path and header validation, so a malformed request is refused with 400 before the credential is examined, a missing or invalid assertion with 401. The API server must belong to `organization_id` (403 otherwise).",
+    "Requires `Authorization: Bearer <JWKS access assertion>` (the `schemavaults-jwks-access-assertion` scheme) signed by the API server named in `X-Api-Server-Id`; the handler verifies it after the path and header validation, so a malformed request is refused with 400 before the credential is examined, a missing or invalid assertion with 401. The API server must belong to `organization_id`, or hold the `all_organizations` membership visibility and forward the user's access token for it in `X-Subject-Token` (403 otherwise).",
   ),
   request: {
     params: z.object({
@@ -62,6 +67,10 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
         description: "Id of the calling API server; the assertion must be signed with its JWKS access key",
         example: "my-resource-api",
       }),
+      "x-subject-token": z.string().min(1).optional().openapi({
+        description:
+          "The user's access token for the calling API server. Required when `organization_id` is not the API server's own organization (only API servers with the `all_organizations` membership visibility may ask about other organizations); ignored otherwise.",
+      }),
     }),
   },
   responses: {
@@ -72,7 +81,8 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
       schema: ResourceServerErrorResponse,
     },
     403: {
-      description: "The API server does not belong to the organization",
+      description:
+        "The API server does not belong to the organization and may not look up other organizations' memberships, or it may but `X-Subject-Token` is missing or is not an active access token of `uid` for the API server",
       schema: ResourceServerErrorResponse,
     },
     500: { description: "Failed to look up the API server or the membership", schema: ResourceServerErrorResponse },
@@ -105,15 +115,40 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
       return ctx.json(401, { success: false, error: "Unauthorized" });
     }
 
-    // Verify the API server owns the requested organization
+    // The API server may see its own organization, and any other one only
+    // with the all_organizations grant plus the user's own access token.
     try {
       const apiServerRegistry = new SchemaVaultsApiServerRegistry(db);
       const apiServer = await apiServerRegistry.getApiServer(api_server_id);
-      if (!apiServer || apiServer.owner_organization_id !== organization_id) {
+      const access: OrganizationMembershipAccess = apiServer ? getOrganizationMembershipAccess(apiServer, organization_id) : false;
+      if (access === false) {
         return ctx.json(403, {
           success: false,
           error: "Forbidden - API server does not own this organization",
         });
+      }
+      if (access === "granted") {
+        const subject_token = ctx.headers["x-subject-token"];
+        if (!subject_token) {
+          return ctx.json(403, {
+            success: false,
+            error:
+              "Forbidden - looking up another organization's membership requires the user's access token in X-Subject-Token",
+          });
+        }
+        const isSubjectTokenValid: boolean = await verifyResourceServerSubjectToken({
+          dbh: ctx.context.dbh,
+          environment: ctx.context.environment,
+          api_server_id,
+          uid,
+          subject_token,
+        });
+        if (!isSubjectTokenValid) {
+          return ctx.json(403, {
+            success: false,
+            error: "Forbidden - X-Subject-Token is not an active access token of this user for this API server",
+          });
+        }
       }
     } catch (e: unknown) {
       await captureServerException(db, e, {

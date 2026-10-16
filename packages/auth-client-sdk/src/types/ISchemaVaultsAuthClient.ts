@@ -46,6 +46,7 @@ import type {
 } from "@/lib/client-application-service-account";
 import type { AssignableOrganizationMembershipRole } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
+import type { OrganizationMembershipVisibility } from "@schemavaults/app-definitions";
 import type {
   DynamicClientRegistrationRequest,
   DynamicClientRegistrationResponse,
@@ -422,6 +423,20 @@ export interface ISchemaVaultsAuthClient {
   ) => Promise<SchemaVaultsApiServerDefinition>;
 
   /**
+   * @name setApiServerOrganizationMembershipVisibility
+   * @description Set which organizations' memberships an API server may look
+   * up on the auth server's resource-server endpoints: `owning_organization`
+   * (the default) or `all_organizations` (multi-tenant platform services;
+   * lookups outside the owning organization must carry the user's access
+   * token for the API server). Platform administrators only.
+   * @returns The updated API server definition
+   */
+  setApiServerOrganizationMembershipVisibility: (
+    api_server_id: ApiServerId,
+    organization_membership_visibility: OrganizationMembershipVisibility,
+  ) => Promise<SchemaVaultsApiServerDefinition>;
+
+  /**
    * @name registerDynamicClient
    * @description Register a new OAuth 2.0 client anonymously through RFC
    * 7591 dynamic client registration (`POST /api/oidc/register`), when the
@@ -687,7 +702,13 @@ export interface ISchemaVaultsAuthClient {
    * @description Fetch the current user's organization memberships from
    *   `GET /api/me/organizations`. Each entry carries the organization id,
    *   display name, the user's role in that org, and the membership's
-   *   creation timestamp.
+   *   creation timestamp. Only available on the auth server's own frontend:
+   *   the endpoint takes the auth server session, and other client apps can
+   *   never obtain access tokens for the auth server, so on any other app
+   *   this rejects with {@link MyOrganizationMembershipsUnavailableError}.
+   *   A resource server lists its users' memberships server-side instead
+   *   (`listUserOrganizations()` / `ctx.auth.listOrganizationMemberships()`
+   *   in `@schemavaults/auth-server-sdk`).
    * @returns A promise resolving to a readonly array of OrganizationMembershipRoleDetails
    */
   listMyOrganizationMemberships: () => Promise<

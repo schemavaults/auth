@@ -14,7 +14,11 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, C
 import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
 import { Trash2, KeyRound, Plus, Unplug } from "lucide-react";
 import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
-import { DEFAULT_RESOURCE_URL_MATCH_MODE } from "@schemavaults/app-definitions";
+import { ApiServerOrganizationMembershipCard } from "@/components/ApiServerOrganizationMembership";
+import {
+  DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY,
+  DEFAULT_RESOURCE_URL_MATCH_MODE,
+} from "@schemavaults/app-definitions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -30,6 +34,8 @@ export interface ApiServerDetailPageViewProps {
   connected_domains: readonly SchemaVaultsApiServerDomainRef[];
   hardcoded: boolean;
   isOrgOwner: boolean;
+  /** Whether the viewer is a platform administrator (may change admin-only settings). */
+  isPlatformAdmin: boolean;
   current_environment: SchemaVaultsAppEnvironment;
 }
 
@@ -58,6 +64,7 @@ export default function ApiServerDetailPageView({
   connected_domains,
   hardcoded,
   isOrgOwner,
+  isPlatformAdmin,
   current_environment,
 }: ApiServerDetailPageViewProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -233,6 +240,17 @@ export default function ApiServerDetailPageView({
             api_server.resource_url_match_mode ?? DEFAULT_RESOURCE_URL_MATCH_MODE
           }
           canManage={isOrgOwner}
+        />
+      )}
+
+      {!hardcoded && (
+        <ApiServerOrganizationMembershipCard
+          api_server_id={api_server.api_server_id}
+          organization_membership_visibility={
+            api_server.organization_membership_visibility ?? DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY
+          }
+          owner_organization_id={api_server.owner_organization_id ?? null}
+          canChange={isPlatformAdmin}
         />
       )}
 

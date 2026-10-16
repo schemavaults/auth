@@ -117,3 +117,5 @@ export type {
   ApiServerDynamicClientPolicy,
   ApiServerDynamicClientPolicyUpdate,
 } from "./lib/update-api-server-dynamic-client-policy";
+export type { ISetApiServerOrganizationMembershipVisibilityOpts } from "./lib/set-api-server-organization-membership-visibility";
+export { MyOrganizationMembershipsUnavailableError } from "./lib/list-my-organization-memberships";

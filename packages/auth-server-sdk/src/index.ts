@@ -71,6 +71,12 @@ export {
 
 // Check user organization membership from auth server (for resource servers)
 export { isUserInOrganization } from "./isUserInOrganization";
+export type { IIsUserInOrganizationOptions } from "./isUserInOrganization";
+export {
+  listUserOrganizations,
+  SUBJECT_TOKEN_HEADER_NAME,
+} from "./listUserOrganizations";
+export type { IListUserOrganizationsOptions } from "./listUserOrganizations";
 
 // RFC 7662 token introspection of this API server's access tokens
 export {

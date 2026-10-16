@@ -1,8 +1,6 @@
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
 import {
   organizationMembershipRoleDetailsSchema,
-  type AccessToken,
   type OrganizationMembershipRoleDetails,
 } from "@schemavaults/auth-common";
 import { z } from "zod";
@@ -12,8 +10,27 @@ export interface IListMyOrganizationMembershipsOpts {
   auth_server_uri: string;
   // Whether this client is running on the auth-server frontend itself.
   is_auth_server: boolean;
-  acquireAccessToken: (opts: AcquireAccessTokenOptions) => Promise<AccessToken>;
   debug?: boolean;
+}
+
+/**
+ * Thrown by `listMyOrganizationMemberships()` on any client app other than
+ * the auth server's own: `/api/me/organizations` takes the auth server
+ * session, and the auth server never issues access tokens for its own
+ * audience to other apps. A resource server lists its users' memberships
+ * server-side instead, with `listUserOrganizations()` (or
+ * `ctx.auth.listOrganizationMemberships()` in operation handlers) from
+ * `@schemavaults/auth-server-sdk`.
+ */
+export class MyOrganizationMembershipsUnavailableError extends Error {
+  public constructor() {
+    super(
+      "listMyOrganizationMemberships() is only available on the auth server's own frontend; " +
+        "list a user's organization memberships through your resource server instead " +
+        "(listUserOrganizations() in @schemavaults/auth-server-sdk)",
+    );
+    this.name = "MyOrganizationMembershipsUnavailableError";
+  }
 }
 
 const listMyOrganizationMembershipsResponseSchema = z
@@ -34,43 +51,23 @@ export async function listMyOrganizationMemberships({
   adapter,
   auth_server_uri,
   is_auth_server,
-  acquireAccessToken,
   debug = false,
 }: IListMyOrganizationMembershipsOpts): Promise<
   readonly OrganizationMembershipRoleDetails[]
 > {
+  // Other client apps can never authenticate to this endpoint (see
+  // MyOrganizationMembershipsUnavailableError): fail before asking the auth
+  // server for a token it will always refuse.
+  if (!is_auth_server) {
+    throw new MyOrganizationMembershipsUnavailableError();
+  }
+
   const method = "GET" as const;
 
+  // On the auth-server frontend the request is same-origin, so the auth
+  // session cookies are sent automatically with credentialed requests.
   // eslint-disable-next-line no-undef
-  const requestInit: RequestInit = { method };
-
-  if (is_auth_server) {
-    // On the auth-server frontend the request is same-origin, so the auth
-    // session cookies are sent automatically with credentialed requests.
-    requestInit.credentials = "include";
-  } else {
-    // On an external app the auth-server's cookies are not available
-    // cross-origin; authenticate with an access token addressed to the auth
-    // server. Its token audience is the auth server URL (not the app id).
-    const audience: string = auth_server_uri;
-    let accessToken: AccessToken;
-    try {
-      accessToken = await acquireAccessToken({
-        audience,
-      });
-    } catch (e: unknown) {
-      throw new Error(
-        `Failed to acquire access token for audience '${audience}'!`,
-        {
-          cause: e,
-        },
-      );
-    }
-
-    requestInit.headers = {
-      Authorization: `Bearer ${accessToken.token}`,
-    };
-  }
+  const requestInit: RequestInit = { method, credentials: "include" };
 
   const endpoint: string = `${auth_server_uri}/api/me/organizations`;
 

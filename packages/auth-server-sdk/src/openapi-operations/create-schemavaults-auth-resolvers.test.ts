@@ -4,7 +4,7 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
-import { generateNewJwtKeySet, JWT_Factory, type JWT_Keys } from "@schemavaults/jwt";
+import { generateNewJwtKeySet, JWT_Factory, SigningKeyPairFactory, type JWT_Keys } from "@schemavaults/jwt";
 import {
   createOperationsApp,
   createOperationDefiner,
@@ -347,6 +347,82 @@ describe("createSchemaVaultsAuthResolvers", () => {
     });
     expect(res.status).toBe(403);
     expect(await res.json()).toMatchObject({ error: "not_an_organization_member" });
+  });
+
+  it("membership lookups forward the presented access token as the subject token", async () => {
+    const user = mockUser();
+    const { store, token } = await mint(user);
+    const [privateKey] = await new SigningKeyPairFactory().generate("pem");
+    process.env.SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY = privateKey;
+
+    const memberships = define({
+      method: "get",
+      path: "/api/my-organizations",
+      summary: "My organizations",
+      auth: requireAuth({ schemes: [schemaVaultsAccessTokenBearerScheme, cookieScheme] }),
+      responses: {
+        200: {
+          description: "ok",
+          schema: z.object({ organizations: z.array(z.string()), role: z.union([z.string(), z.literal(false)]) }),
+        },
+      },
+      handler: async (ctx) => {
+        const listed = (await ctx.auth.listOrganizationMemberships?.()) ?? [];
+        const role = (await ctx.auth.getOrganizationRole?.("globex")) ?? false;
+        return ctx.json(200, { organizations: listed.map((m) => m.organization_id), role });
+      },
+    });
+    const app = createOperationsApp<unknown, UserData>({
+      operations: [memberships],
+      authResolvers: createSchemaVaultsAuthResolvers({
+        apiServerId: API_SERVER_ID,
+        environment,
+        jwtKeysManager: new MockJwtKeyManager(store),
+        authServerUrl: "https://auth.example.com",
+      }),
+    });
+
+    const requests: { url: string; headers: Headers }[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request, init?: Parameters<typeof fetch>[1]) => {
+      const url = String(input);
+      requests.push({ url, headers: new Headers(init?.headers) });
+      const body = url.endsWith("/organizations")
+        ? {
+            success: true,
+            data: {
+              uid: user.uid,
+              organization_membership_visibility: "all_organizations",
+              memberships: [
+                { organization_id: "acme", organization_name: "Acme", role: "owner", created_at: 1, joined_at: 2 },
+              ],
+            },
+          }
+        : { success: true, data: { organization_id: "globex", uid: user.uid, role: "member" } };
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      const credentials: Record<string, string>[] = [
+        { authorization: `Bearer ${token}` },
+        { cookie: `${COOKIE}=${token}` },
+      ];
+      for (const headers of credentials) {
+        requests.length = 0;
+        const res = await app.request("/api/my-organizations", { headers });
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ organizations: ["acme"], role: "member" });
+        expect(requests.map((r) => r.url)).toEqual([
+          `https://auth.example.com/api/resource-server/users/${user.uid}/organizations`,
+          `https://auth.example.com/api/resource-server/organizations/globex/members/${user.uid}/role`,
+        ]);
+        for (const request of requests) {
+          expect(request.headers.get("x-subject-token")).toBe(token);
+          expect(request.headers.get("x-api-server-id")).toBe(API_SERVER_ID);
+        }
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
 
