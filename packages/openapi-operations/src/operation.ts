@@ -1,5 +1,8 @@
 import type { z, ZodObject, ZodType } from "zod";
-import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
+import type {
+  OrganizationMembershipRoleDetails,
+  OrganizationMembershipRoleType,
+} from "@schemavaults/auth-common/organizations";
 import { type HttpMethod, HTTP_METHODS_WITH_REQUEST_BODY, isHttpMethod } from "./http-method";
 import type {
   AllSchemesResolveUser,
@@ -148,6 +151,16 @@ export interface AuthPrincipal<TUser = unknown> {
   readonly getOrganizationRole?: (
     organizationId: string,
   ) => Promise<OrganizationMembershipRoleType | false>;
+  /**
+   * Lists the principal's organization memberships (with each
+   * organization's name and the principal's role), for handlers that show
+   * or filter by "my organizations". Absent means the host cannot list
+   * them; resolvers that can typically answer only the memberships the
+   * host is allowed to see.
+   */
+  readonly listOrganizationMemberships?: () => Promise<
+    readonly OrganizationMembershipRoleDetails[]
+  >;
 }
 
 /** An {@link AuthPrincipal} that is known to carry a user (`principal: "user"` schemes). */

@@ -42,6 +42,19 @@ export {
 } from "./api-server-dynamic-clients";
 export type { ResourceUrlMatchMode } from "./api-server-dynamic-clients";
 
+export {
+  ORGANIZATION_MEMBERSHIP_VISIBILITIES,
+  DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY,
+  organizationMembershipVisibilitySchema,
+  apiServerOrganizationMembershipVisibilityFieldsShape,
+  getOrganizationMembershipVisibility,
+  getOrganizationMembershipAccess,
+} from "./api-server-organization-membership-visibility";
+export type {
+  OrganizationMembershipVisibility,
+  OrganizationMembershipAccess,
+} from "./api-server-organization-membership-visibility";
+
 export * from "./list-registry-apps-query-params";
 export type * from "./list-registry-apps-query-params";
 

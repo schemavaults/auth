@@ -6,6 +6,7 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   organizationIdSchema,
+  type OrganizationMembershipRoleDetails,
   type OrganizationMembershipRoleType,
 } from "@schemavaults/auth-common/organizations";
 import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth-common";
@@ -25,6 +26,7 @@ import loadJwksAccessPrivateKey, {
   JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME,
 } from "@/env/loadJwksAccessPrivateKey";
 import isUserInOrganization from "@/isUserInOrganization";
+import listUserOrganizations from "@/listUserOrganizations";
 import type { IJwtKeyManager } from "@/JwtKeyManager";
 import { JwtKeyManagerMisconfigurationError } from "@/JwtKeyManager/JwtKeyManagerMisconfigurationError";
 import type { IRouteGuard } from "@/route_guards/IRouteGuard";
@@ -177,8 +179,11 @@ export function bearerTokenFromAuthorizationHeader(
  *   auth server URL) is missing, the key is unusable, or the auth server
  *   refuses the JWKS download: a token is never waved through silently;
  * - otherwise resolves `{ scheme, user, isAdmin: user.admin === true,
- *   scope, getOrganizationRole }`, where `getOrganizationRole` asks the
- *   auth server (`isUserInOrganization`) with the JWKS access key.
+ *   scope, getOrganizationRole, listOrganizationMemberships }`, which ask
+ *   the auth server (`isUserInOrganization` / `listUserOrganizations`)
+ *   with the JWKS access key and forward the presented access token as
+ *   the subject token, so an API server granted the `all_organizations`
+ *   membership visibility can see the user's other organizations.
  *
  * Environment-derived settings are read on first use, not when the
  * resolvers are created, so importing the module that builds them (e.g.
@@ -338,6 +343,10 @@ export function createSchemaVaultsAuthResolvers<TContext = unknown>(
       });
     }
 
+    // The token the user presented: forwarded to the auth server as the
+    // subject token of membership lookups.
+    const subject_token: string = source.token;
+
     return {
       scheme: scheme.name,
       user,
@@ -354,8 +363,19 @@ export function createSchemaVaultsAuthResolvers<TContext = unknown>(
           await resolveJwksAccessPrivateKey(),
           user.uid,
           parsed.data,
+          { subject_token },
         );
       },
+      listOrganizationMemberships: async (): Promise<
+        readonly OrganizationMembershipRoleDetails[]
+      > =>
+        listUserOrganizations({
+          auth_server_url: resolveAuthServerUrl(),
+          api_server_id: audience,
+          jwks_access_private_key: await resolveJwksAccessPrivateKey(),
+          uid: user.uid,
+          subject_token,
+        }),
     };
   }
 

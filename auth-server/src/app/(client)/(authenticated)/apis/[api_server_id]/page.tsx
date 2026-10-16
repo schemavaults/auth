@@ -71,6 +71,7 @@ export default async function ApiServerDetailPage(
           connected_domains={connected_domains}
           hardcoded={hardcoded}
           isOrgOwner={canManage}
+          isPlatformAdmin={user.admin === true}
           current_environment={current_environment}
         />
       );

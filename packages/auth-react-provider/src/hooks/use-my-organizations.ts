@@ -26,6 +26,15 @@ export function clearMyOrganizationsCache(
   );
 }
 
+/**
+ * The signed-in user's organization memberships (`GET /api/me/organizations`).
+ * Only works on the auth server's own frontend: on any other client app the
+ * request fails with `MyOrganizationMembershipsUnavailableError`, since the
+ * auth server never issues tokens for its own API to other apps. Resource
+ * servers list memberships server-side instead (`listUserOrganizations()` /
+ * `ctx.auth.listOrganizationMemberships()` in `@schemavaults/auth-server-sdk`)
+ * and expose them through their own API.
+ */
 export function useMyOrganizations({
   enabled = true,
   initialData,
