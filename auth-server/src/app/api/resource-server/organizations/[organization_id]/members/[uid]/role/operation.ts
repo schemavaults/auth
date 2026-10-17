@@ -10,8 +10,10 @@ import {
 } from "@schemavaults/auth-common";
 import { z, publicAccess, withOpenApi } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
-import { ResourceServerErrorResponse } from "@/lib/api/domain-schemas/resource-servers";
-import { validationErrorResponse } from "@/lib/api/schemas";
+import {
+  ResourceServerBadRequestResponse,
+  ResourceServerErrorResponse,
+} from "@/lib/api/domain-schemas/resource-servers";
 import { API_TAGS } from "@/lib/api/tags";
 import verifyJwksAccessAssertion from "@/app/api/jwks/[audience]/verifyJwksAccessAssertion";
 import SchemaVaultsApiServerRegistry from "@/lib/auth-db/apis";
@@ -19,6 +21,11 @@ import getUserByUID from "@/lib/auth-db/users/get-user-by-uid";
 import { userDocumentToUserData } from "@/lib/auth-db/users/load-user-by-uid";
 import captureServerException from "@/lib/captureServerException";
 import isUserInOrganization from "@/lib/isUserInOrganization";
+import {
+  MAX_SUBJECT_TOKEN_LENGTH,
+  parseSubjectTokenHeader,
+  type ParsedSubjectTokenHeader,
+} from "@/lib/resource-server/subject-token-header";
 import { verifyResourceServerSubjectToken } from "@/lib/resource-server/verify-subject-token";
 
 const ROUTE = "/api/resource-server/organizations/{organization_id}/members/{uid}/role";
@@ -67,15 +74,20 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
         description: "Id of the calling API server; the assertion must be signed with its JWKS access key",
         example: "my-resource-api",
       }),
-      "x-subject-token": z.string().min(1).optional().openapi({
-        description:
-          "The user's access token for the calling API server. Required when `organization_id` is not the API server's own organization (only API servers with the `all_organizations` membership visibility may ask about other organizations); ignored otherwise.",
+      // Declared loosely and parsed by the handler (parseSubjectTokenHeader),
+      // which answers a malformed value in this endpoint's error envelope.
+      "x-subject-token": z.string().optional().openapi({
+        description: `The user's access token for the calling API server, exactly as it was presented to the resource server: a JWE in compact serialization of at most ${MAX_SUBJECT_TOKEN_LENGTH} characters. Required when \`organization_id\` is not the API server's own organization (only API servers with the \`all_organizations\` membership visibility may ask about other organizations); otherwise not needed, but still refused with 400 when sent malformed.`,
       }),
     }),
   },
   responses: {
     200: { description: "The user's role (null when not a member)", schema: OrganizationMemberRoleResponse },
-    ...validationErrorResponse,
+    400: {
+      description:
+        "The path parameters or `X-Api-Server-Id` failed validation, or `X-Subject-Token` was sent but cannot be one of the platform's access tokens (not a JWE in compact serialization, too long, or a protected header without the platform's algorithm, `enc`, `keyset_id` and `aud`)",
+      schema: ResourceServerBadRequestResponse,
+    },
     401: {
       description: "No `Authorization: Bearer <assertion>` header, or the assertion did not verify for the API server named in `X-Api-Server-Id`",
       schema: ResourceServerErrorResponse,
@@ -90,6 +102,14 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
   handler: async (ctx) => {
     const { organization_id, uid } = ctx.params;
     const api_server_id = ctx.headers["x-api-server-id"];
+
+    // Parsed before the credential is examined, like the path and the other
+    // headers: a value that cannot be one of the platform's access tokens is
+    // refused whether or not this lookup needs one.
+    const subjectToken: ParsedSubjectTokenHeader = parseSubjectTokenHeader(ctx.headers["x-subject-token"]);
+    if (subjectToken.kind === "malformed") {
+      return ctx.json(400, { success: false, error: `Bad Request - ${subjectToken.reason}` });
+    }
 
     // Extract assertion from Authorization header
     const authorization = ctx.request.headers.get("Authorization");
@@ -128,8 +148,7 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
         });
       }
       if (access === "granted") {
-        const subject_token = ctx.headers["x-subject-token"];
-        if (!subject_token) {
+        if (subjectToken.kind !== "token") {
           return ctx.json(403, {
             success: false,
             error:
@@ -141,7 +160,7 @@ export const getOrganizationMemberRoleForResourceServer = defineOperation({
           environment: ctx.context.environment,
           api_server_id,
           uid,
-          subject_token,
+          subject_token: subjectToken.token,
         });
         if (!isSubjectTokenValid) {
           return ctx.json(403, {

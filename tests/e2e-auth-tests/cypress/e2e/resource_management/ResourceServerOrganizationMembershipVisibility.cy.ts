@@ -209,6 +209,28 @@ function mintSubjectToken(f: Fixture): Cypress.Chainable<string> {
     });
 }
 
+function base64url(value: string): string {
+  return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * Shaped like one of the platform's access tokens (a compact JWE whose
+ * protected header carries the expected members) but not a real one: it
+ * passes the X-Subject-Token parsing and must fail verification (403).
+ */
+function forgedSubjectToken(api_server_id: string): string {
+  const header = base64url(
+    JSON.stringify({
+      alg: "RSA-OAEP-256",
+      enc: "A256GCM",
+      keyset_id: "00000000-0000-4000-8000-000000000000",
+      kid: "00000000-0000-4000-8000-000000000000-decryption",
+      aud: api_server_id,
+    }),
+  );
+  return [header, "AAAA", "AAAA", "AAAA", "AAAA"].join(".");
+}
+
 function mintAssertion(f: Fixture): Cypress.Chainable<string> {
   return cy
     .task("createJwksAccessProofToken", {
@@ -328,6 +350,10 @@ describe("API server organization membership visibility", () => {
         expect(response.status).to.eq(200);
         expect(response.body.data?.role).to.eq(null);
       });
+      // ... but a subject token that is sent must be well-formed, needed or not.
+      getRole(f, f.home_organization_id, f.service_account_uid, "not-a-token").then((response) => {
+        expect(response.status, "malformed subject token on an own-organization lookup").to.eq(400);
+      });
       // The list only contains what the API server may see: nothing here.
       listOrganizations(f, f.service_account_uid, subject_token).then((response) => {
         expect(response.status).to.eq(200);
@@ -348,7 +374,11 @@ describe("API server organization membership visibility", () => {
         expect(response.status, "no subject token").to.eq(403);
       });
       getRole(f, f.other_organization_id, f.service_account_uid, "not-a-token").then((response) => {
-        expect(response.status, "garbage subject token").to.eq(403);
+        expect(response.status, "malformed subject token").to.eq(400);
+        expect(response.body.success).to.eq(false);
+      });
+      getRole(f, f.other_organization_id, f.service_account_uid, forgedSubjectToken(f.api_server_id)).then((response) => {
+        expect(response.status, "well-formed but forged subject token").to.eq(403);
       });
       getRole(f, f.other_organization_id, f.superuser_uid, subject_token).then((response) => {
         expect(response.status, "subject token of another user").to.eq(403);
@@ -397,7 +427,10 @@ describe("API server organization membership visibility", () => {
       expect(response.status, "missing assertion").to.eq(401);
     });
     listOrganizations(f, f.service_account_uid, "not-a-token").then((response) => {
-      expect(response.status, "garbage subject token").to.eq(403);
+      expect(response.status, "malformed subject token").to.eq(400);
+    });
+    listOrganizations(f, f.service_account_uid, forgedSubjectToken(f.api_server_id)).then((response) => {
+      expect(response.status, "well-formed but forged subject token").to.eq(403);
     });
   });
 

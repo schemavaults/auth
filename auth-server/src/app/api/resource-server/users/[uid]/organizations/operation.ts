@@ -15,6 +15,7 @@ import { defineOperation } from "@/lib/api/context";
 import { jwksAccessAssertionScheme } from "@/lib/api/auth-schemes";
 import {
   jwksAssertionErrorResponses,
+  ResourceServerBadRequestResponse,
   ResourceServerErrorResponse,
 } from "@/lib/api/domain-schemas/resource-servers";
 import { API_TAGS } from "@/lib/api/tags";
@@ -23,6 +24,11 @@ import { listUserOrganizationMembershipDetails } from "@/lib/auth-db/organizatio
 import getUserByUID from "@/lib/auth-db/users/get-user-by-uid";
 import { userDocumentToUserData } from "@/lib/auth-db/users/load-user-by-uid";
 import captureServerException from "@/lib/captureServerException";
+import {
+  MAX_SUBJECT_TOKEN_LENGTH,
+  parseSubjectTokenHeader,
+  type ParsedSubjectTokenHeader,
+} from "@/lib/resource-server/subject-token-header";
 import { verifyResourceServerSubjectToken } from "@/lib/resource-server/verify-subject-token";
 
 const ROUTE = "/api/resource-server/users/{uid}/organizations";
@@ -71,14 +77,21 @@ export const listUserOrganizationsForResourceServer = defineOperation({
         description: "Id of the calling API server; the assertion must be signed with its JWKS access key",
         example: "my-resource-api",
       }),
-      "x-subject-token": z.string().min(1).openapi({
-        description: "The user's access token for the calling API server (as presented to the resource server)",
+      // Required here; its contents are parsed by the handler
+      // (parseSubjectTokenHeader), which answers in this endpoint's envelope.
+      "x-subject-token": z.string().openapi({
+        description: `The user's access token for the calling API server, exactly as it was presented to the resource server: a JWE in compact serialization of at most ${MAX_SUBJECT_TOKEN_LENGTH} characters`,
       }),
     }),
   },
   responses: {
     200: { description: "The memberships the API server may see", schema: ResourceServerUserOrganizationsResponse },
     ...jwksAssertionErrorResponses,
+    400: {
+      description:
+        "`X-Api-Server-Id` or `X-Subject-Token` is missing or malformed (`X-Subject-Token` must be a JWE in compact serialization, not too long, whose protected header names the platform's algorithm and carries `enc`, `keyset_id` and `aud`), or the request failed validation",
+      schema: ResourceServerBadRequestResponse,
+    },
     403: {
       description: "`X-Subject-Token` is not an active access token of `uid` for the calling API server",
       schema: ResourceServerErrorResponse,
@@ -90,7 +103,14 @@ export const listUserOrganizationsForResourceServer = defineOperation({
     const { uid } = ctx.params;
     // The resolver verified the assertion for this very id.
     const api_server_id = ctx.headers["x-api-server-id"];
-    const subject_token = ctx.headers["x-subject-token"];
+    const subjectToken: ParsedSubjectTokenHeader = parseSubjectTokenHeader(ctx.headers["x-subject-token"]);
+    if (subjectToken.kind !== "token") {
+      return ctx.json(400, {
+        success: false,
+        error: `Bad Request - ${subjectToken.kind === "malformed" ? subjectToken.reason : "X-Subject-Token is required"}`,
+      });
+    }
+    const subject_token: string = subjectToken.token;
 
     let apiServer: SchemaVaultsApiServerDefinition | null;
     let isSubjectTokenValid: boolean;
