@@ -451,4 +451,94 @@ describe("API server organization membership visibility", () => {
       .its("body.api_server.organization_membership_visibility")
       .should("eq", "owning_organization");
   });
+
+  it("no API server is ever created with a widened visibility, by a regular user or an admin", () => {
+    // The definition schema accepts the field (a GET answer can be posted
+    // back), so creation must refuse a non-default value rather than store it.
+
+    function createApiServer(
+      api_server_id: string,
+      owner_organization_id: string,
+      organization_membership_visibility?: string,
+    ): Cypress.Chainable<Cypress.Response<{ success: boolean; message?: string }>> {
+      return cy.request<{ success: boolean; message?: string }>({
+        method: "POST",
+        url: "/api/apis",
+        body: {
+          api_server_id,
+          api_server_name: `Visibility creation ${api_server_id}`,
+          api_server_description: "ResourceServerOrganizationMembershipVisibility.cy.ts",
+          created_at: Date.now(),
+          public: false,
+          hardcoded: false,
+          owner_type: "organization",
+          owner_organization_id,
+          ...(organization_membership_visibility !== undefined ? { organization_membership_visibility } : {}),
+        },
+        failOnStatusCode: false,
+      });
+    }
+
+    function expectNotCreated(api_server_id: string): void {
+      cy.request({ method: "GET", url: `/api/apis/${api_server_id}`, failOnStatusCode: false })
+        .its("status")
+        .should("eq", 404);
+    }
+
+    function expectCreatedWithDefault(api_server_id: string): void {
+      cy.request<ApiServerResponseBody>({ method: "GET", url: `/api/apis/${api_server_id}` })
+        .its("body.api_server.organization_membership_visibility")
+        .should("eq", "owning_organization");
+    }
+
+    // A regular user who owns an organization (so may create API servers for it).
+    const user_organization_id = randomId("e2e-msvis-user");
+    cy.clearCookies();
+    cy.generate_random_test_user_credentials().then((credentials) => {
+      cy.create_and_login_as_regular_user_via_request(credentials).then((ok: boolean) =>
+        expect(ok, "regular user registration").to.be.true,
+      );
+      cy.create_organization_via_request({
+        organization_id: user_organization_id,
+        name: `Membership visibility user org ${user_organization_id}`,
+      });
+
+      const widened = randomId("e2e-msvis-user-wide");
+      createApiServer(widened, user_organization_id, "all_organizations").then((response) => {
+        expect(response.status, "regular user creating with all_organizations").to.eq(400);
+        expect(response.body.success).to.eq(false);
+      });
+      expectNotCreated(widened);
+
+      createApiServer(randomId("e2e-msvis-user-bad"), user_organization_id, "everyone")
+        .its("status")
+        .should("eq", 400);
+
+      const defaulted = randomId("e2e-msvis-user-default");
+      createApiServer(defaulted, user_organization_id, "owning_organization").its("status").should("eq", 200);
+      expectCreatedWithDefault(defaulted);
+      // ... and the owner still cannot widen it afterwards.
+      setVisibility(defaulted, "all_organizations").its("status").should("eq", 403);
+
+      const omitted = randomId("e2e-msvis-user-omitted");
+      createApiServer(omitted, user_organization_id).its("status").should("eq", 200);
+      expectCreatedWithDefault(omitted);
+    });
+
+    // A platform administrator cannot set it at creation either: the PUT is the only way in.
+    cy.clearCookies();
+    loginAsSuperuser();
+    const adminWidened = randomId("e2e-msvis-admin-wide");
+    createApiServer(adminWidened, f.home_organization_id, "all_organizations")
+      .its("status")
+      .should("eq", 400);
+    expectNotCreated(adminWidened);
+
+    // The regular user's organization takes its API servers with it.
+    cy.request({
+      method: "DELETE",
+      url: `/api/organizations/${user_organization_id}`,
+      failOnStatusCode: false,
+    });
+  });
 });
