@@ -1,4 +1,7 @@
-import type { ResourceOwnership } from "@schemavaults/app-definitions";
+import {
+  DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY,
+  type ResourceOwnership,
+} from "@schemavaults/app-definitions";
 import { requireAuth } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import { sessionSchemes } from "@/lib/api/auth-schemes";
@@ -22,7 +25,7 @@ export const createApiServer = defineOperation({
   path: ROUTE,
   summary: "Register an API server",
   description:
-    "Registers a new API server (resource server). The body's ownership fields decide who owns it: platform (administrators only), an organization the caller owns/administers, or the caller's own account (when user-owned resources are enabled). `hardcoded` must be false; `created_at`/`created_by` are set by the server.",
+    "Registers a new API server (resource server). The body's ownership fields decide who owns it: platform (administrators only), an organization the caller owns/administers, or the caller's own account (when user-owned resources are enabled). `hardcoded` must be false; `created_at`/`created_by` are set by the server. Every API server starts with the `owning_organization` membership visibility: a body asking for any other value is refused with 400, since widening it is a platform administrator's decision made afterwards with `PUT /api/apis/{api_server_id}/organization-membership-visibility`.",
   tags: [API_TAGS.apis],
   auth: requireAuth({
     schemes: sessionSchemes,
@@ -38,7 +41,8 @@ export const createApiServer = defineOperation({
   },
   responses: {
     200: { description: "The API server was registered", schema: ResourceCreationResponse },
-    // 400: the body failed validation, declares a hardcoded API server, or names an invalid owner
+    // 400: the body failed validation, declares a hardcoded API server, asks for a
+    // non-default organization membership visibility, or names an invalid owner
     ...validationErrorResponse,
     ...sessionErrorResponses,
     409: { description: "An API server with that id already exists", schema: ErrorResponse },
@@ -57,6 +61,20 @@ export const createApiServer = defineOperation({
       return ctx.json(400, {
         success: false,
         message: "Failed to parse new API server details from request body",
+      });
+    }
+
+    // The organization membership visibility is a platform grant, set only
+    // by administrators through its own endpoint. Refused here rather than
+    // dropped, for administrators too, so that no creation path can ever
+    // carry it.
+    if (
+      newResource.organization_membership_visibility !== undefined &&
+      newResource.organization_membership_visibility !== DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY
+    ) {
+      return ctx.json(400, {
+        success: false,
+        message: `New API servers always start with the '${DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY}' organization membership visibility; platform administrators change it with PUT /api/apis/{api_server_id}/organization-membership-visibility`,
       });
     }
 

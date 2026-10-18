@@ -217,6 +217,8 @@ const app = createOperationsApp<{ dbh: Kysely<AuthDatabase> }, UserData>({
         isAdmin: user.admin,
         scope: user.scope ?? null,
         getOrganizationRole: (orgId) => lookupMembershipRole(user.uid, orgId),
+        // optional: lets handlers list "my organizations" (ctx.auth.listOrganizationMemberships())
+        listOrganizationMemberships: () => listMemberships(user.uid),
       };
     },
   },

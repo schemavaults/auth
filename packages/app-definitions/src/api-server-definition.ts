@@ -3,6 +3,7 @@ import { apiServerIdSchema } from "./api-server-id";
 import { schemaVaultsAppEnvironmentSchema } from "./app-environments";
 import { resourceOwnershipFieldsShape } from "./resource-ownership";
 import { apiServerDynamicClientFieldsShape } from "./api-server-dynamic-clients";
+import { apiServerOrganizationMembershipVisibilityFieldsShape } from "./api-server-organization-membership-visibility";
 
 export const schemaVaultsApiServerDefinitionSchema = z
   .object({
@@ -16,6 +17,8 @@ export const schemaVaultsApiServerDefinitionSchema = z
     ...resourceOwnershipFieldsShape,
     // Dynamic-client policy: see api-server-dynamic-clients.ts
     ...apiServerDynamicClientFieldsShape,
+    // Organization membership lookups: see api-server-organization-membership-visibility.ts
+    ...apiServerOrganizationMembershipVisibilityFieldsShape,
   })
   .required({
     api_server_id: true,

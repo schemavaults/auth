@@ -54,6 +54,14 @@ export const JsonWebKeySet = z
   });
 
 /**
+ * A 400 from a resource-server endpoint: the operations runtime's
+ * validation envelope, or the endpoint's own `{ success: false, error }`.
+ */
+export const ResourceServerBadRequestResponse = z
+  .union([BadRequestResponse, ResourceServerErrorResponse])
+  .openapi("ResourceServerBadRequestResponse");
+
+/**
  * The 400 / 401 responses the JWKS access assertion resolver
  * (`src/lib/api/auth-resolvers/jwks-access-assertion.ts`) can produce.
  */
@@ -61,9 +69,7 @@ export const jwksAssertionErrorResponses = {
   400: {
     description:
       "The API server the assertion must be signed for (path parameter or `X-Api-Server-Id` header) is missing, malformed, or names the auth server itself; or the request failed validation",
-    schema: z
-      .union([BadRequestResponse, ResourceServerErrorResponse])
-      .openapi("ResourceServerBadRequestResponse"),
+    schema: ResourceServerBadRequestResponse,
   },
   401: {
     description:

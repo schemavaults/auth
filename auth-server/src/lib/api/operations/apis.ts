@@ -19,6 +19,7 @@ import {
   getJwksAccessKeyMetadata,
   regenerateJwksAccessKey,
 } from "@/app/api/apis/[api_server_id]/jwks-access-key/operation";
+import { setApiServerOrganizationMembershipVisibility } from "@/app/api/apis/[api_server_id]/organization-membership-visibility/operation";
 
 /** Operations of the "apis" domain, in the order they appear in the docs. */
 export const apisOperations: readonly AnyOperationDefinition[] = [
@@ -26,6 +27,7 @@ export const apisOperations: readonly AnyOperationDefinition[] = [
   createApiServer,
   getApiServer,
   updateApiServerDynamicClientPolicy,
+  setApiServerOrganizationMembershipVisibility,
   deleteApiServer,
   listApiServerDomains,
   addApiServerDomain,

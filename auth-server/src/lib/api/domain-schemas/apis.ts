@@ -13,7 +13,7 @@ import {
 /** An API server (resource server) registration. */
 export const ApiServerDefinition = withOpenApi(schemaVaultsApiServerDefinitionSchema, "ApiServerDefinition", {
   description:
-    "An API server (resource server) registration: identity, listing visibility, ownership (platform / organization / user) and dynamic-client policy.",
+    "An API server (resource server) registration: identity, listing visibility, ownership (platform / organization / user), dynamic-client policy and organization membership visibility.",
 });
 
 /** A domain registered for an API server in one app environment. */

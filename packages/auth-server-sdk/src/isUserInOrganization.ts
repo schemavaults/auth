@@ -9,6 +9,20 @@ import {
   type OrganizationID,
   type OrganizationMembershipRoleType,
 } from "@schemavaults/auth-common/organizations";
+import { SUBJECT_TOKEN_HEADER_NAME } from "@/listUserOrganizations";
+
+export interface IIsUserInOrganizationOptions {
+  /**
+   * The user's access token for this API server, as presented to the
+   * resource server. Required by the auth server when `organization_id` is
+   * not the API server's own organization (only API servers granted the
+   * `all_organizations` membership visibility may ask about those);
+   * ignored for the API server's own organization.
+   */
+  subject_token?: string;
+  /** Override for tests. */
+  fetch?: typeof fetch;
+}
 
 /**
  * Check if a user is a member of an organization by querying the auth server.
@@ -22,6 +36,7 @@ import {
  * @param jwks_access_private_key - The JWKS access private key for signing assertions
  * @param uid - The user ID to check membership for
  * @param organization_id - The organization to check membership in
+ * @param options - See {@link IIsUserInOrganizationOptions}
  * @returns false if not a member, or the role name string (e.g. "owner", "member") if they are
  */
 export async function isUserInOrganization(
@@ -30,6 +45,7 @@ export async function isUserInOrganization(
   jwks_access_private_key: CryptoKey,
   uid: string,
   organization_id: OrganizationID,
+  options: IIsUserInOrganizationOptions = {},
 ): Promise<OrganizationMembershipRoleType | false> {
   if (!apiServerIdSchema.safeParse(api_server_id).success) {
     throw new TypeError("Invalid API server ID!");
@@ -52,12 +68,17 @@ export async function isUserInOrganization(
     auth_server_url,
   );
 
-  const response = await fetch(url.toString(), {
+  const headers = new Headers({
+    Authorization: `Bearer ${assertion}`,
+    "X-Api-Server-Id": api_server_id,
+  });
+  if (typeof options.subject_token === "string" && options.subject_token.length > 0) {
+    headers.set(SUBJECT_TOKEN_HEADER_NAME, options.subject_token);
+  }
+
+  const response = await (options.fetch ?? fetch)(url.toString(), {
     method: "GET",
-    headers: new Headers({
-      Authorization: `Bearer ${assertion}`,
-      "X-Api-Server-Id": api_server_id,
-    }),
+    headers,
   });
 
   if (!response.ok) {

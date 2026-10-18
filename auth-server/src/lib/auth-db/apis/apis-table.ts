@@ -1,4 +1,5 @@
 import type {
+  OrganizationMembershipVisibility,
   ResourceOwnerType,
   ResourceUrlMatchMode,
   SchemaVaultsApiServerDefinition,
@@ -23,6 +24,8 @@ import type {
  * - `owner_uid` is set only for user-owned rows.
  * - The dynamic-client policy columns (migration 00040) are NOT NULL with
  *   defaults (`false` / `'exact'`), so inserts may omit them.
+ * - `organization_membership_visibility` (migration 00045) is NOT NULL with
+ *   the default `'owning_organization'`, so inserts may omit it.
  */
 export type ApiServersTable = Omit<
   SchemaVaultsApiServerDefinition,
@@ -32,6 +35,7 @@ export type ApiServersTable = Omit<
   | "created_by"
   | "allow_dynamic_clients"
   | "resource_url_match_mode"
+  | "organization_membership_visibility"
 > & {
   owner_type: ResourceOwnerType;
   owner_organization_id: string | null;
@@ -39,6 +43,7 @@ export type ApiServersTable = Omit<
   created_by: string | null;
   allow_dynamic_clients: Generated<boolean>;
   resource_url_match_mode: Generated<ResourceUrlMatchMode>;
+  organization_membership_visibility: Generated<OrganizationMembershipVisibility>;
 };
 
 export type ApiServer = Selectable<ApiServersTable>;
