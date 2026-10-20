@@ -6,10 +6,11 @@ import {
   appIdParams,
   appManagementErrorResponses,
 } from "@/lib/api/domain-schemas/apps";
-import { sessionErrorResponses, validationErrorResponse } from "@/lib/api/schemas";
+import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import captureServerException from "@/lib/captureServerException";
+import ServiceAccountUnavailableError from "@/lib/error/ServiceAccountUnavailableError";
 import loadAppForManagement from "@/lib/load-app-for-management";
 import { SERVICE_ACCOUNT_ROUTE, summarizeServiceAccount } from "./service-account-summary";
 
@@ -18,7 +19,7 @@ export const createAppServiceAccount = defineOperation({
   path: "/api/apps/{app_id}/service-account",
   summary: "Create an app's service account",
   description:
-    "Creates the client application's service account ahead of its first client_credentials grant, so its uid can be granted permissions on resource servers up front. Idempotent: an existing service account is returned with `created: false` and status 200. Requires management access; hardcoded apps cannot be configured.",
+    "Creates the client application's service account ahead of its first client_credentials grant, so its uid can be granted permissions on resource servers up front. Idempotent: an existing service account is returned with `created: false` and status 200. Dynamically registered clients (RFC 7591) cannot have a service account. Requires management access; hardcoded apps cannot be configured.",
   tags: [API_TAGS.apps],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: { params: appIdParams },
@@ -28,6 +29,11 @@ export const createAppServiceAccount = defineOperation({
     ...validationErrorResponse,
     ...sessionErrorResponses,
     ...appManagementErrorResponses,
+    409: {
+      description:
+        "The app was registered dynamically (RFC 7591): such clients cannot use the client credentials grant, so they have no service account",
+      schema: ErrorResponse,
+    },
   },
   handler: async (ctx) => {
     const user = ctx.auth.user;
@@ -56,6 +62,13 @@ export const createAppServiceAccount = defineOperation({
       };
       return created ? ctx.json(201, body) : ctx.json(200, body);
     } catch (e: unknown) {
+      if (e instanceof ServiceAccountUnavailableError) {
+        return ctx.json(409, {
+          success: false,
+          message:
+            "Dynamically registered clients cannot use the client credentials grant, so they cannot have a service account.",
+        });
+      }
       await captureServerException(db, e, {
         op_name: "POST_create_service_account.getOrCreateServiceAccount",
         route: SERVICE_ACCOUNT_ROUTE,

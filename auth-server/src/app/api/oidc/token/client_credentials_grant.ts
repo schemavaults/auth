@@ -14,7 +14,10 @@ import {
   parseOidcTokenResourceParam,
   validateOidcTokenResource,
 } from "@/lib/oidc/token-request-extensions";
-import type { ApiServerId } from "@schemavaults/app-definitions";
+import {
+  isDynamicallyRegisteredClient,
+  type ApiServerId,
+} from "@schemavaults/app-definitions";
 import type { OidcGrantContext, OidcGrantOutcome } from "./token-response";
 
 /**
@@ -24,7 +27,12 @@ import type { OidcGrantContext, OidcGrantOutcome } from "./token-response";
  * confidential clients"), i.e. apps with a registered client secret that
  * authenticated with it on this request — route.ts already ran client
  * authentication, so a public client reaching this handler is refused
- * with `unauthorized_client`.
+ * with `unauthorized_client`. So is a dynamically registered client
+ * (RFC 7591), confidential or not: anyone can register one anonymously,
+ * and the grant would hand that registration an unattended machine
+ * identity (and tokens for every API server that accepts dynamic
+ * clients). handleOidcTokenRequest() already refuses it through the
+ * client's registered grant types; this check stands on its own.
  *
  * There is no resource owner: the token's subject is the app's SERVICE
  * ACCOUNT (a machine identity stored as a USERS row and created on the
@@ -42,6 +50,7 @@ export async function handleOidcClientCredentialsGrant({
   dbh,
   form,
   client_app_id,
+  client_app,
   client_authenticated,
   param,
   environment,
@@ -57,6 +66,24 @@ export async function handleOidcClientCredentialsGrant({
       oidcTokenErrorResponse(
         "unauthorized_client",
         "The client credentials grant is only available to confidential clients; register a client secret for this app and authenticate with it.",
+      ),
+    );
+  }
+  // A client secret implies an APPS row, so `client_app` is only null if
+  // the app vanished mid-request; fail closed.
+  if (client_app === null) {
+    return fail(
+      oidcTokenErrorResponse(
+        "unauthorized_client",
+        "Unknown client application.",
+      ),
+    );
+  }
+  if (isDynamicallyRegisteredClient(client_app)) {
+    return fail(
+      oidcTokenErrorResponse(
+        "unauthorized_client",
+        "The client credentials grant is not available to dynamically registered clients.",
       ),
     );
   }

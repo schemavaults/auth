@@ -18,10 +18,17 @@
 // the service account, and deleting the service account revokes nothing
 // retroactively beyond what deleting any user does (stateless access
 // tokens stay verifiable until they expire).
+//
+// Dynamically registered clients (RFC 7591, owner type
+// `dynamic-client-registration`) never get one: anyone can register such
+// a client anonymously, and a service account would give that
+// registration an unattended machine identity. The token endpoint
+// refuses them the grant; creation refuses them here as well.
 
 import "server-only";
 import {
   appIdSchema,
+  DYNAMIC_CLIENT_REGISTRATION_OWNER_TYPE,
   isHardcodedAppId,
   type AppId,
 } from "@schemavaults/app-definitions";
@@ -38,6 +45,7 @@ import {
   DEFAULT_SERVICE_ACCOUNT_EMAIL_DOMAIN,
   getServiceAccountEmailDomain,
 } from "@/lib/config/service-account-email-domain";
+import ServiceAccountUnavailableError from "@/lib/error/ServiceAccountUnavailableError";
 
 export { DEFAULT_SERVICE_ACCOUNT_EMAIL_DOMAIN };
 
@@ -62,6 +70,33 @@ async function assertManageableAppId(app_id: AppId): Promise<void> {
     // use the client_credentials grant — and they have no APPS row for
     // the service account's foreign key to reference.
     throw new Error("Hardcoded apps cannot have service accounts");
+  }
+}
+
+/**
+ * Refuses apps that may not be handed a service account: unknown apps and
+ * dynamically registered (ownerless) clients, whose registration is
+ * anonymous. Only creation (and handing out an existing one) is refused:
+ * reading and deleting stay available so an administrator can remove a
+ * service account created for such a client before this rule existed.
+ *
+ * @throws ServiceAccountUnavailableError for a dynamically registered client.
+ */
+async function assertAppMayHaveServiceAccount(
+  db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
+  app_id: AppId,
+): Promise<void> {
+  await assertManageableAppId(app_id);
+  const app = await db
+    .selectFrom("apps")
+    .select("owner_type")
+    .where("app_id", "=", app_id)
+    .executeTakeFirst();
+  if (!app) {
+    throw new Error(`Cannot create a service account for unknown app '${app_id}'`);
+  }
+  if (app.owner_type === DYNAMIC_CLIENT_REGISTRATION_OWNER_TYPE) {
+    throw new ServiceAccountUnavailableError(app_id);
   }
 }
 
@@ -113,13 +148,16 @@ export interface GetOrCreateAppServiceAccountResult {
  * validation checks). Concurrent first grants race safely: the partial
  * unique index on `service_account_app_id` lets exactly one insert win,
  * and the loser re-reads the winner's row.
+ *
+ * @throws ServiceAccountUnavailableError for a dynamically registered
+ * client, even one that already has a service account.
  */
 export async function getOrCreateAppServiceAccount(
   db: Kysely<AuthDatabase>,
   app_id: AppId,
   debug: boolean = false,
 ): Promise<GetOrCreateAppServiceAccountResult> {
-  await assertManageableAppId(app_id);
+  await assertAppMayHaveServiceAccount(db, app_id);
 
   const existing = await getAppServiceAccount(db, app_id);
   if (existing) {

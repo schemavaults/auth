@@ -138,6 +138,12 @@ export interface AppServiceAccountCardProps {
   organization_membership: ServiceAccountOrganizationMembershipSummary;
   /** Whether the app is a confidential client (may use the grant). */
   has_client_secret: boolean;
+  /**
+   * Whether the app was registered dynamically (RFC 7591): such clients
+   * cannot use the grant, so no service account can be created for them
+   * (one created before that rule can still be removed).
+   */
+  dynamically_registered?: boolean;
   /** Whether the viewer may create/remove the service account. */
   canManage: boolean;
 }
@@ -147,16 +153,19 @@ export interface AppServiceAccountCardProps {
  * machine identity that access tokens obtained through the OAuth2
  * client_credentials grant are issued to. The grant is only available
  * to confidential clients, so the card points at the client secret card
- * when the app has none. For an organization-owned app, once the service
- * account exists, the card also makes it a member of that organization
- * (service accounts cannot accept invitations), so resource servers that
- * require organization membership accept its tokens.
+ * when the app has none, and never to dynamically registered clients, so
+ * the card offers no creation for them. For an organization-owned app,
+ * once the service account exists, the card also makes it a member of
+ * that organization (service accounts cannot accept invitations), so
+ * resource servers that require organization membership accept its
+ * tokens.
  */
 export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
   app_id,
   service_account,
   organization_membership,
   has_client_secret,
+  dynamically_registered = false,
   canManage,
 }): ReactElement => {
   const { toast } = useToast();
@@ -255,8 +264,10 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
           Machine-to-machine access tokens obtained with the OAuth2 client
           credentials grant (<code>grant_type=client_credentials</code>) are
           issued to this app&apos;s service account instead of a user.
-          {!has_client_secret &&
-            " The grant requires a confidential client: generate a client secret first."}
+          {dynamically_registered
+            ? " The grant is not available to dynamically registered clients, so no service account can be created for this app."
+            : !has_client_secret &&
+              " The grant requires a confidential client: generate a client secret first."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -295,7 +306,7 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
               </p>
             )}
           </div>
-        ) : (
+        ) : dynamically_registered ? null : (
           <p className="text-sm text-muted-foreground">
             No service account yet. One is created automatically by the first
             successful client credentials grant, or create it now to grant its
@@ -303,7 +314,7 @@ export const AppServiceAccountCard: FC<AppServiceAccountCardProps> = ({
           </p>
         )}
 
-        {canManage && (
+        {canManage && (service_account || !dynamically_registered) && (
           <div className="flex flex-row flex-wrap gap-2">
             {!service_account ? (
               <Button disabled={busy} onClick={() => runMutation("create")}>

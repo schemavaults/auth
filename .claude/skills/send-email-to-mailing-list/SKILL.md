@@ -281,8 +281,8 @@ type MailingListNotificationBody = {
   message:
     | { template_id: string; template_props?: unknown }
     | { text: string; html: string };
-  from?: string;      // defaults to the mail-server's configured sender
-  replyTo?: string;   // optional reply-to override
+  from?: string;      // address or "Display Name <address>"; defaults to the mail-server's configured sender
+  replyTo?: string;   // optional reply-to override; address or "Display Name <address>"
   dryRun?: boolean;   // server validates without dispatching
   transport?: string; // which mail-server transport to deliver with
   attachments?: EmailAttachment[]; // 1-20 files, <= 25 MiB total once decoded
