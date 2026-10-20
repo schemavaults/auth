@@ -2,6 +2,7 @@ import "server-only";
 import type { NextRequest, NextResponse } from "next/server";
 import type {
   AppId,
+  SchemaVaultsApp,
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { ServerlessDatabase } from "@/lib/auth-db";
@@ -64,6 +65,13 @@ export interface OidcGrantContext {
   form: FormData;
   param: OidcTokenFormParam;
   client_app_id: AppId;
+  /**
+   * The client application's definition, or null when `client_app_id`
+   * names no app (the grants then refuse the request on their own).
+   * handleOidcTokenRequest() has already checked that the app may use
+   * the requested grant type (registered grant types).
+   */
+  client_app: SchemaVaultsApp | null;
   /**
    * Whether the client authenticated with its registered client secret
    * (a confidential client). Public clients pass client authentication

@@ -14,6 +14,9 @@
 //   - a public client (`token_endpoint_auth_method: none`) gets a
 //     `client_id` and no secret; the RFC default (`client_secret_basic`)
 //     gets a one-time `client_secret` that does not expire;
+//   - a registered client never gets the client_credentials grant, not
+//     even a confidential one, and no service account exists or can be
+//     created for it;
 //   - the registered client completes a plain OAuth 2.1 grant (no
 //     `openid`): the user consents, a PKCE code is minted for one of the
 //     registered loopback redirect URIs, and the token endpoint redeems
@@ -451,6 +454,84 @@ describe("Dynamic client registration (RFC 7591)", () => {
             "invalid_client",
           );
         });
+      });
+    });
+
+    it("refuses the client_credentials grant to a confidential registered client and never gives it a service account", () => {
+      // An anonymous registration with a secret is a confidential client;
+      // the client_credentials grant would mint machine tokens for it,
+      // including for the example API server, which accepts dynamic
+      // clients without an app-to-API connection.
+      postRegistration({
+        client_name: "E2E client_credentials attempt",
+        redirect_uris: [HTTPS_REDIRECT_URI],
+        token_endpoint_auth_method: "client_secret_basic",
+      }).then((registration) => {
+        expect(registration.status, "registration status").to.equal(201);
+        const client_id: string = registration.body.client_id;
+        const client_secret = registration.body.client_secret as string;
+        expect(client_secret, "client_secret").to.be.a("string").and.match(
+          /^svs_/,
+        );
+
+        const attempts: { label: string; params: Record<string, string> }[] = [
+          { label: "resource URL", params: { resource: RESOURCE_URL } },
+          { label: "API server id", params: { resource: EXAMPLE_API_SERVER_ID } },
+          { label: "default audience", params: {} },
+        ];
+        for (const { label, params } of attempts) {
+          postTokenRequest(
+            { grant_type: "client_credentials", ...params },
+            { username: client_id, password: client_secret },
+          ).then((response) => {
+            expect(response.status, `${label}: status`).to.equal(400);
+            expect(response.body.error, `${label}: error`).to.equal(
+              "unauthorized_client",
+            );
+            expect(response.body.access_token, `${label}: no token`).to.be
+              .undefined;
+          });
+        }
+        // client_secret_post is refused the same way.
+        postTokenRequest({
+          grant_type: "client_credentials",
+          client_id,
+          client_secret,
+          resource: RESOURCE_URL,
+        }).then((response) => {
+          expect(response.status, "client_secret_post: status").to.equal(400);
+          expect(response.body.error, "client_secret_post: error").to.equal(
+            "unauthorized_client",
+          );
+        });
+
+        // No service account was created, and an administrator cannot
+        // create one either.
+        loginAsSuperuser();
+        const serviceAccountUrl = `/api/apps/${client_id}/service-account`;
+        cy.request<{ service_account: unknown }>({
+          method: "GET",
+          url: serviceAccountUrl,
+        }).then((response) => {
+          expect(response.status, "service account lookup").to.equal(200);
+          expect(response.body.service_account, "no service account").to.be
+            .null;
+        });
+        cy.request({
+          method: "POST",
+          url: serviceAccountUrl,
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(response.status, "service account creation").to.equal(409);
+        });
+        cy.request<{ service_account: unknown }>({
+          method: "GET",
+          url: serviceAccountUrl,
+        }).then((response) => {
+          expect(response.body.service_account, "still no service account").to
+            .be.null;
+        });
+        cy.logout();
       });
     });
 

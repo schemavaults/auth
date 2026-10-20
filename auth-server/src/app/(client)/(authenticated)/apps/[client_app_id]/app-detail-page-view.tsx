@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
-import { isHardcodedApiServerId, type SchemaVaultsApp, type SchemaVaultsAppCallbackUrlRef, type SchemaVaultsAppDomainRef, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { isDynamicallyRegisteredClient, isHardcodedApiServerId, type SchemaVaultsApp, type SchemaVaultsAppCallbackUrlRef, type SchemaVaultsAppDomainRef, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { AppCallbackUrlsCard, AppClientSecretCard, AppServiceAccountCard } from "@/components/AppOAuthSecurity";
@@ -247,6 +247,7 @@ export default function AppDetailPageView({
           service_account={service_account}
           organization_membership={service_account_organization_membership}
           has_client_secret={client_secret_metadata.has_client_secret}
+          dynamically_registered={isDynamicallyRegisteredClient(app)}
           canManage={isOrgOwner}
         />
       )}

@@ -4,11 +4,13 @@ import {
   appIdSchema,
   getAppEnvironment,
   type AppId,
+  type SchemaVaultsApp,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import type { OidcRefreshTokenDeliveryMode } from "@schemavaults/auth-common";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { ServerlessDatabase } from "@/lib/auth-db";
+import { getApp } from "@/lib/auth-db/apps";
 import captureServerException from "@/lib/captureServerException";
 import {
   buildCorsHeaders,
@@ -20,6 +22,7 @@ import {
   parseBasicClientCredentials,
   TOKEN_ENDPOINT_WWW_AUTHENTICATE,
 } from "@/lib/oauth2/authenticate-token-endpoint-client";
+import { isGrantTypeAllowedForClientApp } from "@/lib/oauth2/client-grant-types";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import deliverOidcTokens from "@/lib/oidc/deliver-oidc-tokens";
 import { parseOidcRefreshTokenDeliveryParam } from "@/lib/oidc/token-request-extensions";
@@ -201,6 +204,27 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
       );
     }
 
+    // RFC 6749 §5.2 `unauthorized_client`: a client is held to the grant
+    // types it registered (RFC 7591 §2), and a dynamically registered
+    // client can never use client_credentials. An unknown client_id has
+    // no definition to check; each grant refuses it on its own.
+    const client_app: SchemaVaultsApp | null = await getApp(
+      dbh.db,
+      client_app_id,
+      debug,
+    );
+    if (
+      client_app !== null &&
+      !isGrantTypeAllowedForClientApp(client_app, grant_type)
+    ) {
+      return withCors(
+        oidcTokenErrorResponse(
+          "unauthorized_client",
+          `This client is not authorized to use the '${grant_type}' grant type.`,
+        ),
+      );
+    }
+
     // Per-IP budgets for the grants that can be replayed without user
     // interaction: a stolen refresh token (or leaked client secret) must
     // not turn into an unbounded minting loop. Each grant has its own
@@ -243,6 +267,7 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
       form,
       param,
       client_app_id,
+      client_app,
       client_authenticated: clientAuth.confidential,
       environment,
       debug,
