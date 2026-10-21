@@ -22,6 +22,11 @@ import {
 import { AccessTokenCookieName } from "@/AccessTokenCookieNames";
 import getSchemavaultsApiServerId from "@/env/get-schemavaults-api-server-id";
 import getSchemaVaultsAuthServerUrl from "@/env/get-schemavaults-auth-server-url";
+import {
+  RESOURCE_URL_ENV_VAR_NAME,
+  getSchemaVaultsResourceUrl,
+  resourceUrlAudiences,
+} from "@/env/get-schemavaults-resource-url";
 import loadJwksAccessPrivateKey, {
   JWKS_ACCESS_PRIVATE_KEY_ENV_VAR_NAME,
 } from "@/env/loadJwksAccessPrivateKey";
@@ -62,7 +67,10 @@ export interface CreateSchemaVaultsAuthResolversOptions {
   /**
    * RFC 8707 resource URL(s) this resource server is known by; access
    * tokens whose `aud` is one of them are accepted too. See
-   * `RouteGuardFactory`'s `accepted_audiences`.
+   * `RouteGuardFactory`'s `accepted_audiences`. The resource URL in
+   * `SCHEMAVAULTS_RESOURCE_URL` (the one the protected resource metadata
+   * route advertises), with or without a trailing slash, is always
+   * accepted in addition, read on first use.
    */
   readonly acceptedAudiences?: readonly string[];
   /**
@@ -245,12 +253,21 @@ export function createSchemaVaultsAuthResolvers<TContext = unknown>(
   const resolveFactory = (): RouteGuardFactory => {
     if (factory === undefined) {
       const env = resolveEnvironment();
+      let resourceUrl: string | null;
+      try {
+        resourceUrl = getSchemaVaultsResourceUrl(env);
+      } catch (e: unknown) {
+        throw notConfigured(`the '${RESOURCE_URL_ENV_VAR_NAME}' environment variable is not a valid resource URL`, e);
+      }
       try {
         factory = new RouteGuardFactory({
           environment: env,
           jwt_keys_manager: keysManager,
           is_token_revoked: options.isTokenRevoked,
-          accepted_audiences: options.acceptedAudiences,
+          accepted_audiences: [
+            ...(options.acceptedAudiences ?? []),
+            ...(resourceUrl !== null ? resourceUrlAudiences(resourceUrl) : []),
+          ],
           debug,
         });
       } catch (e: unknown) {

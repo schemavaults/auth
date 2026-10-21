@@ -98,6 +98,63 @@ changes, and only for tokens whose header names one of the listed URLs
 (`resolveExpectedTokenAudience()`). Tokens with any other `aud` fail as
 before.
 
+`createSchemaVaultsAuthResolvers()` (see below) also accepts the resource URL
+in `SCHEMAVAULTS_RESOURCE_URL` without configuration, with or without a
+trailing slash; elsewhere, list them yourself with `getSchemaVaultsResourceUrl()`
+(null when unset) and `resourceUrlAudiences(url)` from
+`@schemavaults/auth-server-sdk/oauth-protected-resource`.
+
+## Protected resource metadata (RFC 9728)
+
+OAuth clients that start from nothing but your server's URL (MCP clients do)
+discover which authorization server to use, and which `resource` URL to request
+tokens for, from `/.well-known/oauth-protected-resource`.
+`@schemavaults/auth-server-sdk/oauth-protected-resource` serves that document. In
+Next.js, `app/.well-known/oauth-protected-resource/[[...path]]/route.ts` (the
+optional catch-all also answers the path-suffixed URLs of RFC 9728 §3.1, e.g.
+`/.well-known/oauth-protected-resource/mcp` for `https://api.example.com/mcp`):
+
+```ts
+import { createOAuthProtectedResourceMetadataRoute } from "@schemavaults/auth-server-sdk/oauth-protected-resource";
+
+export const { GET, OPTIONS } = createOAuthProtectedResourceMetadataRoute({
+  resource_name: "My API",         // optional
+  resource_documentation: "/docs", // optional; paths resolve against the resource URL
+  scopes_supported: ["mcp:tools"], // optional
+});
+export const dynamic = "force-dynamic";
+```
+
+```json
+{
+  "resource": "https://api.example.com/mcp",
+  "authorization_servers": ["https://auth.example.com"],
+  "bearer_methods_supported": ["header"],
+  "resource_name": "My API",
+  "resource_documentation": "https://api.example.com/docs"
+}
+```
+
+- `resource` is `SCHEMAVAULTS_RESOURCE_URL` (or the `resource` option): an
+  absolute http(s) URL without query or fragment, `https` in production and
+  staging. It is what clients send as RFC 8707 `resource`, so it becomes the
+  `aud` of their access tokens; the auth resolvers accept it (above). On the
+  auth server the URL must resolve to your API server, or token requests for it
+  fail with `invalid_target`: register its origin as one of the API server's
+  domains, with `prefix` resource URL matching when the resource URL has a path
+  (`exact` suffices when it is the origin itself), and turn on
+  `allow_dynamic_clients` for dynamically registered clients.
+- `authorization_servers` is the auth server URL (`SCHEMAVAULTS_AUTH_SERVER_URL`,
+  or the environment's default), which is the auth server's issuer.
+- The document is public: `Access-Control-Allow-Origin: *`, cached for an hour,
+  and `OPTIONS` answers CORS preflights.
+- Without a resource URL the route answers 404 (no metadata is published); a
+  path-suffixed request for a path that is neither the resource's nor below it is
+  a 404 too; an invalid resource URL is a 500.
+
+`buildOAuthProtectedResourceMetadata()` and `oauthProtectedResourceMetadataUrl()`
+(the RFC 9728 §3.1 metadata URL of a resource URL) are exported for other hosts.
+
 ## When the JWKS cannot be loaded
 
 Route guards verify tokens with the JWKS that `RemoteJwtKeyManager` downloads from the
@@ -181,7 +238,7 @@ export const api = createOperationsAppFactory<ApiContext, UserData>({
     // all optional; environment-derived defaults are read on first request
     apiServerId,                 // default SCHEMAVAULTS_API_SERVER_ID
     environment,                 // default getAppEnvironment()
-    acceptedAudiences: ["https://mcp.example.com/mcp"], // RFC 8707 resource URLs (see above)
+    acceptedAudiences: ["https://mcp.example.com/mcp"], // more RFC 8707 resource URLs; SCHEMAVAULTS_RESOURCE_URL is always accepted (see above)
     isTokenRevoked,              // optional revocation hook
   }),
 });

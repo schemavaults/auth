@@ -18,11 +18,13 @@ import type { ExampleApiContext } from "./context";
  */
 
 /**
- * RFC 8707 resource URL(s) this server is known by, from the
+ * Additional RFC 8707 resource URL(s) this server is known by, from the
  * comma-separated `SCHEMAVAULTS_ACCEPTED_TOKEN_AUDIENCES` env var. A
  * client (an MCP client, say) that requested its token with
  * `resource=<one of these URLs>` receives a token whose `aud` is that URL
- * rather than this API server's id; listing the URL here accepts it.
+ * rather than this API server's id; listing the URL here accepts it. The
+ * resolvers already accept `SCHEMAVAULTS_RESOURCE_URL`, the resource URL
+ * this server advertises at /.well-known/oauth-protected-resource.
  */
 export const ACCEPTED_TOKEN_AUDIENCES_ENV_VAR =
   "SCHEMAVAULTS_ACCEPTED_TOKEN_AUDIENCES" as const;

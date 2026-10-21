@@ -68,7 +68,7 @@ async function mint(user: UserData, scope?: string) {
     user_organizations: [],
   });
   const access = await factory.access(API_SERVER_ID, scope ? { scope } : undefined);
-  return { store, token: access.token, jti: access.jti };
+  return { store, factory, token: access.token, jti: access.jti };
 }
 
 const define = createOperationDefiner<{ id: number }, UserData>();
@@ -114,6 +114,7 @@ function appWith(store: MockJwtKeySetsStore, options: Partial<CreateSchemaVaults
 const originalEnv = { ...process.env };
 beforeEach(() => {
   delete process.env.SCHEMAVAULTS_API_SERVER_ID;
+  delete process.env.SCHEMAVAULTS_RESOURCE_URL;
 });
 afterEach(() => {
   for (const key of Object.keys(process.env)) {
@@ -202,6 +203,40 @@ describe("createSchemaVaultsAuthResolvers", () => {
     });
     expect(foreign.status).toBe(401);
     expect(await foreign.json()).toMatchObject({ error: "invalid_token" });
+  });
+
+  it("accepts tokens for the SCHEMAVAULTS_RESOURCE_URL resource URL, with or without a trailing slash", async () => {
+    const { store, factory } = await mint(mockUser());
+    const forResource = (await factory.access("https://api.example.com")).token;
+    const forResourceSlash = (await factory.access("https://api.example.com/")).token;
+    const forOther = (await factory.access("https://other.example.com")).token;
+    const status = async (app: ReturnType<typeof appWith>, token: string) =>
+      (await app.request("/api/whoami", { headers: { authorization: `Bearer ${token}` } })).status;
+
+    // Without a resource URL a URL-audience token fails the audience check.
+    expect(await status(appWith(store), forResource)).toBe(401);
+
+    process.env.SCHEMAVAULTS_RESOURCE_URL = "https://api.example.com";
+    const app = appWith(store);
+    expect(await status(app, forResource)).toBe(200);
+    expect(await status(app, forResourceSlash)).toBe(200);
+    expect(await status(app, forOther)).toBe(401);
+
+    // Explicit acceptedAudiences add to it.
+    const both = appWith(store, { acceptedAudiences: ["https://other.example.com"] });
+    expect(await status(both, forOther)).toBe(200);
+    expect(await status(both, forResource)).toBe(200);
+  });
+
+  it("answers 500 naming SCHEMAVAULTS_RESOURCE_URL when it is not a valid resource URL", async () => {
+    process.env.SCHEMAVAULTS_RESOURCE_URL = "https://api.example.com/?tenant=1";
+    const { store, token } = await mint(mockUser());
+    const res = await appWith(store).request("/api/whoami", { headers: { authorization: `Bearer ${token}` } });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({
+      error: "auth_not_configured",
+      message: expect.stringContaining("SCHEMAVAULTS_RESOURCE_URL"),
+    });
   });
 
   it("rejects a revoked token with 401 token_revoked", async () => {
