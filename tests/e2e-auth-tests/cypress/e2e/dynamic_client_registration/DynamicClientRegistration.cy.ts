@@ -26,6 +26,9 @@
 //     cypress.config.ts), so no app-to-API connection exists; the access
 //     token's `aud` is the resource URL verbatim, and the example resource
 //     server (configured to accept that URL) authenticates it;
+//   - the example resource server publishes RFC 9728 protected resource
+//     metadata naming that resource URL and this auth server, which is
+//     how an MCP client discovers both;
 //   - the client SDK's `registerDynamicClient()` helper drives one of the
 //     registrations;
 //   - only administrators can see the ownerless client in the app list.
@@ -61,8 +64,9 @@ describe("Dynamic client registration (RFC 7591)", () => {
   // The resource server identifies itself to clients by this URL (an MCP
   // server would advertise something like https://host/mcp). It is
   // matched against the seeded domain (the origin) by prefix, and the
-  // resource server accepts it as a token audience through its
-  // SCHEMAVAULTS_ACCEPTED_TOKEN_AUDIENCES env var (docker-compose.yml).
+  // resource server advertises it in its RFC 9728 protected resource
+  // metadata and accepts it as a token audience through its
+  // SCHEMAVAULTS_RESOURCE_URL env var (docker-compose.yml).
   const RESOURCE_URL = `${exampleAppOrigin}/api`;
 
   // RFC 8252 §7.3 loopback redirect: registered with one port, redeemed
@@ -267,6 +271,54 @@ describe("Dynamic client registration (RFC 7591)", () => {
   after(() => {
     // Leave the deployment as we found it: registration off.
     setRegistrationEnabled(false);
+  });
+
+  describe("protected resource metadata (RFC 9728)", () => {
+    interface ProtectedResourceMetadata {
+      resource?: string;
+      authorization_servers?: string[];
+      bearer_methods_supported?: string[];
+      resource_documentation?: string;
+    }
+
+    const WELL_KNOWN = `${exampleAppOrigin}/.well-known/oauth-protected-resource`;
+
+    it("the example resource server advertises its resource URL and this auth server", () => {
+      cy.request<DiscoveryDocument>({ url: DISCOVERY_ENDPOINT }).then(
+        (discovery) => {
+          // RFC 9728 §3.1 derives `<origin>/.well-known/oauth-protected-resource/api`
+          // from the resource URL; MCP clients fall back to the bare path.
+          for (const url of [`${WELL_KNOWN}/api`, WELL_KNOWN]) {
+            cy.request<ProtectedResourceMetadata>({ url }).then((response) => {
+              expect(response.status, `${url} status`).to.equal(200);
+              expect(
+                response.headers["access-control-allow-origin"],
+                `${url} Access-Control-Allow-Origin`,
+              ).to.equal("*");
+              expect(response.body.resource, "resource").to.equal(RESOURCE_URL);
+              expect(
+                response.body.authorization_servers,
+                "authorization_servers",
+              ).to.deep.equal([discovery.body.issuer]);
+              expect(
+                response.body.bearer_methods_supported,
+                "bearer_methods_supported",
+              ).to.deep.equal(["header"]);
+              expect(
+                response.body.resource_documentation,
+                "resource_documentation",
+              ).to.equal(`${exampleAppOrigin}/docs`);
+            });
+          }
+        },
+      );
+      // A path that is not the resource's (nor below it) names another resource.
+      cy.request({ url: `${WELL_KNOWN}/elsewhere`, failOnStatusCode: false }).then(
+        (response) => {
+          expect(response.status, "other resource status").to.equal(404);
+        },
+      );
+    });
   });
 
   describe("while disabled (the default)", () => {

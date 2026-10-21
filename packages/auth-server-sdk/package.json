@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server-sdk",
   "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -162,6 +162,11 @@
       "types": "./dist/auth-session-route/index.d.ts",
       "import": "./dist/auth-session-route/index.js",
       "require": "./dist/auth-session-route/index.js"
+    },
+    "./oauth-protected-resource": {
+      "types": "./dist/oauth-protected-resource/index.d.ts",
+      "import": "./dist/oauth-protected-resource/index.js",
+      "require": "./dist/oauth-protected-resource/index.js"
     }
   },
   "peerDependencies": {
