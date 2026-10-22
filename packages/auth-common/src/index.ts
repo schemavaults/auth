@@ -53,6 +53,9 @@ export type * from "./pkce";
 export * from "./oidc";
 export type * from "./oidc";
 
+export * from "./api-scopes";
+export type * from "./api-scopes";
+
 export { sha256_base64url } from "./sha256_digest";
 
 export {

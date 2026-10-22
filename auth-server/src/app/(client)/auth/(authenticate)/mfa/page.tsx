@@ -127,6 +127,8 @@ export default async function MfaChallengePage(props: {
   // Requested scopes, forwarded from the login form for the same reason
   // as `code_challenge` (rebuilding the flow's entry URL).
   const scope: string | null = readString(searchParams, "scope") ?? null;
+  // RFC 8707 resource whose API scopes `scope` asks for (same reason).
+  const resource: string | null = readString(searchParams, "resource") ?? null;
 
   // Post-login destination forwarded from the login form (originally
   // set by a route guard). Unsafe values resolve to null → /account.
@@ -159,6 +161,7 @@ export default async function MfaChallengePage(props: {
       state={state}
       nonce={nonce}
       scope={scope}
+      resource={resource}
       next_href={next_href}
       app={app}
     />

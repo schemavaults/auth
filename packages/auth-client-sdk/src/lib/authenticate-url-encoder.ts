@@ -43,6 +43,10 @@ export interface AuthenticateOptions {
   // the client before redirect, bound to the issued authorization code,
   // and verified against the echo in the token-exchange response.
   nonce: string;
+
+  // RFC 8707 resource indicator — OPTIONAL: an API server id or the URL of
+  // one of its registered domains whose API scopes `scope` asks for.
+  resource?: string | null;
 }
 
 export interface ValidateAuthenticateURLOptions {
@@ -138,6 +142,9 @@ export class AuthenticateURLEncoder {
       throw new TypeError("Expected 'nonce' to be a non-empty string!");
     }
     queryParams.set("nonce", opts.nonce);
+    if (typeof opts.resource === "string" && opts.resource.length > 0) {
+      queryParams.set("resource", opts.resource);
+    }
 
     const authenticate_url = new URL(
       `${server_page}?${queryParams.toString()}`,

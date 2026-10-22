@@ -44,7 +44,7 @@ export const getApp = defineOperation({
   auth: requireAuth({
     schemes: [schemaVaultsAccessTokenBearerScheme],
     routeGuard: "authenticated", // or "admin"
-    requiredScopes: ["email"],   // token scope claim must include these
+    requiredScopes: ["email"],   // token scope claim must include these (OIDC scopes, or API scopes like "notes:read")
     organization: { parameter: "organization_id", roles: ["owner", "admin"] }, // optional
   }),
   request: {

@@ -163,6 +163,11 @@ export function AppAuthorizationConsentScreen({
           : onSuccessfulAuthenticate === "account-page"
             ? DEFAULT_AUTH_SCOPE
             : null;
+      // RFC 8707 resource whose API scopes `scope` asks for (bound to the
+      // code server-side; ignored when it names no usable API server).
+      const url_resource = searchParams.get("resource");
+      const flow_resource: string | null =
+        url_resource && url_resource.length > 0 ? url_resource : null;
 
       if (!code_challenge) {
         throw new Error("Missing code_challenge parameter");
@@ -203,6 +208,7 @@ export function AppAuthorizationConsentScreen({
             ...(redirect_uri ? { redirect_uri } : {}),
             ...(flow_nonce ? { nonce: flow_nonce } : {}),
             ...(flow_scope ? { scope: flow_scope } : {}),
+            ...(flow_resource ? { resource: flow_resource } : {}),
           }),
         },
       );

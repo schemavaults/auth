@@ -1,7 +1,7 @@
 import "server-only";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import type { AppId } from "@schemavaults/app-definitions";
+import type { ApiServerId, AppId } from "@schemavaults/app-definitions";
 import {
   MAX_AUTHORIZATION_CODE_AGE,
   PKCE_ProofKeyManager,
@@ -17,12 +17,17 @@ import { type AuthorizationCodeRecord } from "./authorization-codes-table";
  * - `scope`: the granted scopes (space-delimited), stamped on the
  *   tokens minted at redemption. Null when nothing was granted — a
  *   plain OAuth 2.1 grant (no `openid`, so no id_token at redemption).
+ * - `scope_api_server_id`: the API server whose API scopes `scope`
+ *   carries (the authorization request's RFC 8707 `resource`), null when
+ *   the grant holds no API scopes. Build it with
+ *   `resolveAuthorizationCodeGrant()` (`@/lib/oauth2/api-scopes`).
  * A null `nonce` and a null `scope` are both first-class values (the
  * client omitted them).
  */
 export interface AuthorizationCodeGrantContext {
   nonce: string | null;
   scope: string | null;
+  scope_api_server_id: ApiServerId | null;
 }
 
 export async function generateAuthorizationCode(
@@ -87,6 +92,7 @@ export async function generateAuthorizationCode(
       redirect_uri,
       nonce: grant.nonce,
       scope: grant.scope,
+      scope_api_server_id: grant.scope_api_server_id,
     };
 
     if (debug) {

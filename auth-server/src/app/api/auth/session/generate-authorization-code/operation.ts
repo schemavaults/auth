@@ -3,8 +3,7 @@ import { appIdSchema } from "@schemavaults/app-definitions";
 import {
   oidcNonceSchema,
   oidcScopeSchema,
-  parseAndGrantScopes,
-  serializeOidcScopesOrNull,
+  resourceIndicatorSchema,
 } from "@schemavaults/auth-common";
 import { codeChallengeSchema } from "@schemavaults/auth-common/pkce/code_challenge.js";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
@@ -25,6 +24,7 @@ import {
   EMAIL_VERIFICATION_REQUIRED_MESSAGE,
   isEmailVerificationRequiredForClientApp,
 } from "@/lib/email-verification/third-party-app-gate";
+import { resolveAuthorizationCodeGrant } from "@/lib/oauth2/api-scopes";
 
 const ROUTE = "/api/auth/session/generate-authorization-code";
 
@@ -52,6 +52,11 @@ export const GenerateAuthorizationCodeRequest = z
       description:
         "Requested scopes, space delimited (RFC 6749 §3.3). The server re-derives the granted subset; absent, or naming no supported scope, is a plain OAuth 2.1 grant without an id_token.",
       example: "openid profile email",
+    }),
+    resource: resourceIndicatorSchema.optional().openapi({
+      description:
+        "RFC 8707 resource indicator of the authorization request: an API server id, or the URL of one of its registered domains. When it names an API server this client app may use, the requested `scope` values that API server defines (its API scopes) are granted too, bound to it. Otherwise it is ignored.",
+      example: "https://api.example.com/mcp",
     }),
   })
   .strict()
@@ -82,7 +87,7 @@ export const generateAuthorizationCodeOperation = defineOperation({
   path: ROUTE,
   summary: "Issue an authorization code for the current session",
   description:
-    "Mints a PKCE authorization code for `client_app_id` on behalf of the signed-in user without re-entering credentials (the OAuth2 authorize bridge and the consent screen use it once the user has authorized the app). The code is bound to the code challenge, the `redirect_uri`, the granted scopes and the nonce exactly as a fresh login would bind them. Like a fresh login, a code for a third-party app is refused (403, `error_id: email_verification_required`) while the account's e-mail address is not verified and the `require_email_verification_for_third_party_apps` server setting is on.",
+    "Mints a PKCE authorization code for `client_app_id` on behalf of the signed-in user without re-entering credentials (the OAuth2 authorize bridge and the consent screen use it once the user has authorized the app). The code is bound to the code challenge, the `redirect_uri`, the granted scopes (with the API scopes of the API server named by `resource`) and the nonce exactly as a fresh login would bind them. Like a fresh login, a code for a third-party app is refused (403, `error_id: email_verification_required`) while the account's e-mail address is not verified and the `require_email_verification_for_third_party_apps` server setting is on.",
   tags: [API_TAGS.authentication],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {
@@ -180,14 +185,21 @@ export const generateAuthorizationCodeOperation = defineOperation({
       return ctx.json(500, { success: false, message: "Failed to check email verification requirements" });
     }
 
-    // Granted scopes are re-derived server-side (never trusted
-    // verbatim); null when nothing was granted (plain OAuth 2.1 grant).
-    const grant_context: AuthorizationCodeGrantContext = {
-      nonce: body.nonce ?? null,
-      scope: serializeOidcScopesOrNull(parseAndGrantScopes(body.scope).granted),
-    };
-
     try {
+      // Granted scopes are re-derived server-side (never trusted
+      // verbatim): the supported OIDC scopes plus the API scopes of the
+      // API server `resource` names; null when nothing was granted (plain
+      // OAuth 2.1 grant).
+      const { grant: grant_context }: { grant: AuthorizationCodeGrantContext } =
+        await resolveAuthorizationCodeGrant({
+          dbh,
+          client_app_id: body.client_app_id,
+          nonce: body.nonce ?? null,
+          scope: body.scope ?? null,
+          resource: body.resource ?? null,
+          environment,
+          debug: environment === "development",
+        });
       const authorization_code = await generateAuthorizationCode(
         dbh.db,
         user.uid,

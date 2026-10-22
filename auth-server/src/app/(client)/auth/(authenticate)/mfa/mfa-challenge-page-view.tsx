@@ -38,6 +38,8 @@ export interface MfaChallengePageViewProps {
   nonce?: string | null;
   // Requested scopes forwarded from the login form (entry-URL rebuild).
   scope?: string | null;
+  // RFC 8707 resource whose API scopes `scope` asks for (entry-URL rebuild).
+  resource?: string | null;
   // Safe same-origin path (validated by `resolveNextHref` in page.tsx)
   // to land the user on after the account-page flow completes — set
   // when a route guard bounced them to login from a protected page.
@@ -62,6 +64,7 @@ export default function MfaChallengePageView({
   state,
   nonce,
   scope,
+  resource,
   next_href,
   app,
 }: MfaChallengePageViewProps): ReactElement {
@@ -362,6 +365,7 @@ export default function MfaChallengePageView({
         state,
         nonce,
         scope,
+        resource,
       }),
     );
   }, [
@@ -376,6 +380,7 @@ export default function MfaChallengePageView({
     state,
     nonce,
     scope,
+    resource,
   ]);
 
   const onChallengeExpired = useCallback(() => {

@@ -57,7 +57,12 @@ import type {
   CreatedClientApplicationServiceAccount,
   UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
-import type { AssignableOrganizationMembershipRole } from "@schemavaults/auth-common";
+import type {
+  ApiServerScope,
+  AssignableOrganizationMembershipRole,
+  CreateApiServerScopeRequest,
+  UpdateApiServerScopeRequest,
+} from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
 import type { OrganizationMembershipVisibility } from "@schemavaults/app-definitions";
 import type {
@@ -69,6 +74,7 @@ import type {
   OnAuthStateChangedListenerRef,
 } from "@/lib/auth-client-events";
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
+import type { AuthenticateWithRedirectOptions } from "@/types/authenticate-with-redirect-options";
 import {
   type ApiServerId,
   type AppId,
@@ -599,7 +605,7 @@ export class SchemaVaultsAuthClient
 
   private async authenticateWithRedirect(
     type: "login" | "register",
-    opts?: { scope?: string },
+    opts?: AuthenticateWithRedirectOptions,
   ) {
     if (
       !this.authorize_uri ||
@@ -619,11 +625,12 @@ export class SchemaVaultsAuthClient
       environment: this.environment,
       authorize_uri: this.authorize_uri,
       scope: opts?.scope,
+      ...(opts?.resource ? { resource: opts.resource } : {}),
       debug: this.debug,
     });
   }
 
-  public async login(opts?: { scope?: string }): Promise<void> {
+  public async login(opts?: AuthenticateWithRedirectOptions): Promise<void> {
     if (this.isClientForAuthServer) {
       return await this.adapter.redirect("/auth/login");
     }
@@ -644,7 +651,7 @@ export class SchemaVaultsAuthClient
     }
   } // login()
 
-  public async register(opts?: { scope?: string }): Promise<void> {
+  public async register(opts?: AuthenticateWithRedirectOptions): Promise<void> {
     if (this.isClientForAuthServer) {
       return await this.adapter.redirect("/auth/register");
     }
@@ -1263,6 +1270,9 @@ export class SchemaVaultsAuthClient
     // `scope` sent, so no id_token); defaults to the platform's OpenID
     // scope set.
     scope: string | null = DEFAULT_AUTH_SCOPE,
+    // Optional RFC 8707 resource indicator: grants the requested API
+    // scopes of the API server it names (null / omitted: none).
+    resource: string | null = null,
   ): Promise<AuthenticateResult> {
     if (this.DEBUG)
       console.log(
@@ -1280,6 +1290,7 @@ export class SchemaVaultsAuthClient
       auth_server_url: this.auth_server_url,
       nonce,
       scope,
+      resource,
     });
   }
 
@@ -2009,6 +2020,69 @@ export class SchemaVaultsAuthClient
       auth_server_uri: this.auth_server_uri,
       api_server_id,
       update,
+    });
+  }
+
+  public async listApiServerScopes(
+    api_server_id: ApiServerId,
+  ): Promise<ApiServerScope[]> {
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.listApiServerScopes,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+    });
+  }
+
+  public async createApiServerScope(
+    api_server_id: ApiServerId,
+    scope: CreateApiServerScopeRequest,
+  ): Promise<ApiServerScope> {
+    this.assertAppAndApiManagementWriteAccess("createApiServerScope");
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.createApiServerScope,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      scope,
+    });
+  }
+
+  public async updateApiServerScope(
+    api_server_id: ApiServerId,
+    api_server_scope_id: string,
+    update: UpdateApiServerScopeRequest,
+  ): Promise<ApiServerScope> {
+    this.assertAppAndApiManagementWriteAccess("updateApiServerScope");
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.updateApiServerScope,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      api_server_scope_id,
+      update,
+    });
+  }
+
+  public async deleteApiServerScope(
+    api_server_id: ApiServerId,
+    api_server_scope_id: string,
+  ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("deleteApiServerScope");
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.deleteApiServerScope,
+    );
+    await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      api_server_scope_id,
     });
   }
 

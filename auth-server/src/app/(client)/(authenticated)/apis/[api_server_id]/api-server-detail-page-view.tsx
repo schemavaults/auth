@@ -14,6 +14,8 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, C
 import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
 import { Trash2, KeyRound, Plus, Unplug } from "lucide-react";
 import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
+import { ApiServerScopesCard } from "@/components/ApiServerScopes";
+import type { ApiServerScope } from "@schemavaults/auth-common";
 import { ApiServerOrganizationMembershipCard } from "@/components/ApiServerOrganizationMembership";
 import {
   DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY,
@@ -32,6 +34,8 @@ export interface ApiServerDetailPageViewProps {
   api_server: SchemaVaultsApiServerDefinition;
   connected_apps: readonly ConnectedApp[];
   connected_domains: readonly SchemaVaultsApiServerDomainRef[];
+  /** The API scopes the API server defines (none for hardcoded ones). */
+  scopes: readonly ApiServerScope[];
   hardcoded: boolean;
   isOrgOwner: boolean;
   /** Whether the viewer is a platform administrator (may change admin-only settings). */
@@ -62,6 +66,7 @@ export default function ApiServerDetailPageView({
   api_server,
   connected_apps,
   connected_domains,
+  scopes,
   hardcoded,
   isOrgOwner,
   isPlatformAdmin,
@@ -231,6 +236,14 @@ export default function ApiServerDetailPageView({
           )}
         </CardContent>
       </Card>
+
+      {!hardcoded && (
+        <ApiServerScopesCard
+          api_server_id={api_server.api_server_id}
+          scopes={scopes}
+          canManage={isOrgOwner}
+        />
+      )}
 
       {!hardcoded && (
         <ApiServerDynamicClientsCard

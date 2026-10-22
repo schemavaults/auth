@@ -34,6 +34,11 @@ interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
    * (see payload_data.ts). Omitted on all other tokens.
    */
   scope?: string;
+  /**
+   * REFRESH tokens only: the API server whose API scopes `scope` carries
+   * (see payload_data.ts). Omitted when the grant holds no API scopes.
+   */
+  scope_api_server_id?: string;
 }
 
 interface GenerateJWTWithAllKeysOptions<
@@ -190,6 +195,22 @@ export async function generateJWT<T extends AuthTokenTypes>(
     );
   }
 
+  // The API-scope binding is a refresh-token claim: access tokens are read
+  // by resource servers whose (strict) payload schema may predate it.
+  const scope_api_server_id: string | undefined =
+    typeof opts.scope_api_server_id === "string" &&
+    opts.scope_api_server_id.length > 0
+      ? opts.scope_api_server_id
+      : undefined;
+  if (scope_api_server_id !== undefined) {
+    if (type !== "refresh") {
+      throw new Error("Only refresh tokens may carry 'scope_api_server_id'!");
+    }
+    if (!apiServerIdSchema.safeParse(scope_api_server_id).success) {
+      throw new TypeError("Invalid 'scope_api_server_id'!");
+    }
+  }
+
   let sig: string;
   try {
     sig = await signJWT({
@@ -256,6 +277,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
       ...(typeof opts.scope === "string" && opts.scope.length > 0
         ? { scope: opts.scope }
         : {}),
+      ...(scope_api_server_id ? { scope_api_server_id } : {}),
       ...(user.service_account === true ? { service_account: true } : {}),
     };
 

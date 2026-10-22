@@ -250,6 +250,17 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         ? DEFAULT_AUTH_SCOPE
         : null;
 
+  // RFC 8707 resource indicator of a third-party flow: grants the
+  // requested API scopes of the API server it names (the server ignores a
+  // value it cannot honour). Never sent on the account-page flow.
+  const url_resource = searchParams.get("resource");
+  const flow_resource: string | null =
+    onSuccessfulAuthenticate !== "account-page" &&
+    url_resource &&
+    url_resource.length > 0
+      ? url_resource
+      : null;
+
   // Where to send the user after the account-page flow completes (set by
   // the route guards when bouncing an unauthenticated user off a
   // protected page). Unsafe / auth-flow-internal values resolve to null
@@ -270,6 +281,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       request_redirect_uri,
       flow_nonce,
       flow_scope,
+      flow_resource,
     );
     if (result.kind === "mfa_required") {
       // The MFA challenge page lives at a different URL, so the
@@ -329,6 +341,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       // grant) is simply not forwarded.
       if (flow_nonce) params.set("nonce", flow_nonce);
       if (flow_scope) params.set("scope", flow_scope);
+      if (flow_resource) params.set("resource", flow_resource);
       // Forward the post-login destination so the MFA challenge page can
       // land the user where they were originally headed. Only meaningful
       // for the account-page flow — third-party flows redirect to their

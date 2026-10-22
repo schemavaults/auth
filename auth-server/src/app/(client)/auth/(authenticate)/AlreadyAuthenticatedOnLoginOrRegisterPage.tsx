@@ -15,10 +15,8 @@ import {
   OAuth2StateValidationError,
   OidcNonceValidationError,
   oidcScopeSchema,
-  parseAndGrantScopes,
   parseOAuth2State,
   parseOidcNonce,
-  serializeOidcScopesOrNull,
   type UserData,
 } from "@schemavaults/auth-common";
 import { getAuthServerUri } from "@/lib/auth_server_uri";
@@ -28,6 +26,10 @@ import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_c
 import { UserRegistry } from "@/lib/auth-db";
 import { isEmailVerificationRequiredForClientApp } from "@/lib/email-verification/third-party-app-gate";
 import { buildVerifyEmailRequiredHref } from "@/lib/email-verification/verify-email-required-href";
+import {
+  resolveAuthorizationCodeGrant,
+  type ResolvedAuthorizationCodeGrant,
+} from "@/lib/oauth2/api-scopes";
 
 export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   on_successful_authenticate: OnSuccessfulAuthenticateAction;
@@ -54,6 +56,9 @@ export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   // already gate this).
   nonce: string | null;
   scope: string | null;
+  // RFC 8707 resource indicator: grants the requested API scopes of the
+  // API server it names (ignored when it names none this app may use).
+  resource: string | null;
 }
 
 export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
@@ -159,11 +164,25 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     );
     redirectWithError(400, "bad_request");
   }
-  const { granted } = parseAndGrantScopes(opts.scope ?? undefined);
-  const grant_context = {
-    nonce: url_nonce,
-    scope: serializeOidcScopesOrNull(granted),
-  };
+  let resolved_grant: ResolvedAuthorizationCodeGrant;
+  try {
+    resolved_grant = await resolveAuthorizationCodeGrant({
+      dbh,
+      client_app_id: app_id,
+      nonce: url_nonce,
+      scope: opts.scope,
+      resource: opts.resource,
+      environment: getAppEnvironment(),
+      debug: opts.debug,
+    });
+  } catch (e: unknown) {
+    console.error(
+      `[AlreadyAuthenticatedOnLoginOrRegisterPage] Failed to resolve the requested scopes for app '${app_id}': `,
+      e,
+    );
+    redirectWithError(500, "internal_server_error");
+  }
+  const grant_context = resolved_grant.grant;
 
   // E-mail verification gate, checked before consent and before minting:
   // an already-signed-in user whose address is not verified is parked on
@@ -199,6 +218,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
         state: opts.state,
         nonce: opts.nonce,
         scope: opts.scope,
+        resource: opts.resource,
       }),
     );
   }

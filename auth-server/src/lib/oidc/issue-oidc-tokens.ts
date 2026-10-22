@@ -27,11 +27,25 @@ export interface IssueOidcTokensOptions {
   user: UserData;
   client_app_id: AppId;
   /**
-   * Granted scopes, space-delimited; empty for a plain OAuth 2.1 grant
-   * (the tokens then carry no scope claim and the response omits
-   * `scope`).
+   * Granted scopes of the ACCESS token, space-delimited; empty for a plain
+   * OAuth 2.1 grant (the tokens then carry no scope claim and the response
+   * omits `scope`). Also the refresh token's scope unless
+   * `refresh_token_scope` says otherwise.
    */
   scope: string;
+  /**
+   * Scope the refresh token carries forward when it differs from the
+   * access token's: a grant's API scopes stay on the refresh token even
+   * when this access token is minted for another audience (see
+   * `splitTokenScopes`). Defaults to `scope`.
+   */
+  refresh_token_scope?: string;
+  /**
+   * The API server whose API scopes `refresh_token_scope` carries (the
+   * refresh token's `scope_api_server_id` claim); null / omitted when it
+   * carries none.
+   */
+  refresh_token_scope_api_server_id?: ApiServerId | null;
   /** RP nonce to echo into the id_token; null when absent / on refresh. */
   nonce: string | null;
   grant_type: IssuedTokenGrantType;
@@ -127,6 +141,8 @@ export async function issueOidcTokens({
   user,
   client_app_id,
   scope,
+  refresh_token_scope = scope,
+  refresh_token_scope_api_server_id = null,
   nonce,
   grant_type,
   environment,
@@ -163,6 +179,10 @@ export async function issueOidcTokens({
       generate_refresh: issue_refresh_token,
       auth_jwt_manager: jwt_keys_manager,
       scope,
+      refresh_scope: refresh_token_scope,
+      ...(refresh_token_scope_api_server_id
+        ? { refresh_scope_api_server_id: refresh_token_scope_api_server_id }
+        : {}),
       tracking: {
         db: dbh.db,
         grant_type,

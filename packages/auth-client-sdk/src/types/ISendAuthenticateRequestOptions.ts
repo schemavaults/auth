@@ -35,6 +35,13 @@ export interface ISendAuthenticateRequestOptions {
   // platform default. The server re-derives the granted subset and
   // stamps it on the code row and issued tokens.
   scope: string | null;
+  // RFC 8707 resource indicator — OPTIONAL: an API server id or the URL
+  // of one of its registered domains. When it names an API server this
+  // client app may use, the requested `scope` values that API server
+  // defines (its API scopes) are granted too; redeem the code with the
+  // same `resource` to get an access token carrying them. Null / absent
+  // sends none.
+  resource?: string | null;
 }
 
 export type { ISendAuthenticateRequestOptions as SendAuthenticateRequestOptions };

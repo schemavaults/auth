@@ -65,6 +65,13 @@ describe("buildActiveIntrospectionResponse", () => {
     expect(build("refresh")).not.toHaveProperty("token_type");
   });
 
+  test("reports the API scopes an access token carries alongside its OIDC scopes", () => {
+    expect(build("access", { scope: "openid notes:read email notes:write" }).scope).toBe(
+      "openid notes:read email notes:write",
+    );
+    expect(build("access", { scope: "notes:read" }).scope).toBe("notes:read");
+  });
+
   test("omits `scope` for a plain OAuth 2.1 grant", () => {
     expect(build("access")).not.toHaveProperty("scope");
   });

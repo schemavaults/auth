@@ -90,7 +90,10 @@ export async function handleOidcClientCredentialsGrant({
 
   // RFC 6749 §4.4.2: `scope` is OPTIONAL. Unknown scopes are dropped (as
   // everywhere on the OIDC surface) and so is `openid`: no end user
-  // authenticated, so no OpenID authentication took place.
+  // authenticated, so no OpenID authentication took place. API scopes are
+  // dropped too, even with a `resource`: no user consents here, so they
+  // wait for a per-app allowlist of the scopes an API server grants each
+  // connected app's service account.
   let scope: string = "";
   const requested_scope = param("scope");
   if (requested_scope !== null) {

@@ -33,7 +33,7 @@ export const OidcAuthorizeQuery = z
     ),
     response_type: authorizeParam("REQUIRED. Only `code` is supported.", "code"),
     scope: authorizeParam(
-      "OPTIONAL. Space-delimited scopes. With `openid` this is an OpenID Connect authentication request (an id_token is minted); without it a plain OAuth 2.1 authorization grant (access + refresh tokens only). Supported: `openid`, `email`, `profile`; unknown scopes are ignored.",
+      "OPTIONAL. Space-delimited scopes. With `openid` this is an OpenID Connect authentication request (an id_token is minted); without it a plain OAuth 2.1 authorization grant (access + refresh tokens only). Supported: `openid`, `email`, `profile`, plus the API scopes defined by the API server named in `resource`; unknown scopes are ignored.",
       "openid email profile",
     ),
     state: authorizeParam("RECOMMENDED. Opaque value echoed back on the redirect (also on error redirects)."),
@@ -46,7 +46,8 @@ export const OidcAuthorizeQuery = z
     request: authorizeParam("Not supported: refused with `request_not_supported` (no JAR / RFC 9101)."),
     request_uri: authorizeParam("Not supported: refused with `request_uri_not_supported`."),
     resource: authorizeParam(
-      "Ignored at this endpoint. Send the RFC 8707 `resource` parameter to the token endpoint instead to mint the access token for a registered API server.",
+      "OPTIONAL. RFC 8707 resource indicator: an API server id, or the https URL of one of its registered domains, that this client may get tokens for. The requested `scope` values that API server defines (its API scopes, e.g. `notes:read`) are granted: the access tokens minted for that API server (send the same `resource` to the token endpoint) carry them, and the refresh token keeps them. A value that names no such API server, or several `resource` values, is ignored (only OIDC scopes are granted); the token endpoint refuses an unusable `resource` with `invalid_target`.",
+      "https://api.example.com/mcp",
     ),
   })
   .loose();
@@ -66,7 +67,7 @@ export const oidcAuthorize = defineOperation({
   responses: {
     302: {
       description:
-        "Redirect. On success `Location` is the auth server's login page carrying the bridged parameters (`app_id`, `code_challenge`, `code_challenge_method`, `challenge_time`, `redirect_uri`, `state`, `nonce`, `scope`); on a post-validation error it is the client's `redirect_uri` with `error`, `error_description`, `state` and `iss`.",
+        "Redirect. On success `Location` is the auth server's login page carrying the bridged parameters (`app_id`, `code_challenge`, `code_challenge_method`, `challenge_time`, `redirect_uri`, `state`, `nonce`, `scope`, and `resource` when API scopes were granted for it); on a post-validation error it is the client's `redirect_uri` with `error`, `error_description`, `state` and `iss`.",
       headers: noStoreHeaders.extend({
         Location: z.string().openapi({ description: "Where the user-agent is sent next." }),
       }),
@@ -85,7 +86,8 @@ export const oidcAuthorize = defineOperation({
     if (validation.kind === "response") {
       return validation.response;
     }
-    const { client_app_id, redirect_uri, scope, state, nonce, code_challenge } = validation.request;
+    const { client_app_id, redirect_uri, scope, resource, state, nonce, code_challenge } =
+      validation.request;
 
     // Bridge into the platform's existing login/consent/MFA UI. `scope` /
     // `nonce` are first-class on every flow; a plain OAuth 2.1 grant (no
@@ -108,6 +110,11 @@ export const oidcAuthorize = defineOperation({
     }
     if (scope.length > 0) {
       bridge.searchParams.set("scope", scope);
+    }
+    // The resource travels with the flow only when the scope holds its API
+    // scopes: the login flow binds them to the code for that API server.
+    if (resource) {
+      bridge.searchParams.set("resource", resource);
     }
 
     return NextResponse.redirect(bridge, {

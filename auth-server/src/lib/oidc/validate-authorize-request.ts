@@ -9,13 +9,12 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   OAuth2StateValidationError,
+  OIDC_TOKEN_RESOURCE_PARAM,
   OidcNonceValidationError,
   PKCE_ProofKeyManager,
   oidcScopeSchema,
-  parseAndGrantScopes,
   parseOAuth2State,
   parseOidcNonce,
-  serializeOidcScopes,
 } from "@schemavaults/auth-common";
 import { SchemaVaultsAppRegistry, type ServerlessDatabase } from "@/lib/auth-db";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
@@ -25,6 +24,10 @@ import {
 } from "./oidc-errors";
 import isValidUrl from "@/lib/is-valid-url";
 import captureServerException from "@/lib/captureServerException";
+import {
+  resolveAuthorizationCodeGrant,
+  type ResolvedAuthorizationCodeGrant,
+} from "@/lib/oauth2/api-scopes";
 
 export interface ValidatedOidcAuthorizeRequest {
   client_app_id: AppId;
@@ -34,9 +37,15 @@ export interface ValidatedOidcAuthorizeRequest {
    * authorization grant (no `scope`, or none of the supported scopes
    * requested): no id_token is minted for it and the bridge URL carries
    * no `scope`. Contains "openid" iff this is an OpenID Connect
-   * authentication request.
+   * authentication request. Also holds the requested API scopes of the
+   * API server `resource` names, if any.
    */
   scope: string;
+  /**
+   * The RFC 8707 `resource` whose API scopes `scope` holds; null when it
+   * holds none (no usable `resource`, or no API scope requested).
+   */
+  resource: string | null;
   state: string | null;
   nonce: string | null;
   code_challenge: string;
@@ -221,7 +230,6 @@ export async function validateOidcAuthorizeRequest(
   ) {
     return redirectError("invalid_scope", "Malformed 'scope' parameter.");
   }
-  const { granted } = parseAndGrantScopes(raw_scope ?? undefined);
 
   let nonce: string | null;
   try {
@@ -260,12 +268,41 @@ export async function validateOidcAuthorizeRequest(
     );
   }
 
+  // RFC 8707 `resource`: a single value naming an API server this client
+  // may use lets the request ask for the scopes that API server defines.
+  // Anything else is ignored, as this endpoint always ignored `resource`
+  // (the token endpoint still answers `invalid_target` for it): the grant
+  // then holds the supported OIDC scopes only.
+  let resolved_grant: ResolvedAuthorizationCodeGrant;
+  try {
+    resolved_grant = await resolveAuthorizationCodeGrant({
+      dbh,
+      client_app_id,
+      nonce: null,
+      scope: raw_scope !== null && raw_scope.length > 0 ? raw_scope : null,
+      resource: searchParams.getAll(OIDC_TOKEN_RESOURCE_PARAM),
+      environment,
+    });
+  } catch (e: unknown) {
+    console.error(
+      `[validateOidcAuthorizeRequest] Failed to resolve the requested scopes of '${client_app_id}':`,
+      e,
+    );
+    await captureServerException(dbh.db, e, {
+      op_name: "validateOidcAuthorizeRequest.resolveAuthorizationCodeGrant",
+      route: "/api/oidc/authorize",
+      context: { client_app_id },
+    });
+    return redirectError("server_error", "Failed to resolve the requested scopes.");
+  }
+
   return {
     kind: "ok",
     request: {
       client_app_id,
       redirect_uri,
-      scope: serializeOidcScopes(granted),
+      scope: resolved_grant.grant.scope ?? "",
+      resource: resolved_grant.resource,
       state,
       nonce,
       code_challenge: parsed_code_challenge.data,

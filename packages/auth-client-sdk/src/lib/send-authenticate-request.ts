@@ -104,6 +104,12 @@ export async function sendAuthenticateRequest(
       ? opts.scope
       : null;
 
+  // `resource` is optional (RFC 8707); omitted when absent.
+  const resource: string | null =
+    typeof opts.resource === "string" && opts.resource.length > 0
+      ? opts.resource
+      : null;
+
   const auth_request_body = {
     credentials: {
       email: credentials.email,
@@ -117,6 +123,7 @@ export async function sendAuthenticateRequest(
     // Omit entirely when absent so the server's optional schema sees no key.
     ...(nonce ? { nonce } : {}),
     ...(scope ? { scope } : {}),
+    ...(resource ? { resource } : {}),
   };
 
   let response: Response;

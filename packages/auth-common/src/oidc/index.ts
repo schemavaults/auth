@@ -1,10 +1,14 @@
 export {
   OIDC_OPENID_SCOPE,
   OIDC_SUPPORTED_SCOPES,
+  OIDC_RESERVED_SCOPES,
+  isOidcReservedScope,
   DEFAULT_AUTH_SCOPE,
   OIDC_SCOPE_REGEX,
   oidcScopeSchema,
   parseAndGrantScopes,
+  grantRequestedScopes,
+  partitionGrantedScopes,
   serializeOidcScopes,
   serializeOidcScopesOrNull,
 } from "./scope";
@@ -12,6 +16,7 @@ export type {
   OidcSupportedScope,
   OidcScope,
   ParsedOidcScopes,
+  GrantedScopes,
 } from "./scope";
 
 export {

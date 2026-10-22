@@ -20,6 +20,14 @@ import {
   regenerateJwksAccessKey,
 } from "@/app/api/apis/[api_server_id]/jwks-access-key/operation";
 import { setApiServerOrganizationMembershipVisibility } from "@/app/api/apis/[api_server_id]/organization-membership-visibility/operation";
+import {
+  createApiServerScope,
+  listApiServerScopes,
+} from "@/app/api/apis/[api_server_id]/scopes/operation";
+import {
+  deleteApiServerScope,
+  updateApiServerScope,
+} from "@/app/api/apis/[api_server_id]/scopes/[api_server_scope_id]/operation";
 
 /** Operations of the "apis" domain, in the order they appear in the docs. */
 export const apisOperations: readonly AnyOperationDefinition[] = [
@@ -31,6 +39,10 @@ export const apisOperations: readonly AnyOperationDefinition[] = [
   deleteApiServer,
   listApiServerDomains,
   addApiServerDomain,
+  listApiServerScopes,
+  createApiServerScope,
+  updateApiServerScope,
+  deleteApiServerScope,
   getAppToApiServerConnection,
   connectAppToApiServer,
   disconnectAppFromApiServer,

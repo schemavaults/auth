@@ -24,6 +24,7 @@ export type {
   UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
 export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
+export type { AuthenticateWithRedirectOptions } from "@/types/authenticate-with-redirect-options";
 
 export type { UserData } from "@/types/UserData";
 
