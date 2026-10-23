@@ -799,8 +799,11 @@ describe("API scope consent, allowances and third-party access", () => {
           approved_api_scopes: [NOTES_READ, NOTES_WRITE],
         });
         cy.visit("/account");
+        // Server-rendered buttons do nothing until React has hydrated them.
+        cy.wait_for_page_hydration();
         cy.get('[data-testid="manage-connected-apps-link"]', { timeout: 20000 }).click();
         cy.location("pathname").should("equal", "/account/connected-apps");
+        cy.wait_for_page_hydration();
 
         const app = `[data-testid="connected-app"][data-app-id="${CLIENT_ID}"]`;
         cy.get(`${app} [data-testid="connected-app-scope"]`, { timeout: 20000 })
@@ -829,9 +832,13 @@ describe("API scope consent, allowances and third-party access", () => {
       }).then((listed) => {
         const read = listed.body.list.find((row) => row.scope === NOTES_READ);
         cy.visit(`/apis/${API_SERVER_ID}`);
+        // The allowances button is server-rendered: clicking it before
+        // hydration opens nothing.
+        cy.wait_for_page_hydration();
         cy.get(`[data-testid="app-scope-allowances-${CLIENT_ID}"]`, { timeout: 20000 })
           .click();
-        cy.get('[data-testid="app-scope-allowances-dialog"]').should("be.visible");
+        cy.get('[data-testid="app-scope-allowances-dialog"]', { timeout: 20000 })
+          .should("be.visible");
         cy.get(`[data-testid="service-account-scope-${read?.api_server_scope_id}"]`, {
           timeout: 20000,
         }).click();
