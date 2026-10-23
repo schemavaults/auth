@@ -63,7 +63,7 @@ async function isConnected(
     .where("api_server_id", "=", api_server_id)
     .select(["client_app_id"])
     .executeTakeFirst();
-  return row !== undefined;
+  return row !== undefined && row !== null;
 }
 
 /**
