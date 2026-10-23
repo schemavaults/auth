@@ -16,3 +16,31 @@ export type {
   CreateApiServerScopeRequest,
   UpdateApiServerScopeRequest,
 } from "./api-server-scope";
+
+export {
+  API_SCOPE_GRANTEES,
+  apiScopeGranteeSchema,
+  appApiScopePolicySchema,
+  updateAppApiScopePolicyRequestSchema,
+} from "./scope-grants";
+export type {
+  ApiScopeGrantee,
+  AppApiScopePolicy,
+  UpdateAppApiScopePolicyRequest,
+} from "./scope-grants";
+
+export {
+  consentScopeSchema,
+  appConsentStatusSchema,
+  approvedApiScopesSchema,
+  connectedAppScopeSchema,
+  connectedAppSchema,
+  listConnectedAppsResponseSchema,
+} from "./consent";
+export type {
+  ConsentScope,
+  AppConsentStatus,
+  ConnectedAppScope,
+  ConnectedApp,
+  ListConnectedAppsResponse,
+} from "./consent";

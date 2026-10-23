@@ -80,7 +80,7 @@ export const CreateApiServerScopeRequest = withOpenApi(
   "CreateApiServerScopeRequest",
   {
     description:
-      "`scope`: a single RFC 6749 scope-token (printable ASCII without spaces, `\"` or `\\`, at most 128 characters) that is not an OpenID Connect scope name (`openid`, `profile`, `email`, `address`, `phone`, `offline_access`). `description`: 1 to 256 characters, shown to users. Unknown keys are rejected.",
+      "`scope`: a single RFC 6749 scope-token (printable ASCII without spaces, `\"` or `\\`, at most 128 characters) that is not an OpenID Connect scope name (`openid`, `profile`, `email`, `address`, `phone`, `offline_access`). `description`: 1 to 256 characters, shown to users. `allow_dynamic_clients` (default true): whether dynamically registered clients, which have no app connection, may be granted it. Unknown keys are rejected.",
   },
 );
 
@@ -89,7 +89,7 @@ export const UpdateApiServerScopeRequest = withOpenApi(
   "UpdateApiServerScopeRequest",
   {
     description:
-      "Only the description can change: the scope value is immutable (define a new scope and delete the old one to rename). Unknown keys are rejected.",
+      "The description and/or `allow_dynamic_clients` (at least one). The scope value is immutable (define a new scope and delete the old one to rename). Unknown keys are rejected.",
   },
 );
 

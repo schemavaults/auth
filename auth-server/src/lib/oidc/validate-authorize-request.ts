@@ -46,6 +46,13 @@ export interface ValidatedOidcAuthorizeRequest {
    * holds none (no usable `resource`, or no API scope requested).
    */
   resource: string | null;
+  /**
+   * `prompt=none` (OIDC Core §3.1.2.1): answer without any UI — a code when
+   * the user is signed in and nothing needs their consent, else an error.
+   */
+  prompt_none: boolean;
+  /** `prompt=consent`: show the consent screen even if nothing new is asked for. */
+  prompt_consent: boolean;
   state: string | null;
   nonce: string | null;
   code_challenge: string;
@@ -259,14 +266,21 @@ export async function validateOidcAuthorizeRequest(
     );
   }
 
-  // `prompt=none` demands a guaranteed no-UI flow; the bridge may need
-  // to render login or consent, so report the spec error instead.
-  if (searchParams.get("prompt") === "none") {
+  // `prompt` (OIDC Core §3.1.2.1) is a space-delimited list. `none` must
+  // stand alone; it is answered by the endpoint without any UI. `consent`
+  // forces the consent screen; other values (`login`, `select_account`)
+  // are ignored.
+  const prompts: string[] = (searchParams.get("prompt") ?? "")
+    .split(" ")
+    .filter((value) => value.length > 0);
+  const prompt_none: boolean = prompts.includes("none");
+  if (prompt_none && prompts.length > 1) {
     return redirectError(
-      "login_required",
-      "Silent authentication (prompt=none) is not supported.",
+      "invalid_request",
+      "prompt=none cannot be combined with other prompt values.",
     );
   }
+  const prompt_consent: boolean = prompts.includes("consent");
 
   // RFC 8707 `resource`: a single value naming an API server this client
   // may use lets the request ask for the scopes that API server defines.
@@ -278,6 +292,7 @@ export async function validateOidcAuthorizeRequest(
     resolved_grant = await resolveAuthorizationCodeGrant({
       dbh,
       client_app_id,
+      uid: null,
       nonce: null,
       scope: raw_scope !== null && raw_scope.length > 0 ? raw_scope : null,
       resource: searchParams.getAll(OIDC_TOKEN_RESOURCE_PARAM),
@@ -301,8 +316,11 @@ export async function validateOidcAuthorizeRequest(
     request: {
       client_app_id,
       redirect_uri,
-      scope: resolved_grant.grant.scope ?? "",
+      // What the flow asks for (consent is per user, asked by the login UI).
+      scope: resolved_grant.requested_scope ?? "",
       resource: resolved_grant.resource,
+      prompt_none,
+      prompt_consent,
       state,
       nonce,
       code_challenge: parsed_code_challenge.data,

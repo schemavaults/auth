@@ -8,16 +8,16 @@ import {
 } from "@/lib/api/domain-schemas/apis";
 import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
-import { updateApiServerScopeDescription } from "@/lib/auth-db/apis";
+import { updateApiServerScope as updateScope } from "@/lib/auth-db/apis";
 import captureServerException from "@/lib/captureServerException";
 import { MANAGE_SCOPES_AUTH_NOTES, SCOPE_ROUTE, loadApiServerForScopes } from "../scope-access";
 
 export const updateApiServerScope = defineOperation({
   method: "patch",
   path: SCOPE_ROUTE,
-  summary: "Change an API scope's description",
+  summary: "Update an API scope",
   description:
-    "Changes the description shown to users for one of the API server's scopes. The scope value is immutable: tokens already carry it, so renaming a scope means defining the new one and deleting the old one.",
+    "Changes the description shown to users for one of the API server's scopes and/or whether dynamically registered clients may be granted it (`allow_dynamic_clients`). The scope value is immutable: tokens already carry it, so renaming a scope means defining the new one and deleting the old one.",
   tags: [API_TAGS.apis],
   auth: requireAuth({ schemes: sessionSchemes, notes: MANAGE_SCOPES_AUTH_NOTES }),
   request: {
@@ -44,12 +44,7 @@ export const updateApiServerScope = defineOperation({
     }
 
     try {
-      const scope = await updateApiServerScopeDescription(
-        db,
-        api_server_id,
-        api_server_scope_id,
-        ctx.body.description,
-      );
+      const scope = await updateScope(db, api_server_id, api_server_scope_id, ctx.body);
       if (!scope) {
         return ctx.json(404, { success: false, message: "API scope not found" });
       }

@@ -28,7 +28,11 @@ import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import issueOidcTokens from "@/lib/oidc/issue-oidc-tokens";
 import { listApiServerScopeValues } from "@/lib/auth-db/apis";
-import { narrowGrantedScope, splitTokenScopes } from "@/lib/oauth2/api-scopes";
+import {
+  listUsableApiScopeValues,
+  narrowGrantedScope,
+  splitTokenScopes,
+} from "@/lib/oauth2/api-scopes";
 import {
   parseOidcTokenResourceParam,
   validateOidcTokenResource,
@@ -277,13 +281,21 @@ export async function handleOidcRefreshTokenGrant({
     access_token_audience_api_server_id = validated_resource.api_server_id;
   }
 
-  // The API scopes the grant's API server still defines (a deleted scope
-  // stops being carried forward).
+  // The API scopes the grant's API server defines (what a scope re-request
+  // is checked against), and those the token may still carry: allowed for
+  // the app and consented by the user as things stand now, so a deleted
+  // scope, a removed allowance or a withdrawn consent stops being carried
+  // forward.
   const defined_api_scopes: ReadonlySet<string> = new Set(
     scope_api_server_id
       ? await listApiServerScopeValues(dbh.db, scope_api_server_id)
       : [],
   );
+  const usable_api_scopes: ReadonlySet<string> = await listUsableApiScopeValues(dbh, {
+    uid: user.uid,
+    client_app_id,
+    api_server_id: scope_api_server_id,
+  });
 
   // RFC 6749 §6: a scope re-request must be a subset of the original
   // grant; absent means "same as originally granted". Narrowing away
@@ -316,7 +328,7 @@ export async function handleOidcRefreshTokenGrant({
   const token_scopes = splitTokenScopes({
     granted_scope,
     scope_api_server_id,
-    defined_api_scopes,
+    defined_api_scopes: usable_api_scopes,
     access_token_api_server_id: access_token_audience_api_server_id ?? null,
   });
 

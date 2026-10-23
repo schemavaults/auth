@@ -24,6 +24,7 @@ export const AUTHORIZE_FLOW_PARAM_KEYS = [
   "nonce",
   "scope",
   "resource",
+  "prompt",
 ] as const;
 
 export type AuthorizeFlowParamKey = (typeof AUTHORIZE_FLOW_PARAM_KEYS)[number];

@@ -4,6 +4,7 @@ import {
   apiScopeDescriptionSchema,
   apiScopeValueSchema,
   createApiServerScopeRequestSchema,
+  updateApiServerScopeRequestSchema,
 } from "./api-server-scope";
 
 describe("apiScopeValueSchema", () => {
@@ -65,6 +66,35 @@ describe("createApiServerScopeRequestSchema", () => {
         description: "Read your notes",
         extra: true,
       }).success,
+    ).toBe(false);
+  });
+
+  test("defaults allow_dynamic_clients to absent (the server defaults it on)", () => {
+    const parsed = createApiServerScopeRequestSchema.safeParse({
+      scope: "notes:read",
+      description: "Read your notes",
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.allow_dynamic_clients).toBeUndefined();
+  });
+});
+
+describe("updateApiServerScopeRequestSchema", () => {
+  test("accepts a description, the dynamic-client flag, or both", () => {
+    expect(updateApiServerScopeRequestSchema.safeParse({ description: "Read notes" }).success).toBe(true);
+    expect(updateApiServerScopeRequestSchema.safeParse({ allow_dynamic_clients: false }).success).toBe(true);
+    expect(
+      updateApiServerScopeRequestSchema.safeParse({
+        description: "Read notes",
+        allow_dynamic_clients: true,
+      }).success,
+    ).toBe(true);
+  });
+
+  test("rejects an empty update and unknown keys", () => {
+    expect(updateApiServerScopeRequestSchema.safeParse({}).success).toBe(false);
+    expect(
+      updateApiServerScopeRequestSchema.safeParse({ description: "Read notes", scope: "x" }).success,
     ).toBe(false);
   });
 });

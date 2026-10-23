@@ -45,11 +45,20 @@ import type {
   CreatedClientApplicationServiceAccount,
   UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
+import type { AuthorizeClientApplicationConsent } from "@/lib/send-authorize-client-application-request";
 import type {
+  RevokeClientApplicationAuthorizationResult,
+  RevokeMyAppScopeConsentResult,
+} from "@/lib/connected-apps";
+import type {
+  AppConsentStatus,
+  ConnectedApp,
   ApiServerScope,
+  AppApiScopePolicy,
   AssignableOrganizationMembershipRole,
   CreateApiServerScopeRequest,
   UpdateApiServerScopeRequest,
+  UpdateAppApiScopePolicyRequest,
 } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
 import type { OrganizationMembershipVisibility } from "@schemavaults/app-definitions";
@@ -357,7 +366,23 @@ export interface ISchemaVaultsAuthClient {
   sendAuthorizeClientApplicationRequest: (
     app_id: AppId,
     state?: string | null,
+    /**
+     * Per-scope consent: the request's `scope` / `resource` and the API
+     * scopes the user approved on the consent screen.
+     */
+    consent?: AuthorizeClientApplicationConsent,
   ) => Promise<void>;
+
+  /**
+   * @name getAppConsentStatus
+   * @description Whether the signed-in user authorized an app, and what the
+   * consent screen has to ask for before an authorization code for this
+   * authorization request (`scope`, RFC 8707 `resource`) is handed to it.
+   */
+  getAppConsentStatus: (
+    app_id: AppId,
+    request?: { scope?: string | null; resource?: string | null },
+  ) => Promise<AppConsentStatus>;
 
   /**
    * @name checkAppAuthorization
@@ -467,6 +492,28 @@ export interface ISchemaVaultsAuthClient {
     api_server_id: ApiServerId,
     api_server_scope_id: string,
   ) => Promise<void>;
+
+  /**
+   * @name getAppApiScopePolicy
+   * @description Which of an API server's scopes a connected app may be
+   * granted: on behalf of users (all unless restricted) and for its own
+   * service account on the client_credentials grant (none unless listed).
+   */
+  getAppApiScopePolicy: (
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+  ) => Promise<AppApiScopePolicy>;
+
+  /**
+   * @name updateAppApiScopePolicy
+   * @description Replace a connected app's API scope allowances. Requires
+   * management access to the API server.
+   */
+  updateAppApiScopePolicy: (
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+    update: UpdateAppApiScopePolicyRequest,
+  ) => Promise<AppApiScopePolicy>;
 
   /**
    * @name setApiServerOrganizationMembershipVisibility
@@ -760,6 +807,38 @@ export interface ISchemaVaultsAuthClient {
   listMyOrganizationMemberships: () => Promise<
     readonly OrganizationMembershipRoleDetails[]
   >;
+
+  /**
+   * @name listMyConnectedApps
+   * @description The third-party client applications the current user
+   *   authorized (`GET /api/me/connected-apps`, newest first), with the API
+   *   scopes granted to each. Only available on the auth server's own frontend.
+   */
+  listMyConnectedApps: () => Promise<ConnectedApp[]>;
+
+  /**
+   * @name revokeMyAppScopeConsent
+   * @description Withdraws one API scope the current user granted a client
+   *   application, revoking the app's access tokens for that scope's API
+   *   server. The app stays authorized. Only available on the auth server's
+   *   own frontend.
+   */
+  revokeMyAppScopeConsent: (
+    app_id: AppId,
+    api_server_scope_id: string,
+  ) => Promise<RevokeMyAppScopeConsentResult>;
+
+  /**
+   * @name revokeClientApplicationAuthorization
+   * @description Removes the current user's authorization of a client
+   *   application (`DELETE /api/apps/[app_id]/authorize`): its API scope
+   *   grants go with it, and its tokens issued for the user are revoked.
+   *   Signing in to the app asks for consent again. Only available on the
+   *   auth server's own frontend.
+   */
+  revokeClientApplicationAuthorization: (
+    app_id: AppId,
+  ) => Promise<RevokeClientApplicationAuthorizationResult>;
 
   /**
    * @param feature_name Name of the feature to check if supported

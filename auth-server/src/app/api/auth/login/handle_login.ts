@@ -345,6 +345,7 @@ export async function handleLogin({
     resolved_grant = await resolveAuthorizationCodeGrant({
       dbh,
       client_app_id,
+      uid,
       nonce: parse_login_body.data.nonce ?? null,
       scope: parse_login_body.data.scope ?? null,
       resource: parse_login_body.data.resource ?? null,

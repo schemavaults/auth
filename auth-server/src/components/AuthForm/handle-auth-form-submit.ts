@@ -11,6 +11,7 @@ import {
   DEFAULT_AUTH_SCOPE,
   PKCE_ProofKeyManager,
   parseOAuth2State,
+  type AppConsentStatus,
 } from "@schemavaults/auth-common";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import {
@@ -39,6 +40,11 @@ export interface PendingAuthorizationState {
   // when the flow carried no nonce (an OIDC RP may omit it, OIDC Core
   // §3.1.2.1); nothing is echoed/verified in that case.
   nonce: string | null;
+  // What the consent screen asks for (the app is not authorized yet, or
+  // the request asks for API scopes the user has not granted). Null when
+  // the status could not be loaded: the screen then shows the generic
+  // sign-in permissions.
+  consent: AppConsentStatus | null;
 }
 
 interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
@@ -329,6 +335,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         "challenge_time",
         "code_challenge",
         "code_challenge_method",
+        "prompt",
       ] as const) {
         const value = searchParams.get(key);
         if (value) params.set(key, value);
@@ -409,15 +416,23 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     onSuccessfulAuthenticate !== "account-page" &&
     opts.onAppAuthorizationNeeded
   ) {
-    // Check if the user has already authorized this app
-    let alreadyAuthorized = false;
+    // Check whether the user already authorized this app and every API
+    // scope the request asks for (`prompt=consent` asks again anyway).
+    let consent: AppConsentStatus | null = null;
+    let consentRequired = true;
     try {
-      alreadyAuthorized = await authClient.checkAppAuthorization(opts.app.app_id);
+      consent = await authClient.getAppConsentStatus(opts.app.app_id, {
+        scope: flow_scope,
+        resource: flow_resource,
+      });
+      consentRequired =
+        consent.consent_required ||
+        (searchParams.get("prompt") ?? "").split(" ").includes("consent");
     } catch {
       // If the check fails, fall through to showing the consent screen (safe default)
     }
 
-    if (!alreadyAuthorized) {
+    if (consentRequired) {
       const redirect_uri: string | null | undefined =
         searchParams.get("redirect_uri");
       const state: string | null = parseOAuth2State(
@@ -430,6 +445,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         redirect_uri,
         state,
         nonce: flow_nonce,
+        consent,
       });
       return;
     }

@@ -13,10 +13,19 @@ export {
   listApiServerScopes,
   listApiServerScopeValues,
   createApiServerScope,
-  updateApiServerScopeDescription,
+  updateApiServerScope,
   deleteApiServerScope,
 } from './api-server-scopes';
 export type { CreateApiServerScopeOptions } from './api-server-scopes';
+
+export {
+  getAppApiScopePolicy,
+  setAppApiScopePolicy,
+  listGrantableApiScopeValues,
+  UnknownApiScopesError,
+  AppNotConnectedForScopesError,
+} from './api-scope-grants';
+export type { SetAppApiScopePolicyOptions } from './api-scope-grants';
 
 export { preloadApiServersTable } from './preload-api-servers-table';
 export type { QueryApiServersInputOptions } from './preload-api-servers-table';

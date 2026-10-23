@@ -3,7 +3,6 @@ import type { ReactElement } from "react";
 import redirectWithError from "@/lib/redirect-with-error";
 import { redirect } from "next/navigation";
 import generateAuthorizationCode from "@/lib/auth-db/users/generate-authorization-code";
-import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import type { AppId, SchemaVaultsApp } from "@schemavaults/app-definitions";
 import { getAppEnvironment } from "@schemavaults/app-definitions";
@@ -27,8 +26,9 @@ import { UserRegistry } from "@/lib/auth-db";
 import { isEmailVerificationRequiredForClientApp } from "@/lib/email-verification/third-party-app-gate";
 import { buildVerifyEmailRequiredHref } from "@/lib/email-verification/verify-email-required-href";
 import {
-  resolveAuthorizationCodeGrant,
-  type ResolvedAuthorizationCodeGrant,
+  describeAppConsentStatus,
+  toAppConsentStatus,
+  type DescribedAppConsentStatus,
 } from "@/lib/oauth2/api-scopes";
 
 export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
@@ -59,6 +59,9 @@ export interface AlreadyAuthenticatedOnLoginOrRegisterPageProps {
   // RFC 8707 resource indicator: grants the requested API scopes of the
   // API server it names (ignored when it names none this app may use).
   resource: string | null;
+  // OIDC `prompt`: `consent` shows the consent screen even when nothing
+  // new is asked for.
+  prompt?: string | null;
 }
 
 export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
@@ -78,14 +81,6 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     redirectWithError(500, "internal_server_error");
   }
   const app_id: AppId = app.app_id;
-
-  let isAppAuthorized: boolean;
-  try {
-    isAppAuthorized = await isAppAuthorizedForUser(dbh.db, uid, app_id, opts.debug);
-  } catch (e: unknown) {
-    console.error(`[AlreadyAuthenticatedOnLoginOrRegisterPage] Failed to check if app '${app_id}' is authorized for user '${uid}': `, e);
-    redirectWithError(500, "internal_server_error");
-  }
 
   // App already authorized — generate auth code server-side and redirect immediately
   if (typeof opts.code_challenge !== 'string' || !codeChallengeSchema.safeParse(opts.code_challenge).success) {
@@ -164,12 +159,14 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     );
     redirectWithError(400, "bad_request");
   }
-  let resolved_grant: ResolvedAuthorizationCodeGrant;
+  // Whether the app is authorized and which requested API scopes still
+  // need the user's consent; the code is minted with the consented ones.
+  let consent_status: DescribedAppConsentStatus;
   try {
-    resolved_grant = await resolveAuthorizationCodeGrant({
+    consent_status = await describeAppConsentStatus({
       dbh,
+      uid,
       client_app_id: app_id,
-      nonce: url_nonce,
       scope: opts.scope,
       resource: opts.resource,
       environment: getAppEnvironment(),
@@ -177,12 +174,13 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
     });
   } catch (e: unknown) {
     console.error(
-      `[AlreadyAuthenticatedOnLoginOrRegisterPage] Failed to resolve the requested scopes for app '${app_id}': `,
+      `[AlreadyAuthenticatedOnLoginOrRegisterPage] Failed to check the consent status of app '${app_id}' for user '${uid}': `,
       e,
     );
     redirectWithError(500, "internal_server_error");
   }
-  const grant_context = resolved_grant.grant;
+  const grant_context = { ...consent_status.resolved.grant, nonce: url_nonce };
+  const prompt_consent: boolean = (opts.prompt ?? "").split(" ").includes("consent");
 
   // E-mail verification gate, checked before consent and before minting:
   // an already-signed-in user whose address is not verified is parked on
@@ -219,12 +217,15 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
         nonce: opts.nonce,
         scope: opts.scope,
         resource: opts.resource,
+        prompt: opts.prompt,
       }),
     );
   }
 
-  if (!isAppAuthorized) {
-    // App NOT authorized — show consent screen
+  if (consent_status.consent_required || prompt_consent) {
+    // The app is not authorized yet, or the request asks for API scopes
+    // the user has not granted (or `prompt=consent`) — show the consent
+    // screen, which records the decision and mints the code.
     return (
       <AppAuthorizationConsentScreen
         app_id={app.app_id}
@@ -233,6 +234,7 @@ export default async function AlreadyAuthenticatedOnLoginOrRegisterPage(
         redirect_uri={redirect_uri}
         onSuccessfulAuthenticate={on_successful_authenticate}
         mode="authorize-and-redirect"
+        consent={toAppConsentStatus(consent_status)}
         debug={opts.debug}
       />
     );

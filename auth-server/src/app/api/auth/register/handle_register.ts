@@ -195,6 +195,10 @@ export async function handleRegister({
     resolved_grant = await resolveAuthorizationCodeGrant({
       dbh,
       client_app_id,
+      // The account does not exist yet: no API scope is consented, so a
+      // code minted at registration holds OIDC scopes only and the consent
+      // screen asks for the API scopes.
+      uid: null,
       nonce: registrationData.nonce ?? null,
       scope: registrationData.scope ?? null,
       resource: registrationData.resource ?? null,

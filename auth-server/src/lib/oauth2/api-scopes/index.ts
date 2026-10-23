@@ -10,6 +10,14 @@ export type {
   ResolveAuthorizationCodeGrantOptions,
 } from "./resolve-authorization-code-grant";
 
+export { listUsableApiScopeValues } from "./usable-api-scopes";
+
+export { describeAppConsentStatus, toAppConsentStatus } from "./consent-status";
+export type {
+  DescribeAppConsentStatusOptions,
+  DescribedAppConsentStatus,
+} from "./consent-status";
+
 export {
   splitTokenScopes,
   narrowGrantedScope,

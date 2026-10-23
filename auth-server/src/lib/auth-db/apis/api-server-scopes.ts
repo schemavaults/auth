@@ -44,6 +44,20 @@ function parseApiServerScopeFromDb(row: object): ApiServerScope {
   return parsed.data;
 }
 
+/**
+ * The columns read back. Listed explicitly (not SELECT *) so a column added
+ * later cannot break the strict parse of older code.
+ */
+const SCOPE_COLUMNS = [
+  "api_server_scope_id",
+  "api_server_id",
+  "scope",
+  "description",
+  "allow_dynamic_clients",
+  "created_at",
+  "created_by",
+] as const;
+
 function assertApiServerId(api_server_id: string): asserts api_server_id is ApiServerId {
   if (!apiServerIdSchema.safeParse(api_server_id).success) {
     throw new TypeError("Invalid API server ID!");
@@ -65,7 +79,7 @@ export async function listApiServerScopes(
     .orderBy("created_at", "asc")
     .orderBy("scope", "asc")
     .limit(MAX_API_SCOPES_PER_API_SERVER)
-    .selectAll()
+    .select(SCOPE_COLUMNS)
     .execute();
   return rows.map(parseApiServerScopeFromDb);
 }
@@ -97,6 +111,8 @@ export interface CreateApiServerScopeOptions {
   api_server_id: ApiServerId;
   scope: string;
   description: string;
+  /** Whether dynamically registered clients may be granted it (default true). */
+  allow_dynamic_clients?: boolean;
   created_by: string | null;
 }
 
@@ -109,7 +125,13 @@ export interface CreateApiServerScopeOptions {
  */
 export async function createApiServerScope(
   db: Kysely<AuthDatabase>,
-  { api_server_id, scope, description, created_by }: CreateApiServerScopeOptions,
+  {
+    api_server_id,
+    scope,
+    description,
+    allow_dynamic_clients = true,
+    created_by,
+  }: CreateApiServerScopeOptions,
 ): Promise<ApiServerScope> {
   assertApiServerId(api_server_id);
   if (isHardcodedApiServerId(api_server_id)) {
@@ -131,6 +153,7 @@ export async function createApiServerScope(
     api_server_id,
     scope: parsed_scope.data,
     description: parsed_description.data,
+    allow_dynamic_clients,
     created_at: Date.now(),
     created_by,
   };
@@ -168,28 +191,39 @@ export async function createApiServerScope(
 }
 
 /**
- * Changes a scope's description. Returns the updated scope, or null when
- * the API server defines no scope with that id.
+ * Changes a scope's description and/or whether dynamic clients may be
+ * granted it. Returns the updated scope, or null when the API server
+ * defines no scope with that id.
  */
-export async function updateApiServerScopeDescription(
+export async function updateApiServerScope(
   db: Kysely<AuthDatabase>,
   api_server_id: ApiServerId,
   api_server_scope_id: string,
-  description: string,
+  update: { description?: string; allow_dynamic_clients?: boolean },
 ): Promise<ApiServerScope | null> {
   assertApiServerId(api_server_id);
-  const parsed_description = apiScopeDescriptionSchema.safeParse(description);
-  if (!parsed_description.success) {
-    throw new TypeError("Invalid API scope description", {
-      cause: parsed_description.error,
-    });
+  const set: { description?: string; allow_dynamic_clients?: boolean } = {};
+  if (update.description !== undefined) {
+    const parsed_description = apiScopeDescriptionSchema.safeParse(update.description);
+    if (!parsed_description.success) {
+      throw new TypeError("Invalid API scope description", {
+        cause: parsed_description.error,
+      });
+    }
+    set.description = parsed_description.data;
+  }
+  if (typeof update.allow_dynamic_clients === "boolean") {
+    set.allow_dynamic_clients = update.allow_dynamic_clients;
+  }
+  if (Object.keys(set).length === 0) {
+    throw new TypeError("Nothing to update");
   }
   const row = await db
     .updateTable("api_server_scopes")
-    .set({ description: parsed_description.data })
+    .set(set)
     .where("api_server_id", "=", api_server_id)
     .where("api_server_scope_id", "=", api_server_scope_id)
-    .returningAll()
+    .returning(SCOPE_COLUMNS)
     .executeTakeFirst();
   return row ? parseApiServerScopeFromDb(row) : null;
 }

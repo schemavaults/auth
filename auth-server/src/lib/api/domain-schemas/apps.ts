@@ -4,7 +4,10 @@ import {
   schemaVaultsAppDefinitionSchema,
   schemaVaultsAppDomainRefSchema,
 } from "@schemavaults/app-definitions";
-import { assignableOrganizationMembershipRoles } from "@schemavaults/auth-common";
+import {
+  appConsentStatusSchema,
+  assignableOrganizationMembershipRoles,
+} from "@schemavaults/auth-common";
 import { z, withOpenApi } from "@schemavaults/openapi-operations";
 import { ErrorResponse } from "@/lib/api/schemas";
 
@@ -46,14 +49,10 @@ export const ListAppCallbackUrlsResponse = z
   })
   .openapi("ListAppCallbackUrlsResponse");
 
-export const AppAuthorizationStatusResponse = z
-  .object({
-    success: z.literal(true),
-    authorized: z
-      .boolean()
-      .openapi({ description: "Whether the caller has authorized the app to receive tokens on their behalf" }),
-  })
-  .openapi("AppAuthorizationStatusResponse");
+export const AppAuthorizationStatusResponse = withOpenApi(appConsentStatusSchema, "AppAuthorizationStatusResponse", {
+  description:
+    "`authorized`: whether the caller authorized the app at all. With the authorization request's `scope` / `resource` as query parameters, also what the consent screen has to ask for: `consent_required` (the app is not authorized yet, or the request asks for API scopes the caller has not granted it), the requested OIDC scopes, and the requested API scopes of the `resource`'s API server split into already granted and pending ones.",
+});
 
 export const AppAuthorizationRevocationResponse = z
   .object({

@@ -25,6 +25,11 @@ export type {
 } from "@/lib/client-application-service-account";
 export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
 export type { AuthenticateWithRedirectOptions } from "@/types/authenticate-with-redirect-options";
+export type { AuthorizeClientApplicationConsent } from "@/lib/send-authorize-client-application-request";
+export type {
+  RevokeClientApplicationAuthorizationResult,
+  RevokeMyAppScopeConsentResult,
+} from "@/lib/connected-apps";
 
 export type { UserData } from "@/types/UserData";
 

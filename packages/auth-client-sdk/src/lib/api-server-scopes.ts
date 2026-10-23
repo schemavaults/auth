@@ -1,12 +1,21 @@
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import { apiServerIdSchema, type ApiServerId } from "@schemavaults/app-definitions";
+import {
+  apiServerIdSchema,
+  appIdSchema,
+  type ApiServerId,
+  type AppId,
+} from "@schemavaults/app-definitions";
 import {
   apiServerScopeSchema,
+  appApiScopePolicySchema,
   createApiServerScopeRequestSchema,
   updateApiServerScopeRequestSchema,
+  updateAppApiScopePolicyRequestSchema,
   type ApiServerScope,
+  type AppApiScopePolicy,
   type CreateApiServerScopeRequest,
   type UpdateApiServerScopeRequest,
+  type UpdateAppApiScopePolicyRequest,
 } from "@schemavaults/auth-common";
 import { z } from "zod";
 
@@ -150,4 +159,73 @@ export async function deleteApiServerScope({
   if (!response.ok) {
     await readFailureMessage(response, "delete API scope");
   }
+}
+
+function scopePolicyUrl(auth_server_uri: string, api_server_id: ApiServerId, client_app_id: AppId): string {
+  return `${auth_server_uri}/api/apis/${encodeURIComponent(api_server_id)}/connect_app/${encodeURIComponent(client_app_id)}/scopes`;
+}
+
+const scopePolicyResponseSchema = z
+  .object({ success: z.literal(true), policy: appApiScopePolicySchema })
+  .loose();
+
+/**
+ * `GET /api/apis/[api_server_id]/connect_app/[client_app_id]/scopes`: which
+ * of the API server's scopes a connected app may be granted (on behalf of
+ * users, and for its service account).
+ */
+export async function getAppApiScopePolicy({
+  adapter,
+  auth_server_uri,
+  api_server_id,
+  client_app_id,
+}: IApiServerScopesRequestOpts & { client_app_id: AppId }): Promise<AppApiScopePolicy> {
+  await apiServerIdSchema.parseAsync(api_server_id);
+  await appIdSchema.parseAsync(client_app_id);
+  const response = await adapter.fetch(scopePolicyUrl(auth_server_uri, api_server_id, client_app_id), {
+    method: "GET",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    return await readFailureMessage(response, "load the app's API scope allowances");
+  }
+  const parsed = scopePolicyResponseSchema.safeParse(await response.json().catch(() => null));
+  if (!parsed.success) {
+    throw new Error("API scope allowances response was malformed", { cause: parsed.error });
+  }
+  return parsed.data.policy;
+}
+
+/**
+ * `PUT /api/apis/[api_server_id]/connect_app/[client_app_id]/scopes`:
+ * replaces a connected app's API scope allowances. Requires management
+ * access to the API server.
+ */
+export async function updateAppApiScopePolicy({
+  adapter,
+  auth_server_uri,
+  api_server_id,
+  client_app_id,
+  update,
+}: IApiServerScopesRequestOpts & {
+  client_app_id: AppId;
+  update: UpdateAppApiScopePolicyRequest;
+}): Promise<AppApiScopePolicy> {
+  await apiServerIdSchema.parseAsync(api_server_id);
+  await appIdSchema.parseAsync(client_app_id);
+  const body = await updateAppApiScopePolicyRequestSchema.parseAsync(update);
+  const response = await adapter.fetch(scopePolicyUrl(auth_server_uri, api_server_id, client_app_id), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    return await readFailureMessage(response, "update the app's API scope allowances");
+  }
+  const parsed = scopePolicyResponseSchema.safeParse(await response.json().catch(() => null));
+  if (!parsed.success) {
+    throw new Error("API scope allowances update response was malformed", { cause: parsed.error });
+  }
+  return parsed.data.policy;
 }

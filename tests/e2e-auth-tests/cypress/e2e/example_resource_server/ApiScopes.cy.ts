@@ -13,13 +13,18 @@
 //     scopes, no error;
 //   - the token endpoint: API scopes go on access tokens minted for their
 //     API server only, stay on the refresh token across audiences, and can
-//     be narrowed but not widened on refresh; client_credentials never
-//     grants them;
+//     be narrowed but not widened on refresh; client_credentials grants
+//     only the ones the API server's owner allowed the app's service
+//     account;
 //   - the example resource server enforcing an API scope with
 //     `requiredScopes` (GET /api/me/notes needs `example:notes.read`).
 //
 // The example app and API server (the same id) are seeded in
 // cypress.config.ts's before:run hook; the app is connected to its API.
+// Codes carry only the API scopes the user consented to, so the users
+// below consent to `example:notes.read` when they authorize the app.
+// Consent, per-app allowances, `prompt` and the third-party access API
+// are covered by ApiScopeConsent.cy.ts.
 
 import {
   type CodeChallengeWithDetails,
@@ -40,6 +45,7 @@ interface ApiServerScopeBody {
   api_server_id: string;
   scope: string;
   description: string;
+  allow_dynamic_clients: boolean;
   created_at: number;
   created_by: string | null;
 }
@@ -145,7 +151,8 @@ describe("API scopes (per-API-server OAuth 2.0 scopes)", () => {
 
   /**
    * Creates a fresh user with a verified e-mail address who has authorized
-   * the example app (signed in, so the login API can mint codes for them).
+   * the example app and consented to `example:notes.read` for it (signed
+   * in, so the login API can mint codes for them).
    */
   function createUserAuthorizedForExampleApp(): Cypress.Chainable<{
     email: string;
@@ -169,7 +176,11 @@ describe("API scopes (per-API-server OAuth 2.0 scopes)", () => {
           .request({
             method: "POST",
             url: `/api/apps/${CLIENT_ID}/authorize`,
-            body: {},
+            body: {
+              scope: `openid ${NOTES_READ}`,
+              resource: API_SERVER_ID,
+              approved_api_scopes: [NOTES_READ],
+            },
           })
           .then((response) => {
             expect(response.status, "app authorization status").to.equal(200);
@@ -349,6 +360,29 @@ describe("API scopes (per-API-server OAuth 2.0 scopes)", () => {
           expect(updated.body.scope.scope, "value unchanged").to.equal(
             "example:temporary",
           );
+          expect(
+            updated.body.scope.allow_dynamic_clients,
+            "dynamic clients allowed by default",
+          ).to.equal(true);
+        });
+        cy.request<{ success: boolean; scope: ApiServerScopeBody }>({
+          method: "PATCH",
+          url: `${SCOPES_URL}/${id}`,
+          body: { allow_dynamic_clients: false },
+        }).then((updated) => {
+          expect(updated.status, "flag update status").to.equal(200);
+          expect(updated.body.scope.allow_dynamic_clients, "flag").to.equal(false);
+          expect(updated.body.scope.description, "description kept").to.equal(
+            "Still temporary",
+          );
+        });
+        cy.request({
+          method: "PATCH",
+          url: `${SCOPES_URL}/${id}`,
+          body: {},
+          failOnStatusCode: false,
+        }).then((empty) => {
+          expect(empty.status, "empty update status").to.equal(400);
         });
         cy.request({ method: "DELETE", url: `${SCOPES_URL}/${id}` }).then(
           (deleted) => {
@@ -569,31 +603,74 @@ describe("API scopes (per-API-server OAuth 2.0 scopes)", () => {
       });
     });
 
-    it("never grants API scopes to the client_credentials grant", () => {
+    describe("client_credentials", () => {
       const client_id: string = Cypress.env(
         "OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID",
       );
       const client_secret: string = Cypress.env(
         "OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET",
       );
-      cy.request<OidcTokenResponseBody>({
-        method: "POST",
-        url: TOKEN_ENDPOINT,
-        form: true,
-        failOnStatusCode: false,
-        headers: {
-          Authorization: `Basic ${btoa(
-            `${encodeURIComponent(client_id)}:${encodeURIComponent(client_secret)}`,
-          )}`,
-        },
-        body: {
-          grant_type: "client_credentials",
-          resource: API_SERVER_ID,
-          scope: `email ${NOTES_READ}`,
-        },
-      }).then((response) => {
-        expect(response.status, "status").to.equal(200);
-        expect(response.body.scope, "scope").to.equal("email");
+      const POLICY_URL = `/api/apis/${API_SERVER_ID}/connect_app/${client_id}/scopes`;
+
+      function clientCredentials(
+        scope: string,
+      ): Cypress.Chainable<Cypress.Response<OidcTokenResponseBody>> {
+        return cy.request<OidcTokenResponseBody>({
+          method: "POST",
+          url: TOKEN_ENDPOINT,
+          form: true,
+          failOnStatusCode: false,
+          headers: {
+            Authorization: `Basic ${btoa(
+              `${encodeURIComponent(client_id)}:${encodeURIComponent(client_secret)}`,
+            )}`,
+          },
+          body: {
+            grant_type: "client_credentials",
+            resource: API_SERVER_ID,
+            scope,
+          },
+        });
+      }
+
+      function setServiceAccountScopes(scopes: readonly string[]): void {
+        loginAsSuperuser();
+        cy.request({
+          method: "PUT",
+          url: POLICY_URL,
+          body: {
+            restrict_user_scopes: false,
+            user_scopes: [],
+            service_account_scopes: scopes,
+          },
+        }).then((response) => {
+          expect(response.status, "set service-account scopes").to.equal(200);
+        });
+        cy.logout();
+      }
+
+      afterEach(() => {
+        setServiceAccountScopes([]);
+      });
+
+      it("grants no API scope to a service account without an allowance", () => {
+        clientCredentials(`email ${NOTES_READ}`).then((response) => {
+          expect(response.status, "status").to.equal(200);
+          expect(response.body.scope, "scope").to.equal("email");
+        });
+      });
+
+      it("grants the requested API scopes the app's service account is allowed", () => {
+        setServiceAccountScopes([NOTES_READ]);
+        clientCredentials(`email ${NOTES_READ} ${NOTES_WRITE}`).then(
+          (response) => {
+            expect(response.status, "status").to.equal(200);
+            expect(response.body.scope, "scope").to.equal(`email ${NOTES_READ}`);
+          },
+        );
+        clientCredentials("email").then((response) => {
+          expect(response.body.scope, "unrequested allowance").to.equal("email");
+        });
       });
     });
   });

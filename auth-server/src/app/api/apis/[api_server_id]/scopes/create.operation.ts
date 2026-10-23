@@ -54,6 +54,9 @@ export const createApiServerScope = defineOperation({
         api_server_id,
         scope: ctx.body.scope,
         description: ctx.body.description,
+        ...(ctx.body.allow_dynamic_clients !== undefined
+          ? { allow_dynamic_clients: ctx.body.allow_dynamic_clients }
+          : {}),
         created_by: user.uid,
       });
       return ctx.json(200, { success: true, scope });

@@ -74,6 +74,11 @@ export const apiServerScopeSchema = z
       .max(MAX_API_SCOPE_VALUE_LENGTH)
       .regex(API_SCOPE_VALUE_REGEX),
     description: z.string().max(MAX_API_SCOPE_DESCRIPTION_LENGTH),
+    // Whether clients registered through RFC 7591 dynamic client
+    // registration (which have no app-to-API connection to carry an
+    // allowance) may be granted the scope. Only meaningful while the API
+    // server allows dynamic clients at all.
+    allow_dynamic_clients: z.boolean(),
     created_at: z.number().nonnegative(),
     created_by: z.guid().nullable(),
   })
@@ -86,6 +91,8 @@ export const createApiServerScopeRequestSchema = z
   .object({
     scope: apiScopeValueSchema,
     description: apiScopeDescriptionSchema,
+    /** Defaults to true. */
+    allow_dynamic_clients: z.boolean().optional(),
   })
   .strict();
 
@@ -94,15 +101,22 @@ export type CreateApiServerScopeRequest = z.infer<
 >;
 
 /**
- * Body of a request changing a scope's description. The scope value
- * itself is immutable: tokens already carry it, so a rename is a new
- * scope plus a deletion.
+ * Body of a request changing a scope's description and/or whether dynamic
+ * clients may be granted it. The scope value itself is immutable: tokens
+ * already carry it, so a rename is a new scope plus a deletion.
  */
 export const updateApiServerScopeRequestSchema = z
   .object({
-    description: apiScopeDescriptionSchema,
+    description: apiScopeDescriptionSchema.optional(),
+    allow_dynamic_clients: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (update) =>
+      update.description !== undefined ||
+      update.allow_dynamic_clients !== undefined,
+    "At least one of 'description' and 'allow_dynamic_clients' must be provided",
+  );
 
 export type UpdateApiServerScopeRequest = z.infer<
   typeof updateApiServerScopeRequestSchema

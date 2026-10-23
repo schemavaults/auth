@@ -20,12 +20,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -80,11 +82,11 @@ export const ApiServerScopesCard: FC<ApiServerScopesCardProps> = ({
 
   const addForm = useForm<CreateApiServerScopeRequest>({
     resolver: zodResolver(createApiServerScopeRequestSchema),
-    defaultValues: { scope: "", description: "" },
+    defaultValues: { scope: "", description: "", allow_dynamic_clients: true },
   });
   const editForm = useForm<UpdateApiServerScopeRequest>({
     resolver: zodResolver(updateApiServerScopeRequestSchema),
-    defaultValues: { description: "" },
+    defaultValues: { description: "", allow_dynamic_clients: true },
   });
 
   function run(
@@ -121,7 +123,7 @@ export const ApiServerScopesCard: FC<ApiServerScopesCardProps> = ({
       },
       () => {
         toast({ variant: "default", title: `Scope "${values.scope}" defined` });
-        addForm.reset({ scope: "", description: "" });
+        addForm.reset({ scope: "", description: "", allow_dynamic_clients: true });
         setAddDialogOpen(false);
       },
     );
@@ -198,6 +200,11 @@ export const ApiServerScopesCard: FC<ApiServerScopesCardProps> = ({
                   <p className="text-sm text-muted-foreground break-words">
                     {scope.description}
                   </p>
+                  {!scope.allow_dynamic_clients && (
+                    <Badge variant="secondary" className="mt-1">
+                      Not for dynamically registered clients
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <LocalDateTime
@@ -214,7 +221,10 @@ export const ApiServerScopesCard: FC<ApiServerScopesCardProps> = ({
                         title="Edit description"
                         disabled={busy}
                         onClick={() => {
-                          editForm.reset({ description: scope.description });
+                          editForm.reset({
+                            description: scope.description,
+                            allow_dynamic_clients: scope.allow_dynamic_clients,
+                          });
                           setEditTarget(scope);
                         }}
                       >
@@ -317,6 +327,30 @@ export const ApiServerScopesCard: FC<ApiServerScopesCardProps> = ({
                   </FormItem>
                 )}
               />
+              <FormField
+                control={addForm.control}
+                name="allow_dynamic_clients"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value !== false}
+                        onCheckedChange={(checked) => field.onChange(checked === true)}
+                        disabled={busy}
+                      />
+                    </FormControl>
+                    <div className="space-y-1">
+                      <FormLabel className="font-normal">
+                        Available to dynamically registered clients
+                      </FormLabel>
+                      <FormDescription>
+                        Clients that registered themselves (e.g. MCP clients)
+                        may request it, while this API server allows them.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
               <DialogFooter>
                 <Button type="submit" disabled={busy}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -345,7 +379,7 @@ export const ApiServerScopesCard: FC<ApiServerScopesCardProps> = ({
                   Edit <code>{editTarget?.scope}</code>
                 </DialogTitle>
                 <DialogDescription>
-                  Only the description can change.
+                  The scope value cannot change.
                 </DialogDescription>
               </DialogHeader>
               <FormField
@@ -358,6 +392,30 @@ export const ApiServerScopesCard: FC<ApiServerScopesCardProps> = ({
                       <Input {...field} disabled={busy} />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="allow_dynamic_clients"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value !== false}
+                        onCheckedChange={(checked) => field.onChange(checked === true)}
+                        disabled={busy}
+                      />
+                    </FormControl>
+                    <div className="space-y-1">
+                      <FormLabel className="font-normal">
+                        Available to dynamically registered clients
+                      </FormLabel>
+                      <FormDescription>
+                        Clients that registered themselves (e.g. MCP clients)
+                        may request it, while this API server allows them.
+                      </FormDescription>
+                    </div>
                   </FormItem>
                 )}
               />

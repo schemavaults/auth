@@ -194,6 +194,7 @@ export const generateAuthorizationCodeOperation = defineOperation({
         await resolveAuthorizationCodeGrant({
           dbh,
           client_app_id: body.client_app_id,
+          uid: user.uid,
           nonce: body.nonce ?? null,
           scope: body.scope ?? null,
           resource: body.resource ?? null,

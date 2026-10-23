@@ -129,6 +129,8 @@ export default async function MfaChallengePage(props: {
   const scope: string | null = readString(searchParams, "scope") ?? null;
   // RFC 8707 resource whose API scopes `scope` asks for (same reason).
   const resource: string | null = readString(searchParams, "resource") ?? null;
+  // OIDC `prompt` (`consent` forces the consent screen), same reason.
+  const prompt: string | null = readString(searchParams, "prompt") ?? null;
 
   // Post-login destination forwarded from the login form (originally
   // set by a route guard). Unsafe values resolve to null → /account.
@@ -162,6 +164,7 @@ export default async function MfaChallengePage(props: {
       nonce={nonce}
       scope={scope}
       resource={resource}
+      prompt={prompt}
       next_href={next_href}
       app={app}
     />
