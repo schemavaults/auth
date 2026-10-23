@@ -26,7 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@schemavaults/ui";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Unplug } from "lucide-react";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import { UserProfileCard } from "@/components/UserProfile";
@@ -120,6 +120,32 @@ export default function AccountPageView({
             <Link href="/mfa">
               <ShieldCheck className="h-4 w-4" />
               Manage MFA
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
+      <Card className={cardsClassName}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Unplug className="h-5 w-5 text-muted-foreground" />
+            Third-party access
+          </CardTitle>
+          <CardDescription>
+            See which applications can access your account and what they can
+            do.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Withdraw single permissions, or remove an application&apos;s access
+            entirely.
+          </p>
+        </CardContent>
+        <CardFooter>
+          <Button asChild className="flex flex-row gap-2 flex-nowrap">
+            <Link href="/account/connected-apps" data-testid="manage-connected-apps-link">
+              <Unplug className="h-4 w-4" />
+              Manage access
             </Link>
           </Button>
         </CardFooter>

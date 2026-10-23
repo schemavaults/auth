@@ -34,6 +34,10 @@ const challengeStateSchema = z
     // (≤5 min TTL) still parse.
     nonce: z.string().nullable().optional(),
     scope: z.string().nullable().optional(),
+    // The API server whose API scopes `scope` holds (see
+    // AuthorizationCodeGrantContext). Nullable-optional for in-flight
+    // challenges created before API scopes existed.
+    scope_api_server_id: z.string().nullable().optional(),
   })
   .strict();
 
@@ -54,6 +58,7 @@ export async function createChallenge(
     redirect_uri: string | null;
     nonce: string | null;
     scope: string | null;
+    scope_api_server_id: string | null;
     ttl_seconds?: number;
   },
 ): Promise<{ expires_at: number }> {
@@ -69,6 +74,7 @@ export async function createChallenge(
     redirect_uri: args.redirect_uri,
     nonce: args.nonce,
     scope: args.scope,
+    scope_api_server_id: args.scope_api_server_id,
   };
   await client.set(makeKey(args.challenge_id), JSON.stringify(state), "EX", ttl);
   return { expires_at: now + ttl * 1000 };

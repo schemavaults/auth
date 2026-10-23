@@ -1,12 +1,29 @@
-import { OIDC_SUPPORTED_SCOPES } from "@schemavaults/auth-common";
+import {
+  OIDC_SUPPORTED_SCOPES,
+  apiScopeValueSchema,
+} from "@schemavaults/auth-common";
+
+/**
+ * A scope a route may require: one of OIDC_SUPPORTED_SCOPES, or an API
+ * scope (a single RFC 6749 scope-token that is not an OIDC scope name)
+ * the API server defines on the auth server, e.g. `notes:read`.
+ */
+function isValidRequiredScope(scope: string): boolean {
+  return (
+    (OIDC_SUPPORTED_SCOPES satisfies readonly string[] as readonly string[]).includes(
+      scope,
+    ) || apiScopeValueSchema.safeParse(scope).success
+  );
+}
 
 export type RequiredScopesEvaluation =
   | { ok: true }
   | {
       ok: false;
       /**
-       * `invalid_config`: the route declared a scope outside
-       * OIDC_SUPPORTED_SCOPES — a server misconfiguration (500).
+       * `invalid_config`: the route declared a value no token can carry
+       * (not a supported OIDC scope, nor a valid API scope value) — a
+       * server misconfiguration (500).
        * `missing_scopes`: the token's grant does not cover the
        * requirement (403).
        */
@@ -43,10 +60,7 @@ export function evaluateRequiredScopes(
   }
 
   const invalid_configured_scopes: string[] = required_scopes.filter(
-    (scope: string) =>
-      !(
-        OIDC_SUPPORTED_SCOPES satisfies readonly string[] as readonly string[]
-      ).includes(scope),
+    (scope: string) => !isValidRequiredScope(scope),
   );
   if (invalid_configured_scopes.length > 0) {
     return {

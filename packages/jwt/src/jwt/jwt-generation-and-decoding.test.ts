@@ -322,4 +322,55 @@ describe("JWT Generation & Decoding", () => {
     });
     expect(plain_decoded.scope).toBeUndefined();
   });
+  it("round-trips the API-scope binding claim on refresh tokens only", async () => {
+    const user: UserData = new MockUser();
+    const now = Date.now();
+    const api_server_id = crypto.randomUUID();
+
+    const refresh_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: DEFAULT_AUTH_SERVER_APP_ID,
+      environment,
+    });
+    const refresh = await generateJWT({
+      type: "refresh",
+      user,
+      audience: getRefreshTokenAudience(env),
+      iat: now,
+      client_app_id: crypto.randomUUID(),
+      auth_server_url,
+      jwt_keys: refresh_keys,
+      env,
+      scope: "openid notes:read",
+      scope_api_server_id: api_server_id,
+    });
+    const decoded = await decodeJWT({
+      jwt: refresh.token,
+      type: "refresh",
+      jwt_keys: refresh_keys,
+      env,
+    });
+    expect(decoded.scope).toBe("openid notes:read");
+    expect(decoded.scope_api_server_id).toBe(api_server_id);
+
+    // Access tokens never carry it: resource servers decode them with a
+    // strict schema that may predate the claim.
+    const access_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: api_server_id,
+      environment,
+    });
+    await expect(
+      generateJWT({
+        type: "access",
+        user,
+        audience: api_server_id,
+        iat: now,
+        client_app_id: crypto.randomUUID(),
+        auth_server_url,
+        jwt_keys: access_keys,
+        env,
+        scope: "notes:read",
+        scope_api_server_id: api_server_id,
+      }),
+    ).rejects.toThrow();
+  });
 });

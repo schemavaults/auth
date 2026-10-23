@@ -38,11 +38,12 @@ export const OidcTokenRequest = z
         "`refresh_token`: the refresh token to rotate. Browser SDK clients that chose cookie delivery send it as the `refresh_token_<client_id>` cookie instead.",
     }),
     scope: z.string().optional().openapi({
-      description: "`refresh_token` / `client_credentials`: requested scope, which may only narrow the originally granted scope.",
+      description:
+        "`refresh_token`: requested scope, which may only narrow the originally granted scope. `client_credentials`: requested OIDC scopes (API scopes are not granted to service accounts).",
     }),
     resource: z.string().optional().openapi({
       description:
-        "RFC 8707 resource indicator, as extended by @schemavaults/auth-server: the URL of a registered API server; the `access_token` is then minted for that audience instead of the reserved userinfo audience. At most one per request.",
+        "RFC 8707 resource indicator, as extended by @schemavaults/auth-server: the URL of a registered API server; the `access_token` is then minted for that audience instead of the reserved userinfo audience. At most one per request. The API scopes a grant holds (requested with that API server as the authorization request's `resource`) go on the access token only when it is minted for that API server.",
       example: "https://api.example.com",
     }),
     refresh_token_delivery: oidcRefreshTokenDeliveryModeSchema.optional().openapi({
@@ -63,7 +64,10 @@ export const OidcTokenResponse = z
     refresh_token_expires_in: z.number().int().optional().openapi({
       description: "@schemavaults/auth-server extension: seconds until the (possibly cookie-delivered) refresh token expires.",
     }),
-    scope: z.string().optional().openapi({ description: "Granted scope; omitted when nothing was granted (plain OAuth 2.1 grant)." }),
+    scope: z.string().optional().openapi({
+      description:
+        "Scope of the issued access token: the granted OIDC scopes, plus the grant's API scopes when the access token is minted for the API server that defines them. Omitted when it holds nothing (plain OAuth 2.1 grant).",
+    }),
     id_token: z.string().optional().openapi({
       description: "RS256-signed id_token; only on an `authorization_code` grant whose scope includes `openid`.",
     }),

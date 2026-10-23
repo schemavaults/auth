@@ -2,10 +2,11 @@ import "server-only";
 import type { NextResponse } from "next/server";
 import {
   OIDC_OPENID_SCOPE,
+  grantRequestedScopes,
   oidcScopeSchema,
-  parseAndGrantScopes,
   type UserData,
 } from "@schemavaults/auth-common";
+import { listGrantableApiScopeValues } from "@/lib/auth-db/apis";
 import { loadUserData, UserRegistry } from "@/lib/auth-db";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
@@ -90,18 +91,16 @@ export async function handleOidcClientCredentialsGrant({
 
   // RFC 6749 §4.4.2: `scope` is OPTIONAL. Unknown scopes are dropped (as
   // everywhere on the OIDC surface) and so is `openid`: no end user
-  // authenticated, so no OpenID authentication took place.
-  let scope: string = "";
+  // authenticated, so no OpenID authentication took place. API scopes are
+  // granted below, once the `resource` is known.
   const requested_scope = param("scope");
-  if (requested_scope !== null) {
-    if (!oidcScopeSchema.safeParse(requested_scope).success) {
-      return fail(
-        oidcTokenErrorResponse("invalid_scope", "Malformed 'scope' parameter."),
-      );
-    }
-    scope = parseAndGrantScopes(requested_scope)
-      .granted.filter((s) => s !== OIDC_OPENID_SCOPE)
-      .join(" ");
+  if (
+    requested_scope !== null &&
+    !oidcScopeSchema.safeParse(requested_scope).success
+  ) {
+    return fail(
+      oidcTokenErrorResponse("invalid_scope", "Malformed 'scope' parameter."),
+    );
   }
 
   const parsed_resource = parseOidcTokenResourceParam(form, environment);
@@ -161,6 +160,23 @@ export async function handleOidcClientCredentialsGrant({
     access_token_audience = validated_resource.access_token_audience;
     access_token_audience_api_server_id = validated_resource.api_server_id;
   }
+
+  // No user consents on this grant, so a token for an API server carries
+  // only the requested API scopes its owner granted this app's service
+  // account (APP_API_SCOPE_GRANTS, none by default).
+  const service_account_api_scopes: string[] = access_token_audience_api_server_id
+    ? await listGrantableApiScopeValues(dbh.db, {
+        client_app_id,
+        api_server_id: access_token_audience_api_server_id,
+        grantee: "service_account",
+      })
+    : [];
+  const scope: string = grantRequestedScopes(
+    requested_scope ?? undefined,
+    service_account_api_scopes,
+  )
+    .granted.filter((s) => s !== OIDC_OPENID_SCOPE)
+    .join(" ");
 
   const issued = await issueOidcTokens({
     dbh,

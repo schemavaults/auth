@@ -9,7 +9,8 @@ import ApiServerDetailPageView from "./api-server-detail-page-view";
 import { type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefinition, type SchemaVaultsApiServerDomainRef, getAppEnvironment } from "@schemavaults/app-definitions";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
-import { loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
+import { listApiServerScopes, loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
+import type { ApiServerScope } from "@schemavaults/auth-common";
 import { accessLevelSatisfies, getUserAccessLevelForResource, type OwnedResourceAccessLevel } from "@/lib/ownership/resource-access";
 import { connection } from "next/server";
 import type { ServerRuntime } from "next/types";
@@ -61,6 +62,7 @@ export default async function ApiServerDetailPage(
       const connected_apps = await permissions_registry.listConnectedApps(api_server_id);
       const api_server_registry = new SchemaVaultsApiServerRegistry(dbh.db);
       const connected_domains: readonly SchemaVaultsApiServerDomainRef[] = await api_server_registry.getApiServerDomains(api_server_id);
+      const scopes: readonly ApiServerScope[] = hardcoded ? [] : await listApiServerScopes(dbh.db, api_server_id);
 
       const current_environment = getAppEnvironment();
 
@@ -69,6 +71,7 @@ export default async function ApiServerDetailPage(
           api_server={api_server}
           connected_apps={connected_apps}
           connected_domains={connected_domains}
+          scopes={scopes}
           hardcoded={hardcoded}
           isOrgOwner={canManage}
           isPlatformAdmin={user.admin === true}

@@ -1,5 +1,6 @@
 import {
   type SchemaVaultsAppEnvironment,
+  type ApiServerId,
   type AppId,
   appIdSchema,
 } from "@schemavaults/app-definitions";
@@ -21,6 +22,11 @@ export interface IGenerateRefreshTokenOpts {
    * Only the OIDC surface sets this.
    */
   scope?: string;
+  /**
+   * The API server whose API scopes `scope` carries (the token's
+   * `scope_api_server_id` claim). Omit when it carries none.
+   */
+  scope_api_server_id?: ApiServerId;
 }
 
 export default async function generateRefreshToken({
@@ -30,6 +36,7 @@ export default async function generateRefreshToken({
   user_organizations,
   environment,
   scope,
+  scope_api_server_id,
 }: IGenerateRefreshTokenOpts): Promise<RefreshToken> {
   if (!appIdSchema.safeParse(client_app_id).success) {
     throw new Error("Invalid client app ID");
@@ -47,7 +54,12 @@ export default async function generateRefreshToken({
     jwt_keys: auth_server_jwt_keys,
   });
   const token: RefreshToken = await jwt_factory.refresh(
-    scope ? { scope } : undefined,
+    scope
+      ? {
+          scope,
+          ...(scope_api_server_id ? { scope_api_server_id } : {}),
+        }
+      : undefined,
   );
   return token;
 }

@@ -1,5 +1,9 @@
 import type {
   ApiServerDomainsTable,
+  ApiServerScopesTable,
+  AppApiScopePoliciesTable,
+  AppApiScopeGrantsTable,
+  UserAppScopeConsentsTable,
   ApiServersTable,
   AppsToApisPermissionsTable,
   AppsToHardcodedApisPermissionsTable,
@@ -50,6 +54,10 @@ export type AuthDatabase = {
   app_service_account_organization_roles: AppServiceAccountOrganizationRolesTable;
   api_servers: ApiServersTable;
   api_server_domains: ApiServerDomainsTable;
+  api_server_scopes: ApiServerScopesTable;
+  app_api_scope_policies: AppApiScopePoliciesTable;
+  app_api_scope_grants: AppApiScopeGrantsTable;
+  user_app_scope_consents: UserAppScopeConsentsTable;
   authorized_apps: AuthorizedAppsTable;
   apps_to_apis_permissions: AppsToApisPermissionsTable;
   apps_to_hardcoded_apis_permissions: AppsToHardcodedApisPermissionsTable;

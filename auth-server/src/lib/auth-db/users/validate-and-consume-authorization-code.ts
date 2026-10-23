@@ -44,6 +44,8 @@ export interface ConsumedAuthorizationCode {
   uid: string;
   nonce: string | null;
   scope: string | null;
+  /** The API server whose API scopes `scope` carries, if any. */
+  scope_api_server_id: string | null;
   /**
    * When the code was minted (unix **milliseconds**). The token endpoint
    * compares it against the user's `tokens_valid_after` watermark so a code
@@ -126,6 +128,7 @@ export async function validateAndConsumeAuthorizationCode(
       challenge_time: stored_challenge_time,
       nonce: stored_nonce,
       scope: stored_scope,
+      scope_api_server_id: stored_scope_api_server_id,
       created_at: stored_created_at,
     } = parsed_authorization_code.data;
 
@@ -268,6 +271,7 @@ export async function validateAndConsumeAuthorizationCode(
       uid,
       nonce: stored_nonce ?? null,
       scope: stored_scope ?? null,
+      scope_api_server_id: stored_scope_api_server_id ?? null,
       created_at: stored_created_at,
     };
   });

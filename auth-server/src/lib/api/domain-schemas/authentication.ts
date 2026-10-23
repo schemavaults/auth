@@ -9,6 +9,7 @@ import {
   oidcScopeSchema,
   passwordSchema,
   PKCE_ProofKeyManager,
+  resourceIndicatorSchema,
 } from "@schemavaults/auth-common";
 import { z, withOpenApi } from "@schemavaults/openapi-operations";
 import { ErrorResponse, RateLimitedResponse } from "@/lib/api/schemas";
@@ -148,6 +149,11 @@ const pkceGrantRequestFields = {
     description:
       "Requested scopes, space delimited (RFC 6749 §3.3). The server re-derives the granted subset; absent, or naming no supported scope, is a plain OAuth 2.1 grant without an id_token.",
     example: "openid profile email",
+  }),
+  resource: resourceIndicatorSchema.optional().openapi({
+    description:
+      "RFC 8707 resource indicator of the authorization request: an API server id, or the URL of one of its registered domains. When it names an API server this client app may use, the requested `scope` values that API server defines (its API scopes) are granted too, bound to it; otherwise it is ignored.",
+    example: "https://api.example.com/mcp",
   }),
 };
 

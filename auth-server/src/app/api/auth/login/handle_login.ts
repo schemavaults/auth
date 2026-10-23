@@ -13,8 +13,7 @@ import {
   collapseWebauthnFactors,
   oidcNonceSchema,
   oidcScopeSchema,
-  parseAndGrantScopes,
-  serializeOidcScopesOrNull,
+  resourceIndicatorSchema,
 } from "@schemavaults/auth-common";
 import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
 import type { UserData } from "@schemavaults/auth-common";
@@ -42,6 +41,10 @@ import {
   EMAIL_VERIFICATION_REQUIRED_MESSAGE,
   isEmailVerificationRequiredForClientApp,
 } from "@/lib/email-verification/third-party-app-gate";
+import {
+  resolveAuthorizationCodeGrant,
+  type ResolvedAuthorizationCodeGrant,
+} from "@/lib/oauth2/api-scopes";
 
 // Constant message returned for both "no such user" and "wrong password"
 // failures, so that an unauthenticated caller cannot tell whether an email
@@ -79,6 +82,11 @@ const loginBodySchema = z
     // redemption). When present it is validated for wire format by
     // oidcScopeSchema, then the server re-derives the granted subset.
     scope: oidcScopeSchema.optional(),
+    // RFC 8707 resource indicator of the authorization request — OPTIONAL.
+    // When it names an API server this client may use, the requested
+    // scopes that API server defines are granted too (and bound to it);
+    // otherwise it is ignored and only OIDC scopes are granted.
+    resource: resourceIndicatorSchema.optional(),
   })
   .required({
     credentials: true,
@@ -104,14 +112,6 @@ export async function handleLogin({
   const code_challenge: string = parse_login_body.data.code_challenge;
   const challenge_time: number = parse_login_body.data.challenge_time;
   const redirect_uri: string | null = parse_login_body.data.redirect_uri ?? null;
-  // Granted scopes are re-derived server-side (never trusted verbatim);
-  // null when nothing was granted (plain OAuth 2.1 grant).
-  const grant_context: AuthorizationCodeGrantContext = {
-    nonce: parse_login_body.data.nonce ?? null,
-    scope: serializeOidcScopesOrNull(
-      parseAndGrantScopes(parse_login_body.data.scope).granted,
-    ),
-  };
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
@@ -336,6 +336,40 @@ export async function handleLogin({
     console.log(`Login successful as ${email_credentials.email} (uid: ${uid})`);
   }
 
+  // Granted scopes are re-derived server-side (never trusted verbatim):
+  // the supported OIDC scopes, plus the API scopes of the API server the
+  // flow's `resource` names; null when nothing was granted (plain OAuth
+  // 2.1 grant).
+  let resolved_grant: ResolvedAuthorizationCodeGrant;
+  try {
+    resolved_grant = await resolveAuthorizationCodeGrant({
+      dbh,
+      client_app_id,
+      uid,
+      nonce: parse_login_body.data.nonce ?? null,
+      scope: parse_login_body.data.scope ?? null,
+      resource: parse_login_body.data.resource ?? null,
+      environment: appEnv,
+      debug,
+    });
+  } catch (e: unknown) {
+    await captureServerException(dbh.db, e, {
+      op_name: "handleLogin.resolveAuthorizationCodeGrant",
+      route: ROUTE,
+      uid,
+      context: { client_app_id },
+    });
+    return NextResponse.json(
+      {
+        kind: "failure",
+        success: false,
+        message: "Failed to resolve the requested scopes",
+      } satisfies AuthenticateResult,
+      { status: 500 },
+    );
+  }
+  const grant_context: AuthorizationCodeGrantContext = resolved_grant.grant;
+
   // MFA gate: if the user has any verified factor, do NOT issue an
   // authorization code yet. Instead, persist a short-lived Redis
   // challenge keyed by a fresh UUID and return mfa_required. The client
@@ -395,6 +429,7 @@ export async function handleLogin({
         redirect_uri,
         nonce: grant_context.nonce,
         scope: grant_context.scope,
+        scope_api_server_id: grant_context.scope_api_server_id,
       });
       return NextResponse.json(
         {
@@ -522,7 +557,9 @@ export async function handleLogin({
       req,
       res: response,
       environment: appEnv,
-      scope: grant_context.scope ?? undefined,
+      // Only the OIDC scopes: a third-party API's scopes never land on the
+      // auth server's own session.
+      scope: resolved_grant.session_scope ?? undefined,
       debug,
     });
   } catch (e: unknown) {

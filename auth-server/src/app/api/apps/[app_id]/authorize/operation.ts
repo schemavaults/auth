@@ -1,4 +1,9 @@
-import { oauth2StateSchema } from "@schemavaults/auth-common";
+import {
+  approvedApiScopesSchema,
+  oauth2StateSchema,
+  oidcScopeSchema,
+  resourceIndicatorSchema,
+} from "@schemavaults/auth-common";
 import { z, requireAuth } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import { sessionSchemes } from "@/lib/api/auth-schemes";
@@ -10,9 +15,12 @@ import {
   validationErrorResponse,
 } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
-import AuthorizedAppsRegistry, {
+import {
+  authorizeAppForUser,
   removeAppAuthorizationForUser,
 } from "@/lib/auth-db/apps/authorized-apps-registry";
+import { recordApiScopeConsents } from "@/lib/auth-db/api-scope-consents";
+import { resolveAuthorizationCodeGrant } from "@/lib/oauth2/api-scopes";
 import { revokeTokensIssuedToClientApp } from "@/lib/auth-db/token-revocations";
 import captureServerException from "@/lib/captureServerException";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
@@ -31,6 +39,18 @@ const AuthorizeAppRequest = z
       description:
         "The OAuth2 `state` nonce of the in-flight authorization request. Validated, logged in development, never persisted.",
     }),
+    scope: oidcScopeSchema.optional().openapi({
+      description:
+        "The authorization request's requested scopes. Required for `approved_api_scopes` to take effect.",
+    }),
+    resource: resourceIndicatorSchema.optional().openapi({
+      description:
+        "The authorization request's RFC 8707 resource indicator, whose API scopes `scope` asks for.",
+    }),
+    approved_api_scopes: approvedApiScopesSchema.optional().openapi({
+      description:
+        "The API scopes the user approved on the consent screen. Recorded as the user's consent for those of them the request asks for and the app may be granted; the rest are ignored. Omitted or empty: no API scope is consented (the app is still authorized).",
+    }),
   })
   .strict()
   .openapi("AuthorizeAppRequest");
@@ -40,7 +60,7 @@ export const authorizeApp = defineOperation({
   path: ROUTE,
   summary: "Authorize a client application",
   description:
-    "Records the caller's consent for a client application to receive tokens on their behalf. Idempotent. The auth server's own app is always authorized and cannot be explicitly authorized (403). The JSON body is optional.",
+    "Records the caller's consent for a client application to receive tokens on their behalf, and for the API scopes they approved (`approved_api_scopes`, among those the request's `scope` asks for of the API server its `resource` names). Idempotent; consenting again adds scopes, never removes them. The auth server's own app is always authorized and cannot be explicitly authorized (403). The JSON body is optional.",
   tags: [API_TAGS.apps],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {
@@ -82,11 +102,36 @@ export const authorizeApp = defineOperation({
     }
 
     try {
-      const registry = new AuthorizedAppsRegistry(db);
-      await registry.authorizeAppForUser(
-        user.uid, // user id
-        app_id, // frontend app id
-      );
+      // The approved API scopes count only among those the request asks
+      // for and the app may be granted (resolved before the transaction).
+      const approved: readonly string[] = ctx.body?.approved_api_scopes ?? [];
+      const resolved =
+        approved.length > 0
+          ? await resolveAuthorizationCodeGrant({
+              dbh: ctx.context.dbh,
+              client_app_id: app_id,
+              uid: user.uid,
+              nonce: null,
+              scope: ctx.body?.scope ?? null,
+              resource: ctx.body?.resource ?? null,
+              environment,
+              debug: ctx.context.debug,
+            })
+          : null;
+      const consentable: string[] = resolved
+        ? approved.filter((scope) => resolved.requested_api_scopes.includes(scope))
+        : [];
+      await db.transaction().execute(async (trx) => {
+        await authorizeAppForUser(trx, user.uid, app_id);
+        if (resolved?.api_server_id && consentable.length > 0) {
+          await recordApiScopeConsents(trx, {
+            uid: user.uid,
+            client_app_id: app_id,
+            api_server_id: resolved.api_server_id,
+            scopes: consentable,
+          });
+        }
+      });
       return ctx.json(200, {
         success: true,
         message: "Successfully authorized frontend application to receive tokens on your behalf",

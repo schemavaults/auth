@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_AUTH_SCOPE,
+  OIDC_RESERVED_SCOPES,
   OIDC_SUPPORTED_SCOPES,
+  grantRequestedScopes,
+  isOidcReservedScope,
   oidcScopeSchema,
   parseAndGrantScopes,
+  partitionGrantedScopes,
   serializeOidcScopes,
   serializeOidcScopesOrNull,
 } from "./scope";
@@ -121,5 +125,94 @@ describe("oidcScopeSchema (RFC 6749 §3.3 wire format)", () => {
 
   test("rejects scopes longer than 256 chars", () => {
     expect(oidcScopeSchema.safeParse("openid".repeat(50)).success).toBe(false);
+  });
+});
+
+describe("grantRequestedScopes", () => {
+  test("without API scopes it grants exactly what parseAndGrantScopes grants", () => {
+    for (const raw of [
+      undefined,
+      "",
+      "openid email",
+      "email mcp:tools",
+      "mcp:tools mcp:resources",
+      "openid  email",
+    ]) {
+      const legacy = parseAndGrantScopes(raw);
+      const result = grantRequestedScopes(raw);
+      expect(result.granted).toEqual(legacy.granted);
+      expect(result.oidc).toEqual(legacy.granted);
+      expect(result.api).toEqual([]);
+      expect(result.hasOpenid).toBe(legacy.hasOpenid);
+    }
+  });
+
+  test("grants requested API scopes the API server defines, in request order", () => {
+    const result = grantRequestedScopes(
+      "notes:write openid notes:read unknown:scope email",
+      ["notes:read", "notes:write", "notes:admin"],
+    );
+    expect(result.granted).toEqual([
+      "notes:write",
+      "openid",
+      "notes:read",
+      "email",
+    ]);
+    expect(result.oidc).toEqual(["openid", "email"]);
+    expect(result.api).toEqual(["notes:write", "notes:read"]);
+    expect(result.hasOpenid).toBe(true);
+  });
+
+  test("dedupes repeated API scopes", () => {
+    expect(
+      grantRequestedScopes("notes:read notes:read", ["notes:read"]).granted,
+    ).toEqual(["notes:read"]);
+  });
+
+  test("never grants an OIDC reserved name as an API scope", () => {
+    const result = grantRequestedScopes("offline_access phone notes:read", [
+      "offline_access",
+      "phone",
+      "notes:read",
+    ]);
+    expect(result.granted).toEqual(["notes:read"]);
+    expect(result.api).toEqual(["notes:read"]);
+  });
+
+  test("a malformed scope grants nothing", () => {
+    expect(
+      grantRequestedScopes("notes:read  openid", ["notes:read"]).granted,
+    ).toEqual([]);
+  });
+});
+
+describe("partitionGrantedScopes", () => {
+  test("splits a granted scope string into OIDC and API scopes", () => {
+    expect(
+      partitionGrantedScopes("openid notes:read email notes:write"),
+    ).toEqual({ oidc: ["openid", "email"], api: ["notes:read", "notes:write"] });
+  });
+
+  test("null / empty is the empty grant", () => {
+    expect(partitionGrantedScopes(null)).toEqual({ oidc: [], api: [] });
+    expect(partitionGrantedScopes(undefined)).toEqual({ oidc: [], api: [] });
+    expect(partitionGrantedScopes("")).toEqual({ oidc: [], api: [] });
+  });
+
+  test("ignores reserved OIDC names this server does not support", () => {
+    expect(partitionGrantedScopes("openid offline_access")).toEqual({
+      oidc: ["openid"],
+      api: [],
+    });
+  });
+});
+
+describe("OIDC_RESERVED_SCOPES", () => {
+  test("includes every supported OIDC scope", () => {
+    for (const scope of OIDC_SUPPORTED_SCOPES) {
+      expect(isOidcReservedScope(scope)).toBe(true);
+    }
+    expect(OIDC_RESERVED_SCOPES).toContain("offline_access");
+    expect(isOidcReservedScope("notes:read")).toBe(false);
   });
 });

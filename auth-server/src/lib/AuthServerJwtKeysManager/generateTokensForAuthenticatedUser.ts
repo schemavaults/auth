@@ -69,11 +69,21 @@ export interface IGenerateTokensForAuthenticatedUserOpts {
   generate_refresh: boolean;
   tracking?: ITokenIssuanceTracking;
   /**
-   * Space-delimited granted OIDC scopes embedded in the generated ACCESS
-   * tokens' optional `scope` claim (refresh tokens never carry it).
-   * Set only by the OIDC surface.
+   * Space-delimited granted scopes embedded in the generated tokens'
+   * optional `scope` claim. Set only by the OIDC surface.
    */
   scope?: string;
+  /**
+   * Scope of the REFRESH token when it differs from the access tokens'
+   * (its API scopes are kept even when the access token is minted for
+   * another audience). Defaults to `scope`.
+   */
+  refresh_scope?: string;
+  /**
+   * The API server whose API scopes `refresh_scope` carries (the refresh
+   * token's `scope_api_server_id` claim). Omit when it carries none.
+   */
+  refresh_scope_api_server_id?: ApiServerId;
 }
 
 function isValidUserOrganizations(user_organizations: readonly string[]): boolean {
@@ -93,6 +103,8 @@ export default async function generateTokensForAuthenticatedUser({
   generate_refresh,
   tracking,
   scope,
+  refresh_scope = scope,
+  refresh_scope_api_server_id,
   audience_api_server_ids,
 }: IGenerateTokensForAuthenticatedUserOpts): Promise<RequestTokensResult> {
   if (!isValidUserOrganizations(user_organizations)) {
@@ -107,7 +119,8 @@ export default async function generateTokensForAuthenticatedUser({
       user,
       environment,
       user_organizations,
-      scope,
+      scope: refresh_scope,
+      scope_api_server_id: refresh_scope_api_server_id,
     });
   }
 

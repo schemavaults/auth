@@ -38,15 +38,27 @@ describe("evaluateRequiredScopes", () => {
     });
   });
 
-  test("rejects unsupported scopes in the route configuration (server error)", () => {
+  test("rejects values no token can carry in the route configuration (server error)", () => {
     const result = evaluateRequiredScopes("openid email profile", [
       "email",
-      "bogus",
+      "notes read",
+      "offline_access",
     ]);
     expect(result).toEqual({
       ok: false,
       reason: "invalid_config",
-      scopes: ["bogus"],
+      scopes: ["notes read", "offline_access"],
+    });
+  });
+
+  test("enforces API scopes defined by the API server", () => {
+    expect(
+      evaluateRequiredScopes("openid notes:read notes:write", ["notes:read"]),
+    ).toEqual({ ok: true });
+    expect(evaluateRequiredScopes("openid email", ["notes:write"])).toEqual({
+      ok: false,
+      reason: "missing_scopes",
+      scopes: ["notes:write"],
     });
   });
 

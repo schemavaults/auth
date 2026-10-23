@@ -144,6 +144,8 @@ export default async function RegisterPage(props: {
       state: parsedState,
       nonce: typeof searchParams.nonce === 'string' ? searchParams.nonce : null,
       scope: typeof searchParams.scope === 'string' ? searchParams.scope : null,
+      resource: typeof searchParams.resource === 'string' ? searchParams.resource : null,
+      prompt: typeof searchParams.prompt === 'string' ? searchParams.prompt : null,
       debug
     });
   }
