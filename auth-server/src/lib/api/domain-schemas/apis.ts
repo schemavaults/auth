@@ -45,6 +45,11 @@ export const ApiServerResponse = z
   .object({ success: z.literal(true), api_server: ApiServerDefinition })
   .openapi("ApiServerResponse");
 
+/** `{ api_server_id, api_server_domain_ref_id }` path parameters of `/api/apis/{api_server_id}/domains/{api_server_domain_ref_id}`. */
+export const apiServerDomainParams = apiServerParams.extend({
+  api_server_domain_ref_id: z.guid().openapi({ description: "The API server domain reference id" }),
+});
+
 export const ListApiServerDomainsResponse = z
   .object({
     success: z.literal(true),

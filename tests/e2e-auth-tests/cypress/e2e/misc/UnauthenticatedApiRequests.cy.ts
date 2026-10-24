@@ -7,6 +7,7 @@ describe("Unauthenticated API Requests", () => {
   const fakeErrorId = "00000000-0000-0000-0000-000000000006";
   const fakeCallbackUrlRefId = "00000000-0000-0000-0000-000000000007";
   const fakeFactorId = "00000000-0000-0000-0000-000000000008";
+  const fakeDomainRefId = "00000000-0000-0000-0000-000000000009";
   const fakeInviteCode = "unauthenticated-probe-code";
 
   describe("Authenticated API routes", () => {
@@ -94,6 +95,16 @@ describe("Unauthenticated API Requests", () => {
       cy.request({
         method: "POST",
         url: `/api/apis/${fakeApiId}/domains`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("DELETE /api/apis/:apiId/domains/:refId returns 401", () => {
+      cy.request({
+        method: "DELETE",
+        url: `/api/apis/${fakeApiId}/domains/${fakeDomainRefId}`,
         failOnStatusCode: false,
       }).then((response) => {
         expect(response.status).to.eq(401);
@@ -206,6 +217,16 @@ describe("Unauthenticated API Requests", () => {
       cy.request({
         method: "POST",
         url: `/api/apps/${fakeAppId}/domains`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status).to.eq(401);
+      });
+    });
+
+    it("DELETE /api/apps/:appId/domains/:refId returns 401", () => {
+      cy.request({
+        method: "DELETE",
+        url: `/api/apps/${fakeAppId}/domains/${fakeDomainRefId}`,
         failOnStatusCode: false,
       }).then((response) => {
         expect(response.status).to.eq(401);

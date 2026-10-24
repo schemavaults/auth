@@ -431,6 +431,20 @@ export interface ISchemaVaultsAuthClient {
   ) => Promise<void>;
 
   /**
+   * @name deleteClientApplicationDomain
+   * @description Detach a domain from a client application. Its origin is
+   * no longer allowed for CORS or (without explicit callback URLs) as a
+   * redirect_uri origin
+   * @argument app_id The unique ID of the client application
+   * @argument app_domain_ref_id The unique ID of the domain entry
+   * @returns A promise resolving if deletion succeeds
+   */
+  deleteClientApplicationDomain: (
+    app_id: AppId,
+    app_domain_ref_id: string,
+  ) => Promise<void>;
+
+  /**
    * @name loadApiServerDefinition
    * @description Load an API server definition
    * @argument api_server_id The unique ID of the API server definition to load
@@ -574,6 +588,19 @@ export interface ISchemaVaultsAuthClient {
    */
   createApiServerDomain: (
     api_server_domain_definition: SchemaVaultsApiServerDomainRef,
+  ) => Promise<void>;
+
+  /**
+   * @name deleteApiServerDomain
+   * @description Detach a domain from an API server. RFC 8707 resource URLs
+   * on it no longer resolve to the API server
+   * @argument api_server_id The unique ID of the API server
+   * @argument api_server_domain_ref_id The unique ID of the domain entry
+   * @returns A promise resolving if deletion succeeds
+   */
+  deleteApiServerDomain: (
+    api_server_id: ApiServerId,
+    api_server_domain_ref_id: string,
   ) => Promise<void>;
 
   /**

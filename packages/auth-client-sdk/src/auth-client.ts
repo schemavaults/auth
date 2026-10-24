@@ -1763,6 +1763,22 @@ export class SchemaVaultsAuthClient
     });
   }
 
+  public async deleteClientApplicationDomain(
+    app_id: AppId,
+    app_domain_ref_id: string,
+  ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("deleteClientApplicationDomain");
+    const fn = await import("@/lib/delete-client-application-domain").then(
+      (m) => m.default,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+      app_domain_ref_id,
+    });
+  }
+
   public async loadClientApplicationDefinition(
     app_id: AppId,
   ): Promise<SchemaVaultsApp> {
@@ -2008,6 +2024,22 @@ export class SchemaVaultsAuthClient
       adapter: this.adapter,
       auth_server_uri: this.auth_server_uri,
       api_server_domain_definition,
+    });
+  }
+
+  public async deleteApiServerDomain(
+    api_server_id: ApiServerId,
+    api_server_domain_ref_id: string,
+  ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("deleteApiServerDomain");
+    const fn = await import("@/lib/delete-api-server-domain").then(
+      (m) => m.default,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      api_server_domain_ref_id,
     });
   }
 
