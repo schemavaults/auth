@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { getAuthServerUrl } from "@schemavaults/app-definitions";
 import ServerlessDatabase from "@/lib/auth-db/serverless-database";
 import { RedisCache } from "@/lib/redis";
@@ -10,6 +11,7 @@ import {
 import { getDefaultBrandingAsset } from "@/lib/branding/default-assets";
 import { brandingAssetUrlPath } from "@/lib/branding/branding-asset-version";
 import { getGeneratedOpenGraphImageHash } from "@/lib/branding/generated-og-image";
+import { createLastKnownGoodLookup } from "@/lib/last-known-good";
 
 /**
  * Resolved /branding/* asset URLs (with ?v= cache-busting versions) for the
@@ -45,30 +47,37 @@ async function safeDefaultAssetHash(key: string): Promise<string | null> {
 
 /**
  * Load the current asset content hashes (Redis-cached, ~1 lookup per TTL).
- * Degrades gracefully when the database is unreachable (e.g. during
- * `next build`): callers fall back to the default assets' versions, and the
- * short-TTL caching on the serving route self-corrects the mismatch.
+ * Every page render waits on this (root layout), so a database / Redis
+ * outage must neither fail nor stall it: a failed or slow lookup answers the
+ * versions last loaded on this server instance, or none (e.g. during
+ * `next build`), in which case callers fall back to the default assets'
+ * versions and the short-TTL caching on the serving route self-corrects the
+ * mismatch.
  */
-async function safeLoadAssetVersions(): Promise<
+const lookupAssetVersions = createLastKnownGoodLookup<
   Partial<Record<BrandingAssetKey, string | null>>
-> {
-  try {
+>({
+  name: "resolveBrandingMetadata.loadAssetVersions",
+  load: async () => {
     await using dbh = ServerlessDatabase.createDBH();
-    await using redis = RedisCache.createConnection();
+    await using redis = RedisCache.createConnection({ fail_fast: true });
     const registry = new BrandingAssetsRegistry(
       dbh.db,
       undefined,
       redis.client,
     );
     return await registry.getAssetVersions();
-  } catch (e: unknown) {
-    console.error(
-      "[resolveBrandingMetadata] Failed to load branding asset versions, using defaults:",
-      e,
-    );
-    return {};
-  }
-}
+  },
+  fallback: {},
+  timeout_ms: 1_500,
+  retry_after_ms: 15_000,
+});
+
+/**
+ * One lookup per request: generateMetadata() and the root layout both
+ * resolve branding URLs.
+ */
+const safeLoadAssetVersions = cache(lookupAssetVersions);
 
 /**
  * Resolve the cache-busted /branding/icon URL for rendering the app icon in

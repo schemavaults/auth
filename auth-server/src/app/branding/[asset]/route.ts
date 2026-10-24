@@ -144,7 +144,7 @@ export async function GET(
   let custom_resized: Buffer | null = null;
   try {
     await using dbh = ServerlessDatabase.createDBH();
-    await using redis = RedisCache.createConnection();
+    await using redis = RedisCache.createConnection({ fail_fast: true });
     const registry = new BrandingAssetsRegistry(
       dbh.db,
       undefined,

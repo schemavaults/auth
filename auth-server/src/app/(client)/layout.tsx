@@ -14,13 +14,23 @@ import shouldEnableDebug from "@/lib/should-enable-debug";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import inviteCodesRequired from "@/lib/config/invite-codes-required";
 import { ServerlessDatabase } from "@/lib/auth-db/serverless-database";
+import { createLastKnownGoodLookup } from "@/lib/last-known-good";
 import { connection } from "next/server";
 
-async function requireInviteCode(): Promise<boolean> {
-  "use cache";
-  await using dbh = ServerlessDatabase.createDBH();
-  return await inviteCodesRequired(dbh.db);
-}
+// Every client page renders through this layout (the home page included), so
+// a database outage must not fail or stall it. Until a lookup succeeds the
+// auth provider gets no value and applies its own default (required); the
+// register page re-reads the setting itself, and the server enforces it.
+const requireInviteCode = createLastKnownGoodLookup<boolean | undefined>({
+  name: "ClientFacingServerPageLayout.inviteCodesRequired",
+  load: async () => {
+    await using dbh = ServerlessDatabase.createDBH();
+    return await inviteCodesRequired(dbh.db);
+  },
+  fallback: undefined,
+  timeout_ms: 1_500,
+  retry_after_ms: 15_000,
+});
 
 export default async function ClientFacingServerPageLayout({
   children,

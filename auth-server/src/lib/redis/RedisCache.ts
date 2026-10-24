@@ -6,6 +6,16 @@ import {
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 
+export interface RedisCacheConnectionOptions {
+  /**
+   * Fail commands as soon as the first connection attempt fails, instead of
+   * holding them through ioredis' default 20 reconnect attempts (~10s). For
+   * best-effort cache reads that fall back to Postgres or a default, e.g.
+   * on page renders, which must not stall while Redis is down.
+   */
+  fail_fast?: boolean;
+}
+
 export class RedisCache implements AsyncDisposable {
   public readonly client: Redis;
 
@@ -31,14 +41,19 @@ export class RedisCache implements AsyncDisposable {
     }
   }
 
-  private constructor() {
+  private constructor(opts: RedisCacheConnectionOptions) {
     const environment = getAppEnvironment();
     const url = RedisCache.resolveRedisUrl(environment);
-    this.client = new Redis(url);
+    this.client =
+      opts.fail_fast === true
+        ? new Redis(url, { maxRetriesPerRequest: 0 })
+        : new Redis(url);
   }
 
-  public static createConnection(): RedisCache {
-    return new RedisCache();
+  public static createConnection(
+    opts: RedisCacheConnectionOptions = {},
+  ): RedisCache {
+    return new RedisCache(opts);
   }
 
   public async [Symbol.asyncDispose](): Promise<void> {
