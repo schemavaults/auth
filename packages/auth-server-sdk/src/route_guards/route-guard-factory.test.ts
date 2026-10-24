@@ -324,3 +324,124 @@ describe("RouteGuardFactory access / refresh token type separation", () => {
     expect(session_guard.isAccessAllowed()).toBe(true);
   });
 });
+
+describe("RouteGuardFactory refresh token app binding", () => {
+  // Every client app's refresh tokens are encrypted with the auth server's
+  // keyset and name the auth server as audience; only their `app` claim
+  // says which app they were issued to. `refresh_token_app_id` makes the
+  // guard accept only the named app's refresh tokens.
+  const CLIENT_APP_ID = "third-party-app";
+
+  async function mintRefreshTokensFor(user: UserData): Promise<{
+    keys_manager: MockJwtKeyManager;
+    auth_server_refresh_token: string;
+    client_app_refresh_token: string;
+  }> {
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: DEFAULT_AUTH_SERVER_APP_ID,
+      environment,
+    });
+    const store = new MockJwtKeySetsStore();
+    await store.storeKeySet(jwt_keys);
+    const refreshFor = async (client_app_id: string): Promise<string> =>
+      (
+        await new JWT_Factory({
+          user,
+          client_app_id,
+          jwt_keys,
+          environment,
+          user_organizations: [],
+        }).refresh()
+      ).token;
+    return {
+      keys_manager: new MockJwtKeyManager(store),
+      auth_server_refresh_token: await refreshFor(DEFAULT_AUTH_SERVER_APP_ID),
+      client_app_refresh_token: await refreshFor(CLIENT_APP_ID),
+    };
+  }
+
+  it("refuses a client app's refresh token as the auth server's session, for both guard types", async () => {
+    const admin: UserData = { ...createMockUser(), admin: true };
+    const { keys_manager, client_app_refresh_token } = await mintRefreshTokensFor(admin);
+    const factory = new RouteGuardFactory({
+      environment,
+      is_auth_server: true,
+      jwt_keys_manager: keys_manager,
+    });
+
+    for (const guard_type of ["authenticated", "admin"] as const) {
+      const guard = await factory.createGuardFromTokenSources(
+        guard_type,
+        refreshSource(client_app_refresh_token),
+        DEFAULT_AUTH_SERVER_APP_ID,
+        { refresh_token_app_id: DEFAULT_AUTH_SERVER_APP_ID },
+      );
+      expect(guard.user, `${guard_type} guard`).toBeNull();
+      expect(guard.isAccessAllowed()).toBe(false);
+    }
+  });
+
+  it("accepts the named app's own refresh token", async () => {
+    const user = createMockUser();
+    const { keys_manager, auth_server_refresh_token, client_app_refresh_token } =
+      await mintRefreshTokensFor(user);
+    const factory = new RouteGuardFactory({
+      environment,
+      is_auth_server: true,
+      jwt_keys_manager: keys_manager,
+    });
+
+    const session = await factory.createGuardFromTokenSources(
+      "authenticated",
+      refreshSource(auth_server_refresh_token),
+      DEFAULT_AUTH_SERVER_APP_ID,
+      { refresh_token_app_id: DEFAULT_AUTH_SERVER_APP_ID },
+    );
+    expect(session.user?.uid).toBe(user.uid);
+
+    const client_session = await factory.createGuardFromTokenSources(
+      "authenticated",
+      refreshSource(client_app_refresh_token),
+      DEFAULT_AUTH_SERVER_APP_ID,
+      { refresh_token_app_id: CLIENT_APP_ID },
+    );
+    expect(client_session.user?.uid).toBe(user.uid);
+  });
+
+  it("does not consult the revocation hook for a refresh token issued to another app", async () => {
+    const user = createMockUser();
+    const { keys_manager, client_app_refresh_token } = await mintRefreshTokensFor(user);
+    let hook_calls = 0;
+    const guard = await new RouteGuardFactory({
+      environment,
+      is_auth_server: true,
+      jwt_keys_manager: keys_manager,
+      is_token_revoked: () => {
+        hook_calls++;
+        return false;
+      },
+    }).createGuardFromTokenSources(
+      "authenticated",
+      refreshSource(client_app_refresh_token),
+      DEFAULT_AUTH_SERVER_APP_ID,
+      { refresh_token_app_id: DEFAULT_AUTH_SERVER_APP_ID },
+    );
+    expect(guard.user).toBeNull();
+    expect(hook_calls).toBe(0);
+  });
+
+  it("leaves the binding off unless asked (existing callers are unchanged)", async () => {
+    const user = createMockUser();
+    const { keys_manager, client_app_refresh_token } = await mintRefreshTokensFor(user);
+    const guard = await new RouteGuardFactory({
+      environment,
+      is_auth_server: true,
+      jwt_keys_manager: keys_manager,
+    }).createGuardFromTokenSources(
+      "authenticated",
+      refreshSource(client_app_refresh_token),
+      DEFAULT_AUTH_SERVER_APP_ID,
+    );
+    expect(guard.user?.uid).toBe(user.uid);
+  });
+});

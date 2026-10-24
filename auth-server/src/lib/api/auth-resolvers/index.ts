@@ -23,9 +23,19 @@ import { principalFromTokenSource } from "./token-source-principal";
 
 type Resolver = AuthResolver<UserData, AuthServerApiContext>;
 
+/**
+ * The auth server's own session: `refresh_token_<auth_server_app_id>`. Only a
+ * refresh token issued to the auth server's app counts; one a third-party
+ * client received for the same user (same keyset, same audience) does not.
+ */
 const sessionCookie: Resolver = (c, scheme, context) => {
-  const source = refreshTokenCookieSource(c, getAuthServerAppId(), "Auth Server Refresh Token");
-  return source ? principalFromTokenSource(context, scheme.name, source) : null;
+  const auth_server_app_id = getAuthServerAppId();
+  const source = refreshTokenCookieSource(c, auth_server_app_id, "Auth Server Refresh Token");
+  return source
+    ? principalFromTokenSource(context, scheme.name, source, {
+        refresh_token_app_id: auth_server_app_id,
+      })
+    : null;
 };
 
 const accessTokenCookie: Resolver = (c, scheme, context) => {
@@ -47,7 +57,12 @@ const clientAppSessionCookie: Resolver = (c, scheme, context) => {
     client_app_id,
     `Client App Refresh Token from cookie 'refresh_token_${client_app_id}'`,
   );
-  return source ? principalFromTokenSource(context, scheme.name, source) : null;
+  // The cookie's name is not a binding: require the token's `app` claim too.
+  return source
+    ? principalFromTokenSource(context, scheme.name, source, {
+        refresh_token_app_id: client_app_id,
+      })
+    : null;
 };
 
 /**

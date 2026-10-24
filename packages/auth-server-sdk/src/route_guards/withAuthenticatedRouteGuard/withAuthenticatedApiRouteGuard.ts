@@ -305,6 +305,11 @@ export function withAuthenticatedApiRouteGuard<
         route_guard_type,
         token_sources,
         api_server_id,
+        // Every client app's refresh tokens verify against the auth server's
+        // keyset; only the auth server's own may stand for its session.
+        api_server_id === auth_server_app_id
+          ? { refresh_token_app_id: auth_server_app_id }
+          : {},
       );
     } catch (e: unknown) {
       if (e instanceof JwtKeyManagerMisconfigurationError) {
