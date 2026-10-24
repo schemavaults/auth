@@ -11,7 +11,7 @@ import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
+import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveApiServerDomainDialog } from "@schemavaults/auth-ui";
 import { Trash2, KeyRound, ListChecks, Plus, Unplug } from "lucide-react";
 import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
 import { ApiServerScopesCard, AppScopeAllowancesDialog } from "@/components/ApiServerScopes";
@@ -43,7 +43,7 @@ export interface ApiServerDetailPageViewProps {
   current_environment: SchemaVaultsAppEnvironment;
 }
 
-function DomainRow({ domain, dateKey }: { domain: { domain: string; environment: string; created_at: number; [key: string]: unknown }; dateKey: string }) {
+function DomainRow({ domain, dateKey, onRemove }: { domain: SchemaVaultsApiServerDomainRef; dateKey: string; onRemove?: () => void }) {
   return (
     <div
       key={dateKey}
@@ -53,11 +53,25 @@ function DomainRow({ domain, dateKey }: { domain: { domain: string; environment:
         <p className="text-sm font-medium">{domain.domain}</p>
         <p className="text-xs text-muted-foreground">{domain.environment}</p>
       </div>
-      <LocalDateTime
-        value={domain.created_at}
-        showSeconds={false}
-        className="text-xs text-muted-foreground"
-      />
+      <div className="flex items-center gap-3">
+        <LocalDateTime
+          value={domain.created_at}
+          showSeconds={false}
+          className="text-xs text-muted-foreground"
+        />
+        {onRemove && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`Remove domain ${domain.domain}`}
+            title="Remove"
+            id={`remove-api-server-domain-button-${domain.api_server_domain_ref_id}`}
+            onClick={onRemove}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -74,16 +88,18 @@ export default function ApiServerDetailPageView({
 }: ApiServerDetailPageViewProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addDomainDialogOpen, setAddDomainDialogOpen] = useState(false);
+  const [removeDomainTarget, setRemoveDomainTarget] = useState<SchemaVaultsApiServerDomainRef | null>(null);
   const [apps, setApps] = useState<readonly ConnectedApp[]>(connected_apps);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApp | null>(null);
   const [scopesTarget, setScopesTarget] = useState<ConnectedApp | null>(null);
   const router = useRouter();
 
   // Same gate as the "Add domain" row action on the /apis table: viewers
-  // with read-only (organization member) access never see the control, and
-  // hardcoded API servers take their domains from the server's environment
-  // rather than a database row. The server enforces this on POST regardless.
-  const canAddDomain: boolean = !hardcoded && isOrgOwner;
+  // with read-only (organization member) access never see the add / remove
+  // controls, and hardcoded API servers take their domains from the server's
+  // environment rather than a database row. The server enforces this on
+  // POST and DELETE regardless.
+  const canManageDomains: boolean = !hardcoded && isOrgOwner;
 
   const activeDomains = connected_domains.filter((d) => d.environment === current_environment);
   const inactiveDomains = connected_domains.filter((d) => d.environment !== current_environment);
@@ -133,7 +149,7 @@ export default function ApiServerDetailPageView({
           ) : (
             <div className="space-y-3">
               {activeDomains.map((domain) => (
-                <DomainRow key={domain.api_server_domain_ref_id} domain={domain} dateKey={domain.api_server_domain_ref_id} />
+                <DomainRow key={domain.api_server_domain_ref_id} domain={domain} dateKey={domain.api_server_domain_ref_id} onRemove={canManageDomains ? () => setRemoveDomainTarget(domain) : undefined} />
               ))}
             </div>
           )}
@@ -146,14 +162,14 @@ export default function ApiServerDetailPageView({
                 <AccordionContent>
                   <div className="space-y-3">
                     {inactiveDomains.map((domain) => (
-                      <DomainRow key={domain.api_server_domain_ref_id} domain={domain} dateKey={domain.api_server_domain_ref_id} />
+                      <DomainRow key={domain.api_server_domain_ref_id} domain={domain} dateKey={domain.api_server_domain_ref_id} onRemove={canManageDomains ? () => setRemoveDomainTarget(domain) : undefined} />
                     ))}
                   </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
           )}
-          {canAddDomain && (
+          {canManageDomains && (
             <Button
               variant="outline"
               className="mt-4"
@@ -167,7 +183,7 @@ export default function ApiServerDetailPageView({
         </CardContent>
       </Card>
 
-      {canAddDomain && (
+      {canManageDomains && (
         <CreateApiServerDomainDialog
           api_server_id={api_server.api_server_id}
           open={addDomainDialogOpen}
@@ -176,6 +192,19 @@ export default function ApiServerDetailPageView({
           // the server component to show the new row.
           onCreated={() => router.refresh()}
           uuid={uuidSync}
+        />
+      )}
+
+      {canManageDomains && removeDomainTarget && (
+        <RemoveApiServerDomainDialog
+          domain={removeDomainTarget}
+          open={!!removeDomainTarget}
+          onOpenChange={(open: boolean) => {
+            if (!open) setRemoveDomainTarget(null);
+          }}
+          // Domains on this page come from server-side props, so re-render
+          // the server component to drop the removed row.
+          onRemoved={() => router.refresh()}
         />
       )}
 

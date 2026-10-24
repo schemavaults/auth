@@ -250,6 +250,12 @@ export {
 } from "./CreateApiServerDomainDialog";
 export type { CreateApiServerDomainDialogProps } from "./CreateApiServerDomainDialog";
 
+export { RemoveAppDomainDialog } from "./RemoveAppDomainDialog";
+export type { RemoveAppDomainDialogProps } from "./RemoveAppDomainDialog";
+
+export { RemoveApiServerDomainDialog } from "./RemoveApiServerDomainDialog";
+export type { RemoveApiServerDomainDialogProps } from "./RemoveApiServerDomainDialog";
+
 export { MfaChallengeForm } from "./MfaChallengeForm";
 export type { MfaChallengeFormProps } from "./MfaChallengeForm";
 

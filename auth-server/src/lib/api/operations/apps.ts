@@ -4,6 +4,7 @@ import { deleteApp, getApp } from "@/app/api/apps/[app_id]/operation";
 import { authorizeApp, revokeAppAuthorization } from "@/app/api/apps/[app_id]/authorize/operation";
 import { checkAppAuthorization } from "@/app/api/apps/[app_id]/check-authorization/operation";
 import { createAppDomain, listAppDomains } from "@/app/api/apps/[app_id]/domains/operation";
+import { deleteAppDomain } from "@/app/api/apps/[app_id]/domains/[app_domain_ref_id]/operation";
 import {
   createAppCallbackUrl,
   listAppCallbackUrls,
@@ -36,6 +37,7 @@ export const appsOperations: readonly AnyOperationDefinition[] = [
   revokeAppAuthorization,
   listAppDomains,
   createAppDomain,
+  deleteAppDomain,
   listAppCallbackUrls,
   createAppCallbackUrl,
   deleteAppCallbackUrl,

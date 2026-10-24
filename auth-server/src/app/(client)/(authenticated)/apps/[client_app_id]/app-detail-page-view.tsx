@@ -8,7 +8,7 @@ import { AppCallbackUrlsCard, AppClientSecretCard, AppServiceAccountCard } from 
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
+import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveAppDomainDialog } from "@schemavaults/auth-ui";
 import { ExternalLink, Plus, PlugZap, Trash2, Unplug } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -72,7 +72,7 @@ function LaunchButton(
   )
 }
 
-function DomainRow({ domain, dateKey, current_environment }: { domain: { domain: string; environment: string; created_at: number; [key: string]: unknown }; dateKey: string; current_environment: SchemaVaultsAppEnvironment }) {
+function DomainRow({ domain, dateKey, current_environment, onRemove }: { domain: SchemaVaultsAppDomainRef; dateKey: string; current_environment: SchemaVaultsAppEnvironment; onRemove?: () => void }) {
   const environmentMismatch = domain.environment !== current_environment;
   const requiresHttps = domain.environment === "staging" || domain.environment === "production";
   const hasHttps = domain.domain.startsWith("https://");
@@ -94,6 +94,18 @@ function DomainRow({ domain, dateKey, current_environment }: { domain: { domain:
           className="text-xs text-muted-foreground"
         />
         <LaunchButton domain={domain} disabled={disabled} />
+        {onRemove && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`Remove domain ${domain.domain}`}
+            title="Remove"
+            id={`remove-app-domain-button-${domain.app_domain_ref_id}`}
+            onClick={onRemove}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -113,6 +125,7 @@ export default function AppDetailPageView({
 }: AppDetailPageViewProps): ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addDomainDialogOpen, setAddDomainDialogOpen] = useState(false);
+  const [removeDomainTarget, setRemoveDomainTarget] = useState<SchemaVaultsAppDomainRef | null>(null);
   const [apiServers, setApiServers] = useState<readonly ConnectedApiServer[]>(connected_api_servers);
   // Disconnecting removes a row locally; connecting refreshes the server
   // component, whose new connected_api_servers list replaces the local one.
@@ -127,10 +140,11 @@ export default function AppDetailPageView({
   const router = useRouter();
 
   // Same gate as the "Add domain" row action on the /apps table: viewers
-  // with read-only (organization member) access never see the control, and
-  // hardcoded apps take their domains from the server's environment rather
-  // than a database row. The server enforces this on POST regardless.
-  const canAddDomain: boolean = !hardcoded && isOrgOwner;
+  // with read-only (organization member) access never see the add / remove
+  // controls, and hardcoded apps take their domains from the server's
+  // environment rather than a database row. The server enforces this on
+  // POST and DELETE regardless.
+  const canManageDomains: boolean = !hardcoded && isOrgOwner;
   // Connecting requires managing the app (and the API server, which the
   // server checks on submit). Hardcoded apps keep their compiled-in API
   // audiences.
@@ -175,7 +189,7 @@ export default function AppDetailPageView({
           ) : (
             <div className="space-y-3">
               {activeDomains.map((domain) => (
-                <DomainRow key={domain.app_domain_ref_id} domain={domain} dateKey={domain.app_domain_ref_id} current_environment={current_environment} />
+                <DomainRow key={domain.app_domain_ref_id} domain={domain} dateKey={domain.app_domain_ref_id} current_environment={current_environment} onRemove={canManageDomains ? () => setRemoveDomainTarget(domain) : undefined} />
               ))}
             </div>
           )}
@@ -188,14 +202,14 @@ export default function AppDetailPageView({
                 <AccordionContent>
                   <div className="space-y-3">
                     {inactiveDomains.map((domain) => (
-                      <DomainRow key={domain.app_domain_ref_id} domain={domain} dateKey={domain.app_domain_ref_id} current_environment={current_environment} />
+                      <DomainRow key={domain.app_domain_ref_id} domain={domain} dateKey={domain.app_domain_ref_id} current_environment={current_environment} onRemove={canManageDomains ? () => setRemoveDomainTarget(domain) : undefined} />
                     ))}
                   </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
           )}
-          {canAddDomain && (
+          {canManageDomains && (
             <Button
               variant="outline"
               className="mt-4"
@@ -209,7 +223,7 @@ export default function AppDetailPageView({
         </CardContent>
       </Card>
 
-      {canAddDomain && (
+      {canManageDomains && (
         <CreateAppDomainDialog
           app_id={app.app_id}
           open={addDomainDialogOpen}
@@ -218,6 +232,19 @@ export default function AppDetailPageView({
           // the server component to show the new row.
           onCreated={() => router.refresh()}
           uuid={uuidSync}
+        />
+      )}
+
+      {canManageDomains && removeDomainTarget && (
+        <RemoveAppDomainDialog
+          domain={removeDomainTarget}
+          open={!!removeDomainTarget}
+          onOpenChange={(open: boolean) => {
+            if (!open) setRemoveDomainTarget(null);
+          }}
+          // Domains on this page come from server-side props, so re-render
+          // the server component to drop the removed row.
+          onRemoved={() => router.refresh()}
         />
       )}
 
