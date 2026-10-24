@@ -58,28 +58,29 @@ describe("Resource server post-login redirect via next_href", () => {
   it("returns a signed-out visitor to the guarded page they were turned away from", () => {
     signInToAuthServerOnly("guard");
 
-    const exampleApp = new URL(exampleAppOrigin);
-    cy.intercept({
-      method: "GET",
-      hostname: exampleApp.hostname,
-      port: Number(exampleApp.port) || 80,
-      pathname: "/auth/login",
-    }).as("resourceServerLoginPage");
+    // The route guard forwards the attempted page (query included). Asked
+    // directly: cy.visit() resolves the redirect itself, so the login page
+    // request it lands on never reaches cy.intercept().
+    cy.request({
+      url: `${exampleAppOrigin}/account?from=next-href-spec`,
+      followRedirect: false,
+    }).then((response) => {
+      expect(response.status).to.equal(307);
+      const location = new URL(
+        String(response.headers["location"]),
+        exampleAppOrigin,
+      );
+      expect(location.pathname).to.equal("/auth/login");
+      expect(location.searchParams.get("next_href")).to.equal(
+        "/account?from=next-href-spec",
+      );
+    });
 
     cy.origin(exampleAppOrigin, () => {
       localStorage.clear();
       sessionStorage.clear();
       cy.visit("/account?from=next-href-spec");
     });
-
-    // The route guard forwards the attempted page (query included).
-    cy.wait("@resourceServerLoginPage", { timeout: 20000 }).then(
-      (interception) => {
-        expect(
-          new URL(interception.request.url).searchParams.get("next_href"),
-        ).to.equal("/account?from=next-href-spec");
-      },
-    );
 
     // The auth server session completes the PKCE flow at once (the app was
     // authorized at registration); the authorize page then returns the user
