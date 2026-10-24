@@ -106,6 +106,7 @@ import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-typ
 import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
 import { AUTH_CLIENT_SDK_VERSION } from "@/generated/version";
 import authenticateWithRedirect from "@/lib/authenticate-with-redirect";
+import { resolveNextHref, withNextHref } from "@/lib/next-href";
 import checkIfAuthenticatedWithServer from "@/lib/check-if-authenticated-with-server";
 import exchangeAuthTokens from "@/lib/exchange-auth-tokens";
 import handleSuccessfulAuthentication from "@/lib/handle-successful-authentication";
@@ -543,6 +544,43 @@ export class SchemaVaultsAuthClient
     return this.adapter.loadOidcNonce(challenge_time);
   }
 
+  // `next_href` storage wrapper (see `login()`). Adapters predating it
+  // lack the methods; the destination is then dropped.
+  private storeNextHref(next_href: string, challenge_time: number): void {
+    if (typeof this.adapter.storeNextHref !== "function") {
+      if (this.DEBUG) {
+        console.warn(
+          "[SchemaVaultsAuthClient] The auth client adapter cannot store 'next_href'; the user will be sent to 'successful_authentication_redirect_uri' after signing in.",
+        );
+      }
+      return;
+    }
+    this.adapter.storeNextHref(next_href, challenge_time);
+  }
+
+  public consumeNextHref(challenge_time: number): string | null {
+    if (
+      typeof challenge_time !== "number" ||
+      !Number.isFinite(challenge_time) ||
+      typeof this.adapter.loadNextHref !== "function"
+    ) {
+      return null;
+    }
+    let stored: string | null = null;
+    try {
+      stored = this.adapter.loadNextHref(challenge_time);
+      this.adapter.clearNextHref?.(challenge_time);
+    } catch (e: unknown) {
+      console.error("[SchemaVaultsAuthClient] Failed to load next_href: ", e);
+      return null;
+    }
+    if (Date.now() - challenge_time > PKCE_ProofKeyManager.max_age) {
+      return null;
+    }
+    // Re-validated: storage is the page's own, but it is still input.
+    return resolveNextHref(stored);
+  } // consumeNextHref()
+
   // Load the code verifier from a secure location
   public loadCodeVerifier(challenge_time: number): string | null {
     const now = Date.now();
@@ -631,17 +669,21 @@ export class SchemaVaultsAuthClient
       storeCodeVerifier: this.storeCodeVerifier.bind(this),
       storeOAuth2State: this.storeOAuth2State.bind(this),
       storeOidcNonce: this.storeOidcNonce.bind(this),
+      storeNextHref: this.storeNextHref.bind(this),
       environment: this.environment,
       authorize_uri: this.authorize_uri,
       scope: opts?.scope,
       ...(opts?.resource ? { resource: opts.resource } : {}),
+      next_href: resolveNextHref(opts?.next_href),
       debug: this.debug,
     });
   }
 
   public async login(opts?: AuthenticateWithRedirectOptions): Promise<void> {
     if (this.isClientForAuthServer) {
-      return await this.adapter.redirect("/auth/login");
+      return await this.adapter.redirect(
+        withNextHref("/auth/login", opts?.next_href),
+      );
     }
 
     if (this.DEBUG) {
@@ -662,7 +704,9 @@ export class SchemaVaultsAuthClient
 
   public async register(opts?: AuthenticateWithRedirectOptions): Promise<void> {
     if (this.isClientForAuthServer) {
-      return await this.adapter.redirect("/auth/register");
+      return await this.adapter.redirect(
+        withNextHref("/auth/register", opts?.next_href),
+      );
     }
 
     if (this.DEBUG) {

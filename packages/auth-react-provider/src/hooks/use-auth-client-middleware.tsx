@@ -9,6 +9,7 @@ import {
   type PotentiallyValidTokenSource,
   type UserData,
 } from "@schemavaults/auth-common";
+import { withNextHref } from "@schemavaults/auth-client-sdk";
 import type { useRouter } from "next/navigation";
 import {
   type OnAuthStateChangedHandlerInput,
@@ -27,6 +28,19 @@ export type UseAuthClientMiddlewareOptions = {
   path: string;
   debug?: boolean;
 };
+
+// The page the middleware ran on, with its search params (`path` comes
+// from `usePathname()`, which has none).
+function currentPathWithSearch(path: string): string {
+  try {
+    if (window.location.pathname === path) {
+      return path + window.location.search;
+    }
+  } catch (e: unknown) {
+    void e; // no-op
+  }
+  return path;
+}
 
 export function useAuthClientMiddleware(
   opts: UseAuthClientMiddlewareOptions,
@@ -149,15 +163,26 @@ export function useAuthClientMiddleware(
       }
 
       if (authMiddlewareResult.redirect) {
+        // A signed-out user turned away from a page that needs a session
+        // is sent to sign in with that page as `next_href`, so the sign-in
+        // flow returns them to it (like the server component route guards).
+        const redirectTo: string =
+          authStatus.status === "logged-out" &&
+          authMiddlewareResult.redirectTo === unauthed_on_authed_redirect_uri
+            ? withNextHref(
+                authMiddlewareResult.redirectTo,
+                currentPathWithSearch(opts.path),
+              )
+            : authMiddlewareResult.redirectTo;
         if (debug) {
           console.log(
             `[onAuthStateChangedRunMiddleware] ` +
-              `Redirecting to: ${authMiddlewareResult.redirectTo} (from ${
+              `Redirecting to: ${redirectTo} (from ${
                 window.location.origin
               } @ ${opts.path})`,
           );
         }
-        opts.router.push(authMiddlewareResult.redirectTo);
+        opts.router.push(redirectTo);
         return;
       }
     }

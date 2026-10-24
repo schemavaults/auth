@@ -67,6 +67,15 @@ export {
 // adapters or tests.
 export { generateOAuth2State } from "./lib/generate-oauth2-state";
 
+// The `next_href` search param route guards send users to the login page
+// with (the page to return them to after signing in): validation, and
+// adding it to a URL.
+export {
+  NEXT_HREF_SEARCH_PARAM,
+  resolveNextHref,
+  withNextHref,
+} from "./lib/next-href";
+
 // Login replay-nonce generation (OIDC Core §3.1.2.1 semantics, used on
 // every SchemaVaults flow). Same shape/contract as generateOAuth2State.
 export { generateOidcNonce } from "./lib/generate-oidc-nonce";

@@ -88,6 +88,24 @@ The React provider's `useTradeAuthorizationCodeForTokensEffect()` (the
 generated `/auth/authorize` page) and `useStartLoginOauthPKCEFlow()` (the
 generated `/auth/login` page) do this for you.
 
+## Returning the user to the page they came from (`next_href`)
+
+Route guards that send a signed-out user to sign in name the page they
+turned the user away from in the `next_href` search param
+(`/auth/login?next_href=%2Fadmin%2Fkeys`): the server component guards of
+`@schemavaults/auth-server-sdk` (their `next_href` option) and the React
+provider's client middleware. Pass it to `login({ next_href })` /
+`register({ next_href })`: the SDK keeps it in the adapter under the flow's
+`challenge_time` (the adapter's optional `storeNextHref` / `loadNextHref` /
+`clearNextHref`; it never goes to the auth server), and once the code is
+redeemed, `consumeNextHref(challenge_time)` hands it back to redirect to
+instead of `successful_authentication_redirect_uri`.
+
+Only same-origin paths outside the sign-in flow's own pages (`/auth/*`) are
+kept (`resolveNextHref()`), so the param cannot be used as an open redirect.
+The generated `/auth/login`, `/auth/register` and `/auth/authorize` pages
+do all of this for you.
+
 ## Dynamic client registration (RFC 7591)
 
 Auth servers that enable the `allow_dynamic_client_registration` setting

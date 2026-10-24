@@ -37,6 +37,7 @@ const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
   OAUTH2_STATES = "oauth2_states",
   OIDC_NONCES = "oidc_nonces",
+  NEXT_HREFS = "next_hrefs",
   USER_DATA = "user_data",
 }
 
@@ -366,6 +367,9 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
       window.localStorage.removeItem(
         AuthClientSdkAdapterLocalStorageKeys.OIDC_NONCES,
       );
+      window.localStorage.removeItem(
+        AuthClientSdkAdapterLocalStorageKeys.NEXT_HREFS,
+      );
     } catch (e: unknown) {
       console.error(e);
       throw new Error("Failed to clear code verifiers from local storage");
@@ -570,6 +574,91 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     } catch (e: unknown) {
       console.error(e);
       throw new Error("Failed to clear login nonce from local storage");
+    }
+  }
+
+  // Post-sign-in destination (`next_href`) storage — keyed by
+  // challenge_time and expiry-pruned on write like the nonces above, but
+  // removed outright on clear: it guards nothing, so there is nothing to
+  // tombstone.
+  private loadNextHrefs(): Record<number, string> {
+    try {
+      const raw = window.localStorage.getItem(
+        AuthClientSdkAdapterLocalStorageKeys.NEXT_HREFS,
+      );
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") {
+        window.localStorage.removeItem(
+          AuthClientSdkAdapterLocalStorageKeys.NEXT_HREFS,
+        );
+        return {};
+      }
+      for (const [k, v] of Object.entries(parsed)) {
+        if (isNaN(Number(k)) || typeof v !== "string") {
+          window.localStorage.removeItem(
+            AuthClientSdkAdapterLocalStorageKeys.NEXT_HREFS,
+          );
+          return {};
+        }
+      }
+      return parsed as Record<number, string>;
+    } catch (e: unknown) {
+      console.error("Failed to load next_hrefs: ", e);
+      return {};
+    }
+  }
+
+  public storeNextHref(next_href: string, challenge_time: number): void {
+    if (typeof next_href !== "string" || next_href.length === 0) {
+      throw new TypeError(
+        "Expected 'next_href' to be a non-empty string for next_href storage!",
+      );
+    }
+    try {
+      const next_hrefs = this.loadNextHrefs();
+
+      // Evict entries older than the PKCE challenge max-age so the
+      // bag doesn't grow unboundedly across abandoned flows.
+      const now = Date.now();
+      for (const key of Object.keys(next_hrefs)) {
+        const t = parseInt(key);
+        if (isNaN(t) || now - t > PKCE_ProofKeyManager.max_age) {
+          delete next_hrefs[t];
+        }
+      }
+
+      next_hrefs[challenge_time] = next_href;
+      window.localStorage.setItem(
+        AuthClientSdkAdapterLocalStorageKeys.NEXT_HREFS,
+        JSON.stringify(next_hrefs),
+      );
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error(
+        `Failed to store next_href for challenge_time ${challenge_time}`,
+      );
+    }
+  }
+
+  public loadNextHref(challenge_time: number): string | null {
+    const value: string | undefined = this.loadNextHrefs()[challenge_time];
+    return typeof value === "string" && value.length > 0 ? value : null;
+  }
+
+  public clearNextHref(challenge_time: number): void {
+    try {
+      const next_hrefs = this.loadNextHrefs();
+      if (challenge_time in next_hrefs) {
+        delete next_hrefs[challenge_time];
+        window.localStorage.setItem(
+          AuthClientSdkAdapterLocalStorageKeys.NEXT_HREFS,
+          JSON.stringify(next_hrefs),
+        );
+      }
+    } catch (e: unknown) {
+      console.error(e);
+      throw new Error("Failed to clear next_href from local storage");
     }
   }
 

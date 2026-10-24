@@ -285,6 +285,17 @@ export interface ISchemaVaultsAuthClient {
     received_iss?: string | null,
   ) => Promise<void>;
 
+  /**
+   * @name consumeNextHref
+   * @description Read (and forget) the `next_href` that `login()` /
+   * `register()` stored for the flow started at `challenge_time` (the
+   * callback's `challenge_time` search param): the same-origin page to send
+   * the user to instead of `successful_authentication_redirect_uri`.
+   * @returns The validated path, or null when the flow stored none (or it
+   * expired with the flow, or the adapter cannot store it).
+   */
+  consumeNextHref: (challenge_time: number) => string | null;
+
   getAccessTokenFromCache: (token_id: string) => AccessToken | null;
   getRefreshTokenFromCache: () => RefreshToken | null;
   hasHttpOnlyRefreshToken: () => boolean;
