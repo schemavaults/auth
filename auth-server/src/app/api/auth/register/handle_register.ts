@@ -20,8 +20,7 @@ import {
   PKCE_ProofKeyManager,
   oidcNonceSchema,
   oidcScopeSchema,
-  parseAndGrantScopes,
-  serializeOidcScopesOrNull,
+  resourceIndicatorSchema,
 } from "@schemavaults/auth-common";
 import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
 import {
@@ -48,6 +47,10 @@ import {
   EMAIL_VERIFICATION_REQUIRED_MESSAGE,
   isEmailVerificationRequiredForClientApp,
 } from "@/lib/email-verification/third-party-app-gate";
+import {
+  resolveAuthorizationCodeGrant,
+  type ResolvedAuthorizationCodeGrant,
+} from "@/lib/oauth2/api-scopes";
 
 const ROUTE = "/api/auth/register";
 
@@ -73,6 +76,9 @@ const registerBodySchema = z
     // OAuth 2.1 grant); see handle_login.ts.
     nonce: oidcNonceSchema.nullable().optional(),
     scope: oidcScopeSchema.optional(),
+    // RFC 8707 resource indicator (OPTIONAL): grants the requested API
+    // scopes of the API server it names; see handle_login.ts.
+    resource: resourceIndicatorSchema.optional(),
   })
   .required({
     credentials: true,
@@ -140,14 +146,6 @@ export async function handleRegister({
   const challenge_time: number = registrationData.challenge_time;
   const invite_code: string | undefined = registrationData.invite_code;
   const redirect_uri: string | null = registrationData.redirect_uri ?? null;
-  // Granted scopes are re-derived server-side (never trusted verbatim);
-  // null when nothing was granted (plain OAuth 2.1 grant).
-  const grant_context: AuthorizationCodeGrantContext = {
-    nonce: registrationData.nonce ?? null,
-    scope: serializeOidcScopesOrNull(
-      parseAndGrantScopes(registrationData.scope).granted,
-    ),
-  };
 
   await using dbh: ServerlessDatabase = ServerlessDatabase.createDBH();
 
@@ -186,6 +184,43 @@ export async function handleRegister({
       );
     }
   }
+
+  // Granted scopes are re-derived server-side (never trusted verbatim):
+  // the supported OIDC scopes, plus the API scopes of the API server the
+  // flow's `resource` names; null when nothing was granted (plain OAuth
+  // 2.1 grant). Resolved before the account is created, so a failure
+  // leaves nothing behind.
+  let resolved_grant: ResolvedAuthorizationCodeGrant;
+  try {
+    resolved_grant = await resolveAuthorizationCodeGrant({
+      dbh,
+      client_app_id,
+      // The account does not exist yet: no API scope is consented, so a
+      // code minted at registration holds OIDC scopes only and the consent
+      // screen asks for the API scopes.
+      uid: null,
+      nonce: registrationData.nonce ?? null,
+      scope: registrationData.scope ?? null,
+      resource: registrationData.resource ?? null,
+      environment: getAppEnvironment(),
+      debug,
+    });
+  } catch (e: unknown) {
+    await captureServerException(dbh.db, e, {
+      op_name: "handleRegister.resolveAuthorizationCodeGrant",
+      route: ROUTE,
+      context: { client_app_id },
+    });
+    return NextResponse.json(
+      {
+        kind: "failure",
+        success: false,
+        message: "Failed to resolve the requested scopes",
+      } satisfies AuthenticateResult,
+      { status: 500 },
+    );
+  }
+  const grant_context: AuthorizationCodeGrantContext = resolved_grant.grant;
 
   // Details on invite code
   let inviteCodeRequired: boolean;
@@ -633,7 +668,9 @@ export async function handleRegister({
       req,
       res: response,
       environment: appEnv,
-      scope: grant_context.scope ?? undefined,
+      // Only the OIDC scopes: a third-party API's scopes never land on the
+      // auth server's own session.
+      scope: resolved_grant.session_scope ?? undefined,
       debug,
     });
   } catch (e: unknown) {

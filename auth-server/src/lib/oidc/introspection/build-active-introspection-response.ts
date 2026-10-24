@@ -3,9 +3,8 @@ import type { AppId } from "@schemavaults/app-definitions";
 import {
   accessTokenExpiry,
   formatOidcSubClaim,
-  parseAndGrantScopes,
+  partitionGrantedScopes,
   refreshTokenExpiry,
-  type ParsedOidcScopes,
 } from "@schemavaults/auth-common";
 import type {
   ActiveOidcIntrospectionResponseBody,
@@ -27,9 +26,17 @@ export function buildActiveIntrospectionResponse({
   issuer,
 }: BuildActiveIntrospectionResponseOptions): ActiveOidcIntrospectionResponseBody {
   // The granted scope is reported as-is (RFC 7662 §2.2 `scope` is
-  // OPTIONAL); a token minted for a plain OAuth 2.1 grant carries none
-  // and is every bit as active as an OpenID one.
-  const scopes: ParsedOidcScopes = parseAndGrantScopes(payload.scope);
+  // OPTIONAL): its OIDC scopes and the API scopes of the API server the
+  // token was minted for. A token minted for a plain OAuth 2.1 grant
+  // carries none and is every bit as active as an OpenID one.
+  const { oidc, api } = partitionGrantedScopes(payload.scope);
+  const granted: string[] = (payload.scope ?? "")
+    .split(" ")
+    .filter(
+      (token, index, all) =>
+        all.indexOf(token) === index &&
+        ((oidc as readonly string[]).includes(token) || api.includes(token)),
+    );
 
   // `exp` is reconstructed as iat + the per-type validity duration —
   // exactly the window decodeJWT itself enforces via maxTokenAge.
@@ -38,9 +45,7 @@ export function buildActiveIntrospectionResponse({
 
   return {
     active: true,
-    ...(scopes.granted.length > 0
-      ? { scope: scopes.granted.join(" ") }
-      : {}),
+    ...(granted.length > 0 ? { scope: granted.join(" ") } : {}),
     client_id: payload.app,
     exp: payload.iat + validity_seconds,
     iat: payload.iat,
@@ -52,7 +57,9 @@ export function buildActiveIntrospectionResponse({
     iss: issuer,
     ...(kind === "access" ? { token_type: "Bearer" as const } : {}),
     ...(payload.jti ? { jti: payload.jti } : {}),
-    ...(scopes.granted.includes("email") ? { username: payload.email } : {}),
+    ...((oidc as readonly string[]).includes("email")
+      ? { username: payload.email }
+      : {}),
   };
 }
 

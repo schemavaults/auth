@@ -64,6 +64,15 @@ export interface DecodeJWTsWithKeyManagerOptions {
    * {@link resolveExpectedTokenAudience}.
    */
   accepted_audiences?: readonly string[];
+  /**
+   * When set, a REFRESH token verifies only if its `app` claim is this app
+   * id. Every client app's refresh tokens are encrypted with the auth
+   * server's keyset and name the auth server as their audience, so the
+   * audience check alone cannot tell the auth server's own session apart
+   * from a refresh token issued to a third-party client. Access tokens are
+   * unaffected (their audience already binds them).
+   */
+  refresh_token_app_id?: string;
 }
 
 /**
@@ -217,6 +226,15 @@ export async function decodeJWTsWithKeyManager(
               keyset_id,
               env: environment,
             });
+            if (
+              opts.type === "refresh" &&
+              typeof options.refresh_token_app_id === "string" &&
+              jwtPayload.app !== options.refresh_token_app_id
+            ) {
+              throw new Error(
+                `Refresh token was not issued to the expected app '${options.refresh_token_app_id}'`,
+              );
+            }
             // decodeJWTs forwards only type/token/audience to this
             // callback; recover the source hint from the original list.
             const source_hint: string | undefined =

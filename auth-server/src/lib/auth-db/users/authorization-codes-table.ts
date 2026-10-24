@@ -1,5 +1,5 @@
 import type { Insertable, Selectable } from "@schemavaults/dbh";
-import { appIdSchema } from "@schemavaults/app-definitions";
+import { apiServerIdSchema, appIdSchema } from "@schemavaults/app-definitions";
 import { oidcNonceSchema, oidcScopeSchema } from "@schemavaults/auth-common";
 import { z } from "zod";
 
@@ -35,6 +35,12 @@ export const authorizationCodeRecordSchema = z
     // no empty form), which redeems to tokens without a scope claim and
     // no id_token.
     scope: oidcScopeSchema.nullable().optional(),
+    // The API server whose API scopes `scope` carries: the one the
+    // authorization request's RFC 8707 `resource` resolved to (migration
+    // 00046). Null when the grant holds no API scopes (every pre-upgrade
+    // row); the token endpoint stamps those scopes only on access tokens
+    // minted for this API server.
+    scope_api_server_id: apiServerIdSchema.nullable().optional(),
   })
   .required({
     authorization_code: true,

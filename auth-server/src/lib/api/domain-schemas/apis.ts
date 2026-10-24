@@ -4,6 +4,11 @@ import {
   schemaVaultsApiServerDefinitionSchema,
   schemaVaultsApiServerDomainRefSchema,
 } from "@schemavaults/app-definitions";
+import {
+  apiServerScopeSchema,
+  createApiServerScopeRequestSchema,
+  updateApiServerScopeRequestSchema,
+} from "@schemavaults/auth-common";
 
 /**
  * Schemas shared by the operations of the "API servers" domain
@@ -47,6 +52,46 @@ export const ListApiServerDomainsResponse = z
     list: z.array(ApiServerDomainRef).readonly(),
   })
   .openapi("ListApiServerDomainsResponse");
+
+/** A scope an API server defines (an "API scope"). */
+export const ApiServerScope = withOpenApi(apiServerScopeSchema, "ApiServerScope", {
+  description:
+    "An OAuth 2.0 scope value (RFC 6749 §3.3) an API server defines for itself, with the description shown to users. Clients request it on an authorization request whose RFC 8707 `resource` names the API server; it is granted on the access tokens minted for that API server.",
+});
+
+/** `{ api_server_id, api_server_scope_id }` path parameters of `/api/apis/{api_server_id}/scopes/{api_server_scope_id}`. */
+export const apiServerScopeParams = apiServerParams.extend({
+  api_server_scope_id: z.guid().openapi({ description: "Id of the API scope definition" }),
+});
+
+export const ListApiServerScopesResponse = z
+  .object({
+    success: z.literal(true),
+    list: z.array(ApiServerScope).readonly(),
+  })
+  .openapi("ListApiServerScopesResponse");
+
+export const ApiServerScopeResponse = z
+  .object({ success: z.literal(true), scope: ApiServerScope })
+  .openapi("ApiServerScopeResponse");
+
+export const CreateApiServerScopeRequest = withOpenApi(
+  createApiServerScopeRequestSchema,
+  "CreateApiServerScopeRequest",
+  {
+    description:
+      "`scope`: a single RFC 6749 scope-token (printable ASCII without spaces, `\"` or `\\`, at most 128 characters) that is not an OpenID Connect scope name (`openid`, `profile`, `email`, `address`, `phone`, `offline_access`). `description`: 1 to 256 characters, shown to users. `allow_dynamic_clients` (default true): whether dynamically registered clients, which have no app connection, may be granted it. Unknown keys are rejected.",
+  },
+);
+
+export const UpdateApiServerScopeRequest = withOpenApi(
+  updateApiServerScopeRequestSchema,
+  "UpdateApiServerScopeRequest",
+  {
+    description:
+      "The description and/or `allow_dynamic_clients` (at least one). The scope value is immutable (define a new scope and delete the old one to rename). Unknown keys are rejected.",
+  },
+);
 
 /** `JwksAccessKeyStatusQueryResponse` from `@/lib/auth-db/jwks-access-keys`: key metadata without the key itself. */
 export const JwksAccessKeyStatus = z

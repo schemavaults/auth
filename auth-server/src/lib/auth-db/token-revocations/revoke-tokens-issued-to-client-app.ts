@@ -25,6 +25,36 @@ export async function revokeTokensIssuedToClientApp(
   client_app_id: string,
   now: number = Date.now(),
 ): Promise<number> {
+  return await revokeIssuedTokens(db, uid, client_app_id, null, now);
+}
+
+/**
+ * Revokes the unexpired ACCESS tokens issued to `client_app_id` on behalf
+ * of `uid` for one API server audience (tracked by API server id). Used
+ * when the user withdraws one API scope from an app: the access tokens
+ * that may carry it die with it (for resource servers that introspect or
+ * check revocation), while the app's refresh tokens stay valid and stop
+ * carrying the scope on their next rotation.
+ *
+ * Returns the number of tokens this call revoked.
+ */
+export async function revokeAccessTokensIssuedToClientAppForAudience(
+  db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
+  uid: string,
+  client_app_id: string,
+  api_server_id: string,
+  now: number = Date.now(),
+): Promise<number> {
+  return await revokeIssuedTokens(db, uid, client_app_id, api_server_id, now);
+}
+
+async function revokeIssuedTokens(
+  db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
+  uid: string,
+  client_app_id: string,
+  access_token_audience: string | null,
+  now: number,
+): Promise<number> {
   if (!isValidUuid(uid)) {
     throw new TypeError("Invalid uid: expected a valid UUID");
   }
@@ -34,15 +64,20 @@ export async function revokeTokensIssuedToClientApp(
 
   // Tokens already revoked (logout, rotation) are skipped, so the count
   // reflects what this call revoked and a repeated call reports 0.
-  const issued = await db
+  let query = db
     .selectFrom("issued_tokens")
     .leftJoin("token_revocations", "token_revocations.jti", "issued_tokens.jti")
     .select(["issued_tokens.jti", "issued_tokens.expires_at"])
     .where("issued_tokens.uid", "=", uid)
     .where("issued_tokens.client_app_id", "=", client_app_id)
     .where("issued_tokens.expires_at", ">", now)
-    .where("token_revocations.jti", "is", null)
-    .execute();
+    .where("token_revocations.jti", "is", null);
+  if (access_token_audience !== null) {
+    query = query
+      .where("issued_tokens.token_type", "=", "access")
+      .where("issued_tokens.audience", "=", access_token_audience);
+  }
+  const issued = await query.execute();
 
   if (issued.length === 0) {
     return 0;

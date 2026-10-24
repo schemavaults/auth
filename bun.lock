@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.57.4",
+      "version": "0.59.3",
       "dependencies": {
         "@hookform/resolvers": "5.9.1",
         "@schemavaults/app-definitions": "workspace:*",
@@ -83,7 +83,7 @@
     },
     "packages/auth-client-sdk": {
       "name": "@schemavaults/auth-client-sdk",
-      "version": "0.24.0",
+      "version": "0.26.0",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -103,7 +103,7 @@
     },
     "packages/auth-common": {
       "name": "@schemavaults/auth-common",
-      "version": "0.33.2",
+      "version": "0.35.0",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "crypto-js": "4.2.0",
@@ -123,7 +123,7 @@
     },
     "packages/auth-react-provider": {
       "name": "@schemavaults/auth-react-provider",
-      "version": "0.18.4",
+      "version": "0.18.6",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -155,7 +155,7 @@
     },
     "packages/auth-resource-server-codegen-templates": {
       "name": "@schemavaults/auth-resource-server-codegen-templates",
-      "version": "0.0.167",
+      "version": "0.0.169",
       "devDependencies": {
         "@eslint/js": "9.39.1",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -181,7 +181,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.35.0",
+      "version": "0.36.3",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -214,7 +214,7 @@
     },
     "packages/auth-ui": {
       "name": "@schemavaults/auth-ui",
-      "version": "0.21.7",
+      "version": "0.21.9",
       "dependencies": {
         "@hookform/resolvers": "5.9.1",
       },
@@ -249,7 +249,7 @@
     },
     "packages/jwt": {
       "name": "@schemavaults/jwt",
-      "version": "0.14.7",
+      "version": "0.15.1",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -294,7 +294,7 @@
     },
     "packages/openapi-operations": {
       "name": "@schemavaults/openapi-operations",
-      "version": "0.5.0",
+      "version": "0.5.2",
       "dependencies": {
         "@asteasolutions/zod-to-openapi": "9.1.0",
         "@schemavaults/auth-common": "workspace:*",
@@ -315,7 +315,7 @@
     },
     "packages/trpc-backend-init": {
       "name": "@schemavaults/trpc-backend-init",
-      "version": "0.9.90",
+      "version": "0.9.94",
       "devDependencies": {
         "bun-types": "1.4.2",
         "tsc-alias": "1.9.0",
@@ -344,7 +344,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.12.19",
+      "version": "0.12.22",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -362,7 +362,7 @@
     },
     "tests/example-nextjs-resource-server": {
       "name": "@schemavaults/example-nextjs-resource-server",
-      "version": "0.5.12",
+      "version": "0.5.13",
       "dependencies": {
         "@schemavaults/auth-client-sdk": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",

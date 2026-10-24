@@ -15,6 +15,7 @@ import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-
 import { PasskeyChallengeButton } from "@/components/Passkeys";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { buildVerifyEmailRequiredHref } from "@/lib/email-verification/verify-email-required-href";
+import type { AppConsentStatus } from "@schemavaults/auth-common";
 
 export interface MfaChallengePageViewProps {
   challenge_id: string;
@@ -38,6 +39,11 @@ export interface MfaChallengePageViewProps {
   nonce?: string | null;
   // Requested scopes forwarded from the login form (entry-URL rebuild).
   scope?: string | null;
+  // RFC 8707 resource whose API scopes `scope` asks for (entry-URL rebuild).
+  resource?: string | null;
+  // OIDC `prompt` forwarded from the login form (`consent` forces the
+  // consent screen).
+  prompt?: string | null;
   // Safe same-origin path (validated by `resolveNextHref` in page.tsx)
   // to land the user on after the account-page flow completes — set
   // when a route guard bounced them to login from a protected page.
@@ -62,6 +68,8 @@ export default function MfaChallengePageView({
   state,
   nonce,
   scope,
+  resource,
+  prompt,
   next_href,
   app,
 }: MfaChallengePageViewProps): ReactElement {
@@ -91,6 +99,8 @@ export default function MfaChallengePageView({
   // approving it resumes the hand-off with this code.
   const [pendingAuthorizationCode, setPendingAuthorizationCode] =
     useState<string | null>(null);
+  // What the consent screen asks for (null when it could not be loaded).
+  const [pendingConsent, setPendingConsent] = useState<AppConsentStatus | null>(null);
 
   // Whether a verified challenge hands its authorization code to a
   // third-party client (PKCE redirect or native-app delivery) rather than
@@ -109,24 +119,39 @@ export default function MfaChallengePageView({
   // handed off. The check runs against the refresh-token cookie the
   // verify response just set; when it cannot be made (SDK not ready,
   // request failed) consent is asked for rather than assumed.
-  const isClientAppAuthorized = useCallback(async (): Promise<boolean> => {
+  // Besides a first sign-in, consent is also asked for when the request
+  // asks for API scopes the user has not granted the app (or carries
+  // `prompt=consent`).
+  const loadConsentRequirement = useCallback(async (): Promise<{
+    required: boolean;
+    consent: AppConsentStatus | null;
+  }> => {
     const authClient = auth.ready ? auth.client.current : null;
     if (!authClient) {
-      return false;
+      return { required: true, consent: null };
     }
     if (client_app_id === authClient.app_id) {
-      return true;
+      return { required: false, consent: null };
     }
     try {
-      return await authClient.checkAppAuthorization(client_app_id);
+      const consent = await authClient.getAppConsentStatus(client_app_id, {
+        scope: scope ?? null,
+        resource: resource ?? null,
+      });
+      return {
+        required:
+          consent.consent_required ||
+          (prompt ?? "").split(" ").includes("consent"),
+        consent,
+      };
     } catch (e: unknown) {
       console.warn(
         "[MfaChallengePageView] Could not check app authorization; asking for consent:",
         e,
       );
-      return false;
+      return { required: true, consent: null };
     }
-  }, [auth, client_app_id]);
+  }, [auth, client_app_id, scope, resource, prompt]);
 
   // Hands a minted authorization code to the third-party client the way
   // a non-MFA login would: PKCE redirect flows are sent back to the
@@ -225,7 +250,9 @@ export default function MfaChallengePageView({
       // navigate; without that, /account renders skeleton placeholders
       // forever and useAdmin() returns false.
       if (handsOffToClient) {
-        if (!(await isClientAppAuthorized())) {
+        const consentRequirement = await loadConsentRequirement();
+        if (consentRequirement.required) {
+          setPendingConsent(consentRequirement.consent);
           setPendingAuthorizationCode(authorization_code);
           return;
         }
@@ -307,7 +334,7 @@ export default function MfaChallengePageView({
     },
     [
       handsOffToClient,
-      isClientAppAuthorized,
+      loadConsentRequirement,
       handOffAuthorizationCode,
       challenge_time,
       nonce,
@@ -323,9 +350,13 @@ export default function MfaChallengePageView({
   // authorization; the code minted by the challenge can now be handed
   // to the client. It is single-use, so a failed hand-off cannot be
   // retried with it — the user has to sign in again.
-  async function resumeHandOffAfterAuthorization(): Promise<void> {
+  async function resumeHandOffAfterAuthorization(
+    fresh_authorization_code: string | null,
+  ): Promise<void> {
     if (!pendingAuthorizationCode) return;
-    const handedOff = await handOffAuthorizationCode(pendingAuthorizationCode);
+    const handedOff = await handOffAuthorizationCode(
+      fresh_authorization_code ?? pendingAuthorizationCode,
+    );
     if (!handedOff) {
       toast({
         variant: "destructive",
@@ -362,6 +393,8 @@ export default function MfaChallengePageView({
         state,
         nonce,
         scope,
+        resource,
+        prompt,
       }),
     );
   }, [
@@ -376,6 +409,8 @@ export default function MfaChallengePageView({
     state,
     nonce,
     scope,
+    resource,
+    prompt,
   ]);
 
   const onChallengeExpired = useCallback(() => {
@@ -422,9 +457,10 @@ export default function MfaChallengePageView({
           redirect_uri={redirect_uri}
           onSuccessfulAuthenticate={on_successful_authenticate}
           mode="authorize-only"
-          onAuthorizationComplete={() => {
-            void resumeHandOffAfterAuthorization();
+          onAuthorizationComplete={(fresh_authorization_code) => {
+            void resumeHandOffAfterAuthorization(fresh_authorization_code);
           }}
+          consent={pendingConsent}
           debug={env !== "production"}
         />
       </div>

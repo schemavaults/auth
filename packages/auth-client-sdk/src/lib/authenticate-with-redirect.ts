@@ -26,6 +26,13 @@ export interface IAuthenticateWithRedirectOpts {
    * DEFAULT_AUTH_SCOPE ("openid email profile").
    */
   scope?: string;
+  /**
+   * RFC 8707 resource indicator: an API server id (or the URL of one of
+   * its registered domains) whose API scopes `scope` asks for. The access
+   * tokens the SDK later acquires for that API server carry the granted
+   * ones. Omit to request OIDC scopes only.
+   */
+  resource?: string;
   storeCodeVerifier: (code_verifier: string, challenge_time: number) => void;
   storeOAuth2State: (state: string, challenge_time: number) => void;
   storeOidcNonce: (nonce: string, challenge_time: number) => void;
@@ -40,6 +47,7 @@ export default async function authenticateWithRedirect({
   environment,
   authorize_uri,
   scope,
+  resource,
   storeCodeVerifier,
   storeOAuth2State,
   storeOidcNonce,
@@ -207,6 +215,7 @@ export default async function authenticateWithRedirect({
       state,
       scope: scope ?? DEFAULT_AUTH_SCOPE,
       nonce,
+      resource: resource ?? null,
     });
   } catch (e: unknown) {
     console.error("Failed to build authenticate URL: ", e);

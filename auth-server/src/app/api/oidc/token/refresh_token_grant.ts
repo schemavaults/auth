@@ -5,12 +5,7 @@ import {
   type ApiServerId,
   type AppId,
 } from "@schemavaults/app-definitions";
-import {
-  oidcScopeSchema,
-  parseAndGrantScopes,
-  refreshTokenExpiry,
-  type UserData,
-} from "@schemavaults/auth-common";
+import { refreshTokenExpiry, type UserData } from "@schemavaults/auth-common";
 import {
   decodeJWT,
   getAudienceFromToken,
@@ -32,6 +27,12 @@ import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import issueOidcTokens from "@/lib/oidc/issue-oidc-tokens";
+import { listApiServerScopeValues } from "@/lib/auth-db/apis";
+import {
+  listUsableApiScopeValues,
+  narrowGrantedScope,
+  splitTokenScopes,
+} from "@/lib/oauth2/api-scopes";
 import {
   parseOidcTokenResourceParam,
   validateOidcTokenResource,
@@ -195,7 +196,10 @@ export async function handleOidcRefreshTokenGrant({
   // ...and its granted scope carries forward. A token with no `scope`
   // claim was minted for a plain OAuth 2.1 grant (nothing granted); it
   // rotates like any other and its replacements carry no scope either.
-  const original_scopes = parseAndGrantScopes(decoded.scope);
+  // API scopes in it belong to the API server named by its
+  // `scope_api_server_id` claim (absent on every token without them).
+  const original_scope: string = decoded.scope ?? "";
+  const scope_api_server_id: string | null = decoded.scope_api_server_id ?? null;
 
   // Revocation checks: explicit jti revocation (logout) plus the
   // per-user tokens_valid_after watermark (password reset, disabled
@@ -277,38 +281,65 @@ export async function handleOidcRefreshTokenGrant({
     access_token_audience_api_server_id = validated_resource.api_server_id;
   }
 
+  // The API scopes the grant's API server defines (what a scope re-request
+  // is checked against), and those the token may still carry: allowed for
+  // the app and consented by the user as things stand now, so a deleted
+  // scope, a removed allowance or a withdrawn consent stops being carried
+  // forward.
+  const defined_api_scopes: ReadonlySet<string> = new Set(
+    scope_api_server_id
+      ? await listApiServerScopeValues(dbh.db, scope_api_server_id)
+      : [],
+  );
+  const usable_api_scopes: ReadonlySet<string> = await listUsableApiScopeValues(dbh, {
+    uid: user.uid,
+    client_app_id,
+    api_server_id: scope_api_server_id,
+  });
+
   // RFC 6749 §6: a scope re-request must be a subset of the original
   // grant; absent means "same as originally granted". Narrowing away
   // `openid` is allowed (the result is a plain OAuth token set), but a
-  // malformed value is rejected rather than read as "nothing".
-  let scope: string = original_scopes.granted.join(" ");
+  // malformed value is rejected rather than read as "nothing". Unknown
+  // scopes are dropped, as everywhere on the OIDC surface.
+  let granted_scope: string = original_scope;
   const requested_scope = param("scope");
   if (requested_scope !== null) {
-    if (!oidcScopeSchema.safeParse(requested_scope).success) {
-      return fail(
-        oidcTokenErrorResponse("invalid_scope", "Malformed 'scope' parameter."),
-      );
-    }
-    const requested = parseAndGrantScopes(requested_scope);
-    const isSubset = requested.granted.every((s) =>
-      original_scopes.granted.includes(s),
+    const narrowed = narrowGrantedScope(
+      original_scope,
+      requested_scope,
+      defined_api_scopes,
     );
-    if (!isSubset) {
+    if (!narrowed.ok) {
       return fail(
-        oidcTokenErrorResponse(
-          "invalid_scope",
-          "Requested scope exceeds the originally granted scope.",
-        ),
+        narrowed.reason === "malformed"
+          ? oidcTokenErrorResponse("invalid_scope", "Malformed 'scope' parameter.")
+          : oidcTokenErrorResponse(
+              "invalid_scope",
+              "Requested scope exceeds the originally granted scope.",
+            ),
       );
     }
-    scope = requested.granted.join(" ");
+    granted_scope = narrowed.scope;
   }
+
+  // The grant's API scopes go on the access token only when it is minted
+  // for their API server; the rotated refresh token keeps them either way.
+  const token_scopes = splitTokenScopes({
+    granted_scope,
+    scope_api_server_id,
+    defined_api_scopes: usable_api_scopes,
+    access_token_api_server_id: access_token_audience_api_server_id ?? null,
+  });
 
   const issued = await issueOidcTokens({
     dbh,
     user,
     client_app_id,
-    scope,
+    scope: token_scopes.access_token_scope,
+    refresh_token_scope: token_scopes.refresh_token_scope,
+    refresh_token_scope_api_server_id:
+      token_scopes.refresh_token_scope_api_server_id,
     nonce: null,
     grant_type: "refresh_token",
     environment,

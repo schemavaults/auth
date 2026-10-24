@@ -14,6 +14,7 @@ import {
 import isAppAuthorizedForUser from "@/lib/auth-db/apps/authorized-apps-registry/is-app-authorized-for-user";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import issueOidcTokens from "@/lib/oidc/issue-oidc-tokens";
+import { listUsableApiScopeValues, splitTokenScopes } from "@/lib/oauth2/api-scopes";
 import {
   parseOidcTokenResourceParam,
   validateOidcTokenResource,
@@ -174,13 +175,32 @@ export async function handleOidcAuthorizationCodeGrant({
   }
 
   // A null stored scope is a plain OAuth 2.1 grant (nothing granted):
-  // the tokens carry no scope claim and no id_token is minted.
-  const scope: string = consumed.scope ?? "";
+  // the tokens carry no scope claim and no id_token is minted. API scopes
+  // the code was granted (for the RFC 8707 `resource` of its authorization
+  // request) go on the access token only when it is minted for that same
+  // API server, and stay on the refresh token either way; a code without
+  // API scopes yields the same scope on both, as it always did. The API
+  // scopes are re-checked against the app's allowance and the user's
+  // consent as they stand now.
+  const token_scopes = splitTokenScopes({
+    granted_scope: consumed.scope,
+    scope_api_server_id: consumed.scope_api_server_id,
+    defined_api_scopes: await listUsableApiScopeValues(dbh, {
+      uid: user.uid,
+      client_app_id,
+      api_server_id: consumed.scope_api_server_id,
+    }),
+    access_token_api_server_id: access_token_audience_api_server_id ?? null,
+  });
+  const scope: string = token_scopes.access_token_scope;
   const issued = await issueOidcTokens({
     dbh,
     user,
     client_app_id,
     scope,
+    refresh_token_scope: token_scopes.refresh_token_scope,
+    refresh_token_scope_api_server_id:
+      token_scopes.refresh_token_scope_api_server_id,
     nonce: consumed.nonce,
     grant_type: "authorization_code",
     environment,

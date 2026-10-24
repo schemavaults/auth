@@ -12,8 +12,10 @@ import { DetailRow } from "@/components/DetailRow";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime } from "@schemavaults/auth-ui";
-import { Trash2, KeyRound, Plus, Unplug } from "lucide-react";
+import { Trash2, KeyRound, ListChecks, Plus, Unplug } from "lucide-react";
 import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
+import { ApiServerScopesCard, AppScopeAllowancesDialog } from "@/components/ApiServerScopes";
+import type { ApiServerScope } from "@schemavaults/auth-common";
 import { ApiServerOrganizationMembershipCard } from "@/components/ApiServerOrganizationMembership";
 import {
   DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY,
@@ -32,6 +34,8 @@ export interface ApiServerDetailPageViewProps {
   api_server: SchemaVaultsApiServerDefinition;
   connected_apps: readonly ConnectedApp[];
   connected_domains: readonly SchemaVaultsApiServerDomainRef[];
+  /** The API scopes the API server defines (none for hardcoded ones). */
+  scopes: readonly ApiServerScope[];
   hardcoded: boolean;
   isOrgOwner: boolean;
   /** Whether the viewer is a platform administrator (may change admin-only settings). */
@@ -62,6 +66,7 @@ export default function ApiServerDetailPageView({
   api_server,
   connected_apps,
   connected_domains,
+  scopes,
   hardcoded,
   isOrgOwner,
   isPlatformAdmin,
@@ -71,6 +76,7 @@ export default function ApiServerDetailPageView({
   const [addDomainDialogOpen, setAddDomainDialogOpen] = useState(false);
   const [apps, setApps] = useState<readonly ConnectedApp[]>(connected_apps);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApp | null>(null);
+  const [scopesTarget, setScopesTarget] = useState<ConnectedApp | null>(null);
   const router = useRouter();
 
   // Same gate as the "Add domain" row action on the /apis table: viewers
@@ -190,6 +196,8 @@ export default function ApiServerDetailPageView({
               {apps.map((app) => {
                 const canDisconnect =
                   isOrgOwner && !isHardcodedAppId(app.client_app_id);
+                // Which of the API server's scopes the app may be granted.
+                const canEditScopes = isOrgOwner && !hardcoded && scopes.length > 0;
                 return (
                   <div
                     key={app.client_app_id}
@@ -209,6 +217,22 @@ export default function ApiServerDetailPageView({
                         className="text-xs text-muted-foreground"
                       />
                     </Link>
+                    {canEditScopes && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Scopes of ${app.app_name}`}
+                        title="Scopes"
+                        data-testid={`app-scope-allowances-${app.client_app_id}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setScopesTarget(app);
+                        }}
+                      >
+                        <ListChecks className="h-4 w-4" />
+                      </Button>
+                    )}
                     {canDisconnect && (
                       <Button
                         variant="ghost"
@@ -233,6 +257,14 @@ export default function ApiServerDetailPageView({
       </Card>
 
       {!hardcoded && (
+        <ApiServerScopesCard
+          api_server_id={api_server.api_server_id}
+          scopes={scopes}
+          canManage={isOrgOwner}
+        />
+      )}
+
+      {!hardcoded && (
         <ApiServerDynamicClientsCard
           api_server_id={api_server.api_server_id}
           allow_dynamic_clients={api_server.allow_dynamic_clients === true}
@@ -251,6 +283,19 @@ export default function ApiServerDetailPageView({
           }
           owner_organization_id={api_server.owner_organization_id ?? null}
           canChange={isPlatformAdmin}
+        />
+      )}
+
+      {scopesTarget && (
+        <AppScopeAllowancesDialog
+          api_server_id={api_server.api_server_id}
+          client_app_id={scopesTarget.client_app_id}
+          client_app_name={scopesTarget.app_name}
+          scopes={scopes}
+          open={!!scopesTarget}
+          onOpenChange={(open: boolean) => {
+            if (!open) setScopesTarget(null);
+          }}
         />
       )}
 

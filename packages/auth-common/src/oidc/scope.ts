@@ -17,6 +17,12 @@
  * granted set is echoed back in the token response, so RPs that
  * hardcode e.g. "openid profile email address" still interoperate, and
  * a request naming only unknown scopes degrades to a plain OAuth grant).
+ *
+ * API scopes: an API server (resource server) may define its own scope
+ * values (e.g. `notes:read`, see `api-scopes/`). They are granted only
+ * when the authorization request names that API server as its RFC 8707
+ * `resource` (`grantRequestedScopes`); without a resource they are
+ * unknown scopes and dropped exactly as before.
  */
 
 import { z } from "zod";
@@ -24,6 +30,26 @@ import { z } from "zod";
 export const OIDC_OPENID_SCOPE = "openid" as const;
 
 export const OIDC_SUPPORTED_SCOPES = ["openid", "email", "profile"] as const;
+
+/**
+ * The scope values OpenID Connect Core §5.4 / §11 standardize. No API
+ * server may define one of them as an API scope (even those this server
+ * does not support yet), so a granted scope string always splits
+ * unambiguously into its OIDC part and its API part
+ * (`partitionGrantedScopes`).
+ */
+export const OIDC_RESERVED_SCOPES = [
+  "openid",
+  "profile",
+  "email",
+  "address",
+  "phone",
+  "offline_access",
+] as const;
+
+export function isOidcReservedScope(scope: string): boolean {
+  return (OIDC_RESERVED_SCOPES as readonly string[]).includes(scope);
+}
 
 /**
  * Scope requested by default when a flow does not name one explicitly:
@@ -115,6 +141,88 @@ export function parseAndGrantScopes(raw: unknown): ParsedOidcScopes {
   }
 
   return { granted, hasOpenid: granted.includes(OIDC_OPENID_SCOPE) };
+}
+
+export interface GrantedScopes {
+  /**
+   * Every granted scope (OIDC and API scopes), deduplicated, in request
+   * order.
+   */
+  granted: string[];
+  /** The OIDC scopes among `granted` (see `parseAndGrantScopes`). */
+  oidc: OidcSupportedScope[];
+  /** The API scopes among `granted`. */
+  api: string[];
+  /** Whether `granted` includes `openid`. */
+  hasOpenid: boolean;
+}
+
+/**
+ * Like `parseAndGrantScopes`, but also grants the requested scopes that
+ * `api_scopes` lists: the scope values defined by the API server the
+ * grant's RFC 8707 `resource` resolved to. Every other scope is still
+ * dropped (RFC 6749 §3.3), and so is any OIDC reserved name in
+ * `api_scopes`. With no `api_scopes` the result grants exactly what
+ * `parseAndGrantScopes` grants.
+ */
+export function grantRequestedScopes(
+  raw: unknown,
+  api_scopes: Iterable<string> = [],
+): GrantedScopes {
+  const { granted: oidc, hasOpenid } = parseAndGrantScopes(raw);
+  const grantable_api_scopes = new Set<string>();
+  for (const scope of api_scopes) {
+    if (typeof scope === "string" && !isOidcReservedScope(scope)) {
+      grantable_api_scopes.add(scope);
+    }
+  }
+  if (
+    grantable_api_scopes.size === 0 ||
+    typeof raw !== "string" ||
+    !oidcScopeSchema.safeParse(raw).success
+  ) {
+    return { granted: [...oidc], oidc, api: [], hasOpenid };
+  }
+
+  const granted: string[] = [];
+  const api: string[] = [];
+  for (const token of raw.split(" ")) {
+    if (!token || granted.includes(token)) continue;
+    if ((oidc as readonly string[]).includes(token)) {
+      granted.push(token);
+    } else if (grantable_api_scopes.has(token)) {
+      granted.push(token);
+      api.push(token);
+    }
+  }
+  return { granted, oidc, api, hasOpenid };
+}
+
+/**
+ * Splits a granted scope string (an authorization code row, a token's
+ * `scope` claim) into its OIDC scopes and its API scopes. Only granted
+ * sets are stored, and API scopes can never take an OIDC reserved name,
+ * so every token that is not a supported OIDC scope is an API scope.
+ * Null / empty is the empty grant (a plain OAuth 2.1 grant).
+ */
+export function partitionGrantedScopes(scope: string | null | undefined): {
+  oidc: OidcSupportedScope[];
+  api: string[];
+} {
+  const oidc: OidcSupportedScope[] = [];
+  const api: string[] = [];
+  if (typeof scope !== "string") {
+    return { oidc, api };
+  }
+  for (const token of scope.split(" ")) {
+    if (!token) continue;
+    if (isSupportedOidcScope(token)) {
+      if (!oidc.includes(token)) oidc.push(token);
+    } else if (!isOidcReservedScope(token) && !api.includes(token)) {
+      api.push(token);
+    }
+  }
+  return { oidc, api };
 }
 
 /**

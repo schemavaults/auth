@@ -7,6 +7,25 @@ export type * from './apis-table';
 export type * from './api-domains-table';
 export type * from './apps-to-apis-permissions-table';
 export type * from './apps-to-hardcoded-apis-permissions-table';
+export type * from './api-server-scopes-table';
+
+export {
+  listApiServerScopes,
+  listApiServerScopeValues,
+  createApiServerScope,
+  updateApiServerScope,
+  deleteApiServerScope,
+} from './api-server-scopes';
+export type { CreateApiServerScopeOptions } from './api-server-scopes';
+
+export {
+  getAppApiScopePolicy,
+  setAppApiScopePolicy,
+  listGrantableApiScopeValues,
+  UnknownApiScopesError,
+  AppNotConnectedForScopesError,
+} from './api-scope-grants';
+export type { SetAppApiScopePolicyOptions } from './api-scope-grants';
 
 export { preloadApiServersTable } from './preload-api-servers-table';
 export type { QueryApiServersInputOptions } from './preload-api-servers-table';

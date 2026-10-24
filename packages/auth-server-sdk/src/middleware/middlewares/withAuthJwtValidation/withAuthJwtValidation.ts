@@ -268,6 +268,16 @@ class AuthJwtValidationMiddleware
               verification_key,
               keyset_id,
             });
+            // The only refresh token this middleware reads is the auth
+            // server's own session cookie. Every client app's refresh
+            // tokens verify against the same keyset and audience, so only
+            // the `app` claim tells the session apart from a token issued
+            // to a third-party client.
+            if (type === "refresh" && decoded.app !== getAuthServerAppId()) {
+              throw new Error(
+                "Refresh token was not issued to the auth server's app",
+              );
+            }
             return { ...decoded };
           } catch (e: unknown) {
             if (this.debug) {

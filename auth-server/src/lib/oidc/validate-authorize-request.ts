@@ -9,13 +9,12 @@ import {
 } from "@schemavaults/app-definitions";
 import {
   OAuth2StateValidationError,
+  OIDC_TOKEN_RESOURCE_PARAM,
   OidcNonceValidationError,
   PKCE_ProofKeyManager,
   oidcScopeSchema,
-  parseAndGrantScopes,
   parseOAuth2State,
   parseOidcNonce,
-  serializeOidcScopes,
 } from "@schemavaults/auth-common";
 import { SchemaVaultsAppRegistry, type ServerlessDatabase } from "@/lib/auth-db";
 import isRedirectUriRegisteredForClientApp from "@/lib/oauth2/validate-redirect-uri";
@@ -25,6 +24,10 @@ import {
 } from "./oidc-errors";
 import isValidUrl from "@/lib/is-valid-url";
 import captureServerException from "@/lib/captureServerException";
+import {
+  resolveAuthorizationCodeGrant,
+  type ResolvedAuthorizationCodeGrant,
+} from "@/lib/oauth2/api-scopes";
 
 export interface ValidatedOidcAuthorizeRequest {
   client_app_id: AppId;
@@ -34,9 +37,22 @@ export interface ValidatedOidcAuthorizeRequest {
    * authorization grant (no `scope`, or none of the supported scopes
    * requested): no id_token is minted for it and the bridge URL carries
    * no `scope`. Contains "openid" iff this is an OpenID Connect
-   * authentication request.
+   * authentication request. Also holds the requested API scopes of the
+   * API server `resource` names, if any.
    */
   scope: string;
+  /**
+   * The RFC 8707 `resource` whose API scopes `scope` holds; null when it
+   * holds none (no usable `resource`, or no API scope requested).
+   */
+  resource: string | null;
+  /**
+   * `prompt=none` (OIDC Core §3.1.2.1): answer without any UI — a code when
+   * the user is signed in and nothing needs their consent, else an error.
+   */
+  prompt_none: boolean;
+  /** `prompt=consent`: show the consent screen even if nothing new is asked for. */
+  prompt_consent: boolean;
   state: string | null;
   nonce: string | null;
   code_challenge: string;
@@ -221,7 +237,6 @@ export async function validateOidcAuthorizeRequest(
   ) {
     return redirectError("invalid_scope", "Malformed 'scope' parameter.");
   }
-  const { granted } = parseAndGrantScopes(raw_scope ?? undefined);
 
   let nonce: string | null;
   try {
@@ -251,13 +266,49 @@ export async function validateOidcAuthorizeRequest(
     );
   }
 
-  // `prompt=none` demands a guaranteed no-UI flow; the bridge may need
-  // to render login or consent, so report the spec error instead.
-  if (searchParams.get("prompt") === "none") {
+  // `prompt` (OIDC Core §3.1.2.1) is a space-delimited list. `none` must
+  // stand alone; it is answered by the endpoint without any UI. `consent`
+  // forces the consent screen; other values (`login`, `select_account`)
+  // are ignored.
+  const prompts: string[] = (searchParams.get("prompt") ?? "")
+    .split(" ")
+    .filter((value) => value.length > 0);
+  const prompt_none: boolean = prompts.includes("none");
+  if (prompt_none && prompts.length > 1) {
     return redirectError(
-      "login_required",
-      "Silent authentication (prompt=none) is not supported.",
+      "invalid_request",
+      "prompt=none cannot be combined with other prompt values.",
     );
+  }
+  const prompt_consent: boolean = prompts.includes("consent");
+
+  // RFC 8707 `resource`: a single value naming an API server this client
+  // may use lets the request ask for the scopes that API server defines.
+  // Anything else is ignored, as this endpoint always ignored `resource`
+  // (the token endpoint still answers `invalid_target` for it): the grant
+  // then holds the supported OIDC scopes only.
+  let resolved_grant: ResolvedAuthorizationCodeGrant;
+  try {
+    resolved_grant = await resolveAuthorizationCodeGrant({
+      dbh,
+      client_app_id,
+      uid: null,
+      nonce: null,
+      scope: raw_scope !== null && raw_scope.length > 0 ? raw_scope : null,
+      resource: searchParams.getAll(OIDC_TOKEN_RESOURCE_PARAM),
+      environment,
+    });
+  } catch (e: unknown) {
+    console.error(
+      `[validateOidcAuthorizeRequest] Failed to resolve the requested scopes of '${client_app_id}':`,
+      e,
+    );
+    await captureServerException(dbh.db, e, {
+      op_name: "validateOidcAuthorizeRequest.resolveAuthorizationCodeGrant",
+      route: "/api/oidc/authorize",
+      context: { client_app_id },
+    });
+    return redirectError("server_error", "Failed to resolve the requested scopes.");
   }
 
   return {
@@ -265,7 +316,11 @@ export async function validateOidcAuthorizeRequest(
     request: {
       client_app_id,
       redirect_uri,
-      scope: serializeOidcScopes(granted),
+      // What the flow asks for (consent is per user, asked by the login UI).
+      scope: resolved_grant.requested_scope ?? "",
+      resource: resolved_grant.resource,
+      prompt_none,
+      prompt_consent,
       state,
       nonce,
       code_challenge: parsed_code_challenge.data,

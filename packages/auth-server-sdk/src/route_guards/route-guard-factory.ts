@@ -92,6 +92,16 @@ const GUARDS = {
   (opts: InitRouteGuardCheckOptions) => IRouteGuard
 >;
 
+export interface CreateGuardFromTokenSourcesOptions {
+  /**
+   * Accept REFRESH tokens only when their `app` claim is this app id (see
+   * `DecodeJWTsWithKeyManagerOptions.refresh_token_app_id`). The auth server
+   * sets it to its own app id wherever a refresh token stands for its own
+   * session, since every client app's refresh tokens verify otherwise.
+   */
+  refresh_token_app_id?: string;
+}
+
 /**
  * Factory for constructing {@link IRouteGuard} instances that protect API
  * routes and server components.
@@ -239,6 +249,7 @@ export class RouteGuardFactory {
     type: RouteGuardType,
     token_sources: readonly PotentiallyValidTokenSource[],
     jwt_audience: ApiServerId,
+    options: CreateGuardFromTokenSourcesOptions = {},
   ): Promise<IRouteGuard> {
     if (this.debug) {
       console.log(
@@ -265,7 +276,12 @@ export class RouteGuardFactory {
       jwt_audience,
       this.environment,
       this.debug,
-      { accepted_audiences: this.accepted_audiences },
+      {
+        accepted_audiences: this.accepted_audiences,
+        ...(options.refresh_token_app_id !== undefined
+          ? { refresh_token_app_id: options.refresh_token_app_id }
+          : {}),
+      },
     );
 
     // Revocation is a post-verification check: a token that decrypts and

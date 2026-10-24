@@ -11,6 +11,7 @@ import {
   DEFAULT_AUTH_SCOPE,
   PKCE_ProofKeyManager,
   parseOAuth2State,
+  type AppConsentStatus,
 } from "@schemavaults/auth-common";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import {
@@ -39,6 +40,11 @@ export interface PendingAuthorizationState {
   // when the flow carried no nonce (an OIDC RP may omit it, OIDC Core
   // §3.1.2.1); nothing is echoed/verified in that case.
   nonce: string | null;
+  // What the consent screen asks for (the app is not authorized yet, or
+  // the request asks for API scopes the user has not granted). Null when
+  // the status could not be loaded: the screen then shows the generic
+  // sign-in permissions.
+  consent: AppConsentStatus | null;
 }
 
 interface HandleAuthFormSubmitOptions<T extends "login" | "register"> {
@@ -250,6 +256,17 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         ? DEFAULT_AUTH_SCOPE
         : null;
 
+  // RFC 8707 resource indicator of a third-party flow: grants the
+  // requested API scopes of the API server it names (the server ignores a
+  // value it cannot honour). Never sent on the account-page flow.
+  const url_resource = searchParams.get("resource");
+  const flow_resource: string | null =
+    onSuccessfulAuthenticate !== "account-page" &&
+    url_resource &&
+    url_resource.length > 0
+      ? url_resource
+      : null;
+
   // Where to send the user after the account-page flow completes (set by
   // the route guards when bouncing an unauthenticated user off a
   // protected page). Unsafe / auth-flow-internal values resolve to null
@@ -270,6 +287,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       request_redirect_uri,
       flow_nonce,
       flow_scope,
+      flow_resource,
     );
     if (result.kind === "mfa_required") {
       // The MFA challenge page lives at a different URL, so the
@@ -317,6 +335,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         "challenge_time",
         "code_challenge",
         "code_challenge_method",
+        "prompt",
       ] as const) {
         const value = searchParams.get(key);
         if (value) params.set(key, value);
@@ -329,6 +348,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
       // grant) is simply not forwarded.
       if (flow_nonce) params.set("nonce", flow_nonce);
       if (flow_scope) params.set("scope", flow_scope);
+      if (flow_resource) params.set("resource", flow_resource);
       // Forward the post-login destination so the MFA challenge page can
       // land the user where they were originally headed. Only meaningful
       // for the account-page flow — third-party flows redirect to their
@@ -396,15 +416,23 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
     onSuccessfulAuthenticate !== "account-page" &&
     opts.onAppAuthorizationNeeded
   ) {
-    // Check if the user has already authorized this app
-    let alreadyAuthorized = false;
+    // Check whether the user already authorized this app and every API
+    // scope the request asks for (`prompt=consent` asks again anyway).
+    let consent: AppConsentStatus | null = null;
+    let consentRequired = true;
     try {
-      alreadyAuthorized = await authClient.checkAppAuthorization(opts.app.app_id);
+      consent = await authClient.getAppConsentStatus(opts.app.app_id, {
+        scope: flow_scope,
+        resource: flow_resource,
+      });
+      consentRequired =
+        consent.consent_required ||
+        (searchParams.get("prompt") ?? "").split(" ").includes("consent");
     } catch {
       // If the check fails, fall through to showing the consent screen (safe default)
     }
 
-    if (!alreadyAuthorized) {
+    if (consentRequired) {
       const redirect_uri: string | null | undefined =
         searchParams.get("redirect_uri");
       const state: string | null = parseOAuth2State(
@@ -417,6 +445,7 @@ export async function handleAuthFormSubmit<T extends "login" | "register">(
         redirect_uri,
         state,
         nonce: flow_nonce,
+        consent,
       });
       return;
     }

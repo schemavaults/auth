@@ -74,8 +74,11 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
     org_id: OrganizationID,
   ) => Promise<OrganizationMembershipRoleType | false>;
   /**
-   * Scopes (from OIDC_SUPPORTED_SCOPES) that the presented token's
-   * `scope` claim must include, e.g. `["email"]`. A token without a
+   * Scopes that the presented token's `scope` claim must include: OIDC
+   * scopes (from OIDC_SUPPORTED_SCOPES, e.g. `["email"]`) and/or API
+   * scopes this API server defines on the auth server (e.g.
+   * `["notes:read"]`, granted to clients that request them with this API
+   * server as their RFC 8707 `resource`). A token without a
    * scope claim (issued before scopes became first-class) grants NO
    * scopes and is denied 403 whenever this list is non-empty. Unlike
    * `required_organization`, there is no admin bypass: scopes describe
@@ -302,6 +305,11 @@ export function withAuthenticatedApiRouteGuard<
         route_guard_type,
         token_sources,
         api_server_id,
+        // Every client app's refresh tokens verify against the auth server's
+        // keyset; only the auth server's own may stand for its session.
+        api_server_id === auth_server_app_id
+          ? { refresh_token_app_id: auth_server_app_id }
+          : {},
       );
     } catch (e: unknown) {
       if (e instanceof JwtKeyManagerMisconfigurationError) {

@@ -57,7 +57,21 @@ import type {
   CreatedClientApplicationServiceAccount,
   UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
-import type { AssignableOrganizationMembershipRole } from "@schemavaults/auth-common";
+import type { AuthorizeClientApplicationConsent } from "@/lib/send-authorize-client-application-request";
+import type {
+  RevokeClientApplicationAuthorizationResult,
+  RevokeMyAppScopeConsentResult,
+} from "@/lib/connected-apps";
+import type {
+  AppConsentStatus,
+  ConnectedApp,
+  ApiServerScope,
+  AppApiScopePolicy,
+  AssignableOrganizationMembershipRole,
+  CreateApiServerScopeRequest,
+  UpdateApiServerScopeRequest,
+  UpdateAppApiScopePolicyRequest,
+} from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
 import type { OrganizationMembershipVisibility } from "@schemavaults/app-definitions";
 import type {
@@ -69,6 +83,7 @@ import type {
   OnAuthStateChangedListenerRef,
 } from "@/lib/auth-client-events";
 import type { AcquireAccessTokenOptions } from "@/types/acquire-access-token-options";
+import type { AuthenticateWithRedirectOptions } from "@/types/authenticate-with-redirect-options";
 import {
   type ApiServerId,
   type AppId,
@@ -599,7 +614,7 @@ export class SchemaVaultsAuthClient
 
   private async authenticateWithRedirect(
     type: "login" | "register",
-    opts?: { scope?: string },
+    opts?: AuthenticateWithRedirectOptions,
   ) {
     if (
       !this.authorize_uri ||
@@ -619,11 +634,12 @@ export class SchemaVaultsAuthClient
       environment: this.environment,
       authorize_uri: this.authorize_uri,
       scope: opts?.scope,
+      ...(opts?.resource ? { resource: opts.resource } : {}),
       debug: this.debug,
     });
   }
 
-  public async login(opts?: { scope?: string }): Promise<void> {
+  public async login(opts?: AuthenticateWithRedirectOptions): Promise<void> {
     if (this.isClientForAuthServer) {
       return await this.adapter.redirect("/auth/login");
     }
@@ -644,7 +660,7 @@ export class SchemaVaultsAuthClient
     }
   } // login()
 
-  public async register(opts?: { scope?: string }): Promise<void> {
+  public async register(opts?: AuthenticateWithRedirectOptions): Promise<void> {
     if (this.isClientForAuthServer) {
       return await this.adapter.redirect("/auth/register");
     }
@@ -1263,6 +1279,9 @@ export class SchemaVaultsAuthClient
     // `scope` sent, so no id_token); defaults to the platform's OpenID
     // scope set.
     scope: string | null = DEFAULT_AUTH_SCOPE,
+    // Optional RFC 8707 resource indicator: grants the requested API
+    // scopes of the API server it names (null / omitted: none).
+    resource: string | null = null,
   ): Promise<AuthenticateResult> {
     if (this.DEBUG)
       console.log(
@@ -1280,6 +1299,7 @@ export class SchemaVaultsAuthClient
       auth_server_url: this.auth_server_url,
       nonce,
       scope,
+      resource,
     });
   }
 
@@ -1639,6 +1659,7 @@ export class SchemaVaultsAuthClient
   public async sendAuthorizeClientApplicationRequest(
     app_id: AppId,
     state?: string | null,
+    consent?: AuthorizeClientApplicationConsent,
   ): Promise<void> {
     const sendAuthorizeRequest =
       await import("@/lib/send-authorize-client-application-request").then(
@@ -1646,8 +1667,30 @@ export class SchemaVaultsAuthClient
       );
     return await this.withErrorReporting(
       "sendAuthorizeClientApplicationRequest",
-      () => sendAuthorizeRequest({ app_id, adapter: this.adapter, state }),
+      () =>
+        sendAuthorizeRequest({
+          app_id,
+          adapter: this.adapter,
+          state,
+          ...(consent ? { consent } : {}),
+        }),
     );
+  }
+
+  public async getAppConsentStatus(
+    app_id: AppId,
+    request: { scope?: string | null; resource?: string | null } = {},
+  ): Promise<AppConsentStatus> {
+    const fn = await import("@/lib/check-app-authorization").then(
+      (mod) => mod.getAppConsentStatus,
+    );
+    return await fn({
+      app_id,
+      adapter: this.adapter,
+      auth_server_url: this.auth_server_url,
+      scope: request.scope ?? null,
+      resource: request.resource ?? null,
+    });
   }
 
   public async checkAppAuthorization(app_id: AppId): Promise<boolean> {
@@ -2012,6 +2055,102 @@ export class SchemaVaultsAuthClient
     });
   }
 
+  public async listApiServerScopes(
+    api_server_id: ApiServerId,
+  ): Promise<ApiServerScope[]> {
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.listApiServerScopes,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+    });
+  }
+
+  public async createApiServerScope(
+    api_server_id: ApiServerId,
+    scope: CreateApiServerScopeRequest,
+  ): Promise<ApiServerScope> {
+    this.assertAppAndApiManagementWriteAccess("createApiServerScope");
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.createApiServerScope,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      scope,
+    });
+  }
+
+  public async updateApiServerScope(
+    api_server_id: ApiServerId,
+    api_server_scope_id: string,
+    update: UpdateApiServerScopeRequest,
+  ): Promise<ApiServerScope> {
+    this.assertAppAndApiManagementWriteAccess("updateApiServerScope");
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.updateApiServerScope,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      api_server_scope_id,
+      update,
+    });
+  }
+
+  public async deleteApiServerScope(
+    api_server_id: ApiServerId,
+    api_server_scope_id: string,
+  ): Promise<void> {
+    this.assertAppAndApiManagementWriteAccess("deleteApiServerScope");
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.deleteApiServerScope,
+    );
+    await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      api_server_scope_id,
+    });
+  }
+
+  public async getAppApiScopePolicy(
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+  ): Promise<AppApiScopePolicy> {
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.getAppApiScopePolicy,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      client_app_id,
+    });
+  }
+
+  public async updateAppApiScopePolicy(
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+    update: UpdateAppApiScopePolicyRequest,
+  ): Promise<AppApiScopePolicy> {
+    this.assertAppAndApiManagementWriteAccess("updateAppApiScopePolicy");
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.updateAppApiScopePolicy,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      client_app_id,
+      update,
+    });
+  }
+
   public async setApiServerOrganizationMembershipVisibility(
     api_server_id: ApiServerId,
     organization_membership_visibility: OrganizationMembershipVisibility,
@@ -2108,6 +2247,43 @@ export class SchemaVaultsAuthClient
       auth_server_uri: this.auth_server_uri,
       is_auth_server: this.isClientForAuthServer,
       debug: this.debug,
+    });
+  }
+
+  public async listMyConnectedApps(): Promise<ConnectedApp[]> {
+    const fn = await import("@/lib/connected-apps").then((m) => m.listMyConnectedApps);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      is_auth_server: this.isClientForAuthServer,
+    });
+  }
+
+  public async revokeMyAppScopeConsent(
+    app_id: AppId,
+    api_server_scope_id: string,
+  ): Promise<RevokeMyAppScopeConsentResult> {
+    const fn = await import("@/lib/connected-apps").then((m) => m.revokeMyAppScopeConsent);
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      is_auth_server: this.isClientForAuthServer,
+      app_id,
+      api_server_scope_id,
+    });
+  }
+
+  public async revokeClientApplicationAuthorization(
+    app_id: AppId,
+  ): Promise<RevokeClientApplicationAuthorizationResult> {
+    const fn = await import("@/lib/connected-apps").then(
+      (m) => m.revokeClientApplicationAuthorization,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      is_auth_server: this.isClientForAuthServer,
+      app_id,
     });
   }
 

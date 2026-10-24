@@ -16,6 +16,7 @@ export type OidcAuthorizeErrorCode =
   | "temporarily_unavailable"
   | "login_required"
   | "interaction_required"
+  | "consent_required"
   | "request_not_supported"
   | "request_uri_not_supported";
 

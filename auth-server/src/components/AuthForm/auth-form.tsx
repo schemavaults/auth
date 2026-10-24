@@ -159,7 +159,11 @@ export function AuthForm<T extends "login" | "register">({
 
   const [pendingAuthorization, setPendingAuthorization] = useState<PendingAuthorizationState | null>(null);
 
-  async function resumeRedirectAfterAuthorization(): Promise<void> {
+  // `fresh_authorization_code`: minted by the consent screen when the user
+  // approved API scopes the code minted at sign-in did not hold.
+  async function resumeRedirectAfterAuthorization(
+    fresh_authorization_code: string | null,
+  ): Promise<void> {
     if (!pendingAuthorization) return;
 
     toast({
@@ -170,7 +174,8 @@ export function AuthForm<T extends "login" | "register">({
     try {
       await performPostAuthRedirect({
         onSuccessfulAuthenticate,
-        authorization_code: pendingAuthorization.authorization_code,
+        authorization_code:
+          fresh_authorization_code ?? pendingAuthorization.authorization_code,
         code_challenge: pendingAuthorization.code_challenge,
         code_verifier: pendingAuthorization.code_verifier,
         redirect_uri: pendingAuthorization.redirect_uri,
@@ -203,8 +208,11 @@ export function AuthForm<T extends "login" | "register">({
         redirect_uri={pendingAuthorization.redirect_uri ?? null}
         onSuccessfulAuthenticate={onSuccessfulAuthenticate}
         mode="authorize-only"
-        onAuthorizationComplete={resumeRedirectAfterAuthorization}
+        onAuthorizationComplete={(fresh_authorization_code) => {
+          void resumeRedirectAfterAuthorization(fresh_authorization_code);
+        }}
         pendingAuthState={pendingAuthorization}
+        consent={pendingAuthorization.consent}
         debug={debug}
       />
     );

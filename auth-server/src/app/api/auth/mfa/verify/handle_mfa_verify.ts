@@ -5,7 +5,8 @@ import {
   mfaVerifyBodySchema,
   type AuthenticateResult,
 } from "@schemavaults/auth-common";
-import { getAppEnvironment } from "@schemavaults/app-definitions";
+import { apiServerIdSchema, getAppEnvironment } from "@schemavaults/app-definitions";
+import { oidcPartOfGrantedScope } from "@/lib/oauth2/api-scopes";
 import {
   ServerlessDatabase,
   UserRegistry,
@@ -194,6 +195,11 @@ export async function handleMfaVerify({
         {
           nonce: challenge.nonce ?? null,
           scope: challenge.scope ?? null,
+          scope_api_server_id:
+            challenge.scope_api_server_id &&
+            apiServerIdSchema.safeParse(challenge.scope_api_server_id).success
+              ? challenge.scope_api_server_id
+              : null,
         },
       );
     } catch (e: unknown) {
@@ -238,8 +244,9 @@ export async function handleMfaVerify({
       environment: env,
       // The first-party session cookie is minted with the platform
       // default when the flow granted no scope (a third-party plain
-      // OAuth 2.1 grant never narrows the user's own session).
-      scope: challenge.scope ?? undefined,
+      // OAuth 2.1 grant never narrows the user's own session), and never
+      // carries a third-party API's scopes.
+      scope: oidcPartOfGrantedScope(challenge.scope) ?? undefined,
       debug,
     });
   } catch (e: unknown) {

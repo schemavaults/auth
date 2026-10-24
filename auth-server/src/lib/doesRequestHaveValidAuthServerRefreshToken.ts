@@ -39,6 +39,9 @@ async function doesCookiesStoreHaveValidRefreshToken(
         sourceHint: `From cookie with key '${RefreshTokenCookieName(auth_server_app_id)}'`
       }],
       auth_server_app_id,
+      // Only the auth server's own refresh token is a session here, not one
+      // a third-party client app received for the same user.
+      { refresh_token_app_id: auth_server_app_id },
     );
 
     if (!route_guard.isAccessAllowed() || !route_guard.user) {
