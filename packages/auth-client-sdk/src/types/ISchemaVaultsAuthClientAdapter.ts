@@ -35,6 +35,17 @@ interface AuthClientOidcNonceActions {
   clearOidcNonce: (challenge_time: number) => void;
 }
 
+// Post-sign-in destination (`next_href`, see `login()`): the same-origin
+// page to return the user to once the flow completes, persisted across the
+// authorize redirect under the same challenge_time key as `state`. Optional:
+// an adapter without them drops `next_href`, and the user lands on the
+// client's `successful_authentication_redirect_uri` instead.
+interface AuthClientNextHrefActions {
+  storeNextHref?: (next_href: string, challenge_time: number) => void;
+  loadNextHref?: (challenge_time: number) => string | null;
+  clearNextHref?: (challenge_time: number) => void;
+}
+
 interface AuthClientUserDataActions {
   storeUserData: (userData: UserData) => void;
   getUserData: () => UserData | null;
@@ -122,6 +133,7 @@ export interface ISchemaVaultsAuthClientAdapter
   extends AuthClientCodeVerifierActions,
     AuthClientOAuth2StateActions,
     AuthClientOidcNonceActions,
+    AuthClientNextHrefActions,
     AuthClientUserDataActions,
     AuthClientAuthTokensActions,
     AuthClientNetworkActions {

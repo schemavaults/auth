@@ -21,7 +21,11 @@ const enum AuthorizePageSearchParam {
   Issuer = "iss",
 }
 
-type TradeAuthorizationCodeResult = HookStatus<{ auth_state_set: boolean }>;
+type TradeAuthorizationCodeResult = HookStatus<{
+  auth_state_set: boolean;
+  // Where the flow asked to return the user (`login({ next_href })`).
+  next_href: string | null;
+}>;
 
 /**
  * The exchange started for each authorization code on this page load. React
@@ -105,7 +109,19 @@ export function useTradeAuthorizationCodeForTokensEffect(
       });
     }
 
-    function onAuthHandlerSuccess(): void {
+    // The page the sign-in flow was started from asked to return the user to
+    // (`next_href`), if any, for the callback's `challenge_time`.
+    function consumeNextHrefOfCallback(): string | null {
+      const challenge_time: number = Number(
+        searchParams.get(AuthorizePageSearchParam.ChallengeTime),
+      );
+      if (!Number.isFinite(challenge_time) || challenge_time <= 0) {
+        return null;
+      }
+      return auth.consumeNextHref(challenge_time);
+    }
+
+    function onAuthHandlerSuccess(next_href: string | null): void {
       if (tradeCodeEffectCancelled) {
         if (debug) {
           console.log(
@@ -120,7 +136,7 @@ export function useTradeAuthorizationCodeForTokensEffect(
           "[onAuthHandlerSuccess] Redirecting user after successful authentication!",
         );
       }
-      router.replace(auth.successful_authentication_redirect_uri);
+      router.replace(next_href ?? auth.successful_authentication_redirect_uri);
       return;
     }
 
@@ -168,7 +184,18 @@ export function useTradeAuthorizationCodeForTokensEffect(
       return;
     }
 
-    if (auth.isAuthenticated) {
+    const authorization_code_param: string | null = searchParams.get(
+      AuthorizePageSearchParam.AuthorizationCode,
+    );
+    let exchange: Promise<TradeAuthorizationCodeResult> | undefined =
+      authorization_code_param
+        ? exchangesByAuthorizationCode.get(authorization_code_param)
+        : undefined;
+
+    // Signed in by something other than this page's own exchange (when this
+    // page's exchange signed the user in, a re-run awaits it below, so the
+    // redirect still honours its `next_href`).
+    if (auth.isAuthenticated && !exchange) {
       if (typeof toast === "function") {
         toast({
           variant: "warning",
@@ -177,7 +204,7 @@ export function useTradeAuthorizationCodeForTokensEffect(
             "Please log out before attempting to log in to a different account!",
         });
       }
-      onAuthHandlerSuccess();
+      onAuthHandlerSuccess(consumeNextHrefOfCallback());
       return cancelEffectUnsubscribeFn;
     }
 
@@ -325,11 +352,13 @@ export function useTradeAuthorizationCodeForTokensEffect(
           "[tradeAuthorizationCodeForTokensHandler] Exchanging authorization code for refresh tokens appears to have been a success...",
         );
       }
+      const next_href: string | null = auth.consumeNextHref(challenge_time);
       return {
         loading: false,
         success: true,
         data: {
           auth_state_set: true,
+          next_href,
         },
       };
     } // end of tradeAuthorizationCodeForTokensHandler()
@@ -340,13 +369,6 @@ export function useTradeAuthorizationCodeForTokensEffect(
       );
     }
 
-    const authorization_code_param: string | null = searchParams.get(
-      AuthorizePageSearchParam.AuthorizationCode,
-    );
-    let exchange: Promise<TradeAuthorizationCodeResult> | undefined =
-      authorization_code_param
-        ? exchangesByAuthorizationCode.get(authorization_code_param)
-        : undefined;
     if (exchange) {
       if (debug) {
         console.log(
@@ -379,7 +401,7 @@ export function useTradeAuthorizationCodeForTokensEffect(
                   "tradeAuthorizationCodeForTokensHandler ran successfully!",
                 );
               }
-              onAuthHandlerSuccess();
+              onAuthHandlerSuccess(init_result.data.next_href);
               return;
             } else {
               throw new Error(

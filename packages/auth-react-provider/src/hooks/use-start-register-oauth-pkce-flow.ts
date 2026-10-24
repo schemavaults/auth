@@ -3,7 +3,10 @@
 import useEffectIfAuthenticated from "@/hooks/use-effect-if-authenticated";
 import useAuth from "@/hooks/use-auth";
 import { useEffect } from "react";
-import type { ISchemaVaultsAuthClient } from "@schemavaults/auth-client-sdk";
+import {
+  type ISchemaVaultsAuthClient,
+  resolveNextHref,
+} from "@schemavaults/auth-client-sdk";
 import useAppEnvironment, {
   type SchemaVaultsAppEnvironment,
 } from "@/hooks/use-app-environment";
@@ -14,12 +17,19 @@ import useIsAuthServer from "@/hooks/use-is-auth-server";
 
 export interface IUseStartRegisterOauthPKCEFlowOpts {
   onError: (e: unknown) => void;
+  /**
+   * The page to return the user to after registering: the register page's
+   * `next_href` search param. Same rules as
+   * `useStartLoginOauthPKCEFlow`'s `next_href`.
+   */
+  next_href?: string | null;
 }
 
 type UnsubscribeFn = () => void;
 
 export function useStartRegisterOauthPKCEFlow({
   onError,
+  next_href,
 }: IUseStartRegisterOauthPKCEFlowOpts) {
   const router = useRouter();
   const authContext = useAuth();
@@ -32,13 +42,14 @@ export function useStartRegisterOauthPKCEFlow({
     if (!auth.isAuthenticated) {
       return () => {};
     }
+    const redirect_uri: string =
+      resolveNextHref(next_href) ?? auth.successful_authentication_redirect_uri;
     if (debug) {
       console.log(
-        "[useEffectIfAuthenticated] Sending to 'successful_authentication_redirect_uri': ",
-        auth.successful_authentication_redirect_uri,
+        "[useEffectIfAuthenticated] Sending already-authenticated user to: ",
+        redirect_uri,
       );
     }
-    const redirect_uri: string = auth.successful_authentication_redirect_uri;
     router.push(redirect_uri);
     return () => {};
   });
@@ -74,7 +85,7 @@ export function useStartRegisterOauthPKCEFlow({
       if (cancelRegisterEffect) {
         return;
       }
-      await auth.register();
+      await auth.register(next_href ? { next_href } : undefined);
     }
 
     async function handleAuthClientReady(
@@ -160,6 +171,7 @@ export function useStartRegisterOauthPKCEFlow({
     debug,
     router,
     onError,
+    next_href,
     checkIfAuthenticatedWithServer,
   ]);
 }

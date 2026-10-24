@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import {
   type ISchemaVaultsAuthClient,
   resolveLoginErrorPage,
+  resolveNextHref,
 } from "@schemavaults/auth-client-sdk";
 import useAppEnvironment, {
   type SchemaVaultsAppEnvironment,
@@ -18,12 +19,21 @@ import type { ApiServerId } from "@schemavaults/app-definitions";
 
 export interface IUseStartLoginOauthPKCEFlowOpts {
   onError: (e: unknown) => void;
+  /**
+   * The page to return the user to after signing in: the login page's
+   * `next_href` search param, which route guards set to the page they
+   * turned the user away from. Unsafe values are ignored (see
+   * `resolveNextHref`); without one, the user lands on
+   * `successful_authentication_redirect_uri`.
+   */
+  next_href?: string | null;
 }
 
 type UnsubscribeFn = () => void;
 
 export function useStartLoginOauthPKCEFlow({
   onError,
+  next_href,
 }: IUseStartLoginOauthPKCEFlowOpts) {
   const router = useRouter();
   const authContext = useAuth();
@@ -54,7 +64,7 @@ export function useStartLoginOauthPKCEFlow({
         }
         return;
       }
-      await auth.login();
+      await auth.login(next_href ? { next_href } : undefined);
     }
 
     async function acquireDefaultAccessTokens(
@@ -187,14 +197,15 @@ export function useStartLoginOauthPKCEFlow({
           }
         }
 
+        const redirect_uri: string =
+          resolveNextHref(next_href) ??
+          auth.successful_authentication_redirect_uri;
         if (debug) {
           console.log(
-            "[startLoginPkceFlow] User appears to already be logged in! Not triggering Oauth2 PKCE flow-- but redirecting the user to 'successful_authentication_redirect_uri': ",
-            auth.successful_authentication_redirect_uri,
+            "[startLoginPkceFlow] User appears to already be logged in! Not triggering Oauth2 PKCE flow-- but redirecting the user to: ",
+            redirect_uri,
           );
         }
-        const redirect_uri: string =
-          auth.successful_authentication_redirect_uri;
         if (cancelLoginEffect) {
           // don't redirect if page unmounted
           return;
@@ -260,6 +271,7 @@ export function useStartLoginOauthPKCEFlow({
     debug,
     router,
     onError,
+    next_href,
     checkIfAuthenticatedWithServer,
     defaultAccessTokenAudiences,
   ]);

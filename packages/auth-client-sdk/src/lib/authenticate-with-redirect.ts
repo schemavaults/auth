@@ -33,9 +33,16 @@ export interface IAuthenticateWithRedirectOpts {
    * ones. Omit to request OIDC scopes only.
    */
   resource?: string;
+  /**
+   * Resolved same-origin path to return the user to once the flow
+   * completes (see `AuthenticateWithRedirectOptions.next_href`); stored
+   * with `storeNextHref` under the flow's challenge_time.
+   */
+  next_href?: string | null;
   storeCodeVerifier: (code_verifier: string, challenge_time: number) => void;
   storeOAuth2State: (state: string, challenge_time: number) => void;
   storeOidcNonce: (nonce: string, challenge_time: number) => void;
+  storeNextHref: (next_href: string, challenge_time: number) => void;
 }
 
 export default async function authenticateWithRedirect({
@@ -48,9 +55,11 @@ export default async function authenticateWithRedirect({
   authorize_uri,
   scope,
   resource,
+  next_href,
   storeCodeVerifier,
   storeOAuth2State,
   storeOidcNonce,
+  storeNextHref,
 }: IAuthenticateWithRedirectOpts): Promise<void> {
   if (debug) {
     console.log(
@@ -178,6 +187,17 @@ export default async function authenticateWithRedirect({
   } catch (e: unknown) {
     console.error("Failed to store login nonce: ", e);
     throw new Error("Failed to store login nonce!");
+  }
+
+  // Remember where to return the user once the flow completes. Losing it
+  // only lands the user on the default page, so a storage failure does
+  // not abort the sign-in.
+  if (typeof next_href === "string" && next_href.length > 0) {
+    try {
+      storeNextHref(next_href, code_challenge.challenge_time) satisfies void;
+    } catch (e: unknown) {
+      console.error("Failed to store next_href: ", e);
+    }
   }
 
   if (!client_app_id) {
