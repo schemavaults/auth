@@ -14,6 +14,7 @@ export {
   RouteGuardFactory,
   RouteGuardFactory as default,
 } from "./route-guard-factory";
+export type { CreateGuardFromTokenSourcesOptions } from "./route-guard-factory";
 
 export {
   withAuthenticatedServerComponentRouteGuard,

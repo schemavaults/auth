@@ -1,6 +1,9 @@
 import "server-only";
 import type { PotentiallyValidTokenSource, UserData } from "@schemavaults/auth-common";
-import type { IRouteGuard } from "@schemavaults/auth-server-sdk";
+import type {
+  CreateGuardFromTokenSourcesOptions,
+  IRouteGuard,
+} from "@schemavaults/auth-server-sdk";
 import { OperationError, type UserAuthPrincipal } from "@schemavaults/openapi-operations";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import isUserInOrganization from "@/lib/isUserInOrganization";
@@ -20,11 +23,16 @@ import type { AuthServerApiContext } from "../context";
  * - a token that verified but was revoked (logout, password reset) fails
  *   the request with 401, whatever other credentials were presented;
  * - a disabled account is refused with 403.
+ *
+ * Pass `refresh_token_app_id` whenever `source` is a refresh token: every
+ * client app's refresh tokens verify against the auth server's keyset, so
+ * only the `app` claim says whose session it is.
  */
 export async function principalFromTokenSource(
   context: AuthServerApiContext,
   schemeName: string,
   source: PotentiallyValidTokenSource,
+  options: CreateGuardFromTokenSourcesOptions = {},
 ): Promise<UserAuthPrincipal<UserData> | null> {
   let guard: IRouteGuard;
   try {
@@ -32,6 +40,7 @@ export async function principalFromTokenSource(
       "authenticated",
       [source],
       getAuthServerAppId(),
+      options,
     );
   } catch (e: unknown) {
     // A token that does not verify yields a guard without a user; a throw
