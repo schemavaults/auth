@@ -8,6 +8,9 @@ export interface InitRouteGuardCheckOptions {
   // (RouteGuardFactory.createGuardFromOptions) can omit it — it defaults to
   // null (no scopes granted).
   scope?: string | null;
+  // The client app the resolving token was issued to (its `app` claim).
+  // Optional like `scope`; defaults to null (unknown).
+  client_app_id?: string | null;
   // True when a token that verified cryptographically was rejected by the
   // `is_token_revoked` hook (logout / password reset). `user` is null in
   // that case; guards use the flag to report "revoked" rather than

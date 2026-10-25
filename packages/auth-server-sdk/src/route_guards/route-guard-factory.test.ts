@@ -111,6 +111,7 @@ describe("RouteGuardFactory revocation hook", () => {
     expect(seen[0]).toMatchObject({ jti, uid: user.uid, type: "refresh" });
     expect(typeof seen[0]?.iat).toBe("number");
     expect(guard.user?.uid).toBe(user.uid);
+    expect(guard.client_app_id).toBe(DEFAULT_AUTH_SERVER_APP_ID);
     expect(guard.revoked).toBe(false);
   });
 
@@ -128,6 +129,7 @@ describe("RouteGuardFactory revocation hook", () => {
     );
     expect(guard.user).toBeNull();
     expect(guard.scope).toBeNull();
+    expect(guard.client_app_id).toBeNull();
     expect(guard.revoked).toBe(true);
     expect(guard.isAccessAllowed()).toBe(false);
   });

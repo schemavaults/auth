@@ -142,7 +142,13 @@ export interface AuthPrincipal<TUser = unknown> {
    * §3.3), or null when the credential carries no scope claim.
    */
   readonly scope: string | null;
-  /** OAuth client id for client-credential style principals. */
+  /**
+   * OAuth client id the presented credential was issued to: the client of
+   * client-credential style principals, or the client app a user signed in
+   * to when the resolver knows it (SchemaVaults access tokens: their `app`
+   * claim), which lets a host tell its own app's tokens from third-party
+   * clients'. Absent when the resolver cannot tell.
+   */
   readonly clientId?: string;
   /**
    * Resolves the principal's membership role in an organization, used for

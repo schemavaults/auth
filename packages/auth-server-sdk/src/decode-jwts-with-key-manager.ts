@@ -31,18 +31,27 @@ import {
 import isValidUuid from "@/is-valid-uuid";
 import type { DecodedTokenClaims } from "@/route_guards/token-revocation";
 
-// A decoded token: the user identity plus the granted `scope` carried
-// ALONGSIDE it (never folded into UserData). `scope` is null when the token
-// has no scope claim (issued before scopes became first-class).
+// A decoded token: the user identity plus the granted `scope` and the
+// client app the token was issued to, carried ALONGSIDE it (never folded
+// into UserData). `scope` is null when the token has no scope claim (issued
+// before scopes became first-class).
 interface DecodedTokenWithScope {
   user: UserData;
   scope: string | null;
+  client_app_id: string;
 }
 
 export type IDecodeJWTsWithKeyManagerOutput =
   | {
       user: UserData;
       scope: string | null;
+      /**
+       * The client app the resolving token was issued to (its `app`
+       * claim): the app the user signed in to, which is how a resource
+       * server tells its own app's tokens from those of third-party
+       * clients (an MCP client, say).
+       */
+      client_app_id: string;
       /**
        * Revocation-relevant claims (`jti`, `iat`, `uid`, type) of EVERY
        * token source that decrypted and verified — all belong to `user`.
@@ -138,7 +147,7 @@ export async function decodeJWTsWithKeyManager(
         token_sources,
         jwt_audience: token_audience,
         // The consistency check in decodeJWTs compares the user across
-        // token sources; pull the user out of the `{ user, scope }` record.
+        // token sources; pull the user out of the `{ user, scope, ... }` record.
         getUserData: (d: DecodedTokenWithScope): UserData => d.user,
         decodeJWT: async (opts): Promise<DecodedTokenWithScope> => {
           const sourceHintLabel: string =
@@ -251,6 +260,7 @@ export async function decodeJWTsWithKeyManager(
             return {
               user: customJwtPayloadToUserData(jwtPayload),
               scope: getScopeFromCustomJwtPayload(jwtPayload),
+              client_app_id: jwtPayload.app,
             };
           } catch (e: unknown) {
             console.error(
@@ -301,10 +311,11 @@ export async function decodeJWTsWithKeyManager(
     }
     const user: UserData = parsed_user.data;
 
-    // Scope is threaded ALONGSIDE the user, not inside it.
+    // Scope and client app are threaded ALONGSIDE the user, not inside it.
     return {
       user,
       scope: decoded_result.scope,
+      client_app_id: decoded_result.client_app_id,
       // decodeJWTs already verified every token resolves the same uid.
       tokens: verified_tokens.filter((t) => t.uid === user.uid),
     };

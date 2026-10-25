@@ -312,6 +312,8 @@ export class RouteGuardFactory {
       // Thread the token's granted scope alongside the user (null when no
       // user was resolved or the token carried no scope claim).
       scope: decoded.user && !revoked ? decoded.scope : null,
+      // Likewise the client app the token was issued to.
+      client_app_id: decoded.user && !revoked ? decoded.client_app_id : null,
       revoked,
       environment: getAppEnvironment(),
     };
