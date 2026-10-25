@@ -56,13 +56,13 @@ function mockUser(overrides: Partial<UserData> = {}): UserData {
   };
 }
 
-async function mint(user: UserData, scope?: string) {
+async function mint(user: UserData, scope?: string, client_app_id: string = DEFAULT_AUTH_SERVER_APP_ID) {
   const jwt_keys: JWT_Keys = await generateNewJwtKeySet({ audience_id: API_SERVER_ID, environment });
   const store = new MockJwtKeySetsStore();
   await store.storeKeySet(jwt_keys);
   const factory = new JWT_Factory({
     user,
-    client_app_id: DEFAULT_AUTH_SERVER_APP_ID,
+    client_app_id,
     jwt_keys,
     environment,
     user_organizations: [],
@@ -82,11 +82,23 @@ const whoami = define({
   responses: {
     200: {
       description: "ok",
-      schema: z.object({ uid: z.string(), scheme: z.string(), admin: z.boolean(), scope: z.string().nullable() }),
+      schema: z.object({
+        uid: z.string(),
+        scheme: z.string(),
+        admin: z.boolean(),
+        scope: z.string().nullable(),
+        client_id: z.string().nullable(),
+      }),
     },
   },
   handler: (ctx) =>
-    ctx.json(200, { uid: ctx.auth.user.uid, scheme: ctx.auth.scheme, admin: ctx.auth.isAdmin, scope: ctx.auth.scope }),
+    ctx.json(200, {
+      uid: ctx.auth.user.uid,
+      scheme: ctx.auth.scheme,
+      admin: ctx.auth.isAdmin,
+      scope: ctx.auth.scope,
+      client_id: ctx.auth.clientId ?? null,
+    }),
 });
 
 const adminOnly = define({
@@ -134,7 +146,7 @@ describe("createSchemaVaultsAuthResolvers", () => {
     expect(cookieScheme.name).toBe("schemavaults-access-token-cookie");
   });
 
-  it("resolves a bearer access token to the user with its scope", async () => {
+  it("resolves a bearer access token to the user with its scope and client app", async () => {
     const user = mockUser();
     const { store, token } = await mint(user, "openid email");
     const res = await appWith(store).request("/api/whoami", { headers: { authorization: `Bearer ${token}` } });
@@ -144,7 +156,18 @@ describe("createSchemaVaultsAuthResolvers", () => {
       scheme: "schemavaults-access-token",
       admin: false,
       scope: "openid email",
+      client_id: DEFAULT_AUTH_SERVER_APP_ID,
     });
+  });
+
+  it("names the client app a token was issued to, so third-party clients can be told apart", async () => {
+    const user = mockUser();
+    const { store, token } = await mint(user, "notes:read", "example-mcp-client");
+    const app = appWith(store);
+    const bearer = await app.request("/api/whoami", { headers: { authorization: `Bearer ${token}` } });
+    expect(await bearer.json()).toMatchObject({ scope: "notes:read", client_id: "example-mcp-client" });
+    const cookie = await app.request("/api/whoami", { headers: { cookie: `${COOKIE}=${token}` } });
+    expect(await cookie.json()).toMatchObject({ scheme: "schemavaults-access-token-cookie", client_id: "example-mcp-client" });
   });
 
   it("resolves the JSON access-token cookie written by the auth provider, and a raw JWT cookie", async () => {

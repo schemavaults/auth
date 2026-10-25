@@ -187,11 +187,13 @@ export function bearerTokenFromAuthorizationHeader(
  *   auth server URL) is missing, the key is unusable, or the auth server
  *   refuses the JWKS download: a token is never waved through silently;
  * - otherwise resolves `{ scheme, user, isAdmin: user.admin === true,
- *   scope, getOrganizationRole, listOrganizationMemberships }`, which ask
- *   the auth server (`isUserInOrganization` / `listUserOrganizations`)
- *   with the JWKS access key and forward the presented access token as
- *   the subject token, so an API server granted the `all_organizations`
- *   membership visibility can see the user's other organizations.
+ *   scope, clientId, getOrganizationRole, listOrganizationMemberships }`
+ *   (`clientId` is the client app the token was issued to, its `app`
+ *   claim); the membership lookups ask the auth server
+ *   (`isUserInOrganization` / `listUserOrganizations`) with the JWKS
+ *   access key and forward the presented access token as the subject
+ *   token, so an API server granted the `all_organizations` membership
+ *   visibility can see the user's other organizations.
  *
  * Environment-derived settings are read on first use, not when the
  * resolvers are created, so importing the module that builds them (e.g.
@@ -369,6 +371,10 @@ export function createSchemaVaultsAuthResolvers<TContext = unknown>(
       user,
       isAdmin: user.admin === true,
       scope: guard.scope,
+      // The client app the token was issued to: the resource server's own
+      // app, or a third-party client (e.g. an MCP client) whose access
+      // the resource server may want to limit to the token's API scopes.
+      ...(typeof guard.client_app_id === "string" ? { clientId: guard.client_app_id } : {}),
       getOrganizationRole: async (
         organizationId: string,
       ): Promise<OrganizationMembershipRoleType | false> => {
