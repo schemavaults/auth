@@ -30,6 +30,95 @@ the auth session routes (`session/{token,whoami,logout}/route.ts`, see below) an
 - `--help`, `-h` — Show help.
 - `--version`, `-v` — Show package name and version.
 
+## Defining API scopes from code (`sync-scopes`)
+
+A resource server can keep its API scopes (the OAuth 2.0 scope values clients ask
+for, e.g. `notes:read`) in code instead of typing them into the auth server console.
+It sends its whole scope list to the auth server
+(`PUT /api/resource-server/apis/{api_server_id}/scopes`), authenticated with the
+same JWKS access key it already holds. The auth server creates the missing scopes and
+updates changed descriptions (and `allow_dynamic_clients`, where an entry gives it)
+in one transaction. **It never deletes a scope**: deleting one drops users' consents
+and the per-app allowances set for it, so scopes the list leaves out are reported as
+`not_in_manifest` and stay a decision for a person in the console. Per-app scope
+allowances, the API server's dynamic-client policy and the dynamic client
+registration setting are not touched either.
+
+Write the list as a JSON manifest. Its `$schema` names the JSON Schema every auth
+server serves at `/json-schema/api-server-scopes.json`, so editors (VS Code,
+JetBrains, ...) auto-complete and check it while you type:
+
+```json
+{
+  "$schema": "https://auth.schemavaults.com/json-schema/api-server-scopes.json",
+  "scopes": [
+    { "scope": "notes:read", "description": "Read your notes." },
+    { "scope": "notes:write", "description": "Create, edit and delete your notes.", "allow_dynamic_clients": true }
+  ]
+}
+```
+
+- `scope`: one RFC 6749 scope-token (printable ASCII without spaces, `"` or `\`), at
+  most 128 characters, never an OpenID Connect scope name (`openid`, `profile`, ...),
+  each value listed once. A scope cannot be renamed (define a new one and delete the
+  old one in the console).
+- `description`: 1 to 256 characters, shown on the consent screen.
+- `allow_dynamic_clients` (optional): whether dynamically registered clients may be
+  granted the scope. Omit it to keep the current value (so a choice made in the
+  console stands); a new scope defaults to `true`.
+- At most 100 scopes per API server in total.
+
+```bash
+bunx @schemavaults/auth-server-sdk sync-scopes --init                 # writes ./api-scopes.json
+bunx @schemavaults/auth-server-sdk sync-scopes --manifest ./api-scopes.json --dry-run
+bunx @schemavaults/auth-server-sdk sync-scopes --manifest ./api-scopes.json
+bunx @schemavaults/auth-server-sdk sync-scopes --manifest ./api-scopes.json --check   # CI: exit 2 on drift
+```
+
+| Flag | Effect |
+| --- | --- |
+| `--manifest <path>` | The manifest. Checked locally with the auth server's own schema before anything is sent |
+| `--init` | Writes a starter manifest (to `--manifest`, default `./api-scopes.json`) whose `$schema` is the configured auth server's; never overwrites |
+| `--dry-run` | Prints what would change, writes nothing |
+| `--check` | Dry run that exits 2 when anything would be created or updated |
+| `--env-file <path>` | Loads `SCHEMAVAULTS_API_SERVER_ID`, `SCHEMAVAULTS_AUTH_SERVER_URL`, `SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY` and `SCHEMAVAULTS_APP_ENVIRONMENT` from a file first; its values win over the environment's |
+
+It prints one line per created (`+`), updated (`~`) and `not_in_manifest` (`!`, a
+warning only) scope. Exit codes: 0 on success, 1 on any error (an invalid manifest,
+missing settings, a refusal), 2 for drift under `--check`. It reads the same settings
+as `createSchemaVaultsAuthResolvers()`.
+
+The CLI runs on Node, so it reads JSON manifests only. TypeScript apps can call the
+function from a script instead (`{ [scope]: description }` is accepted as a shorthand
+that keeps every scope's current `allow_dynamic_clients`):
+
+```ts
+import { syncApiServerScopes, ApiScopeSyncFailedError } from "@schemavaults/auth-server-sdk/api-scopes";
+
+const result = await syncApiServerScopes({
+  scopes: [
+    { scope: "notes:read", description: "Read your notes." },
+    { scope: "notes:write", description: "Create, edit and delete your notes." },
+  ],
+  dry_run: false,
+  // Defaults: SCHEMAVAULTS_API_SERVER_ID, getSchemaVaultsAuthServerUrl(),
+  // loadJwksAccessPrivateKey() (SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY).
+});
+// result: { api_server_id, dry_run, created, updated (with `previous`), unchanged, not_in_manifest }
+```
+
+A list that fails the schema throws `InvalidApiScopeManifestError` without calling the
+auth server; any other answer than 200 throws `ApiScopeSyncFailedError` with its
+`status` and `code` (e.g. `validation_error`, `invalid_assertion`, `too_many_scopes`
+(409), `hardcoded_api_server`). `API_SERVER_SCOPES_JSON_SCHEMA_PATH` is exported for
+tools that build the schema URL from the configured auth server.
+
+**Sync before you deploy, once per environment.** No client can be granted a scope
+until it exists, so run the sync before shipping code whose `requiredScopes` name a
+new scope. Each auth server deployment (staging, production) is synced separately with
+the API server's key for that deployment, e.g. `--env-file .env.staging` then
+`--env-file .env.production`. An auth server older than scope sync answers 404.
+
 ## Auth session routes (refresh token in a first-party HTTP-only cookie)
 
 `@schemavaults/auth-server-sdk/auth-session-route` serves the browser SDK's

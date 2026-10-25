@@ -83,7 +83,9 @@ bun run test --filter @schemavaults/auth-ui          # Run tests in auth-ui pack
        │                                                server's refresh token in a first-party HTTP-only cookie),
        │                                                the RFC 9728 protected resource metadata route
        │                                                (`/oauth-protected-resource`, `SCHEMAVAULTS_RESOURCE_URL`),
-       │                                                `auth-server-sdk codegen` CLI; its build bundles the codegen templates below.
+       │                                                `auth-server-sdk codegen` CLI, the `/api-scopes` sub-export + `auth-server-sdk
+       │                                                sync-scopes` CLI (define the API server's scopes from a manifest);
+       │                                                its build bundles the codegen templates below.
        │                                                Optional peerDep on openapi-operations for its `/openapi-operations`
        │                                                sub-export (`createSchemaVaultsAuthResolvers()`)
        │         └─ @schemavaults/trpc-backend-init   ← tRPC router factory with access-token validation
@@ -159,6 +161,11 @@ Every `auth-server/src/app/api/**/route.ts` is served by `@schemavaults/openapi-
   replaces the retired `withAuthenticatedApiRouteGuard`; `routeGuard: "admin"` replaces `withAdminApiRouteGuard`.
   Standards endpoints (`/api/oidc/*`, login/register) stay `publicAccess()` and keep their protocol-mandated
   parsing / error bodies (`documentOnly` bodies).
+- The resource-server endpoints (`src/app/api/resource-server/**`, catalogue `operations/resource-servers.ts`,
+  `API_TAGS.resourceServers`) authenticate the calling API server with `jwksAccessAssertionScheme`; all of them
+  read except `PUT /api/resource-server/apis/{api_server_id}/scopes`, the scope sync (creates and updates the API
+  server's scopes from its manifest, never deletes; manifests are described by the public JSON Schema at
+  `/json-schema/api-server-scopes.json`, a plain Next.js route outside `/api`). See the `api-scopes` skill.
 - `src/lib/api/schemas.ts` (shared envelopes), `domain-schemas/<domain>.ts` (per-domain shared schemas),
   `tags.ts` (exactly one `API_TAGS.*` per operation).
 - `src/lib/api/operations/<domain>.ts` — the catalogue. Route files do NOT import it (bundles stay small);
@@ -253,7 +260,7 @@ The sections below used to live in this file. Each now lives in a Claude Code sk
 | `plain-oauth2-grants` | authorization requests without `openid` (OAuth-only / MCP clients), scope handling at the authorize and token endpoints |
 | `oidc-confidential-clients` | client secrets, `client_secret_basic`/`_post`, token introspection callers (apps by secret, API servers by `private_key_jwt`), explicit callback URL allowlists, `redirect_uri` validation |
 | `resource-server-organization-memberships` | resource servers asking the auth server about their users' organization memberships (`/api/resource-server/organizations/{organization_id}/members/{uid}/role`, `/api/resource-server/users/{uid}/organizations`), the admin-only per-API-server `organization_membership_visibility` grant, the `X-Subject-Token` binding, the server SDK's `listUserOrganizations()` / principal `listOrganizationMemberships`, and why `useMyOrganizations()` only works on the auth server |
-| `api-scopes` | per-API-server OAuth scopes (`API_SERVER_SCOPES`, `/api/apis/[api_server_id]/scopes`, `ApiServerScopesCard`), the RFC 8707 `resource` of authorization requests (`resolveAuthorizationCodeGrant()`), per-app scope allowances (users / service account, `AppScopeAllowancesDialog`), per-scope user consent (consent screen checkboxes, incremental consent, `prompt=consent` / `prompt=none`), the third-party access page (`/account/connected-apps`, `/api/me/connected-apps`), the `scope_api_server_id` binding on codes / refresh tokens, access-vs-refresh scope on the token grants, `requiredScopes` with API scopes |
+| `api-scopes` | per-API-server OAuth scopes (`API_SERVER_SCOPES`, `/api/apis/[api_server_id]/scopes`, `ApiServerScopesCard`), the RFC 8707 `resource` of authorization requests (`resolveAuthorizationCodeGrant()`), per-app scope allowances (users / service account, `AppScopeAllowancesDialog`), per-scope user consent (consent screen checkboxes, incremental consent, `prompt=consent` / `prompt=none`), the third-party access page (`/account/connected-apps`, `/api/me/connected-apps`), the `scope_api_server_id` binding on codes / refresh tokens, access-vs-refresh scope on the token grants, `requiredScopes` with API scopes, scope sync from resource servers (`PUT /api/resource-server/apis/{api_server_id}/scopes`, `/json-schema/api-server-scopes.json`, `auth-server-sdk sync-scopes`) |
 | `client-credentials-grant` | `grant_type=client_credentials` M2M tokens, per-app service accounts (`USERS.service_account_app_id`, the `service_account` token claim), the `/api/apps/[app_id]/service-account` management surface, a service account's (virtual) membership of its app's owning organization |
 | `dynamic-client-registration` | RFC 7591 `POST /api/oidc/register` (MCP clients), RFC 9728 protected resource metadata of resource servers (`SCHEMAVAULTS_RESOURCE_URL`, `createOAuthProtectedResourceMetadataRoute()`), the `allow_dynamic_client_registration` setting, the ownerless `dynamic-client-registration` owner type, RFC 8707 resource-URL audiences (`allow_dynamic_clients` / `resource_url_match_mode` on API servers, `aud` = resource URL, `accepted_audiences` in the server SDK), the `dynamic_client_registration` E2E suite |
 | `client-sdk-token-flows` | `@schemavaults/auth-client-sdk` code/refresh exchange via `openid-client`, the token-endpoint extensions, the discovery document |

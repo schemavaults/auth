@@ -81,6 +81,7 @@ describe("GET /api/openapi.json (auth server)", () => {
         "/api/admin/users/{uid}",
         "/api/jwks/{audience}",
         "/api/resource-server/apis/{api_server_id}/allowed-origins",
+        "/api/resource-server/apis/{api_server_id}/scopes",
         "/api/resource-server/organizations/{organization_id}/members/{uid}/role",
         "/api/resource-server/users/{uid}/organizations",
         "/api/environment",

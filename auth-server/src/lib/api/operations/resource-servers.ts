@@ -1,6 +1,7 @@
 import type { AnyOperationDefinition } from "@schemavaults/openapi-operations";
 import { getAudienceJwks } from "@/app/api/jwks/[audience]/operation";
 import { getResourceServerAllowedOrigins } from "@/app/api/resource-server/apis/[api_server_id]/allowed-origins/operation";
+import { syncResourceServerApiScopes } from "@/app/api/resource-server/apis/[api_server_id]/scopes/operation";
 import { getOrganizationMemberRoleForResourceServer } from "@/app/api/resource-server/organizations/[organization_id]/members/[uid]/role/operation";
 import { listUserOrganizationsForResourceServer } from "@/app/api/resource-server/users/[uid]/organizations/operation";
 
@@ -8,6 +9,7 @@ import { listUserOrganizationsForResourceServer } from "@/app/api/resource-serve
 export const resource_serversOperations: readonly AnyOperationDefinition[] = [
   getAudienceJwks,
   getResourceServerAllowedOrigins,
+  syncResourceServerApiScopes,
   getOrganizationMemberRoleForResourceServer,
   listUserOrganizationsForResourceServer,
 ];

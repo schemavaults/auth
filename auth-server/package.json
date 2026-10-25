@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.60.2",
+  "version": "0.61.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -49,6 +49,7 @@
     "@types/react-dom": "19.2.3",
     "@typescript-eslint/eslint-plugin": "8.48.1",
     "@typescript-eslint/parser": "8.48.1",
+    "ajv": "8.17.1",
     "autoprefixer": "10.4.21",
     "bun-types": "1.4.2",
     "eslint": "9.39.1",
