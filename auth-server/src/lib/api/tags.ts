@@ -60,7 +60,7 @@ export const API_TAG_DESCRIPTIONS: readonly { name: ApiTag; description: string 
   {
     name: API_TAGS.resourceServers,
     description:
-      "Endpoints resource servers call on their own behalf with a JWKS access assertion: signing keys, allowed origins, membership lookups.",
+      "Endpoints resource servers call on their own behalf with a JWKS access assertion: signing keys, allowed origins, membership lookups, and syncing the API scopes they define (scope manifests are described by the JSON Schema at `/json-schema/api-server-scopes.json`).",
   },
   {
     name: API_TAGS.telemetry,

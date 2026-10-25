@@ -44,3 +44,25 @@ export type {
   ConnectedApp,
   ListConnectedAppsResponse,
 } from "./consent";
+
+export {
+  API_SERVER_SCOPES_JSON_SCHEMA_PATH,
+  apiScopeManifestEntrySchema,
+  syncApiServerScopesRequestSchema,
+  apiScopeManifestEntries,
+  syncedApiScopeSchema,
+  updatedApiScopeSchema,
+  apiServerScopeSyncResultSchema,
+  syncApiServerScopesResponseSchema,
+  hasApiScopeSyncDrift,
+} from "./scope-sync";
+export type {
+  ApiScopeManifestEntry,
+  ApiScopeManifestEntryInput,
+  SyncApiServerScopesRequest,
+  SyncApiServerScopesRequestInput,
+  SyncedApiScope,
+  UpdatedApiScope,
+  ApiServerScopeSyncResult,
+  SyncApiServerScopesResponse,
+} from "./scope-sync";

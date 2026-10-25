@@ -15,8 +15,9 @@ export {
   createApiServerScope,
   updateApiServerScope,
   deleteApiServerScope,
+  syncApiServerScopes,
 } from './api-server-scopes';
-export type { CreateApiServerScopeOptions } from './api-server-scopes';
+export type { CreateApiServerScopeOptions, SyncApiServerScopesOptions } from './api-server-scopes';
 
 export {
   getAppApiScopePolicy,

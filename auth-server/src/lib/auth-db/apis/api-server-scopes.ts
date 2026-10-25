@@ -10,12 +10,16 @@ import {
   apiScopeValueSchema,
   apiServerScopeSchema,
   isOidcReservedScope,
+  syncApiServerScopesRequestSchema,
+  type ApiScopeManifestEntry,
   type ApiServerScope,
+  type ApiServerScopeSyncResult,
 } from "@schemavaults/auth-common";
 import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { ConflictError } from "@/lib/error/ConflictError";
 import isUniqueViolation from "@/lib/auth-db/is-unique-violation";
+import { planApiServerScopeSync } from "./plan-api-server-scope-sync";
 
 /**
  * API scopes: the OAuth 2.0 scope values an API server defines for itself
@@ -245,4 +249,138 @@ export async function deleteApiServerScope(
     .where("api_server_scope_id", "=", api_server_scope_id)
     .executeTakeFirst();
   return result.numDeletedRows > BigInt(0);
+}
+
+export interface SyncApiServerScopesOptions {
+  api_server_id: ApiServerId;
+  /** The API server's whole scope list (a parsed manifest). */
+  scopes: readonly ApiScopeManifestEntry[];
+  /** Plan and report without writing. */
+  dry_run: boolean;
+}
+
+/**
+ * Brings the API server's scopes in line with the list its resource server
+ * declares (`PUT /api/resource-server/apis/{api_server_id}/scopes`): creates
+ * the missing scopes and updates the changed ones in one transaction, under
+ * the same API server row lock as {@link createApiServerScope}. Never
+ * deletes; defined scopes the list leaves out come back as
+ * `not_in_manifest`. See `planApiServerScopeSync` for the rule. A dry run
+ * plans (and checks the limit) without writing. Synced scopes have no
+ * `created_by`.
+ *
+ * @returns what was (or would be) done, or null when no such API server
+ * is registered.
+ * @throws ConflictError when the created scopes would take the API server
+ * over {@link MAX_API_SCOPES_PER_API_SERVER} scopes.
+ * @throws TypeError for an invalid id, a hardcoded API server, or a list
+ * that fails `syncApiServerScopesRequestSchema`.
+ */
+export async function syncApiServerScopes(
+  db: Kysely<AuthDatabase>,
+  { api_server_id, scopes, dry_run }: SyncApiServerScopesOptions,
+): Promise<ApiServerScopeSyncResult | null> {
+  assertApiServerId(api_server_id);
+  if (isHardcodedApiServerId(api_server_id)) {
+    throw new TypeError("Hardcoded API servers cannot define API scopes");
+  }
+  const parsed = syncApiServerScopesRequestSchema.shape.scopes.safeParse(scopes);
+  if (!parsed.success) {
+    throw new TypeError("Invalid API scope list", { cause: parsed.error });
+  }
+  const entries: readonly ApiScopeManifestEntry[] = parsed.data;
+
+  const run = async (
+    trx: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
+    lock: boolean,
+  ): Promise<ApiServerScopeSyncResult | null> => {
+    const apiServerQuery = trx
+      .selectFrom("api_servers")
+      .where("api_server_id", "=", api_server_id)
+      .select(["api_server_id"]);
+    // Locked so concurrent syncs and creations cannot overshoot the
+    // per-server limit or insert the same scope twice.
+    const apiServer = lock
+      ? await apiServerQuery.forUpdate().executeTakeFirst()
+      : await apiServerQuery.executeTakeFirst();
+    if (!apiServer) return null;
+
+    const rows = await trx
+      .selectFrom("api_server_scopes")
+      .where("api_server_id", "=", api_server_id)
+      .orderBy("created_at", "asc")
+      .orderBy("scope", "asc")
+      .select(SCOPE_COLUMNS)
+      .execute();
+    const existing: ApiServerScope[] = rows.map(parseApiServerScopeFromDb);
+
+    const plan = planApiServerScopeSync(existing, entries);
+    if (existing.length + plan.created.length > MAX_API_SCOPES_PER_API_SERVER) {
+      throw new ConflictError(
+        `An API server cannot define more than ${MAX_API_SCOPES_PER_API_SERVER} scopes: it defines ${existing.length} and the list adds ${plan.created.length}`,
+      );
+    }
+
+    if (!dry_run) {
+      if (plan.created.length > 0) {
+        const now: number = Date.now();
+        await trx
+          .insertInto("api_server_scopes")
+          .values(
+            plan.created.map(
+              (scope, index): ApiServerScope => ({
+                api_server_scope_id: crypto.randomUUID(),
+                api_server_id,
+                scope: scope.scope,
+                description: scope.description,
+                allow_dynamic_clients: scope.allow_dynamic_clients,
+                // One millisecond apart so listings (oldest first) keep the
+                // manifest's order.
+                created_at: now + index,
+                created_by: null,
+              }),
+            ),
+          )
+          .execute();
+      }
+      for (const update of plan.updated) {
+        await trx
+          .updateTable("api_server_scopes")
+          .set({
+            description: update.description,
+            allow_dynamic_clients: update.allow_dynamic_clients,
+          })
+          .where("api_server_id", "=", api_server_id)
+          .where("api_server_scope_id", "=", update.api_server_scope_id)
+          .execute();
+      }
+    }
+
+    return {
+      api_server_id,
+      dry_run,
+      created: [...plan.created],
+      updated: plan.updated.map(({ scope, description, allow_dynamic_clients, previous }) => ({
+        scope,
+        description,
+        allow_dynamic_clients,
+        previous,
+      })),
+      unchanged: [...plan.unchanged],
+      not_in_manifest: [...plan.not_in_manifest],
+    };
+  };
+
+  if (dry_run) {
+    return await run(db, false);
+  }
+  try {
+    return await db.transaction().execute((trx) => run(trx, true));
+  } catch (e: unknown) {
+    if (e instanceof ConflictError) throw e;
+    if (isUniqueViolation(e)) {
+      throw new ConflictError("A listed scope was defined concurrently; retry the sync");
+    }
+    throw e;
+  }
 }
