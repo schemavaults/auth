@@ -89,6 +89,11 @@ export const syncResourceServerApiScopes = defineOperation({
         "The body failed validation (an invalid or reserved scope value, a missing or over-long description, a repeated value, more than 100 entries, an unknown key), the path id is not a valid API server id or names the auth server itself, or the API server is hardcoded (`hardcoded_api_server`)",
       schema: ResourceServerBadRequestResponse,
     },
+    403: {
+      description:
+        "The assertion was verified for another API server than the path names (`api_server_mismatch`); a resource server can only sync its own scopes",
+      schema: ErrorResponse,
+    },
     404: { description: "No such API server is registered (`api_server_not_found`)", schema: ErrorResponse },
     409: {
       description: `Creating the missing scopes would take the API server over ${MAX_API_SCOPES_PER_API_SERVER} scopes (\`too_many_scopes\`)`,
@@ -98,9 +103,29 @@ export const syncResourceServerApiScopes = defineOperation({
   },
   handler: async (ctx) => {
     const { db } = ctx.context;
-    // The resolver verified the assertion for this very id (ctx.auth.clientId).
     const api_server_id: ApiServerId = ctx.params.api_server_id;
     const dry_run: boolean = ctx.query.dry_run === "true";
+
+    // The resolver only accepts an assertion issued by the API server the
+    // path names, and reports it as ctx.auth.clientId. Checked again here
+    // because this endpoint writes: an API server may only sync its own
+    // scopes. A mismatch means the resolver is broken, so it is recorded.
+    if (ctx.auth.clientId !== api_server_id) {
+      await captureServerException(
+        db,
+        new Error("The JWKS access assertion was verified for another API server than the path names"),
+        {
+          op_name: "resource-server-api-scopes.callerMismatch",
+          route: ROUTE_FOLDER,
+          context: { api_server_id, caller_api_server_id: ctx.auth.clientId ?? null },
+        },
+      );
+      return ctx.json(403, {
+        success: false,
+        error: "api_server_mismatch",
+        message: "Forbidden - an API server can only sync its own API scopes",
+      });
+    }
 
     if (isHardcodedApiServerId(api_server_id)) {
       return ctx.json(400, {
