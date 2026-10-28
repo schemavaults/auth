@@ -519,9 +519,12 @@ export function AppAuthorizationConsentScreen({
           above.
         </p>
       </CardContent>
-      <CardFooter className="flex flex-row justify-between items-center gap-4">
+      {/* Side by side from `sm` up; stacked full-width below it (the
+          Authorize button on top), where the pair overflows the card. */}
+      <CardFooter className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between sm:items-center sm:gap-4">
         <Button
           variant="outline"
+          className="w-full sm:w-auto"
           onClick={handleDeny}
           disabled={submitting}
         >
@@ -529,7 +532,7 @@ export function AppAuthorizationConsentScreen({
           Deny
         </Button>
         <Button
-          className="bg-green-500 hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
+          className="w-full sm:w-auto bg-green-500 hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
           onClick={() => {
             startSubmitting(async () => {
               await handleAuthorize();
@@ -560,6 +563,8 @@ export function AppAuthorizationConsentScreen({
     );
   }
 
+  // `authorize-only` hosts (the login form, the MFA challenge page) render
+  // the screen on their own <ThemedPageBackground />.
   return content;
 }
 
