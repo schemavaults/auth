@@ -1,16 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type PropsWithChildren,
+  type ReactElement,
+} from "react";
 import { MfaChallengeForm } from "@schemavaults/auth-ui";
 import {
   useAppEnvironment,
   useAuth,
 } from "@schemavaults/auth-react-provider";
-import { Button, useToast } from "@schemavaults/ui";
+import { Button, Card, CardContent, useToast } from "@schemavaults/ui";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import { successRedirect } from "@/components/AuthForm/success-redirect";
 import { AppAuthorizationConsentScreen } from "@/components/AppAuthorizationConsentScreen";
+import { ThemedPageBackground } from "@/components/ThemedPageBackground";
 import { useMfaChallengeFactorsStore } from "@/lib/stores/mfa-challenge-factors-store";
 import { PasskeyChallengeButton } from "@/components/Passkeys";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
@@ -54,6 +61,50 @@ export interface MfaChallengePageViewProps {
   // non-account-page flow; null for the account-page flow, which never
   // needs consent.
   app?: PartialAppInfo | null;
+}
+
+/**
+ * The branded background every state of the challenge page renders on —
+ * the same one as the login form the challenge continues from.
+ */
+function MfaChallengePageBackground({
+  children,
+}: PropsWithChildren): ReactElement {
+  return (
+    <ThemedPageBackground
+      className="items-center justify-center flex"
+      backgroundClassName="grow min-h-[100dvh] h-full no-scrollbar"
+    >
+      {children}
+    </ThemedPageBackground>
+  );
+}
+
+/**
+ * Centers a `max-w-md` card (the challenge form's width) on the
+ * background, keeping a gutter around it on phones.
+ */
+function MfaChallengeCardSlot({ children }: PropsWithChildren): ReactElement {
+  return (
+    <div className="flex w-full justify-center px-4 my-16">{children}</div>
+  );
+}
+
+/** A status message, on a card so it stays legible on the background. */
+function MfaChallengeStatusCard({
+  children,
+}: PropsWithChildren): ReactElement {
+  return (
+    <MfaChallengePageBackground>
+      <MfaChallengeCardSlot>
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center gap-3 pt-6">
+            {children}
+          </CardContent>
+        </Card>
+      </MfaChallengeCardSlot>
+    </MfaChallengePageBackground>
+  );
 }
 
 export default function MfaChallengePageView({
@@ -435,11 +486,11 @@ export default function MfaChallengePageView({
 
   if (!challenge_id || !client_app_id) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
+      <MfaChallengeStatusCard>
         <p className="text-sm text-destructive">
           Missing MFA challenge parameters. Please log in again.
         </p>
-      </div>
+      </MfaChallengeStatusCard>
     );
   }
 
@@ -449,7 +500,7 @@ export default function MfaChallengePageView({
   // would otherwise render.
   if (pendingAuthorizationCode) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
+      <MfaChallengePageBackground>
         <AppAuthorizationConsentScreen
           app_id={app?.app_id ?? client_app_id}
           app_name={app?.app_name ?? client_app_id}
@@ -463,20 +514,20 @@ export default function MfaChallengePageView({
           consent={pendingConsent}
           debug={env !== "production"}
         />
-      </div>
+      </MfaChallengePageBackground>
     );
   }
 
   if (!hasHydrated) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
+      <MfaChallengeStatusCard>
         <p
           className="text-sm text-muted-foreground"
           data-testid="mfa-challenge-loading"
         >
           Loading verification options…
         </p>
-      </div>
+      </MfaChallengeStatusCard>
     );
   }
 
@@ -486,20 +537,20 @@ export default function MfaChallengePageView({
   // error below during that window.
   if (succeeded) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
+      <MfaChallengeStatusCard>
         <p
           className="text-sm text-muted-foreground"
           data-testid="mfa-challenge-success"
         >
           Verification successful. Finishing sign-in…
         </p>
-      </div>
+      </MfaChallengeStatusCard>
     );
   }
 
   if (!payload) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6 flex-col gap-3">
+      <MfaChallengeStatusCard>
         <p className="text-sm text-destructive">
           This MFA challenge could not be loaded in this tab. Please log
           in again.
@@ -512,47 +563,49 @@ export default function MfaChallengePageView({
         >
           Back to login
         </Button>
-      </div>
+      </MfaChallengeStatusCard>
     );
   }
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center p-6">
-      <MfaChallengeForm
-        challenge_id={challenge_id}
-        client_app_id={client_app_id}
-        expires_at={expires_at}
-        available_factors={payload.available_factors}
-        recovery_codes_available={payload.recovery_codes_available}
-        onAuthenticated={async (authorization_code) => {
-          // Show the success state before clearing factors so the
-          // resulting `payload === undefined` re-render doesn't flash the
-          // missing-payload error while the redirect is in flight.
-          setSucceeded(true);
-          // Drop the stashed factor list now that the challenge is
-          // resolved — keeps sessionStorage tidy if the user comes back
-          // through a fresh login.
-          clearFactors(challenge_id);
-          await onAuthenticated(authorization_code);
-        }}
-        onChallengeExpired={onChallengeExpired}
-        onEmailVerificationRequired={onEmailVerificationRequired}
-        renderPasskeyAction={({ factor_id, onError }) => (
-          <PasskeyChallengeButton
-            challenge_id={challenge_id}
-            client_app_id={client_app_id}
-            factor_id={factor_id}
-            onError={onError}
-            onAuthenticated={async (authorization_code) => {
-              setSucceeded(true);
-              clearFactors(challenge_id);
-              await onAuthenticated(authorization_code);
-            }}
-            onChallengeExpired={onChallengeExpired}
-            onEmailVerificationRequired={onEmailVerificationRequired}
-          />
-        )}
-      />
-    </div>
+    <MfaChallengePageBackground>
+      <MfaChallengeCardSlot>
+        <MfaChallengeForm
+          challenge_id={challenge_id}
+          client_app_id={client_app_id}
+          expires_at={expires_at}
+          available_factors={payload.available_factors}
+          recovery_codes_available={payload.recovery_codes_available}
+          onAuthenticated={async (authorization_code) => {
+            // Show the success state before clearing factors so the
+            // resulting `payload === undefined` re-render doesn't flash the
+            // missing-payload error while the redirect is in flight.
+            setSucceeded(true);
+            // Drop the stashed factor list now that the challenge is
+            // resolved — keeps sessionStorage tidy if the user comes back
+            // through a fresh login.
+            clearFactors(challenge_id);
+            await onAuthenticated(authorization_code);
+          }}
+          onChallengeExpired={onChallengeExpired}
+          onEmailVerificationRequired={onEmailVerificationRequired}
+          renderPasskeyAction={({ factor_id, onError }) => (
+            <PasskeyChallengeButton
+              challenge_id={challenge_id}
+              client_app_id={client_app_id}
+              factor_id={factor_id}
+              onError={onError}
+              onAuthenticated={async (authorization_code) => {
+                setSucceeded(true);
+                clearFactors(challenge_id);
+                await onAuthenticated(authorization_code);
+              }}
+              onChallengeExpired={onChallengeExpired}
+              onEmailVerificationRequired={onEmailVerificationRequired}
+            />
+          )}
+        />
+      </MfaChallengeCardSlot>
+    </MfaChallengePageBackground>
   );
 };
