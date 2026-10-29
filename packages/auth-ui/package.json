@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-ui",
-  "version": "0.22.2",
+  "version": "0.22.3",
   "private": false,
   "license": "UNLICENSED",
   "description": "React.js UI components for authentication/authorization shared between different SchemaVaults apps",
@@ -13,10 +13,10 @@
     "@hookform/resolvers": "5.9.1"
   },
   "peerDependencies": {
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "next": "^16.3.5",
-    "@schemavaults/ui": "^0.112.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "next": "^16.4.3",
+    "@schemavaults/ui": "^0.117.0",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
@@ -28,9 +28,9 @@
   "devDependencies": {
     "typescript": "6.0.3",
     "tsc-alias": "1.9.0",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "bun-types": "1.4.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "bun-types": "1.4.4",
     "eslint": "9.39.1",
     "@eslint/js": "9.39.1",
     "globals": "16.5.0",
@@ -72,5 +72,5 @@
     "access": "public"
   },
   "type": "module",
-  "packageManager": "bun@1.4.2"
+  "packageManager": "bun@1.4.4"
 }

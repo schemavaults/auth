@@ -183,6 +183,7 @@ Every `auth-server/src/app/api/**/route.ts` is served by `@schemavaults/openapi-
 - `src/app/` - Next.js App Directory
 - `src/app/api/` - Next.js API routes (auth endpoints, admin endpoints, token management), each declared as an OpenAPI operation (see above)
 - `src/app/docs/` - Generated API reference pages (`/docs`, `/docs/[slug]`)
+- `src/app/robots.ts` / `src/app/sitemap.ts` - `/robots.txt` and `/sitemap.xml`, built per request by `src/lib/seo/crawler-policy.ts` on the deployment's own auth server URL. The sitemap lists `PUBLIC_PAGE_PATHS` plus one `/docs/<slug>` page per catalogued operation; a production robots.txt disallows `CRAWLER_DISALLOWED_PATH_PREFIXES` (the API, every `(authenticated)` page, mid-flow auth pages) and links the sitemap, while every other environment disallows everything. `crawler-policy.test.ts` fails when a page is neither listed nor disallowed; load the `crawler-policy` skill whenever you add, move or remove a page.
 - `src/lib/api/` - The OpenAPI operations runtime of the auth server (context, auth schemes/resolvers, catalogue, document)
 - `src/app/(client)/` - Client-side pages with route groups
 - `src/app/(client)/(authenticated)/` - Routes requiring authentication
@@ -266,6 +267,7 @@ The sections below used to live in this file. Each now lives in a Claude Code sk
 | `client-sdk-token-flows` | `@schemavaults/auth-client-sdk` code/refresh exchange via `openid-client`, the token-endpoint extensions, the discovery document |
 | `docker-deployment` | `auth-server/Dockerfile` targets, the `deploy/` compose stack, nginx configuration |
 | `client-error-reporting` | the SDK's error reporting (`reportError()`, `disable_telemetry`), the `POST /api/client-errors/{client_app_id}` intake and its limits, the `CLIENT_ERRORS` table and the `client_error_reports_*` / `accept_client_error_reports` settings, the `/admin/client-errors` dashboard |
+| `crawler-policy` | adding, removing, renaming or moving an auth-server page (`page.tsx`, route groups, redirects), deciding whether it belongs in `/sitemap.xml` or is disallowed in `/robots.txt`, the `src/app/robots.ts` / `sitemap.ts` routes |
 | `e2e-auth-tests` | writing, debugging, or running the Cypress suite |
 | `verify` | booting and driving the auth-server locally to verify a change |
 | `commit-changes` | committing (package version bumps and the `<package>:<version> - <summary>` subject convention) |

@@ -14,7 +14,7 @@ import {
 import { Wordmark } from "@/components/Wordmark";
 import { Send } from "lucide-react";
 import Link from "next/link";
-import { type ReactElement, useCallback, useTransition } from "react";
+import { type ReactElement, useTransition } from "react";
 import PageContainer from "@/components/PageContainer";
 import getAuthenticatedUserDashboardLinks from "../dashboard-links";
 
@@ -32,7 +32,7 @@ export default function AdminPageView(): ReactElement {
       .flatMap((group) => group.items)
       .filter((item) => item.url !== "/admin");
 
-  const handleSendDailyReport = useCallback((): void => {
+  function handleSendDailyReport(): void {
     startSendingReport(async () => {
       try {
         const response = await fetch("/api/admin/send-daily-report", {
@@ -59,7 +59,7 @@ export default function AdminPageView(): ReactElement {
         });
       }
     });
-  }, [toast]);
+  }
 
   return (
     <PageContainer>

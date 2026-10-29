@@ -71,6 +71,9 @@ function ScopeChecklist({
  * on behalf of its users (every scope unless restricted; each user still
  * consents per scope) and for its own service account on the
  * client_credentials grant (none unless ticked).
+ *
+ * Mount it per opening, keyed by `client_app_id`: the allowances it loads
+ * belong to the app it was mounted for.
  */
 export const AppScopeAllowancesDialog: FC<AppScopeAllowancesDialogProps> = ({
   api_server_id,
@@ -90,7 +93,6 @@ export const AppScopeAllowancesDialog: FC<AppScopeAllowancesDialogProps> = ({
 
   useEffect(() => {
     if (!open) return;
-    setPolicy(null);
     startTransition(async () => {
       try {
         const authClient = auth.ready ? auth.client.current : undefined;

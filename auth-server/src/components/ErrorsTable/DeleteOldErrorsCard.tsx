@@ -44,12 +44,10 @@ export function DeleteOldErrorsCard(): ReactElement {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
 
-  const defaultValue = useMemo<string>(() => {
+  const [beforeInput, setBeforeInput] = useState<string>(() => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     return toLocalDatetimeInputValue(thirtyDaysAgo);
-  }, []);
-
-  const [beforeInput, setBeforeInput] = useState<string>(defaultValue);
+  });
 
   const beforeDate: Date | null = useMemo<Date | null>(() => {
     if (!beforeInput) return null;
