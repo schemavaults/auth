@@ -71,6 +71,9 @@ function ScopeChecklist({
  * on behalf of its users (every scope unless restricted; each user still
  * consents per scope) and for its own service account on the
  * client_credentials grant (none unless ticked).
+ *
+ * Mount it per opening, keyed by `client_app_id`: the allowances it loads
+ * belong to the app it was mounted for.
  */
 export const AppScopeAllowancesDialog: FC<AppScopeAllowancesDialogProps> = ({
   api_server_id,
@@ -87,15 +90,6 @@ export const AppScopeAllowancesDialog: FC<AppScopeAllowancesDialogProps> = ({
   const [restrict, setRestrict] = useState<boolean>(false);
   const [userScopes, setUserScopes] = useState<Set<string>>(new Set());
   const [serviceAccountScopes, setServiceAccountScopes] = useState<Set<string>>(new Set());
-
-  // Forget the allowances of an earlier opening (or another app) as soon as
-  // the dialog opens, so stale checkboxes never show while these load.
-  const loadTarget: string | null = open ? `${api_server_id}/${client_app_id}` : null;
-  const [policyTarget, setPolicyTarget] = useState<string | null>(loadTarget);
-  if (policyTarget !== loadTarget) {
-    setPolicyTarget(loadTarget);
-    setPolicy(null);
-  }
 
   useEffect(() => {
     if (!open) return;

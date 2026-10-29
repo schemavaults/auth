@@ -317,6 +317,7 @@ export default function ApiServerDetailPageView({
 
       {scopesTarget && (
         <AppScopeAllowancesDialog
+          key={scopesTarget.client_app_id}
           api_server_id={api_server.api_server_id}
           client_app_id={scopesTarget.client_app_id}
           client_app_name={scopesTarget.app_name}

@@ -36,35 +36,33 @@ export function EditServerSettingDialog({
   open,
   onOpenChange,
 }: EditServerSettingDialogProps): ReactElement {
+  // DialogContent unmounts while the dialog is closed, so every opening
+  // mounts a fresh form initialized from the setting's stored values.
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <EditServerSettingForm
+          key={setting?.key}
+          setting={setting}
+          onSaved={() => onOpenChange(false)}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditServerSettingForm({
+  setting,
+  onSaved,
+}: {
+  setting: ServerSettingRecord | null;
+  onSaved: () => void;
+}): ReactElement {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [value, setValue] = useState<unknown>(setting?.value);
   const [description, setDescription] = useState<string>(
     setting?.description ?? ""
-  );
-
-  // Sync form state when the dialog opens with a setting
-  const formSource: ServerSettingRecord | null = open ? setting : null;
-  const [syncedSource, setSyncedSource] = useState<ServerSettingRecord | null>(
-    formSource
-  );
-  if (syncedSource !== formSource) {
-    setSyncedSource(formSource);
-    if (formSource) {
-      setValue(formSource.value);
-      setDescription(formSource.description ?? "");
-    }
-  }
-
-  const handleOpenChange = useCallback(
-    (newOpen: boolean) => {
-      if (newOpen && setting) {
-        setValue(setting.value);
-        setDescription(setting.description ?? "");
-      }
-      onOpenChange(newOpen);
-    },
-    [setting, onOpenChange]
   );
 
   const handleSubmit = useCallback(
@@ -104,7 +102,7 @@ export function EditServerSettingDialog({
           });
 
           clearServerSettingsCache();
-          onOpenChange(false);
+          onSaved();
         } catch (e: unknown) {
           console.error("Failed to update setting:", e);
           toast({
@@ -116,7 +114,7 @@ export function EditServerSettingDialog({
         }
       });
     },
-    [setting, value, description, toast, onOpenChange]
+    [setting, value, description, toast, onSaved]
   );
 
   const renderValueInput = (): ReactElement => {
@@ -183,51 +181,47 @@ export function EditServerSettingDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit Setting</DialogTitle>
-            <DialogDescription>
-              {setting ? (
-                <>
-                  Modify the value of{" "}
-                  <code className="font-mono bg-muted px-1 py-0.5 rounded">
-                    {setting.key}
-                  </code>
-                </>
-              ) : (
-                "No setting selected"
-              )}
-            </DialogDescription>
-          </DialogHeader>
+    <form onSubmit={handleSubmit}>
+      <DialogHeader>
+        <DialogTitle>Edit Setting</DialogTitle>
+        <DialogDescription>
+          {setting ? (
+            <>
+              Modify the value of{" "}
+              <code className="font-mono bg-muted px-1 py-0.5 rounded">
+                {setting.key}
+              </code>
+            </>
+          ) : (
+            "No setting selected"
+          )}
+        </DialogDescription>
+      </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="setting-value">Value</Label>
-              {renderValueInput()}
-            </div>
+      <div className="grid gap-4 py-4">
+        <div className="grid gap-2">
+          <Label htmlFor="setting-value">Value</Label>
+          {renderValueInput()}
+        </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="setting-description">Description (optional)</Label>
-              <Textarea
-                id="setting-description"
-                placeholder="Describe what this setting does..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={isPending}
-              />
-            </div>
-          </div>
+        <div className="grid gap-2">
+          <Label htmlFor="setting-description">Description (optional)</Label>
+          <Textarea
+            id="setting-description"
+            placeholder="Describe what this setting does..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={isPending}
+          />
+        </div>
+      </div>
 
-          <DialogFooter>
-            <Button type="submit" disabled={isPending || !setting}>
-              <Save className="h-4 w-4 mr-2" />
-              {isPending ? "Saving..." : "Save changes"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter>
+        <Button type="submit" disabled={isPending || !setting}>
+          <Save className="h-4 w-4 mr-2" />
+          {isPending ? "Saving..." : "Save changes"}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }
