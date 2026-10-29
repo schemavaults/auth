@@ -101,6 +101,22 @@ describe("the crawler policy matches the app's pages", () => {
     }
   });
 
+  test("every page is listed in the sitemap or disallowed in production", () => {
+    // Dynamic routes whose URLs src/app/sitemap.ts enumerates itself.
+    const generatedRoutes = new Set<string>(["/docs/[slug]"]);
+    const listedRoutes = new Set<string>(PUBLIC_PAGE_PATHS);
+    for (const page of pages) {
+      const classified: boolean =
+        listedRoutes.has(page.route) ||
+        generatedRoutes.has(page.route) ||
+        !isCrawlable(productionRobots, page.route);
+      expect(
+        classified,
+        `${page.route}: add it to PUBLIC_PAGE_PATHS or CRAWLER_DISALLOWED_PATH_PREFIXES in crawler-policy.ts (see the crawler-policy skill)`,
+      ).toBe(true);
+    }
+  });
+
   test("every signed-in dashboard page is disallowed in production", () => {
     const dashboardPages = pages.filter((page) => page.groups.includes("(authenticated)"));
     expect(dashboardPages.length).toBeGreaterThan(0);
