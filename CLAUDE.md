@@ -183,6 +183,7 @@ Every `auth-server/src/app/api/**/route.ts` is served by `@schemavaults/openapi-
 - `src/app/` - Next.js App Directory
 - `src/app/api/` - Next.js API routes (auth endpoints, admin endpoints, token management), each declared as an OpenAPI operation (see above)
 - `src/app/docs/` - Generated API reference pages (`/docs`, `/docs/[slug]`)
+- `src/app/robots.ts` / `src/app/sitemap.ts` - `/robots.txt` and `/sitemap.xml`, built per request by `src/lib/seo/crawler-policy.ts` on the deployment's own auth server URL. The sitemap lists `PUBLIC_PAGE_PATHS` plus one `/docs/<slug>` page per catalogued operation; a production robots.txt disallows `CRAWLER_DISALLOWED_PATH_PREFIXES` (the API, every `(authenticated)` page, mid-flow auth pages) and links the sitemap, while every other environment disallows everything. `crawler-policy.test.ts` fails when a new dashboard page is not disallowed or a public page is missing.
 - `src/lib/api/` - The OpenAPI operations runtime of the auth server (context, auth schemes/resolvers, catalogue, document)
 - `src/app/(client)/` - Client-side pages with route groups
 - `src/app/(client)/(authenticated)/` - Routes requiring authentication
