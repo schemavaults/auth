@@ -8,6 +8,7 @@ import {
   type OrganizationMembershipVisibility,
 } from "@schemavaults/app-definitions";
 import {
+  Badge,
   Card,
   CardContent,
   CardDescription,
@@ -15,10 +16,11 @@ import {
   CardTitle,
   Label,
   Switch,
+  cn,
   useToast,
 } from "@schemavaults/ui";
 import { useAuth } from "@schemavaults/auth-react-provider";
-import { Building2 } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 
 export interface ApiServerOrganizationMembershipCardProps {
   api_server_id: ApiServerId;
@@ -35,7 +37,8 @@ export interface ApiServerOrganizationMembershipCardProps {
  * resource-server endpoints: only its owning organization (the default), or
  * every organization for multi-tenant platform services. Lookups outside
  * the owning organization are always bound to the user's own access token
- * for the API server.
+ * for the API server. Styled as a danger zone: widening an API server that
+ * is not a platform service leaks its users' memberships across the platform.
  */
 export const ApiServerOrganizationMembershipCard: FC<ApiServerOrganizationMembershipCardProps> = ({
   api_server_id,
@@ -83,12 +86,17 @@ export const ApiServerOrganizationMembershipCard: FC<ApiServerOrganizationMember
   }
 
   return (
-    <Card data-testid="api-server-organization-membership-card">
+    <Card className="border-destructive/50" data-testid="api-server-organization-membership-card">
       <CardHeader>
-        <CardTitle className="flex flex-row items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          Organization Memberships
-        </CardTitle>
+        <div className="flex flex-row flex-wrap items-center justify-between gap-2">
+          <CardTitle className="flex flex-row items-center gap-2 text-destructive">
+            <ShieldAlert className="h-5 w-5" />
+            Organization Memberships
+          </CardTitle>
+          <Badge variant="destructive" data-testid="api-server-organization-membership-admin-only-badge">
+            Platform admins only
+          </Badge>
+        </div>
         <CardDescription>
           Which organizations this API server may ask the auth server about
           when it checks a user&apos;s role or lists a user&apos;s
@@ -103,22 +111,35 @@ export const ApiServerOrganizationMembershipCard: FC<ApiServerOrganizationMember
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-row items-center justify-between gap-4 rounded-md border p-3">
-          <div>
+        <div
+          className={cn(
+            "flex flex-row items-center justify-between gap-4 rounded-md border border-destructive/50 p-3",
+            visibility === "all_organizations" && "bg-destructive/10",
+          )}
+        >
+          <div className="space-y-2">
             <Label htmlFor="all-organizations-membership-switch" className="font-medium">
               Look up memberships in all organizations
             </Label>
             <p className="text-sm text-muted-foreground">
-              For multi-tenant platform services that serve every
-              organization. Lookups outside the API server&apos;s own
-              organization are only answered for a user who presents an
+              Lets this API server learn which organizations its users
+              belong to, and their roles, across the whole platform. Only
+              turn this on for a multi-tenant platform service run by the
+              platform administrators, never for an API server run by an
+              organization or a user. Lookups outside the API server&apos;s
+              own organization are only answered for a user who presents an
               active access token for this API server.
-              {canChange ? null : " Only platform administrators can change this."}
             </p>
+            {canChange ? null : (
+              <p className="text-sm font-medium text-destructive">
+                Only platform administrators can change this setting.
+              </p>
+            )}
           </div>
           <Switch
             id="all-organizations-membership-switch"
             data-testid="all-organizations-membership-switch"
+            className="data-[state=checked]:bg-destructive"
             checked={visibility === "all_organizations"}
             disabled={!canChange || busy}
             onCheckedChange={(checked: boolean) => {
