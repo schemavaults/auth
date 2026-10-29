@@ -88,7 +88,8 @@ export const AppCallbackUrlsCard: FC<AppCallbackUrlsCardProps> = ({
       app_id,
       callback_url: "",
       environment: current_environment,
-      created_at: Date.now(),
+      // Placeholder for validation: onSubmit stamps the real creation time.
+      created_at: 0,
     }),
     [app_id, current_environment, uuid],
   );

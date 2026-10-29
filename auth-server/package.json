@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-server",
-  "version": "0.61.2",
+  "version": "0.61.3",
   "private": true,
   "repository": {
     "type": "git",
@@ -22,18 +22,18 @@
     "@schemavaults/openapi-operations": "workspace:*",
     "@schemavaults/send-email": "0.3.1",
     "@schemavaults/theme": "0.30.0",
-    "@schemavaults/ui": "0.112.1",
+    "@schemavaults/ui": "0.117.0",
     "@simplewebauthn/browser": "13.3.0",
     "@simplewebauthn/server": "13.3.1",
     "cookies-next": "6.1.1",
     "hash-wasm": "4.12.0",
     "ioredis": "5.10.1",
     "lucide-react": "0.575.0",
-    "next": "16.3.5",
+    "next": "16.4.3",
     "otplib": "12.0.1",
     "qrcode": "1.5.4",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "server-only": "0.0.1",
     "sharp": "0.34.5",
     "swr": "2.3.4",
@@ -45,15 +45,15 @@
     "@eslint/js": "9.39.1",
     "@types/node": "24.13.3",
     "@types/qrcode": "^1.5.6",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "@typescript-eslint/eslint-plugin": "8.48.1",
     "@typescript-eslint/parser": "8.48.1",
     "ajv": "8.17.1",
     "autoprefixer": "10.4.21",
-    "bun-types": "1.4.2",
+    "bun-types": "1.4.4",
     "eslint": "9.39.1",
-    "eslint-config-next": "16.3.5",
+    "eslint-config-next": "16.4.3",
     "globals": "16.5.0",
     "postcss": "8.5.28",
     "tailwindcss": "3.4.17",
@@ -79,5 +79,5 @@
   "publishConfig": {
     "access": "restricted"
   },
-  "packageManager": "bun@1.4.2"
+  "packageManager": "bun@1.4.4"
 }

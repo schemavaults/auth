@@ -3,7 +3,6 @@
 import {
   type SubmitEvent,
   useCallback,
-  useEffect,
   useState,
   useTransition,
   type ReactElement,
@@ -45,12 +44,17 @@ export function EditServerSettingDialog({
   );
 
   // Sync form state when the dialog opens with a setting
-  useEffect(() => {
-    if (open && setting) {
-      setValue(setting.value);
-      setDescription(setting.description ?? "");
+  const formSource: ServerSettingRecord | null = open ? setting : null;
+  const [syncedSource, setSyncedSource] = useState<ServerSettingRecord | null>(
+    formSource
+  );
+  if (syncedSource !== formSource) {
+    setSyncedSource(formSource);
+    if (formSource) {
+      setValue(formSource.value);
+      setDescription(formSource.description ?? "");
     }
-  }, [open, setting]);
+  }
 
   const handleOpenChange = useCallback(
     (newOpen: boolean) => {

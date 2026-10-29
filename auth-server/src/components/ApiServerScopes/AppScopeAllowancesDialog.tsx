@@ -88,9 +88,17 @@ export const AppScopeAllowancesDialog: FC<AppScopeAllowancesDialogProps> = ({
   const [userScopes, setUserScopes] = useState<Set<string>>(new Set());
   const [serviceAccountScopes, setServiceAccountScopes] = useState<Set<string>>(new Set());
 
+  // Forget the allowances of an earlier opening (or another app) as soon as
+  // the dialog opens, so stale checkboxes never show while these load.
+  const loadTarget: string | null = open ? `${api_server_id}/${client_app_id}` : null;
+  const [policyTarget, setPolicyTarget] = useState<string | null>(loadTarget);
+  if (policyTarget !== loadTarget) {
+    setPolicyTarget(loadTarget);
+    setPolicy(null);
+  }
+
   useEffect(() => {
     if (!open) return;
-    setPolicy(null);
     startTransition(async () => {
       try {
         const authClient = auth.ready ? auth.client.current : undefined;

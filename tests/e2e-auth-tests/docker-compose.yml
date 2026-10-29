@@ -5,7 +5,7 @@ services:
       context: ../..
       dockerfile: tests/e2e-auth-tests/Dockerfile
       args:
-        BUN_VERSION: 1.4.2
+        BUN_VERSION: 1.4.4
       target: test-runner
     depends_on:
       - schemavaults-auth
@@ -54,7 +54,7 @@ services:
       context: ../..
       dockerfile: tests/example-nextjs-resource-server/Dockerfile
       args:
-        BUN_VERSION: 1.4.2
+        BUN_VERSION: 1.4.4
         NODEJS_VERSION: 24-alpine
       target: production
     depends_on:
@@ -91,7 +91,7 @@ services:
       context: ../..
       dockerfile: auth-server/Dockerfile
       args:
-        BUN_VERSION: 1.4.2
+        BUN_VERSION: 1.4.4
         NODEJS_VERSION: 24-alpine
         NEXT_INCLUDE_PRODUCTION_SOURCE_MAPS: yes
       target: test
