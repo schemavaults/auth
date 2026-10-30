@@ -8,7 +8,7 @@ import { AppCallbackUrlsCard, AppClientSecretCard, AppServiceAccountCard } from 
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveAppDomainDialog } from "@schemavaults/auth-ui";
+import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveAppDomainDialog, useAuthUiOwnerOrganizationId } from "@schemavaults/auth-ui";
 import { ExternalLink, Plus, PlugZap, Trash2, Unplug } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -138,6 +138,9 @@ export default function AppDetailPageView({
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApiServer | null>(null);
   const router = useRouter();
+  // The owner organization env var is not available in client bundles; without
+  // it, platform-owned apps of a white-label deployment fail to resolve.
+  const platformOwnerOrganizationId: string = useAuthUiOwnerOrganizationId();
 
   // Same gate as the "Add domain" row action on the /apps table: viewers
   // with read-only (organization member) access never see the add / remove
@@ -274,7 +277,9 @@ export default function AppDetailPageView({
           service_account={service_account}
           organization_membership={service_account_organization_membership}
           has_client_secret={client_secret_metadata.has_client_secret}
-          dynamically_registered={isDynamicallyRegisteredClient(app)}
+          dynamically_registered={isDynamicallyRegisteredClient(app, {
+            platform_owner_organization_id: platformOwnerOrganizationId,
+          })}
           canManage={isOrgOwner}
         />
       )}
