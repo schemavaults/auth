@@ -78,6 +78,7 @@ export const resetUserMfa = defineOperation({
       await new MfaRegistry(db).deleteAllFactorsForUser(target_uid);
 
       await sendMfaSecurityAlertEmail({
+        uid: target_uid,
         to: target.email,
         action: "admin_reset",
         db,

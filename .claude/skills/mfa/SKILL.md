@@ -9,6 +9,10 @@ TOTP-based MFA lives in `auth-server/src/lib/mfa/` (KEK, recovery-code HMAC, TOT
 
 The account-management UI lives in the auth-server `src/components/` (it is consumed only by the auth-server, not by external resource servers) and renders on the dedicated `/mfa` route: `src/components/Mfa/` owns `TotpSettingsCard` plus the TOTP dialogs (`TotpEnrollmentDialog`, `MfaRemoveFactorDialog`, `MfaRegenerateRecoveryCodesDialog`), `src/components/RecoveryCodesPanel/` owns `RecoveryCodesPanel`, and `src/components/Passkeys/` owns `PasskeysSettingsCard`/`PasskeysSettingsSection` (the WebAuthn browser ceremonies). `@schemavaults/auth-ui` retains the login challenge-flow components (`MfaChallengeForm`, `MfaFactorPicker`) used at `/auth/mfa`. The React state hook is `useMfa()` in `@schemavaults/auth-react-provider`.
 
+## Security alert emails
+
+Every MFA change emails the user through `sendMfaSecurityAlertEmail()` (`src/lib/mfa/`, never throws): TOTP / passkey enrollment (`enabled`), removal (`removed`), the admin reset (`admin_reset`) and recovery code regeneration (`recovery_codes_regenerated`). It sends the mail server's `security-alert` template with the props built by `buildMfaSecurityAlertTemplateProps()` (`mfa-security-alert-template-props.ts`): `name` (display name, first name or e-mail address — required by the template), `eventType` `mfa-enabled` | `mfa-removed` | `mfa-reset-by-admin` | `mfa-recovery-codes-regenerated`, `eventTime`, `secureAccountUrl` (`/mfa`) and `productName`. The mail server refuses any other shape (`400 invalid_template_props`), so keep the builder in step with its `SECURITY_ALERT_EVENT_TYPES`.
+
 ## Organization MFA requirements
 
 Organizations can require their members to use MFA (migration 00048). "Has MFA" means at least one verified `USER_MFA_FACTORS` row (TOTP or passkey), the login challenge's test. Only real `ORGANIZATION_MEMBERSHIP_ROLES` rows are subject to it: service accounts' and platform admins' virtual memberships are not, and system (hardcoded) organizations cannot require MFA.

@@ -86,6 +86,7 @@ export const verifyTotpEnrollment = defineOperation({
 
       // Notify the user that MFA was enabled. Best-effort.
       await sendMfaSecurityAlertEmail({
+        uid: user.uid,
         to: user.email,
         action: "enabled",
         db,

@@ -76,6 +76,7 @@ export const removeTotpFactor = defineOperation({
       }
 
       await sendMfaSecurityAlertEmail({
+        uid: user.uid,
         to: user.email,
         action: "removed",
         db,

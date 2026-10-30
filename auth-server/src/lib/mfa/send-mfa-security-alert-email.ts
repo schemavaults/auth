@@ -2,16 +2,22 @@ import "server-only";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import sendEmailViaMailServer from "@/lib/mail/send-email-via-mail-server";
-import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import {
+  getAppEnvironment,
+  getAuthServerUrl,
+  type SchemaVaultsAppEnvironment,
+} from "@schemavaults/app-definitions";
 import type { RedisCache } from "@/lib/redis";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import captureServerException from "@/lib/captureServerException";
+import { getUserByUID } from "@/lib/auth-db/users/get-user-by-uid";
+import {
+  buildMfaSecurityAlertTemplateProps,
+  getMfaSecurityAlertRecipientName,
+  type MfaSecurityAlertAction,
+} from "./mfa-security-alert-template-props";
 
-export type MfaSecurityAlertAction =
-  | "enabled"
-  | "removed"
-  | "admin_reset"
-  | "recovery_codes_regenerated";
+export type { MfaSecurityAlertAction } from "./mfa-security-alert-template-props";
 
 const SUBJECT: Record<MfaSecurityAlertAction, string> = {
   enabled: "Multi-factor authentication enabled",
@@ -21,47 +27,40 @@ const SUBJECT: Record<MfaSecurityAlertAction, string> = {
   recovery_codes_regenerated: "Your MFA recovery codes were regenerated",
 };
 
-function buildSummary(
-  action: MfaSecurityAlertAction,
-  friendlyName: string,
-): string {
-  const SUMMARY: Record<MfaSecurityAlertAction, string> = {
-    enabled: `Multi-factor authentication was just enabled on your ${friendlyName} account.`,
-    removed: `Multi-factor authentication was just removed from your ${friendlyName} account.`,
-    admin_reset: `An administrator has reset multi-factor authentication on your ${friendlyName} account. You may need to re-enroll an authenticator app to log in.`,
-    recovery_codes_regenerated: `Your ${friendlyName} MFA recovery codes were just regenerated. Previous codes are no longer valid.`,
-  };
-  return SUMMARY[action];
-}
-
 // Best-effort security alert. Never throws — failures are recorded to the
 // ERRORS table so the caller's MFA mutation completes regardless of
 // mail-server health.
 export async function sendMfaSecurityAlertEmail(args: {
+  /** The user whose MFA changed (their name greets them). */
+  uid: string;
   to: string;
   action: MfaSecurityAlertAction;
   db: Kysely<AuthDatabase>;
   redis: RedisCache;
   environment?: SchemaVaultsAppEnvironment
 }): Promise<void> {
-  const subject = SUBJECT[args.action];
-  const summary = buildSummary(args.action, getAuthServerFriendlyName());
+  const occurred_at: number = Date.now();
+  const environment: SchemaVaultsAppEnvironment = args.environment ?? getAppEnvironment();
   try {
+    const user = await getUserByUID(args.db, args.uid);
     await sendEmailViaMailServer(
       {
         to: args.to,
-        subject,
+        subject: SUBJECT[args.action],
         message: {
           template_id: "security-alert",
-          template_props: {
+          template_props: buildMfaSecurityAlertTemplateProps({
             action: args.action,
-            summary,
-          },
+            name: getMfaSecurityAlertRecipientName(user ?? { email: args.to }),
+            occurred_at,
+            auth_server_url: getAuthServerUrl(environment),
+            product_name: getAuthServerFriendlyName(),
+          }),
         },
       },
       args.db,
       args.redis,
-      args.environment ?? getAppEnvironment()
+      environment,
     );
   } catch (e: unknown) {
     console.warn(
@@ -70,6 +69,7 @@ export async function sendMfaSecurityAlertEmail(args: {
     );
     await captureServerException(args.db, e, {
       op_name: "sendMfaSecurityAlertEmail",
+      uid: args.uid,
       context: { action: args.action, nonFatal: true },
     });
   }

@@ -99,6 +99,7 @@ export const removePasskey = defineOperation({
       // Awaited (it never throws): the request's db / redis are released
       // once the response is produced, which would cut a detached send off.
       await sendMfaSecurityAlertEmail({
+        uid: user.uid,
         to: user.email,
         action: "removed",
         db,
