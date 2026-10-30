@@ -10,6 +10,7 @@ import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
 import { deleteStepUpChallenge, getStepUpChallenge } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
+import { startOrganizationMfaGracePeriodsForUser } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
 const ROUTE = "/api/user/mfa/webauthn/{factor_id}";
 
@@ -104,6 +105,10 @@ export const removePasskey = defineOperation({
         redis,
         environment,
       });
+
+      // Without a factor left, organizations requiring MFA start the user's
+      // grace period (and email them). Never throws.
+      await startOrganizationMfaGracePeriodsForUser({ db, redis, uid: user.uid, environment });
 
       return ctx.json(200, { success: true });
     } catch (e: unknown) {

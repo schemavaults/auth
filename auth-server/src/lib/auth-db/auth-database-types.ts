@@ -23,6 +23,10 @@ import type {
   OrganizationInvitationsTable,
 } from "./organizations";
 import type {
+  OrganizationMfaGracePeriodsTable,
+  OrganizationMfaRequirementsTable,
+} from "./organization-mfa-requirements";
+import type {
   AuthorizationCodesTable,
   PasswordsTable,
   PasswordResetTokensTable,
@@ -72,6 +76,8 @@ export type AuthDatabase = {
   organizations: OrganizationsTable;
   organization_membership_roles: OrganizationMembershipRolesTable;
   organization_invitations: OrganizationInvitationsTable;
+  organization_mfa_requirements: OrganizationMfaRequirementsTable;
+  organization_mfa_grace_periods: OrganizationMfaGracePeriodsTable;
   jwt_keys: JwtKeysTable;
   jwks_access_keys: JwksAccessKeysTable;
   jwks_access_keys_for_hardcoded: JwksAccessKeysForHardcodedTable;

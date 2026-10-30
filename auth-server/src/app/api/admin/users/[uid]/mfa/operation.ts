@@ -7,6 +7,7 @@ import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry, UserRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
+import { startOrganizationMfaGracePeriodsForUser } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
 const ROUTE = "/api/admin/users/{uid}/mfa";
 const LEGACY_ROUTE = "/api/admin/users/[uid]/mfa";
@@ -83,6 +84,10 @@ export const resetUserMfa = defineOperation({
         redis,
         environment,
       });
+
+      // Organizations requiring MFA start the user's grace period (and
+      // email them). Never throws.
+      await startOrganizationMfaGracePeriodsForUser({ db, redis, uid: target_uid, environment });
 
       return ctx.json(200, { success: true });
     } catch (e: unknown) {

@@ -24,6 +24,8 @@ import type {
 } from "@schemavaults/auth-common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, useToast } from "@schemavaults/ui";
 import uuidSync from "@/lib/uuid/uuidSync";
+import { OrganizationMfaRequirementCard } from "@/components/OrganizationMfaRequirement";
+import type { OrganizationMfaRequirementView } from "@/lib/organization-mfa-requirements/types";
 
 export interface OrgPageViewProps {
   organization: OrganizationDefinition;
@@ -43,6 +45,13 @@ export interface OrgPageViewProps {
    * directly (no invitation), themselves included.
    */
   platform_admin?: { uid: string; email: string };
+  /**
+   * The organization's MFA requirement (null for system organizations, or
+   * when it failed to load: the card is then left out).
+   */
+  preloaded_mfa_requirement: OrganizationMfaRequirementView | null;
+  /** Whether the viewer holds a membership of the organization. */
+  viewerIsMember: boolean;
 }
 
 function OrgTitleCard({ organization, userRole }: Pick<OrgPageViewProps, 'organization' | 'userRole'>): ReactElement {
@@ -72,6 +81,8 @@ export default function OrgPageView({
   userRole,
   can_create_personal_resources,
   platform_admin,
+  preloaded_mfa_requirement,
+  viewerIsMember,
 }: OrgPageViewProps): ReactElement {
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
@@ -201,6 +212,16 @@ export default function OrgPageView({
         showConnectAppToApi={isOrgOwner}
         isOrgOwner={isOrgOwner}
       />
+
+      {preloaded_mfa_requirement && (
+        <OrganizationMfaRequirementCard
+          organization_id={organization.organization_id}
+          organization_name={organization.name}
+          preloaded={preloaded_mfa_requirement}
+          canManage={isOrgOwner}
+          viewerIsMember={viewerIsMember}
+        />
+      )}
 
       {isOrgOwner && (
         <OrganizationSettingsCard

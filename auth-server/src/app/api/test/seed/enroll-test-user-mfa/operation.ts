@@ -9,6 +9,7 @@ import { ErrorResponse, validationErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry, UserRegistry } from "@/lib/auth-db";
 import { generateRecoveryCodes, generateTotpSecret } from "@/lib/mfa";
+import { clearOrganizationMfaGracePeriodsAfterEnrollment } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
 /**
  * Test-only helper: enrolls a user with a known TOTP secret + recovery
@@ -80,6 +81,7 @@ export const enrollTestUserMfa = defineOperation({
 
     const recovery_codes = generateRecoveryCodes();
     await mfaRegistry.replaceRecoveryCodes({ uid: user.uid, codes: recovery_codes });
+    await clearOrganizationMfaGracePeriodsAfterEnrollment({ db, uid: user.uid });
 
     return ctx.json(200, { success: true, uid: user.uid, factor_id, secret, recovery_codes });
   },

@@ -14,6 +14,7 @@ import { useMemo, type PropsWithChildren, type ReactElement } from "react";
 import getAuthenticatedUserDashboardLinks from "./dashboard-links";
 import { useAdmin } from "@schemavaults/auth-react-provider";
 import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
+import { OrganizationMfaRequirementBanner } from "@/components/OrganizationMfaRequirement";
 
 type DashboardSidebarLinkProps = Parameters<DashboardLayoutProps["Link"]>[0];
 
@@ -66,6 +67,7 @@ export default function AuthenticatedAuthServerLayout({
       printHidden
     >
       <EmailVerificationBanner />
+      <OrganizationMfaRequirementBanner />
       {children}
     </DashboardLayout>
   );

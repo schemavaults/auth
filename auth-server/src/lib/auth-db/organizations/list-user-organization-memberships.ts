@@ -10,6 +10,7 @@ import {
   getServiceAccountVirtualOrganizationMembership,
   type ServiceAccountVirtualOrganizationMembership,
 } from "@/lib/auth-db/apps/app-registry/app-service-account-organization-roles";
+import { listMfaSuspendedOrganizationIdsForUser } from "@/lib/auth-db/organization-mfa-requirements";
 
 /**
  * `membership_declaration_id` prefixes of the memberships that have no
@@ -114,15 +115,20 @@ export async function listUserOrganizationMemberships(
   }
 
   try {
-    // Memberships that are recorded in the database, and the virtual
+    // Memberships that are recorded in the database, the virtual
     // membership of a service account whose app's managers opted it into
-    // the organization that owns the app (null for every human account).
-    const [all_memberships_from_db, service_account_membership]: [
+    // the organization that owns the app (null for every human account),
+    // and the organizations whose MFA requirement the user failed to meet
+    // in time: their membership rows only remain until the enforcement job
+    // removes them (migration 00048), and grant nothing meanwhile.
+    const [all_memberships_from_db, service_account_membership, mfa_suspended_organization_ids]: [
       readonly OrganizationMembershipRoleDefinition[],
       ServiceAccountVirtualOrganizationMembership | null,
+      readonly OrganizationID[],
     ] = await Promise.all([
       listMembershipsForUserFromDatabase(),
       getServiceAccountVirtualOrganizationMembership(db, uid),
+      listMfaSuspendedOrganizationIdsForUser(db, uid, Date.now()),
     ]);
 
     if (!Array.isArray(all_memberships_from_db)) {
@@ -135,7 +141,10 @@ export async function listUserOrganizationMemberships(
       throw new Error("One of the organization IDs from the database conflicts with a hardcoded organization ID!")
     }
 
-    memberships.push(...all_memberships_from_db);
+    const mfa_suspended = new Set<OrganizationID>(mfa_suspended_organization_ids);
+    memberships.push(
+      ...all_memberships_from_db.filter((membership) => !mfa_suspended.has(membership.organization_id)),
+    );
 
     // Service accounts are refused membership rows (they cannot accept
     // invitations or be assigned directly) and a hardcoded organization

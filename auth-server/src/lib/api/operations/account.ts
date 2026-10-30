@@ -1,5 +1,6 @@
 import type { AnyOperationDefinition } from "@schemavaults/openapi-operations";
 import { listMyInvitations } from "@/app/api/me/invitations/operation";
+import { listMyOrganizationMfaRequirements } from "@/app/api/me/organization-mfa-requirements/operation";
 import { listMyConnectedApps } from "@/app/api/me/connected-apps/operation";
 import { revokeMyAppScopeConsent } from "@/app/api/me/connected-apps/[app_id]/scopes/[api_server_scope_id]/operation";
 import { listMyOrganizations } from "@/app/api/me/organizations/operation";
@@ -15,6 +16,7 @@ export const accountOperations: readonly AnyOperationDefinition[] = [
   getMyOrganizationRole,
   listUserOrganizations,
   listMyInvitations,
+  listMyOrganizationMfaRequirements,
   listMyConnectedApps,
   revokeMyAppScopeConsent,
 ];

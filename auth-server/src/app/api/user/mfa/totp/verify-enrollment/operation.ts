@@ -9,6 +9,7 @@ import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
 import { decryptSecret, issueRecoveryCodesIfNeeded, verifyTotpCode } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
+import { clearOrganizationMfaGracePeriodsAfterEnrollment } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
 const ROUTE = "/api/user/mfa/totp/verify-enrollment";
 
@@ -79,6 +80,9 @@ export const verifyTotpEnrollment = defineOperation({
         db,
         user.uid,
       );
+
+      // The user meets organization MFA requirements now. Never throws.
+      await clearOrganizationMfaGracePeriodsAfterEnrollment({ db, uid: user.uid });
 
       // Notify the user that MFA was enabled. Best-effort.
       await sendMfaSecurityAlertEmail({
