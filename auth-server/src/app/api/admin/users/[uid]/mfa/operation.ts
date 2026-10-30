@@ -81,6 +81,7 @@ export const resetUserMfa = defineOperation({
         uid: target_uid,
         to: target.email,
         action: "admin_reset",
+        requested_by: ctx.auth.user.uid,
         db,
         redis,
         environment,

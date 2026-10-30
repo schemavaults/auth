@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { userEmailLogEmailTypes } from "@/lib/auth-db/user-email-log/user-email-log-table";
 import {
   buildMfaSecurityAlertTemplateProps,
+  getMfaSecurityAlertEmailLogDetails,
   getMfaSecurityAlertRecipientName,
+  MFA_SECURITY_ALERT_EMAIL_LOG_TYPES,
   MFA_SECURITY_ALERT_EVENT_TYPES,
   type MfaSecurityAlertAction,
 } from "./mfa-security-alert-template-props";
@@ -43,5 +46,35 @@ describe("getMfaSecurityAlertRecipientName", () => {
     expect(getMfaSecurityAlertRecipientName({ email: "j@example.com", display_name: "Jane D", first_name: "Jane" })).toBe("Jane D");
     expect(getMfaSecurityAlertRecipientName({ email: "j@example.com", display_name: "  ", first_name: "Jane" })).toBe("Jane");
     expect(getMfaSecurityAlertRecipientName({ email: "j@example.com", display_name: null, first_name: null })).toBe("j@example.com");
+  });
+});
+
+describe("getMfaSecurityAlertEmailLogDetails", () => {
+  const ADMIN_UID = "77777777-7777-4777-8777-777777777777";
+
+  test("logs each alert under its own e-mail type", () => {
+    const types = Object.values(MFA_SECURITY_ALERT_EMAIL_LOG_TYPES);
+    expect(new Set(types).size).toBe(types.length);
+    for (const type of types) {
+      expect(userEmailLogEmailTypes).toContain(type);
+    }
+  });
+
+  test("an administrator's reset is an admin_request naming the administrator", () => {
+    expect(getMfaSecurityAlertEmailLogDetails("admin_reset", ADMIN_UID)).toEqual({
+      email_type: "mfa_admin_reset_alert",
+      source: "admin_request",
+      requested_by: ADMIN_UID,
+    });
+  });
+
+  test("the user's own MFA changes are user_requests without an administrator", () => {
+    for (const action of ["enabled", "removed", "recovery_codes_regenerated"] as const) {
+      expect(getMfaSecurityAlertEmailLogDetails(action, ADMIN_UID)).toEqual({
+        email_type: MFA_SECURITY_ALERT_EMAIL_LOG_TYPES[action],
+        source: "user_request",
+        requested_by: null,
+      });
+    }
   });
 });

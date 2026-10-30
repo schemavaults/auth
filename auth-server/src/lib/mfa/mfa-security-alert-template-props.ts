@@ -1,9 +1,15 @@
 /**
- * The `security-alert` template props of the auth server's MFA alerts. The
- * mail server's template requires `name` and only knows its own `eventType`
- * values, so every alert must carry both (the template refuses anything
- * else, and without an event type it would render a "new sign-in" alert).
+ * The `security-alert` template props of the auth server's MFA alerts, and
+ * how each alert is recorded in the user's e-mail log. The mail server's
+ * template requires `name` and only knows its own `eventType` values, so
+ * every alert must carry both (the template refuses anything else, and
+ * without an event type it would render a "new sign-in" alert).
  */
+
+import type {
+  UserEmailLogEmailType,
+  UserEmailLogSource,
+} from "@/lib/auth-db/user-email-log/user-email-log-table";
 
 export type MfaSecurityAlertAction =
   | "enabled"
@@ -61,5 +67,30 @@ export function buildMfaSecurityAlertTemplateProps({
     eventTime: new Date(occurred_at).toUTCString(),
     secureAccountUrl: `${auth_server_url}/mfa`,
     productName: product_name,
+  };
+}
+
+/** The USER_EMAIL_LOG `email_type` of each alert. */
+export const MFA_SECURITY_ALERT_EMAIL_LOG_TYPES = {
+  enabled: "mfa_enabled_alert",
+  removed: "mfa_removed_alert",
+  admin_reset: "mfa_admin_reset_alert",
+  recovery_codes_regenerated: "mfa_recovery_codes_regenerated_alert",
+} as const satisfies Record<MfaSecurityAlertAction, UserEmailLogEmailType>;
+
+/**
+ * How an alert is recorded in USER_EMAIL_LOG: the administrator's reset is
+ * an `admin_request` naming them, every other alert follows a change the
+ * user made themselves (`user_request`).
+ */
+export function getMfaSecurityAlertEmailLogDetails(
+  action: MfaSecurityAlertAction,
+  requested_by: string | null = null,
+): { email_type: UserEmailLogEmailType; source: UserEmailLogSource; requested_by: string | null } {
+  const source: UserEmailLogSource = action === "admin_reset" ? "admin_request" : "user_request";
+  return {
+    email_type: MFA_SECURITY_ALERT_EMAIL_LOG_TYPES[action],
+    source,
+    requested_by: source === "admin_request" ? requested_by : null,
   };
 }

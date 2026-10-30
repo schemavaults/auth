@@ -1,13 +1,24 @@
 import type { Generated, Insertable, Selectable } from "@schemavaults/dbh";
 
-/** The e-mails recorded in USER_EMAIL_LOG (migration 00044). */
-export const userEmailLogEmailTypes = ["email_verification", "password_reset"] as const;
+/**
+ * The e-mails recorded in USER_EMAIL_LOG: verification and password reset
+ * links (migration 00044) and the MFA security alerts (migration 00049).
+ */
+export const userEmailLogEmailTypes = [
+  "email_verification",
+  "password_reset",
+  "mfa_enabled_alert",
+  "mfa_removed_alert",
+  "mfa_admin_reset_alert",
+  "mfa_recovery_codes_regenerated_alert",
+] as const;
 export type UserEmailLogEmailType = (typeof userEmailLogEmailTypes)[number];
 
 /**
- * What triggered the e-mail: the verification e-mail sent at sign-up, a
- * request the user made themselves (verification resend, forgotten
- * password), or an administrator's resend from /admin/users/[uid].
+ * What triggered the e-mail: the verification e-mail sent at sign-up,
+ * something the user did themselves (verification resend, forgotten
+ * password, an MFA change), or an administrator's action from
+ * /admin/users/[uid] (a verification resend, an MFA reset).
  */
 export const userEmailLogSources = ["registration", "user_request", "admin_request"] as const;
 export type UserEmailLogSource = (typeof userEmailLogSources)[number];

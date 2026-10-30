@@ -1,6 +1,6 @@
 // Covers the e-mail log of a user (USER_EMAIL_LOG): every attempt to e-mail
-// a verification or password reset link is recorded, whether the mail
-// server accepted it or not, and administrators read it through
+// a verification or password reset link, or an MFA security alert, is
+// recorded, whether the mail server accepted it or not, and administrators read it through
 // GET /api/admin/users/[uid]/email-log and the "Email Log" timeline card on
 // /admin/users/[uid]. The E2E stack has no mail server, so the attempts
 // are recorded as failed with a reason; the spec accepts either status so
@@ -13,7 +13,13 @@ const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
 interface EmailLogEntry {
   email_log_id: string;
   uid: string;
-  email_type: "email_verification" | "password_reset";
+  email_type:
+    | "email_verification"
+    | "password_reset"
+    | "mfa_enabled_alert"
+    | "mfa_removed_alert"
+    | "mfa_admin_reset_alert"
+    | "mfa_recovery_codes_regenerated_alert";
   source: "registration" | "user_request" | "admin_request";
   recipient: string;
   status: "sent" | "failed";
@@ -176,6 +182,77 @@ describe("User e-mail log", () => {
             expect(resend!.requested_by).to.eq(admin.uid);
             expect(resend!.requested_by_email).to.eq(admin.email);
             expectRecordedAttempt(resend, user.email);
+          });
+        });
+      });
+    });
+  });
+
+  describe("MFA security alerts", () => {
+    it("records the alert of an MFA enrollment, and of an administrator's MFA reset with the administrator", () => {
+      cy.generate_random_test_user_credentials().then((credentials) => {
+        cy.create_and_login_as_regular_user_via_request(credentials).then((created: boolean) => {
+          expect(created, "regular user registration should succeed").to.be.true;
+        });
+        cy.request({ method: "GET", url: `/api/auth/whoami/${AUTH_APP_ID}` }).then((whoami) => {
+          const uid: string = whoami.body.user.uid;
+
+          // Enroll TOTP through the user's own API (sends the "enabled" alert)
+          cy.request<{ factor_id: string; secret: string }>({
+            method: "POST",
+            url: "/api/user/mfa/totp/enroll",
+          }).then((enroll) => {
+            expect(enroll.status).to.eq(200);
+            cy.compute_totp_code(enroll.body.secret).then((code: string) => {
+              cy.request({
+                method: "POST",
+                url: "/api/user/mfa/totp/verify-enrollment",
+                body: { factor_id: enroll.body.factor_id, code },
+              })
+                .its("status")
+                .should("eq", 200);
+            });
+          });
+          cy.clearCookies();
+
+          loginAsSuperuser().then((admin) => {
+            cy.request({ method: "DELETE", url: `/api/admin/users/${uid}/mfa` })
+              .its("status")
+              .should("eq", 200);
+
+            listEmailLog(uid).then((entries) => {
+              // Newest first: the reset alert, the enrollment alert, the
+              // verification e-mail sent at registration.
+              expect(entries.map((entry) => entry.email_type)).to.deep.equal([
+                "mfa_admin_reset_alert",
+                "mfa_enabled_alert",
+                "email_verification",
+              ]);
+              const [reset, enabled] = entries;
+              expect(reset!.source).to.eq("admin_request");
+              expect(reset!.requested_by).to.eq(admin.uid);
+              expect(reset!.requested_by_email).to.eq(admin.email);
+              expectRecordedAttempt(reset, credentials.email);
+              expect(enabled!.source).to.eq("user_request");
+              expect(enabled!.requested_by).to.eq(null);
+              expectRecordedAttempt(enabled, credentials.email);
+            });
+
+            cy.visit(`/admin/users/${uid}`);
+            cy.wait_for_page_hydration();
+            cy.get('[data-testid="admin-user-email-log-card"]').within(() => {
+              cy.get('[data-testid="admin-user-email-log-entry"]').should("have.length", 3);
+              cy.get('[data-testid="admin-user-email-log-entry"]')
+                .first()
+                .should("have.attr", "data-email-type", "mfa_admin_reset_alert")
+                .and("contain.text", "MFA reset alert")
+                .and("contain.text", `Sent after an MFA reset by ${admin.email}`);
+              cy.get('[data-testid="admin-user-email-log-entry"]')
+                .eq(1)
+                .should("have.attr", "data-email-type", "mfa_enabled_alert")
+                .and("contain.text", "MFA enabled alert")
+                .and("contain.text", "Sent after the user enabled MFA");
+            });
           });
         });
       });
