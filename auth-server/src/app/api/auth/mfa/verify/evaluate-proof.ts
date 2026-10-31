@@ -3,14 +3,15 @@ import "server-only";
 import type { MfaProof } from "@schemavaults/auth-common";
 import type { AuthenticationResponseJSON } from "@simplewebauthn/server";
 import type { MfaRegistry } from "@/lib/auth-db";
-import { verifyTotpCode } from "@/lib/mfa";
+import { verifyAndConsumeTotpCode } from "@/lib/mfa";
 import { verifyWebauthnAuthentication } from "@/lib/mfa/webauthn";
 
 // Evaluates an MFA proof against a user's enrolled factors and applies the
 // success side-effects (touch last-used, bump WebAuthn counter, consume a
-// recovery code). Returns whether the proof was valid. Shared by the login
-// second-factor exchange and step-up authorization for sensitive account
-// actions so all proof types are verified identically in one place.
+// recovery code, record the TOTP time step so the code cannot be replayed).
+// Returns whether the proof was valid. Shared by the login second-factor
+// exchange and step-up authorization for sensitive account actions so all
+// proof types are verified identically in one place.
 //
 // For a `webauthn` proof the caller must supply the server-issued assertion
 // challenge the authenticator signed (`webauthnChallenge`); if absent the
@@ -29,7 +30,15 @@ export async function evaluateMfaProof(args: {
       factor_id: proof.factor_id,
     });
     if (!factor) return false;
-    const valid = verifyTotpCode({ secret: factor.secret, code: proof.code });
+    // A code whose time step this factor already accepted is a replay
+    // (RFC 6238 §5.2) and is refused like a wrong code.
+    const valid = await verifyAndConsumeTotpCode({
+      mfaRegistry,
+      uid,
+      factor_id: factor.row.factor_id,
+      secret: factor.secret,
+      code: proof.code,
+    });
     if (valid) {
       await mfaRegistry.touchFactorLastUsed(factor.row.factor_id);
     }

@@ -7,7 +7,7 @@ import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
-import { verifyTotpCode } from "@/lib/mfa";
+import { verifyAndConsumeTotpCode } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 import { startOrganizationMfaGracePeriodsForUser } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
@@ -58,7 +58,16 @@ export const removeTotpFactor = defineOperation({
       if (!factor) {
         return ctx.json(404, { success: false, message: "Factor not found" });
       }
-      if (!verifyTotpCode({ secret: factor.secret, code })) {
+      // A code this factor already accepted (e.g. one observed at login)
+      // is refused as a replay.
+      const isValid = await verifyAndConsumeTotpCode({
+        mfaRegistry,
+        uid: user.uid,
+        factor_id,
+        secret: factor.secret,
+        code,
+      });
+      if (!isValid) {
         return ctx.json(401, { success: false, message: "Invalid TOTP code" });
       }
 

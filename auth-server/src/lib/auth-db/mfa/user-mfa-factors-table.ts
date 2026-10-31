@@ -15,6 +15,11 @@ export interface UserMfaFactorsTable {
   created_at: number;
   verified_at: number | null;
   last_used_at: number | null;
+  // RFC 6238 time step of the last TOTP code accepted for this factor
+  // (migration 00051). Codes for this step or an earlier one are refused
+  // as replays; see consume-totp-time-step.ts. NULL until a code is
+  // accepted, and always NULL for passkey factors.
+  last_used_totp_step: number | null;
 }
 
 export type UserMfaFactorRow = Selectable<UserMfaFactorsTable>;
