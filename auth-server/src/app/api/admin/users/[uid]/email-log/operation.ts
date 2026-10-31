@@ -13,9 +13,9 @@ const LEGACY_ROUTE = "/api/admin/users/[uid]/email-log";
 export const listUserEmailLog = defineOperation({
   method: "get",
   path: ROUTE,
-  summary: "List the verification and password reset e-mails sent to a user",
+  summary: "List the verification, password reset and MFA alert e-mails sent to a user",
   description:
-    "Lists the most recent 100 attempts to e-mail the user a verification link or a password reset link, newest first, including attempts the mail server did not accept.",
+    "Lists the most recent 100 attempts to e-mail the user a verification link, a password reset link or an MFA security alert (MFA enabled, a factor removed, an administrator's MFA reset, recovery codes regenerated), newest first, including attempts the mail server did not accept.",
   tags: [API_TAGS.admin],
   auth: requireAuth({ schemes: sessionSchemes, routeGuard: "admin" }),
   request: {

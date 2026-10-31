@@ -10,6 +10,12 @@ import type {
   ClientErrorStats,
 } from "@/lib/auth-db/client-errors";
 import type { ClientErrorStorageStatus } from "@/lib/client-errors/row-size";
+import type {
+  OrganizationMfaDailyReport,
+  OrganizationMfaRemovalReportEntry,
+  OrganizationMfaUpcomingRemoval,
+} from "@/lib/auth-db/organization-mfa-requirements";
+import type { OrganizationMfaGracePeriodReason } from "@/lib/organization-mfa-requirements/policy";
 import { formatBytes } from "@/lib/format-bytes";
 import {
   clientErrorPageFiltersToSearchParams,
@@ -51,6 +57,8 @@ interface BuildReportOpts {
    */
   authServerApiServerId: string;
   clientErrors: DailyReportClientErrors;
+  /** Organization MFA enforcement activity; the section is left out while no organization requires MFA. */
+  organizationMfa: OrganizationMfaDailyReport;
 }
 
 interface ReportContent {
@@ -106,6 +114,17 @@ const CLIENT_ERROR_MESSAGE_MAX_LENGTH: number = 200;
 
 /** Share of the storage limit (percent) from which the report flags the client error storage. */
 const CLIENT_ERROR_STORAGE_WARNING_PERCENT: number = 80;
+
+/** Removals and upcoming removals the organization MFA section lists at most. */
+export const DAILY_REPORT_ORGANIZATION_MFA_LIST_LIMIT: number = 25;
+
+/** How far ahead the organization MFA section lists the removals that are due. */
+export const DAILY_REPORT_ORGANIZATION_MFA_UPCOMING_HOURS: number = 72;
+
+const GRACE_PERIOD_REASON_LABELS: Record<OrganizationMfaGracePeriodReason, string> = {
+  requirement_enabled: "had no MFA when the organization required it",
+  mfa_removed: "lost their MFA while a member",
+};
 
 /**
  * The client errors dashboard showing the last 24 hours (the report's window,
@@ -372,6 +391,154 @@ ${appRows}
   return { html, text };
 }
 
+/**
+ * The organization MFA enforcement of the window: the members the daily
+ * enforcement job removed (each one listed), and where the grace periods
+ * stand now (members in one, members past their deadline, removals due
+ * soon, warnings not delivered). Null while no organization requires MFA and
+ * nobody was removed, so deployments that don't use the feature don't see it.
+ */
+function buildOrganizationMfaSection(
+  authServerUri: string,
+  accentColor: string,
+  report: OrganizationMfaDailyReport,
+): ReportSection | null {
+  if (report.organizations_requiring_mfa === 0 && report.removals_total === 0) {
+    return null;
+  }
+  const organizationsUrl: string = `${authServerUri}${ADMIN_PAGES.organizations.path}`;
+  const userUrl = (uid: string): string => `${authServerUri}/admin/users/${encodeURIComponent(uid)}`;
+  const orgUrl = (organization_id: string): string => `${authServerUri}/orgs/${encodeURIComponent(organization_id)}`;
+  const alarming: boolean = report.removals_total > 0 || report.not_notified > 0;
+  const headingColor: string = alarming ? ALERT_COLOR : accentColor;
+  const title: string = `Organization MFA enforcement (${pluralize(report.removals_total, "member")} removed)`;
+  const summary: string = `${pluralize(report.organizations_requiring_mfa, "organization requires", "organizations require")} multi-factor authentication. Members without it are removed once their grace period ends.`;
+  const moreRemovals: number = Math.max(0, report.removals_total - report.removals.length);
+  const moreUpcoming: number = Math.max(0, report.upcoming_removals_total - report.upcoming_removals.length);
+
+  const cell = (content: string, style: string = ""): string =>
+    `<td style="padding:8px 12px;border-bottom:1px solid ${BORDER_COLOR};${style}">${content}</td>`;
+  const memberCell = (entry: { uid: string; email: string }): string =>
+    cell(
+      `${linkHtml(accentColor, userUrl(entry.uid), escapeHtml(entry.email))}<div style="margin-top:2px;font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(entry.uid)}</div>`,
+    );
+  const organizationCell = (entry: { organization_id: string; organization_name: string }): string =>
+    cell(
+      `${linkHtml(accentColor, orgUrl(entry.organization_id), escapeHtml(entry.organization_name))}<div style="margin-top:2px;font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(entry.organization_id)}</div>`,
+    );
+  const mutedCell = (value: string): string => cell(escapeHtml(value), `color:${MUTED_COLOR};font-size:13px;`);
+  const moreNote = (count: number, singular: string): string =>
+    count > 0
+      ? `\n        <p style="margin:8px 0 0;font-size:12px;color:${MUTED_COLOR};">+${escapeHtml(pluralize(count, `more ${singular}`))} not listed</p>`
+      : "";
+
+  const removalsHtml: string = report.removals_total === 0
+    ? `<p style="margin:0;padding:12px;color:${MUTED_COLOR};font-style:italic;">No members were removed in the last 24 hours.</p>`
+    : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <thead>
+            <tr>
+              ${headerCellHtml("Member", ALERT_COLOR)}
+              ${headerCellHtml("Organization", ALERT_COLOR)}
+              ${headerCellHtml("Role", ALERT_COLOR)}
+              ${headerCellHtml("Grace period ended", ALERT_COLOR)}
+              ${headerCellHtml("Removed at", ALERT_COLOR)}
+            </tr>
+          </thead>
+          <tbody>
+${report.removals
+  .map(
+    (r: OrganizationMfaRemovalReportEntry) => `<tr>
+  ${memberCell(r)}
+  ${organizationCell(r)}
+  ${cell(escapeHtml(r.role), `color:${TEXT_COLOR};text-transform:capitalize;`)}
+  ${cell(`${escapeHtml(formatTimestamp(r.grace_period_ended_at))}<div style="margin-top:2px;font-size:12px;">${escapeHtml(GRACE_PERIOD_REASON_LABELS[r.grace_period_reason])}</div>`, `color:${MUTED_COLOR};font-size:13px;`)}
+  ${mutedCell(formatTimestamp(r.removed_at))}
+</tr>`,
+  )
+  .join("\n")}
+          </tbody>
+        </table>${moreNote(moreRemovals, "removal")}`;
+
+  const upcomingHtml: string = report.upcoming_removals_total === 0
+    ? `<p style="margin:0;padding:12px;color:${MUTED_COLOR};font-style:italic;">No grace periods end in the next ${DAILY_REPORT_ORGANIZATION_MFA_UPCOMING_HOURS} hours.</p>`
+    : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <thead>
+            <tr>
+              ${headerCellHtml("Member", accentColor)}
+              ${headerCellHtml("Organization", accentColor)}
+              ${headerCellHtml("Grace period ends", accentColor)}
+              ${headerCellHtml("Warned by email", accentColor)}
+            </tr>
+          </thead>
+          <tbody>
+${report.upcoming_removals
+  .map(
+    (u: OrganizationMfaUpcomingRemoval) => `<tr>
+  ${memberCell(u)}
+  ${organizationCell(u)}
+  ${mutedCell(formatTimestamp(u.ends_at))}
+  ${u.notified ? cell("Yes", `color:${TEXT_COLOR};`) : cell("No", `color:${ALERT_COLOR};font-weight:600;`)}
+</tr>`,
+  )
+  .join("\n")}
+          </tbody>
+        </table>${moreNote(moreUpcoming, "upcoming removal")}`;
+
+  const html = `<tr>
+      <td style="padding:8px 32px 24px;">
+        ${sectionHeadingHtml(accentColor, title, organizationsUrl, "All organizations", headingColor)}
+        <p style="margin:0 0 12px;color:${MUTED_COLOR};font-size:13px;">${escapeHtml(summary)}</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:8px 0;">
+          <tr>
+              ${statTileHtml(report.removals_total, "Members removed")}
+              ${statTileHtml(report.in_grace_period, "In a grace period")}
+              ${statTileHtml(report.awaiting_removal, "Awaiting removal", report.awaiting_removal > 0 ? { text: "Grace period over; removed by the next run", color: MUTED_COLOR } : null)}
+              ${statTileHtml(report.not_notified, "Not yet emailed", report.not_notified > 0 ? { text: "Check the mail server: these members were not warned", color: ALERT_COLOR } : null)}
+          </tr>
+        </table>
+        <h3 style="margin:20px 0 8px;font-size:14px;color:${TEXT_COLOR};">Removed from organizations</h3>
+        ${removalsHtml}
+        <h3 style="margin:20px 0 8px;font-size:14px;color:${TEXT_COLOR};">Removals due in the next ${DAILY_REPORT_ORGANIZATION_MFA_UPCOMING_HOURS} hours</h3>
+        ${upcomingHtml}
+      </td>
+    </tr>`;
+
+  const text: string[] = [];
+  text.push(`${title}:`);
+  text.push(`  → All organizations: ${organizationsUrl}`);
+  text.push(`  ${summary}`);
+  text.push(
+    `  ${pluralize(report.removals_total, "member")} removed · ${report.in_grace_period.toLocaleString("en-US")} in a grace period · ${report.awaiting_removal.toLocaleString("en-US")} awaiting removal · ${report.not_notified.toLocaleString("en-US")} not yet emailed`,
+  );
+  if (report.not_notified > 0) {
+    text.push("  ! Some members in a grace period were not warned by email: check the mail server.");
+  }
+  text.push("  Removed from organizations:");
+  if (report.removals_total === 0) {
+    text.push("    (none)");
+  } else {
+    for (const r of report.removals) {
+      text.push(
+        `    - ${r.email} from ${r.organization_name} [${r.organization_id}] (${r.role}) — grace period ended ${formatTimestamp(r.grace_period_ended_at)}, ${GRACE_PERIOD_REASON_LABELS[r.grace_period_reason]} — removed ${formatTimestamp(r.removed_at)} — ${userUrl(r.uid)}`,
+      );
+    }
+    if (moreRemovals > 0) text.push(`    (+${pluralize(moreRemovals, "more removal")} not listed)`);
+  }
+  text.push(`  Removals due in the next ${DAILY_REPORT_ORGANIZATION_MFA_UPCOMING_HOURS} hours:`);
+  if (report.upcoming_removals_total === 0) {
+    text.push("    (none)");
+  } else {
+    for (const u of report.upcoming_removals) {
+      text.push(
+        `    - ${u.email} from ${u.organization_name} [${u.organization_id}] — grace period ends ${formatTimestamp(u.ends_at)} — ${u.notified ? "warned by email" : "NOT warned by email"} — ${userUrl(u.uid)}`,
+      );
+    }
+    if (moreUpcoming > 0) text.push(`    (+${pluralize(moreUpcoming, "more upcoming removal")} not listed)`);
+  }
+
+  return { html, text };
+}
+
 export function buildDailyAdminReport({
   authServerUri,
   friendlyName,
@@ -386,9 +553,15 @@ export function buildDailyAdminReport({
   topMostPopularApis,
   authServerApiServerId,
   clientErrors,
+  organizationMfa,
 }: BuildReportOpts): ReportContent {
   const adminUrl = (page: AdminPage): string => `${authServerUri}${ADMIN_PAGES[page].path}`;
   const clientErrorsSection: ReportSection = buildClientErrorsSection(authServerUri, accentColor, clientErrors);
+  const organizationMfaSection: ReportSection | null = buildOrganizationMfaSection(
+    authServerUri,
+    accentColor,
+    organizationMfa,
+  );
   const windowLabel = `${formatTimestamp(windowStart.getTime())} → ${formatTimestamp(windowEnd.getTime())}`;
 
   /**
@@ -530,6 +703,7 @@ ${organizationsRows}
         </table>
       </td>
     </tr>
+    ${organizationMfaSection?.html ?? ""}
     <tr>
       <td style="padding:8px 32px 24px;">
         ${sectionHeadingHtml(accentColor, `Top most-active users (${topMostActiveUsers.length})`, adminUrl("users"), "All users")}
@@ -646,6 +820,10 @@ ${errorsRows}
     }
   }
   textLines.push("");
+  if (organizationMfaSection) {
+    textLines.push(...organizationMfaSection.text);
+    textLines.push("");
+  }
   textLines.push(`Top most-active users (${topMostActiveUsers.length}):`);
   textLines.push(`  → All users: ${adminUrl("users")}`);
   if (topMostActiveUsers.length === 0) {

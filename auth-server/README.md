@@ -78,7 +78,8 @@ By default the development auth server will run at [http://localhost:6767](http:
 `vercel.json` is shared by every Vercel deployment of this repository: the main production project
 (built and deployed from GitHub Actions with `vercel build` / `vercel deploy --prebuilt`) and any
 third-party project connected through Vercel's Git integration. It defines the monorepo install
-command, the daily-report cron, and a `buildCommand` that runs `vercel-build.sh`.
+command, the scheduled jobs (daily report, client error retention, organization MFA enforcement), and a
+`buildCommand` that runs `vercel-build.sh`.
 
 Because `vercel.json` overrides the build settings in the Vercel dashboard, per-deployment
 customisation is done through **environment variables on the Vercel project** rather than by
@@ -88,7 +89,7 @@ editing the file:
 | --- | --- |
 | `SCHEMAVAULTS_VERCEL_BUILD_RUN_MIGRATIONS=true` | After a successful Next.js build, apply pending database migrations to the database configured by the project's environment variables. A failed migration fails the build, so nothing broken is deployed. |
 | `SCHEMAVAULTS_VERCEL_BUILD_STRIP_TEST_ROUTES=true` | Remove `src/app/api/test` before building so the E2E seed endpoints are absent from the bundle (they are already disabled at runtime outside the `test` environment). |
-| `CRON_SECRET` | Bearer token Vercel presents when invoking the `/api/admin/send-daily-report` cron. |
+| `CRON_SECRET` | Bearer token Vercel presents when invoking the crons (`GET /api/admin/send-daily-report`, `/api/admin/client-errors/purge-expired`, `/api/admin/organizations/enforce-mfa-requirements`). Their `GET` accepts only this secret (and refuses everything while it is unset); administrators run them with `POST` and their session. |
 
 Both build flags are only honoured when `VERCEL_ENV=production`, so preview deployments never
 migrate a database.

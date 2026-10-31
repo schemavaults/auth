@@ -32,6 +32,9 @@ import redirectWithError from "@/lib/redirect-with-error";
 import reportServerException from "@/lib/reportServerException";
 import allowUserOwnedResourceCreation from "@/lib/config/allow-user-owned-resource-creation";
 import { connection } from "next/server";
+import { getHardcodedOrgs } from "@schemavaults/auth-common";
+import loadOrganizationMfaRequirementView from "@/lib/organization-mfa-requirements/load-organization-mfa-requirement";
+import type { OrganizationMfaRequirementView } from "@/lib/organization-mfa-requirements/types";
 
 function memberToTableData(
   member: OrganizationMemberWithUserData,
@@ -67,11 +70,14 @@ async function PreloadedOrgPage(
   // Also determine if user is an owner of this organization
   let isOrgOwner = false;
   let userRole: OrganizationMembershipRoleType | undefined = undefined;
+  // Whether the viewer holds a membership row (platform admins may not)
+  let viewerIsMember = false;
   if (user.admin) {
     isOrgOwner = true;
     const userMemberships = await registry.listUserOrganizationMemberships(user.uid, false);
     const userMembership = userMemberships.find(m => m.organization_id === organization_id);
     userRole = userMembership?.role ?? "admin";
+    viewerIsMember = userMembership !== undefined;
   } else {
     const userMemberships = await registry.listUserOrganizationMemberships(user.uid, false);
     const userMembership = userMemberships.find(m => m.organization_id === organization_id);
@@ -80,7 +86,14 @@ async function PreloadedOrgPage(
     }
     userRole = userMembership.role;
     isOrgOwner = userMembership.role === "owner" || userMembership.role === 'admin';
+    viewerIsMember = true;
   }
+
+  // System organizations cannot require MFA (their membership follows the
+  // platform admin flag), so they get no requirement card.
+  const isSystemOrganization: boolean = getHardcodedOrgs().some(
+    (org) => org.organization_id === organization_id,
+  );
 
   let organization: OrganizationDefinition;
   try {
@@ -102,6 +115,7 @@ async function PreloadedOrgPage(
     preloaded_apps,
     preloaded_api_servers,
     can_create_personal_resources,
+    preloaded_mfa_requirement,
   ] = await Promise.all([
     registry.listOrganizationMembers(organization_id),
     preloadAppsTable({
@@ -137,6 +151,21 @@ async function PreloadedOrgPage(
             return true;
           },
         ),
+    isSystemOrganization
+      ? Promise.resolve(null)
+      : loadOrganizationMfaRequirementView(dbh.db, {
+          organization_id,
+          caller_uid: user.uid,
+          include_members: isOrgOwner,
+        }).catch(async (e: unknown): Promise<OrganizationMfaRequirementView | null> => {
+          await reportServerException(e, {
+            op_name: "ViewOrganizationPage.loadOrganizationMfaRequirementView",
+            route: "/orgs/[organization_id]",
+            uid: user.uid,
+            context: { organization_id, nonFatal: true },
+          });
+          return null;
+        }),
   ]);
 
   const preloaded_members: readonly OrganizationMemberTableData[] =
@@ -151,6 +180,8 @@ async function PreloadedOrgPage(
       isOrgOwner={isOrgOwner}
       userRole={userRole}
       can_create_personal_resources={can_create_personal_resources}
+      preloaded_mfa_requirement={preloaded_mfa_requirement}
+      viewerIsMember={viewerIsMember}
       platform_admin={
         user.admin === true
           ? { uid: user.uid, email: user.email }

@@ -28,9 +28,9 @@ export interface SendAndLogUserEmailOptions extends UserEmailLogDetails {
 }
 
 /**
- * Sends a verification or password reset e-mail with `send` and records the
- * attempt in USER_EMAIL_LOG (the "Email Log" timeline on
- * /admin/users/[uid]): `sent` once the mail server accepted it, `failed`
+ * Sends a verification, password reset or MFA security alert e-mail with
+ * `send` and records the attempt in USER_EMAIL_LOG (the "Email Log"
+ * timeline on /admin/users/[uid]): `sent` once the mail server accepted it, `failed`
  * with the reason otherwise. A failed send is rethrown after it is
  * recorded, so callers keep handling (and capturing) it as before.
  *

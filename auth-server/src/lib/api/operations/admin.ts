@@ -21,6 +21,10 @@ import {
   purgeExpiredClientErrorsViaGet,
   purgeExpiredClientErrorsViaPost,
 } from "@/app/api/admin/client-errors/purge-expired/operation";
+import {
+  enforceOrganizationMfaRequirementsViaGet,
+  enforceOrganizationMfaRequirementsViaPost,
+} from "@/app/api/admin/organizations/enforce-mfa-requirements/operation";
 import { deleteClientError, getClientError } from "@/app/api/admin/client-errors/[client_error_id]/operation";
 import { listServerTraces } from "@/app/api/admin/server-traces/operation";
 import { listServerTraceOperations } from "@/app/api/admin/server-traces/operations/operation";
@@ -39,6 +43,9 @@ export const adminOperations: readonly AnyOperationDefinition[] = [
   listUserIssuedTokens,
   listUserEmailLog,
   promoteUserToAdmin,
+  // Organizations
+  enforceOrganizationMfaRequirementsViaGet,
+  enforceOrganizationMfaRequirementsViaPost,
   // Invite codes
   listInviteCodes,
   createInviteCode,

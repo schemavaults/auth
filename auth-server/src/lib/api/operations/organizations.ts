@@ -17,6 +17,10 @@ import {
   respondToOrganizationInvitation,
   revokeOrganizationInvitation,
 } from "@/app/api/organizations/[organization_id]/invitations/[invitation_id]/operation";
+import {
+  getOrganizationMfaRequirementOperation,
+  updateOrganizationMfaRequirementOperation,
+} from "@/app/api/organizations/[organization_id]/mfa-requirement/operation";
 
 /** Operations of the "organizations" domain, in the order they appear in the docs. */
 export const organizationsOperations: readonly AnyOperationDefinition[] = [
@@ -31,4 +35,6 @@ export const organizationsOperations: readonly AnyOperationDefinition[] = [
   createOrganizationInvitationOperation,
   respondToOrganizationInvitation,
   revokeOrganizationInvitation,
+  getOrganizationMfaRequirementOperation,
+  updateOrganizationMfaRequirementOperation,
 ];

@@ -18,7 +18,13 @@ import { getClientErrorStats } from "@/lib/auth-db/client-errors";
 import { loadClientErrorStorageStatus } from "@/lib/client-errors/intake-policy";
 import sendEmailViaMailServer from "@/lib/mail/send-email-via-mail-server";
 import captureServerException from "@/lib/captureServerException";
-import { buildDailyAdminReport, DAILY_REPORT_CLIENT_ERROR_TOP_N } from "./buildReportHtml";
+import { loadOrganizationMfaDailyReport } from "@/lib/auth-db/organization-mfa-requirements";
+import {
+  buildDailyAdminReport,
+  DAILY_REPORT_CLIENT_ERROR_TOP_N,
+  DAILY_REPORT_ORGANIZATION_MFA_LIST_LIMIT,
+  DAILY_REPORT_ORGANIZATION_MFA_UPCOMING_HOURS,
+} from "./buildReportHtml";
 import type { RedisCache } from "@/lib/redis";
 import getAuthServerFriendlyName from "@/lib/config/auth-server-friendly-name";
 import getAuthServerEmailAccentColor from "@/lib/config/email-accent-color";
@@ -53,6 +59,7 @@ export async function sendDailyReportHandler({
       topMostPopularApis,
       clientErrorStats,
       clientErrorStorage,
+      organizationMfa,
     ] = await Promise.all([
       listUsersCreatedSince(dbh.db, windowStart.getTime()),
       listOrganizationsCreatedSince(dbh.db, windowStart.getTime()),
@@ -62,6 +69,12 @@ export async function sendDailyReportHandler({
       listTopMostPopularApisSince(dbh.db, windowStart.getTime(), 10),
       getClientErrorStats(dbh.db, { since_ms: windowStart.getTime() }, windowEnd.getTime()),
       loadClientErrorStorageStatus(dbh.db, redis.client),
+      loadOrganizationMfaDailyReport(dbh.db, {
+        since: windowStart.getTime(),
+        now: windowEnd.getTime(),
+        upcoming_until: windowEnd.getTime() + DAILY_REPORT_ORGANIZATION_MFA_UPCOMING_HOURS * 60 * 60 * 1000,
+        list_limit: DAILY_REPORT_ORGANIZATION_MFA_LIST_LIMIT,
+      }),
     ]);
     // Client error reports only carry the app id; name the apps the report lists.
     const clientErrorAppNames = await resolveAppNames(
@@ -99,6 +112,7 @@ export async function sendDailyReportHandler({
         storage: clientErrorStorage,
         appNames: clientErrorAppNames,
       },
+      organizationMfa,
     });
 
     const dateLabel = windowEnd.toISOString().slice(0, 10);
@@ -123,6 +137,7 @@ export async function sendDailyReportHandler({
       top_most_popular_apis_count: topMostPopularApis.length,
       client_errors_count: clientErrorStats.totals.errors,
       client_error_groups_count: clientErrorStats.totals.groups,
+      organization_mfa_removals_count: organizationMfa.removals_total,
       window_start: windowStart.toISOString(),
       window_end: windowEnd.toISOString(),
     });

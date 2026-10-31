@@ -97,6 +97,28 @@ export const jwksAccessAssertionScheme = defineAuthScheme({
 });
 
 /**
+ * The deployment's cron secret (`CRON_SECRET`) presented by a scheduler as
+ * `Authorization: Bearer <CRON_SECRET>`: Vercel crons send it automatically,
+ * the `deploy/` stack's host crontab sends it with curl. Identifies the
+ * scheduled job, not a user, so only scheduled-job operations list it, and
+ * they list nothing else (an administrator triggers the job through its own
+ * admin-guarded operation instead). Refused outright while `CRON_SECRET` is
+ * unset.
+ */
+export const cronSecretScheme = defineAuthScheme({
+  name: "schemavaults-cron-secret",
+  title: "Cron secret (Bearer)",
+  description:
+    "The deployment's `CRON_SECRET`, sent as `Authorization: Bearer <CRON_SECRET>` by the scheduler (Vercel crons send it automatically; see `deploy/README.md` for a host crontab). Identifies the scheduled job, not a user. Refused while `CRON_SECRET` is unset.",
+  securityScheme: {
+    type: "http",
+    scheme: "bearer",
+    description: "The deployment's cron secret.",
+  },
+  challenge: 'Bearer realm="schemavaults-cron"',
+});
+
+/**
  * The credentials every session-guarded operation accepts, in the order
  * they are tried: the browser session first, then the access token cookie,
  * then a bearer access token. All three are `principal: "user"` schemes,

@@ -20,7 +20,16 @@ import {
   TimelineTime,
   TimelineTitle,
 } from "@schemavaults/ui";
-import { KeyRound, Loader2, Mail, type LucideIcon } from "lucide-react";
+import {
+  KeyRound,
+  Loader2,
+  Mail,
+  RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldOff,
+  type LucideIcon,
+} from "lucide-react";
 import { LocalDateTime } from "@schemavaults/auth-ui";
 import type {
   UserEmailLogEmailType,
@@ -35,11 +44,29 @@ export interface UserEmailLogCardProps {
 const EMAIL_TYPE_LABELS: Record<UserEmailLogEmailType, string> = {
   email_verification: "Verification email",
   password_reset: "Password reset email",
+  mfa_enabled_alert: "MFA enabled alert",
+  mfa_removed_alert: "MFA removed alert",
+  mfa_admin_reset_alert: "MFA reset alert",
+  mfa_recovery_codes_regenerated_alert: "Recovery codes regenerated alert",
 };
 
 const EMAIL_TYPE_ICONS: Record<UserEmailLogEmailType, LucideIcon> = {
   email_verification: Mail,
   password_reset: KeyRound,
+  mfa_enabled_alert: ShieldCheck,
+  mfa_removed_alert: ShieldOff,
+  mfa_admin_reset_alert: ShieldAlert,
+  mfa_recovery_codes_regenerated_alert: RefreshCw,
+};
+
+/** What the user did that sent each `user_request` e-mail. */
+const USER_REQUEST_DESCRIPTIONS: Record<UserEmailLogEmailType, string> = {
+  email_verification: "Requested by the user",
+  password_reset: "Requested by the user (forgot password)",
+  mfa_enabled_alert: "Sent after the user enabled MFA",
+  mfa_removed_alert: "Sent after the user removed an MFA factor",
+  mfa_admin_reset_alert: "Requested by the user",
+  mfa_recovery_codes_regenerated_alert: "Sent after the user regenerated their recovery codes",
 };
 
 function describeSource(entry: UserEmailLogEntry): ReactNode {
@@ -47,13 +74,13 @@ function describeSource(entry: UserEmailLogEntry): ReactNode {
     case "registration":
       return "Sent at sign-up";
     case "user_request":
-      return entry.email_type === "password_reset"
-        ? "Requested by the user (forgot password)"
-        : "Requested by the user";
+      return USER_REQUEST_DESCRIPTIONS[entry.email_type];
     case "admin_request":
       return (
         <>
-          Resent by{" "}
+          {entry.email_type === "mfa_admin_reset_alert"
+            ? "Sent after an MFA reset by"
+            : "Resent by"}{" "}
           {entry.requested_by ? (
             <Link
               href={`/admin/users/${entry.requested_by}`}
@@ -127,9 +154,9 @@ function UserEmailLogTimelineItem({
 }
 
 /**
- * The verification and password reset e-mails sent to a user (newest
- * first), as recorded in USER_EMAIL_LOG, including the ones the mail
- * server did not accept.
+ * The verification, password reset and MFA security alert e-mails sent to
+ * a user (newest first), as recorded in USER_EMAIL_LOG, including the ones
+ * the mail server did not accept.
  */
 export function UserEmailLogCard({ uid }: UserEmailLogCardProps): ReactElement {
   const { data, error, isLoading } = useUserEmailLog(uid);
@@ -153,7 +180,8 @@ export function UserEmailLogCard({ uid }: UserEmailLogCardProps): ReactElement {
         className="text-sm text-muted-foreground"
         data-testid="admin-user-email-log-empty"
       >
-        No verification or password reset emails have been sent to this user.
+        No verification, password reset or MFA alert emails have been sent to
+        this user.
       </p>
     );
   } else {
@@ -175,8 +203,9 @@ export function UserEmailLogCard({ uid }: UserEmailLogCardProps): ReactElement {
       <CardHeader>
         <CardTitle>Email Log</CardTitle>
         <CardDescription>
-          Verification and password reset emails sent to this user, newest
-          first, including attempts the mail server did not accept.
+          Verification, password reset and MFA security alert emails sent to
+          this user, newest first, including attempts the mail server did not
+          accept.
         </CardDescription>
       </CardHeader>
       <CardContent>{content}</CardContent>

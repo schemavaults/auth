@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ClientErrorGroupStats, ClientErrorStats } from "@/lib/auth-db/client-errors";
 import type { ClientErrorStorageStatus } from "@/lib/client-errors/row-size";
+import type { OrganizationMfaDailyReport } from "@/lib/auth-db/organization-mfa-requirements";
 import { buildDailyAdminReport, DAILY_REPORT_CLIENT_ERROR_TOP_N, type DailyReportClientErrors } from "./buildReportHtml";
 
 const AUTH_SERVER_URI = "https://auth.example.com";
@@ -64,7 +65,22 @@ const STORAGE: ClientErrorStorageStatus = {
   retention_days: 30,
 };
 
-function build(clientErrors: Partial<DailyReportClientErrors> = {}) {
+/** No organization requires MFA: the section is left out. */
+const NO_ORGANIZATION_MFA: OrganizationMfaDailyReport = {
+  organizations_requiring_mfa: 0,
+  removals: [],
+  removals_total: 0,
+  in_grace_period: 0,
+  awaiting_removal: 0,
+  not_notified: 0,
+  upcoming_removals: [],
+  upcoming_removals_total: 0,
+};
+
+function build(
+  clientErrors: Partial<DailyReportClientErrors> = {},
+  organizationMfa: Partial<OrganizationMfaDailyReport> = {},
+) {
   return buildDailyAdminReport({
     authServerUri: AUTH_SERVER_URI,
     friendlyName: "Example Auth",
@@ -88,6 +104,7 @@ function build(clientErrors: Partial<DailyReportClientErrors> = {}) {
       appNames: new Map([[APP_ID, "Example App"]]),
       ...clientErrors,
     },
+    organizationMfa: { ...NO_ORGANIZATION_MFA, ...organizationMfa },
   });
 }
 
@@ -198,5 +215,91 @@ describe("buildDailyAdminReport client errors", () => {
     expect(build({ storage: { ...STORAGE, accepting_reports: false, retention_days: 0 } }).text).toContain(
       "Intake: Not accepting reports · Storage: 3 MB of 100 MB used (3%) · Reports are kept until an administrator deletes them",
     );
+  });
+});
+
+describe("buildDailyAdminReport organization MFA enforcement", () => {
+  const MEMBER_UID = "66666666-6666-4666-8666-666666666666";
+  const OTHER_UID = "77777777-7777-4777-8777-777777777777";
+  const ORG_ID = "acme-inc";
+  const REMOVED_AT = WINDOW_END.getTime() - 16 * 60 * 60 * 1000;
+
+  const removal = {
+    organization_id: ORG_ID,
+    organization_name: "Acme <Inc>",
+    uid: MEMBER_UID,
+    email: "removed@example.com",
+    role: "owner" as const,
+    grace_period_reason: "requirement_enabled" as const,
+    grace_period_ended_at: REMOVED_AT - 60 * 60 * 1000,
+    removed_at: REMOVED_AT,
+  };
+  const upcoming = {
+    organization_id: ORG_ID,
+    organization_name: "Acme <Inc>",
+    uid: OTHER_UID,
+    email: "soon@example.com",
+    ends_at: WINDOW_END.getTime() + 30 * 60 * 60 * 1000,
+    notified: false,
+  };
+
+  test("is left out while no organization requires MFA and nobody was removed", () => {
+    const { html, text } = build();
+    expect(html).not.toContain("Organization MFA enforcement");
+    expect(text).not.toContain("Organization MFA enforcement");
+  });
+
+  test("says so when organizations require MFA but nobody was removed", () => {
+    const { html, text } = build({}, { organizations_requiring_mfa: 2 });
+    expect(html).toContain("Organization MFA enforcement (0 members removed)");
+    expect(html).toContain("2 organizations require multi-factor authentication.");
+    expect(html).toContain("No members were removed in the last 24 hours.");
+    expect(html).toContain("No grace periods end in the next 72 hours.");
+    expect(text).toContain("Organization MFA enforcement (0 members removed):");
+    expect(text).toContain(`  → All organizations: ${AUTH_SERVER_URI}/admin/organizations`);
+  });
+
+  test("lists each removed member with their organization, role, grace period and links", () => {
+    const { html, text } = build({}, {
+      organizations_requiring_mfa: 1,
+      removals: [removal],
+      removals_total: 1,
+      in_grace_period: 3,
+    });
+    expect(html).toContain(`<h2 style="margin:0;font-size:16px;color:#dc2626;">Organization MFA enforcement (1 member removed)</h2>`);
+    expect(html).toContain(`href="${AUTH_SERVER_URI}/admin/users/${MEMBER_UID}"`);
+    expect(html).toContain(`href="${AUTH_SERVER_URI}/orgs/${ORG_ID}"`);
+    expect(html).toContain("Acme &lt;Inc&gt;");
+    expect(html).not.toContain("Acme <Inc>");
+    expect(html).toContain("had no MFA when the organization required it");
+    expect(text).toContain(
+      `    - removed@example.com from Acme <Inc> [${ORG_ID}] (owner) — grace period ended 2026-10-03 19:00:00 UTC, had no MFA when the organization required it — removed 2026-10-03 20:00:00 UTC — ${AUTH_SERVER_URI}/admin/users/${MEMBER_UID}`,
+    );
+    expect(text).toContain("  1 member removed · 3 in a grace period · 0 awaiting removal · 0 not yet emailed");
+  });
+
+  test("flags upcoming removals of members who were not warned by email", () => {
+    const { html, text } = build({}, {
+      organizations_requiring_mfa: 1,
+      not_notified: 1,
+      upcoming_removals: [upcoming],
+      upcoming_removals_total: 1,
+    });
+    expect(html).toContain("Check the mail server: these members were not warned");
+    expect(html).toContain(`color:#dc2626;font-weight:600;">No</td>`);
+    expect(text).toContain("  ! Some members in a grace period were not warned by email: check the mail server.");
+    expect(text).toContain(
+      `    - soon@example.com from Acme <Inc> [${ORG_ID}] — grace period ends 2026-10-05 18:00:00 UTC — NOT warned by email — ${AUTH_SERVER_URI}/admin/users/${OTHER_UID}`,
+    );
+  });
+
+  test("notes the removals it does not list", () => {
+    const { html, text } = build({}, {
+      organizations_requiring_mfa: 1,
+      removals: [removal],
+      removals_total: 4,
+    });
+    expect(html).toContain("+3 more removals not listed");
+    expect(text).toContain("    (+3 more removals not listed)");
   });
 });

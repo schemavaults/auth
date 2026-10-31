@@ -8,6 +8,7 @@ import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
 import { generateRecoveryCodes, verifyTotpCode } from "@/lib/mfa";
+import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 
 const ROUTE = "/api/user/mfa/recovery-codes/regenerate";
 
@@ -16,7 +17,7 @@ export const regenerateRecoveryCodes = defineOperation({
   path: ROUTE,
   summary: "Regenerate my recovery codes",
   description:
-    "Replaces the caller's recovery codes with a fresh set, invalidating every previous code. The request must carry a current code from one of the caller's verified authenticator-app factors (`factor_id`). The response always has `recovery_codes_issued: true`.",
+    "Replaces the caller's recovery codes with a fresh set, invalidating every previous code. The request must carry a current code from one of the caller's verified authenticator-app factors (`factor_id`). The response always has `recovery_codes_issued: true`; a security alert e-mail is sent.",
   tags: [API_TAGS.mfa],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {
@@ -42,7 +43,7 @@ export const regenerateRecoveryCodes = defineOperation({
   },
   handler: async (ctx) => {
     const user = ctx.auth.user;
-    const { db } = ctx.context;
+    const { db, redis, environment } = ctx.context;
     const { factor_id, code } = ctx.body;
 
     const mfaRegistry = new MfaRegistry(db);
@@ -60,6 +61,18 @@ export const regenerateRecoveryCodes = defineOperation({
       }
       const recovery_codes = generateRecoveryCodes();
       await mfaRegistry.replaceRecoveryCodes({ uid: user.uid, codes: recovery_codes });
+
+      // Awaited (it never throws): the request's db / redis are released
+      // once the response is produced, which would cut a detached send off.
+      await sendMfaSecurityAlertEmail({
+        uid: user.uid,
+        to: user.email,
+        action: "recovery_codes_regenerated",
+        db,
+        redis,
+        environment,
+      });
+
       return ctx.json(200, {
         success: true,
         recovery_codes,

@@ -10,6 +10,7 @@ import {
   accessTokenCookieScheme,
   clientAppRefreshTokenBearerScheme,
   clientAppSessionCookieScheme,
+  cronSecretScheme,
   jwksAccessAssertionScheme,
   sessionCookieScheme,
 } from "../auth-schemes";
@@ -18,6 +19,7 @@ import {
   bearerAccessTokenSource,
   refreshTokenCookieSource,
 } from "./cookie-token-sources";
+import { cronSecretResolver } from "./cron-secret";
 import { jwksAccessAssertionResolver } from "./jwks-access-assertion";
 import { principalFromTokenSource } from "./token-source-principal";
 
@@ -121,4 +123,5 @@ export const authResolvers: AuthResolvers<UserData, AuthServerApiContext> = {
   [clientAppSessionCookieScheme.name]: clientAppSessionCookie,
   [clientAppRefreshTokenBearerScheme.name]: clientAppRefreshTokenBearer,
   [jwksAccessAssertionScheme.name]: jwksAccessAssertionResolver,
+  [cronSecretScheme.name]: cronSecretResolver,
 };

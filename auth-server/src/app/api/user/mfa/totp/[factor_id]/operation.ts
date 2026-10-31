@@ -9,6 +9,7 @@ import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
 import { verifyTotpCode } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
+import { startOrganizationMfaGracePeriodsForUser } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
 const ROUTE = "/api/user/mfa/totp/{factor_id}";
 
@@ -75,11 +76,16 @@ export const removeTotpFactor = defineOperation({
       }
 
       await sendMfaSecurityAlertEmail({
+        uid: user.uid,
         to: user.email,
         action: "removed",
         db,
         redis,
       });
+
+      // Without a factor left, organizations requiring MFA start the user's
+      // grace period (and email them). Never throws.
+      await startOrganizationMfaGracePeriodsForUser({ db, redis, uid: user.uid });
 
       return ctx.json(200, { success: true });
     } catch (e: unknown) {

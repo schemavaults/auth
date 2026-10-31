@@ -22,8 +22,8 @@ export interface PurgeExpiredClientErrorsInputs {
  * Deletes the client error reports older than the
  * `client_error_reports_retention_days` setting, immediately (no hourly
  * lock), for the scheduled job and for administrators. Shared by the
- * session-guarded operations and the cron-secret middleware, so both
- * answer with the same body.
+ * scheduled job's GET (cron secret) and the administrators' POST
+ * (session), so both answer with the same body.
  */
 export async function purgeExpiredClientErrorsHandler({
   db,

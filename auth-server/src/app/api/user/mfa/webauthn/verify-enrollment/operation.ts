@@ -21,6 +21,7 @@ import {
   verifyWebauthnRegistration,
 } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
+import { clearOrganizationMfaGracePeriodsAfterEnrollment } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 import {
   WEBAUTHN_ENROLL_RATE_LIMIT,
   checkRateLimit,
@@ -132,9 +133,13 @@ export const verifyPasskeyEnrollment = defineOperation({
         user.uid,
       );
 
+      // The user meets organization MFA requirements now. Never throws.
+      await clearOrganizationMfaGracePeriodsAfterEnrollment({ db, uid: user.uid });
+
       // Awaited (it never throws): the request's db / redis are released
       // once the response is produced, which would cut a detached send off.
       await sendMfaSecurityAlertEmail({
+        uid: user.uid,
         to: user.email,
         action: "enabled",
         db,

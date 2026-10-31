@@ -115,7 +115,7 @@ export const AdminIssuedToken = z
   })
   .openapi("AdminIssuedToken");
 
-/** A row of the `USER_EMAIL_LOG` table: one attempt to e-mail a user a verification or password reset link. */
+/** A row of the `USER_EMAIL_LOG` table: one attempt to e-mail a user a verification or password reset link, or an MFA security alert. */
 export const AdminUserEmailLogEntry = z
   .object({
     email_log_id: z.string(),
@@ -123,7 +123,7 @@ export const AdminUserEmailLogEntry = z
     email_type: z.enum(userEmailLogEmailTypes).openapi({ description: "Which e-mail was sent" }),
     source: z.enum(userEmailLogSources).openapi({
       description:
-        "What triggered it: the verification e-mail sent at sign-up, a request the user made, or an administrator's resend",
+        "What triggered it: the verification e-mail sent at sign-up, something the user did (a request, or an MFA change for the MFA alerts), or an administrator's action (a verification resend, an MFA reset)",
     }),
     recipient: z.string().openapi({ description: "Address the e-mail was sent to, as it was at the time" }),
     status: z.enum(userEmailLogStatuses).openapi({ description: "Whether the mail server accepted the e-mail" }),
@@ -131,7 +131,7 @@ export const AdminUserEmailLogEntry = z
     requested_by: z
       .string()
       .nullable()
-      .openapi({ description: "uid of the administrator behind an `admin_request`; null otherwise" }),
+      .openapi({ description: "uid of the administrator behind an `admin_request` (resend or MFA reset); null otherwise" }),
     requested_by_email: z
       .string()
       .nullable()
@@ -158,6 +158,10 @@ export const DailyAdminReportResult = z
       .number()
       .int()
       .openapi({ description: "Distinct client error groups (fingerprints) among those reports" }),
+    organization_mfa_removals_count: z
+      .number()
+      .int()
+      .openapi({ description: "Members the organization MFA enforcement removed from organizations during the window" }),
     window_start: z.iso.datetime().openapi({ description: "Start of the 24h reporting window" }),
     window_end: z.iso.datetime().openapi({ description: "End of the 24h reporting window (now)" }),
   })

@@ -11,18 +11,20 @@ import {
   respondToInvitation,
   type RespondToInvitationResult,
 } from "@/lib/auth-db/organizations";
+import { wouldJoiningViolateOrganizationMfaRequirement } from "@/lib/auth-db/organization-mfa-requirements";
 import captureServerException from "@/lib/captureServerException";
 import { sendTeamInvitationAcceptedEmail } from "@/lib/mail/send-team-invitation-emails";
 import { INVITATION_ROUTE, invitationParams } from "./shared";
 
 class ExceededMembershipLimitError extends Error {}
+class OrganizationRequiresMfaError extends Error {}
 
 export const respondToOrganizationInvitation = defineOperation({
   method: "patch",
   path: INVITATION_ROUTE,
   summary: "Accept or decline an invitation",
   description:
-    "Lets the invited user accept (joining the organization as a member) or decline a pending invitation. Only the invitee may respond; accepting is refused once the caller reached the membership limit.",
+    "Lets the invited user accept (joining the organization as a member) or decline a pending invitation. Only the invitee may respond; accepting is refused once the caller reached the membership limit, and while the organization requires multi-factor authentication of its members and the caller has no verified MFA factor (`error: mfa_required`; the invitation stays pending, so the caller can enable MFA and accept it then).",
   tags: [API_TAGS.organizations],
   auth: requireAuth({ schemes: sessionSchemes, notes: "Only the invited user may respond to an invitation." }),
   request: {
@@ -44,7 +46,12 @@ export const respondToOrganizationInvitation = defineOperation({
       }),
     },
     ...validationErrorResponse,
-    ...sessionErrorResponses,
+    401: sessionErrorResponses[401],
+    403: {
+      description:
+        "The account is disabled, the caller is not the invitee, or the organization requires multi-factor authentication and the caller has none (`error: mfa_required`)",
+      schema: ErrorResponse,
+    },
     404: { description: "No such invitation in this organization", schema: ErrorResponse },
     409: { description: "The caller reached the organization membership limit", schema: ErrorResponse },
     500: { description: "Failed to respond to the invitation", schema: ErrorResponse },
@@ -78,6 +85,9 @@ export const respondToOrganizationInvitation = defineOperation({
           if (exceededMembershipLimit) {
             throw new ExceededMembershipLimitError();
           }
+          if (await wouldJoiningViolateOrganizationMfaRequirement(trx, organization_id, user.uid)) {
+            throw new OrganizationRequiresMfaError();
+          }
         }
         return await respondToInvitation(trx, invitation_id, user.uid, action);
       });
@@ -105,6 +115,14 @@ export const respondToOrganizationInvitation = defineOperation({
         }
       }
     } catch (e: unknown) {
+      if (e instanceof OrganizationRequiresMfaError) {
+        return ctx.json(403, {
+          success: false,
+          error: "mfa_required",
+          message:
+            "This organization requires multi-factor authentication. Enable it on your account's MFA page, then accept the invitation again.",
+        });
+      }
       if (e instanceof ExceededMembershipLimitError) {
         return ctx.json(409, {
           success: false,

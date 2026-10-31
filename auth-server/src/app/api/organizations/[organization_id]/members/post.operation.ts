@@ -18,6 +18,7 @@ import {
   type AssignOrganizationMembershipResult,
 } from "@/lib/auth-db/organizations";
 import { getUserByEmail, getUserByUID, type UserDocument } from "@/lib/auth-db/users";
+import { wouldJoiningViolateOrganizationMfaRequirement } from "@/lib/auth-db/organization-mfa-requirements";
 import captureServerException from "@/lib/captureServerException";
 import { MEMBERS_ROUTE } from "./shared";
 
@@ -55,7 +56,7 @@ export const assignOrganizationMember = defineOperation({
   path: MEMBERS_ROUTE,
   summary: "Add a member directly (administrators)",
   description:
-    "Makes an existing user (looked up by e-mail address or user id, the caller included) a member of the organization immediately, without an invitation to accept. Platform administrators only: organization owners invite members with `POST /api/organizations/{organization_id}/invitations`. Any pending invitation of the user to the organization is revoked. Refused for system organizations, service accounts (an organization-owned app's service account joins its organization through `PUT /api/apps/{app_id}/service-account/organization-membership` instead), users that already are members and users at the membership limit.",
+    "Makes an existing user (looked up by e-mail address or user id, the caller included) a member of the organization immediately, without an invitation to accept. Platform administrators only: organization owners invite members with `POST /api/organizations/{organization_id}/invitations`. Any pending invitation of the user to the organization is revoked. Refused for system organizations, service accounts (an organization-owned app's service account joins its organization through `PUT /api/apps/{app_id}/service-account/organization-membership` instead), users that already are members, users at the membership limit, and users without a verified MFA factor while the organization requires multi-factor authentication (`error: mfa_required`).",
   tags: [API_TAGS.organizations],
   auth: requireAuth({
     schemes: sessionSchemes,
@@ -88,7 +89,8 @@ export const assignOrganizationMember = defineOperation({
     },
     404: { description: "No such organization, or no user matches the identifier", schema: ErrorResponse },
     409: {
-      description: "The user already is a member, or reached the organization membership limit",
+      description:
+        "The user already is a member, reached the organization membership limit, or has no MFA while the organization requires it (`error: mfa_required`)",
       schema: ErrorResponse,
     },
     500: { description: "Failed to add the member", schema: ErrorResponse },
@@ -139,6 +141,24 @@ export const assignOrganizationMember = defineOperation({
       });
     }
     const assignee_uid: string = assignee.uid;
+
+    try {
+      if (await wouldJoiningViolateOrganizationMfaRequirement(db, organization_id, assignee_uid)) {
+        return ctx.json(409, {
+          success: false,
+          error: "mfa_required",
+          message: `This organization requires multi-factor authentication, and ${assignee.email} has not enabled it.`,
+        });
+      }
+    } catch (e: unknown) {
+      await captureServerException(db, e, {
+        op_name: "POST_assign_organization_member_handler.wouldJoiningViolateOrganizationMfaRequirement",
+        route: MEMBERS_ROUTE,
+        uid: user.uid,
+        context: { organization_id, assignee_uid },
+      });
+      return ctx.json(500, { success: false, message: "Failed to check the organization's MFA requirement" });
+    }
 
     let result: AssignOrganizationMembershipResult;
     try {
