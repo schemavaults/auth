@@ -7,7 +7,7 @@ import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
-import { generateRecoveryCodes, verifyTotpCode } from "@/lib/mfa";
+import { generateRecoveryCodes, verifyAndConsumeTotpCode } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 
 const ROUTE = "/api/user/mfa/recovery-codes/regenerate";
@@ -56,7 +56,15 @@ export const regenerateRecoveryCodes = defineOperation({
       if (!factor) {
         return ctx.json(400, { success: false, message: "Unknown or unverified MFA factor" });
       }
-      if (!verifyTotpCode({ secret: factor.secret, code })) {
+      // A code this factor already accepted is refused as a replay.
+      const isValid = await verifyAndConsumeTotpCode({
+        mfaRegistry,
+        uid: user.uid,
+        factor_id,
+        secret: factor.secret,
+        code,
+      });
+      if (!isValid) {
         return ctx.json(401, { success: false, message: "Invalid TOTP code" });
       }
       const recovery_codes = generateRecoveryCodes();

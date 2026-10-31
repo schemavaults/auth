@@ -3,9 +3,10 @@
 //                                        the absence of session cookies
 //   POST /api/auth/mfa/verify         -> client_app_id mismatch (400), unknown
 //                                        or consumed challenge (410, incl.
-//                                        replay after success), recovery-code
-//                                        single use, body validation (400),
-//                                        cookies + authorization_code on success
+//                                        replay after success), TOTP codes and
+//                                        recovery codes single use, body
+//                                        validation (400), cookies +
+//                                        authorization_code on success
 //   POST /api/auth/mfa/webauthn/options -> 409 without passkeys, 410 unknown
 //                                        challenge, 400 client_app_id mismatch
 // The UI-driven flows live in Mfa.cy.ts; this file pins the JSON contracts.
@@ -182,6 +183,53 @@ describe("MFA login challenge API", () => {
           }).then((response) => {
             expect(response.status, "replay after success").to.eq(410);
             expect(response.body.kind).to.eq("challenge_expired");
+          });
+        });
+      });
+    });
+  });
+
+  it("a TOTP code accepted once is refused on a new challenge (RFC 6238 §5.2), the factor's next code is accepted", () => {
+    setupMfaUser().then(({ email, password, factor_id, secret }) => {
+      cy.compute_totp_code(secret).then((code) => {
+        attemptLogin(email, password).then((login) => {
+          verify({
+            challenge_id: login.body.challenge_id,
+            client_app_id: AUTH_APP_ID,
+            proof: { type: "totp", factor_id, code },
+          }).then((response) => {
+            expect(response.status).to.eq(200);
+            expect(response.body.kind).to.eq("authenticated");
+          });
+        });
+
+        // An observed code replayed on a fresh challenge, while it is still
+        // inside the drift window, is refused like a wrong code.
+        cy.logout();
+        attemptLogin(email, password).then((login) => {
+          expect(login.body.kind).to.eq("mfa_required");
+          const challenge_id = login.body.challenge_id as string;
+          verify({
+            challenge_id,
+            client_app_id: AUTH_APP_ID,
+            proof: { type: "totp", factor_id, code },
+          }).then((response) => {
+            expect(response.status, "replayed TOTP code").to.eq(401);
+            expect(response.body.kind).to.eq("failure");
+            expect(String(response.body.message)).to.include("attempt");
+          });
+
+          // compute_totp_code() yields a later time step's code.
+          cy.compute_totp_code(secret).then((next_code) => {
+            expect(next_code, "a different code").to.not.eq(code);
+            verify({
+              challenge_id,
+              client_app_id: AUTH_APP_ID,
+              proof: { type: "totp", factor_id, code: next_code },
+            }).then((response) => {
+              expect(response.status, "next code").to.eq(200);
+              expect(response.body.kind).to.eq("authenticated");
+            });
           });
         });
       });

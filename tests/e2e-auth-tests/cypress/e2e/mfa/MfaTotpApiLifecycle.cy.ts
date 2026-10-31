@@ -10,7 +10,10 @@
 //   DELETE /api/user/mfa/webauthn/[factor_id] (no-passkey branches only;
 //          creating a passkey needs a Chromium virtual authenticator, see
 //          WebauthnMfa.cy.ts)
-// TOTP codes are computed on the Node side via cy.compute_totp_code().
+// TOTP codes are computed on the Node side via cy.compute_totp_code(), which
+// never yields the same time step twice for a secret: the server refuses a
+// code whose step the factor already accepted (RFC 6238 §5.2), so a spec
+// replays a code by reusing the string it got.
 
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import {
@@ -103,11 +106,15 @@ function attemptLogin(
     );
 }
 
-/** Enrolls TOTP purely via request; yields the factor id, secret and codes. */
+/**
+ * Enrolls TOTP purely via request; yields the factor id, secret, recovery
+ * codes and the (now consumed) TOTP code that confirmed the enrollment.
+ */
 function enrollTotpViaApi(): Cypress.Chainable<{
   factor_id: string;
   secret: string;
   recovery_codes: string[];
+  enrollment_code: string;
 }> {
   return cy
     .request<MfaEnrollResponseBody>({
@@ -130,6 +137,7 @@ function enrollTotpViaApi(): Cypress.Chainable<{
               factor_id,
               secret,
               recovery_codes: verify.body.recovery_codes ?? [],
+              enrollment_code: code,
             };
           }),
       );
@@ -285,16 +293,16 @@ describe("MFA TOTP API lifecycle", () => {
 
   it("regenerates recovery codes with a valid TOTP proof and invalidates the old set", () => {
     loginAsFreshRegularUser().then((credentials) => {
-      enrollTotpViaApi().then(({ factor_id, secret, recovery_codes }) => {
-        cy.compute_totp_code(secret).then((code) => {
-          cy.request({
-            method: "POST",
-            url: "/api/user/mfa/recovery-codes/regenerate",
-            body: { factor_id: UNKNOWN_FACTOR_ID, code },
-            failOnStatusCode: false,
-          }).then((response) => {
-            expect(response.status, "unknown factor").to.eq(400);
-          });
+      enrollTotpViaApi().then(({ factor_id, secret, recovery_codes, enrollment_code }) => {
+        // The code that confirmed the enrollment was consumed then: it is
+        // refused as a step-up proof (RFC 6238 §5.2).
+        cy.request({
+          method: "POST",
+          url: "/api/user/mfa/recovery-codes/regenerate",
+          body: { factor_id, code: enrollment_code },
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(response.status, "replayed enrollment code").to.eq(401);
         });
         cy.request({
           method: "POST",
@@ -306,6 +314,15 @@ describe("MFA TOTP API lifecycle", () => {
         });
 
         cy.compute_totp_code(secret).then((code) => {
+          // Refused before the code is checked, so it is not consumed.
+          cy.request({
+            method: "POST",
+            url: "/api/user/mfa/recovery-codes/regenerate",
+            body: { factor_id: UNKNOWN_FACTOR_ID, code },
+            failOnStatusCode: false,
+          }).then((response) => {
+            expect(response.status, "unknown factor").to.eq(400);
+          });
           cy.request<MfaVerifyEnrollmentResponseBody>({
             method: "POST",
             url: "/api/user/mfa/recovery-codes/regenerate",
@@ -317,6 +334,16 @@ describe("MFA TOTP API lifecycle", () => {
             const fresh = response.body.recovery_codes ?? [];
             expect(fresh).to.have.length(10);
             expect(fresh).to.not.include(recovery_codes[0]);
+
+            // The accepted code cannot authorize a second regeneration.
+            cy.request({
+              method: "POST",
+              url: "/api/user/mfa/recovery-codes/regenerate",
+              body: { factor_id, code },
+              failOnStatusCode: false,
+            }).then((replay) => {
+              expect(replay.status, "replayed step-up code").to.eq(401);
+            });
 
             // The old set no longer works at the login challenge.
             cy.logout();
@@ -364,6 +391,8 @@ describe("MFA TOTP API lifecycle", () => {
     loginAsFreshRegularUser().then((credentials) => {
       enrollTotpViaApi().then(({ factor_id, secret }) => {
         cy.compute_totp_code(secret).then((code) => {
+          // These are refused before the code is checked, so it is not
+          // consumed and still removes the factor below.
           cy.request({
             method: "DELETE",
             url: "/api/user/mfa/totp/not-a-uuid",
@@ -388,17 +417,15 @@ describe("MFA TOTP API lifecycle", () => {
           }).then((response) => {
             expect(response.status, "strict body").to.eq(400);
           });
-        });
-        cy.request({
-          method: "DELETE",
-          url: `/api/user/mfa/totp/${factor_id}`,
-          body: { code: "000000" },
-          failOnStatusCode: false,
-        }).then((response) => {
-          expect(response.status, "wrong code").to.eq(401);
-        });
+          cy.request({
+            method: "DELETE",
+            url: `/api/user/mfa/totp/${factor_id}`,
+            body: { code: "000000" },
+            failOnStatusCode: false,
+          }).then((response) => {
+            expect(response.status, "wrong code").to.eq(401);
+          });
 
-        cy.compute_totp_code(secret).then((code) => {
           cy.request({
             method: "DELETE",
             url: `/api/user/mfa/totp/${factor_id}`,
