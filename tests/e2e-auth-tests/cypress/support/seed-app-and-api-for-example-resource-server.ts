@@ -9,9 +9,10 @@ export interface SeedAppAndApiOptions {
    */
   client_secret?: string;
   /**
-   * Explicit redirect_uri allowlist for the seeded app. While empty, any
-   * path on the app's registered domain is accepted; once non-empty,
-   * redirect_uri must match one of these exactly.
+   * Explicit redirect_uri allowlist for the seeded app: redirect_uri must
+   * match one of these exactly. Without any, a public client (no
+   * `client_secret`) accepts no redirect_uri at all, while a confidential
+   * one accepts any path on the app's registered domain.
    */
   callback_urls?: readonly string[];
   /**
@@ -32,6 +33,25 @@ export interface SeedAppAndApiOptions {
    * server's domain: `exact` (default) or `prefix`.
    */
   resource_url_match_mode?: "exact" | "prefix";
+}
+
+/**
+ * Every redirect_uri the example resource server sends as the PUBLIC
+ * client `00000000-0000-0000-0000-000000000000`: the React provider's
+ * `authorize_uri` (`/auth/authorize`), the public openid-client demo's
+ * callback, and the `/oauth2/callback` the specs that drive the
+ * authorization endpoints by request use. Public clients only accept
+ * exactly registered callback URLs.
+ */
+export function exampleResourceServerPublicClientCallbackUrls(
+  resource_server_url: string,
+): string[] {
+  const origin: string = new URL(resource_server_url).origin;
+  return [
+    `${origin}/auth/authorize`,
+    `${origin}/openid-client/callback`,
+    `${origin}/oauth2/callback`,
+  ];
 }
 
 export async function seedAppAndApiForExampleResourceServer(

@@ -22,7 +22,7 @@ export const createAppCallbackUrl = defineOperation({
   path: "/api/apps/{app_id}/callback-urls",
   summary: "Add a callback URL to an app",
   description:
-    "Registers an explicit callback URL for a client application in one environment. Once at least one callback URL exists for an app + environment, `redirect_uri` validation for that environment requires an exact match against the registered list (instead of any path on a registered domain). Requires management access; hardcoded apps cannot be configured. The body's `app_id` must match the path.",
+    "Registers an explicit callback URL for a client application in one environment. Once at least one callback URL exists for an app + environment, `redirect_uri` validation for that environment requires an exact match against the registered list. Without one, a public client accepts no `redirect_uri` at all and a confidential client accepts any path on its registered domains. Requires management access; hardcoded apps cannot be configured. The body's `app_id` must match the path.",
   tags: [API_TAGS.apps],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {

@@ -28,6 +28,8 @@ import { useSWRConfig } from "swr";
 import {
   type RequestedResourceOwnership,
   type SchemaVaultsApp,
+  type SchemaVaultsAppCreationRequest,
+  schemaVaultsAppCreationRequestSchema,
   schemaVaultsAppDefinitionSchema,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -35,6 +37,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AppWindow } from "lucide-react";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
 import { requestedOwnershipToDefinitionFields } from "@/components/CreateAppDialog/requested-ownership-fields";
+import { InitialRedirectTargetsFields } from "@/components/CreateAppDialog/InitialRedirectTargetsFields";
+import {
+  buildInitialRedirectTargets,
+  emptyInitialRedirectTargets,
+  type InitialRedirectTargetsErrors,
+  type InitialRedirectTargetsValue,
+} from "@/components/CreateAppDialog/initial-redirect-targets";
 import {
   ResourceOwnershipPicker,
   describeRequestedResourceOwnership,
@@ -97,6 +106,15 @@ export default function CreateAppForm({
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const { mutate } = useSWRConfig();
   const [submitting, startSubmitting] = useTransition();
+  // Optional domains + callback URLs, created in the same transaction as
+  // the app (see <InitialRedirectTargetsFields />).
+  const [redirectTargets, setRedirectTargets] =
+    useState<InitialRedirectTargetsValue>(() =>
+      emptyInitialRedirectTargets(environment),
+    );
+  const [redirectTargetErrors, setRedirectTargetErrors] = useState<
+    InitialRedirectTargetsErrors | undefined
+  >(undefined);
 
   async function onSubmit(values: SchemaVaultsApp): Promise<void> {
     if (environment === "development") {
@@ -127,13 +145,30 @@ export default function CreateAppForm({
       return;
     }
 
+    const targets = buildInitialRedirectTargets(redirectTargets);
+    if (!targets.ok) {
+      setRedirectTargetErrors(targets.errors);
+      toast({
+        variant: "destructive",
+        title: "Check the app's domains and callback URLs",
+      });
+      return;
+    }
+    setRedirectTargetErrors(undefined);
+
     startSubmitting(async () => {
       const authClient = auth.ready ? auth.client.current : undefined;
 
-      const createAppRequestBody: Partial<SchemaVaultsApp> = {
+      const createAppRequestBody: Partial<SchemaVaultsAppCreationRequest> = {
         ...values,
         // The owner comes from the "Owner" field only.
         ...requestedOwnershipToDefinitionFields(requestedOwnership),
+        ...(targets.initial_domains.length > 0
+          ? { initial_domains: targets.initial_domains }
+          : {}),
+        ...(targets.initial_callback_urls.length > 0
+          ? { initial_callback_urls: targets.initial_callback_urls }
+          : {}),
       };
 
       // if we're creating it from this form then it must be non-hardcoded/dynamic...
@@ -141,7 +176,7 @@ export default function CreateAppForm({
       createAppRequestBody["created_at"] = Date.now();
 
       const validatedAppRequestBody =
-        await schemaVaultsAppDefinitionSchema.safeParseAsync(
+        await schemaVaultsAppCreationRequestSchema.safeParseAsync(
           createAppRequestBody,
         );
       if (!validatedAppRequestBody.success) {
@@ -163,7 +198,7 @@ export default function CreateAppForm({
           throw new Error("Auth client is not available");
         }
         await authClient.createClientApplication(
-          validatedAppRequestBody.data satisfies SchemaVaultsApp,
+          validatedAppRequestBody.data satisfies SchemaVaultsAppCreationRequest,
         );
       } catch (e: unknown) {
         toast({
@@ -187,6 +222,7 @@ export default function CreateAppForm({
       clearFrontendAppsCache(mutate);
       onSuccess();
       form.reset({ ...defaultValues, app_id: uuid() });
+      setRedirectTargets(emptyInitialRedirectTargets(environment));
       return;
     });
     return;
@@ -329,6 +365,16 @@ export default function CreateAppForm({
               <FormMessage />
             </FormItem>
           )}
+        />
+        <InitialRedirectTargetsFields
+          value={redirectTargets}
+          onChange={(next: InitialRedirectTargetsValue): void => {
+            setRedirectTargets(next);
+            // Row errors are index-aligned: drop them once rows change.
+            setRedirectTargetErrors(undefined);
+          }}
+          errors={redirectTargetErrors}
+          disabled={submitting}
         />
         <DialogFooter>
           <Button

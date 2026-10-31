@@ -103,10 +103,13 @@ export function isOriginAllowedForClientApp(
  * parsed and its origin (scheme + host + port) is compared via
  * {@link isOriginAllowedForClientApp}. A malformed URI is rejected.
  *
- * This is the single source of truth for "is this redirect_uri safe to
- * issue an authorization code for?"; all auth-code minting endpoints,
- * the login/register page render guard, and the SDK-driven
- * client-side defense-in-depth check must funnel through here.
+ * This is only the origin-fallback tier: it accepts ANY path on a
+ * registered origin, which is unsafe for public clients. Code that asks
+ * "is this redirect_uri safe to issue an authorization code for?" must
+ * call `isRedirectUriRegisteredForClientApp`
+ * (`@/lib/oauth2/validate-redirect-uri`), which consults explicit
+ * callback URLs first and only falls back here for hardcoded apps and
+ * confidential clients.
  */
 export function isRedirectUriAllowedForClientApp(
   redirect_uri: string,

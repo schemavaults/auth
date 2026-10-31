@@ -17,7 +17,9 @@ import {
 } from "otplib";
 import triggerTestEnvironmentDbMigration from "./cypress/support/triggerTestEnvironmentDbMigration";
 import preRegisterSuperuser from "./cypress/support/pre-register-superuser";
-import seedAppAndApiForExampleResourceServer from "./cypress/support/seed-app-and-api-for-example-resource-server";
+import seedAppAndApiForExampleResourceServer, {
+  exampleResourceServerPublicClientCallbackUrls,
+} from "./cypress/support/seed-app-and-api-for-example-resource-server";
 
 // Crypto + base32 plugins for otplib v13's plugin-based API. The
 // auth-server uses otplib's default settings (SHA-1 / 6 digits / 30 s
@@ -150,6 +152,8 @@ export default defineConfig({
               );
             }
 
+            // A public client: it only accepts the exact callback URLs it
+            // registers (no origin-wide redirect_uri fallback).
             await seedAppAndApiForExampleResourceServer(
               auth_server_url,
               "00000000-0000-0000-0000-000000000000",
@@ -157,6 +161,11 @@ export default defineConfig({
               config.env[
                 "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY"
               ],
+              {
+                callback_urls: exampleResourceServerPublicClientCallbackUrls(
+                  config.env["EXAMPLE_NEXTJS_RESOURCE_SERVER_URL"],
+                ),
+              },
             );
 
             // Second app for the same resource server, registered WITH a
@@ -212,6 +221,9 @@ export default defineConfig({
               {
                 allow_dynamic_clients: true,
                 resource_url_match_mode: "prefix",
+                callback_urls: exampleResourceServerPublicClientCallbackUrls(
+                  config.env["EXAMPLE_NEXTJS_RESOURCE_SERVER_URL"],
+                ),
               },
             );
           } // end of setup for test suite 'dynamic_client_registration'

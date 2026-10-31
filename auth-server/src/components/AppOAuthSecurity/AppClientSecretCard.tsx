@@ -244,7 +244,9 @@ export const AppClientSecretCard: FC<AppClientSecretCardProps> = ({
               The client secret will be deleted and this app will become a
               public client again: token requests will no longer require
               client authentication. Any deployment still sending the secret
-              will be rejected.
+              will be rejected. Public clients only accept their registered
+              callback URLs as redirects, so in an environment without one
+              this app can no longer sign users in.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

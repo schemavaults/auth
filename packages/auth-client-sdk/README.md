@@ -88,6 +88,13 @@ The React provider's `useTradeAuthorizationCodeForTokensEffect()` (the
 generated `/auth/authorize` page) and `useStartLoginOauthPKCEFlow()` (the
 generated `/auth/login` page) do this for you.
 
+The `redirect_uri` the SDK sends is the absolute `authorize_uri` (e.g.
+`https://app.example.com/auth/authorize`). Register that exact URL as a
+callback URL of the app on the auth server (the app's page, or
+`initial_callback_urls` when creating it with `createClientApplication()`):
+a public client (no client secret) accepts no other `redirect_uri`, not
+even another path on its registered domain.
+
 ## Returning the user to the page they came from (`next_href`)
 
 Route guards that send a signed-out user to sign in name the page they

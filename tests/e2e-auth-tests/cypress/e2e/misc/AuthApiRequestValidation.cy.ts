@@ -103,13 +103,18 @@ function expect400(
   expect(response.status, label).to.eq(400);
 }
 
-/** Superuser registers a public web app with one domain; leaves the session logged out. */
+/**
+ * Superuser registers a public web app with one domain and its exact
+ * callback URL (public clients accept no other redirect_uri), both in the
+ * app creation request; leaves the session logged out.
+ */
 function createRegisteredClientApp(): Cypress.Chainable<string> {
   const app_id = `e2e-val-${Math.random().toString(36).slice(2, 12)}`;
   return cy
     .create_and_login_as_superuser_via_request()
     .then((ok: boolean) => {
       if (!ok) throw new Error("Failed to login as superuser");
+      const environment: string = Cypress.env("SCHEMAVAULTS_APP_ENVIRONMENT") ?? "test";
       cy.request({
         method: "POST",
         url: "/api/apps",
@@ -121,18 +126,8 @@ function createRegisteredClientApp(): Cypress.Chainable<string> {
           public: true,
           hardcoded: false,
           web: true,
-        },
-      }).then((response) => expect(response.status).to.eq(200));
-      cy.request({
-        method: "POST",
-        url: `/api/apps/${app_id}/domains`,
-        body: {
-          app_domain_ref_id: generateV4Uuid(),
-          app_id,
-          domain: REGISTERED_ORIGIN,
-          environment: Cypress.env("SCHEMAVAULTS_APP_ENVIRONMENT") ?? "test",
-          created_at: Date.now(),
-          hardcoded: false,
+          initial_domains: [{ domain: REGISTERED_ORIGIN, environment }],
+          initial_callback_urls: [{ callback_url: REGISTERED_REDIRECT_URI, environment }],
         },
       }).then((response) => expect(response.status).to.eq(200));
       cy.logout();
@@ -197,6 +192,18 @@ describe("Auth API request validation", () => {
           }).then((body) =>
             post("/api/auth/login", body).then((response) => {
               expect400(response, "redirect_uri not registered");
+              expect(String(response.body.message)).to.include("not registered");
+            }),
+          );
+          // Another path on the app's own registered domain: a public
+          // client only accepts its exact callback URLs, never any path
+          // of its origin (a leaky page there could expose the code).
+          authBody(credentials.email, credentials.password, {
+            client_app_id: app_id,
+            redirect_uri: `${REGISTERED_ORIGIN}/user-content/leaky-page`,
+          }).then((body) =>
+            post("/api/auth/login", body).then((response) => {
+              expect400(response, "other path on the registered origin");
               expect(String(response.body.message)).to.include("not registered");
             }),
           );
