@@ -1,13 +1,11 @@
 import "server-only";
 import type { ServerRuntime } from "next";
 import { apiRouteHandlers } from "@/lib/api/app";
-import { configureCronSecretBypass } from "./cron-bypass";
 import { sendDailyReportViaGet, sendDailyReportViaPost } from "./operation";
 
-// GET, POST /api/admin/send-daily-report
-export const { GET, POST } = apiRouteHandlers([sendDailyReportViaGet, sendDailyReportViaPost], {
-  configure: configureCronSecretBypass,
-});
+// GET  /api/admin/send-daily-report — the scheduled job (cron secret only)
+// POST /api/admin/send-daily-report — platform administrators (session only)
+export const { GET, POST } = apiRouteHandlers([sendDailyReportViaGet, sendDailyReportViaPost]);
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";

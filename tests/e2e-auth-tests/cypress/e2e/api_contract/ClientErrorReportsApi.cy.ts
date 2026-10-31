@@ -20,8 +20,9 @@
 //   `client_error_reports_max_storage_mb` caps the stored reports (503
 //   `client_error_storage_full` with an exposed `Retry-After`);
 // - the scheduled retention job (`/api/admin/client-errors/purge-expired`)
-//   applies `client_error_reports_retention_days` for an administrator and
-//   refuses everyone else (the CRON_SECRET path is not configured in E2E).
+//   applies `client_error_reports_retention_days` for an administrator's
+//   POST and refuses everyone else; its GET only takes the cron secret, so
+//   it refuses every session (CRON_SECRET is not configured in E2E).
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 
 const AUTH_APP_ID: string = getAuthServerAppIdFromCypressEnv();
@@ -320,24 +321,24 @@ describe("Client error reports API", () => {
     const message = unique("Recent report");
     sendReport({ name: "Error", message }).its("status").should("eq", 202);
 
-    for (const method of ["GET", "POST"] as const) {
-      cy.request<{ success: boolean; data: { deleted: number; retention_days: number; cutoff: number | null } }>({
-        method,
-        url: PURGE_EXPIRED_URL,
-      }).then((response) => {
-        expect(response.status, method).to.eq(200);
-        expect(response.body.success).to.eq(true);
-        expect(response.body.data.retention_days).to.eq(30);
-        expect(response.body.data.deleted).to.be.at.least(0);
-        expect(response.body.data.cutoff).to.be.closeTo(Date.now() - 30 * DAY_MS, 5 * 60 * 1000);
-      });
-    }
+    // An administrator runs the job with POST; GET is the scheduler's (cron secret only).
+    cy.request<{ success: boolean; data: { deleted: number; retention_days: number; cutoff: number | null } }>({
+      method: "POST",
+      url: PURGE_EXPIRED_URL,
+    }).then((response) => {
+      expect(response.status).to.eq(200);
+      expect(response.body.success).to.eq(true);
+      expect(response.body.data.retention_days).to.eq(30);
+      expect(response.body.data.deleted).to.be.at.least(0);
+      expect(response.body.data.cutoff).to.be.closeTo(Date.now() - 30 * DAY_MS, 5 * 60 * 1000);
+    });
+    cy.request({ url: PURGE_EXPIRED_URL, failOnStatusCode: false }).its("status").should("eq", 401);
     // A report inside the retention period survives the purge.
     findReports(message).then((errors) => expect(errors).to.have.length(1));
 
     // With retention off, the job deletes nothing.
     setSetting("client_error_reports_retention_days", 0);
-    cy.request<{ data: unknown }>(PURGE_EXPIRED_URL)
+    cy.request<{ data: unknown }>("POST", PURGE_EXPIRED_URL)
       .its("body.data")
       .should("deep.equal", { deleted: 0, retention_days: 0, cutoff: null });
   });
@@ -349,7 +350,7 @@ describe("Client error reports API", () => {
     for (const method of ["GET", "POST"] as const) {
       cy.request({ method, url: PURGE_EXPIRED_URL, failOnStatusCode: false }).its("status").should("eq", 401);
     }
-    // A bearer token that is not the cron secret falls through to the session guard.
+    // GET only takes the cron secret: any other bearer token is refused.
     cy.request({
       url: PURGE_EXPIRED_URL,
       headers: { Authorization: "Bearer not-the-cron-secret" },
@@ -361,7 +362,9 @@ describe("Client error reports API", () => {
       cy.create_and_login_as_regular_user_via_request(credentials).then((ok: boolean) => {
         expect(ok, "regular user login").to.be.true;
         cy.request({ url: "/api/admin/client-errors", failOnStatusCode: false }).its("status").should("eq", 403);
-        cy.request({ url: PURGE_EXPIRED_URL, failOnStatusCode: false }).its("status").should("eq", 403);
+        cy.request({ method: "POST", url: PURGE_EXPIRED_URL, failOnStatusCode: false }).its("status").should("eq", 403);
+        // GET refuses every session, so a regular user is not even authenticated there.
+        cy.request({ url: PURGE_EXPIRED_URL, failOnStatusCode: false }).its("status").should("eq", 401);
       });
     });
   });

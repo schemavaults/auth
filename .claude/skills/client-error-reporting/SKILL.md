@@ -81,8 +81,9 @@ Then it adds the size to the cached total and runs the retention purge.
 - Retention (`client_error_reports_retention_days`, 0 = keep) is enforced twice. The scheduled job
   `GET`/`POST /api/admin/client-errors/purge-expired` (`deleteExpiredClientErrors()`, no lock) runs daily: a
   Vercel cron in `auth-server/vercel.json`, a host crontab entry for the `deploy/` stack (`deploy/README.md`
-  "Scheduled jobs"). It takes `Authorization: Bearer <CRON_SECRET>` via the route's `cron-bypass.ts` middleware
-  (ahead of the admin guard, like `/api/admin/send-daily-report`) or an admin session. Between runs,
+  "Scheduled jobs"). Its `GET` is the scheduler's and only takes `Authorization: Bearer <CRON_SECRET>`; its `POST`
+  only takes an admin session (both from `defineScheduledJobOperations()` in `src/lib/api/scheduled-job-operations.ts`,
+  like every scheduled job). Between runs,
   `purgeExpiredClientErrors()` applies the same cutoff at most once an hour across instances (Redis `SET NX` lock)
   from the intake and the dashboard page.
 - The three settings are declared in `server-setting-keys.ts`; the two number settings are what made

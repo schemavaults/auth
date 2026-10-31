@@ -1,13 +1,11 @@
 import "server-only";
 import type { ServerRuntime } from "next";
 import { apiRouteHandlers } from "@/lib/api/app";
-import { configurePurgeCronSecretBypass } from "./cron-bypass";
 import { purgeExpiredClientErrorsViaGet, purgeExpiredClientErrorsViaPost } from "./operation";
 
-// GET, POST /api/admin/client-errors/purge-expired
-export const { GET, POST } = apiRouteHandlers([purgeExpiredClientErrorsViaGet, purgeExpiredClientErrorsViaPost], {
-  configure: configurePurgeCronSecretBypass,
-});
+// GET  /api/admin/client-errors/purge-expired — the scheduled job (cron secret only)
+// POST /api/admin/client-errors/purge-expired — platform administrators (session only)
+export const { GET, POST } = apiRouteHandlers([purgeExpiredClientErrorsViaGet, purgeExpiredClientErrorsViaPost]);
 
 export const runtime: ServerRuntime = "nodejs";
 export const dynamic = "force-dynamic";

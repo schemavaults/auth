@@ -214,13 +214,15 @@ describe("Regular User Admin API Forbidden", () => {
     });
   });
 
-  it("GET /api/admin/send-daily-report returns 403 for authenticated non-admin", () => {
+  // GET is the scheduled job's and only takes the cron secret: no session
+  // authenticates there, so the user is refused before any admin check.
+  it("GET /api/admin/send-daily-report returns 401 for authenticated non-admin", () => {
     cy.request({
       method: "GET",
       url: `/api/admin/send-daily-report`,
       failOnStatusCode: false,
     }).then((response) => {
-      expect(response.status).to.eq(403);
+      expect(response.status).to.eq(401);
       expect(response.body).to.have.property("success", false);
     });
   });
