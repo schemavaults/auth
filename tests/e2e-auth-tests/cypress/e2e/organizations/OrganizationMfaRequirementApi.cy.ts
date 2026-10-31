@@ -1,7 +1,8 @@
 // Organization MFA requirements (migration 00048):
 //   GET|PUT /api/organizations/[organization_id]/mfa-requirement
 //   GET     /api/me/organization-mfa-requirements
-//   GET|POST /api/admin/organizations/enforce-mfa-requirements
+//   POST    /api/admin/organizations/enforce-mfa-requirements (administrators;
+//           its GET is the scheduled job's and only takes the cron secret)
 // Pins
 //   - who may read (members, platform admins) and change (owners, platform
 //     admins) the requirement, the grace period bounds, the system
@@ -11,7 +12,8 @@
 //     and joining is refused to users without MFA (direct assignment 409,
 //     invitation acceptance 403, both `error: mfa_required`),
 //   - that a member whose grace period ended no longer counts as a member and
-//     the enforcement job removes them,
+//     the enforcement job removes them (run by an administrator's POST; the
+//     scheduled job's GET refuses an administrator session),
 //   - that removing one's last factor starts a new grace period and turning
 //     the requirement off ends it.
 // Users that got MFA (through the test enrollment seed, which keeps the
@@ -293,6 +295,14 @@ describe("Organization MFA requirement API", () => {
             cy.logout();
 
             loginAsSuperuser();
+            // GET belongs to the scheduled job (cron secret only)
+            cy.request({
+              method: "GET",
+              url: "/api/admin/organizations/enforce-mfa-requirements",
+              failOnStatusCode: false,
+            })
+              .its("status")
+              .should("eq", 401);
             cy.request<EnforcementResponseBody>({
               method: "POST",
               url: "/api/admin/organizations/enforce-mfa-requirements",

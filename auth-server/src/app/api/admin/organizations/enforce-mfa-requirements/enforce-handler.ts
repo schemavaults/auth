@@ -16,10 +16,9 @@ export interface EnforceOrganizationMfaRequirementsInputs {
 }
 
 /**
- * One enforcement run of the organization MFA requirements, for the
- * scheduled job and for administrators. Shared by the session-guarded
- * operations and the cron-secret middleware, so both answer with the same
- * body.
+ * One enforcement run of the organization MFA requirements, shared by the
+ * scheduled job's GET (cron secret) and the administrators' POST (session),
+ * so both answer with the same body.
  */
 export async function enforceOrganizationMfaRequirementsHandler({
   db,

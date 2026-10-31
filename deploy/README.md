@@ -58,7 +58,9 @@ they are declared as crons in `auth-server/vercel.json`; this stack has no
 scheduler, so run them from the host's crontab. All accept the deployment's
 cron secret instead of an administrator session: set `CRON_SECRET` in `.env`
 (`openssl rand -hex 32`) and restart the auth server
-(`docker compose up -d schemavaults-auth`).
+(`docker compose up -d schemavaults-auth`). The MFA enforcement endpoint
+splits the two: its `GET` (what the crontab line below sends) only accepts the
+cron secret, and administrators run it by hand with `POST` and their session.
 
 | Endpoint | Schedule (UTC) | What it does |
 | --- | --- | --- |
