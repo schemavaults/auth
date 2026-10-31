@@ -1,5 +1,5 @@
-import type { Insertable, Selectable, Updateable } from "@schemavaults/dbh";
-import type { OrganizationID } from "@schemavaults/auth-common";
+import type { Generated, Insertable, Selectable, Updateable } from "@schemavaults/dbh";
+import type { OrganizationID, OrganizationMembershipRoleType } from "@schemavaults/auth-common";
 import type { OrganizationMfaGracePeriodReason } from "@/lib/organization-mfa-requirements/policy";
 
 /**
@@ -30,6 +30,21 @@ export interface OrganizationMfaGracePeriodsTable {
   notified_at: number | null;
 }
 
+/**
+ * ORGANIZATION_MFA_REMOVALS (migration 00050): a member the enforcement job
+ * removed from an organization because their grace period ended without MFA.
+ */
+export interface OrganizationMfaRemovalsTable {
+  removal_id: Generated<string>;
+  organization_id: OrganizationID;
+  uid: string;
+  /** The membership role they lost (the highest one, should they have held two). */
+  role: OrganizationMembershipRoleType;
+  grace_period_reason: OrganizationMfaGracePeriodReason;
+  grace_period_ended_at: number;
+  removed_at: number;
+}
+
 export type OrganizationMfaRequirementRow = Selectable<OrganizationMfaRequirementsTable>;
 export type NewOrganizationMfaRequirementRow = Insertable<OrganizationMfaRequirementsTable>;
 export type OrganizationMfaRequirementRowUpdate = Updateable<OrganizationMfaRequirementsTable>;
@@ -37,3 +52,6 @@ export type OrganizationMfaRequirementRowUpdate = Updateable<OrganizationMfaRequ
 export type OrganizationMfaGracePeriodRow = Selectable<OrganizationMfaGracePeriodsTable>;
 export type NewOrganizationMfaGracePeriodRow = Insertable<OrganizationMfaGracePeriodsTable>;
 export type OrganizationMfaGracePeriodRowUpdate = Updateable<OrganizationMfaGracePeriodsTable>;
+
+export type OrganizationMfaRemovalRow = Selectable<OrganizationMfaRemovalsTable>;
+export type NewOrganizationMfaRemovalRow = Insertable<OrganizationMfaRemovalsTable>;

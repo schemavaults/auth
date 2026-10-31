@@ -158,6 +158,10 @@ export const DailyAdminReportResult = z
       .number()
       .int()
       .openapi({ description: "Distinct client error groups (fingerprints) among those reports" }),
+    organization_mfa_removals_count: z
+      .number()
+      .int()
+      .openapi({ description: "Members the organization MFA enforcement removed from organizations during the window" }),
     window_start: z.iso.datetime().openapi({ description: "Start of the 24h reporting window" }),
     window_end: z.iso.datetime().openapi({ description: "End of the 24h reporting window (now)" }),
   })

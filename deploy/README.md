@@ -63,7 +63,7 @@ cron secret instead of an administrator session: set `CRON_SECRET` in `.env`
 | Endpoint | Schedule (UTC) | What it does |
 | --- | --- | --- |
 | `/api/admin/client-errors/purge-expired` | daily, 03:17 | Deletes client error reports older than the `client_error_reports_retention_days` server setting (default 30) |
-| `/api/admin/organizations/enforce-mfa-requirements` | daily, 04:43 | Removes members of organizations that require MFA whose grace period ended without MFA, and sends the `organization-mfa-required` emails still owed |
+| `/api/admin/organizations/enforce-mfa-requirements` | daily, 04:43 | Removes members of organizations that require MFA whose grace period ended without MFA (the daily report lists them), and sends the `organization-mfa-required` emails still owed |
 | `/api/admin/send-daily-report` | daily, 21:00 | E-mails the 24-hour activity report to the administrator mailing list |
 
 ```cron

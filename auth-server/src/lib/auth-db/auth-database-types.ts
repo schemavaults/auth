@@ -24,6 +24,7 @@ import type {
 } from "./organizations";
 import type {
   OrganizationMfaGracePeriodsTable,
+  OrganizationMfaRemovalsTable,
   OrganizationMfaRequirementsTable,
 } from "./organization-mfa-requirements";
 import type {
@@ -78,6 +79,7 @@ export type AuthDatabase = {
   organization_invitations: OrganizationInvitationsTable;
   organization_mfa_requirements: OrganizationMfaRequirementsTable;
   organization_mfa_grace_periods: OrganizationMfaGracePeriodsTable;
+  organization_mfa_removals: OrganizationMfaRemovalsTable;
   jwt_keys: JwtKeysTable;
   jwks_access_keys: JwksAccessKeysTable;
   jwks_access_keys_for_hardcoded: JwksAccessKeysForHardcodedTable;
