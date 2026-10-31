@@ -23,6 +23,7 @@ import {
   getGeneratedOpenGraphImageHash,
   resolveOpenGraphImageBranding,
 } from "@/lib/branding/generated-og-image";
+import { FRAME_ANCESTORS_NONE_DIRECTIVE } from "@/lib/security-headers/frame-protection";
 import { generatedOpenGraphImageResponse } from "./generated-og-image-response";
 
 /**
@@ -56,9 +57,10 @@ function buildAssetHeaders(
       : SHORT_CACHE_CONTROL,
     "X-Content-Type-Options": "nosniff",
     // Defense-in-depth for admin-uploaded SVG favicons: never execute
-    // scripts/loads if the asset URL is opened as a document.
-    "Content-Security-Policy":
-      "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    // scripts/loads if the asset URL is opened as a document. This route
+    // owns its CSP (next.config.ts leaves /branding/* out of its own CSP
+    // rule), so it repeats the site-wide clickjacking directive.
+    "Content-Security-Policy": `default-src 'none'; style-src 'unsafe-inline'; sandbox; ${FRAME_ANCESTORS_NONE_DIRECTIVE}`,
   };
 }
 

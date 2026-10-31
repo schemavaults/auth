@@ -2,6 +2,7 @@
 import type { NextConfig } from "next";
 import { join, normalize } from "path";
 import { existsSync, readFileSync } from "fs";
+import { buildFrameProtectionHeaderRules } from "./src/lib/security-headers/frame-protection";
 
 function isNextStandaloneDockerBuildFlagSet(): boolean {
   return (
@@ -90,6 +91,13 @@ const nextConfig: NextConfig = {
     "/*": ["./public/branding-defaults/**/*"],
   },
   productionBrowserSourceMaps,
+  async headers() {
+    return [
+      // Clickjacking protection: forbid framing of every page by any origin
+      // (CSP `frame-ancestors 'none'` + legacy `X-Frame-Options: DENY`).
+      ...buildFrameProtectionHeaderRules(),
+    ];
+  },
   async redirects() {
     return [
       // Organization pages moved from /org/* to /orgs/* (alongside the new
