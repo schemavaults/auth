@@ -33,6 +33,7 @@ import type {
   SchemaVaultsApiServerDefinition,
   SchemaVaultsApiServerDomainRef,
   SchemaVaultsApp,
+  SchemaVaultsAppCreationRequest,
   SchemaVaultsAppCallbackUrlRef,
   SchemaVaultsAppDomainRef,
 } from "@schemavaults/app-definitions";
@@ -425,11 +426,18 @@ export interface ISchemaVaultsAuthClient {
 
   /**
    * @name createClientApplication
-   * @description Creates a client application reference in the auth-server database
-   * @argument App definition to write to database
+   * @description Creates a client application reference in the auth-server
+   * database, together with the optional `initial_domains` and
+   * `initial_callback_urls` (written in the same transaction: if any is
+   * refused, nothing is created). Without a callback URL in an environment,
+   * a public client cannot sign users in there, and a confidential client
+   * accepts any path on its domains as a redirect_uri.
+   * @argument App definition (plus optional initial domains / callback URLs) to write to database
    * @returns A promise resolving if creation succeeds
    */
-  createClientApplication: (app_definition: SchemaVaultsApp) => Promise<void>;
+  createClientApplication: (
+    app_definition: SchemaVaultsAppCreationRequest,
+  ) => Promise<void>;
 
   /**
    * @name createClientApplicationDomain
@@ -628,7 +636,9 @@ export interface ISchemaVaultsAuthClient {
    * @name listClientApplicationCallbackUrls
    * @description List the explicit OAuth2/OIDC callback URLs registered for a
    * client application. When any exist for an environment, redirect_uri
-   * validation in that environment requires an exact match against them.
+   * validation in that environment requires an exact match against them;
+   * without any, a public client accepts no redirect_uri there (a
+   * confidential client accepts any path on its registered domains).
    * @argument app_id The unique ID of the client application
    * @returns A promise resolving to an array of SchemaVaultsAppCallbackUrlRef objects
    */

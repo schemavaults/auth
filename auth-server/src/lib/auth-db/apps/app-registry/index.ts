@@ -7,6 +7,8 @@ export type * from './app-client-secrets-table';
 export type * from './app-service-account-organization-roles-table';
 
 export { getApp } from "./get-app";
+export { registerAppWithRedirectTargets } from "./register-app-with-redirect-targets";
+export type { RegisterAppWithRedirectTargetsOptions } from "./register-app-with-redirect-targets";
 export {
   DEFAULT_SERVICE_ACCOUNT_EMAIL_DOMAIN,
   serviceAccountEmailForApp,

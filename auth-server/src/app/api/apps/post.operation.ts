@@ -1,4 +1,4 @@
-import { schemaVaultsAppDefinitionSchema } from "@schemavaults/app-definitions";
+import { schemaVaultsAppCreationRequestSchema } from "@schemavaults/app-definitions";
 import { requireAuth, withOpenApi } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import { sessionSchemes } from "@/lib/api/auth-schemes";
@@ -17,21 +17,25 @@ export const createApp = defineOperation({
   path: "/api/apps",
   summary: "Create a client application",
   description:
-    "Registers a new client application (OAuth client). The owner is resolved from the `owner_type` / `owner_organization_id` / `owner_uid` fields: platform-owned apps need a platform administrator, organization-owned apps an owner or admin of that organization, and user-owned apps require the `allow_user_owned_resource_creation` server setting. Apps flagged `hardcoded` cannot be created.",
+    "Registers a new client application (OAuth client). The owner is resolved from the `owner_type` / `owner_organization_id` / `owner_uid` fields: platform-owned apps need a platform administrator, organization-owned apps an owner or admin of that organization, and user-owned apps require the `allow_user_owned_resource_creation` server setting. Apps flagged `hardcoded` cannot be created. The optional `initial_domains` (http(s) origins) and `initial_callback_urls` (exact `redirect_uri` values) are registered in the same transaction as the app: if any is refused, nothing is created. Callback URLs are optional, but without one in an environment a public client (no client secret) cannot sign users in there, and a confidential client accepts any path on its domains as a `redirect_uri`.",
   tags: [API_TAGS.apps],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {
     body: {
       lenientContentType: true,
-      schema: withOpenApi(schemaVaultsAppDefinitionSchema, "SchemaVaultsAppDefinition"),
-      description: "`created_by` and the ownership are derived from the caller and the requested owner fields.",
+      schema: withOpenApi(schemaVaultsAppCreationRequestSchema, "SchemaVaultsAppCreationRequest"),
+      description:
+        "The app definition plus optional initial domains and callback URLs. `created_by` and the ownership are derived from the caller and the requested owner fields.",
     },
   },
   responses: {
     200: { description: "The app was created", schema: ResourceCreationResponse },
     ...validationErrorResponse,
     ...sessionErrorResponses,
-    409: { description: "An app with this id already exists", schema: ErrorResponse },
+    409: {
+      description: "An app with this id already exists, or a listed domain / callback URL is a duplicate",
+      schema: ErrorResponse,
+    },
     500: { description: "Failed to create the app", schema: ErrorResponse },
   },
   handler: (ctx) => POST_app_creation_handler(legacyRouteProps(ctx), ctx.body),

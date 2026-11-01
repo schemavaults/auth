@@ -1,11 +1,16 @@
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
-import type { SchemaVaultsApp } from "@schemavaults/app-definitions";
-import { schemaVaultsAppDefinitionSchema } from "@schemavaults/app-definitions";
+import type { SchemaVaultsAppCreationRequest } from "@schemavaults/app-definitions";
+import { schemaVaultsAppCreationRequestSchema } from "@schemavaults/app-definitions";
 
 export interface ICreateClientApplicationOpts {
   adapter: ISchemaVaultsAuthClientAdapter;
   auth_server_uri: string;
-  app_definition: SchemaVaultsApp;
+  /**
+   * The app definition, optionally with the `initial_domains` and
+   * `initial_callback_urls` the auth server registers in the same
+   * transaction as the app.
+   */
+  app_definition: SchemaVaultsAppCreationRequest;
 }
 
 export async function createClientApplication({
@@ -13,7 +18,7 @@ export async function createClientApplication({
   auth_server_uri,
   app_definition,
 }: ICreateClientApplicationOpts): Promise<void> {
-  await schemaVaultsAppDefinitionSchema.parseAsync(app_definition);
+  await schemaVaultsAppCreationRequestSchema.parseAsync(app_definition);
 
   const response = await adapter.fetch(`${auth_server_uri}/api/apps`, {
     method: "POST",
@@ -22,9 +27,15 @@ export async function createClientApplication({
   });
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to create client application: ${response.status}`,
-    );
+    const body = await response.json().catch(() => null);
+    const message =
+      body &&
+      typeof body === "object" &&
+      "message" in body &&
+      typeof (body as { message: unknown }).message === "string"
+        ? (body as { message: string }).message
+        : `Failed to create client application: ${response.status}`;
+    throw new Error(message);
   }
 
   const body: unknown = await response.json();

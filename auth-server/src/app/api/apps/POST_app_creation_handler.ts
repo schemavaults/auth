@@ -1,10 +1,8 @@
 import "server-only";
 
-import {
-  SchemaVaultsAppRegistry,
-  type ResourceCreationResponse,
-} from "@/lib/auth-db";
-import type { SchemaVaultsApp } from "@schemavaults/app-definitions";
+import type { ResourceCreationResponse } from "@/lib/auth-db";
+import { registerAppWithRedirectTargets } from "@/lib/auth-db/apps";
+import type { SchemaVaultsAppCreationRequest } from "@schemavaults/app-definitions";
 import { NextResponse } from "next/server";
 import type { IProtectedAuthenticatedApiRouteProps } from "@/lib/withAuthenticatedRouteGuard";
 import { resolveRequestedOwnershipForCreation } from "@/lib/ownership/requested-ownership";
@@ -20,12 +18,14 @@ function respond(status: number, body: ResourceCreationResponse): NextResponse<R
 }
 
 /**
- * Create a new frontend application. Runs behind the `createApp` operation
- * (see ./post.operation.ts); `newResource` is the validated JSON body.
+ * Create a new frontend application, with the domains and callback URLs
+ * the request lists, in one transaction. Runs behind the `createApp`
+ * operation (see ./post.operation.ts); `newResource` is the validated JSON
+ * body.
  */
 export async function POST_app_creation_handler(
   { user, dbh, redis, environment }: IProtectedAuthenticatedApiRouteProps,
-  newResource: SchemaVaultsApp,
+  newResource: SchemaVaultsAppCreationRequest,
 ): Promise<NextResponse<ResourceCreationResponse>> {
   if (environment === "development") {
     console.log("[/api/apps] POST request received");
@@ -60,18 +60,6 @@ export async function POST_app_creation_handler(
     return respond(500, { success: false, message: "Failed to resolve who should own the new app" });
   }
 
-  let appRegistry: SchemaVaultsAppRegistry;
-  try {
-    appRegistry = new SchemaVaultsAppRegistry(dbh.db);
-  } catch (e: unknown) {
-    await captureServerException(dbh.db, e, {
-      op_name: "POST_app_creation_handler.loadAppsRegistry",
-      route: ROUTE,
-      uid: user.uid,
-    });
-    return respond(500, { success: false, message: "Failed to connect to apps registry" });
-  }
-
   if (typeof newResource.web !== "boolean") {
     return respond(400, { success: false, message: "The 'web' field must be a boolean" });
   }
@@ -80,14 +68,18 @@ export async function POST_app_creation_handler(
     if (debug) {
       console.log("[POST /api/apps] Attempting to register new app: ", newResource);
     }
-    await appRegistry.registerApp({
-      app_id: newResource.app_id,
-      app_name: newResource.app_name,
-      app_description: newResource.app_description,
-      publicly_listed: newResource.public,
-      ownership,
-      web: newResource.web,
-      created_by: user.uid,
+    await registerAppWithRedirectTargets(dbh.db, {
+      app: {
+        app_id: newResource.app_id,
+        app_name: newResource.app_name,
+        app_description: newResource.app_description,
+        publicly_listed: newResource.public,
+        ownership,
+        web: newResource.web,
+        created_by: user.uid,
+      },
+      initial_domains: newResource.initial_domains,
+      initial_callback_urls: newResource.initial_callback_urls,
     });
 
     return respond(200, {

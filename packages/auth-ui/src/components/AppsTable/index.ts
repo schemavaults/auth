@@ -4,3 +4,7 @@ export type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_tabl
 
 export { clearUseAppsListCache, useAppsList } from "./useAppsList";
 export { getUseAppDomainsListEndpoint, useAppDomains } from "./useAppDomains";
+export {
+  getUseAppCallbackUrlsListEndpoint,
+  useAppCallbackUrls,
+} from "./useAppCallbackUrls";

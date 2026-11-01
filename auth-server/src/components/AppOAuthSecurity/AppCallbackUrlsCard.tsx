@@ -48,6 +48,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@schemavaults/auth-react-provider";
 import { LocalDateTime } from "@schemavaults/auth-ui";
 import { Link2, Plus, Trash2 } from "lucide-react";
+import { MissingCallbackUrlAlert } from "./MissingCallbackUrlAlert";
 
 export interface AppCallbackUrlsCardProps {
   app_id: AppId;
@@ -55,23 +56,32 @@ export interface AppCallbackUrlsCardProps {
   current_environment: SchemaVaultsAppEnvironment;
   /** Whether the viewer may add/remove callback URLs. */
   canManage: boolean;
+  /**
+   * Whether the app has a client secret: a confidential client without
+   * callback URLs still accepts any path on its domains, a public one
+   * accepts no redirect at all.
+   */
+  has_client_secret: boolean;
   uuid: () => string;
 }
 
 /**
  * Management card for a client application's explicit OAuth2/OIDC
- * callback (redirect) URL allowlist. While the list for an environment
- * is empty, any path on a registered app domain is accepted as a
- * redirect_uri (legacy behavior); once at least one callback URL is
+ * callback (redirect) URL allowlist. Once at least one callback URL is
  * registered for an environment, only exact matches are accepted there
  * (a registered http://127.0.0.1 or http://[::1] URL matches on any port,
- * RFC 8252 §7.3, for native apps that pick a port at runtime).
+ * RFC 8252 §7.3, for native apps that pick a port at runtime). While the
+ * list for an environment is empty, a public client accepts no
+ * redirect_uri there and a confidential client accepts any path on a
+ * registered app domain; `<MissingCallbackUrlAlert />` says which for the
+ * deployment's environment.
  */
 export const AppCallbackUrlsCard: FC<AppCallbackUrlsCardProps> = ({
   app_id,
   callback_urls,
   current_environment,
   canManage,
+  has_client_secret,
   uuid,
 }): ReactElement => {
   const { toast } = useToast();
@@ -163,19 +173,26 @@ export const AppCallbackUrlsCard: FC<AppCallbackUrlsCardProps> = ({
           Callback URLs
         </CardTitle>
         <CardDescription>
-          Explicit OAuth2/OIDC redirect URLs for this application. While this
-          list is empty for an environment, any path on a registered domain is
-          accepted; once a callback URL is registered, only exact matches are
-          accepted in that environment. A registered http://127.0.0.1 or
-          http://[::1] URL matches on any port, so native apps can listen on
-          an ephemeral port.
+          The exact OAuth2/OIDC redirect URLs this application may receive
+          authorization codes on, per environment. A registered
+          http://127.0.0.1 or http://[::1] URL matches on any port, so native
+          apps can listen on an ephemeral port. Without one, a public client
+          cannot sign users in, and a confidential client accepts any path on
+          its registered domains.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!callback_urls.some(
+          (ref) => ref.environment === current_environment,
+        ) && (
+          <MissingCallbackUrlAlert
+            environment={current_environment}
+            has_client_secret={has_client_secret}
+          />
+        )}
         {callback_urls.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No explicit callback URLs are registered. Redirects are validated
-            against the app&apos;s registered domains (any path allowed).
+            No callback URLs are registered.
           </p>
         ) : (
           <div className="space-y-3">
@@ -328,7 +345,7 @@ export const AppCallbackUrlsCard: FC<AppCallbackUrlsCardProps> = ({
             <AlertDialogTitle>Remove callback URL?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget
-                ? `"${deleteTarget.callback_url}" (${deleteTarget.environment}) will no longer be an allowed redirect URL. If it is the last callback URL for its environment, redirect validation falls back to the app's registered domains.`
+                ? `"${deleteTarget.callback_url}" (${deleteTarget.environment}) will no longer be an allowed redirect URL. If it is the last callback URL for its environment, ${has_client_secret ? "redirects there are accepted on any path of the app's registered domains" : "this public client can no longer sign users in there"}.`
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>

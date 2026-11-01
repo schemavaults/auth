@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/openapi-operations",
   "description": "Define OpenAPI-representable HTTP operations (zod schemas + auth schemes + handlers) and serve them as Hono apps on Vercel functions / Next.js route handlers",
-  "version": "0.5.5",
+  "version": "0.5.7",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -18,7 +18,7 @@
     "@schemavaults/auth-common": "workspace:*",
     "hono": "4.13.7",
     "openapi3-ts": "4.6.1",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "scripts": {
     "build": "tsc --project tsconfig.json && tsc-alias --project tsconfig.json",

@@ -257,6 +257,7 @@ export default function AppDetailPageView({
           callback_urls={callback_urls}
           current_environment={current_environment}
           canManage={isOrgOwner}
+          has_client_secret={client_secret_metadata.has_client_secret}
           uuid={uuidSync}
         />
       )}

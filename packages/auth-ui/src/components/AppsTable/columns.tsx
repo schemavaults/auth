@@ -11,6 +11,7 @@ import type {
 } from "@schemavaults/app-definitions";
 import { FrontendApplicationActions } from "./frontend_app_actions";
 import AppDomainsList from "./AppDomainsList";
+import AppCallbackUrlsList from "./AppCallbackUrlsList";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
 import { AppWindowMac, Globe } from "lucide-react";
 import { ResourceOwnerLabel } from "@/components/ResourceOwnerLabel";
@@ -140,6 +141,19 @@ export function getAppsTableColumns(
           />
         );
       },
+      enableSorting: false,
+      enableHiding: true,
+    },
+    {
+      // Loaded per row on demand (no server-side preload, unlike domains).
+      id: "callback_urls",
+      header: "Callback URLs",
+      cell: ({ row }): ReactElement => (
+        <AppCallbackUrlsList
+          app_id={row.original.app_id}
+          hardcoded={row.original.hardcoded}
+        />
+      ),
       enableSorting: false,
       enableHiding: true,
     },

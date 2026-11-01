@@ -12,6 +12,17 @@ export {
 export type * from "./client-app-definition";
 
 export {
+  schemaVaultsAppCreationRequestSchema,
+  initialAppDomainSchema,
+  initialAppCallbackUrlSchema,
+  isHttpOriginUrl,
+  canonicalAppDomain,
+  MAX_INITIAL_APP_DOMAINS,
+  MAX_INITIAL_APP_CALLBACK_URLS,
+} from "./client-app-creation-request";
+export type * from "./client-app-creation-request";
+
+export {
   DYNAMIC_CLIENT_TOKEN_ENDPOINT_AUTH_METHODS,
   dynamicClientTokenEndpointAuthMethodSchema,
   DYNAMIC_CLIENT_GRANT_TYPES,

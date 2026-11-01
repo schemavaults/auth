@@ -21,21 +21,18 @@ export {};
 const CLIENT_ORIGIN = "https://authorize-validation.example";
 const REDIRECT_URI = `${CLIENT_ORIGIN}/oidc/callback`;
 
-function generateV4Uuid(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-/** Superuser registers a public web app with the client origin as a domain. */
+/**
+ * Superuser registers a public web app with the client origin as a domain
+ * and its exact callback URL (public clients accept no other
+ * redirect_uri), both in the app creation request.
+ */
 function registerClientApp(): Cypress.Chainable<string> {
   const app_id = `e2e-authz-${Math.random().toString(36).slice(2, 12)}`;
   return cy
     .create_and_login_as_superuser_via_request()
     .then((ok: boolean) => {
       if (!ok) throw new Error("Failed to login as superuser");
+      const environment: string = Cypress.env("SCHEMAVAULTS_APP_ENVIRONMENT") ?? "test";
       cy.request({
         method: "POST",
         url: "/api/apps",
@@ -47,18 +44,8 @@ function registerClientApp(): Cypress.Chainable<string> {
           public: true,
           hardcoded: false,
           web: true,
-        },
-      }).then((response) => expect(response.status).to.eq(200));
-      cy.request({
-        method: "POST",
-        url: `/api/apps/${app_id}/domains`,
-        body: {
-          app_domain_ref_id: generateV4Uuid(),
-          app_id,
-          domain: CLIENT_ORIGIN,
-          environment: Cypress.env("SCHEMAVAULTS_APP_ENVIRONMENT") ?? "test",
-          created_at: Date.now(),
-          hardcoded: false,
+          initial_domains: [{ domain: CLIENT_ORIGIN, environment }],
+          initial_callback_urls: [{ callback_url: REDIRECT_URI, environment }],
         },
       }).then((response) => expect(response.status).to.eq(200));
       cy.logout();

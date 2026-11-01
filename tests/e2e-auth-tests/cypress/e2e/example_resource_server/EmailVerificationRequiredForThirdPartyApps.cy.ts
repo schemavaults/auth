@@ -22,9 +22,9 @@
 //     users reach the app as before.
 //
 // The public (PKCE-only) example-resource-server app is seeded in
-// cypress.config.ts's before:run hook with the example app's origin as
-// its registered domain, so any path on that origin is a valid
-// redirect_uri.
+// cypress.config.ts's before:run hook with exact callback URLs
+// (exampleResourceServerPublicClientCallbackUrls), `/oauth2/callback`
+// among them: public clients accept no other redirect_uri.
 
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import {

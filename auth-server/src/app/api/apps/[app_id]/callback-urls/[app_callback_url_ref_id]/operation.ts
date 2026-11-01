@@ -20,7 +20,7 @@ export const deleteAppCallbackUrl = defineOperation({
   path: "/api/apps/{app_id}/callback-urls/{app_callback_url_ref_id}",
   summary: "Remove a callback URL from an app",
   description:
-    "Removes a callback URL from a client application's explicit allowlist. When the last one for an environment is removed, `redirect_uri` validation for that environment falls back to origin matching against the app's domains. Requires management access; hardcoded apps cannot be configured.",
+    "Removes a callback URL from a client application's explicit allowlist. When the last one for an environment is removed, a public client accepts no `redirect_uri` in that environment any more, while a confidential client falls back to accepting any path on the app's domains. Requires management access; hardcoded apps cannot be configured.",
   tags: [API_TAGS.apps],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {

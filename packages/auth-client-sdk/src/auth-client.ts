@@ -91,6 +91,7 @@ import {
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
   type SchemaVaultsApp,
+  type SchemaVaultsAppCreationRequest,
   type SchemaVaultsApiServerDefinition,
   type SchemaVaultsApiServerDomainRef,
   type SchemaVaultsAppDomainRef,
@@ -1780,7 +1781,7 @@ export class SchemaVaultsAuthClient
   }
 
   public async createClientApplication(
-    app_definition: SchemaVaultsApp,
+    app_definition: SchemaVaultsAppCreationRequest,
   ): Promise<void> {
     this.assertAppAndApiManagementWriteAccess("createClientApplication");
     const fn = await import("@/lib/create-client-application").then(
