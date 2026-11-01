@@ -152,8 +152,10 @@ function loginMint(
 }
 
 describe("redirect_uri allowlist of apps without callback URLs", () => {
+  // Start signed out. (cy.logout() asserts a signed-in session and signs
+  // out through the UI, so it cannot be used when nobody is signed in.)
   beforeEach(() => {
-    cy.logout();
+    cy.clearAllCookies();
   });
 
   it("refuses every redirect_uri of a public client, even on its own domain", () => {
