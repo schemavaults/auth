@@ -25,6 +25,14 @@ export type {
 } from "./ResourceOwnerLabel";
 
 export {
+  DynamicClientRegistrationIcon,
+  useIsDynamicallyRegisteredClient,
+  DYNAMIC_CLIENT_REGISTRATION_ICON_LABEL,
+  DYNAMIC_CLIENT_REGISTRATION_ICON_TITLE,
+} from "./DynamicClientRegistrationIcon";
+export type { DynamicClientRegistrationIconProps } from "./DynamicClientRegistrationIcon";
+
+export {
   OwnerTypeFilter,
   OWNER_TYPE_FILTER_VALUES,
   isOwnerTypeFilterValue,

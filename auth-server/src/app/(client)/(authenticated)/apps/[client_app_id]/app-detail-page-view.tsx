@@ -5,10 +5,11 @@ import { isDynamicallyRegisteredClient, isHardcodedApiServerId, type SchemaVault
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { AppCallbackUrlsCard, AppClientSecretCard, AppServiceAccountCard } from "@/components/AppOAuthSecurity";
+import { DynamicClientRegistrationMetadataCard } from "@/components/DynamicClientRegistrationMetadata";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveAppDomainDialog, useAuthUiOwnerOrganizationId } from "@schemavaults/auth-ui";
+import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, DynamicClientRegistrationIcon, LocalDateTime, RemoveAppDomainDialog, useAuthUiOwnerOrganizationId } from "@schemavaults/auth-ui";
 import { ExternalLink, Plus, PlugZap, Trash2, Unplug } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -141,6 +142,11 @@ export default function AppDetailPageView({
   // The owner organization env var is not available in client bundles; without
   // it, platform-owned apps of a white-label deployment fail to resolve.
   const platformOwnerOrganizationId: string = useAuthUiOwnerOrganizationId();
+  // Registered anonymously through RFC 7591 (e.g. an MCP client): its name
+  // and metadata are self-asserted, which the page makes visible.
+  const dynamicallyRegistered: boolean = isDynamicallyRegisteredClient(app, {
+    platform_owner_organization_id: platformOwnerOrganizationId,
+  });
 
   // Same gate as the "Add domain" row action on the /apps table: viewers
   // with read-only (organization member) access never see the add / remove
@@ -161,7 +167,10 @@ export default function AppDetailPageView({
     <PageContainer>
       <Card>
         <CardHeader>
-          <CardTitle>{app.app_name}</CardTitle>
+          <CardTitle className="flex flex-row items-center gap-2">
+            {dynamicallyRegistered && <DynamicClientRegistrationIcon iconClassName="h-5 w-5" />}
+            {app.app_name}
+          </CardTitle>
           {app.app_description && (
             <CardDescription>{app.app_description}</CardDescription>
           )}
@@ -176,6 +185,8 @@ export default function AppDetailPageView({
           <DetailRow label="Created At" value={<LocalDateTime value={app.created_at} showSeconds={false} />} />
         </CardContent>
       </Card>
+
+      {dynamicallyRegistered && <DynamicClientRegistrationMetadataCard app={app} />}
 
       <Card>
         <CardHeader>
@@ -278,9 +289,7 @@ export default function AppDetailPageView({
           service_account={service_account}
           organization_membership={service_account_organization_membership}
           has_client_secret={client_secret_metadata.has_client_secret}
-          dynamically_registered={isDynamicallyRegisteredClient(app, {
-            platform_owner_organization_id: platformOwnerOrganizationId,
-          })}
+          dynamically_registered={dynamicallyRegistered}
           canManage={isOrgOwner}
         />
       )}

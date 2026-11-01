@@ -12,6 +12,7 @@ import type {
 import { FrontendApplicationActions } from "./frontend_app_actions";
 import AppDomainsList from "./AppDomainsList";
 import AppCallbackUrlsList from "./AppCallbackUrlsList";
+import AppNameCell from "./AppNameCell";
 import type { PreloadedAppsTableDataWithDomainRefs } from "./preloaded_apps_table_data";
 import { AppWindowMac, Globe } from "lucide-react";
 import { ResourceOwnerLabel } from "@/components/ResourceOwnerLabel";
@@ -65,14 +66,7 @@ export function getAppsTableColumns(
       id: "app_name",
       accessorKey: "app_name",
       header: "App Name",
-      cell: ({ row }): ReactElement => {
-        const app = row.original;
-        return (
-          <Link href={`/apps/${app.app_id}`} className="hover:underline text-primary">
-            {app.app_name}
-          </Link>
-        );
-      },
+      cell: ({ row }): ReactElement => <AppNameCell app={row.original} />,
     },
     {
       id: "app_description",
