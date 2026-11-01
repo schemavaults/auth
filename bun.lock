@@ -5,7 +5,7 @@
     "": {
       "name": "@schemavaults/auth",
       "devDependencies": {
-        "@schemavaults/send-email": "0.3.1",
+        "@schemavaults/send-email": "0.6.1",
         "turbo": "2.9.14",
       },
     },
@@ -24,7 +24,7 @@
         "@schemavaults/jwt": "workspace:*",
         "@schemavaults/openapi-docs-ui": "workspace:*",
         "@schemavaults/openapi-operations": "workspace:*",
-        "@schemavaults/send-email": "0.3.1",
+        "@schemavaults/send-email": "0.6.1",
         "@schemavaults/theme": "0.30.0",
         "@schemavaults/ui": "0.119.0",
         "@simplewebauthn/browser": "13.3.0",
@@ -812,7 +812,7 @@
 
     "@schemavaults/openapi-operations": ["@schemavaults/openapi-operations@workspace:packages/openapi-operations"],
 
-    "@schemavaults/send-email": ["@schemavaults/send-email@0.3.1", "", { "dependencies": { "commander": "14.0.1", "zod": "4.4.3" }, "bin": { "schemavaults-send-email": "dist/cli.js" } }, "sha512-SR6pEXaKD5annFKQRRKqJJFU80tGsAi97dV8XA5G+07pkUKWCahL/hNHqgxw87dPGyXhjtJ8VNpVDp75tUBl7A=="],
+    "@schemavaults/send-email": ["@schemavaults/send-email@0.6.1", "", { "dependencies": { "commander": "14.0.1", "zod": "^4.6.7" }, "bin": { "schemavaults-send-email": "dist/cli.js" } }, "sha512-MaYZK7IkcYVVUfrorZKzhdJdtvjYSalF0p5d89vW6Dyth3OYVTlfjK95PWCH9g75X3Jz/LF9bjeWC39DiJ598Q=="],
 
     "@schemavaults/theme": ["@schemavaults/theme@0.30.0", "", { "dependencies": { "resolve": "1.22.11", "tailwindcss-animate": "1.0.7" } }, "sha512-4jCJI4pbPsUICkArrvh6gkEHcXbIY4gniyQQaLQ9ehf4UdfG/7H2DbPKckwGiNdIY/A1rOj4K12NbMFWuHnWlw=="],
 
@@ -2069,8 +2069,6 @@
     "@schemavaults/e2e-auth-tests/otplib": ["otplib@13.4.0", "", { "dependencies": { "@otplib/core": "13.4.0", "@otplib/hotp": "13.4.0", "@otplib/plugin-base32-scure": "13.4.0", "@otplib/plugin-crypto-noble": "13.4.0", "@otplib/totp": "13.4.0", "@otplib/uri": "13.4.0" } }, "sha512-RUcYcRMCgRWhUE/XabRppXpUwCwaWBNHe5iPXhdvP8wwDGpGpsIf/kxX/ec3zFsOaM1Oq8lEhUqDwk6W7DHkwg=="],
 
     "@schemavaults/send-email/commander": ["commander@14.0.1", "", {}, "sha512-2JkV3gUZUVrbNA+1sjBOYLsMZ5cEEl8GTFP2a4AVz5hvasAMCQ1D2l2le/cX+pV4N6ZU17zjUahLpIXRrnWL8A=="],
-
-    "@schemavaults/send-email/zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "@schemavaults/theme/resolve": ["resolve@1.22.11", "", { "dependencies": { "is-core-module": "^2.16.1", "path-parse": "^1.0.7", "supports-preserve-symlinks-flag": "^1.0.0" }, "bin": { "resolve": "bin/resolve" } }, "sha512-RfqAvLnMl313r7c9oclB1HhUEAezcpLjz95wFH4LVuhk9JF/r22qmVP9AMmOU4vMX7Q8pN8jwNg/CSpdFnMjTQ=="],
 
