@@ -148,6 +148,7 @@ export function AppsTable({
         owner_organization_id: false,
         web: true,
         domains: true,
+        callback_urls: true,
       }}
       searchColumn={[
         "app_id",

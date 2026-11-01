@@ -7,6 +7,7 @@
 //   - the domains and callback URLs travel in the POST /api/apps body
 //     (`initial_domains` / `initial_callback_urls`, for the environment
 //     picked in the section) and are registered with the new app.
+//   - the apps table's "Callback URLs" column then lists the new URL.
 
 interface CreateAppRequestBody {
   app_id?: string;
@@ -104,6 +105,14 @@ describe("Create app dialog: domains and callback URLs", () => {
           }).then((response) => {
             expect(response.body.list.map((d) => d.domain)).to.deep.eq([ORIGIN]);
           });
+
+          // The apps table lists the new app's callback URL (loaded per row
+          // by AppCallbackUrlsList) with its environment.
+          cy.contains("th", "Callback URLs").should("be.visible");
+          cy.get('input[placeholder="Filter apps..."]').clear().type(`Redirect Targets App ${code}`);
+          cy.contains("tr", `Redirect Targets App ${code}`, { timeout: 20000 })
+            .should("contain.text", CALLBACK_URL)
+            .and("contain.text", ENVIRONMENT);
 
           cy.request({ method: "DELETE", url: `/api/apps/${app_id}` }).its("status").should("eq", 200);
         },
