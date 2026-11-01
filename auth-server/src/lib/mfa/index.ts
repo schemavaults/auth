@@ -14,10 +14,13 @@ export {
 export {
   generateTotpSecret,
   buildOtpAuthUrl,
-  verifyTotpCode,
+  matchTotpTimeStep,
+  totpTimeStepAt,
   generateTotpCodeForTesting,
   TOTP_ISSUER,
+  TOTP_STEP_SECONDS,
 } from "./totp";
+export { verifyAndConsumeTotpCode } from "./consume-totp-code";
 export { renderQrPngDataUrl } from "./qr-code";
 export {
   createChallenge,

@@ -35,6 +35,7 @@ import { updateWebauthnCounter as updateWebauthnCounterFn } from "./update-webau
 import type { UserWebauthnCredentialRow } from "./user-webauthn-credentials-table";
 import { verifyFactor as verifyFactorFn } from "./verify-factor";
 import { touchFactorLastUsed as touchFactorLastUsedFn } from "./touch-factor-last-used";
+import { consumeTotpTimeStep as consumeTotpTimeStepFn } from "./consume-totp-time-step";
 import { deleteFactor as deleteFactorFn } from "./delete-factor";
 import { deleteAllFactorsForUser as deleteAllFactorsForUserFn } from "./delete-all-factors-for-user";
 import { sweepStaleUnverifiedFactors as sweepStaleUnverifiedFactorsFn } from "./sweep-stale-unverified-factors";
@@ -164,6 +165,20 @@ export class MfaRegistry {
 
   public touchFactorLastUsed(factor_id: string): Promise<void> {
     return touchFactorLastUsedFn(this.db, factor_id);
+  }
+
+  /**
+   * Records `time_step` as the factor's last accepted TOTP time step if it
+   * is later than the stored one; false means a replayed code (or no such
+   * TOTP factor). Use `verifyAndConsumeTotpCode()` from `@/lib/mfa`
+   * rather than calling this directly.
+   */
+  public consumeTotpTimeStep(args: {
+    uid: string;
+    factor_id: string;
+    time_step: number;
+  }): Promise<boolean> {
+    return consumeTotpTimeStepFn(this.db, args);
   }
 
   public deleteFactor(args: {

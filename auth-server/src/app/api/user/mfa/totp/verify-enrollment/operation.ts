@@ -7,7 +7,7 @@ import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
-import { decryptSecret, issueRecoveryCodesIfNeeded, verifyTotpCode } from "@/lib/mfa";
+import { decryptSecret, issueRecoveryCodesIfNeeded, verifyAndConsumeTotpCode } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 import { clearOrganizationMfaGracePeriodsAfterEnrollment } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
@@ -63,7 +63,15 @@ export const verifyTotpEnrollment = defineOperation({
         return ctx.json(400, { success: false, message: "Factor is not a TOTP factor" });
       }
       const secret = decryptSecret(factor.secret_ciphertext, factor.kek_version);
-      const isValid = verifyTotpCode({ secret, code });
+      // Consuming the code records its time step, so the code that
+      // confirmed the enrollment cannot be replayed at the login challenge.
+      const isValid = await verifyAndConsumeTotpCode({
+        mfaRegistry,
+        uid: user.uid,
+        factor_id,
+        secret,
+        code,
+      });
       if (!isValid) {
         return ctx.json(401, { success: false, message: "Invalid TOTP code" });
       }

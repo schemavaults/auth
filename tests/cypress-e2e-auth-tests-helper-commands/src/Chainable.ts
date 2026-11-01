@@ -126,6 +126,8 @@ declare global {
       enroll_test_user_mfa(
         params: EnrollTestUserMfaParams,
       ): Chainable<EnrollTestUserMfaResult>;
+      // A TOTP code for a time step not yet yielded for this secret (the
+      // server refuses replayed codes); may wait for the next 30 s step.
       compute_totp_code(secret: string): Chainable<string>;
       // Registers a CDP virtual WebAuthn authenticator and yields its id.
       // Chromium-only (unavailable under Electron); see the action file.
