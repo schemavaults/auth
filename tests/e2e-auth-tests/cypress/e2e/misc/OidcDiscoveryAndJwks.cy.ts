@@ -13,6 +13,7 @@ interface DiscoveryDocument {
   token_endpoint: string;
   userinfo_endpoint: string;
   introspection_endpoint: string;
+  revocation_endpoint: string;
   jwks_uri: string;
   response_types_supported: string[];
   response_modes_supported: string[];
@@ -23,6 +24,7 @@ interface DiscoveryDocument {
   token_endpoint_auth_methods_supported: string[];
   introspection_endpoint_auth_methods_supported: string[];
   introspection_endpoint_auth_signing_alg_values_supported: string[];
+  revocation_endpoint_auth_methods_supported: string[];
   code_challenge_methods_supported: string[];
   claims_supported: string[];
   authorization_response_iss_parameter_supported: boolean;
@@ -60,6 +62,7 @@ describe("GET /api/oidc/openid-configuration", () => {
       expect(issuer).to.eq(new URL(Cypress.env("AUTH_SERVER_URL")).origin);
       expect(doc.userinfo_endpoint).to.eq(`${issuer}/api/oidc/userinfo`);
       expect(doc.introspection_endpoint).to.eq(`${issuer}/api/oidc/introspect`);
+      expect(doc.revocation_endpoint).to.eq(`${issuer}/api/oidc/revoke`);
       expect(doc.grant_types_supported).to.deep.equal([
         "authorization_code",
         "refresh_token",
@@ -90,6 +93,11 @@ describe("GET /api/oidc/openid-configuration", () => {
       expect(
         doc.introspection_endpoint_auth_signing_alg_values_supported,
       ).to.deep.equal(["RS256"]);
+      expect(doc.revocation_endpoint_auth_methods_supported).to.deep.equal([
+        "none",
+        "client_secret_basic",
+        "client_secret_post",
+      ]);
       expect(doc.authorization_response_iss_parameter_supported).to.eq(true);
       // JAR is refused by the authorize endpoint, so both must be false.
       expect(doc.request_parameter_supported).to.eq(false);

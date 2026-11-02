@@ -31,6 +31,8 @@ export type OidcProviderMetadata = {
   token_endpoint: string;
   userinfo_endpoint: string;
   introspection_endpoint: string;
+  /** RFC 7009 token revocation endpoint (RFC 8414 §2). */
+  revocation_endpoint: string;
   jwks_uri: string;
   response_types_supported: string[];
   response_modes_supported: string[];
@@ -46,6 +48,7 @@ export type OidcProviderMetadata = {
    * theirs with their RS256 JWKS access key).
    */
   introspection_endpoint_auth_signing_alg_values_supported: string[];
+  revocation_endpoint_auth_methods_supported: string[];
   code_challenge_methods_supported: string[];
   claims_supported: string[];
   authorization_response_iss_parameter_supported: boolean;
@@ -96,6 +99,7 @@ export function buildOidcProviderMetadata(
       normalized_issuer,
       "introspection",
     ),
+    revocation_endpoint: getOidcEndpointUrl(normalized_issuer, "revocation"),
     jwks_uri: getOidcEndpointUrl(normalized_issuer, "jwks"),
     response_types_supported: ["code"],
     response_modes_supported: ["query"],
@@ -131,6 +135,14 @@ export function buildOidcProviderMetadata(
       "private_key_jwt",
     ],
     introspection_endpoint_auth_signing_alg_values_supported: ["RS256"],
+    // RFC 7009 token revocation: clients authenticate as at the token
+    // endpoint, so a public client identifies itself with `client_id`
+    // alone ("none") and may revoke the tokens issued to it (§2.1).
+    revocation_endpoint_auth_methods_supported: [
+      "none",
+      "client_secret_basic",
+      "client_secret_post",
+    ],
     code_challenge_methods_supported: ["S256"],
     claims_supported: [
       "sub",

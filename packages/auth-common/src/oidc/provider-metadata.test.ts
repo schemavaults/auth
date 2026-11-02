@@ -19,6 +19,9 @@ describe("buildOidcProviderMetadata", () => {
     expect(md.introspection_endpoint).toBe(
       `${ISSUER}${OIDC_ENDPOINT_PATHS.introspection}`,
     );
+    expect(md.revocation_endpoint).toBe(
+      `${ISSUER}${OIDC_ENDPOINT_PATHS.revocation}`,
+    );
     expect(md.jwks_uri).toBe(`${ISSUER}${OIDC_ENDPOINT_PATHS.jwks}`);
   });
 
@@ -46,6 +49,11 @@ describe("buildOidcProviderMetadata", () => {
     expect(md.introspection_endpoint_auth_signing_alg_values_supported).toEqual(
       ["RS256"],
     );
+    expect(md.revocation_endpoint_auth_methods_supported).toEqual([
+      "none",
+      "client_secret_basic",
+      "client_secret_post",
+    ]);
     expect(md.authorization_response_iss_parameter_supported).toBe(true);
     expect(md.request_parameter_supported).toBe(false);
     expect(md.request_uri_parameter_supported).toBe(false);

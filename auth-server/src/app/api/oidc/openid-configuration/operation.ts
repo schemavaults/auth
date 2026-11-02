@@ -22,6 +22,7 @@ export const OidcProviderMetadata = z
     token_endpoint: endpointUrl("The token endpoint", "/api/oidc/token"),
     userinfo_endpoint: endpointUrl("The userinfo endpoint", "/api/oidc/userinfo"),
     introspection_endpoint: endpointUrl("RFC 7662 token introspection endpoint", "/api/oidc/introspect"),
+    revocation_endpoint: endpointUrl("RFC 7009 token revocation endpoint", "/api/oidc/revoke"),
     jwks_uri: endpointUrl("Public RS256 id_token verification keys", "/api/oidc/jwks"),
     registration_endpoint: endpointUrl(
       "RFC 7591 dynamic client registration endpoint. Present only while the `allow_dynamic_client_registration` server setting is on.",
@@ -46,6 +47,11 @@ export const OidcProviderMetadata = z
     introspection_endpoint_auth_signing_alg_values_supported: z
       .array(z.string())
       .openapi({ example: ["RS256"] }),
+    revocation_endpoint_auth_methods_supported: z.array(z.string()).openapi({
+      description:
+        "As at the token endpoint: `none` (a public client identifies itself with `client_id`) or the client secret of a confidential client.",
+      example: ["none", "client_secret_basic", "client_secret_post"],
+    }),
     code_challenge_methods_supported: z.array(z.string()).openapi({ example: ["S256"] }),
     claims_supported: z.array(z.string()),
     authorization_response_iss_parameter_supported: z
