@@ -20,11 +20,13 @@ export type {
 
 export {
   splitTokenScopes,
+  splitRefreshGrantTokenScopes,
   narrowGrantedScope,
   oidcPartOfGrantedScope,
 } from "./token-scopes";
 export type {
   SplitTokenScopesOptions,
+  SplitRefreshGrantTokenScopesOptions,
   TokenScopes,
   NarrowedGrantScope,
 } from "./token-scopes";

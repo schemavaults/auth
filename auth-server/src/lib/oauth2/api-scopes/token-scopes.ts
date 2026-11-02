@@ -20,7 +20,10 @@ function uniqueTokens(scope: string | null | undefined): string[] {
 }
 
 export interface SplitTokenScopesOptions {
-  /** The grant's scope: the code row's, or the presented refresh token's (already narrowed). */
+  /**
+   * The grant's scope: the code row's, or the presented refresh token's
+   * (see {@link splitRefreshGrantTokenScopes} for a narrowing refresh).
+   */
   granted_scope: string | null | undefined;
   /** The API server whose API scopes `granted_scope` carries, if any. */
   scope_api_server_id: string | null | undefined;
@@ -78,6 +81,44 @@ export function splitTokenScopes({
     refresh_token_scope_api_server_id: carries_api_scopes
       ? (scope_api_server_id ?? null)
       : null,
+  };
+}
+
+export interface SplitRefreshGrantTokenScopesOptions
+  extends Omit<SplitTokenScopesOptions, "granted_scope"> {
+  /** The scope of the presented refresh token: the grant. */
+  original_scope: string | null | undefined;
+  /**
+   * The request's scope re-request, already checked by
+   * {@link narrowGrantedScope}; null when the request named no `scope`.
+   */
+  narrowed_scope: string | null;
+}
+
+/**
+ * The scopes of the token pair a refresh grant mints. A scope re-request
+ * narrows the ACCESS token only: RFC 6749 §6 requires a rotated refresh
+ * token's scope to be identical to that of the refresh token presented. So
+ * the rotated refresh token carries the grant forward exactly as a refresh
+ * without `scope` does (minus the API scopes that are no longer usable),
+ * and a client can mint a narrower access token, e.g. for an agent, without
+ * giving up the rest of its grant.
+ */
+export function splitRefreshGrantTokenScopes({
+  original_scope,
+  narrowed_scope,
+  ...rest
+}: SplitRefreshGrantTokenScopesOptions): TokenScopes {
+  const { access_token_scope } = splitTokenScopes({
+    ...rest,
+    granted_scope: narrowed_scope ?? original_scope,
+  });
+  const { refresh_token_scope, refresh_token_scope_api_server_id } =
+    splitTokenScopes({ ...rest, granted_scope: original_scope });
+  return {
+    access_token_scope,
+    refresh_token_scope,
+    refresh_token_scope_api_server_id,
   };
 }
 

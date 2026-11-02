@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   narrowGrantedScope,
   oidcPartOfGrantedScope,
+  splitRefreshGrantTokenScopes,
   splitTokenScopes,
 } from "./token-scopes";
 
@@ -93,6 +94,92 @@ describe("splitTokenScopes", () => {
       access_token_scope: "openid",
       refresh_token_scope: "openid",
       refresh_token_scope_api_server_id: null,
+    });
+  });
+});
+
+describe("splitRefreshGrantTokenScopes", () => {
+  test("without a re-request both tokens get the grant, as with splitTokenScopes", () => {
+    const options = {
+      scope_api_server_id: NOTES_API,
+      defined_api_scopes: NOTES_SCOPES,
+      access_token_api_server_id: NOTES_API,
+    };
+    expect(
+      splitRefreshGrantTokenScopes({
+        ...options,
+        original_scope: "openid notes:read notes:write",
+        narrowed_scope: null,
+      }),
+    ).toEqual(
+      splitTokenScopes({ ...options, granted_scope: "openid notes:read notes:write" }),
+    );
+  });
+
+  test("a re-request narrows the access token only; the refresh token keeps the grant (RFC 6749 §6)", () => {
+    expect(
+      splitRefreshGrantTokenScopes({
+        original_scope: "openid email notes:read notes:write",
+        narrowed_scope: "notes:read",
+        scope_api_server_id: NOTES_API,
+        defined_api_scopes: NOTES_SCOPES,
+        access_token_api_server_id: NOTES_API,
+      }),
+    ).toEqual({
+      access_token_scope: "notes:read",
+      refresh_token_scope: "openid email notes:read notes:write",
+      refresh_token_scope_api_server_id: NOTES_API,
+    });
+  });
+
+  test("narrowing away openid, or to nothing, keeps the whole grant on the refresh token", () => {
+    for (const narrowed_scope of ["email", ""]) {
+      expect(
+        splitRefreshGrantTokenScopes({
+          original_scope: "openid email",
+          narrowed_scope,
+          scope_api_server_id: null,
+          defined_api_scopes: NONE,
+          access_token_api_server_id: null,
+        }),
+      ).toEqual({
+        access_token_scope: narrowed_scope,
+        refresh_token_scope: "openid email",
+        refresh_token_scope_api_server_id: null,
+      });
+    }
+  });
+
+  test("API scopes that are no longer usable drop off both tokens", () => {
+    expect(
+      splitRefreshGrantTokenScopes({
+        original_scope: "openid notes:read notes:write",
+        narrowed_scope: "notes:read notes:write",
+        scope_api_server_id: NOTES_API,
+        // notes:write was withdrawn (consent, allowance or definition).
+        defined_api_scopes: new Set(["notes:read"]),
+        access_token_api_server_id: NOTES_API,
+      }),
+    ).toEqual({
+      access_token_scope: "notes:read",
+      refresh_token_scope: "openid notes:read",
+      refresh_token_scope_api_server_id: NOTES_API,
+    });
+  });
+
+  test("an access token for another audience gets no API scopes, whatever the re-request", () => {
+    expect(
+      splitRefreshGrantTokenScopes({
+        original_scope: "openid notes:read",
+        narrowed_scope: "openid notes:read",
+        scope_api_server_id: NOTES_API,
+        defined_api_scopes: NOTES_SCOPES,
+        access_token_api_server_id: OTHER_API,
+      }),
+    ).toEqual({
+      access_token_scope: "openid",
+      refresh_token_scope: "openid notes:read",
+      refresh_token_scope_api_server_id: NOTES_API,
     });
   });
 });

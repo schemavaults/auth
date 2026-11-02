@@ -570,6 +570,16 @@ describe("API scopes (per-API-server OAuth 2.0 scopes)", () => {
               expect(narrowed.body.scope, "narrowed scope").to.equal(NOTES_READ);
               expect(narrowed.body.id_token, "no id_token on refresh").to.be
                 .undefined;
+              // RFC 6749 §6: the narrowing applied to that access token
+              // only; the rotated refresh token still carries the grant.
+              refresh(narrowed.body.refresh_token as string, {
+                resource: API_SERVER_ID,
+              }).then((restored) => {
+                expect(restored.status, "restored status").to.equal(200);
+                expect(restored.body.scope, "restored scope").to.equal(
+                  `openid ${NOTES_READ}`,
+                );
+              });
             });
           });
         });
