@@ -192,10 +192,19 @@ describe("API server delegated-token policy", () => {
 
   it("the API server page's switch turns it on", () => {
     loginAsManager();
+    cy.intercept({
+      method: "PUT",
+      url: `**/api/apis/${api_server_id}/delegated-token-policy`,
+    }).as("savePolicy");
     cy.visit(`/apis/${api_server_id}`);
     // The switch is server-rendered: clicking it before hydration does nothing.
     cy.wait_for_page_hydration();
-    cy.get('[data-testid="api-server-delegated-tokens-card"]', { timeout: 20000 }).should("be.visible");
+    // The card sits below the fold of the 1280x720 viewport, which Cypress
+    // reports as "clipped by a parent with overflow": bring it into view
+    // before asserting visibility.
+    cy.get('[data-testid="api-server-delegated-tokens-card"]', { timeout: 20000 })
+      .scrollIntoView()
+      .should("be.visible");
     cy.get('[data-testid="accept-delegated-tokens-switch"]')
       .should("have.attr", "aria-checked", "false")
       .click();
@@ -204,7 +213,13 @@ describe("API server delegated-token policy", () => {
       "aria-checked",
       "true",
     );
-    cy.wrap(null, { timeout: 20000 }).then(() => expectPolicy(api_server_id, true));
+    // The switch flips at once and saves in the background: read the stored
+    // policy only once the PUT has answered.
+    cy.wait("@savePolicy").then((interception) => {
+      expect(interception.request.body).to.deep.eq({ accept_delegated_tokens: true });
+      expect(interception.response?.statusCode).to.eq(200);
+    });
+    expectPolicy(api_server_id, true);
     setPolicy(api_server_id, { accept_delegated_tokens: false }).its("status").should("eq", 200);
   });
 });
