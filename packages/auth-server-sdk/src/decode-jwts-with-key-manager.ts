@@ -23,6 +23,8 @@ import {
   getKeysetIdFromToken,
   customJwtPayloadToUserData,
   getScopeFromCustomJwtPayload,
+  getActorFromCustomJwtPayload,
+  type TokenActor,
 } from "@schemavaults/jwt";
 import {
   normalizeAcceptedAudiences,
@@ -31,14 +33,16 @@ import {
 import isValidUuid from "@/is-valid-uuid";
 import type { DecodedTokenClaims } from "@/route_guards/token-revocation";
 
-// A decoded token: the user identity plus the granted `scope` and the
-// client app the token was issued to, carried ALONGSIDE it (never folded
-// into UserData). `scope` is null when the token has no scope claim (issued
-// before scopes became first-class).
+// A decoded token: the user identity plus the granted `scope`, the client
+// app the token was issued to and its RFC 8693 actor, carried ALONGSIDE it
+// (never folded into UserData) in one record so they always come from the
+// same token. `scope` is null when the token has no scope claim (issued
+// before scopes became first-class); `actor` when it has no `act` claim.
 interface DecodedTokenWithScope {
   user: UserData;
   scope: string | null;
   client_app_id: string;
+  actor: TokenActor | null;
 }
 
 export type IDecodeJWTsWithKeyManagerOutput =
@@ -52,6 +56,13 @@ export type IDecodeJWTsWithKeyManagerOutput =
        * clients (an MCP client, say).
        */
       client_app_id: string;
+      /**
+       * RFC 8693 §4.1 actor of the resolving token (its `act` claim): who
+       * acts on behalf of `user`, e.g. an agent. Null when the token names
+       * no actor. Base access control only on `user` and this current
+       * actor; `actor.prior_actor` is informational only.
+       */
+      actor: TokenActor | null;
       /**
        * Revocation-relevant claims (`jti`, `iat`, `uid`, type) of EVERY
        * token source that decrypted and verified — all belong to `user`.
@@ -147,7 +158,9 @@ export async function decodeJWTsWithKeyManager(
         token_sources,
         jwt_audience: token_audience,
         // The consistency check in decodeJWTs compares the user across
-        // token sources; pull the user out of the `{ user, scope, ... }` record.
+        // token sources; pull the user out of the `{ user, scope, ... }`
+        // record. Only UserData is compared, so an `act` on one source
+        // and not another does not trip it.
         getUserData: (d: DecodedTokenWithScope): UserData => d.user,
         decodeJWT: async (opts): Promise<DecodedTokenWithScope> => {
           const sourceHintLabel: string =
@@ -261,6 +274,7 @@ export async function decodeJWTsWithKeyManager(
               user: customJwtPayloadToUserData(jwtPayload),
               scope: getScopeFromCustomJwtPayload(jwtPayload),
               client_app_id: jwtPayload.app,
+              actor: getActorFromCustomJwtPayload(jwtPayload),
             };
           } catch (e: unknown) {
             console.error(
@@ -311,11 +325,13 @@ export async function decodeJWTsWithKeyManager(
     }
     const user: UserData = parsed_user.data;
 
-    // Scope and client app are threaded ALONGSIDE the user, not inside it.
+    // Scope, client app and actor are threaded ALONGSIDE the user, not
+    // inside it.
     return {
       user,
       scope: decoded_result.scope,
       client_app_id: decoded_result.client_app_id,
+      actor: decoded_result.actor,
       // decodeJWTs already verified every token resolves the same uid.
       tokens: verified_tokens.filter((t) => t.uid === user.uid),
     };

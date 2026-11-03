@@ -20,6 +20,10 @@ import {
 import { createAudienceSchema, isResourceUrlAudience } from "@schemavaults/auth-common";
 import { z } from "zod";
 import isValidUuid from "@/utils/isValidUuid";
+import {
+  type JwtActorClaim,
+  parseActorClaimForGeneratedToken,
+} from "./actor-claim";
 
 interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
   user: UserData;
@@ -39,6 +43,13 @@ interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
    * (see payload_data.ts). Omitted when the grant holds no API scopes.
    */
   scope_api_server_id?: string;
+  /**
+   * ACCESS tokens only: the RFC 8693 §4.1 actor acting on behalf of `user`,
+   * embedded as the `act` claim (see actor-claim.ts). The outermost actor
+   * is the current one; nested actors are informational only. Refused on
+   * refresh tokens. Omitted: the token carries no `act`.
+   */
+  actor?: JwtActorClaim;
 }
 
 interface GenerateJWTWithAllKeysOptions<
@@ -211,6 +222,14 @@ export async function generateJWT<T extends AuthTokenTypes>(
     }
   }
 
+  // The actor is an access-token claim, like the binding above is a
+  // refresh-token one: refused on refresh tokens, validated here.
+  const actor: JwtActorClaim | undefined = parseActorClaimForGeneratedToken(
+    z,
+    type,
+    opts.actor,
+  );
+
   let sig: string;
   try {
     sig = await signJWT({
@@ -279,6 +298,7 @@ export async function generateJWT<T extends AuthTokenTypes>(
         : {}),
       ...(scope_api_server_id ? { scope_api_server_id } : {}),
       ...(user.service_account === true ? { service_account: true } : {}),
+      ...(actor ? { act: actor } : {}),
     };
 
     const jwt = await new EncryptJWT(additionalClaims)

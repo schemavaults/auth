@@ -305,6 +305,34 @@ The access tokens themselves still carry the bare uid as `sub`, so older SDK
 versions keep verifying them; `userDataSchema` upgrades a bare-uuid `sub` with
 `SCHEMAVAULTS_AUTH_SERVER_APP_ID` (default `schemavaults-auth`).
 
+## Delegated tokens: the actor (RFC 8693 `act`)
+
+An access token may say that someone acts on behalf of its user (an agent, say): its
+`sub` is still the user, and its `act` claim names the actor (RFC 8693 §4.1). The
+auth server does not issue such tokens yet; this SDK version accepts them so resource
+servers can upgrade before it does (older versions reject a token carrying `act`).
+
+Route guards expose the actor of the token that resolved the user next to
+`client_app_id`, and `decodeJWTsWithKeyManager()` returns it as `actor`:
+
+```ts
+const guard = await factory.createGuardFromAuthHeader("authenticated", authHeader, apiServerId);
+guard.user;          // the user the token was issued for (its `sub`)
+guard.actor;         // null, or the TokenActor acting on the user's behalf:
+guard.actor?.uid;    //   the actor's platform id
+guard.actor?.sub;    //   its OIDC subject `<auth_server_app_id>|<uid>`
+guard.actor?.client_id;   // the client app the actor acts through, or null
+guard.actor?.prior_actor; // the previous actor of a delegation chain, or null
+```
+
+`actor` is null for tokens without `act`, when no user was resolved and when the
+token was revoked. A chain holds at most three actors; tokens with a deeper or
+malformed `act` do not verify.
+
+**Base access control only on the user and the current actor** (`guard.actor`, the
+principal's `actor`). Prior actors (`prior_actor`, `actor.actor`) are informational:
+RFC 8693 §4.1 forbids using them for access-control decisions.
+
 ## Auth resolvers for `@schemavaults/openapi-operations`
 
 Resource servers that declare their API with
@@ -346,13 +374,38 @@ Per request:
   URL), an unusable key, or a JWKS download the auth server refuses is 500
   `auth_not_configured` with a message naming the cause, never a silent pass. With no
   credential at all the operations runtime still answers 401 + `WWW-Authenticate`.
-- The principal is `{ scheme, user, isAdmin: user.admin === true, scope,
-  getOrganizationRole, listOrganizationMemberships }`. `getOrganizationRole` validates the
+- The principal is `{ scheme, user, isAdmin: user.admin === true, scope, clientId,
+  actor, getOrganizationRole, listOrganizationMemberships }`. `clientId` is the client app
+  the token was issued to (its `app` claim). `actor` is present only when the token
+  carries an RFC 8693 `act` claim (see [Delegated tokens](#delegated-tokens-the-actor-rfc-8693-act)):
+  `{ sub, clientId?, actor? }`, with `sub` the actor's OIDC subject and the nested
+  `actor` the prior actor of a delegation chain, which is informational only: base
+  access control on the user and the current actor. `getOrganizationRole` validates the
   id and asks the auth server (`isUserInOrganization`); `listOrganizationMemberships()`
   lists the user's memberships (`listUserOrganizations`, the same
   `OrganizationMembershipRoleDetails` shape as `/api/me/organizations`). Both sign a JWKS
   access assertion with the JWKS access key and forward the token the user presented in
   `X-Subject-Token`.
+
+To keep agents away from a sensitive operation, refuse principals with an actor:
+
+```ts
+import { OperationError } from "@schemavaults/openapi-operations";
+
+export const deleteAccount = defineOperation({
+  // ...
+  handler: async (ctx) => {
+    if (ctx.auth.actor) {
+      // Someone (e.g. an agent) is acting on the user's behalf: only the user may do this.
+      throw new OperationError(403, {
+        error: "delegation_not_allowed",
+        message: "This operation cannot be performed on your behalf",
+      });
+    }
+    // ...
+  },
+});
+```
 
 ### Organization memberships
 

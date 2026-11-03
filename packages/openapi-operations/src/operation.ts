@@ -125,6 +125,21 @@ export type EmptyResponseStatusOf<TResponses extends ResponsesDefinition> = {
 // ---------------------------------------------------------------------------
 
 /**
+ * The RFC 8693 §4.1 actor of a delegated credential (e.g. an agent acting
+ * for a user): the outermost actor is the current one. Base access-control
+ * decisions on the principal and its current actor only; a nested `actor`
+ * (prior actor of a delegation chain) is informational.
+ */
+export interface AuthPrincipalActor {
+  /** Subject identifier of the acting principal. */
+  readonly sub: string;
+  /** OAuth client id the actor acts through, when the credential names one. */
+  readonly clientId?: string;
+  /** Prior actor in the delegation chain (informational only). */
+  readonly actor?: AuthPrincipalActor;
+}
+
+/**
  * Result of a successful credential resolution for one auth scheme. Built
  * by the {@link AuthResolver} registered for the scheme, so its `user` type
  * is whatever the host application resolves (e.g. `UserData` from
@@ -150,6 +165,12 @@ export interface AuthPrincipal<TUser = unknown> {
    * clients'. Absent when the resolver cannot tell.
    */
   readonly clientId?: string;
+  /**
+   * RFC 8693 §4.1 actor: who acts on behalf of the principal's subject; absent
+   * when the credential names none. Base access control only on the current
+   * actor; `actor.actor` (prior actors) is informational.
+   */
+  readonly actor?: AuthPrincipalActor;
   /**
    * Resolves the principal's membership role in an organization, used for
    * {@link OrganizationRoleRequirement}. Absent means "cannot be a member".

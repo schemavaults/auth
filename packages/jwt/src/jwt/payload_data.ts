@@ -7,6 +7,7 @@ import {
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
 import { createAudienceSchema } from "@schemavaults/auth-common";
+import { createJwtActorClaimSchema } from "./actor-claim";
 
 // Data to hold in the JWT
 export function createJwtPayloadSchema(
@@ -51,6 +52,17 @@ export function createJwtPayloadSchema(
       // (OAuth2 client_credentials grant, RFC 6749 §4.4): the subject is a
       // machine identity, not a person. Omitted on every other token.
       service_account: z.boolean().optional(),
+      // ACCESS tokens only: the RFC 8693 §4.1 actor, who acts on behalf of
+      // `sub` (e.g. an agent acting for the user); see actor-claim.ts.
+      // The outermost `act` is the current actor; nested ones are prior
+      // actors and informational only: access-control decisions MUST use
+      // only the top-level claims and the current actor. Protected by the
+      // JWE like `scope`; the inner `sig` does not cover it. Decoders
+      // before this claim reject it (this schema is strict), so the auth
+      // server may only send it to resource servers running a version that
+      // accepts it: the change that starts emitting it must gate emission
+      // per API server. Nothing emits it yet.
+      act: createJwtActorClaimSchema(z).optional(),
     })
     .required({
       uid: true,

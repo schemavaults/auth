@@ -1,6 +1,7 @@
 // base-route-guard.ts
 
 import type { UserData } from "@schemavaults/auth-common";
+import type { TokenActor } from "@schemavaults/jwt";
 import type { InitRouteGuardCheckOptions } from "./init_route_guard_check_options";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type { IRouteGuard } from "./IRouteGuard";
@@ -10,6 +11,7 @@ export abstract class BaseRouteGuard implements IRouteGuard {
   protected readonly _user: UserData | null;
   protected readonly _scope: string | null;
   protected readonly _client_app_id: string | null;
+  protected readonly _actor: TokenActor | null;
   protected readonly _revoked: boolean;
   private readonly environment: SchemaVaultsAppEnvironment;
 
@@ -17,6 +19,7 @@ export abstract class BaseRouteGuard implements IRouteGuard {
     user,
     scope,
     client_app_id,
+    actor,
     revoked,
     environment,
   }: InitRouteGuardCheckOptions) {
@@ -25,6 +28,7 @@ export abstract class BaseRouteGuard implements IRouteGuard {
     this._user = this._revoked ? null : user;
     this._scope = this._revoked ? null : (scope ?? null);
     this._client_app_id = this._revoked ? null : (client_app_id ?? null);
+    this._actor = this._revoked ? null : (actor ?? null);
     this.environment = environment;
   }
 
@@ -56,6 +60,11 @@ export abstract class BaseRouteGuard implements IRouteGuard {
 
   public get client_app_id(): string | null {
     return this._client_app_id;
+  }
+
+  /** RFC 8693 actor of the resolving token; see {@link IRouteGuard.actor}. */
+  public get actor(): TokenActor | null {
+    return this._actor;
   }
 
   public get revoked(): boolean {

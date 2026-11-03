@@ -7,7 +7,13 @@ export type { CustomJWTPayload } from "./payload_data";
 export {
   customJwtPayloadToUserData,
   getScopeFromCustomJwtPayload,
+  getActorFromCustomJwtPayload,
 } from "./custom-jwt-payload-to-user-data";
+export {
+  createJwtActorClaimSchema,
+  MAX_JWT_ACTOR_CLAIM_DEPTH,
+} from "./actor-claim";
+export type { JwtActorClaim, TokenActor } from "./actor-claim";
 
 export {
   JWT_Keys,

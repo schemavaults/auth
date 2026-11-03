@@ -314,6 +314,8 @@ export class RouteGuardFactory {
       scope: decoded.user && !revoked ? decoded.scope : null,
       // Likewise the client app the token was issued to.
       client_app_id: decoded.user && !revoked ? decoded.client_app_id : null,
+      // And the token's RFC 8693 actor (null when it names none).
+      actor: decoded.user && !revoked ? decoded.actor : null,
       revoked,
       environment: getAppEnvironment(),
     };

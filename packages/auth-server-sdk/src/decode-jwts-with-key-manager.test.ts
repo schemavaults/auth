@@ -178,6 +178,91 @@ describe("decodeJWTsWithKeyManager", () => {
     expect(decoded_user?.uid).toBe(user.uid);
   });
 
+  describe("RFC 8693 actor (act claim)", () => {
+    async function mint(actor?: { sub: string; client_id?: string }) {
+      const user = createMockUser();
+      const { jwt_keys, keys_manager } = await createKeysAndManager();
+      const factory = new JWT_Factory({
+        user,
+        client_app_id: DEFAULT_AUTH_SERVER_APP_ID,
+        jwt_keys,
+        environment,
+        user_organizations: [],
+      });
+      const access_token = await factory.access(
+        getTokenAudienceForApiServerId(DEFAULT_AUTH_SERVER_APP_ID, environment),
+        actor ? { actor } : undefined,
+      );
+      return { user, factory, keys_manager, access_token };
+    }
+
+    it("carries the token's actor alongside the user", async () => {
+      const agent_uid = crypto.randomUUID();
+      const agent_app_id = crypto.randomUUID();
+      const { user, keys_manager, access_token } = await mint({
+        sub: agent_uid,
+        client_id: agent_app_id,
+      });
+
+      const decoded = await decodeJWTsWithKeyManager(
+        keys_manager,
+        [{ sourceHint: "access cookie", type: "access", token: access_token.token }],
+        DEFAULT_AUTH_SERVER_APP_ID,
+        environment,
+      );
+
+      if (!decoded.user) throw new Error("expected a user");
+      expect(decoded.user.uid).toBe(user.uid);
+      expect(decoded.user).not.toHaveProperty("act");
+      expect(decoded.user).not.toHaveProperty("actor");
+      expect(decoded.actor).toEqual({
+        uid: agent_uid,
+        sub: `${DEFAULT_AUTH_SERVER_APP_ID}|${agent_uid}`,
+        client_id: agent_app_id,
+        prior_actor: null,
+      });
+      expect(decoded.client_app_id).toBe(DEFAULT_AUTH_SERVER_APP_ID);
+    });
+
+    it("reports a null actor for a token without act", async () => {
+      const { keys_manager, access_token } = await mint();
+
+      const decoded = await decodeJWTsWithKeyManager(
+        keys_manager,
+        [{ sourceHint: "access cookie", type: "access", token: access_token.token }],
+        DEFAULT_AUTH_SERVER_APP_ID,
+        environment,
+      );
+
+      if (!decoded.user) throw new Error("expected a user");
+      expect(decoded.actor).toBeNull();
+    });
+
+    it("does not treat an act on only one token source as an inconsistency", async () => {
+      const agent_uid = crypto.randomUUID();
+      const { user, factory, keys_manager, access_token } = await mint({
+        sub: agent_uid,
+      });
+      const refresh_token = await factory.refresh();
+
+      const decoded = await decodeJWTsWithKeyManager(
+        keys_manager,
+        [
+          { sourceHint: "access cookie", type: "access", token: access_token.token },
+          { sourceHint: "refresh cookie", type: "refresh", token: refresh_token.token },
+        ],
+        DEFAULT_AUTH_SERVER_APP_ID,
+        environment,
+      );
+
+      if (!decoded.user) throw new Error("expected a user");
+      expect(decoded.user.uid).toBe(user.uid);
+      expect(decoded.tokens).toHaveLength(2);
+      // The actor comes from the same (resolving) token as client_app_id.
+      expect(decoded.actor?.uid).toBe(agent_uid);
+    });
+  });
+
   describe("when the key manager cannot load keys", () => {
     async function mintAccessToken(): Promise<string> {
       const { jwt_keys } = await createKeysAndManager();
