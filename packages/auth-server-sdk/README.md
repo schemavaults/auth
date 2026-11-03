@@ -275,7 +275,12 @@ the auth server, authenticating with your JWKS access key (`private_key_jwt`: a
 fresh single-use JWKS access assertion per call):
 
 ```ts
-import { introspectToken, loadJwksAccessPrivateKey, getAuthServerUrl } from "@schemavaults/auth-server-sdk";
+import {
+  getActorFromIntrospectionResult,
+  getAuthServerUrl,
+  introspectToken,
+  loadJwksAccessPrivateKey,
+} from "@schemavaults/auth-server-sdk";
 
 const result = await introspectToken({
   auth_server_url: getAuthServerUrl(),
@@ -284,10 +289,12 @@ const result = await introspectToken({
   token: accessToken,
 });
 if (result.active) {
-  result.uid;       // platform user id
-  result.sub;       // OIDC subject `<auth_server_app_id>|<uid>`
-  result.client_id; // the client app the token was issued to
-  result.scope;     // granted scope, if any
+  result.uid;             // platform user id
+  result.sub;             // OIDC subject `<auth_server_app_id>|<uid>`
+  result.client_id;       // the client app the token was issued to
+  result.scope;           // granted scope, if any
+  result.service_account; // true when the user is a client app's service account (a machine)
+  getActorFromIntrospectionResult(result); // the RFC 8693 actor of a delegated token, or null
 }
 ```
 
@@ -328,6 +335,13 @@ guard.actor?.prior_actor; // the previous actor of a delegation chain, or null
 `actor` is null for tokens without `act`, when no user was resolved and when the
 token was revoked. A chain holds at most three actors; tokens with a deeper or
 malformed `act` do not verify.
+
+Introspection reports the actor too: the auth server's response carries `act`
+(`sub` in the OIDC form plus `uid`, `client_id`, the prior actor nested), and
+`getActorFromIntrospectionResult(result)` returns it as the same `TokenActor`, so a
+resource server that introspects delegated tokens (to honour an ended agent session
+at once) applies the same actor policy as one that verifies them locally. A
+malformed `act` makes `introspectToken()` throw rather than drop it.
 
 **Base access control only on the user and the current actor** (`guard.actor`, the
 principal's `actor`). Prior actors (`prior_actor`, `actor.actor`) are informational:

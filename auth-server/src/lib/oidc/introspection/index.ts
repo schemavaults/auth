@@ -15,7 +15,8 @@ import "server-only";
  *   - introspected-token-activity.ts: revocation, consent and app-to-API
  *     connection rules — pure, over injected signals
  *   - is-introspected-token-active.ts: those rules bound to the database
- *   - build-active-introspection-response.ts: the §2.2 metadata — pure
+ *   - build-active-introspection-response.ts: the §2.2 metadata — pure,
+ *     with the RFC 8693 actor mapped by introspection-actor.ts
  */
 
 export {
@@ -63,12 +64,14 @@ export type { IsIntrospectedTokenActiveOptions } from "./is-introspected-token-a
 
 export { buildActiveIntrospectionResponse } from "./build-active-introspection-response";
 export type { BuildActiveIntrospectionResponseOptions } from "./build-active-introspection-response";
+export { toOidcIntrospectionActor } from "./introspection-actor";
 
 export { INACTIVE_INTROSPECTION_RESPONSE } from "./types";
 export type {
   ActiveOidcIntrospectionResponseBody,
   DecodedIntrospectableToken,
   IntrospectableTokenKind,
+  OidcIntrospectionActor,
   OidcIntrospectionCaller,
   OidcIntrospectionResponseBody,
 } from "./types";

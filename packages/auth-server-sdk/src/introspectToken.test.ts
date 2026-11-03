@@ -7,11 +7,34 @@ import {
   sign_verify_alg,
 } from "@schemavaults/jwt";
 import { OAUTH_JWT_BEARER_CLIENT_ASSERTION_TYPE } from "@schemavaults/auth-common";
-import { introspectToken } from "./introspectToken";
+import {
+  getActorFromIntrospectionResult,
+  introspectToken,
+  type TokenIntrospectionResult,
+} from "./introspectToken";
 
 const AUTH_SERVER_URL = "https://auth.example.com" as const;
 const API_SERVER_ID = "4f7c2f4e-9d6a-4a1b-8f3e-2c5d6e7f8a9b" as const;
 const UID = "11111111-1111-4111-8111-111111111111" as const;
+const CLIENT_APP_ID = "22222222-2222-4222-8222-222222222222" as const;
+const ACTOR_UID = "44444444-4444-4444-8444-444444444444" as const;
+const PRIOR_ACTOR_UID = "55555555-5555-4555-8555-555555555555" as const;
+
+/** An active introspection response for a token of `UID`. */
+function activeResponse(extra: Record<string, unknown> = {}) {
+  return {
+    active: true,
+    client_id: CLIENT_APP_ID,
+    token_type: "Bearer",
+    exp: 1_700_000_900,
+    iat: 1_700_000_000,
+    sub: `schemavaults-auth|${UID}`,
+    uid: UID,
+    aud: API_SERVER_ID,
+    iss: AUTH_SERVER_URL,
+    ...extra,
+  };
+}
 
 let private_key: CryptoKey;
 let public_key: CryptoKey;
@@ -136,6 +159,59 @@ describe("introspectToken", () => {
     ).toEqual(active as never);
   });
 
+  test("returns a delegated token's actor and a service account's flag", async () => {
+    const delegated = activeResponse({
+      act: {
+        sub: `schemavaults-auth|${ACTOR_UID}`,
+        uid: ACTOR_UID,
+        client_id: CLIENT_APP_ID,
+        act: { sub: `schemavaults-auth|${PRIOR_ACTOR_UID}`, uid: PRIOR_ACTOR_UID },
+      },
+    });
+    const { fetch } = stubFetch(200, delegated);
+    expect(
+      await introspectToken({
+        auth_server_url: AUTH_SERVER_URL,
+        api_server_id: API_SERVER_ID,
+        jwks_access_private_key: private_key,
+        token: "t",
+        fetch,
+      }),
+    ).toEqual(delegated as never);
+
+    const machine = activeResponse({ service_account: true });
+    const { fetch: machineFetch } = stubFetch(200, machine);
+    const result = await introspectToken({
+      auth_server_url: AUTH_SERVER_URL,
+      api_server_id: API_SERVER_ID,
+      jwks_access_private_key: private_key,
+      token: "t",
+      fetch: machineFetch,
+    });
+    expect(result.active && result.service_account).toBe(true);
+  });
+
+  test("refuses a malformed actor instead of dropping it", async () => {
+    // Dropping it would let the agent pass for the user it acts for.
+    for (const act of [
+      { sub: `schemavaults-auth|${ACTOR_UID}` },
+      { uid: ACTOR_UID },
+      "agent",
+      { sub: `schemavaults-auth|${ACTOR_UID}`, uid: ACTOR_UID, act: { uid: 7 } },
+    ]) {
+      const { fetch } = stubFetch(200, activeResponse({ act }));
+      await expect(
+        introspectToken({
+          auth_server_url: AUTH_SERVER_URL,
+          api_server_id: API_SERVER_ID,
+          jwks_access_private_key: private_key,
+          token: "t",
+          fetch,
+        }),
+      ).rejects.toThrow("unexpected token introspection response");
+    }
+  });
+
   test("throws when the auth server refuses the client", async () => {
     const { fetch } = stubFetch(401, {
       error: "invalid_client",
@@ -186,5 +262,41 @@ describe("introspectToken", () => {
       }),
     ).rejects.toThrow(TypeError);
     expect(requests).toHaveLength(0);
+  });
+});
+
+describe("getActorFromIntrospectionResult", () => {
+  test("maps the actor chain to the TokenActor route guards report", () => {
+    const result = activeResponse({
+      act: {
+        sub: `schemavaults-auth|${ACTOR_UID}`,
+        uid: ACTOR_UID,
+        client_id: CLIENT_APP_ID,
+        act: { sub: `schemavaults-auth|${PRIOR_ACTOR_UID}`, uid: PRIOR_ACTOR_UID },
+      },
+    }) as TokenIntrospectionResult;
+    expect(getActorFromIntrospectionResult(result)).toEqual({
+      uid: ACTOR_UID,
+      sub: `schemavaults-auth|${ACTOR_UID}`,
+      client_id: CLIENT_APP_ID,
+      prior_actor: {
+        uid: PRIOR_ACTOR_UID,
+        sub: `schemavaults-auth|${PRIOR_ACTOR_UID}`,
+        client_id: null,
+        prior_actor: null,
+      },
+    });
+  });
+
+  test("is null for inactive tokens and tokens without an actor", () => {
+    expect(getActorFromIntrospectionResult({ active: false })).toBeNull();
+    expect(
+      getActorFromIntrospectionResult(activeResponse() as TokenIntrospectionResult),
+    ).toBeNull();
+    expect(
+      getActorFromIntrospectionResult(
+        activeResponse({ service_account: true }) as TokenIntrospectionResult,
+      ),
+    ).toBeNull();
   });
 });

@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.65.1",
+      "version": "0.65.2",
       "dependencies": {
         "@hookform/resolvers": "5.9.1",
         "@schemavaults/app-definitions": "workspace:*",
@@ -182,7 +182,7 @@
     },
     "packages/auth-server-sdk": {
       "name": "@schemavaults/auth-server-sdk",
-      "version": "0.39.0",
+      "version": "0.40.0",
       "bin": {
         "auth-server-sdk": "./dist/cli.cjs",
       },
@@ -316,7 +316,7 @@
     },
     "packages/trpc-backend-init": {
       "name": "@schemavaults/trpc-backend-init",
-      "version": "0.9.104",
+      "version": "0.9.105",
       "devDependencies": {
         "bun-types": "1.4.4",
         "tsc-alias": "1.9.0",
@@ -345,7 +345,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.12.41",
+      "version": "0.12.42",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",

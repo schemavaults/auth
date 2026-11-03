@@ -6,6 +6,7 @@ import {
   partitionGrantedScopes,
   refreshTokenExpiry,
 } from "@schemavaults/auth-common";
+import { toOidcIntrospectionActor } from "./introspection-actor";
 import type {
   ActiveOidcIntrospectionResponseBody,
   DecodedIntrospectableToken,
@@ -59,6 +60,18 @@ export function buildActiveIntrospectionResponse({
     ...(payload.jti ? { jti: payload.jti } : {}),
     ...((oidc as readonly string[]).includes("email")
       ? { username: payload.email }
+      : {}),
+    // Who is calling, as far as the token says: introspecting resource
+    // servers must learn what local verification learns (the server SDK
+    // exposes both claims), or a machine or an agent would pass for the
+    // user. A machine subject (client_credentials) is flagged...
+    ...(payload.service_account === true
+      ? { service_account: true as const }
+      : {}),
+    // ...and a delegated token names its actor (RFC 8693 §4.1: `act` MAY
+    // appear in introspection responses), the current one outermost.
+    ...(payload.act
+      ? { act: toOidcIntrospectionActor(payload.act, auth_server_app_id) }
       : {}),
   };
 }

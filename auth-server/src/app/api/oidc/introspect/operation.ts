@@ -1,6 +1,7 @@
 import { toNextRequest } from "@/lib/api/next-request";
 import { apiServerIdSchema, appIdSchema } from "@schemavaults/app-definitions";
 import { OAUTH_JWT_BEARER_CLIENT_ASSERTION_TYPE } from "@schemavaults/auth-common";
+import { MAX_JWT_ACTOR_CLAIM_DEPTH } from "@schemavaults/jwt";
 import { z, publicAccess } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import {
@@ -35,6 +36,35 @@ export const OidcIntrospectionRequest = z
   })
   .openapi("OidcIntrospectionRequest");
 
+/**
+ * One level of a delegated token's actor chain, built level by level like
+ * the token's own `act` schema (at most MAX_JWT_ACTOR_CLAIM_DEPTH actors).
+ */
+function introspectionActorLevel(levels: number): z.ZodType {
+  const identity = {
+    sub: z.string().openapi({ description: "The actor's subject in the `<auth_server_app_id>|<uid>` form." }),
+    uid: z.guid().openapi({ description: "The actor's platform user id (the `<uid>` part of its `sub`)." }),
+    client_id: z.string().optional().openapi({ description: "The client application the actor acts through." }),
+  };
+  if (levels <= 1) {
+    return z.object(identity);
+  }
+  return z.object({
+    ...identity,
+    act: introspectionActorLevel(levels - 1)
+      .optional()
+      .openapi({ description: "The prior actor of the delegation chain: informational only." }),
+  });
+}
+
+export const OidcIntrospectionActor = introspectionActorLevel(MAX_JWT_ACTOR_CLAIM_DEPTH).openapi(
+  "OidcIntrospectionActor",
+  {
+    description:
+      "RFC 8693 §4.1 actor of a delegated token: who acts on behalf of the token's subject (e.g. an agent). The outermost `act` is the current actor; nested ones are prior actors and informational only. Base access control on the top-level claims and the current actor alone.",
+  },
+);
+
 export const OidcIntrospectionResponse = z
   .union([
     z.object({ active: z.literal(false) }),
@@ -54,6 +84,13 @@ export const OidcIntrospectionResponse = z
         aud: z.string(),
         iss: z.string(),
         jti: z.string().optional(),
+        service_account: z.literal(true).optional().openapi({
+          description:
+            "Present only when the subject is a client application's service account: a machine identity (`client_credentials` grant), not a person.",
+        }),
+        act: OidcIntrospectionActor.optional().openapi({
+          description: "Present only on a delegated token (RFC 8693 §4.1): the actor acting on behalf of `sub`.",
+        }),
       })
       .loose(),
   ])
@@ -64,7 +101,7 @@ export const postOidcIntrospect = defineOperation({
   path: ROUTE,
   summary: "Token introspection",
   description:
-    "The OAuth 2.0 token introspection endpoint (RFC 7662), advertised as `introspection_endpoint`. The caller POSTs a token issued by this server and learns whether it is currently active plus its metadata (scope, client, subject, expiry). Two kinds of caller may introspect, each only its own tokens: " +
+    "The OAuth 2.0 token introspection endpoint (RFC 7662), advertised as `introspection_endpoint`. The caller POSTs a token issued by this server and learns whether it is currently active plus its metadata (scope, client, subject, expiry), including who is calling as far as the token says: `service_account` for a machine subject, and the RFC 8693 actor (`act`) of a token delegated to, e.g., an agent acting for the user. Two kinds of caller may introspect, each only its own tokens: " +
     "a confidential client app, the OIDC surface's access and refresh tokens issued to it; and an API server (`private_key_jwt` with its JWKS access key), the access tokens minted for it (its id or one of its RFC 8707 resource URLs as `aud`), so it can learn about logouts, password resets, disabled accounts and de-authorized apps that local token verification cannot see. " +
     "Tokens the caller may not see (another client's or another API server's), tokens of a client app the user has since de-authorized or (for API servers) that is no longer connected to the API server, expired and revoked tokens all yield `{ \"active\": false }`. " +
     "Public (PKCE-only) clients cannot introspect: without client authentication the endpoint would be open to token scanning. Responses carry `Cache-Control: no-store` and `Access-Control-Allow-Origin: *`.",

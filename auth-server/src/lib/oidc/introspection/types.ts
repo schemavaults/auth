@@ -3,6 +3,24 @@ import type { ApiServerId, AppId } from "@schemavaults/app-definitions";
 import type { CustomJWTPayload } from "@schemavaults/jwt";
 
 /**
+ * The RFC 8693 §4.1 actor (`act`) of a delegated token as introspection
+ * reports it: who acts on behalf of the token's subject (e.g. an agent).
+ * Identified like the top level of the response: `sub` in the OIDC form
+ * `<auth_server_app_id>|<uid>`, `uid` the platform user id inside it. The
+ * outermost `act` is the CURRENT actor; a nested `act` is the prior actor of
+ * a delegation chain and is informational only (access control must use the
+ * top-level claims and the current actor alone).
+ */
+export interface OidcIntrospectionActor {
+  sub: string;
+  uid: string;
+  /** The client app the actor acts through. */
+  client_id?: AppId;
+  /** The prior actor of a delegation chain (informational only). */
+  act?: OidcIntrospectionActor;
+}
+
+/**
  * RFC 7662 §2.2 introspection response. An inactive token yields the
  * bare `{ active: false }` object — §2.2 says the server SHOULD NOT
  * include any other members, so callers cannot distinguish "expired"
@@ -33,6 +51,16 @@ export type OidcIntrospectionResponseBody =
       aud: string;
       iss: string;
       jti?: string;
+      /**
+       * Present (and true) only when the subject is a client app's service
+       * account: a machine identity (client_credentials grant), not a person.
+       */
+      service_account?: true;
+      /**
+       * Present only on a delegated token: the actor acting on behalf of
+       * `sub` (RFC 8693 §4.1), with its prior actors nested.
+       */
+      act?: OidcIntrospectionActor;
     };
 
 export type ActiveOidcIntrospectionResponseBody = Extract<
