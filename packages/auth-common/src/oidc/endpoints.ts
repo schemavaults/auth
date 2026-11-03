@@ -19,6 +19,8 @@ export const OIDC_ENDPOINT_PATHS = {
   token: "/api/oidc/token",
   userinfo: "/api/oidc/userinfo",
   introspection: "/api/oidc/introspect",
+  // RFC 7009 token revocation.
+  revocation: "/api/oidc/revoke",
   jwks: "/api/oidc/jwks",
   // RFC 7591 dynamic client registration; advertised in the discovery
   // document only when the server setting enabling it is on.

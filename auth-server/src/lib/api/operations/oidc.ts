@@ -4,6 +4,7 @@ import { postOidcIntrospect } from "@/app/api/oidc/introspect/operation";
 import { getOidcJwks } from "@/app/api/oidc/jwks/operation";
 import { getOpenIdConfiguration } from "@/app/api/oidc/openid-configuration/operation";
 import { postOidcRegister } from "@/app/api/oidc/register/operation";
+import { postOidcRevoke } from "@/app/api/oidc/revoke/operation";
 import { postOidcToken } from "@/app/api/oidc/token/operation";
 import { getOidcUserinfo, postOidcUserinfo } from "@/app/api/oidc/userinfo/operation";
 
@@ -16,5 +17,6 @@ export const oidcOperations: readonly AnyOperationDefinition[] = [
   getOidcUserinfo,
   postOidcUserinfo,
   postOidcIntrospect,
+  postOidcRevoke,
   postOidcRegister,
 ];

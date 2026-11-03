@@ -31,7 +31,7 @@ import { listApiServerScopeValues } from "@/lib/auth-db/apis";
 import {
   listUsableApiScopeValues,
   narrowGrantedScope,
-  splitTokenScopes,
+  splitRefreshGrantTokenScopes,
 } from "@/lib/oauth2/api-scopes";
 import {
   parseOidcTokenResourceParam,
@@ -87,7 +87,8 @@ export function isRefreshTokenPresentedViaCookie(
  * grant_type=refresh_token (RFC 6749 §6 / OIDC Core §12): redeems a
  * refresh token for a fresh token set (no id_token — OIDC Core §12.2
  * permits omitting it). The token's granted scope (possibly none, for a
- * plain OAuth 2.1 grant) carries forward on rotation. Called from
+ * plain OAuth 2.1 grant) carries forward on rotation, also when a `scope`
+ * re-request narrows the access token (RFC 6749 §6). Called from
  * route.ts after
  * grant_type/client_id validation and client authentication; the
  * shared try/catch there owns exception capture, and route.ts delivers
@@ -299,10 +300,10 @@ export async function handleOidcRefreshTokenGrant({
 
   // RFC 6749 §6: a scope re-request must be a subset of the original
   // grant; absent means "same as originally granted". Narrowing away
-  // `openid` is allowed (the result is a plain OAuth token set), but a
-  // malformed value is rejected rather than read as "nothing". Unknown
+  // `openid` is allowed (the access token is then a plain OAuth one), but
+  // a malformed value is rejected rather than read as "nothing". Unknown
   // scopes are dropped, as everywhere on the OIDC surface.
-  let granted_scope: string = original_scope;
+  let narrowed_scope: string | null = null;
   const requested_scope = param("scope");
   if (requested_scope !== null) {
     const narrowed = narrowGrantedScope(
@@ -320,13 +321,16 @@ export async function handleOidcRefreshTokenGrant({
             ),
       );
     }
-    granted_scope = narrowed.scope;
+    narrowed_scope = narrowed.scope;
   }
 
-  // The grant's API scopes go on the access token only when it is minted
-  // for their API server; the rotated refresh token keeps them either way.
-  const token_scopes = splitTokenScopes({
-    granted_scope,
+  // The re-request narrows the access token only: the rotated refresh
+  // token keeps the presented grant (RFC 6749 §6). The grant's API scopes
+  // go on the access token only when it is minted for their API server;
+  // the rotated refresh token keeps them either way.
+  const token_scopes = splitRefreshGrantTokenScopes({
+    original_scope,
+    narrowed_scope,
     scope_api_server_id,
     defined_api_scopes: usable_api_scopes,
     access_token_api_server_id: access_token_audience_api_server_id ?? null,

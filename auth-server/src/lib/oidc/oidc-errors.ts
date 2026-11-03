@@ -30,6 +30,9 @@ export type OidcTokenErrorCode =
   // RFC 8707 §2: the requested `resource` is invalid, unknown, or not
   // permitted for this client.
   | "invalid_target"
+  // RFC 7009 §2.2.1: the revocation endpoint cannot revoke this kind of
+  // token (access tokens minted for an API server).
+  | "unsupported_token_type"
   // Unexpected failure (500). RFC 6749 §5.2 defines no code for it; this
   // borrows the authorization endpoint's `server_error` (§4.1.2.1), which
   // /api/oidc/register already answers with.

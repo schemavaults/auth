@@ -57,6 +57,7 @@ describe("GET /api/openapi.json (auth server)", () => {
         "/api/oidc/token",
         "/api/oidc/authorize",
         "/api/oidc/userinfo",
+        "/api/oidc/revoke",
         "/api/oidc/openid-configuration",
         "/api/oidc/jwks",
         "/api/user/profile",
@@ -142,6 +143,7 @@ describe("GET /api/openapi.json (auth server)", () => {
       for (const [path, method] of [
         ["/api/auth/login", "post"],
         ["/api/oidc/token", "post"],
+        ["/api/oidc/revoke", "post"],
         ["/api/environment", "get"],
         ["/api/config/app-id", "get"],
       ] as const) {
