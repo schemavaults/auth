@@ -25,7 +25,7 @@ export const createApiServer = defineOperation({
   path: ROUTE,
   summary: "Register an API server",
   description:
-    "Registers a new API server (resource server). The body's ownership fields decide who owns it: platform (administrators only), an organization the caller owns/administers, or the caller's own account (when user-owned resources are enabled). `hardcoded` must be false; `created_at`/`created_by` are set by the server. Every API server starts with the `owning_organization` membership visibility: a body asking for any other value is refused with 400, since widening it is a platform administrator's decision made afterwards with `PUT /api/apis/{api_server_id}/organization-membership-visibility`.",
+    "Registers a new API server (resource server). The body's ownership fields decide who owns it: platform (administrators only), an organization the caller owns/administers, or the caller's own account (when user-owned resources are enabled). `hardcoded` must be false; `created_at`/`created_by` are set by the server. Every API server starts with the `owning_organization` membership visibility: a body asking for any other value is refused with 400, since widening it is a platform administrator's decision made afterwards with `PUT /api/apis/{api_server_id}/organization-membership-visibility`. Likewise every API server starts without delegated tokens (`accept_delegated_tokens: true` is refused with 400); its managers turn them on afterwards with `PUT /api/apis/{api_server_id}/delegated-token-policy`.",
   tags: [API_TAGS.apis],
   auth: requireAuth({
     schemes: sessionSchemes,
@@ -42,7 +42,8 @@ export const createApiServer = defineOperation({
   responses: {
     200: { description: "The API server was registered", schema: ResourceCreationResponse },
     // 400: the body failed validation, declares a hardcoded API server, asks for a
-    // non-default organization membership visibility, or names an invalid owner
+    // non-default organization membership visibility or for delegated tokens, or
+    // names an invalid owner
     ...validationErrorResponse,
     ...sessionErrorResponses,
     409: { description: "An API server with that id already exists", schema: ErrorResponse },
@@ -75,6 +76,18 @@ export const createApiServer = defineOperation({
       return ctx.json(400, {
         success: false,
         message: `New API servers always start with the '${DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY}' organization membership visibility; platform administrators change it with PUT /api/apis/{api_server_id}/organization-membership-visibility`,
+      });
+    }
+
+    // Delegated tokens are a decision about the running resource server
+    // (older SDKs reject tokens carrying `act`), made by its managers with
+    // the dedicated endpoint once it is ready. Refused here rather than
+    // silently dropped: the registry never writes the column at creation.
+    if (newResource.accept_delegated_tokens === true) {
+      return ctx.json(400, {
+        success: false,
+        message:
+          "New API servers always start without delegated tokens; their managers turn them on with PUT /api/apis/{api_server_id}/delegated-token-policy once the resource server accepts them",
       });
     }
 

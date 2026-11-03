@@ -563,6 +563,21 @@ export interface ISchemaVaultsAuthClient {
   ) => Promise<SchemaVaultsApiServerDefinition>;
 
   /**
+   * @name setApiServerDelegatedTokenPolicy
+   * @description Set whether an API server accepts delegated access tokens,
+   * whose RFC 8693 actor (`act`) claim names someone acting on behalf of the
+   * user (e.g. a client app's agent). Turn it on only once the API server's
+   * resource server runs `@schemavaults/auth-server-sdk` 0.39.0+ (older
+   * versions reject tokens carrying `act`). The API server's managers
+   * (organization owners/admins, the owning user) or global admins only.
+   * @returns The updated API server definition
+   */
+  setApiServerDelegatedTokenPolicy: (
+    api_server_id: ApiServerId,
+    accept_delegated_tokens: boolean,
+  ) => Promise<SchemaVaultsApiServerDefinition>;
+
+  /**
    * @name registerDynamicClient
    * @description Register a new OAuth 2.0 client anonymously through RFC
    * 7591 dynamic client registration (`POST /api/oidc/register`), when the

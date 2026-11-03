@@ -7,7 +7,7 @@ import {
   getTokenAudienceForApiServerId,
 } from "@schemavaults/app-definitions";
 import type AuthServerJwtKeysManager from "./AuthServerJwtKeysManager";
-import { type I_JWT_Keys, JWT_Factory } from "@schemavaults/jwt";
+import { type I_JWT_Keys, type JwtActorClaim, JWT_Factory } from "@schemavaults/jwt";
 import type { AccessToken, UserData } from "@schemavaults/auth-common";
 
 export interface IGenerateAccessTokenOpts {
@@ -30,6 +30,12 @@ export interface IGenerateAccessTokenOpts {
    * `oidc-userinfo`), where /api/oidc/userinfo filters claims by it.
    */
   scope?: string;
+  /**
+   * RFC 8693 §4.1 actor acting on behalf of `user`, embedded as the token's
+   * `act` claim. Only for an audience whose API server accepts delegated
+   * tokens: issueOidcTokens() checks that before minting.
+   */
+  actor?: JwtActorClaim;
 }
 
 export default async function generateAccessToken({
@@ -41,6 +47,7 @@ export default async function generateAccessToken({
   user_organizations,
   environment,
   scope,
+  actor,
 }: IGenerateAccessTokenOpts): Promise<AccessToken> {
   if (!appIdSchema.safeParse(client_app_id).success) {
     throw new TypeError("Invalid client app ID");
@@ -64,7 +71,9 @@ export default async function generateAccessToken({
   });
   const token: AccessToken = await jwt_factory.access(
     token_audience ?? getTokenAudienceForApiServerId(audience_id, environment),
-    scope ? { scope } : undefined,
+    scope || actor
+      ? { ...(scope ? { scope } : {}), ...(actor ? { actor } : {}) }
+      : undefined,
   );
   return token;
 }

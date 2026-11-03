@@ -2246,6 +2246,22 @@ export class SchemaVaultsAuthClient
     });
   }
 
+  public async setApiServerDelegatedTokenPolicy(
+    api_server_id: ApiServerId,
+    accept_delegated_tokens: boolean,
+  ): Promise<SchemaVaultsApiServerDefinition> {
+    this.assertAppAndApiManagementWriteAccess("setApiServerDelegatedTokenPolicy");
+    const fn = await import("@/lib/set-api-server-delegated-token-policy").then(
+      (m) => m.default,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      accept_delegated_tokens,
+    });
+  }
+
   public async registerDynamicClient(
     metadata: DynamicClientRegistrationRequest,
   ): Promise<DynamicClientRegistrationResponse> {

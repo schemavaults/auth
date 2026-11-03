@@ -319,6 +319,13 @@ An access token may say that someone acts on behalf of its user (an agent, say):
 auth server does not issue such tokens yet; this SDK version accepts them so resource
 servers can upgrade before it does (older versions reject a token carrying `act`).
 
+The auth server mints delegated tokens only for API servers that accept them, and
+none does by default. Once your resource server runs this version, have one of the
+API server's managers turn on **Accept delegated tokens** on its page in the auth
+server console (`PUT /api/apis/{api_server_id}/delegated-token-policy` with
+`{ "accept_delegated_tokens": true }`). The API server definition reports the
+setting as `accept_delegated_tokens`.
+
 Route guards expose the actor of the token that resolved the user next to
 `client_app_id`, and `decodeJWTsWithKeyManager()` returns it as `actor`:
 

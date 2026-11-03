@@ -17,6 +17,7 @@ import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClient
 import { ApiServerScopesCard, AppScopeAllowancesDialog } from "@/components/ApiServerScopes";
 import type { ApiServerScope } from "@schemavaults/auth-common";
 import { ApiServerOrganizationMembershipCard } from "@/components/ApiServerOrganizationMembership";
+import { ApiServerDelegatedTokensCard } from "@/components/ApiServerDelegatedTokens";
 import {
   DEFAULT_ORGANIZATION_MEMBERSHIP_VISIBILITY,
   DEFAULT_RESOURCE_URL_MATCH_MODE,
@@ -300,6 +301,14 @@ export default function ApiServerDetailPageView({
           resource_url_match_mode={
             api_server.resource_url_match_mode ?? DEFAULT_RESOURCE_URL_MATCH_MODE
           }
+          canManage={isOrgOwner}
+        />
+      )}
+
+      {!hardcoded && (
+        <ApiServerDelegatedTokensCard
+          api_server_id={api_server.api_server_id}
+          accept_delegated_tokens={api_server.accept_delegated_tokens === true}
           canManage={isOrgOwner}
         />
       )}

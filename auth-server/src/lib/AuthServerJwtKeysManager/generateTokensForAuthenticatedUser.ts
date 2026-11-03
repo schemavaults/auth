@@ -22,6 +22,7 @@ import {
   organizationIdSchema,
 } from "@schemavaults/auth-common";
 import type { Kysely } from "@schemavaults/dbh";
+import type { JwtActorClaim } from "@schemavaults/jwt";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import {
   type IssuedTokenGrantType,
@@ -84,6 +85,13 @@ export interface IGenerateTokensForAuthenticatedUserOpts {
    * token's `scope_api_server_id` claim). Omit when it carries none.
    */
   refresh_scope_api_server_id?: ApiServerId;
+  /**
+   * RFC 8693 §4.1 actor acting on behalf of `user`: embedded as the `act`
+   * claim of every ACCESS token minted here (never of the refresh token).
+   * Every audience's API server must accept delegated tokens; mint through
+   * issueOidcTokens(), which checks that.
+   */
+  actor?: JwtActorClaim;
 }
 
 function isValidUserOrganizations(user_organizations: readonly string[]): boolean {
@@ -106,6 +114,7 @@ export default async function generateTokensForAuthenticatedUser({
   refresh_scope = scope,
   refresh_scope_api_server_id,
   audience_api_server_ids,
+  actor,
 }: IGenerateTokensForAuthenticatedUserOpts): Promise<RequestTokensResult> {
   if (!isValidUserOrganizations(user_organizations)) {
     throw new Error("'user_organizations' must be an array of valid organization IDs");
@@ -158,6 +167,7 @@ export default async function generateTokensForAuthenticatedUser({
       environment,
       user_organizations,
       scope,
+      ...(actor ? { actor } : {}),
     });
   }
 

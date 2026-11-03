@@ -133,4 +133,5 @@ export type {
   ApiServerDynamicClientPolicyUpdate,
 } from "./lib/update-api-server-dynamic-client-policy";
 export type { ISetApiServerOrganizationMembershipVisibilityOpts } from "./lib/set-api-server-organization-membership-visibility";
+export type { ISetApiServerDelegatedTokenPolicyOpts } from "./lib/set-api-server-delegated-token-policy";
 export { MyOrganizationMembershipsUnavailableError } from "./lib/list-my-organization-memberships";

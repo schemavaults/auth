@@ -25,6 +25,7 @@ import {
   regenerateJwksAccessKey,
 } from "@/app/api/apis/[api_server_id]/jwks-access-key/operation";
 import { setApiServerOrganizationMembershipVisibility } from "@/app/api/apis/[api_server_id]/organization-membership-visibility/operation";
+import { setApiServerDelegatedTokenPolicy } from "@/app/api/apis/[api_server_id]/delegated-token-policy/operation";
 import {
   createApiServerScope,
   listApiServerScopes,
@@ -41,6 +42,7 @@ export const apisOperations: readonly AnyOperationDefinition[] = [
   getApiServer,
   updateApiServerDynamicClientPolicy,
   setApiServerOrganizationMembershipVisibility,
+  setApiServerDelegatedTokenPolicy,
   deleteApiServer,
   listApiServerDomains,
   addApiServerDomain,
