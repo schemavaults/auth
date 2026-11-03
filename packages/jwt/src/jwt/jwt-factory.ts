@@ -20,6 +20,7 @@ import {
 } from "@schemavaults/app-definitions";
 import { type GenerateJWTOptions, generateJWT } from "./generate";
 import type { I_JWT_Keys } from "./jwt_keys";
+import type { JwtActorClaim } from "./actor-claim";
 
 export interface IJWT_Factory_Init_Options {
   user: UserData;
@@ -106,7 +107,11 @@ export class JWT_Factory {
   private async generate<T extends AuthTokenTypes>(
     type: T,
     aud: string,
-    opts?: { scope?: string; scope_api_server_id?: string },
+    opts?: {
+      scope?: string;
+      scope_api_server_id?: string;
+      actor?: JwtActorClaim;
+    },
   ): Promise<T extends "access" ? AccessToken : RefreshToken> {
     // Make sure the token type is valid
     if (type !== "refresh" && type !== "access") {
@@ -158,6 +163,7 @@ export class JWT_Factory {
       ...(opts?.scope_api_server_id
         ? { scope_api_server_id: opts.scope_api_server_id }
         : {}),
+      ...(opts?.actor !== undefined ? { actor: opts.actor } : {}),
     };
 
     const jwt: AuthToken = await generateJWT(generateTokenOptions);
@@ -175,7 +181,15 @@ export class JWT_Factory {
 
   public async access(
     audience: string,
-    opts?: { scope?: string },
+    opts?: {
+      scope?: string;
+      /**
+       * RFC 8693 §4.1 actor acting on behalf of the user, embedded as the
+       * token's `act` claim (see actor-claim.ts). Only send it to resource
+       * servers whose decoders accept `act`.
+       */
+      actor?: JwtActorClaim;
+    },
   ): Promise<AccessToken> {
     return await this.generate("access", audience, opts);
   }

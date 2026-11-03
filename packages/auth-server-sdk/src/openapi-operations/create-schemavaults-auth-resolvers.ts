@@ -38,6 +38,7 @@ import type { IRouteGuard } from "@/route_guards/IRouteGuard";
 import RouteGuardFactory from "@/route_guards/route-guard-factory";
 import type { IsTokenRevokedFn } from "@/route_guards/token-revocation";
 import { readCookie } from "./read-cookie";
+import { tokenActorToPrincipalActor } from "./token-actor-to-principal-actor";
 
 /** Scheme names the resolvers are registered under. */
 export const SCHEMAVAULTS_ACCESS_TOKEN_BEARER_SCHEME_NAME =
@@ -187,9 +188,14 @@ export function bearerTokenFromAuthorizationHeader(
  *   auth server URL) is missing, the key is unusable, or the auth server
  *   refuses the JWKS download: a token is never waved through silently;
  * - otherwise resolves `{ scheme, user, isAdmin: user.admin === true,
- *   scope, clientId, getOrganizationRole, listOrganizationMemberships }`
- *   (`clientId` is the client app the token was issued to, its `app`
- *   claim); the membership lookups ask the auth server
+ *   scope, clientId, actor, getOrganizationRole,
+ *   listOrganizationMemberships }` (`clientId` is the client app the token
+ *   was issued to, its `app` claim; `actor`, present only when the token
+ *   carries an RFC 8693 `act` claim, is who acts on the user's behalf,
+ *   e.g. an agent: `{ sub, clientId?, actor? }` with `sub` in the OIDC
+ *   form. Base access control only on the user and this current actor;
+ *   `actor.actor`, the prior actor of a delegation chain, is
+ *   informational); the membership lookups ask the auth server
  *   (`isUserInOrganization` / `listUserOrganizations`) with the JWKS
  *   access key and forward the presented access token as the subject
  *   token, so an API server granted the `all_organizations` membership
@@ -375,6 +381,9 @@ export function createSchemaVaultsAuthResolvers<TContext = unknown>(
       // app, or a third-party client (e.g. an MCP client) whose access
       // the resource server may want to limit to the token's API scopes.
       ...(typeof guard.client_app_id === "string" ? { clientId: guard.client_app_id } : {}),
+      // RFC 8693 actor (e.g. an agent acting for the user), from the same
+      // token as `clientId`; absent when the token names none.
+      ...(guard.actor ? { actor: tokenActorToPrincipalActor(guard.actor) } : {}),
       getOrganizationRole: async (
         organizationId: string,
       ): Promise<OrganizationMembershipRoleType | false> => {

@@ -64,6 +64,8 @@ export type {
   IDecodeJWTsWithKeyManagerOutput,
   DecodeJWTsWithKeyManagerOptions,
 } from "./decode-jwts-with-key-manager";
+// RFC 8693 actor of a decoded token (`IRouteGuard.actor`, decoder `actor`)
+export type { TokenActor } from "@schemavaults/jwt";
 export {
   resolveExpectedTokenAudience,
   normalizeAcceptedAudiences,

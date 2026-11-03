@@ -44,6 +44,7 @@ export {
 export type {
   AnyOperationDefinition,
   AuthPrincipal,
+  AuthPrincipalActor,
   EmptyResponseStatusOf,
   InferBody,
   InferParsed,

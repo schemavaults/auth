@@ -1,5 +1,6 @@
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type { UserData } from "@schemavaults/auth-common";
+import type { TokenActor } from "@schemavaults/jwt";
 
 export interface InitRouteGuardCheckOptions {
   user: UserData | null;
@@ -11,6 +12,10 @@ export interface InitRouteGuardCheckOptions {
   // The client app the resolving token was issued to (its `app` claim).
   // Optional like `scope`; defaults to null (unknown).
   client_app_id?: string | null;
+  // RFC 8693 §4.1 actor of the resolving token (its `act` claim), from the
+  // same token as `client_app_id`. Optional like `scope`; defaults to null
+  // (no actor).
+  actor?: TokenActor | null;
   // True when a token that verified cryptographically was rejected by the
   // `is_token_revoked` hook (logout / password reset). `user` is null in
   // that case; guards use the flag to report "revoked" rather than
