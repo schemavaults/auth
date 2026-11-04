@@ -5,7 +5,9 @@
 // lib/oidc/token-exchange/): a confidential client swaps an access token
 // one of its users holds for an API server for a DELEGATED access token on
 // which the client's service account acts for that user (the `act` claim),
-// e.g. for an agent the client runs in a sandbox.
+// e.g. for an agent the client runs in a sandbox. And the client's
+// revocation of such a token at POST /api/oidc/revoke when the agent's
+// session ends.
 //
 // What the grant must do:
 //   - mint an access token alone (no refresh token, no id_token) with
@@ -76,6 +78,7 @@ export {};
 describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
   const TOKEN_ENDPOINT = "/api/oidc/token";
   const INTROSPECTION_ENDPOINT = "/api/oidc/introspect";
+  const REVOCATION_ENDPOINT = "/api/oidc/revoke";
   const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
   const ACCESS_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
   const JWT_BEARER_CLIENT_ASSERTION_TYPE =
@@ -486,6 +489,37 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
       loginAsSuperuser();
       setDelegatedTokenPolicy(ownApiServerId, true);
       cy.logout();
+    });
+  });
+
+  it("lets the client revoke a delegated token when the agent's session ends", () => {
+    signIn(confidentialClientId, ownApiServerId).then((subject) => {
+      exchange({ subject_token: subject.access_token as string }).then((response) => {
+        const delegated = response.body.access_token as string;
+        introspectAsOwnApiServer(delegated).its("active").should("equal", true);
+        // Not by another client...
+        cy.request<TokenResponseBody>({
+          method: "POST",
+          url: REVOCATION_ENDPOINT,
+          form: true,
+          failOnStatusCode: false,
+          body: { token: delegated, client_id: PUBLIC_CLIENT_ID },
+        }).then((refused) => {
+          expect(refused.status, "status").to.equal(400);
+          expect(refused.body.error, "error").to.equal("invalid_grant");
+        });
+        // ...but by the client it was issued to.
+        cy.request({
+          method: "POST",
+          url: REVOCATION_ENDPOINT,
+          form: true,
+          headers: { Authorization: CONFIDENTIAL_CLIENT_AUTH() },
+          body: { token: delegated },
+        }).its("status").should("equal", 200);
+        introspectAsOwnApiServer(delegated).should("deep.equal", { active: false });
+        // The user's own token is untouched.
+        introspectAsOwnApiServer(subject.access_token as string).its("active").should("equal", true);
+      });
     });
   });
 });

@@ -9,7 +9,8 @@ import "server-only";
  *     token endpoint (secret for confidential clients, `client_id` alone for
  *     public ones)
  *   - decode-revocable-token.ts: verify the token and that it was issued to
- *     the client (the introspection rules for a client-app caller)
+ *     the client (the introspection rules for a client-app caller, plus the
+ *     delegated access tokens the client obtained by token exchange)
  *   - revoke-decoded-token.ts: revoke it by `jti` (a refresh token with the
  *     access tokens minted alongside it)
  */

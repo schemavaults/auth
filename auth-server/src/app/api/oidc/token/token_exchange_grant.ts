@@ -57,7 +57,8 @@ import type { OidcGrantContext, OidcGrantOutcome } from "./token-response";
  * The API server must accept delegated tokens (`accept_delegated_tokens`,
  * set by its managers); issueOidcTokens() refuses otherwise and the grant
  * answers `invalid_target` (RFC 8693 §2.2.2). The response carries
- * `issued_token_type` (§2.2.1).
+ * `issued_token_type` (§2.2.1). The client can revoke the delegated token
+ * at /api/oidc/revoke, e.g. when the agent's session ends.
  */
 export async function handleOidcTokenExchangeGrant({
   dbh,

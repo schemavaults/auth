@@ -35,7 +35,11 @@ export interface VerifiedRevocableToken {
 export type RevocableToken =
   /** Not a live token of this server: nothing to revoke (§2.2: 200). */
   | { kind: "unverifiable" }
-  /** An access token minted for an API server (§2.2.1 `unsupported_token_type`). */
+  /**
+   * An access token minted for an API server that is not a delegated token
+   * (§2.2.1 `unsupported_token_type`). Delegated tokens (RFC 8693 `act`) are
+   * revocable by the client they were issued to.
+   */
   | { kind: "unsupported" }
   /** A live token whose `app` claim names another client (§2.1: refused). */
   | { kind: "issued_to_another_client" }
