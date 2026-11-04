@@ -7,6 +7,9 @@ import type { IntrospectableTokenKind } from "./types";
 const UID = "4f7c2f4e-9d6a-4a1b-8f3e-2c5d6e7f8a9b" as const;
 const CLIENT_APP_ID = "22222222-2222-4222-8222-222222222222" as const;
 const JTI = "33333333-3333-4333-8333-333333333333" as const;
+const ACTOR_UID = "44444444-4444-4444-8444-444444444444" as const;
+const PRIOR_ACTOR_UID = "55555555-5555-4555-8555-555555555555" as const;
+const FIRST_ACTOR_UID = "66666666-6666-4666-8666-666666666666" as const;
 const ISSUER = "https://auth.example.com" as const;
 const IAT = 1_700_000_000;
 
@@ -87,5 +90,54 @@ describe("buildActiveIntrospectionResponse", () => {
 
   test("omits `jti` when the token has none", () => {
     expect(build("access")).not.toHaveProperty("jti");
+  });
+
+  test("flags a service account's token, and only that", () => {
+    expect(build("access", { service_account: true }).service_account).toBe(true);
+    expect(build("access")).not.toHaveProperty("service_account");
+    expect(build("access", { service_account: false })).not.toHaveProperty(
+      "service_account",
+    );
+  });
+
+  test("reports a delegated token's actor like its subject: OIDC `sub` plus `uid`", () => {
+    expect(
+      build("access", { act: { sub: ACTOR_UID, client_id: CLIENT_APP_ID } }).act,
+    ).toEqual({
+      sub: `acme-auth|${ACTOR_UID}`,
+      uid: ACTOR_UID,
+      client_id: CLIENT_APP_ID,
+    });
+    // The subject stays the user: the actor never replaces `sub` / `uid`.
+    const response = build("access", { act: { sub: ACTOR_UID } });
+    expect(response.sub).toBe(`acme-auth|${UID}`);
+    expect(response.uid).toBe(UID);
+    expect(response.act).toEqual({ sub: `acme-auth|${ACTOR_UID}`, uid: ACTOR_UID });
+  });
+
+  test("keeps a delegation chain's prior actors nested, current actor outermost", () => {
+    expect(
+      build("access", {
+        act: {
+          sub: ACTOR_UID,
+          client_id: CLIENT_APP_ID,
+          act: { sub: PRIOR_ACTOR_UID, act: { sub: FIRST_ACTOR_UID } },
+        },
+      }).act,
+    ).toEqual({
+      sub: `acme-auth|${ACTOR_UID}`,
+      uid: ACTOR_UID,
+      client_id: CLIENT_APP_ID,
+      act: {
+        sub: `acme-auth|${PRIOR_ACTOR_UID}`,
+        uid: PRIOR_ACTOR_UID,
+        act: { sub: `acme-auth|${FIRST_ACTOR_UID}`, uid: FIRST_ACTOR_UID },
+      },
+    });
+  });
+
+  test("omits `act` for a token without an actor", () => {
+    expect(build("access", { scope: "openid" })).not.toHaveProperty("act");
+    expect(build("refresh")).not.toHaveProperty("act");
   });
 });

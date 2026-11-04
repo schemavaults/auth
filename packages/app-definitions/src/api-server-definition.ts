@@ -4,6 +4,7 @@ import { schemaVaultsAppEnvironmentSchema } from "./app-environments";
 import { resourceOwnershipFieldsShape } from "./resource-ownership";
 import { apiServerDynamicClientFieldsShape } from "./api-server-dynamic-clients";
 import { apiServerOrganizationMembershipVisibilityFieldsShape } from "./api-server-organization-membership-visibility";
+import { apiServerDelegatedTokenFieldsShape } from "./api-server-delegated-tokens";
 
 export const schemaVaultsApiServerDefinitionSchema = z
   .object({
@@ -19,6 +20,8 @@ export const schemaVaultsApiServerDefinitionSchema = z
     ...apiServerDynamicClientFieldsShape,
     // Organization membership lookups: see api-server-organization-membership-visibility.ts
     ...apiServerOrganizationMembershipVisibilityFieldsShape,
+    // Delegated (RFC 8693 `act`) access tokens: see api-server-delegated-tokens.ts
+    ...apiServerDelegatedTokenFieldsShape,
   })
   .required({
     api_server_id: true,

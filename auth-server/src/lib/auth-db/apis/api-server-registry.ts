@@ -460,6 +460,33 @@ export class SchemaVaultsApiServerRegistry {
     return await this.getApiServer(api_server_id);
   }
 
+  /**
+   * @description Sets whether the API server accepts delegated access tokens,
+   * whose RFC 8693 `act` claim names someone acting on behalf of the user
+   * (migration 00052). Its managers may call the route that uses this;
+   * hardcoded API servers have no row and cannot be updated.
+   */
+  public async setApiServerDelegatedTokenPolicy(
+    api_server_id: ApiServerId,
+    accept_delegated_tokens: boolean,
+  ): Promise<SchemaVaultsApiServerDefinition | null> {
+    if (!isValidApiServerId(api_server_id)) {
+      throw new TypeError("Received invalid API server ID!");
+    }
+    if (isHardcodedApiServerId(api_server_id)) {
+      throw new Error("Cannot update the delegated-token policy of a hardcoded API server");
+    }
+    if (typeof accept_delegated_tokens !== "boolean") {
+      throw new TypeError("'accept_delegated_tokens' must be a boolean");
+    }
+    await this.db
+      .updateTable("api_servers")
+      .set({ accept_delegated_tokens })
+      .where("api_server_id", "=", api_server_id)
+      .execute();
+    return await this.getApiServer(api_server_id);
+  }
+
   public async deleteApiServer(api_server_id: ApiServerId) {
     const fn = await import("./delete-api-server").then(m => m.default);
     return await fn(this.db, api_server_id);

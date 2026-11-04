@@ -46,6 +46,8 @@ interface IntrospectionResponseBody {
   sub?: string;
   aud?: string;
   iss?: string;
+  service_account?: boolean;
+  act?: unknown;
 }
 
 interface UserinfoResponseBody {
@@ -258,6 +260,9 @@ describe("OAuth2 client credentials grant (RFC 6749 §4.4)", () => {
         expect(claims.client_id, "client_id").to.equal(confidentialClientId);
         expect(claims.token_type, "token_type").to.equal("Bearer");
         expect(claims.sub, "sub").to.be.a("string").and.not.be.empty;
+        // A machine subject is flagged as one; nobody acts on its behalf.
+        expect(claims.service_account, "service_account").to.equal(true);
+        expect(claims, "no actor").to.not.have.property("act");
         expect(claims, "no scope").to.not.have.property("scope");
         expect(claims, "no username without the email scope").to.not.have.property(
           "username",

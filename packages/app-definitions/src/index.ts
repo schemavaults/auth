@@ -66,6 +66,11 @@ export type {
   OrganizationMembershipAccess,
 } from "./api-server-organization-membership-visibility";
 
+export {
+  apiServerDelegatedTokenFieldsShape,
+  doesApiServerAcceptDelegatedTokens,
+} from "./api-server-delegated-tokens";
+
 export * from "./list-registry-apps-query-params";
 export type * from "./list-registry-apps-query-params";
 

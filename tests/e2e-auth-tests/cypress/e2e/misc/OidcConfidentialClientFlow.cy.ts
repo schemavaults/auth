@@ -61,6 +61,8 @@ interface IntrospectionResponseBody {
   iss?: string;
   jti?: string;
   username?: string;
+  service_account?: boolean;
+  act?: unknown;
 }
 
 interface AppAuthorizationRevocationBody {
@@ -344,6 +346,11 @@ describe("OIDC confidential client flow (management API only)", () => {
               new URL(Cypress.env("AUTH_SERVER_URL")).origin,
             );
             expect(response.body.jti).to.be.a("string");
+            // A person's own token: no machine flag, no actor.
+            expect(response.body, "no service_account").to.not.have.property(
+              "service_account",
+            );
+            expect(response.body, "no actor").to.not.have.property("act");
           });
           introspect(client, refresh_token, {
             token_type_hint: "refresh_token",

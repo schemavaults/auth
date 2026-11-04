@@ -1,6 +1,7 @@
 import "server-only";
 import {
   OIDC_USERINFO_AUDIENCE_ID,
+  getApiServerIdForTokenAudience,
   type ApiServerId,
   type AppId,
   type SchemaVaultsAppEnvironment,
@@ -14,13 +15,19 @@ import {
   type OidcTokenResponseExtensions,
   parseAndGrantScopes,
 } from "@schemavaults/auth-common";
-import { generateIdToken, type I_JWT_Keys } from "@schemavaults/jwt";
+import {
+  generateIdToken,
+  type I_JWT_Keys,
+  type JwtActorClaim,
+} from "@schemavaults/jwt";
 import {
   AuthServerJwtKeysManager,
   generateTokensForAuthenticatedUser,
 } from "@/lib/AuthServerJwtKeysManager";
 import { OrganizationsRegistry, type ServerlessDatabase } from "@/lib/auth-db";
 import type { IssuedTokenGrantType } from "@/lib/auth-db";
+import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
+import { assertDelegatedTokenIssuance } from "./delegated-token-issuance";
 
 export interface IssueOidcTokensOptions {
   dbh: ServerlessDatabase;
@@ -91,6 +98,15 @@ export interface IssueOidcTokensOptions {
     uid: string;
     expires_at: number;
   };
+  /**
+   * RFC 8693 §4.1 actor acting on behalf of `user` (e.g. a client app's
+   * agent): the access token becomes a DELEGATED token carrying it as `act`.
+   * Requires `issue_refresh_token: false` and no id_token, and an access
+   * token audience whose API server accepts delegated tokens; otherwise
+   * nothing is minted (see assertDelegatedTokenIssuance(): a
+   * DelegatedTokensNotAcceptedError maps to `invalid_target`).
+   */
+  actor?: JwtActorClaim;
   debug?: boolean;
 }
 
@@ -151,8 +167,23 @@ export async function issueOidcTokens({
   access_token_audience = OIDC_USERINFO_AUDIENCE_ID,
   access_token_audience_api_server_id,
   revoke_rotated_refresh_token,
+  actor,
   debug = false,
 }: IssueOidcTokensOptions): Promise<IssuedOidcTokens> {
+  // A delegated token only ever reaches an API server that accepts it:
+  // resource servers before @schemavaults/jwt 0.16.0 reject `act`.
+  if (actor) {
+    await assertDelegatedTokenIssuance({
+      api_server_id:
+        access_token_audience_api_server_id ??
+        getApiServerIdForTokenAudience(access_token_audience, environment),
+      issue_refresh_token,
+      include_id_token,
+      loadApiServer: (api_server_id) =>
+        new SchemaVaultsApiServerRegistry(dbh.db, debug).getApiServer(api_server_id),
+    });
+  }
+
   const orgRegistry = new OrganizationsRegistry(dbh.db, debug);
   const user_organizations: readonly string[] =
     await orgRegistry.listUserOrganizationMembershipIds(
@@ -183,6 +214,7 @@ export async function issueOidcTokens({
       ...(refresh_token_scope_api_server_id
         ? { refresh_scope_api_server_id: refresh_token_scope_api_server_id }
         : {}),
+      ...(actor ? { actor } : {}),
       tracking: {
         db: dbh.db,
         grant_type,

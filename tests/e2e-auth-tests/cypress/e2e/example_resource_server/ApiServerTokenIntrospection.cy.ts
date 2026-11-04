@@ -34,6 +34,8 @@ interface IntrospectionResponseBody {
   aud?: string;
   iss?: string;
   jti?: string;
+  service_account?: boolean;
+  act?: unknown;
   error?: string;
   error_description?: string;
 }
@@ -232,6 +234,10 @@ describe("Token introspection by API servers (private_key_jwt)", () => {
             body.iat as number,
           );
           expect(body.jti, "jti").to.be.a("string").and.not.be.empty;
+          // The token is the confidential app's service account's: the API
+          // server learns it is a machine, as local verification would.
+          expect(body.service_account, "service_account").to.equal(true);
+          expect(body, "no actor").to.not.have.property("act");
         });
       },
     );

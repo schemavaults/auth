@@ -82,11 +82,13 @@ export type { IListUserOrganizationsOptions } from "./listUserOrganizations";
 
 // RFC 7662 token introspection of this API server's access tokens
 export {
+  getActorFromIntrospectionResult,
   introspectToken,
   tokenIntrospectionResultSchema,
 } from "./introspectToken";
 export type {
   IIntrospectTokenOptions,
+  IntrospectedTokenActor,
   TokenIntrospectionResult,
 } from "./introspectToken";
 
