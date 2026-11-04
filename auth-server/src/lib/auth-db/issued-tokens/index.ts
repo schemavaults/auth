@@ -9,4 +9,5 @@ export { countTokensIssuedSinceGroupedByColumn } from "./count-tokens-issued-sin
 export type { GroupableTokenColumn } from "./count-tokens-issued-since-grouped-by-column";
 export { listIssuedTokensForUser } from "./list-issued-tokens-for-user";
 export type { ListIssuedTokensForUserOptions } from "./list-issued-tokens-for-user";
+export { ISSUED_TOKEN_GRANT_TYPES } from "./issued-tokens-table";
 export type * from "./issued-tokens-table";

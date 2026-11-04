@@ -1,15 +1,43 @@
 import { describe, expect, test } from "bun:test";
 import {
+  TOKEN_ENDPOINT_GRANT_TYPES,
   isGrantTypeAllowedForClientApp,
+  parseTokenEndpointGrantType,
   type ClientAppGrantTypePolicyFields,
   type TokenEndpointGrantType,
 } from "./client-grant-types";
 
-const ALL_GRANTS: readonly TokenEndpointGrantType[] = [
-  "authorization_code",
-  "refresh_token",
-  "client_credentials",
-];
+const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
+
+const ALL_GRANTS: readonly TokenEndpointGrantType[] = TOKEN_ENDPOINT_GRANT_TYPES;
+
+describe("parseTokenEndpointGrantType", () => {
+  test("recognizes the four grants the token endpoint implements", () => {
+    expect([...TOKEN_ENDPOINT_GRANT_TYPES]).toEqual([
+      "authorization_code",
+      "refresh_token",
+      "client_credentials",
+      TOKEN_EXCHANGE,
+    ]);
+    for (const grant_type of TOKEN_ENDPOINT_GRANT_TYPES) {
+      expect(parseTokenEndpointGrantType(grant_type)).toBe(grant_type);
+    }
+  });
+
+  test("refuses anything else", () => {
+    for (const value of [
+      null,
+      "",
+      "password",
+      "implicit",
+      "token_exchange",
+      "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      "urn:ietf:params:oauth:grant-type:device_code",
+    ]) {
+      expect(parseTokenEndpointGrantType(value)).toBeNull();
+    }
+  });
+});
 
 const ORGANIZATION_APP: ClientAppGrantTypePolicyFields = {
   owner_type: "organization",
@@ -71,6 +99,24 @@ describe("isGrantTypeAllowedForClientApp", () => {
           "client_credentials",
         ] as unknown as ClientAppGrantTypePolicyFields["grant_types"]),
         "client_credentials",
+      ),
+    ).toBe(false);
+  });
+
+  test("dynamically registered clients may never use the token exchange grant", () => {
+    // It mints tokens on which the client's service account acts: a
+    // managed-app feature, like client_credentials.
+    expect(
+      isGrantTypeAllowedForClientApp(
+        dynamicClient(["authorization_code", "refresh_token"]),
+        TOKEN_EXCHANGE,
+      ),
+    ).toBe(false);
+    expect(isGrantTypeAllowedForClientApp(dynamicClient(null), TOKEN_EXCHANGE)).toBe(false);
+    expect(
+      isGrantTypeAllowedForClientApp(
+        dynamicClient([TOKEN_EXCHANGE] as unknown as ClientAppGrantTypePolicyFields["grant_types"]),
+        TOKEN_EXCHANGE,
       ),
     ).toBe(false);
   });

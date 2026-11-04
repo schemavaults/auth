@@ -22,7 +22,11 @@ import {
   parseBasicClientCredentials,
   TOKEN_ENDPOINT_WWW_AUTHENTICATE,
 } from "@/lib/oauth2/authenticate-token-endpoint-client";
-import { isGrantTypeAllowedForClientApp } from "@/lib/oauth2/client-grant-types";
+import {
+  isGrantTypeAllowedForClientApp,
+  parseTokenEndpointGrantType,
+  type TokenEndpointGrantType,
+} from "@/lib/oauth2/client-grant-types";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import deliverOidcTokens from "@/lib/oidc/deliver-oidc-tokens";
 import { parseOidcRefreshTokenDeliveryParam } from "@/lib/oidc/token-request-extensions";
@@ -34,6 +38,7 @@ import {
   rateLimitResponse,
   CLIENT_CREDENTIALS_RATE_LIMIT,
   REFRESH_TOKEN_RATE_LIMIT,
+  TOKEN_EXCHANGE_RATE_LIMIT,
   type RateLimitConfig,
 } from "@/lib/rate-limit";
 import handleOidcAuthorizationCodeGrant from "./authorization_code_grant";
@@ -41,6 +46,7 @@ import handleOidcClientCredentialsGrant from "./client_credentials_grant";
 import handleOidcRefreshTokenGrant, {
   isRefreshTokenPresentedViaCookie,
 } from "./refresh_token_grant";
+import handleOidcTokenExchangeGrant from "./token_exchange_grant";
 import {
   applyOidcTokenCors,
   CORS_HEADERS,
@@ -74,7 +80,9 @@ export async function handleOidcTokenPreflight(request: Request): Promise<NextRe
  * refresh token (grant_type=refresh_token) for the standard token
  * response — with an id_token on the code grant — or, for confidential
  * clients, mints a machine-to-machine access token for the app's
- * service account (grant_type=client_credentials). Scope/nonce are
+ * service account (grant_type=client_credentials) or a delegated access
+ * token on which that service account acts for one of the app's users
+ * (RFC 8693 token exchange). Scope/nonce are
  * first-class on every login flow, so any code is redeemable here
  * regardless of which surface initiated the login (PKCE + client +
  * redirect_uri binding are the security boundary, plus client-secret
@@ -91,7 +99,8 @@ export async function handleOidcTokenPreflight(request: Request): Promise<NextRe
  * grant_type dispatch, client_id validation, CORS, client
  * authentication, rate limiting, token delivery, exception capture);
  * the per-grant logic lives in ./authorization_code_grant.ts,
- * ./refresh_token_grant.ts and ./client_credentials_grant.ts. The
+ * ./refresh_token_grant.ts, ./client_credentials_grant.ts and
+ * ./token_exchange_grant.ts. The
  * operation in ./operation.ts mounts it.
  */
 export async function handleOidcTokenRequest(request: NextRequest): Promise<NextResponse> {
@@ -115,16 +124,14 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
     return typeof value === "string" && value.length > 0 ? value : null;
   };
 
-  const grant_type = param("grant_type");
-  if (
-    grant_type !== "authorization_code" &&
-    grant_type !== "refresh_token" &&
-    grant_type !== "client_credentials"
-  ) {
+  const grant_type: TokenEndpointGrantType | null = parseTokenEndpointGrantType(
+    param("grant_type"),
+  );
+  if (grant_type === null) {
     return applyOidcTokenCors(
       oidcTokenErrorResponse(
         "unsupported_grant_type",
-        "grant_type must be 'authorization_code', 'refresh_token', or 'client_credentials'.",
+        "grant_type must be 'authorization_code', 'refresh_token', 'client_credentials', or 'urn:ietf:params:oauth:grant-type:token-exchange'.",
       ),
       null,
     );
@@ -234,7 +241,9 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
         ? REFRESH_TOKEN_RATE_LIMIT
         : grant_type === "client_credentials"
           ? CLIENT_CREDENTIALS_RATE_LIMIT
-          : null;
+          : grant_type === "authorization_code"
+            ? null
+            : TOKEN_EXCHANGE_RATE_LIMIT;
     if (rate_limit) {
       const ip = extractClientIp(request);
       if (!ip) {
@@ -277,7 +286,9 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
         ? await handleOidcAuthorizationCodeGrant(ctx)
         : grant_type === "refresh_token"
           ? await handleOidcRefreshTokenGrant(ctx)
-          : await handleOidcClientCredentialsGrant(ctx);
+          : grant_type === "client_credentials"
+            ? await handleOidcClientCredentialsGrant(ctx)
+            : await handleOidcTokenExchangeGrant(ctx);
     if (!outcome.ok) {
       return withCors(outcome.response);
     }
