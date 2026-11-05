@@ -29,6 +29,7 @@ import {
 } from "@/lib/oauth2/client-grant-types";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import deliverOidcTokens from "@/lib/oidc/deliver-oidc-tokens";
+import { TOKEN_EXCHANGE_GRANT_TYPE } from "@/lib/oidc/token-exchange";
 import { parseOidcRefreshTokenDeliveryParam } from "@/lib/oidc/token-request-extensions";
 import { RedisCache } from "@/lib/redis";
 import {
@@ -72,6 +73,61 @@ export async function handleOidcTokenPreflight(request: Request): Promise<NextRe
     status: 204,
     headers: origin ? buildCorsHeaders(origin) : CORS_HEADERS,
   });
+}
+
+/**
+ * The `default` of every `switch` on the grant type. Typed `never`, so a
+ * grant added to TOKEN_ENDPOINT_GRANT_TYPES without its own case does not
+ * compile; should one get through anyway, the request fails loudly (the
+ * handler records it and answers 500) instead of falling through.
+ */
+function unhandledGrantType(grant_type: never): never {
+  throw new TypeError(
+    `Unhandled token endpoint grant_type: '${String(grant_type)}'`,
+  );
+}
+
+/**
+ * The per-IP budget of a grant, or null for none. The grants that can be
+ * replayed without user interaction are budgeted, so a stolen refresh
+ * token (or leaked client secret) cannot turn into an unbounded minting
+ * loop; each has its own bucket so M2M traffic never starves browser
+ * refreshes. An authorization code is single-use and needs none.
+ */
+function getGrantRateLimit(
+  grant_type: TokenEndpointGrantType,
+): RateLimitConfig | null {
+  switch (grant_type) {
+    case "authorization_code":
+      return null;
+    case "refresh_token":
+      return REFRESH_TOKEN_RATE_LIMIT;
+    case "client_credentials":
+      return CLIENT_CREDENTIALS_RATE_LIMIT;
+    case TOKEN_EXCHANGE_GRANT_TYPE:
+      return TOKEN_EXCHANGE_RATE_LIMIT;
+    default:
+      return unhandledGrantType(grant_type);
+  }
+}
+
+/** Runs the grant's own handler (./<grant>_grant.ts). */
+async function handleOidcGrant(
+  grant_type: TokenEndpointGrantType,
+  ctx: OidcGrantContext,
+): Promise<OidcGrantOutcome> {
+  switch (grant_type) {
+    case "authorization_code":
+      return await handleOidcAuthorizationCodeGrant(ctx);
+    case "refresh_token":
+      return await handleOidcRefreshTokenGrant(ctx);
+    case "client_credentials":
+      return await handleOidcClientCredentialsGrant(ctx);
+    case TOKEN_EXCHANGE_GRANT_TYPE:
+      return await handleOidcTokenExchangeGrant(ctx);
+    default:
+      return unhandledGrantType(grant_type);
+  }
 }
 
 /**
@@ -232,18 +288,7 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
       );
     }
 
-    // Per-IP budgets for the grants that can be replayed without user
-    // interaction: a stolen refresh token (or leaked client secret) must
-    // not turn into an unbounded minting loop. Each grant has its own
-    // bucket so M2M traffic never starves browser refreshes.
-    const rate_limit: RateLimitConfig | null =
-      grant_type === "refresh_token"
-        ? REFRESH_TOKEN_RATE_LIMIT
-        : grant_type === "client_credentials"
-          ? CLIENT_CREDENTIALS_RATE_LIMIT
-          : grant_type === "authorization_code"
-            ? null
-            : TOKEN_EXCHANGE_RATE_LIMIT;
+    const rate_limit: RateLimitConfig | null = getGrantRateLimit(grant_type);
     if (rate_limit) {
       const ip = extractClientIp(request);
       if (!ip) {
@@ -281,14 +326,7 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
       environment,
       debug,
     };
-    const outcome: OidcGrantOutcome =
-      grant_type === "authorization_code"
-        ? await handleOidcAuthorizationCodeGrant(ctx)
-        : grant_type === "refresh_token"
-          ? await handleOidcRefreshTokenGrant(ctx)
-          : grant_type === "client_credentials"
-            ? await handleOidcClientCredentialsGrant(ctx)
-            : await handleOidcTokenExchangeGrant(ctx);
+    const outcome: OidcGrantOutcome = await handleOidcGrant(grant_type, ctx);
     if (!outcome.ok) {
       return withCors(outcome.response);
     }
