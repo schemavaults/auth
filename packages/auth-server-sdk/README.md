@@ -304,6 +304,56 @@ A refused request (e.g. a JWKS access key that is not your active one) throws.
 Each call is a round trip to the auth server, so reserve it for requests where
 revocation must be honoured immediately.
 
+## Minting delegated tokens for agents (confidential clients)
+
+A client app that runs agents for its users (in a sandbox, say) should hand each agent
+a delegated token, not the user's own: the API server then sees who is calling (the
+`act` claim names the app's service account), and the agent holds only the scope its
+task needs. The app's backend swaps one of its users' access tokens for one with the
+RFC 8693 token exchange grant (advertised in the discovery document's
+`grant_types_supported`), authenticating with its client secret:
+
+```ts
+import {
+  exchangeTokenForDelegatedToken,
+  revokeToken,
+  OAuthEndpointError,
+} from "@schemavaults/auth-server-sdk/confidential-client";
+
+const client = {
+  auth_server_url: getAuthServerUrl(),
+  client_id: process.env.SCHEMAVAULTS_CLIENT_APP_ID!,
+  client_secret: process.env.SCHEMAVAULTS_CLIENT_SECRET!, // server-side only
+};
+
+const delegated = await exchangeTokenForDelegatedToken({
+  ...client,
+  subject_token: usersAccessToken, // the user's access token for the API server the agent calls
+  scope: ["notes:read"],           // optional: a subset of its scope (default: all of it)
+});
+delegated.access_token; // give this to the agent
+delegated.expires_in;   // seconds; there is no refresh token: exchange again for a fresh one
+delegated.scope;        // the granted scope
+
+// When the agent's session ends:
+await revokeToken({ ...client, token: delegated.access_token });
+```
+
+- One delegated token per API server: it is minted for the subject token's own
+  audience. For an agent that calls several API servers (e.g. several MCP servers),
+  exchange one of the user's access tokens for each.
+- The API server's managers must turn on **Accept delegated tokens** first; until
+  they do, the exchange fails with `OAuthEndpointError` `error: "invalid_target"`.
+  Other refusals: `invalid_request` (the subject token is expired, revoked, already
+  delegated, issued to another client, or the user withdrew the app's access) and
+  `invalid_scope` (more scope than the subject token holds).
+- Revoking makes introspection and resource servers with an `isTokenRevoked` hook
+  refuse the token at once; resource servers that only verify tokens locally stop
+  accepting it when it expires.
+- `revokeToken()` also revokes the client's users' refresh tokens (RFC 7009); it
+  resolves for tokens the auth server does not know.
+- Keep the client secret out of the agent's sandbox: only the delegated token goes in.
+
 ## `UserData.sub`
 
 `UserData.sub` is the OIDC subject `<auth_server_app_id>|<uid>` (the value the
@@ -316,8 +366,10 @@ versions keep verifying them; `userDataSchema` upgrades a bare-uuid `sub` with
 
 An access token may say that someone acts on behalf of its user (an agent, say): its
 `sub` is still the user, and its `act` claim names the actor (RFC 8693 §4.1). The
-auth server does not issue such tokens yet; this SDK version accepts them so resource
-servers can upgrade before it does (older versions reject a token carrying `act`).
+auth server mints them with the RFC 8693 token exchange grant, for confidential
+clients that run agents for their users (see
+[Minting delegated tokens for agents](#minting-delegated-tokens-for-agents-confidential-clients)).
+SDK versions before 0.39.0 reject a token carrying `act`.
 
 The auth server mints delegated tokens only for API servers that accept them, and
 none does by default. Once your resource server runs this version, have one of the

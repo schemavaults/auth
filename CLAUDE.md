@@ -84,7 +84,9 @@ bun run test --filter @schemavaults/auth-ui          # Run tests in auth-ui pack
        │                                                the RFC 9728 protected resource metadata route
        │                                                (`/oauth-protected-resource`, `SCHEMAVAULTS_RESOURCE_URL`),
        │                                                `auth-server-sdk codegen` CLI, the `/api-scopes` sub-export + `auth-server-sdk
-       │                                                sync-scopes` CLI (define the API server's scopes from a manifest);
+       │                                                sync-scopes` CLI (define the API server's scopes from a manifest),
+       │                                                the `/confidential-client` sub-export (a confidential backend's
+       │                                                RFC 8693 token exchange for its agents + RFC 7009 revocation);
        │                                                its build bundles the codegen templates below.
        │                                                Optional peerDep on openapi-operations for its `/openapi-operations`
        │                                                sub-export (`createSchemaVaultsAuthResolvers()`)

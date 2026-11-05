@@ -67,6 +67,7 @@ describe("GET /api/oidc/openid-configuration", () => {
         "authorization_code",
         "refresh_token",
         "client_credentials",
+        "urn:ietf:params:oauth:grant-type:token-exchange",
       ]);
       expect(doc.response_modes_supported).to.deep.equal(["query"]);
       expect(doc.subject_types_supported).to.deep.equal(["public"]);

@@ -359,6 +359,18 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
     cy.reset_rate_limit();
   });
 
+  it("advertises the grant in the discovery document", () => {
+    cy.request<{ grant_types_supported?: string[] }>({
+      method: "GET",
+      url: "/.well-known/openid-configuration",
+    }).then((response) => {
+      expect(response.status, "status").to.equal(200);
+      expect(response.body.grant_types_supported, "grant_types_supported").to.include(
+        TOKEN_EXCHANGE,
+      );
+    });
+  });
+
   it("mints a delegated access token on which the app's service account acts for the user", () => {
     signIn(confidentialClientId, ownApiServerId).then((subject) => {
       exchange({ subject_token: subject.access_token as string, scope: "email" }).then((response) => {

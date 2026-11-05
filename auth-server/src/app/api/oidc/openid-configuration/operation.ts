@@ -32,7 +32,14 @@ export const OidcProviderMetadata = z
     response_modes_supported: z.array(z.string()).openapi({ example: ["query"] }),
     grant_types_supported: z
       .array(z.string())
-      .openapi({ example: ["authorization_code", "refresh_token", "client_credentials"] }),
+      .openapi({
+        example: [
+          "authorization_code",
+          "refresh_token",
+          "client_credentials",
+          "urn:ietf:params:oauth:grant-type:token-exchange",
+        ],
+      }),
     subject_types_supported: z.array(z.string()).openapi({ example: ["public"] }),
     id_token_signing_alg_values_supported: z.array(z.string()).openapi({ example: ["RS256"] }),
     scopes_supported: z.array(z.string()).openapi({ example: ["openid", "email", "profile"] }),

@@ -92,6 +92,21 @@ export type {
   TokenIntrospectionResult,
 } from "./introspectToken";
 
+// Confidential clients: delegated tokens for agents (RFC 8693 token
+// exchange) and token revocation (RFC 7009)
+export {
+  exchangeTokenForDelegatedToken,
+  delegatedTokenResponseSchema,
+  revokeToken,
+  OAuthEndpointError,
+} from "./confidential-client";
+export type {
+  ConfidentialClientCredentials,
+  DelegatedTokenResponse,
+  IExchangeTokenForDelegatedTokenOptions,
+  IRevokeTokenOptions,
+} from "./confidential-client";
+
 // Re-export user data types
 export { userDataSchema } from "@schemavaults/auth-common";
 export type { UserData } from "@schemavaults/auth-common";
