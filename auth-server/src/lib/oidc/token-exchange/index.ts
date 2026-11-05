@@ -15,7 +15,8 @@ import "server-only";
  *     of the subject token's — pure
  *
  * And for the token endpoint itself, find-misplaced-token-exchange-param.ts:
- * the RFC 8693 parameters any other grant refuses (`invalid_request`) — pure.
+ * the RFC 8693 parameters any other grant refuses, and the other grants'
+ * parameters a token exchange refuses (`invalid_request`) — pure.
  */
 
 export {
@@ -41,7 +42,8 @@ export { resolveTokenExchangeScope } from "./resolve-token-exchange-scope";
 export type { ResolveTokenExchangeScopeOptions } from "./resolve-token-exchange-scope";
 
 export {
+  PARAMS_NOT_ALLOWED_WITH_TOKEN_EXCHANGE,
   TOKEN_EXCHANGE_ONLY_PARAMS,
   findMisplacedTokenExchangeParam,
 } from "./find-misplaced-token-exchange-param";
-export type { TokenExchangeOnlyParam } from "./find-misplaced-token-exchange-param";
+export type { MisplacedTokenExchangeParam } from "./find-misplaced-token-exchange-param";

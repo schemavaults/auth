@@ -32,7 +32,7 @@ import deliverOidcTokens from "@/lib/oidc/deliver-oidc-tokens";
 import {
   TOKEN_EXCHANGE_GRANT_TYPE,
   findMisplacedTokenExchangeParam,
-  type TokenExchangeOnlyParam,
+  type MisplacedTokenExchangeParam,
 } from "@/lib/oidc/token-exchange";
 import { parseOidcRefreshTokenDeliveryParam } from "@/lib/oidc/token-request-extensions";
 import { RedisCache } from "@/lib/redis";
@@ -197,16 +197,14 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
     );
   }
 
-  // The RFC 8693 parameters belong to the token exchange grant alone; any
-  // other grant refuses them rather than silently ignoring them.
-  const misplaced_param: TokenExchangeOnlyParam | null =
+  // The RFC 8693 parameters belong to the token exchange grant alone, and
+  // a token exchange takes none of the other grants' own parameters: a
+  // request mixing them up is refused rather than half-ignored.
+  const misplaced_param: MisplacedTokenExchangeParam | null =
     findMisplacedTokenExchangeParam(grant_type, param);
   if (misplaced_param !== null) {
     return applyOidcTokenCors(
-      oidcTokenErrorResponse(
-        "invalid_request",
-        `'${misplaced_param}' is only allowed with grant_type=${TOKEN_EXCHANGE_GRANT_TYPE}.`,
-      ),
+      oidcTokenErrorResponse("invalid_request", misplaced_param.error_description),
       null,
     );
   }

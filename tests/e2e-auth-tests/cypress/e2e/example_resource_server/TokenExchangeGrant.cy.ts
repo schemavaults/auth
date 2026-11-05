@@ -502,6 +502,27 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
     });
   });
 
+  it("refuses the other grants' parameters on a token exchange", () => {
+    signIn(confidentialClientId, ownApiServerId).then((subject) => {
+      const subject_token = subject.access_token as string;
+      const misplaced: Record<string, string> = {
+        code: "unused",
+        code_verifier: "unused",
+        redirect_uri: REDIRECT_URI,
+        refresh_token: subject.refresh_token as string,
+        refresh_token_delivery: "http_only_cookie",
+      };
+      for (const [name, value] of Object.entries(misplaced)) {
+        exchange({ subject_token, [name]: value }).then((response) => {
+          expectTokenError(response, 400, "invalid_request");
+          expect(response.body.error_description, "names the parameter").to.contain(`'${name}'`);
+        });
+      }
+      // The shared parameters stay allowed.
+      exchange({ subject_token, scope: "openid", resource: ownApiServerId }).its("status").should("equal", 200);
+    });
+  });
+
   it("is only available to authenticated confidential clients", () => {
     signIn(confidentialClientId, ownApiServerId).then((subject) => {
       const subject_token = subject.access_token as string;
