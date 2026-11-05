@@ -460,25 +460,27 @@ Per request:
   access assertion with the JWKS access key and forward the token the user presented in
   `X-Subject-Token`.
 
-To keep agents away from a sensitive operation, refuse principals with an actor:
+Once your API server accepts delegated tokens, every operation accepts them unless it
+says otherwise. To keep agents away from a sensitive operation, declare
+`delegatedCallers: "refused"` (`@schemavaults/openapi-operations` ≥ 0.7.0): the runtime
+answers a principal with an actor 403 `delegated_caller_refused`, whatever scope its
+token carries, and the OpenAPI document (`x-schemavaults-auth`) and `/docs` pages show it:
 
 ```ts
-import { OperationError } from "@schemavaults/openapi-operations";
-
 export const deleteAccount = defineOperation({
   // ...
+  auth: requireAuth({
+    schemes: userCredentialSchemes,
+    delegatedCallers: "refused", // only the user's own credential, never an agent's
+  }),
   handler: async (ctx) => {
-    if (ctx.auth.actor) {
-      // Someone (e.g. an agent) is acting on the user's behalf: only the user may do this.
-      throw new OperationError(403, {
-        error: "delegation_not_allowed",
-        message: "This operation cannot be performed on your behalf",
-      });
-    }
-    // ...
+    // ctx.auth.actor is always absent here
   },
 });
 ```
+
+Handlers that need a finer rule (e.g. agents of one client only) read `ctx.auth.actor`
+themselves and throw `OperationError(403, ...)`.
 
 ### Organization memberships
 

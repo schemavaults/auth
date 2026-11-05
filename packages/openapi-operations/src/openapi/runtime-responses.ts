@@ -12,7 +12,7 @@ import { OperationErrorBodySchema } from "../runtime/error-schema";
  * | --- | --- |
  * | 400 | the operation validates params / query / headers / a body, or requires an organization parameter |
  * | 401 | the operation is not public (no, invalid, expired or revoked credential) |
- * | 403 | the operation needs the `admin` route guard, required scopes, or an organization role |
+ * | 403 | the operation refuses delegated callers, or needs the `admin` route guard, required scopes, or an organization role |
  * | 415 | the operation validates a request body (media type mismatch) |
  * | 500 | always (unexpected failure) |
  *
@@ -57,6 +57,9 @@ export function runtimeErrorResponses(
       ...(unauthorizedHeaders ? { headers: unauthorizedHeaders } : {}),
     };
     const reasons: string[] = [];
+    if (auth.delegatedCallers === "refused") {
+      reasons.push("presented a delegated credential (an actor, such as an agent, acting for the user)");
+    }
     if ((auth.routeGuard ?? "authenticated") === "admin") reasons.push("is not a platform administrator");
     if ((auth.requiredScopes?.length ?? 0) > 0) reasons.push("presented a token missing a required scope");
     if (auth.organization) reasons.push("lacks the required organization role");

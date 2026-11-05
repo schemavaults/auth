@@ -46,6 +46,7 @@ export const getApp = defineOperation({
     routeGuard: "authenticated", // or "admin"
     requiredScopes: ["email"],   // token scope claim must include these (OIDC scopes, or API scopes like "notes:read")
     organization: { parameter: "organization_id", roles: ["owner", "admin"] }, // optional
+    delegatedCallers: "refused", // optional: refuse credentials an actor (e.g. an agent) holds for the user
   }),
   request: {
     params: z.object({ app_id: z.string().uuid() }),
@@ -76,6 +77,15 @@ export const health = defineOperation({
   handler: (ctx) => ctx.json(200, { ok: true }),
 });
 ```
+
+`delegatedCallers` decides whether a DELEGATED credential, one whose principal names an
+RFC 8693 actor (`ctx.auth.actor`, e.g. an agent acting for the user), may call the
+operation: `"allowed"` (the default) or `"refused"`, which answers such a principal 403
+`delegated_caller_refused` before the route guard, scope and organization checks (no
+administrator bypass), and lets the user's own credential through. Use it for what an
+agent must never do for a user even with the right scope (deleting the account, paying,
+changing who may access the account). The `x-schemavaults-auth` extension carries it as
+`delegatedCallers` when the operation sets it.
 
 `defineOperationGroup({ pathPrefix, tags, operations })` applies a shared prefix and tags.
 Throw `new OperationError(status, { error, message })` from a handler to short-circuit.

@@ -1,10 +1,16 @@
 import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
-import type { OperationAuth, RouteGuardType } from "../auth-scheme";
+import {
+  isDelegatedCallerPolicy,
+  type DelegatedCallerPolicy,
+  type OperationAuth,
+  type RouteGuardType,
+} from "../auth-scheme";
 
 /**
  * Vendor extension attached to every operation object so API docs can show
  * the SchemaVaults authorization requirements that plain OpenAPI `security`
- * requirements cannot express (route guard level, organization role).
+ * requirements cannot express (route guard level, organization role,
+ * whether delegated callers such as agents are accepted).
  */
 export const SCHEMAVAULTS_AUTH_EXTENSION = "x-schemavaults-auth" as const;
 
@@ -23,6 +29,12 @@ export interface SchemaVaultsAuthExtension {
     readonly roles: readonly OrganizationMembershipRoleType[];
     readonly adminBypass: boolean;
   } | null;
+  /**
+   * Whether credentials naming an RFC 8693 actor (e.g. an agent acting for
+   * the user) are accepted. Present only when the operation declares it;
+   * absent means `"allowed"`.
+   */
+  readonly delegatedCallers?: DelegatedCallerPolicy;
   readonly notes?: string;
 }
 
@@ -49,6 +61,7 @@ export function toSchemaVaultsAuthExtension(auth: OperationAuth): SchemaVaultsAu
           adminBypass: auth.organization.adminBypass ?? true,
         }
       : null,
+    ...(auth.delegatedCallers !== undefined ? { delegatedCallers: auth.delegatedCallers } : {}),
     ...(auth.notes !== undefined ? { notes: auth.notes } : {}),
   };
 }
@@ -62,6 +75,7 @@ export function isSchemaVaultsAuthExtension(value: unknown): value is SchemaVaul
     Array.isArray(record.requiredScopes) &&
     (record.routeGuard === null ||
       record.routeGuard === "authenticated" ||
-      record.routeGuard === "admin")
+      record.routeGuard === "admin") &&
+    (record.delegatedCallers === undefined || isDelegatedCallerPolicy(record.delegatedCallers))
   );
 }

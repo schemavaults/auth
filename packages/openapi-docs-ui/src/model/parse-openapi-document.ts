@@ -177,6 +177,10 @@ function parseAuth(operation: Json, documentSecurity: unknown): ApiDocsAuth {
         ? extension.requiredScopes.filter((s): s is string => typeof s === "string")
         : scopesFromSecurity,
       organization,
+      delegatedCallers:
+        extension.delegatedCallers === "allowed" || extension.delegatedCallers === "refused"
+          ? extension.delegatedCallers
+          : null,
       ...(str(extension.notes) !== undefined ? { notes: str(extension.notes) } : {}),
       source: "x-schemavaults-auth",
     };
@@ -190,6 +194,7 @@ function parseAuth(operation: Json, documentSecurity: unknown): ApiDocsAuth {
     routeGuard: isPublic ? null : "authenticated",
     requiredScopes: scopesFromSecurity,
     organization: null,
+    delegatedCallers: null,
     source: isPublic && !hasOwnSecurity && !Array.isArray(documentSecurity) ? "none" : "security",
   };
 }

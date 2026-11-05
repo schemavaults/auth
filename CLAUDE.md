@@ -130,7 +130,9 @@ resolvers for the SchemaVaults access-token schemes from `createSchemaVaultsAuth
 `@schemavaults/auth-server-sdk/openapi-operations` (built on `RouteGuardFactory` + the remote JWKS). Schemes
 declare `principal: "user"` when their resolver always yields a user, so handlers of operations accepting only such
 schemes get a non-null `ctx.auth.user` (the runtime fails closed with 401 otherwise; `requireUser(auth)` narrows
-the rest). `buildOpenApiDocument({ documentRuntimeResponses: true })` also documents the runtime's own 400 / 401 /
+the rest). `requireAuth({ delegatedCallers: "refused" })` refuses principals that name an RFC 8693 actor (an
+agent holding a delegated token for the user) with 403 `delegated_caller_refused`; the default `"allowed"` accepts
+them. `buildOpenApiDocument({ documentRuntimeResponses: true })` also documents the runtime's own 400 / 401 /
 403 / 415 / 500 responses with the `OperationErrorBodySchema` envelope (`components.schemas.OperationError`), and
 `checkNextAppRouterRoutes()` (`@schemavaults/openapi-operations/nextjs/app-router-routes`) verifies that the
 per-route `operation.ts` / `route.ts` files and the catalogue agree. Request bodies support

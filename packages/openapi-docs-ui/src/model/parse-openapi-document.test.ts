@@ -50,6 +50,7 @@ const document = {
           routeGuard: "admin",
           requiredScopes: ["email"],
           organization: { parameter: "organization_id", roles: ["owner"], adminBypass: false },
+          delegatedCallers: "refused",
           notes: "Admins only",
         },
         parameters: [
@@ -132,6 +133,7 @@ describe("parseOpenApiDocument", () => {
       routeGuard: "admin",
       requiredScopes: ["email"],
       organization: { parameter: "organization_id", roles: ["owner"], adminBypass: false },
+      delegatedCallers: "refused",
       notes: "Admins only",
       source: "x-schemavaults-auth",
     });
@@ -141,6 +143,7 @@ describe("parseOpenApiDocument", () => {
     expect(findOperationBySlug(model, "get-api-health")?.auth).toMatchObject({
       public: true,
       routeGuard: null,
+      delegatedCallers: null,
       source: "security",
     });
     expect(findOperationBySlug(model, "get-api-legacy")?.auth).toMatchObject({
