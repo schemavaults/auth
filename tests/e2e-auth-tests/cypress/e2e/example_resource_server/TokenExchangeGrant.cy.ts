@@ -630,9 +630,21 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
 
     it("when the user has de-authorized the app", () => {
       withExchangeableSubject((subject, credentials) => {
+        // signIn()'s login API call also left the user an auth server
+        // session; start a fresh one explicitly to act as them.
+        cy.is_authenticated().then((authenticated: boolean) => {
+          if (authenticated) {
+            cy.logout();
+          }
+        });
         cy.login_via_request(credentials.email, credentials.password).then((ok: boolean) => {
           expect(ok, "signed in as the user").to.be.true;
         });
+        // Signing out and in again left the subject token exchangeable, so
+        // the refusal below is the de-authorization's doing.
+        exchange({ subject_token: subject.access_token as string })
+          .its("status")
+          .should("equal", 200);
         cy.request({
           method: "DELETE",
           url: `/api/apps/${confidentialClientId}/authorize`,
