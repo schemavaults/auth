@@ -45,13 +45,13 @@ export const OidcTokenRequest = z
     }),
     subject_token: z.string().optional().openapi({
       description:
-        "Token exchange (RFC 8693): the access token a user holds for an API server, issued to this client. The delegated token is minted for the same user, client and API server.",
+        "Token exchange (RFC 8693): the access token a user holds for an API server, issued to this client. The delegated token is minted for the same user, client and API server. Token exchange only, like every RFC 8693 parameter (`subject_token_type`, `requested_token_type`, `actor_token`, `actor_token_type`): any other grant refuses a request carrying one with `invalid_request`.",
     }),
     subject_token_type: z.literal(ACCESS_TOKEN_TYPE).optional().openapi({
-      description: "Token exchange: REQUIRED; only access tokens are exchanged.",
+      description: "Token exchange only: REQUIRED; only access tokens are exchanged.",
     }),
     requested_token_type: z.literal(ACCESS_TOKEN_TYPE).optional().openapi({
-      description: "Token exchange: optional; only access tokens are issued.",
+      description: "Token exchange only: optional; only access tokens are issued.",
     }),
     resource: z.string().optional().openapi({
       description:

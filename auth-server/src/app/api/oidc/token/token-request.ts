@@ -29,7 +29,11 @@ import {
 } from "@/lib/oauth2/client-grant-types";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import deliverOidcTokens from "@/lib/oidc/deliver-oidc-tokens";
-import { TOKEN_EXCHANGE_GRANT_TYPE } from "@/lib/oidc/token-exchange";
+import {
+  TOKEN_EXCHANGE_GRANT_TYPE,
+  findMisplacedTokenExchangeParam,
+  type TokenExchangeOnlyParam,
+} from "@/lib/oidc/token-exchange";
 import { parseOidcRefreshTokenDeliveryParam } from "@/lib/oidc/token-request-extensions";
 import { RedisCache } from "@/lib/redis";
 import {
@@ -188,6 +192,20 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
       oidcTokenErrorResponse(
         "unsupported_grant_type",
         "grant_type must be 'authorization_code', 'refresh_token', 'client_credentials', or 'urn:ietf:params:oauth:grant-type:token-exchange'.",
+      ),
+      null,
+    );
+  }
+
+  // The RFC 8693 parameters belong to the token exchange grant alone; any
+  // other grant refuses them rather than silently ignoring them.
+  const misplaced_param: TokenExchangeOnlyParam | null =
+    findMisplacedTokenExchangeParam(grant_type, param);
+  if (misplaced_param !== null) {
+    return applyOidcTokenCors(
+      oidcTokenErrorResponse(
+        "invalid_request",
+        `'${misplaced_param}' is only allowed with grant_type=${TOKEN_EXCHANGE_GRANT_TYPE}.`,
       ),
       null,
     );

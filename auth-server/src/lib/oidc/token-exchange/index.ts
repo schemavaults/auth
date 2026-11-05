@@ -13,6 +13,9 @@ import "server-only";
  *     access token for an API server, issued to the client, for a person
  *   - resolve-token-exchange-scope.ts: the delegated token's scope, a subset
  *     of the subject token's — pure
+ *
+ * And for the token endpoint itself, find-misplaced-token-exchange-param.ts:
+ * the RFC 8693 parameters any other grant refuses (`invalid_request`) — pure.
  */
 
 export {
@@ -36,3 +39,9 @@ export type {
 
 export { resolveTokenExchangeScope } from "./resolve-token-exchange-scope";
 export type { ResolveTokenExchangeScopeOptions } from "./resolve-token-exchange-scope";
+
+export {
+  TOKEN_EXCHANGE_ONLY_PARAMS,
+  findMisplacedTokenExchangeParam,
+} from "./find-misplaced-token-exchange-param";
+export type { TokenExchangeOnlyParam } from "./find-misplaced-token-exchange-param";

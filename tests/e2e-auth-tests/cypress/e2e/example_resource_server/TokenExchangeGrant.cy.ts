@@ -466,6 +466,42 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
     });
   });
 
+  it("refuses the RFC 8693 parameters on every other grant", () => {
+    signIn(confidentialClientId, ownApiServerId).then((subject) => {
+      const subject_token = subject.access_token as string;
+      const refusedWith = (param: string) => (response: Cypress.Response<TokenResponseBody>) => {
+        expectTokenError(response, 400, "invalid_request");
+        expect(response.body.error_description, "names the parameter").to.contain(`'${param}'`);
+      };
+      // A refresh grant carrying a subject token is refused, not run as a
+      // plain refresh (and the refresh token is not rotated).
+      postTokenRequest({
+        grant_type: "refresh_token",
+        refresh_token: subject.refresh_token as string,
+        subject_token,
+        subject_token_type: ACCESS_TOKEN_TYPE,
+      }).then(refusedWith("subject_token"));
+      postTokenRequest({
+        grant_type: "client_credentials",
+        resource: ownApiServerId,
+        requested_token_type: ACCESS_TOKEN_TYPE,
+      }).then(refusedWith("requested_token_type"));
+      postTokenRequest({
+        grant_type: "authorization_code",
+        code: "unused",
+        code_verifier: "unused",
+        redirect_uri: REDIRECT_URI,
+        actor_token: subject_token,
+        actor_token_type: ACCESS_TOKEN_TYPE,
+      }).then(refusedWith("actor_token"));
+      // The refresh token still works: the refused request did not use it.
+      postTokenRequest({
+        grant_type: "refresh_token",
+        refresh_token: subject.refresh_token as string,
+      }).its("status").should("equal", 200);
+    });
+  });
+
   it("is only available to authenticated confidential clients", () => {
     signIn(confidentialClientId, ownApiServerId).then((subject) => {
       const subject_token = subject.access_token as string;
