@@ -17,7 +17,10 @@
 //     server's introspection and by a resource server's route guards (the
 //     example resource server's /api/whoami reports the actor);
 //   - only exchange a live access token for an API server, issued to the
-//     requesting client, for a person, not yet delegated;
+//     requesting client, for a person, not yet delegated, and only while
+//     the user's access behind it stands (their authorization of the app,
+//     the session it was issued in, their account, the app's connection to
+//     the API server);
 //   - only for authenticated confidential clients, and only for API
 //     servers that accept delegated tokens (`invalid_target` otherwise).
 //
@@ -67,6 +70,11 @@ interface WhoamiBody {
   actor: { sub: string; client_id: string | null } | null;
 }
 
+interface Credentials {
+  email: string;
+  password: string;
+}
+
 interface TestApiServer {
   api_server_id: string;
   private_key_pem: string;
@@ -105,7 +113,7 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
   const suffix: string = Math.random().toString(36).slice(2, 10);
   const ownApiServerId = `e2e-token-exchange-${suffix}`;
   let ownApiServer: TestApiServer;
-  let user: { email: string; password: string };
+  let user: Credentials;
 
   function basicHeader(client_id: string, client_secret: string): string {
     return `Basic ${btoa(`${encodeURIComponent(client_id)}:${encodeURIComponent(client_secret)}`)}`;
@@ -195,17 +203,22 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
   }
 
   /**
-   * Signs `user` in to `client_id` through the login API and redeems the
-   * code for a token response whose access token is minted for `resource`.
+   * Signs `as` (default: the spec's user) in to `client_id` through the
+   * login API and redeems the code for a token response whose access token
+   * is minted for `resource`.
    */
-  function signIn(client_id: string, resource: string): Cypress.Chainable<TokenResponseBody> {
+  function signIn(
+    client_id: string,
+    resource: string,
+    as: Credentials = user,
+  ): Cypress.Chainable<TokenResponseBody> {
     return createPkcePair().then(({ code_verifier, challenge }) =>
       cy
         .request<{ kind?: string; authorization_code?: string }>({
           method: "POST",
           url: "/api/auth/login",
           body: {
-            credentials: { email: user.email, password: user.password },
+            credentials: { email: as.email, password: as.password },
             client_app_id: client_id,
             code_challenge: challenge.code_challenge,
             challenge_time: challenge.challenge_time,
@@ -275,6 +288,30 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
       });
   }
 
+  /**
+   * A new user with a verified address who authorized both example apps
+   * (signed out again afterwards).
+   */
+  function createUserAuthorizedForApps(): Cypress.Chainable<Credentials> {
+    return cy.generate_random_test_user_credentials().then((credentials) => {
+      cy.create_and_login_as_regular_user_via_request(credentials).then((success) => {
+        expect(success, "create_and_login_as_regular_user_via_request").to.be.true;
+      });
+      cy.verify_email_via_request(credentials.email).then((verified: boolean) => {
+        expect(verified, "email verified").to.be.true;
+      });
+      for (const client_id of [confidentialClientId, PUBLIC_CLIENT_ID]) {
+        cy.request({
+          method: "POST",
+          url: `/api/apps/${client_id}/authorize`,
+          body: { scope: "openid email" },
+        }).its("status").should("equal", 200);
+      }
+      cy.logout();
+      return cy.wrap<Credentials>({ email: credentials.email, password: credentials.password });
+    });
+  }
+
   before(() => {
     cy.reset_rate_limit();
     loginAsSuperuser();
@@ -306,23 +343,8 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
     setDelegatedTokenPolicy(EXAMPLE_API_SERVER_ID, true);
     cy.logout();
 
-    // A user with a verified address who authorized both example apps.
-    cy.generate_random_test_user_credentials().then((credentials) => {
-      user = { email: credentials.email, password: credentials.password };
-      cy.create_and_login_as_regular_user(credentials).then((success) => {
-        expect(success, "create_and_login_as_regular_user").to.be.true;
-      });
-      cy.verify_email_via_request(credentials.email).then((verified: boolean) => {
-        expect(verified, "email verified").to.be.true;
-      });
-      for (const client_id of [confidentialClientId, PUBLIC_CLIENT_ID]) {
-        cy.request({
-          method: "POST",
-          url: `/api/apps/${client_id}/authorize`,
-          body: { scope: "openid email" },
-        }).its("status").should("equal", 200);
-      }
-      cy.logout();
+    createUserAuthorizedForApps().then((credentials) => {
+      user = credentials;
     });
   });
 
@@ -576,6 +598,96 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
         introspectAsOwnApiServer(delegated).should("deep.equal", { active: false });
         // The user's own token is untouched.
         introspectAsOwnApiServer(subject.access_token as string).its("active").should("equal", true);
+      });
+    });
+  });
+
+  describe("refuses a subject token once the user's access behind it is withdrawn", () => {
+    /**
+     * Signs a new user in to the confidential app, checks their access token
+     * is exchangeable now, then hands it over: each case withdraws access
+     * one way and expects the same token to be refused. A user of their own
+     * per case, so nothing withdrawn here touches the other tests.
+     */
+    function withExchangeableSubject(
+      run: (subject: TokenResponseBody, credentials: Credentials) => void,
+    ): void {
+      createUserAuthorizedForApps().then((credentials) => {
+        signIn(confidentialClientId, ownApiServerId, credentials).then((subject) => {
+          exchange({ subject_token: subject.access_token as string })
+            .its("status")
+            .should("equal", 200);
+          run(subject, credentials);
+        });
+      });
+    }
+
+    function expectRefused(subject: TokenResponseBody): void {
+      exchange({ subject_token: subject.access_token as string }).then((response) =>
+        expectTokenError(response, 400, "invalid_request"),
+      );
+    }
+
+    it("when the user has de-authorized the app", () => {
+      withExchangeableSubject((subject, credentials) => {
+        cy.login_via_request(credentials.email, credentials.password).then((ok: boolean) => {
+          expect(ok, "signed in as the user").to.be.true;
+        });
+        cy.request({
+          method: "DELETE",
+          url: `/api/apps/${confidentialClientId}/authorize`,
+        }).its("status").should("equal", 200);
+        cy.logout();
+        expectRefused(subject);
+      });
+    });
+
+    it("when the session it was issued in has ended", () => {
+      withExchangeableSubject((subject) => {
+        // Revoking the session's refresh token revokes the access tokens
+        // issued alongside it, as logout does.
+        cy.request({
+          method: "POST",
+          url: REVOCATION_ENDPOINT,
+          form: true,
+          headers: { Authorization: CONFIDENTIAL_CLIENT_AUTH() },
+          body: { token: subject.refresh_token as string },
+        }).its("status").should("equal", 200);
+        expectRefused(subject);
+      });
+    });
+
+    it("when the user's account is disabled", () => {
+      withExchangeableSubject((subject) => {
+        introspectAsOwnApiServer(subject.access_token as string).then(({ uid }) => {
+          expect(uid, "subject uid").to.be.a("string").and.not.be.empty;
+          loginAsSuperuser();
+          cy.request({
+            method: "POST",
+            url: `/api/admin/users/${uid as string}/disable`,
+          }).its("status").should("equal", 200);
+          cy.logout();
+          expectRefused(subject);
+        });
+      });
+    });
+
+    it("when the app is disconnected from the API server", () => {
+      withExchangeableSubject((subject) => {
+        loginAsSuperuser();
+        cy.request({
+          method: "DELETE",
+          url: `/api/apis/${ownApiServerId}/connect_app/${confidentialClientId}`,
+        }).its("status").should("equal", 200);
+        cy.logout();
+        expectRefused(subject);
+        // Reconnect the app for whatever runs next.
+        loginAsSuperuser();
+        cy.request({
+          method: "POST",
+          url: `/api/apis/${ownApiServerId}/connect_app/${confidentialClientId}`,
+        }).its("status").should("equal", 200);
+        cy.logout();
       });
     });
   });
