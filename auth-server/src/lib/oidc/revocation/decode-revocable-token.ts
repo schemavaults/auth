@@ -30,11 +30,28 @@ export interface DecodeRevocableTokenOptions {
   environment: SchemaVaultsAppEnvironment;
 }
 
+/** decodeJWT's options (`@schemavaults/jwt` does not export the type). */
+type DecodeJWTOptions = Parameters<typeof decodeJWT>[0];
+
+/**
+ * The `default` of the switch on a decode plan's kind. Typed `never`, so a
+ * kind of plan added without its own case does not compile; should one get
+ * through anyway, it throws (the endpoint answers 500) rather than reading
+ * the token as one that failed verification, which would answer 200 and
+ * revoke nothing.
+ */
+function unhandledDecodePlan(plan: never): never {
+  throw new TypeError(
+    `Unhandled token decode plan kind: '${String((plan as { kind?: unknown }).kind)}'`,
+  );
+}
+
 /**
  * Verifies `token` with the keyset `plan` names: decodeJWT enforces
  * decryption, signature, issuer, audience, environment and max token age.
  * Null for a token that does not verify (malformed, unknown keyset, failed
- * verification, expired). A failed keyset lookup (database) throws.
+ * verification, expired). A failed keyset lookup (database) or an
+ * unhandled kind of plan throws.
  */
 async function decodeWithPlan(
   db: Kysely<AuthDatabase>,
@@ -54,21 +71,28 @@ async function decodeWithPlan(
   if (!jwt_keys) {
     return null;
   }
+
+  // Chosen outside the try below, so an unhandled plan throws instead of
+  // being caught as a token that failed verification.
+  let options: DecodeJWTOptions;
+  switch (plan.kind) {
+    case "access":
+      options = {
+        type: "access",
+        jwt: token,
+        audience: plan.expected_audience,
+        jwt_keys,
+        env: environment,
+      };
+      break;
+    case "refresh":
+      options = { type: "refresh", jwt: token, jwt_keys, env: environment };
+      break;
+    default:
+      return unhandledDecodePlan(plan);
+  }
   try {
-    return plan.kind === "access"
-      ? await decodeJWT({
-          type: "access",
-          jwt: token,
-          audience: plan.expected_audience,
-          jwt_keys,
-          env: environment,
-        })
-      : await decodeJWT({
-          type: "refresh",
-          jwt: token,
-          jwt_keys,
-          env: environment,
-        });
+    return await decodeJWT(options);
   } catch {
     return null;
   }
