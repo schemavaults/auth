@@ -52,7 +52,8 @@ function revocationOkResponse(): NextResponse {
  * The OAuth 2.0 token revocation endpoint (RFC 7009), advertised as
  * `revocation_endpoint` in the discovery document. A client revokes a
  * refresh token issued to it (with the access tokens minted alongside it),
- * or one of its `oidc-userinfo` access tokens. The steps live in
+ * one of its `oidc-userinfo` access tokens, or a delegated access token it
+ * obtained by token exchange. The steps live in
  * `@/lib/oidc/revocation`: parse the request, authenticate the client,
  * verify the token and that it was issued to the client, revoke it.
  */

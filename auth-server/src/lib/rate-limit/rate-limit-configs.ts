@@ -65,6 +65,20 @@ export const CLIENT_CREDENTIALS_RATE_LIMIT: RateLimitConfig = {
 };
 
 /**
+ * RFC 8693 token exchanges (delegated tokens for agents) at
+ * /api/oidc/token, per IP. Like client_credentials, a confidential
+ * client can repeat it without user interaction; a client minting one
+ * delegated token per agent session and re-exchanging before expiry stays
+ * well inside it.
+ */
+export const TOKEN_EXCHANGE_RATE_LIMIT: RateLimitConfig = {
+  name: "token-exchange",
+  maxAttempts: 60,
+  windowSeconds: 60,
+  keySource: "ip",
+};
+
+/**
  * Anonymous RFC 7591 dynamic client registrations at
  * /api/oidc/register, per IP. Registration is unauthenticated and each
  * success creates database rows, so the budget is small: a legitimate

@@ -1,7 +1,7 @@
 import "server-only";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import type { NewIssuedTokenRow } from "./issued-tokens-table";
+import { ISSUED_TOKEN_GRANT_TYPES, type NewIssuedTokenRow } from "./issued-tokens-table";
 import isValidUuid from "@/lib/is-valid-uuid";
 
 function validateRow(row: NewIssuedTokenRow): void {
@@ -14,13 +14,9 @@ function validateRow(row: NewIssuedTokenRow): void {
   if (row.token_type !== "access" && row.token_type !== "refresh") {
     throw new TypeError("Invalid token_type: expected 'access' or 'refresh'");
   }
-  if (
-    row.grant_type !== "refresh_token" &&
-    row.grant_type !== "authorization_code" &&
-    row.grant_type !== "client_credentials"
-  ) {
+  if (!(ISSUED_TOKEN_GRANT_TYPES as readonly string[]).includes(row.grant_type)) {
     throw new TypeError(
-      "Invalid grant_type: expected 'refresh_token', 'authorization_code', or 'client_credentials'",
+      `Invalid grant_type: expected one of ${ISSUED_TOKEN_GRANT_TYPES.map((g) => `'${g}'`).join(", ")}`,
     );
   }
   if (typeof row.issued_at !== "number" || !Number.isFinite(row.issued_at) || row.issued_at <= 0) {

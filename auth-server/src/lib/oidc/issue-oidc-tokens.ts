@@ -129,6 +129,11 @@ export interface OidcTokenResponseBody extends OidcTokenResponseExtensions {
    */
   scope?: string;
   id_token?: string;
+  /**
+   * RFC 8693 §2.2.1: REQUIRED on a token exchange response — the type of
+   * the issued token (`urn:ietf:params:oauth:token-type:access_token`).
+   */
+  issued_token_type?: string;
 }
 
 export interface IssuedOidcTokens {

@@ -2,6 +2,7 @@ import { inviteCodeDefinitionSchema, mfaFactorTypeSchema } from "@schemavaults/a
 import { z, withOpenApi } from "@schemavaults/openapi-operations";
 import { getAllBrandingAssetKeys, type BrandingAssetKey } from "@/lib/auth-db/branding";
 import { userDocumentSchema } from "@/lib/auth-db/users";
+import { ISSUED_TOKEN_GRANT_TYPES } from "@/lib/auth-db/issued-tokens/issued-tokens-table";
 import {
   userEmailLogEmailTypes,
   userEmailLogSources,
@@ -105,7 +106,9 @@ export const AdminIssuedToken = z
     token_type: issuedTokenTypeSchema,
     client_app_id: z.string(),
     audience: z.string().openapi({ description: "API server id or resource URL the token was minted for" }),
-    grant_type: z.enum(["refresh_token", "authorization_code", "client_credentials"]),
+    grant_type: z.enum(ISSUED_TOKEN_GRANT_TYPES).openapi({
+      description: "The grant that minted the token (`token_exchange`: an RFC 8693 delegated token)",
+    }),
     issued_at: epochMillisecondsColumn,
     expires_at: epochMillisecondsColumn,
     refresh_jti: z

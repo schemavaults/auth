@@ -34,8 +34,9 @@ export const postOidcRevoke = defineOperation({
   description:
     "The OAuth 2.0 token revocation endpoint (RFC 7009), advertised as `revocation_endpoint`. A client POSTs a token issued to it and the token stops working: " +
     "a refresh token can no longer be redeemed, and the access tokens minted alongside it (in the same token response) are revoked with it; " +
-    "an `oidc-userinfo` access token is refused by `/api/oidc/userinfo` and reported inactive by introspection. " +
-    "Access tokens minted for an API server (an RFC 8707 `resource`) are answered with `unsupported_token_type`: revoke the refresh token they were issued with. " +
+    "an `oidc-userinfo` access token is refused by `/api/oidc/userinfo` and reported inactive by introspection; " +
+    "a delegated access token (RFC 8693 `act`, from the token exchange grant) is reported inactive by its API server's introspection, so a client ends an agent's access when the agent's session ends. " +
+    "Other access tokens minted for an API server (an RFC 8707 `resource`) are answered with `unsupported_token_type`: revoke the refresh token they were issued with. " +
     "A token that is not a live token of this server (malformed, expired or already revoked) also yields 200, as §2.2 requires, while a live token issued to another client is refused with `invalid_grant`. " +
     "The success response has an empty body and `Cache-Control: no-store`; every response carries `Access-Control-Allow-Origin: *` (no cookies are read).",
   tags: [API_TAGS.oidc],
@@ -56,7 +57,7 @@ export const postOidcRevoke = defineOperation({
     },
     400: {
       description:
-        "Not form-encoded, `token` missing, a malformed Basic `Authorization` header or both client authentication methods (`invalid_request`); an access token minted for an API server (`unsupported_token_type`); a live token issued to another client (`invalid_grant`)",
+        "Not form-encoded, `token` missing, a malformed Basic `Authorization` header or both client authentication methods (`invalid_request`); an access token minted for an API server that is not a delegated token (`unsupported_token_type`); a live token issued to another client (`invalid_grant`)",
       schema: OAuthErrorResponse,
     },
     401: {

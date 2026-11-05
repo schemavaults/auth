@@ -13,10 +13,12 @@ import {
 } from "@schemavaults/jwt";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import AuthServerJwtKeysManager from "@/lib/AuthServerJwtKeysManager";
+import UnresolvableTokenResourceError from "@/lib/error/UnresolvableTokenResourceError";
 import {
   resolveIntrospectionDecodePlan,
   type IntrospectionDecodePlan,
 } from "@/lib/oidc/introspection/caller-visibility";
+import { resolveTokenAudience, type ResolvedTokenAudience } from "@/lib/oidc/resolve-token-audience";
 import type { RevocableToken } from "./types";
 
 export interface DecodeRevocableTokenOptions {
@@ -28,19 +30,145 @@ export interface DecodeRevocableTokenOptions {
   environment: SchemaVaultsAppEnvironment;
 }
 
+/** decodeJWT's options (`@schemavaults/jwt` does not export the type). */
+type DecodeJWTOptions = Parameters<typeof decodeJWT>[0];
+
+/**
+ * The `default` of the switch on a decode plan's kind. Typed `never`, so a
+ * kind of plan added without its own case does not compile; should one get
+ * through anyway, it throws (the endpoint answers 500) rather than reading
+ * the token as one that failed verification, which would answer 200 and
+ * revoke nothing.
+ */
+function unhandledDecodePlan(plan: never): never {
+  throw new TypeError(
+    `Unhandled token decode plan kind: '${String((plan as { kind?: unknown }).kind)}'`,
+  );
+}
+
+/**
+ * Verifies `token` with the keyset `plan` names: decodeJWT enforces
+ * decryption, signature, issuer, audience, environment and max token age.
+ * Null for a token that does not verify (malformed, unknown keyset, failed
+ * verification, expired). A failed keyset lookup (database) or an
+ * unhandled kind of plan throws.
+ */
+async function decodeWithPlan(
+  db: Kysely<AuthDatabase>,
+  token: string,
+  plan: IntrospectionDecodePlan,
+  environment: SchemaVaultsAppEnvironment,
+): Promise<CustomJWTPayload | null> {
+  let keyset_id: string;
+  try {
+    keyset_id = getKeysetIdFromToken(token);
+  } catch {
+    return null;
+  }
+  const jwt_keys: I_JWT_Keys | null = await new AuthServerJwtKeysManager(
+    db,
+  ).findKeyset(plan.keyset_audience_id, keyset_id);
+  if (!jwt_keys) {
+    return null;
+  }
+
+  // Chosen outside the try below, so an unhandled plan throws instead of
+  // being caught as a token that failed verification.
+  let options: DecodeJWTOptions;
+  switch (plan.kind) {
+    case "access":
+      options = {
+        type: "access",
+        jwt: token,
+        audience: plan.expected_audience,
+        jwt_keys,
+        env: environment,
+      };
+      break;
+    case "refresh":
+      options = { type: "refresh", jwt: token, jwt_keys, env: environment };
+      break;
+    default:
+      return unhandledDecodePlan(plan);
+  }
+  try {
+    return await decodeJWT(options);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * An access token minted for an API server (its id or an RFC 8707 resource
+ * URL as `aud`), presented by a client. Only a DELEGATED one (RFC 8693
+ * `act`, minted by the token exchange grant) is revocable here: it has no
+ * refresh token to end with, and the client that obtained it for an agent
+ * must be able to end it when the agent's session ends. It is verified with
+ * the API server's keyset, as that API server's introspection would.
+ *
+ *  - a token that does not verify, or names a resource URL no API server
+ *    registered: `unverifiable` (§2.2: 200, nothing is live);
+ *  - a live token without `act`: `unsupported`, as before (it ends with the
+ *    refresh token it was minted alongside);
+ *  - a live delegated token of another client: `issued_to_another_client`.
+ */
+async function decodeApiServerAccessToken({
+  db,
+  token,
+  token_audience,
+  client_app_id,
+  environment,
+}: DecodeRevocableTokenOptions & { token_audience: string }): Promise<RevocableToken> {
+  let resolved: ResolvedTokenAudience;
+  try {
+    resolved = await resolveTokenAudience(db, token_audience, environment);
+  } catch (e: unknown) {
+    if (e instanceof TypeError || e instanceof UnresolvableTokenResourceError) {
+      return { kind: "unverifiable" };
+    }
+    throw e;
+  }
+  let plan: IntrospectionDecodePlan | null = null;
+  if (resolved.kind !== "auth-server") {
+    try {
+      plan = resolveIntrospectionDecodePlan({
+        caller: { kind: "api_server", api_server_id: resolved.api_server_id },
+        token_audience,
+        environment,
+      });
+    } catch {
+      return { kind: "unverifiable" };
+    }
+  }
+  if (!plan) {
+    // An access token for the auth server's own audience: first-party only.
+    return { kind: "unsupported" };
+  }
+  const payload: CustomJWTPayload | null = await decodeWithPlan(db, token, plan, environment);
+  if (!payload) {
+    return { kind: "unverifiable" };
+  }
+  if (!payload.act) {
+    return { kind: "unsupported" };
+  }
+  return payload.app === client_app_id
+    ? { kind: "access", payload }
+    : { kind: "issued_to_another_client" };
+}
+
 /**
  * Verifies a token presented for revocation by `client_app_id`. A client
- * can revoke exactly the tokens it could introspect, so the introspection
- * rules for a client-app caller (resolveIntrospectionDecodePlan) pick the
- * keyset: the refresh tokens issued to it and its `oidc-userinfo` access
- * tokens. decodeJWT then enforces decryption, signature, issuer, audience,
- * environment and max token age.
+ * can revoke the tokens it could introspect, so the introspection rules for
+ * a client-app caller (resolveIntrospectionDecodePlan) pick the keyset: the
+ * refresh tokens issued to it and its `oidc-userinfo` access tokens. It can
+ * also revoke the delegated access tokens it obtained by token exchange
+ * (see decodeApiServerAccessToken).
  *
  *  - `unverifiable`: not a live token of this server (malformed, unknown
  *    keyset, failed verification, expired); RFC 7009 §2.2 answers 200.
- *  - `unsupported`: an access token minted for an API server (its id or an
- *    RFC 8707 resource URL as `aud`). It ends with the refresh token it was
- *    minted alongside, or when it expires.
+ *  - `unsupported`: an access token minted for an API server that is not a
+ *    delegated token. It ends with the refresh token it was minted
+ *    alongside, or when it expires.
  *  - `issued_to_another_client`: a live token whose `app` claim names
  *    another client; §2.1 refuses the request.
  *
@@ -53,50 +181,32 @@ export async function decodeRevocableToken({
   client_app_id,
   environment,
 }: DecodeRevocableTokenOptions): Promise<RevocableToken> {
+  let token_audience: string;
   let plan: IntrospectionDecodePlan | null;
-  let keyset_id: string;
   try {
+    token_audience = getAudienceFromToken(token, environment);
     plan = resolveIntrospectionDecodePlan({
       caller: { kind: "client_app", client_app_id },
-      token_audience: getAudienceFromToken(token, environment),
+      token_audience,
       environment,
     });
-    if (!plan) {
-      return { kind: "unsupported" };
-    }
-    keyset_id = getKeysetIdFromToken(token);
   } catch {
     return { kind: "unverifiable" };
   }
-
-  const jwt_keys: I_JWT_Keys | null = await new AuthServerJwtKeysManager(
-    db,
-  ).findKeyset(plan.keyset_audience_id, keyset_id);
-  if (!jwt_keys) {
-    return { kind: "unverifiable" };
+  if (!plan) {
+    return await decodeApiServerAccessToken({
+      db,
+      token,
+      token_audience,
+      client_app_id,
+      environment,
+    });
   }
 
-  let payload: CustomJWTPayload;
-  try {
-    payload =
-      plan.kind === "access"
-        ? await decodeJWT({
-            type: "access",
-            jwt: token,
-            audience: plan.expected_audience,
-            jwt_keys,
-            env: environment,
-          })
-        : await decodeJWT({
-            type: "refresh",
-            jwt: token,
-            jwt_keys,
-            env: environment,
-          });
-  } catch {
+  const payload: CustomJWTPayload | null = await decodeWithPlan(db, token, plan, environment);
+  if (!payload) {
     return { kind: "unverifiable" };
   }
-
   return payload.app === client_app_id
     ? { kind: plan.kind, payload }
     : { kind: "issued_to_another_client" };

@@ -22,9 +22,18 @@ import {
   parseBasicClientCredentials,
   TOKEN_ENDPOINT_WWW_AUTHENTICATE,
 } from "@/lib/oauth2/authenticate-token-endpoint-client";
-import { isGrantTypeAllowedForClientApp } from "@/lib/oauth2/client-grant-types";
+import {
+  isGrantTypeAllowedForClientApp,
+  parseTokenEndpointGrantType,
+  type TokenEndpointGrantType,
+} from "@/lib/oauth2/client-grant-types";
 import { oidcTokenErrorResponse } from "@/lib/oidc/oidc-errors";
 import deliverOidcTokens from "@/lib/oidc/deliver-oidc-tokens";
+import {
+  TOKEN_EXCHANGE_GRANT_TYPE,
+  findMisplacedTokenExchangeParam,
+  type MisplacedTokenExchangeParam,
+} from "@/lib/oidc/token-exchange";
 import { parseOidcRefreshTokenDeliveryParam } from "@/lib/oidc/token-request-extensions";
 import { RedisCache } from "@/lib/redis";
 import {
@@ -34,6 +43,7 @@ import {
   rateLimitResponse,
   CLIENT_CREDENTIALS_RATE_LIMIT,
   REFRESH_TOKEN_RATE_LIMIT,
+  TOKEN_EXCHANGE_RATE_LIMIT,
   type RateLimitConfig,
 } from "@/lib/rate-limit";
 import handleOidcAuthorizationCodeGrant from "./authorization_code_grant";
@@ -41,6 +51,7 @@ import handleOidcClientCredentialsGrant from "./client_credentials_grant";
 import handleOidcRefreshTokenGrant, {
   isRefreshTokenPresentedViaCookie,
 } from "./refresh_token_grant";
+import handleOidcTokenExchangeGrant from "./token_exchange_grant";
 import {
   applyOidcTokenCors,
   CORS_HEADERS,
@@ -69,12 +80,69 @@ export async function handleOidcTokenPreflight(request: Request): Promise<NextRe
 }
 
 /**
+ * The `default` of every `switch` on the grant type. Typed `never`, so a
+ * grant added to TOKEN_ENDPOINT_GRANT_TYPES without its own case does not
+ * compile; should one get through anyway, the request fails loudly (the
+ * handler records it and answers 500) instead of falling through.
+ */
+function unhandledGrantType(grant_type: never): never {
+  throw new TypeError(
+    `Unhandled token endpoint grant_type: '${String(grant_type)}'`,
+  );
+}
+
+/**
+ * The per-IP budget of a grant, or null for none. The grants that can be
+ * replayed without user interaction are budgeted, so a stolen refresh
+ * token (or leaked client secret) cannot turn into an unbounded minting
+ * loop; each has its own bucket so M2M traffic never starves browser
+ * refreshes. An authorization code is single-use and needs none.
+ */
+function getGrantRateLimit(
+  grant_type: TokenEndpointGrantType,
+): RateLimitConfig | null {
+  switch (grant_type) {
+    case "authorization_code":
+      return null;
+    case "refresh_token":
+      return REFRESH_TOKEN_RATE_LIMIT;
+    case "client_credentials":
+      return CLIENT_CREDENTIALS_RATE_LIMIT;
+    case TOKEN_EXCHANGE_GRANT_TYPE:
+      return TOKEN_EXCHANGE_RATE_LIMIT;
+    default:
+      return unhandledGrantType(grant_type);
+  }
+}
+
+/** Runs the grant's own handler (./<grant>_grant.ts). */
+async function handleOidcGrant(
+  grant_type: TokenEndpointGrantType,
+  ctx: OidcGrantContext,
+): Promise<OidcGrantOutcome> {
+  switch (grant_type) {
+    case "authorization_code":
+      return await handleOidcAuthorizationCodeGrant(ctx);
+    case "refresh_token":
+      return await handleOidcRefreshTokenGrant(ctx);
+    case "client_credentials":
+      return await handleOidcClientCredentialsGrant(ctx);
+    case TOKEN_EXCHANGE_GRANT_TYPE:
+      return await handleOidcTokenExchangeGrant(ctx);
+    default:
+      return unhandledGrantType(grant_type);
+  }
+}
+
+/**
  * The OIDC token endpoint (RFC 6749 §3.2, form-encoded): exchanges an
  * authorization code (grant_type=authorization_code) or a scope-bearing
  * refresh token (grant_type=refresh_token) for the standard token
  * response — with an id_token on the code grant — or, for confidential
  * clients, mints a machine-to-machine access token for the app's
- * service account (grant_type=client_credentials). Scope/nonce are
+ * service account (grant_type=client_credentials) or a delegated access
+ * token on which that service account acts for one of the app's users
+ * (RFC 8693 token exchange). Scope/nonce are
  * first-class on every login flow, so any code is redeemable here
  * regardless of which surface initiated the login (PKCE + client +
  * redirect_uri binding are the security boundary, plus client-secret
@@ -91,7 +159,8 @@ export async function handleOidcTokenPreflight(request: Request): Promise<NextRe
  * grant_type dispatch, client_id validation, CORS, client
  * authentication, rate limiting, token delivery, exception capture);
  * the per-grant logic lives in ./authorization_code_grant.ts,
- * ./refresh_token_grant.ts and ./client_credentials_grant.ts. The
+ * ./refresh_token_grant.ts, ./client_credentials_grant.ts and
+ * ./token_exchange_grant.ts. The
  * operation in ./operation.ts mounts it.
  */
 export async function handleOidcTokenRequest(request: NextRequest): Promise<NextResponse> {
@@ -115,17 +184,27 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
     return typeof value === "string" && value.length > 0 ? value : null;
   };
 
-  const grant_type = param("grant_type");
-  if (
-    grant_type !== "authorization_code" &&
-    grant_type !== "refresh_token" &&
-    grant_type !== "client_credentials"
-  ) {
+  const grant_type: TokenEndpointGrantType | null = parseTokenEndpointGrantType(
+    param("grant_type"),
+  );
+  if (grant_type === null) {
     return applyOidcTokenCors(
       oidcTokenErrorResponse(
         "unsupported_grant_type",
-        "grant_type must be 'authorization_code', 'refresh_token', or 'client_credentials'.",
+        "grant_type must be 'authorization_code', 'refresh_token', 'client_credentials', or 'urn:ietf:params:oauth:grant-type:token-exchange'.",
       ),
+      null,
+    );
+  }
+
+  // The RFC 8693 parameters belong to the token exchange grant alone, and
+  // a token exchange takes none of the other grants' own parameters: a
+  // request mixing them up is refused rather than half-ignored.
+  const misplaced_param: MisplacedTokenExchangeParam | null =
+    findMisplacedTokenExchangeParam(grant_type, param);
+  if (misplaced_param !== null) {
+    return applyOidcTokenCors(
+      oidcTokenErrorResponse("invalid_request", misplaced_param.error_description),
       null,
     );
   }
@@ -225,16 +304,7 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
       );
     }
 
-    // Per-IP budgets for the grants that can be replayed without user
-    // interaction: a stolen refresh token (or leaked client secret) must
-    // not turn into an unbounded minting loop. Each grant has its own
-    // bucket so M2M traffic never starves browser refreshes.
-    const rate_limit: RateLimitConfig | null =
-      grant_type === "refresh_token"
-        ? REFRESH_TOKEN_RATE_LIMIT
-        : grant_type === "client_credentials"
-          ? CLIENT_CREDENTIALS_RATE_LIMIT
-          : null;
+    const rate_limit: RateLimitConfig | null = getGrantRateLimit(grant_type);
     if (rate_limit) {
       const ip = extractClientIp(request);
       if (!ip) {
@@ -272,12 +342,7 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
       environment,
       debug,
     };
-    const outcome: OidcGrantOutcome =
-      grant_type === "authorization_code"
-        ? await handleOidcAuthorizationCodeGrant(ctx)
-        : grant_type === "refresh_token"
-          ? await handleOidcRefreshTokenGrant(ctx)
-          : await handleOidcClientCredentialsGrant(ctx);
+    const outcome: OidcGrantOutcome = await handleOidcGrant(grant_type, ctx);
     if (!outcome.ok) {
       return withCors(outcome.response);
     }
