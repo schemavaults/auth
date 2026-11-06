@@ -1,5 +1,9 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { AGENTS_COOKIE_PATH, AGENTS_SESSION_COOKIE } from "@/lib/agents/auth/agents-client";
+import { endAgentsSignIn } from "@/lib/agents/auth/agents-sign-in";
 import { getSignedInAgentUser } from "@/lib/agents/auth/signed-in-user";
 import {
   AgentSessionError,
@@ -82,4 +86,21 @@ export async function grantAgentAccessAgainAction(sessionId: string): Promise<Ag
 
 export async function endAgentSessionAction(sessionId: string): Promise<AgentActionResult> {
   return asSignedInUser(async (user) => endAgentSession(user, String(sessionId)));
+}
+
+/**
+ * Signs out of the agents app: revokes the sign-in's refresh token (which
+ * ends the agents' delegated tokens with it) and clears the session cookie.
+ */
+export async function signOutOfAgentsAction(): Promise<void> {
+  const user = await getSignedInAgentUser();
+  if (user) await endAgentsSignIn(user);
+  (await cookies()).set(AGENTS_SESSION_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: (await resolvePublicOriginFromRequest()).startsWith("https:"),
+    path: AGENTS_COOKIE_PATH,
+    maxAge: 0,
+  });
+  redirect(AGENTS_COOKIE_PATH);
 }

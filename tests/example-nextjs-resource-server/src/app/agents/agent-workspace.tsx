@@ -30,6 +30,7 @@ import {
   grantAgentAccessAgainAction,
   revokeAgentAccessAction,
   sendAgentMessageAction,
+  signOutOfAgentsAction,
   startAgentSessionAction,
   type AgentActionResult,
 } from "./actions";
@@ -120,7 +121,7 @@ export function AgentWorkspace({
             <span className="truncate" data-testid="agents-signed-in-email">
               {email ?? "Signed in"}
             </span>
-            <form method="post" action="/agents/logout">
+            <form action={signOutOfAgentsAction}>
               <Button type="submit" size="sm" variant="outline" className="w-full" data-testid="agents-sign-out">
                 Sign out
               </Button>

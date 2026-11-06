@@ -123,7 +123,7 @@ export interface OpenidClientDemoSession {
  * SCHEMAVAULTS_AUTH_SERVER_URL, with per-environment defaults matching
  * the docker-compose test network and the local dev auth server.
  */
-function getIssuerUrl(): URL {
+export function getIssuerUrl(): URL {
   const fromEnv: string | undefined = process.env.SCHEMAVAULTS_AUTH_SERVER_URL;
   if (typeof fromEnv === "string" && fromEnv.length > 0) {
     return new URL(fromEnv);

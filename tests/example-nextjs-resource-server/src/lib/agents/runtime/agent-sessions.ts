@@ -8,6 +8,7 @@ import {
   revokeDelegatedCredential,
 } from "./delegated-credential";
 import { appendEntry, runAgentTurn } from "./run-agent-turn";
+import { AGENT_SESSION_LIMITS, idleSessions, sessionLimitProblem } from "./session-limits";
 import { agentsState, getAgentSandboxManager, type AgentAppUser } from "./state";
 import { toAgentSessionView, type AgentCredential, type AgentSessionRecord, type AgentSessionView } from "./types";
 
@@ -60,6 +61,10 @@ export async function startAgentSession(
   user: AgentAppUser,
   { scopes, prompt, apiBaseUrl }: StartAgentSessionOptions,
 ): Promise<AgentSessionView> {
+  await reapIdleAgentSessions();
+  const limited = sessionLimitProblem(agentsState().sessions.values(), user.sub);
+  if (limited) throw new AgentSessionError(limited);
+
   const offered = new Set(AGENT_SCOPE_OPTIONS.map((option) => option.scope));
   const now = Date.now();
   const record: AgentSessionRecord = {
@@ -185,10 +190,13 @@ export async function grantAgentAccessAgain(user: AgentAppUser, sessionId: strin
   return toAgentSessionView(record);
 }
 
-/** Ends a session: revokes the agent's token and destroys its sandbox. */
-export async function endAgentSession(user: AgentAppUser, sessionId: string): Promise<AgentSessionView> {
-  const record = ownedSession(user, sessionId);
-  if (record.ended) return toAgentSessionView(record);
+/**
+ * Revokes a session's token and destroys its sandbox. Marked ended first, so
+ * nothing starts a turn in it or finishes it twice meanwhile.
+ */
+async function finishSession(record: AgentSessionRecord, why: string): Promise<void> {
+  record.ended = true;
+  record.status = "completed";
   if (record.credential?.status === "active") {
     await revokeDelegatedCredential(record.credential).catch((e: unknown) =>
       console.error("[agents] Revoking an agent's token failed", e),
@@ -199,8 +207,6 @@ export async function endAgentSession(user: AgentAppUser, sessionId: string): Pr
       .destroy(record.sandbox_id)
       .catch((e: unknown) => console.error("[agents] Destroying an agent's sandbox failed", e));
   }
-  record.ended = true;
-  record.status = "completed";
   const token =
     record.credential?.status === "active"
       ? "revoking the agent's token failed (it still expires with your own)"
@@ -208,7 +214,25 @@ export async function endAgentSession(user: AgentAppUser, sessionId: string): Pr
   appendEntry(record, {
     kind: "event",
     tone: "info",
-    text: `Session ended: ${token}, and its sandbox is destroyed.`,
+    text: `${why}: ${token}, and its sandbox is destroyed.`,
   });
+}
+
+/** Ends a session: revokes the agent's token and destroys its sandbox. */
+export async function endAgentSession(user: AgentAppUser, sessionId: string): Promise<AgentSessionView> {
+  const record = ownedSession(user, sessionId);
+  if (!record.ended) await finishSession(record, "Session ended");
   return toAgentSessionView(record);
+}
+
+/**
+ * Ends every session left idle past the limit (see session-limits.ts), so
+ * abandoned sandboxes and tokens do not linger. Runs before a session starts
+ * and when /agents is loaded.
+ */
+export async function reapIdleAgentSessions(now: number = Date.now()): Promise<void> {
+  const minutes = Math.round(AGENT_SESSION_LIMITS.idleTimeoutMs / 60_000);
+  for (const record of idleSessions(agentsState().sessions.values(), now)) {
+    await finishSession(record, `Ended after ${minutes} minutes without activity`);
+  }
 }

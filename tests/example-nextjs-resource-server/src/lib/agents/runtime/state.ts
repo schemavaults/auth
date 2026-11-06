@@ -1,6 +1,5 @@
 import "server-only";
 import type { SandboxManager } from "@schemavaults/sandbox-management-sdk";
-import { getAppEnvironment } from "@schemavaults/auth-server-sdk";
 import { createAgentSandboxManager } from "../sandbox/agent-sandbox";
 import type { AgentSessionRecord } from "./types";
 
@@ -48,6 +47,6 @@ export function agentsState(): ExampleAgentsState {
 
 export function getAgentSandboxManager(): SandboxManager {
   const state = agentsState();
-  state.sandboxManager ??= createAgentSandboxManager(getAppEnvironment());
+  state.sandboxManager ??= createAgentSandboxManager();
   return state.sandboxManager;
 }

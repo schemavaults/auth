@@ -21,7 +21,11 @@ import {
 export interface LocalProcessSandboxProviderOptions {
   /** Where sandbox directories are created, one per sandbox. */
   rootDir: string;
-  /** `PATH` the sandbox's commands run with. Default: this process's `PATH`. */
+  /**
+   * `PATH` the sandbox's commands run with. Default: the directory of the
+   * runtime running this server (so `node` is the server's own Node.js, even
+   * where it is not on `PATH`), then this process's `PATH`.
+   */
   path?: string;
   /** Default `exec` timeout. Default: 30 seconds. */
   execTimeoutMs?: number;
@@ -51,8 +55,8 @@ interface LocalSandboxState {
  *
  * It is NOT an isolation boundary: commands run as this server's user, with
  * its network. That is why it enforces no `spec.network` policy (the manager
- * refuses restrictive ones) and why `createAgentSandboxManager()` only uses it
- * outside production. It runs one-shot commands only (no `spec.start`).
+ * refuses restrictive ones); `createAgentSandboxManager()` explains when that
+ * is acceptable. It runs one-shot commands only (no `spec.start`).
  */
 export class LocalProcessSandboxProvider implements SandboxProvider {
   readonly name = "local-process";
@@ -65,7 +69,9 @@ export class LocalProcessSandboxProvider implements SandboxProvider {
 
   constructor(options: LocalProcessSandboxProviderOptions) {
     this.rootDir = path.resolve(options.rootDir);
-    this.hostPath = options.path ?? process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin";
+    this.hostPath =
+      options.path ??
+      [path.dirname(process.execPath), process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin"].join(path.delimiter);
     this.execTimeoutMs = options.execTimeoutMs ?? 30_000;
     this.maxOutputBytes = options.maxOutputBytes ?? 256 * 1024;
   }

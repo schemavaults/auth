@@ -7,7 +7,6 @@ import {
   type ExecResult,
   type SandboxRecord,
 } from "@schemavaults/sandbox-management-sdk";
-import type { SchemaVaultsAppEnvironment } from "@schemavaults/auth-server-sdk";
 import { LocalProcessSandboxProvider } from "./local-process-provider";
 import {
   AGENT_API_BASE_URL_ENV,
@@ -19,20 +18,20 @@ import {
 
 /**
  * The `SandboxManager` agent sessions run in. This example keeps sandbox
- * records in memory and runs sandboxes with the local-process provider, so
- * its CI needs neither a database nor Docker. A deployment would pass the
- * Docker or Vercel provider and the dbh store instead (see the
- * @schemavaults/sandbox-management-sdk README); nothing else changes.
+ * records in memory and runs sandboxes with the local-process provider, so it
+ * needs neither a database nor Docker, in CI or in a deployment. That provider
+ * is no isolation boundary; it runs in production too because this example
+ * holds no real data, the agent only ever runs its fixed tool commands (user
+ * input never reaches a shell), the sandboxes get none of the server's
+ * environment, and session-limits.ts bounds how many exist. A deployment with
+ * real data would pass the Docker or Vercel provider and the dbh store instead
+ * (see the @schemavaults/sandbox-management-sdk README); nothing else changes.
  *
- * The local-process provider is no isolation boundary, so it is refused in
- * production and staging.
+ * Everything lives in this server process's memory, so one long-running
+ * process (the Dockerfile's `production` image) serves it fully; on a
+ * serverless host it works while requests reach the same warm instance.
  */
-export function createAgentSandboxManager(environment: SchemaVaultsAppEnvironment): SandboxManager {
-  if (environment === "production" || environment === "staging") {
-    throw new Error(
-      `The agent sessions example runs sandboxes as local processes, which is not safe in '${environment}'`,
-    );
-  }
+export function createAgentSandboxManager(): SandboxManager {
   return new SandboxManager({
     providers: [
       new LocalProcessSandboxProvider({ rootDir: path.join(os.tmpdir(), "example-agent-sandboxes") }),

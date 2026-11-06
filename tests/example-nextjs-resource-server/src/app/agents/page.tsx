@@ -2,8 +2,10 @@ import "server-only";
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@schemavaults/ui";
+import { agentsConfigurationProblem } from "@/lib/agents/auth/agents-client";
+import { AGENTS_SIGN_IN_HREF } from "@/lib/agents/auth/agents-sign-in";
 import { getSignedInAgentUser } from "@/lib/agents/auth/signed-in-user";
-import { listAgentSessions } from "@/lib/agents/runtime/agent-sessions";
+import { listAgentSessions, reapIdleAgentSessions } from "@/lib/agents/runtime/agent-sessions";
 import { AGENT_SCOPE_OPTIONS } from "@/lib/agents/scopes";
 import { AgentWorkspace } from "./agent-workspace";
 
@@ -11,6 +13,22 @@ export const metadata: Metadata = {
   title: "Agent sessions · SchemaVaults Auth example",
   description: "Agents that act for you, each in its own sandbox, with delegated tokens you control",
 };
+
+function NotConfigured({ problem }: { problem: string }): ReactElement {
+  return (
+    <main className="flex grow items-center justify-center p-4">
+      <Card className="w-full max-w-lg" data-testid="agents-not-configured">
+        <CardHeader>
+          <CardTitle>Agent sessions are not set up here</CardTitle>
+          <CardDescription>This deployment is missing configuration the agents app needs.</CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm" data-testid="agents-configuration-problem">
+          {problem}
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
 
 function SignedOut(): ReactElement {
   return (
@@ -29,8 +47,10 @@ function SignedOut(): ReactElement {
           session then gets as much of that as you choose.
         </CardContent>
         <CardFooter>
-          {/* A route handler: a plain anchor makes a full document navigation. */}
-          <a href="/agents/login" data-testid="agents-sign-in">
+          {/* The confidential client's sign-in route (shared with the
+              openid-client demo); a plain anchor makes a full document
+              navigation to it. */}
+          <a href={AGENTS_SIGN_IN_HREF} data-testid="agents-sign-in">
             <Button>Sign in to start agent sessions</Button>
           </a>
         </CardFooter>
@@ -46,8 +66,11 @@ function SignedOut(): ReactElement {
  * scoped to what the user picked. See src/lib/agents/.
  */
 export default async function AgentsPage(): Promise<ReactElement> {
+  const problem = agentsConfigurationProblem();
+  if (problem) return <NotConfigured problem={problem} />;
   const user = await getSignedInAgentUser();
   if (!user) return <SignedOut />;
+  await reapIdleAgentSessions();
   return (
     <main className="flex h-[100dvh] flex-col">
       <AgentWorkspace

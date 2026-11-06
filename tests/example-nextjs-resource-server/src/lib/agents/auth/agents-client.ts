@@ -4,6 +4,7 @@ import {
   getSchemavaultsApiServerId,
   type ConfidentialClientCredentials,
 } from "@schemavaults/auth-server-sdk";
+import { getIssuerUrl } from "@/lib/openid-client-demo/config";
 
 /**
  * The agents app signs users in as the example's CONFIDENTIAL client (the
@@ -29,6 +30,29 @@ export function agentsClientCredentials(): ConfidentialClientCredentials {
  */
 export function agentsApiServerId(): string {
   return getSchemavaultsApiServerId();
+}
+
+/**
+ * Why the agents app cannot work on this deployment, or null when it can:
+ * the configuration it needs beyond the rest of this example's. /agents shows
+ * the reason instead of failing at sign-in.
+ */
+export function agentsConfigurationProblem(): string | null {
+  if (
+    !process.env.OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID ||
+    !process.env.OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET
+  ) {
+    return "Set OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_ID and OPENID_CLIENT_DEMO_CONFIDENTIAL_CLIENT_SECRET: agents need the confidential client (its secret lets the app exchange tokens for them).";
+  }
+  try {
+    getIssuerUrl();
+  } catch (e: unknown) {
+    return e instanceof Error ? e.message : String(e);
+  }
+  if (!process.env.SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY) {
+    return "Set SCHEMAVAULTS_AUTH_JWKS_ACCESS_PRIVATE_KEY: the example API needs it to verify the agents' tokens.";
+  }
+  return null;
 }
 
 export const AGENTS_SESSION_COOKIE = "example_agents_session" as const;
