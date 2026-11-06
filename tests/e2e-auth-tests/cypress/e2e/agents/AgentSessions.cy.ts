@@ -8,7 +8,9 @@
 //     (RFC 8707 `resource`) with the scopes an agent may get; the user
 //     consents to them on the auth server.
 //   - Each agent session gets a sandbox (@schemavaults/sandbox-management-sdk,
-//     local-process provider) and a DELEGATED token (RFC 8693 token
+//     with the example's browser provider: the sessions and their sandboxes
+//     run in the user's browser, the sign-in sits in sealed cookies, and the
+//     app's server keeps nothing) and a DELEGATED token (RFC 8693 token
 //     exchange) narrowed to the scopes the user picked for it. A fake model
 //     picks a tool; the tool calls the example API from the sandbox with the
 //     delegated token, never with the app's secrets.
@@ -164,7 +166,7 @@ describe("Agent sessions: agents in sandboxes, acting for users with delegated t
           cy.get('[data-testid="agent-event"]')
             .eq(1)
             .should("contain.text", "Started sandbox")
-            .and("contain.text", "local-process provider");
+            .and("contain.text", "in your browser (browser provider)");
           cy.get('[data-testid="agent-tool-call"]')
             .last()
             .should("have.attr", "data-tool", "whoami")

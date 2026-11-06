@@ -1,11 +1,11 @@
 import "server-only";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import type { ReactElement } from "react";
 import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@schemavaults/ui";
 import { agentsConfigurationProblem } from "@/lib/agents/auth/agents-client";
 import { AGENTS_SIGN_IN_HREF } from "@/lib/agents/auth/agents-sign-in";
-import { getSignedInAgentUser } from "@/lib/agents/auth/signed-in-user";
-import { listAgentSessions, reapIdleAgentSessions } from "@/lib/agents/runtime/agent-sessions";
+import { readAgentsSignIn } from "@/lib/agents/auth/sign-in-cookie";
 import { AGENT_SCOPE_OPTIONS } from "@/lib/agents/scopes";
 import { AgentWorkspace } from "./agent-workspace";
 
@@ -63,21 +63,22 @@ function SignedOut(): ReactElement {
  * /agents: the agent sessions example. A third-party app's view of
  * "auth for agents": the app signs the user in as a confidential client,
  * then gives each agent session a sandbox and a delegated token (RFC 8693)
- * scoped to what the user picked. See src/lib/agents/.
+ * scoped to what the user picked. The sessions and their sandboxes run in
+ * the user's browser; the server only reads the sealed sign-in cookie here
+ * and mints or revokes the agents' tokens (actions.ts). See src/lib/agents/.
  */
 export default async function AgentsPage(): Promise<ReactElement> {
   const problem = agentsConfigurationProblem();
   if (problem) return <NotConfigured problem={problem} />;
-  const user = await getSignedInAgentUser();
-  if (!user) return <SignedOut />;
-  await reapIdleAgentSessions();
+  const signIn = await readAgentsSignIn(await cookies());
+  if (!signIn) return <SignedOut />;
   return (
     <main className="flex h-[100dvh] flex-col">
       <AgentWorkspace
-        email={user.email}
-        grantedScopes={user.scope.split(" ").filter((scope) => scope.length > 0)}
+        ownerSub={signIn.sub}
+        email={signIn.email}
+        grantedScopes={signIn.scope.split(" ").filter((scope) => scope.length > 0)}
         scopeOptions={AGENT_SCOPE_OPTIONS}
-        initialSessions={listAgentSessions(user)}
       />
     </main>
   );

@@ -9,13 +9,8 @@ import {
   type OpenidClientDemoConfig,
 } from "@/lib/openid-client-demo/config";
 import { AGENTS_SIGN_IN_SCOPE } from "../scopes";
-import { agentsState, type AgentAppUser } from "../runtime/state";
-import {
-  AGENTS_COOKIE_PATH,
-  AGENTS_SESSION_COOKIE,
-  agentsApiServerId,
-  agentsClientCredentials,
-} from "./agents-client";
+import { AGENTS_COOKIE_PATH, agentsApiServerId, agentsClientCredentials } from "./agents-client";
+import { writeAgentsSignIn, type AgentsSignIn } from "./sign-in-cookie";
 
 /**
  * The agents app signs users in through the confidential client's existing
@@ -35,7 +30,6 @@ const PKCE_COOKIE = "example_agents_pkce_verifier";
 const STATE_COOKIE = "example_agents_state";
 const NONCE_COOKIE = "example_agents_nonce";
 const TRANSIENT_COOKIE_MAX_AGE = 60 * 10;
-const SESSION_COOKIE_MAX_AGE = 60 * 60 * 8;
 
 const confidential = (): OpenidClientDemoConfig => getOpenidClientDemoConfig("confidential");
 
@@ -101,8 +95,8 @@ function signInFailed(description: string): NextResponse {
 
 /**
  * The callback's agents flow: redeems the code (client_secret_basic + PKCE,
- * for the example API), keeps the user's tokens server-side and gives the
- * browser an opaque session cookie for /agents.
+ * for the example API) and seals the user's tokens into the /agents cookies
+ * (see sign-in-cookie.ts): the server keeps nothing.
  */
 export async function handleAgentsCallback(request: NextRequest): Promise<NextResponse> {
   const demo = confidential();
@@ -130,43 +124,36 @@ export async function handleAgentsCallback(request: NextRequest): Promise<NextRe
   const claims = tokens.claims();
   if (!claims) return signInFailed("No id_token in the token response.");
 
-  const user: AgentAppUser = {
-    id: crypto.randomUUID(),
+  const signIn: AgentsSignIn = {
     sub: claims.sub,
     email: typeof claims.email === "string" ? claims.email : null,
+    scope: tokens.scope ?? "",
     access_token: tokens.access_token,
     access_token_expires_at: Date.now() + (tokens.expires_in ?? 60) * 1000,
     refresh_token: tokens.refresh_token ?? null,
-    scope: tokens.scope ?? "",
   };
-  agentsState().users.set(user.id, user);
 
   const response = NextResponse.redirect(new URL(`${origin}${AGENTS_COOKIE_PATH}`), 303);
   for (const transient of [PKCE_COOKIE, STATE_COOKIE, NONCE_COOKIE]) {
     response.cookies.set(transient, "", cookieOptions(origin, demo.cookiePath, 0));
   }
-  response.cookies.set(
-    AGENTS_SESSION_COOKIE,
-    user.id,
-    cookieOptions(origin, AGENTS_COOKIE_PATH, SESSION_COOKIE_MAX_AGE),
-  );
+  await writeAgentsSignIn(response.cookies, signIn, origin.startsWith("https:"), request.cookies);
   return response;
 }
 
 /**
- * Ends a sign-in to the agents app: forgets it, and revokes its refresh token
- * (RFC 7009). The auth server then revokes every token of this sign-in,
+ * Ends a sign-in to the agents app at the auth server: revokes its refresh
+ * token (RFC 7009). The auth server then revokes every token of this sign-in,
  * including the delegated tokens the agents were given in exchange for them,
  * so signing out cuts off the user's agents too without the app tracking
- * their tokens.
+ * their tokens. The caller clears the cookies.
  */
-export async function endAgentsSignIn(user: AgentAppUser): Promise<void> {
-  agentsState().users.delete(user.id);
-  if (!user.refresh_token) return;
+export async function endAgentsSignIn(signIn: AgentsSignIn): Promise<void> {
+  if (!signIn.refresh_token) return;
   try {
     await revokeToken({
       ...agentsClientCredentials(),
-      token: user.refresh_token,
+      token: signIn.refresh_token,
       token_type_hint: "refresh_token",
     });
   } catch (e: unknown) {
@@ -175,20 +162,29 @@ export async function endAgentsSignIn(user: AgentAppUser): Promise<void> {
 }
 
 /**
- * The user's access token for the example API, renewed with the refresh
- * grant (as the confidential client, for the same `resource`) when it is
- * about to expire. Each agent session exchanges this token for its own.
+ * The sign-in with a usable access token for the example API: renewed with
+ * the refresh grant (as the confidential client, for the same `resource`)
+ * when it is about to expire, in which case `renewed` tells the caller to seal
+ * the new tokens into the cookies. Each agent session exchanges this token
+ * for its own.
  */
-export async function freshUserAccessToken(user: AgentAppUser): Promise<string> {
-  if (user.access_token_expires_at - Date.now() > 2 * 60 * 1000 || !user.refresh_token) {
-    return user.access_token;
+export async function withFreshAccessToken(
+  signIn: AgentsSignIn,
+): Promise<{ signIn: AgentsSignIn; renewed: boolean }> {
+  if (signIn.access_token_expires_at - Date.now() > 2 * 60 * 1000 || !signIn.refresh_token) {
+    return { signIn, renewed: false };
   }
   const config = await discoverAuthServer("confidential");
-  const tokens = await oidc.refreshTokenGrant(config, user.refresh_token, {
+  const tokens = await oidc.refreshTokenGrant(config, signIn.refresh_token, {
     resource: agentsApiServerId(),
   });
-  user.access_token = tokens.access_token;
-  user.access_token_expires_at = Date.now() + (tokens.expires_in ?? 60) * 1000;
-  user.refresh_token = tokens.refresh_token ?? user.refresh_token;
-  return user.access_token;
+  return {
+    signIn: {
+      ...signIn,
+      access_token: tokens.access_token,
+      access_token_expires_at: Date.now() + (tokens.expires_in ?? 60) * 1000,
+      refresh_token: tokens.refresh_token ?? signIn.refresh_token,
+    },
+    renewed: true,
+  };
 }

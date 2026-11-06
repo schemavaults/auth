@@ -2,105 +2,112 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { AGENTS_COOKIE_PATH, AGENTS_SESSION_COOKIE } from "@/lib/agents/auth/agents-client";
-import { endAgentsSignIn } from "@/lib/agents/auth/agents-sign-in";
-import { getSignedInAgentUser } from "@/lib/agents/auth/signed-in-user";
 import {
-  AgentSessionError,
-  endAgentSession,
-  grantAgentAccessAgain,
-  listAgentSessions,
-  revokeAgentAccess,
-  sendAgentMessage,
-  startAgentSession,
-} from "@/lib/agents/runtime/agent-sessions";
-import type { AgentAppUser } from "@/lib/agents/runtime/state";
-import type { AgentSessionView } from "@/lib/agents/runtime/types";
+  OAuthEndpointError,
+  exchangeTokenForDelegatedToken,
+  revokeToken,
+} from "@schemavaults/auth-server-sdk";
+import { AGENTS_COOKIE_PATH, agentsClientCredentials } from "@/lib/agents/auth/agents-client";
+import { endAgentsSignIn, withFreshAccessToken } from "@/lib/agents/auth/agents-sign-in";
+import {
+  clearAgentsSignIn,
+  readAgentsSignIn,
+  writeAgentsSignIn,
+  type AgentsSignIn,
+} from "@/lib/agents/auth/sign-in-cookie";
+import type { DelegatedTokenGrant } from "@/lib/agents/runtime/types";
+import { delegatedScopeFor } from "@/lib/agents/scopes";
 import { resolvePublicOriginFromRequest } from "@/lib/api/public-origin-next";
 
-export type AgentActionResult =
-  | { ok: true; session: AgentSessionView; sessions: AgentSessionView[] }
+/**
+ * The agents app's server side: only what needs the client secret. Agent
+ * sessions, transcripts and sandboxes live in the user's browser
+ * (src/lib/agents/browser/); the sign-in lives in sealed cookies. So these
+ * Server Functions keep nothing between requests, and any server instance can
+ * answer any of them. Each re-reads the sign-in: they are reachable by a
+ * direct POST, not only from the page.
+ */
+
+export type AgentServerResult<T> =
+  | ({ ok: true } & T)
   | { ok: false; error: string; signedOut?: boolean };
 
-const MAX_PROMPT_LENGTH = 2000;
+const SIGNED_OUT = { ok: false, error: "You are signed out of the agents app.", signedOut: true } as const;
+
+async function secureCookies(): Promise<boolean> {
+  return (await resolvePublicOriginFromRequest()).startsWith("https:");
+}
+
+function describeAuthServerError(error: unknown): string {
+  if (error instanceof OAuthEndpointError) {
+    return `${error.error ?? `HTTP ${error.status}`}${error.error_description ? `: ${error.error_description}` : ""}`;
+  }
+  return error instanceof Error ? error.message : String(error);
+}
 
 /**
- * Every Server Function re-checks who is signed in (they are reachable by a
- * direct POST, not only from the page) and only touches that user's sessions.
+ * Exchanges the signed-in user's access token (RFC 8693, as the confidential
+ * client) for a DELEGATED token on which the app's service account acts for
+ * them, narrowed to `scopes` (see delegatedScopeFor()), for one agent session.
+ * Renews the user's token first when it is about to expire.
  */
-async function asSignedInUser(
-  run: (user: AgentAppUser) => Promise<AgentSessionView>,
-): Promise<AgentActionResult> {
-  const user = await getSignedInAgentUser();
-  if (!user) return { ok: false, error: "You are signed out of the agents app.", signedOut: true };
+export async function mintDelegatedTokenAction(
+  scopes: string[],
+): Promise<AgentServerResult<{ grant: DelegatedTokenGrant }>> {
+  const jar = await cookies();
+  const signIn = await readAgentsSignIn(jar);
+  if (!signIn) return SIGNED_OUT;
+
+  let fresh: AgentsSignIn;
   try {
-    const session = await run(user);
-    return { ok: true, session, sessions: listAgentSessions(user) };
+    const renewal = await withFreshAccessToken(signIn);
+    fresh = renewal.signIn;
+    if (renewal.renewed) await writeAgentsSignIn(jar, fresh, await secureCookies(), jar);
   } catch (e: unknown) {
-    if (e instanceof AgentSessionError) return { ok: false, error: e.message };
-    console.error("[agents] Server Function failed", e);
-    return { ok: false, error: "Something went wrong; see the server log." };
+    console.error("[agents] Renewing the user's token failed; signing them out", e);
+    clearAgentsSignIn(jar, await secureCookies());
+    return { ok: false, error: "Your sign-in has ended; sign in again.", signedOut: true };
+  }
+
+  try {
+    const response = await exchangeTokenForDelegatedToken({
+      ...agentsClientCredentials(),
+      subject_token: fresh.access_token,
+      scope: delegatedScopeFor(Array.isArray(scopes) ? scopes.filter((s) => typeof s === "string") : []),
+    });
+    return {
+      ok: true,
+      grant: {
+        access_token: response.access_token,
+        scope: response.scope ?? "",
+        expires_at: Date.now() + response.expires_in * 1000,
+      },
+    };
+  } catch (e: unknown) {
+    return { ok: false, error: describeAuthServerError(e) };
   }
 }
 
-function checkPrompt(prompt: unknown): string {
-  if (typeof prompt !== "string" || prompt.trim().length === 0 || prompt.length > MAX_PROMPT_LENGTH) {
-    throw new AgentSessionError(`A prompt is 1 to ${MAX_PROMPT_LENGTH} characters.`);
+/** Revokes an agent's delegated token at the auth server (RFC 7009, as the confidential client). */
+export async function revokeDelegatedTokenAction(token: string): Promise<AgentServerResult<object>> {
+  if (!(await readAgentsSignIn(await cookies()))) return SIGNED_OUT;
+  if (typeof token !== "string" || token.length === 0) return { ok: false, error: "No token to revoke." };
+  try {
+    await revokeToken({ ...agentsClientCredentials(), token, token_type_hint: "access_token" });
+    return { ok: true };
+  } catch (e: unknown) {
+    return { ok: false, error: describeAuthServerError(e) };
   }
-  return prompt.trim();
-}
-
-/**
- * Where the agent's tools reach the example API: this app's own public origin,
- * unless EXAMPLE_AGENTS_API_BASE_URL pins it. The agent sends its token there,
- * so a deployment should pin it rather than trust the request's host.
- */
-async function agentApiBaseUrl(): Promise<string> {
-  return process.env.EXAMPLE_AGENTS_API_BASE_URL || (await resolvePublicOriginFromRequest());
-}
-
-export async function startAgentSessionAction(input: {
-  scopes: string[];
-  prompt: string;
-}): Promise<AgentActionResult> {
-  return asSignedInUser(async (user) =>
-    startAgentSession(user, {
-      scopes: Array.isArray(input?.scopes) ? input.scopes.filter((scope) => typeof scope === "string") : [],
-      prompt: checkPrompt(input?.prompt),
-      apiBaseUrl: await agentApiBaseUrl(),
-    }),
-  );
-}
-
-export async function sendAgentMessageAction(sessionId: string, prompt: string): Promise<AgentActionResult> {
-  return asSignedInUser(async (user) => sendAgentMessage(user, String(sessionId), checkPrompt(prompt)));
-}
-
-export async function revokeAgentAccessAction(sessionId: string): Promise<AgentActionResult> {
-  return asSignedInUser(async (user) => revokeAgentAccess(user, String(sessionId)));
-}
-
-export async function grantAgentAccessAgainAction(sessionId: string): Promise<AgentActionResult> {
-  return asSignedInUser(async (user) => grantAgentAccessAgain(user, String(sessionId)));
-}
-
-export async function endAgentSessionAction(sessionId: string): Promise<AgentActionResult> {
-  return asSignedInUser(async (user) => endAgentSession(user, String(sessionId)));
 }
 
 /**
  * Signs out of the agents app: revokes the sign-in's refresh token (which
- * ends the agents' delegated tokens with it) and clears the session cookie.
+ * ends the agents' delegated tokens with it) and clears its cookies.
  */
 export async function signOutOfAgentsAction(): Promise<void> {
-  const user = await getSignedInAgentUser();
-  if (user) await endAgentsSignIn(user);
-  (await cookies()).set(AGENTS_SESSION_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: (await resolvePublicOriginFromRequest()).startsWith("https:"),
-    path: AGENTS_COOKIE_PATH,
-    maxAge: 0,
-  });
+  const jar = await cookies();
+  const signIn = await readAgentsSignIn(jar);
+  if (signIn) await endAgentsSignIn(signIn);
+  clearAgentsSignIn(jar, await secureCookies());
   redirect(AGENTS_COOKIE_PATH);
 }

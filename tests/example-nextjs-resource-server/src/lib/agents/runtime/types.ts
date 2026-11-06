@@ -1,4 +1,4 @@
-// NOT server-only: the client renders AgentSessionView (which holds no token).
+// NOT server-only: agent sessions live in the user's browser (browser/).
 
 import type { AgentSession } from "@schemavaults/ui";
 import type { AgentToolName } from "../model/fake-agent-model";
@@ -30,13 +30,20 @@ export type AgentTranscriptEntry =
  */
 export type AgentCredentialStatus = "active" | "revoked" | "rejected" | "expired";
 
-/** An agent's delegated token. Server-side only: never sent to the browser. */
-export interface AgentCredential {
+/** A delegated token the app's server minted for an agent (actions.ts). */
+export interface DelegatedTokenGrant {
   access_token: string;
   /** The scope the auth server granted (a subset of the user's). */
   scope: string;
-  /** Unix milliseconds. */
+  /** Unix milliseconds: when it expires (at the latest when the user's own token does). */
   expires_at: number;
+}
+
+/**
+ * An agent's delegated token, kept with its session in the user's browser
+ * (the agent and its sandbox run there; the app's secrets never do).
+ */
+export interface AgentCredential extends DelegatedTokenGrant {
   status: AgentCredentialStatus;
 }
 
@@ -57,7 +64,7 @@ export interface AgentSessionRecord {
   ended: boolean;
 }
 
-/** What the page gets about a session: its summary and transcript, never its token. */
+/** What the page renders about a session: its summary and transcript, not its token. */
 export interface AgentSessionView extends AgentSession {
   status: AgentSessionRecord["status"];
   scope: string | null;

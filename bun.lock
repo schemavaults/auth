@@ -345,7 +345,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.12.55",
+      "version": "0.12.56",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -363,7 +363,7 @@
     },
     "tests/example-nextjs-resource-server": {
       "name": "@schemavaults/example-nextjs-resource-server",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "@schemavaults/auth-client-sdk": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",

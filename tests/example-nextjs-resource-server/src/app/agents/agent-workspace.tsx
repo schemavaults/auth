@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import {
   AgentSessions,
   AgentSessionsComposer,
@@ -23,37 +23,56 @@ import {
   PromptInputTextarea,
   PromptInputToolbar,
 } from "@schemavaults/ui";
+import { AgentSessionError, BrowserAgentRuntime } from "@/lib/agents/browser/browser-agent-runtime";
 import type { AgentScopeOption } from "@/lib/agents/scopes";
 import type { AgentSessionView, AgentTranscriptEntry } from "@/lib/agents/runtime/types";
 import {
-  endAgentSessionAction,
-  grantAgentAccessAgainAction,
-  revokeAgentAccessAction,
-  sendAgentMessageAction,
+  mintDelegatedTokenAction,
+  revokeDelegatedTokenAction,
   signOutOfAgentsAction,
-  startAgentSessionAction,
-  type AgentActionResult,
+  type AgentServerResult,
 } from "./actions";
 import { AgentSessionActions } from "./agent-session-actions";
 import { AgentTranscript } from "./agent-transcript";
 import { NewAgentSession } from "./new-agent-session";
 
 export interface AgentWorkspaceProps {
+  /** OIDC `sub` of the signed-in user: whose sessions (kept in this browser) to show. */
+  ownerSub: string;
   email: string | null;
   /** The scopes the user granted the app at sign-in. */
   grantedScopes: string[];
   scopeOptions: readonly AgentScopeOption[];
-  initialSessions: AgentSessionView[];
+}
+
+/** A Server Function's answer, or its error thrown; signed out, the page reloads to offer signing in. */
+function unwrap<T extends object>(result: AgentServerResult<T>): T {
+  if (result.ok) return result;
+  if (result.signedOut) window.location.assign("/agents");
+  throw new AgentSessionError(result.error);
+}
+
+/**
+ * The user's agents, run in this browser: sessions, transcripts and
+ * sandboxes in `localStorage`, delegated tokens minted and revoked by the
+ * app's server (actions.ts), which keeps the client secret.
+ */
+function createRuntime(ownerSub: string): BrowserAgentRuntime {
+  return new BrowserAgentRuntime({
+    ownerSub,
+    storage: window.localStorage,
+    apiBaseUrl: window.location.origin,
+    mintDelegatedToken: async (scopes) => unwrap(await mintDelegatedTokenAction([...scopes])).grant,
+    revokeDelegatedToken: async (token) => {
+      unwrap(await revokeDelegatedTokenAction(token));
+    },
+  });
 }
 
 /** The agent sessions page for a signed-in user, built on `<AgentSessions>` from @schemavaults/ui. */
-export function AgentWorkspace({
-  email,
-  grantedScopes,
-  scopeOptions,
-  initialSessions,
-}: AgentWorkspaceProps): ReactElement {
-  const [sessions, setSessions] = useState<AgentSessionView[]>(initialSessions);
+export function AgentWorkspace({ ownerSub, email, grantedScopes, scopeOptions }: AgentWorkspaceProps): ReactElement {
+  const runtime = useRef<BrowserAgentRuntime | null>(null);
+  const [sessions, setSessions] = useState<AgentSessionView[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   /** The session an action is running for (`new` for the new-session screen), and its prompt. */
   const [pending, setPending] = useState<{ sessionId: string; prompt: string | null } | null>(null);
@@ -62,33 +81,40 @@ export function AgentWorkspace({
     scopeOptions.map((option) => option.scope).filter((scope) => grantedScopes.includes(scope)),
   );
   const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
+
+  // The runtime needs the browser's storage: made after hydration.
+  useEffect(() => {
+    try {
+      runtime.current = createRuntime(ownerSub);
+      setSessions(runtime.current.list());
+      setReady(true);
+    } catch (e: unknown) {
+      setError(`Agent sessions need this browser's local storage: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [ownerSub]);
 
   async function run(
     sessionId: string,
     prompt: string | null,
-    action: () => Promise<AgentActionResult>,
+    action: (runtime: BrowserAgentRuntime) => Promise<AgentSessionView>,
   ): Promise<void> {
+    const current = runtime.current;
+    if (!current) return;
     setPending({ sessionId, prompt });
     setError(null);
     try {
-      const result = await action();
-      if (!result.ok) {
-        setError(result.error);
-        if (result.signedOut) window.location.assign("/agents");
-        return;
-      }
-      setSessions(result.sessions);
-      setActiveSessionId(result.session.id);
+      const session = await action(current);
+      setActiveSessionId(session.id);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
+      setSessions(current.list());
       setPending(null);
     }
   }
 
   const activeSession = sessions.find((session) => session.id === activeSessionId);
-  const busy = pending !== null;
+  const busy = pending !== null || !ready;
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="agent-workspace" data-ready={ready}>
@@ -137,11 +163,9 @@ export function AgentWorkspace({
               <AgentSessionActions
                 session={activeSession}
                 pending={busy}
-                onRevoke={() => run(activeSession.id, null, () => revokeAgentAccessAction(activeSession.id))}
-                onGrantAgain={() =>
-                  run(activeSession.id, null, () => grantAgentAccessAgainAction(activeSession.id))
-                }
-                onEnd={() => run(activeSession.id, null, () => endAgentSessionAction(activeSession.id))}
+                onRevoke={() => run(activeSession.id, null, (agents) => agents.revoke(activeSession.id))}
+                onGrantAgain={() => run(activeSession.id, null, (agents) => agents.grantAgain(activeSession.id))}
+                onEnd={() => run(activeSession.id, null, (agents) => agents.end(activeSession.id))}
               />
             ) : null}
           </AgentSessionsHeader>
@@ -151,10 +175,8 @@ export function AgentWorkspace({
             grantedScopes={grantedScopes}
             selectedScopes={selectedScopes}
             onSelectedScopesChange={setSelectedScopes}
-            pending={pending?.sessionId === "new"}
-            onStart={(prompt) =>
-              run("new", prompt, () => startAgentSessionAction({ scopes: selectedScopes, prompt }))
-            }
+            pending={pending?.sessionId === "new" || !ready}
+            onStart={(prompt) => run("new", prompt, (agents) => agents.start(selectedScopes, prompt))}
           />
 
           <AgentSessionsConversation<AgentSessionView>>
@@ -179,9 +201,7 @@ export function AgentWorkspace({
                     <AgentSessionsPromptInput<AgentSessionView>
                       isLoading={working}
                       disabled={session.ended || busy}
-                      onSubmit={(prompt) =>
-                        run(session.id, prompt, () => sendAgentMessageAction(session.id, prompt))
-                      }
+                      onSubmit={(prompt) => run(session.id, prompt, (agents) => agents.send(session.id, prompt))}
                     >
                       <PromptInputTextarea
                         placeholder={session.ended ? "This session has ended." : "Ask the agent…"}

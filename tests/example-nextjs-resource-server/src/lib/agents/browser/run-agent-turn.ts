@@ -1,9 +1,10 @@
-import "server-only";
-import type { ExecResult, SandboxManager } from "@schemavaults/sandbox-management-sdk";
+// NOT server-only: runs in the browser (unit tested through the runtime).
+
+import type { ExecResult } from "@schemavaults/sandbox-management-sdk";
 import { FakeAgentModel, type AgentModelMessage } from "../model/fake-agent-model";
 import { parseAgentApiToolOutput } from "../sandbox/agent-tools";
-import { runInAgentSandbox } from "../sandbox/agent-sandbox";
-import type { AgentSessionRecord, AgentTranscriptEntry } from "./types";
+import type { AgentSessionRecord, AgentTranscriptEntry } from "../runtime/types";
+import { randomId } from "./random-id";
 
 /** Model steps per turn: pick a tool, then explain its result. */
 const MAX_STEPS = 2;
@@ -17,7 +18,7 @@ type NewEntry = DistributiveOmit<AgentTranscriptEntry, "id" | "at">;
 /** Appends to a session's transcript and stamps its activity time. */
 export function appendEntry(record: AgentSessionRecord, entry: NewEntry): void {
   const at = Date.now();
-  record.transcript.push({ ...entry, id: crypto.randomUUID(), at } as AgentTranscriptEntry);
+  record.transcript.push({ ...entry, id: randomId(), at } as AgentTranscriptEntry);
   record.updated_at = at;
 }
 
@@ -29,9 +30,9 @@ export function appendEntry(record: AgentSessionRecord, entry: NewEntry): void {
  * page offers to grant access again.
  */
 export async function runAgentTurn(
-  manager: SandboxManager,
   record: AgentSessionRecord,
   prompt: string,
+  exec: (command: string) => Promise<ExecResult>,
 ): Promise<void> {
   const model = new FakeAgentModel();
   const history: AgentModelMessage[] = [{ role: "user", content: prompt }];
@@ -48,7 +49,7 @@ export async function runAgentTurn(
 
     let result: ExecResult;
     try {
-      result = await runInAgentSandbox(manager, record.sandbox_id, turn.toolCall.command);
+      result = await exec(turn.toolCall.command);
     } catch (e: unknown) {
       result = { exitCode: 1, stdout: "", stderr: `${e instanceof Error ? e.message : String(e)}\n` };
     }

@@ -55,5 +55,4 @@ export function agentsConfigurationProblem(): string | null {
   return null;
 }
 
-export const AGENTS_SESSION_COOKIE = "example_agents_session" as const;
 export const AGENTS_COOKIE_PATH = "/agents" as const;
