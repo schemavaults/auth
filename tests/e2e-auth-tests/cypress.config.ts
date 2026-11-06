@@ -116,7 +116,12 @@ export default defineConfig({
             config.env["PRIVATE_SUPERUSER_PRECREATED"] = true;
           }
 
-          if (testSuiteName === "example_resource_server") {
+          // The agents suite drives the resource server's /agents app,
+          // which signs users in as the confidential client below.
+          if (
+            testSuiteName === "example_resource_server" ||
+            testSuiteName === "agents"
+          ) {
             if (
               !config.env[
                 "EXAMPLE_NEXTJS_RESOURCE_SERVER_JWKS_ACCESS_PUBLIC_KEY"
@@ -168,7 +173,7 @@ export default defineConfig({
                 ],
               },
             );
-          } // end of setup for test suite 'example_resource_server'
+          } // end of setup for test suites 'example_resource_server' and 'agents'
 
           if (testSuiteName === "dynamic_client_registration") {
             if (

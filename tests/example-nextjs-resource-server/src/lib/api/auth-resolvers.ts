@@ -3,6 +3,7 @@ import type { UserData } from "@schemavaults/auth-server-sdk";
 import { createSchemaVaultsAuthResolvers } from "@schemavaults/auth-server-sdk/openapi-operations";
 import type { AuthResolvers } from "@schemavaults/openapi-operations";
 import type { ExampleApiContext } from "./context";
+import { withDelegatedTokenIntrospection } from "./delegated-token-introspection";
 
 /**
  * Credential resolvers for this resource server, keyed by auth scheme name:
@@ -39,7 +40,12 @@ export function getAcceptedTokenAudiences(): readonly string[] {
 }
 
 export const authResolvers: AuthResolvers<UserData, ExampleApiContext> =
-  createSchemaVaultsAuthResolvers<ExampleApiContext>({
-    acceptedAudiences: getAcceptedTokenAudiences(),
-    debug: process.env.NODE_ENV === "development",
-  });
+  // Agents' delegated tokens are also checked with the auth server, so they
+  // stop working as soon as they are revoked (see the agents example at
+  // /agents); the user's own tokens are verified locally only.
+  withDelegatedTokenIntrospection(
+    createSchemaVaultsAuthResolvers<ExampleApiContext>({
+      acceptedAudiences: getAcceptedTokenAudiences(),
+      debug: process.env.NODE_ENV === "development",
+    }),
+  );

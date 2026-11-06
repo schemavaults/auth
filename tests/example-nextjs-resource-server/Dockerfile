@@ -28,6 +28,9 @@ COPY --chown=bun:bun tests/example-nextjs-resource-server/postcss.config.js test
 COPY --chown=bun:bun tests/example-nextjs-resource-server/tailwind.config.ts tests/example-nextjs-resource-server/tailwind.config.ts
 COPY --chown=bun:bun tests/example-nextjs-resource-server/next.config.ts tests/example-nextjs-resource-server/next.config.ts
 COPY --chown=bun:bun tests/example-nextjs-resource-server/tsconfig.json tests/example-nextjs-resource-server/tsconfig.json
+# Packages the example app uses before they are published (see vendor/README.md):
+# its package.json depends on them as `file:` tarballs.
+COPY --chown=bun:bun vendor/ vendor/
 
 ### Supporting Auth Packages (Config Files) ###
 

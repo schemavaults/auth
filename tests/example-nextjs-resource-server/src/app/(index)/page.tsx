@@ -42,6 +42,11 @@ export default function IndexPage(): ReactElement {
           Sign in with openid-client (confidential client)
         </Button>
       </a>
+      {/* Agents acting for the user in sandboxes, with delegated tokens
+          (RFC 8693) the user scopes and can revoke: src/app/agents/. */}
+      <a href="/agents" data-testid="agents-link">
+        <Button variant="outline">Agent sessions</Button>
+      </a>
     </main>
   );
 }
