@@ -42,6 +42,10 @@ export type {
 export { OIDC_ENDPOINT_PATHS, getOidcEndpointUrl } from "./endpoints";
 
 export { OAUTH_JWT_BEARER_CLIENT_ASSERTION_TYPE } from "./client-assertion";
+export {
+  OAUTH_TOKEN_EXCHANGE_GRANT_TYPE,
+  OAUTH_ACCESS_TOKEN_TYPE,
+} from "./token-exchange";
 export type { OidcEndpointName } from "./endpoints";
 
 export {

@@ -85,11 +85,16 @@ export function missingScopes(principal: AuthPrincipal, required: readonly strin
   return required.filter((scope) => !granted.has(scope));
 }
 
+/** Whether the principal acts through a delegated credential (it names an RFC 8693 actor). */
+export function isDelegatedPrincipal(principal: AuthPrincipal): boolean {
+  return principal.actor !== undefined && principal.actor !== null;
+}
+
 /**
  * Applies an operation's {@link OperationAuth} to the request: tries each
- * accepted scheme's resolver in order, then enforces the route guard,
- * required scopes, and organization membership. Returns the principal, or
- * null for public operations.
+ * accepted scheme's resolver in order, then enforces the delegated-caller
+ * policy, the route guard, required scopes, and organization membership.
+ * Returns the principal, or null for public operations.
  */
 export async function resolveAuth<TUser, TContext = unknown>(
   c: Context,
@@ -115,6 +120,17 @@ export async function resolveAuth<TUser, TContext = unknown>(
       { error: OPERATION_ERROR_CODES.unauthorized, message: "Authentication required" },
       challengeHeader(auth.schemes),
     );
+  }
+
+  // First of the authorization checks: it is about the kind of credential
+  // (the user's own, or one an actor holds for the user), which no role,
+  // scope or membership of the user can make up for.
+  if (auth.delegatedCallers === "refused" && isDelegatedPrincipal(principal)) {
+    throw new OperationError(403, {
+      error: OPERATION_ERROR_CODES.delegatedCallerRefused,
+      message:
+        "This operation does not accept delegated credentials: it must be called with the user's own credential, not one an actor (such as an agent) holds on the user's behalf",
+    });
   }
 
   if ((auth.routeGuard ?? "authenticated") === "admin" && !principal.isAdmin) {

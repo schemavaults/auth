@@ -5,6 +5,7 @@ import { ping } from "@/app/api/ping/operation";
 import { whoami } from "@/app/api/whoami/operation";
 import { myEmail } from "@/app/api/me/email/operation";
 import { myNotes } from "@/app/api/me/notes/operation";
+import { requestAccountDeletion } from "@/app/api/me/account-deletion/operation";
 import { adminPing } from "@/app/api/admin/ping/operation";
 import { organizationGreeting } from "@/app/api/organizations/[organization_id]/greeting/operation";
 
@@ -29,6 +30,7 @@ export const operations: readonly AnyOperationDefinition[] = [
   whoami,
   myEmail,
   myNotes,
+  requestAccountDeletion,
   adminPing,
   organizationGreeting,
 ];

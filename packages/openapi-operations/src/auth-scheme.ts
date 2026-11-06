@@ -113,6 +113,29 @@ export interface OrganizationRoleRequirement {
 }
 
 /**
+ * Whether an operation accepts DELEGATED credentials: ones naming an RFC 8693
+ * actor (`AuthPrincipal.actor`) who calls on behalf of the credential's user,
+ * such as a client app's agent holding a delegated access token.
+ *
+ * - `"allowed"` (the default): any accepted credential, delegated or not. An
+ *   API server only receives delegated SchemaVaults tokens once its managers
+ *   turned on `accept_delegated_tokens`, and their scope never exceeds the
+ *   user's.
+ * - `"refused"`: only the user's own credential; a principal with an actor is
+ *   refused with 403 `delegated_caller_refused`, whatever its scope. For
+ *   operations an agent must never perform for a user, even with the right
+ *   scope (account deletion, payment, changing who may access the account).
+ */
+export const DELEGATED_CALLER_POLICIES = ["allowed", "refused"] as const;
+export type DelegatedCallerPolicy = (typeof DELEGATED_CALLER_POLICIES)[number];
+
+export function isDelegatedCallerPolicy(value: unknown): value is DelegatedCallerPolicy {
+  return (
+    typeof value === "string" && (DELEGATED_CALLER_POLICIES as readonly string[]).includes(value)
+  );
+}
+
+/**
  * What a caller must present / be to invoke an operation. Represented in
  * the OpenAPI document both as the standard `security` requirement list
  * (one entry per accepted scheme, carrying the scopes) and as the
@@ -134,6 +157,12 @@ export interface AuthRequirements<
   readonly requiredScopes?: readonly string[];
   /** Organization membership requirement resolved from a request parameter. */
   readonly organization?: OrganizationRoleRequirement;
+  /**
+   * Whether callers presenting a delegated credential (an actor acting for
+   * the user, e.g. an agent) may invoke the operation; see
+   * {@link DelegatedCallerPolicy}. Default `"allowed"`.
+   */
+  readonly delegatedCallers?: DelegatedCallerPolicy;
   /** Free-form note for the docs ("only the app owner may ...", ...). */
   readonly notes?: string;
 }
@@ -175,6 +204,14 @@ export function requireAuth<const TSchemes extends readonly AuthSchemeDefinition
       throw new TypeError(`Auth scheme "${scheme.name}" listed twice`);
     }
     names.add(scheme.name);
+  }
+  if (
+    requirements.delegatedCallers !== undefined &&
+    !isDelegatedCallerPolicy(requirements.delegatedCallers)
+  ) {
+    throw new TypeError(
+      `Unknown delegatedCallers policy "${String(requirements.delegatedCallers)}" (expected one of: ${DELEGATED_CALLER_POLICIES.join(", ")})`,
+    );
   }
   return {
     type: "required",

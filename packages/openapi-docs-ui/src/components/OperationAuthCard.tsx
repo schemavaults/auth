@@ -134,6 +134,16 @@ export function OperationAuthCard({ auth, schemes, schemesHref, className }: Ope
               </DescriptionDetails>
             </DescriptionItem>
           ) : null}
+          {auth.delegatedCallers ? (
+            <DescriptionItem>
+              <DescriptionTerm>Delegated callers</DescriptionTerm>
+              <DescriptionDetails>
+                {auth.delegatedCallers === "refused"
+                  ? "Refused: only the user's own credential is accepted, never one an actor (such as an agent) holds on the user's behalf."
+                  : "Accepted: an actor (such as an agent) may call with a delegated credential it holds on the user's behalf."}
+              </DescriptionDetails>
+            </DescriptionItem>
+          ) : null}
           {auth.notes ? (
             <DescriptionItem>
               <DescriptionTerm>Notes</DescriptionTerm>

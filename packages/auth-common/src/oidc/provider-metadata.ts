@@ -17,6 +17,7 @@
 
 import { getOidcEndpointUrl } from "./endpoints";
 import { OIDC_SUPPORTED_SCOPES } from "./scope";
+import { OAUTH_TOKEN_EXCHANGE_GRANT_TYPE } from "./token-exchange";
 
 /**
  * The advertised metadata. List fields are plain mutable arrays because
@@ -106,10 +107,14 @@ export function buildOidcProviderMetadata(
     // client_credentials (RFC 6749 §4.4) is restricted to confidential
     // clients (apps with a registered client secret) and mints
     // machine-to-machine access tokens for the app's service account.
+    // The RFC 8693 token exchange is restricted to them too: it swaps one
+    // of their users' access tokens for a delegated token on which the
+    // app's service account acts for the user (e.g. an agent).
     grant_types_supported: [
       "authorization_code",
       "refresh_token",
       "client_credentials",
+      OAUTH_TOKEN_EXCHANGE_GRANT_TYPE,
     ],
     subject_types_supported: ["public"],
     id_token_signing_alg_values_supported: ["RS256"],

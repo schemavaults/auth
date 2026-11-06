@@ -49,6 +49,7 @@ const document = {
           routeGuard: "admin",
           requiredScopes: ["email"],
           organization: { parameter: "organization_id", roles: ["owner", "admin"], adminBypass: true },
+          delegatedCallers: "refused",
           notes: "Owners only.",
         },
         parameters: [
@@ -104,6 +105,7 @@ describe("ApiDocsIndex", () => {
     expect(html).toContain("Admin");
     expect(html).toContain("scope:email");
     expect(html).toContain("org owner / admin");
+    expect(html).toContain("no delegated callers");
     expect(html).toContain("Public");
   });
 });
@@ -118,6 +120,8 @@ describe("ApiOperationPage", () => {
     expect(html).toContain("Get an app");
     expect(html).toContain("Platform administrators only");
     expect(html).toContain("Owners only.");
+    expect(html).toContain("Delegated callers");
+    expect(html).toContain("only the user&#x27;s own credential is accepted");
     expect(html).toContain("organization_id");
     expect(html).toContain("Path parameters");
     expect(html).toContain("Query parameters");

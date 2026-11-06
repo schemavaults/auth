@@ -14,7 +14,8 @@ export interface OperationAuthBadgesProps {
 
 /**
  * Compact summary of an operation's access requirements: Public /
- * Authenticated / Admin, plus scope and organization role chips.
+ * Authenticated / Admin, plus scope, organization role and "no delegated
+ * callers" chips.
  */
 export function OperationAuthBadges({
   auth,
@@ -43,6 +44,9 @@ export function OperationAuthBadges({
         <Badge variant="outline">
           org {auth.organization.roles.length > 0 ? auth.organization.roles.join(" / ") : "member"}
         </Badge>
+      ) : null}
+      {detailed && auth.delegatedCallers === "refused" ? (
+        <Badge variant="outline">no delegated callers</Badge>
       ) : null}
     </span>
   );

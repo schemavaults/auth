@@ -73,6 +73,8 @@ export interface ApiDocsOrganizationRequirement {
   readonly adminBypass: boolean;
 }
 
+export type ApiDocsDelegatedCallerPolicy = "allowed" | "refused";
+
 export interface ApiDocsAuth {
   readonly public: boolean;
   /**
@@ -85,6 +87,13 @@ export interface ApiDocsAuth {
   readonly routeGuard: ApiDocsRouteGuard | null;
   readonly requiredScopes: readonly string[];
   readonly organization: ApiDocsOrganizationRequirement | null;
+  /**
+   * Whether credentials naming an RFC 8693 actor (e.g. an agent acting for
+   * the user) are accepted, when the operation declares it; null when it
+   * does not (delegated callers are then accepted wherever the API server
+   * accepts delegated tokens).
+   */
+  readonly delegatedCallers: ApiDocsDelegatedCallerPolicy | null;
   readonly notes?: string;
   /** Whether the details came from the `x-schemavaults-auth` extension (vs. plain `security`). */
   readonly source: "x-schemavaults-auth" | "security" | "none";

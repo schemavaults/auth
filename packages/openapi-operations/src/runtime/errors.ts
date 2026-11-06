@@ -25,6 +25,7 @@ export const OPERATION_ERROR_CODES = {
   unauthorized: "unauthorized",
   forbidden: "forbidden",
   insufficientScope: "insufficient_scope",
+  delegatedCallerRefused: "delegated_caller_refused",
   organizationRequired: "organization_required",
   notMember: "not_an_organization_member",
   unsupportedMediaType: "unsupported_media_type",

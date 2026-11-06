@@ -15,7 +15,8 @@
 //     audience, with at most the subject token's scope;
 //   - name the client's service account as the actor, as seen by the API
 //     server's introspection and by a resource server's route guards (the
-//     example resource server's /api/whoami reports the actor);
+//     example resource server's /api/whoami reports the actor, and its
+//     POST /api/me/account-deletion refuses delegated callers);
 //   - only exchange a live access token for an API server, issued to the
 //     requesting client, for a person, not yet delegated, and only while
 //     the user's access behind it stands (their authorization of the app,
@@ -359,6 +360,18 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
     cy.reset_rate_limit();
   });
 
+  it("advertises the grant in the discovery document", () => {
+    cy.request<{ grant_types_supported?: string[] }>({
+      method: "GET",
+      url: "/.well-known/openid-configuration",
+    }).then((response) => {
+      expect(response.status, "status").to.equal(200);
+      expect(response.body.grant_types_supported, "grant_types_supported").to.include(
+        TOKEN_EXCHANGE,
+      );
+    });
+  });
+
   it("mints a delegated access token on which the app's service account acts for the user", () => {
     signIn(confidentialClientId, ownApiServerId).then((subject) => {
       exchange({ subject_token: subject.access_token as string, scope: "email" }).then((response) => {
@@ -407,6 +420,32 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
             expect(delegated.actor?.client_id, "actor's client").to.equal(confidentialClientId);
             expect(delegated.actor?.sub, "actor").to.be.a("string").and.not.be.empty;
           });
+        });
+      });
+    });
+  });
+
+  it("is refused by a resource server's operations that refuse delegated callers", () => {
+    // POST /api/me/account-deletion declares `delegatedCallers: "refused"`
+    // (@schemavaults/openapi-operations): only the user's own credential.
+    const requestAccountDeletion = (access_token: string) =>
+      cy.request<{ uid?: string; error?: string }>({
+        method: "POST",
+        url: `${exampleAppOrigin}/api/me/account-deletion`,
+        headers: { Authorization: `Bearer ${access_token}` },
+        failOnStatusCode: false,
+      });
+    signIn(confidentialClientId, EXAMPLE_API_SERVER_ID).then((subject) => {
+      requestAccountDeletion(subject.access_token as string)
+        .its("status")
+        .should("equal", 202);
+      exchange({ subject_token: subject.access_token as string }).then((response) => {
+        expect(response.status, `status (${JSON.stringify(response.body)})`).to.equal(200);
+        // Same user, same scope: refused for being an agent's token.
+        expect(response.body.scope, "scope").to.equal(subject.scope);
+        requestAccountDeletion(response.body.access_token as string).then((refused) => {
+          expect(refused.status, "status").to.equal(403);
+          expect(refused.body.error, "error").to.equal("delegated_caller_refused");
         });
       });
     });

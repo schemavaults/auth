@@ -32,6 +32,8 @@ describe("buildOidcProviderMetadata", () => {
       "authorization_code",
       "refresh_token",
       "client_credentials",
+      // RFC 8693 token exchange (delegated tokens for a client's agents)
+      "urn:ietf:params:oauth:grant-type:token-exchange",
     ]);
     expect(md.code_challenge_methods_supported).toEqual(["S256"]);
     expect(md.id_token_signing_alg_values_supported).toEqual(["RS256"]);

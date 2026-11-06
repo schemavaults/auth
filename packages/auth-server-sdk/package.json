@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server-sdk",
   "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
-  "version": "0.40.1",
+  "version": "0.41.1",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -172,6 +172,11 @@
       "types": "./dist/api-scopes/index.d.ts",
       "import": "./dist/api-scopes/index.js",
       "require": "./dist/api-scopes/index.js"
+    },
+    "./confidential-client": {
+      "types": "./dist/confidential-client/index.d.ts",
+      "import": "./dist/confidential-client/index.js",
+      "require": "./dist/confidential-client/index.js"
     }
   },
   "peerDependencies": {
