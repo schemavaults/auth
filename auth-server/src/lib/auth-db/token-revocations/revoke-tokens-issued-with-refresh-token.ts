@@ -7,10 +7,11 @@ import isValidUuid from "@/lib/is-valid-uuid";
 /**
  * Revokes every unexpired token that was ISSUED ALONGSIDE the given refresh
  * token (the access tokens minted in the same grant — `issued_tokens.
- * refresh_jti`, migration 00039). Used by logout so that ending a session
- * kills that session's access tokens too, while leaving the user's other
- * sessions (other apps, other devices) and any pending authorization code
- * untouched.
+ * refresh_jti`, migration 00039 — and the delegated tokens a client's agents
+ * were given in exchange for one of them, which the token exchange records
+ * in the same session). Used by logout so that ending a session kills that
+ * session's access tokens too, while leaving the user's other sessions
+ * (other apps, other devices) and any pending authorization code untouched.
  *
  * The refresh token itself is revoked separately by the caller. Returns the
  * number of sibling tokens revoked (0 when none are tracked, e.g. for

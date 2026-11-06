@@ -24,6 +24,7 @@ import {
   type JwtActorClaim,
   parseActorClaimForGeneratedToken,
 } from "./actor-claim";
+import { resolveGeneratedTokenExpiry } from "./token-lifetime";
 
 interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
   user: UserData;
@@ -50,6 +51,14 @@ interface BaseGenerateJWTOptions<T extends AuthTokenTypes> {
    * refresh tokens. Omitted: the token carries no `act`.
    */
   actor?: JwtActorClaim;
+  /**
+   * ACCESS tokens only: when the token must expire early (unix
+   * milliseconds), e.g. a delegated token, which never outlives the token
+   * it was exchanged for. Floored to whole seconds and capped at the type's
+   * default lifetime: it can only shorten a token's life. Refused on refresh
+   * tokens. Omitted: the type's default lifetime (see token-lifetime.ts).
+   */
+  expires_at?: number;
 }
 
 interface GenerateJWTWithAllKeysOptions<
@@ -229,6 +238,8 @@ export async function generateJWT<T extends AuthTokenTypes>(
     type,
     opts.actor,
   );
+  // An early expiry is an access-token option too, validated up front.
+  const early_expiry = resolveGeneratedTokenExpiry(type, iat, opts.expires_at);
 
   let sig: string;
   try {
@@ -312,11 +323,15 @@ export async function generateJWT<T extends AuthTokenTypes>(
       .setIssuedAt(new Date(iat))
       .setIssuer(auth_server_url)
       .setAudience(aud)
-      .setExpirationTime(getExpiryDurationString(type))
+      .setExpirationTime(
+        early_expiry ? early_expiry.exp_seconds : getExpiryDurationString(type),
+      )
       .setSubject(userData.uid)
       .encrypt(encryption_key);
 
-    const expiryTime: number = getExpiryTime(type, iat);
+    const expiryTime: number = early_expiry
+      ? early_expiry.expires_at
+      : getExpiryTime(type, iat);
 
     if (env === "development") {
       console.log(`[generateJWT] Generated ${type} JWT: `, jwt);

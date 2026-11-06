@@ -7,6 +7,7 @@ export { countTokensIssuedSinceGroupedByUid } from "./count-tokens-issued-since-
 export type { IssuedTokenCounts } from "./count-tokens-issued-since-grouped-by-uid";
 export { countTokensIssuedSinceGroupedByColumn } from "./count-tokens-issued-since-grouped-by-column";
 export type { GroupableTokenColumn } from "./count-tokens-issued-since-grouped-by-column";
+export { getAccessTokenSessionRefreshJti } from "./get-access-token-session-refresh-jti";
 export { listIssuedTokensForUser } from "./list-issued-tokens-for-user";
 export type { ListIssuedTokensForUserOptions } from "./list-issued-tokens-for-user";
 export { ISSUED_TOKEN_GRANT_TYPES } from "./issued-tokens-table";

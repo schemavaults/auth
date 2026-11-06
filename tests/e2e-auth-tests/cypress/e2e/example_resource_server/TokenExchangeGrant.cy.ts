@@ -12,7 +12,10 @@
 // What the grant must do:
 //   - mint an access token alone (no refresh token, no id_token) with
 //     `issued_token_type`, for the subject token's user, client and
-//     audience, with at most the subject token's scope;
+//     audience, with at most the subject token's scope, expiring when the
+//     subject token does;
+//   - end the delegated token with the user's session its subject token
+//     was issued in (revoking that session's refresh token, as logout does);
 //   - name the client's service account as the actor, as seen by the API
 //     server's introspection and by a resource server's route guards (the
 //     example resource server's /api/whoami reports the actor, and its
@@ -56,6 +59,7 @@ interface IntrospectionActor {
 
 interface IntrospectionResponseBody {
   active: boolean;
+  exp?: number;
   scope?: string;
   client_id?: string;
   uid?: string;
@@ -395,6 +399,11 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
             expect(delegated.scope, "scope").to.equal("email");
             expect(delegated.service_account, "the subject is a person").to.be.undefined;
             expect(delegated.act?.client_id, "actor's client").to.equal(confidentialClientId);
+            // No more time than the subject token: it expires with it.
+            expect(delegated.exp, "expires when the subject token does").to.equal(own.exp);
+            expect(response.body.expires_in, "expires_in").to.be.at.most(
+              subject.expires_in as number,
+            );
             loginAsSuperuser();
             serviceAccountUid().then((uid) => {
               expect(delegated.act?.uid, "the actor is the app's service account").to.equal(uid);
@@ -637,6 +646,29 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
         introspectAsOwnApiServer(delegated).should("deep.equal", { active: false });
         // The user's own token is untouched.
         introspectAsOwnApiServer(subject.access_token as string).its("active").should("equal", true);
+      });
+    });
+  });
+
+  it("ends with the user's session its subject token was issued in", () => {
+    signIn(confidentialClientId, ownApiServerId).then((subject) => {
+      exchange({ subject_token: subject.access_token as string }).then((response) => {
+        expect(response.status, `status (${JSON.stringify(response.body)})`).to.equal(200);
+        const delegated = response.body.access_token as string;
+        introspectAsOwnApiServer(delegated).its("active").should("equal", true);
+        // Ending the session (revoking its refresh token, as logout does)...
+        cy.request({
+          method: "POST",
+          url: REVOCATION_ENDPOINT,
+          form: true,
+          headers: { Authorization: CONFIDENTIAL_CLIENT_AUTH() },
+          body: { token: subject.refresh_token as string },
+        }).its("status").should("equal", 200);
+        // ...ends the user's own token and the agent's delegated one alike.
+        introspectAsOwnApiServer(subject.access_token as string).should("deep.equal", {
+          active: false,
+        });
+        introspectAsOwnApiServer(delegated).should("deep.equal", { active: false });
       });
     });
   });

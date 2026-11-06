@@ -58,7 +58,17 @@ describe("buildActiveIntrospectionResponse", () => {
     });
   });
 
-  test("reconstructs `exp` from the token kind's validity", () => {
+  test("reports the token's own `exp`", () => {
+    expect(build("access", { exp: IAT + accessTokenExpiry }).exp).toBe(IAT + accessTokenExpiry);
+    expect(build("refresh", { exp: IAT + refreshTokenExpiry }).exp).toBe(IAT + refreshTokenExpiry);
+  });
+
+  test("reports the earlier `exp` of a token that expires before its kind's validity (a delegated token)", () => {
+    const exp: number = IAT + 600;
+    expect(build("access", { exp, act: { sub: ACTOR_UID, client_id: CLIENT_APP_ID } }).exp).toBe(exp);
+  });
+
+  test("reconstructs `exp` from the token kind's validity when the payload has none", () => {
     expect(build("access").exp).toBe(IAT + accessTokenExpiry);
     expect(build("refresh").exp).toBe(IAT + refreshTokenExpiry);
   });

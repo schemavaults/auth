@@ -5,7 +5,7 @@ import type {
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { getAudienceFromToken, type CustomJWTPayload } from "@schemavaults/jwt";
-import type { ServerlessDatabase } from "@/lib/auth-db";
+import { getAccessTokenSessionRefreshJti, type ServerlessDatabase } from "@/lib/auth-db";
 import UnresolvableTokenResourceError from "@/lib/error/UnresolvableTokenResourceError";
 import {
   decodeIntrospectableToken,
@@ -35,6 +35,13 @@ export type VerifiedTokenExchangeSubjectToken =
       token_audience: string;
       /** The API server that audience belongs to (its keyset owner). */
       api_server_id: ApiServerId;
+      /**
+       * The user's session the subject token was issued in (the `jti` of
+       * the refresh token minted alongside it), or null when it has none on
+       * record. The delegated token joins it: ending the session (logout,
+       * revoking that refresh token) revokes the agent's token too.
+       */
+      session_refresh_jti: string | null;
     }
   | { ok: false; error: OidcTokenRequestError };
 
@@ -57,6 +64,9 @@ export type VerifiedTokenExchangeSubjectToken =
  *    to outlive its expiry;
  *  - its subject must be a person, not a service account: a service
  *    account has no user to act for.
+ *
+ * It also reports the session the subject token belongs to, so the
+ * delegated token can be revoked with it.
  *
  * Tokens for the auth server itself and for the reserved `oidc-userinfo`
  * audience are never exchangeable (no API server accepts delegated tokens
@@ -126,11 +136,16 @@ export async function verifyTokenExchangeSubjectToken({
     return invalid(INVALID_SUBJECT_TOKEN);
   }
 
+  const session_refresh_jti: string | null = payload.jti
+    ? await getAccessTokenSessionRefreshJti(dbh.db, payload.jti, payload.uid)
+    : null;
+
   return {
     ok: true,
     payload,
     token_audience: payload.aud,
     api_server_id: resolved.api_server_id,
+    session_refresh_jti,
   };
 }
 

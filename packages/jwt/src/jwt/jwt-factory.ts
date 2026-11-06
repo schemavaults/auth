@@ -111,6 +111,7 @@ export class JWT_Factory {
       scope?: string;
       scope_api_server_id?: string;
       actor?: JwtActorClaim;
+      expires_at?: number;
     },
   ): Promise<T extends "access" ? AccessToken : RefreshToken> {
     // Make sure the token type is valid
@@ -164,6 +165,7 @@ export class JWT_Factory {
         ? { scope_api_server_id: opts.scope_api_server_id }
         : {}),
       ...(opts?.actor !== undefined ? { actor: opts.actor } : {}),
+      ...(opts?.expires_at !== undefined ? { expires_at: opts.expires_at } : {}),
     };
 
     const jwt: AuthToken = await generateJWT(generateTokenOptions);
@@ -189,6 +191,12 @@ export class JWT_Factory {
        * servers whose decoders accept `act`.
        */
       actor?: JwtActorClaim;
+      /**
+       * Expire the token early (unix milliseconds), e.g. a delegated token
+       * capped at the expiry of the token it was exchanged for. Capped at
+       * the default access-token lifetime; see generateJWT's `expires_at`.
+       */
+      expires_at?: number;
     },
   ): Promise<AccessToken> {
     return await this.generate("access", audience, opts);

@@ -13,6 +13,8 @@ import "server-only";
  *     access token for an API server, issued to the client, for a person
  *   - resolve-token-exchange-scope.ts: the delegated token's scope, a subset
  *     of the subject token's — pure
+ *   - resolve-delegated-token-expiry.ts: the delegated token's expiry, its
+ *     subject token's — pure
  *
  * And for the token endpoint itself, find-misplaced-token-exchange-param.ts:
  * the RFC 8693 parameters any other grant refuses, and the other grants'
@@ -40,6 +42,15 @@ export type {
 
 export { resolveTokenExchangeScope } from "./resolve-token-exchange-scope";
 export type { ResolveTokenExchangeScopeOptions } from "./resolve-token-exchange-scope";
+
+export {
+  MIN_DELEGATED_TOKEN_LIFETIME_SECONDS,
+  resolveDelegatedTokenExpiry,
+} from "./resolve-delegated-token-expiry";
+export type {
+  ResolveDelegatedTokenExpiryOptions,
+  ResolvedDelegatedTokenExpiry,
+} from "./resolve-delegated-token-expiry";
 
 export {
   PARAMS_NOT_ALLOWED_WITH_TOKEN_EXCHANGE,

@@ -332,7 +332,7 @@ const delegated = await exchangeTokenForDelegatedToken({
   scope: ["notes:read"],           // optional: a subset of its scope (default: all of it)
 });
 delegated.access_token; // give this to the agent
-delegated.expires_in;   // seconds; there is no refresh token: exchange again for a fresh one
+delegated.expires_in;   // seconds: what the subject token had left. No refresh token: renew the user's token and exchange again
 delegated.scope;        // the granted scope
 
 // When the agent's session ends:
@@ -347,6 +347,10 @@ await revokeToken({ ...client, token: delegated.access_token });
   Other refusals: `invalid_request` (the subject token is expired, revoked, already
   delegated, issued to another client, or the user withdrew the app's access) and
   `invalid_scope` (more scope than the subject token holds).
+- A delegated token expires when its subject token does, so exchange a freshly
+  renewed access token of the user's (a subject token with under 30 seconds left is
+  refused with `invalid_request`). It also ends with the user's session it came from:
+  revoking that session's refresh token (or the user logging out) revokes it.
 - Revoking makes introspection and resource servers with an `isTokenRevoked` hook
   refuse the token at once; resource servers that only verify tokens locally stop
   accepting it when it expires.
