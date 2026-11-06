@@ -345,7 +345,7 @@
     },
     "tests/e2e-auth-tests": {
       "name": "@schemavaults/e2e-auth-tests",
-      "version": "0.12.54",
+      "version": "0.12.55",
       "dependencies": {
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-client-sdk": "workspace:*",
@@ -363,7 +363,7 @@
     },
     "tests/example-nextjs-resource-server": {
       "name": "@schemavaults/example-nextjs-resource-server",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "dependencies": {
         "@schemavaults/auth-client-sdk": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
@@ -371,7 +371,7 @@
         "@schemavaults/auth-server-sdk": "workspace:*",
         "@schemavaults/openapi-docs-ui": "workspace:*",
         "@schemavaults/openapi-operations": "workspace:*",
-        "@schemavaults/sandbox-management-sdk": "file:../../vendor/schemavaults-sandbox-management-sdk-0.1.0.tgz",
+        "@schemavaults/sandbox-management-sdk": "0.1.1",
         "@schemavaults/theme": "0.30.0",
         "@schemavaults/ui": "0.119.0",
         "next": "16.4.3",
@@ -813,7 +813,7 @@
 
     "@schemavaults/openapi-operations": ["@schemavaults/openapi-operations@workspace:packages/openapi-operations"],
 
-    "@schemavaults/sandbox-management-sdk": ["@schemavaults/sandbox-management-sdk@../../vendor/schemavaults-sandbox-management-sdk-0.1.0.tgz", { "peerDependencies": { "@schemavaults/dbh": ">=0.14.0", "@vercel/sandbox": "^3.9.0", "dockerode": "^4.0.0 || ^5.0.0", "kysely": ">=0.28.0" }, "optionalPeers": ["@schemavaults/dbh", "@vercel/sandbox", "dockerode", "kysely"] }, "sha512-oRlz4oqXmvdrABqeiyMxlmNxVXSDhT0RDCMw82u/NZRbN8iMUr/mnBL3/lrITU/DipL0Omu/AnXvjSGYFDU06A=="],
+    "@schemavaults/sandbox-management-sdk": ["@schemavaults/sandbox-management-sdk@0.1.1", "", { "peerDependencies": { "@schemavaults/dbh": ">=0.14.0", "@vercel/sandbox": "^3.9.0", "dockerode": "^4.0.0 || ^5.0.0", "kysely": ">=0.28.0" }, "optionalPeers": ["@schemavaults/dbh", "@vercel/sandbox", "dockerode", "kysely"] }, "sha512-0LdWbkVfmlo9caW9PofqrxptTP+mBGy4FrQvku0gyZ+9BKzAxK5YWPbtUye5iyjQFWrNZaLGU56+3VwIg3v/0g=="],
 
     "@schemavaults/send-email": ["@schemavaults/send-email@0.6.1", "", { "dependencies": { "commander": "14.0.1", "zod": "^4.6.7" }, "bin": { "schemavaults-send-email": "dist/cli.js" } }, "sha512-MaYZK7IkcYVVUfrorZKzhdJdtvjYSalF0p5d89vW6Dyth3OYVTlfjK95PWCH9g75X3Jz/LF9bjeWC39DiJ598Q=="],
 

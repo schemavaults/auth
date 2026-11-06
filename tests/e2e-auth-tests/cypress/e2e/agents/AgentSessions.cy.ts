@@ -8,7 +8,7 @@
 //     (RFC 8707 `resource`) with the scopes an agent may get; the user
 //     consents to them on the auth server.
 //   - Each agent session gets a sandbox (@schemavaults/sandbox-management-sdk,
-//     vendored; local-process provider) and a DELEGATED token (RFC 8693 token
+//     local-process provider) and a DELEGATED token (RFC 8693 token
 //     exchange) narrowed to the scopes the user picked for it. A fake model
 //     picks a tool; the tool calls the example API from the sandbox with the
 //     delegated token, never with the app's secrets.
