@@ -19,7 +19,8 @@ export interface RevokedTokens {
  * Revokes a verified token issued to the requesting client, by `jti`:
  *
  *  - a refresh token together with the access tokens minted alongside it
- *    (`issued_tokens.refresh_jti`, as logout does), in one transaction:
+ *    and the delegated tokens exchanged for them (`issued_tokens.
+ *    refresh_jti`, as logout does), in one transaction:
  *    RFC 7009 §2.1 says the server SHOULD also invalidate the access tokens
  *    of the same grant. Access tokens minted with an earlier refresh token
  *    of the rotation chain are not linked to this one and run until they

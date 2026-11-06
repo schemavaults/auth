@@ -137,6 +137,7 @@ describe("RFC 8693 actor (act) claim", () => {
         "env",
         "jti",
         "iat",
+        "exp",
       ].sort(),
     );
     expect(getActorFromCustomJwtPayload(decoded)).toBeNull();

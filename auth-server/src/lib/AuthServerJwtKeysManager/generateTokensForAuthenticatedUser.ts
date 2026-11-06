@@ -49,6 +49,14 @@ export interface ITokenIssuanceTracking {
     uid: string;
     expires_at: number;
   };
+  /**
+   * For a grant that mints no refresh token of its own: the session (the
+   * `jti` of a refresh token) its access tokens belong to, recorded as
+   * their `refresh_jti` so ending that session revokes them too. The token
+   * exchange passes its subject token's session. Refused alongside a
+   * freshly minted refresh token, which is the access tokens' session.
+   */
+  session_refresh_jti?: string | null;
 }
 
 export interface IGenerateTokensForAuthenticatedUserOpts {
@@ -92,6 +100,11 @@ export interface IGenerateTokensForAuthenticatedUserOpts {
    * issueOidcTokens(), which checks that.
    */
   actor?: JwtActorClaim;
+  /**
+   * Expire every ACCESS token minted here early (unix milliseconds); capped
+   * at the default access-token lifetime. Omitted: the default lifetime.
+   */
+  access_token_expires_at?: number;
 }
 
 function isValidUserOrganizations(user_organizations: readonly string[]): boolean {
@@ -115,6 +128,7 @@ export default async function generateTokensForAuthenticatedUser({
   refresh_scope_api_server_id,
   audience_api_server_ids,
   actor,
+  access_token_expires_at,
 }: IGenerateTokensForAuthenticatedUserOpts): Promise<RequestTokensResult> {
   if (!isValidUserOrganizations(user_organizations)) {
     throw new Error("'user_organizations' must be an array of valid organization IDs");
@@ -168,6 +182,9 @@ export default async function generateTokensForAuthenticatedUser({
       user_organizations,
       scope,
       ...(actor ? { actor } : {}),
+      ...(access_token_expires_at !== undefined
+        ? { expires_at: access_token_expires_at }
+        : {}),
     });
   }
 
@@ -195,6 +212,11 @@ export default async function generateTokensForAuthenticatedUser({
   }
 
   if (tracking) {
+    if (refresh_token && tracking.session_refresh_jti) {
+      throw new TypeError(
+        "'session_refresh_jti' links tokens minted without a refresh token; this grant minted one",
+      );
+    }
     const rows: NewIssuedTokenRow[] = [];
     if (refresh_token && refresh_token.jti) {
       rows.push({
@@ -224,9 +246,10 @@ export default async function generateTokensForAuthenticatedUser({
         grant_type: tracking.grant_type,
         issued_at: access.iat,
         expires_at: access.exp,
-        // Link to the refresh token minted in this same grant so logging
+        // Link to the refresh token minted in this same grant (or, for a
+        // grant minting none, the session the caller names) so logging
         // that session out revokes its access tokens too.
-        refresh_jti: refresh_token?.jti ?? null,
+        refresh_jti: refresh_token?.jti ?? tracking.session_refresh_jti ?? null,
       });
     }
 

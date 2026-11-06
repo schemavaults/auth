@@ -222,7 +222,7 @@ export async function decodeJWT<T extends AuthTokenTypes>({
     throw new Error("Decoded JWT is missing iat property!");
   }
 
-  const withoutJWTspecific: Partial<
+  const payload_claims: Partial<
     UserData & {
       iat: number;
       exp: number;
@@ -230,12 +230,11 @@ export async function decodeJWT<T extends AuthTokenTypes>({
       iss: string;
     }
   > = { ...decoded.payload };
-  delete withoutJWTspecific.exp;
 
   const jwtPayloadSchema = createJwtPayloadSchema(z, environment);
 
   const parsedPayload =
-    await jwtPayloadSchema.safeParseAsync(withoutJWTspecific);
+    await jwtPayloadSchema.safeParseAsync(payload_claims);
   if (!parsedPayload.success) {
     if (environment === "development") {
       console.error("[decodeJWT] Error validating JWT payload with schema");

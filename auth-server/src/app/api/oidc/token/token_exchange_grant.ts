@@ -4,7 +4,7 @@ import {
   isDynamicallyRegisteredClient,
   type ApiServerId,
 } from "@schemavaults/app-definitions";
-import type { UserData } from "@schemavaults/auth-common";
+import { accessTokenExpiry, type UserData } from "@schemavaults/auth-common";
 import type { JwtActorClaim } from "@schemavaults/jwt";
 import { loadUserData, UserRegistry } from "@/lib/auth-db";
 import { listApiServerScopeValues } from "@/lib/auth-db/apis";
@@ -17,6 +17,7 @@ import {
   ACCESS_TOKEN_TYPE,
   TOKEN_EXCHANGE_ISSUED_TOKEN_GRANT_TYPE,
   parseTokenExchangeRequest,
+  resolveDelegatedTokenExpiry,
   resolveTokenExchangeScope,
   verifyTokenExchangeSubjectToken,
 } from "@/lib/oidc/token-exchange";
@@ -47,8 +48,14 @@ import type { OidcGrantContext, OidcGrantOutcome } from "./token-response";
  *  - a subset of its scope (`scope` narrows it, as on the refresh grant;
  *    `invalid_scope` when it asks for more), minus the API scopes the user
  *    withdrew or the app lost meanwhile;
+ *  - no more time: it expires when the subject token does, so the agent
+ *    keeps going only while the client keeps renewing the user's token
+ *    (`invalid_request` when the subject has under 30 seconds left);
  *  - no refresh token and no id_token: the client exchanges again for a
- *    fresh token, which only works while the user's own grant is live.
+ *    fresh token, which only works while the user's own grant is live;
+ *  - no life beyond the user's session: it is recorded in the session its
+ *    subject token was issued in, so logout (or revoking that session's
+ *    refresh token at /api/oidc/revoke) revokes it with the user's tokens.
  *
  * Who may exchange: confidential clients (they authenticated with their
  * client secret; the actor is their own machine identity), never
@@ -116,6 +123,14 @@ export async function handleOidcTokenExchangeGrant({
   });
   if (!subject.ok) {
     return failWith(subject.error);
+  }
+  // Decoders report `exp` (jwt >= 0.17.0); without it, the latest the
+  // subject token could expire.
+  const expiry = resolveDelegatedTokenExpiry({
+    subject_token_exp: subject.payload.exp ?? subject.payload.iat + accessTokenExpiry,
+  });
+  if (!expiry.ok) {
+    return failWith(expiry.error);
   }
   if (
     parsed_resource.resource !== null &&
@@ -209,6 +224,8 @@ export async function handleOidcTokenExchangeGrant({
       access_token_audience: validated_resource.access_token_audience,
       access_token_audience_api_server_id: api_server_id,
       actor,
+      access_token_expires_at: expiry.expires_at,
+      session_refresh_jti: subject.session_refresh_jti,
       debug,
     });
   } catch (e: unknown) {

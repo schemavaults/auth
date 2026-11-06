@@ -39,8 +39,10 @@ export function buildActiveIntrospectionResponse({
         ((oidc as readonly string[]).includes(token) || api.includes(token)),
     );
 
-  // `exp` is reconstructed as iat + the per-type validity duration —
-  // exactly the window decodeJWT itself enforces via maxTokenAge.
+  // `exp` is the token's own (decodeJWT reports it since jwt 0.17.0): a
+  // delegated token can expire before iat + the per-type validity. The
+  // reconstruction is a fallback for a payload without it, the window
+  // decodeJWT enforces via maxTokenAge anyway.
   const validity_seconds: number =
     kind === "access" ? accessTokenExpiry : refreshTokenExpiry;
 
@@ -48,7 +50,7 @@ export function buildActiveIntrospectionResponse({
     active: true,
     ...(granted.length > 0 ? { scope: granted.join(" ") } : {}),
     client_id: payload.app,
-    exp: payload.iat + validity_seconds,
+    exp: payload.exp ?? payload.iat + validity_seconds,
     iat: payload.iat,
     // OIDC-facing `<auth_server_app_id>|<uid>` form, matching the
     // id_token and userinfo `sub` for the same user.

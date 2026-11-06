@@ -36,6 +36,13 @@ export function createJwtPayloadSchema(
       env: schemaVaultsAppEnvironmentSchema,
       jti: z.guid().optional(),
       iat: z.number().nonnegative(), // unix seconds (jose's setIssuedAt output)
+      // Unix seconds. Every token carries it and decryption verifies it
+      // (jose), and decodeJWT() returns it since 0.17.0 because a token may
+      // expire before iat + its type's lifetime (a delegated token never
+      // outlives the token it was exchanged for). Optional here so payloads
+      // built by hand (tests, fixtures) need not carry it; decoders before
+      // 0.17.0 strip it before validating, so the strict schema is unaffected.
+      exp: z.number().nonnegative().optional(),
       // Space-delimited granted scopes (RFC 6749 §3.3). Set on every
       // access/refresh token issued since scopes became first-class;
       // kept optional so tokens issued before then remain decodable

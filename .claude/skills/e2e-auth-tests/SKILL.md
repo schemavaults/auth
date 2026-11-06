@@ -25,7 +25,7 @@ Called via `workflow_call` by the pull request workflow (`on-pull-request.yml`, 
 2. **Builds the e2e CLI** (`bun run build:cli --filter @schemavaults/e2e-auth-tests`)
 3. **Fans out to per-suite jobs** — each suite is a separate job that calls the reusable `run-e2e-test-suite.yml` workflow with `test-suite-name: <folder_name>` and `skip-docker-build: true` (uses the pre-built image artifacts)
 
-Each suite job runs on its own CI runner in parallel. The `example_resource_server` suite additionally depends on `Build-Resource-Server-Docker-Image` and passes `load-resource-server-image: true`.
+Each suite job runs on its own CI runner in parallel. The suites that need the example resource server (`suiteNeedsExampleResourceServer()` in `e2e-auth-tests-cli.ts`: `example_resource_server`, `dynamic_client_registration` and `agents`) additionally depend on `Build-Resource-Server-Docker-Image` and pass `load-resource-server-image: true`. The `agents` suite drives the resource server's `/agents` app (the worked example of auth for agents; see the `delegated-tokens` skill) and shares the `example_resource_server` seeding in `cypress.config.ts` (the public example app/API and the confidential client).
 
 ### Sharded suites
 

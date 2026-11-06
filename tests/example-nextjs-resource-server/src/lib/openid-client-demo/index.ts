@@ -7,6 +7,7 @@
 
 export {
   discoverAuthServer,
+  getIssuerUrl,
   getOpenidClientDemoConfig,
   getPublicOrigin,
   type OpenidClientDemoConfig,

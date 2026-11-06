@@ -72,16 +72,19 @@ function planSuiteShards(test_suite_name: string, total: number): Shard[] {
 
 /**
  * Suites that run against the example Next.js resource server as well as
- * the auth server: any suite named after it, plus the dynamic client
+ * the auth server: any suite named after it, the dynamic client
  * registration suite (which completes a plain OAuth flow with a
  * dynamically registered client and calls the resource server's API with
- * the resulting `resource`-audience token). These use the
- * `e2e_with_resource_server` compose profile and get JWKS access keys.
+ * the resulting `resource`-audience token), and the agents suite (the
+ * resource server's /agents app: sandboxed agents acting for users with
+ * delegated tokens). These use the `e2e_with_resource_server` compose
+ * profile and get JWKS access keys.
  */
 export function suiteNeedsExampleResourceServer(test_suite_name: string): boolean {
   return (
     test_suite_name.includes("resource_server") ||
-    test_suite_name === "dynamic_client_registration"
+    test_suite_name === "dynamic_client_registration" ||
+    test_suite_name === "agents"
   );
 }
 

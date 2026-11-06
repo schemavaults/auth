@@ -107,6 +107,20 @@ export interface IssueOidcTokensOptions {
    * DelegatedTokensNotAcceptedError maps to `invalid_target`).
    */
   actor?: JwtActorClaim;
+  /**
+   * Expire the access token early (unix milliseconds): the token exchange
+   * caps a delegated token at its subject token's expiry. Never extends the
+   * default access-token lifetime; `expires_in` reports the shortened one.
+   * Omitted: the default lifetime.
+   */
+  access_token_expires_at?: number;
+  /**
+   * With `issue_refresh_token: false`: the session (refresh token `jti`)
+   * the access token belongs to, so logout / RFC 7009 revocation of that
+   * refresh token revokes it too. The token exchange passes its subject
+   * token's session. Null / omitted: the access token stands alone.
+   */
+  session_refresh_jti?: string | null;
   debug?: boolean;
 }
 
@@ -173,6 +187,8 @@ export async function issueOidcTokens({
   access_token_audience_api_server_id,
   revoke_rotated_refresh_token,
   actor,
+  access_token_expires_at,
+  session_refresh_jti = null,
   debug = false,
 }: IssueOidcTokensOptions): Promise<IssuedOidcTokens> {
   // A delegated token only ever reaches an API server that accepts it:
@@ -220,10 +236,12 @@ export async function issueOidcTokens({
         ? { refresh_scope_api_server_id: refresh_token_scope_api_server_id }
         : {}),
       ...(actor ? { actor } : {}),
+      ...(access_token_expires_at !== undefined ? { access_token_expires_at } : {}),
       tracking: {
         db: dbh.db,
         grant_type,
         revoke_rotated_refresh_token,
+        session_refresh_jti,
       },
     });
   if (!tokenGenerationResult.success || tokenGenerationResult.error) {
@@ -252,7 +270,12 @@ export async function issueOidcTokens({
   const body: OidcTokenResponseBody = {
     access_token: access_token.token,
     token_type: "Bearer",
-    expires_in: accessTokenExpiry,
+    // A shortened token reports its own remaining lifetime; the others
+    // keep the fixed default.
+    expires_in:
+      access_token_expires_at === undefined
+        ? accessTokenExpiry
+        : Math.max(1, Math.floor((access_token.exp - Date.now()) / 1000)),
     ...(refresh_token
       ? {
           refresh_token: refresh_token.token,

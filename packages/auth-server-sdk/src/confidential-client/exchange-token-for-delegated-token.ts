@@ -39,7 +39,11 @@ export const delegatedTokenResponseSchema = z.looseObject({
   access_token: z.string().min(1),
   issued_token_type: z.literal(OAUTH_ACCESS_TOKEN_TYPE),
   token_type: z.literal("Bearer"),
-  /** Lifetime in seconds. Exchange again for a fresh token; there is no refresh token. */
+  /**
+   * Lifetime in seconds: what the subject token had left (a delegated token
+   * expires with it). To keep the agent going, renew the user's access token
+   * and exchange the new one; there is no refresh token.
+   */
   expires_in: z.number().int().positive(),
   /** Space-delimited granted scope; absent when the token carries none. */
   scope: z.string().optional(),
@@ -71,13 +75,14 @@ function serializeScope(scope: string | readonly string[]): string {
  * Only confidential clients can exchange (they authenticate with
  * `client_secret_basic` here), and only for API servers whose managers
  * accept delegated tokens (otherwise `invalid_target`). The response holds
- * an access token alone: when it expires, exchange a fresh access token of
- * the user's again. End the delegation early with `revokeToken()`.
+ * an access token alone, which expires when the subject token does (auth
+ * server >= 0.67.8): when it expires, exchange a fresh access token of the
+ * user's again. End the delegation early with `revokeToken()`.
  *
  * @throws {OAuthEndpointError} when the auth server refuses the exchange.
- * Notable codes: `invalid_request` (the subject token is invalid, expired,
- * revoked, already delegated, or the user's access behind it was
- * withdrawn), `invalid_scope` (wider than the subject token's), and
+ * Notable codes: `invalid_request` (the subject token is invalid, expired
+ * or about to, revoked, already delegated, or the user's access behind it
+ * was withdrawn), `invalid_scope` (wider than the subject token's), and
  * `invalid_target` (another audience, or an API server that does not
  * accept delegated tokens).
  */

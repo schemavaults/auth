@@ -327,6 +327,23 @@ jobs:
       skip-docker-build: true
       load-resource-server-image: true
 
+  # The worked example of auth for agents: the example resource server's
+  # /agents app (agents in sandboxes, acting for users with delegated
+  # tokens) driven end to end.
+  Run-Agents-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+      - Build-Resource-Server-Docker-Image
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: agents
+      skip-docker-build: true
+      load-resource-server-image: true
+
   Run-Miscellaneous-E2E-Tests:
     needs:
       - Build-Auth-Server-Test-Docker-Image

@@ -1,17 +1,17 @@
-// GET /openid-client-confidential/callback
-//
-// OIDC redirect_uri for the CONFIDENTIAL-client openid-client demo
-// sign-in flow: openid-client redeems the authorization code with the
-// PKCE verifier *and* the registered client secret, sent as an HTTP
-// Basic Authorization header (client_secret_basic, RFC 6749 §2.3.1).
-// Shares its implementation with the public-client variant
-// (src/lib/openid-client-demo/callback-handler.ts).
-
 import "server-only";
 import type { NextRequest, NextResponse } from "next/server";
 import { handleOpenidClientDemoCallback } from "@/lib/openid-client-demo";
+import { handleAgentsCallback, isAgentsCallback } from "@/lib/agents/auth/agents-sign-in";
 
+/**
+ * GET /openid-client-confidential/callback: the confidential client's
+ * redirect_uri. Completes the agents app's sign-in when the `state` is the
+ * one its login flow stored, the openid-client demo's otherwise.
+ */
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  if (isAgentsCallback(request)) {
+    return await handleAgentsCallback(request);
+  }
   return await handleOpenidClientDemoCallback(request, "confidential");
 }
 

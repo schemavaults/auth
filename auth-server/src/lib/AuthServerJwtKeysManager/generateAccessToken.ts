@@ -36,6 +36,12 @@ export interface IGenerateAccessTokenOpts {
    * tokens: issueOidcTokens() checks that before minting.
    */
   actor?: JwtActorClaim;
+  /**
+   * Expire the token early (unix milliseconds), never later than the
+   * default access-token lifetime: a delegated token is capped at its
+   * subject token's expiry.
+   */
+  expires_at?: number;
 }
 
 export default async function generateAccessToken({
@@ -48,6 +54,7 @@ export default async function generateAccessToken({
   environment,
   scope,
   actor,
+  expires_at,
 }: IGenerateAccessTokenOpts): Promise<AccessToken> {
   if (!appIdSchema.safeParse(client_app_id).success) {
     throw new TypeError("Invalid client app ID");
@@ -71,8 +78,12 @@ export default async function generateAccessToken({
   });
   const token: AccessToken = await jwt_factory.access(
     token_audience ?? getTokenAudienceForApiServerId(audience_id, environment),
-    scope || actor
-      ? { ...(scope ? { scope } : {}), ...(actor ? { actor } : {}) }
+    scope || actor || expires_at !== undefined
+      ? {
+          ...(scope ? { scope } : {}),
+          ...(actor ? { actor } : {}),
+          ...(expires_at !== undefined ? { expires_at } : {}),
+        }
       : undefined,
   );
   return token;
