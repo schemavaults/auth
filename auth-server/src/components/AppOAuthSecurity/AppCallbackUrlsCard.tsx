@@ -199,9 +199,10 @@ export const AppCallbackUrlsCard: FC<AppCallbackUrlsCardProps> = ({
             {callback_urls.map((ref) => (
               <div
                 key={ref.app_callback_url_ref_id}
-                className="flex items-center justify-between gap-2 rounded-md border p-3"
+                // On a narrow screen the date and button wrap below the URL.
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-md border p-3"
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-auto">
                   <p className="text-sm font-medium">
                     <WrappableUrl url={ref.callback_url} />
                   </p>
@@ -209,11 +210,11 @@ export const AppCallbackUrlsCard: FC<AppCallbackUrlsCardProps> = ({
                     {ref.environment}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
                   <LocalDateTime
                     value={ref.created_at}
                     showSeconds={false}
-                    className="text-xs text-muted-foreground"
+                    className="whitespace-nowrap text-xs text-muted-foreground"
                   />
                   {canManage && (
                     <Button

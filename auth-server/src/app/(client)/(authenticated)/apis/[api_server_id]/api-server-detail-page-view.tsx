@@ -11,7 +11,7 @@ import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveApiServerDomainDialog } from "@schemavaults/auth-ui";
+import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveApiServerDomainDialog, WrappableUrl } from "@schemavaults/auth-ui";
 import { Trash2, KeyRound, ListChecks, Plus, Unplug } from "lucide-react";
 import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
 import { ApiServerScopesCard, AppScopeAllowancesDialog } from "@/components/ApiServerScopes";
@@ -48,17 +48,21 @@ function DomainRow({ domain, dateKey, onRemove }: { domain: SchemaVaultsApiServe
   return (
     <div
       key={dateKey}
-      className="flex items-center justify-between rounded-md border p-3"
+      // On a narrow screen the date and buttons wrap below the domain
+      // instead of overflowing the card.
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-md border p-3"
     >
-      <div>
-        <p className="text-sm font-medium">{domain.domain}</p>
+      <div className="min-w-0 flex-auto">
+        <p className="text-sm font-medium">
+          <WrappableUrl url={domain.domain} />
+        </p>
         <p className="text-xs text-muted-foreground">{domain.environment}</p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
         <LocalDateTime
           value={domain.created_at}
           showSeconds={false}
-          className="text-xs text-muted-foreground"
+          className="whitespace-nowrap text-xs text-muted-foreground"
         />
         {onRemove && (
           <Button
