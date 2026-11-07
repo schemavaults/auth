@@ -24,6 +24,14 @@ export interface IAppAuthProviderProps extends PropsWithChildren {
    */
   auth_server_url?: string;
   default_audiences: readonly string[];
+  /**
+   * The authorization request every sign-in makes, e.g. your API's scopes:
+   * `{ scope: "openid email profile notes:read", resource: "my-notes-api" }`
+   * (see `SchemaVaultsAuthProviderProps.authorization_params`). Sessions
+   * whose sign-in asked for less are sent through the flow again. Define it
+   * at module level so it stays stable.
+   */
+  authorization_params?: SchemaVaultsAuthProviderProps["authorization_params"];
   debug?: boolean;
   authed_on_unauthed_redirect_uri: string;
   unauthed_on_authed_redirect_uri: string;
@@ -76,6 +84,7 @@ export default function AppAuthProvider({
       router={router}
       path={path}
       default_audiences={props.default_audiences}
+      authorization_params={props.authorization_params}
       autoreacquire_access_tokens={
         typeof props.autoreacquire_access_tokens === "boolean"
           ? props.autoreacquire_access_tokens

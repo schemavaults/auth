@@ -297,6 +297,15 @@ export interface ISchemaVaultsAuthClient {
    */
   consumeNextHref: (challenge_time: number) => string | null;
 
+  /**
+   * @name needsReauthorization
+   * @description Whether the signed-in session's sign-in asked for less
+   * than the client's `authorization_params` name (e.g. it predates them),
+   * so the session needs a new authorization request (`login()`) to be
+   * granted them. False without `authorization_params` or a session.
+   */
+  needsReauthorization: () => boolean;
+
   getAccessTokenFromCache: (token_id: string) => AccessToken | null;
   getRefreshTokenFromCache: () => RefreshToken | null;
   hasHttpOnlyRefreshToken: () => boolean;

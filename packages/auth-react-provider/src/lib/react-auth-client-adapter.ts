@@ -23,6 +23,7 @@ import {
 import {
   type AuthSessionRoutes,
   type ISchemaVaultsAuthClientAdapter,
+  type SignInAuthorizationRequest,
 } from "@schemavaults/auth-client-sdk";
 import {
   deleteCookie,
@@ -32,6 +33,7 @@ import {
 } from "cookies-next/client";
 import type { IReactAuthClientSdkAdapterInitOptions } from "@/types/IReactAuthClientSdkAdapterInitOptions";
 import isClientRuntime from "@/lib/isClientRuntime";
+import * as signInAuthorizationRequests from "@/lib/sign-in-authorization-request-storage";
 
 const enum AuthClientSdkAdapterLocalStorageKeys {
   CODE_VERIFIERS = "code_verifiers",
@@ -659,6 +661,64 @@ export class ReactAuthClientSdkAdapter implements ISchemaVaultsAuthClientAdapter
     } catch (e: unknown) {
       console.error(e);
       throw new Error("Failed to clear next_href from local storage");
+    }
+  }
+
+  // What sign-ins asked for (the client's `needsReauthorization()`): each
+  // flow's authorization request, then the session's. Losing them only
+  // means a session may be asked to authorize again, so failures are logged.
+  public storeAuthorizationRequest(
+    request: SignInAuthorizationRequest,
+    challenge_time: number,
+  ): void {
+    signInAuthorizationRequests.storeFlowAuthorizationRequest(
+      window.localStorage,
+      request,
+      challenge_time,
+    );
+  }
+
+  public loadAuthorizationRequest(
+    challenge_time: number,
+  ): SignInAuthorizationRequest | null {
+    return signInAuthorizationRequests.loadFlowAuthorizationRequest(
+      window.localStorage,
+      challenge_time,
+    );
+  }
+
+  public clearAuthorizationRequest(challenge_time: number): void {
+    signInAuthorizationRequests.clearFlowAuthorizationRequest(
+      window.localStorage,
+      challenge_time,
+    );
+  }
+
+  public storeSessionAuthorizationRequest(
+    request: SignInAuthorizationRequest,
+  ): void {
+    signInAuthorizationRequests.storeSessionAuthorizationRequest(
+      window.localStorage,
+      request,
+    );
+  }
+
+  public loadSessionAuthorizationRequest(): SignInAuthorizationRequest | null {
+    return signInAuthorizationRequests.loadSessionAuthorizationRequest(
+      window.localStorage,
+    );
+  }
+
+  public clearSessionAuthorizationRequest(): void {
+    try {
+      signInAuthorizationRequests.clearSessionAuthorizationRequest(
+        window.localStorage,
+      );
+    } catch (e: unknown) {
+      console.error(
+        "Failed to clear the session's sign-in authorization request: ",
+        e,
+      );
     }
   }
 

@@ -107,6 +107,16 @@ import type { AuthenticationOutcomeType } from "@/lib/authentication-outcome-typ
 import type { IAcquireAccessTokenFnOptions } from "@/lib/acquire-access-token";
 import { AUTH_CLIENT_SDK_VERSION } from "@/generated/version";
 import authenticateWithRedirect from "@/lib/authenticate-with-redirect";
+import {
+  UNRECORDED_SIGN_IN_AUTHORIZATION_REQUEST,
+  isSignInAuthorizationRequestCovered,
+  parseAuthorizationParams,
+  resolveSignInAuthorizationRequest,
+} from "@/lib/authorization-params";
+import type {
+  AuthorizationParams,
+  SignInAuthorizationRequest,
+} from "@/types/authorization-params";
 import { resolveNextHref, withNextHref } from "@/lib/next-href";
 import checkIfAuthenticatedWithServer from "@/lib/check-if-authenticated-with-server";
 import exchangeAuthTokens from "@/lib/exchange-auth-tokens";
@@ -160,6 +170,10 @@ export class SchemaVaultsAuthClient
   }
 
   private readonly _default_audiences: readonly string[];
+
+  // The authorization request login() / register() make unless the call
+  // passes its own scope / resource (the 'authorization_params' option)
+  private readonly _authorization_params: AuthorizationParams | undefined;
 
   private readonly _invite_code_required: boolean;
 
@@ -320,6 +334,11 @@ export class SchemaVaultsAuthClient
     // Get default audiences
     // E.g. the web app has https://registry.schemavaults.com('s app ID) as an audience
     this._default_audiences = opts.default_audiences ?? [];
+
+    // The default authorization request of login() / register()
+    this._authorization_params = parseAuthorizationParams(
+      opts.authorization_params,
+    );
 
     // Should we require an invite code?
     this._invite_code_required =
@@ -559,6 +578,84 @@ export class SchemaVaultsAuthClient
     this.adapter.storeNextHref(next_href, challenge_time);
   }
 
+  // Sign-in authorization request storage (see `needsReauthorization()`).
+  // Adapters predating it lack the methods; sessions are then never reported
+  // as needing re-authorization.
+  private storeAuthorizationRequest(
+    request: SignInAuthorizationRequest,
+    challenge_time: number,
+  ): void {
+    this.adapter.storeAuthorizationRequest?.(request, challenge_time);
+  }
+
+  // Once a redirect flow's code is redeemed: its authorization request
+  // becomes the session's. A flow without one on record (started by an older
+  // SDK, or its storage failed) leaves the session unrecorded.
+  private recordSessionAuthorizationRequest(challenge_time: number): void {
+    const { adapter } = this;
+    if (
+      typeof adapter.loadAuthorizationRequest !== "function" ||
+      typeof adapter.storeSessionAuthorizationRequest !== "function"
+    ) {
+      return;
+    }
+    try {
+      const request: SignInAuthorizationRequest | null =
+        adapter.loadAuthorizationRequest(challenge_time);
+      adapter.clearAuthorizationRequest?.(challenge_time);
+      if (request) {
+        adapter.storeSessionAuthorizationRequest(request);
+      } else {
+        adapter.clearSessionAuthorizationRequest?.();
+      }
+    } catch (e: unknown) {
+      console.error(
+        "[SchemaVaultsAuthClient] Failed to record the session's sign-in authorization request: ",
+        e,
+      );
+    }
+  }
+
+  /**
+   * Whether the signed-in session's sign-in asked for less than the client's
+   * `authorization_params` name: a scope they list, or the API scopes of
+   * their `resource`. That is a session signed in before the app named them
+   * (or by an SDK that did not record sign-ins, taken to have asked for the
+   * default scope). Such a session needs a new authorization request:
+   * `login()`, which the auth server answers without asking for a password
+   * while its own session lasts, showing its consent screen for the scopes
+   * the user has not granted yet. A user who declined scopes on that screen
+   * is not asked again: sessions are judged by what their sign-in asked for.
+   * The React provider calls `login()` for such sessions by itself.
+   * @returns false without `authorization_params`, a session, or an adapter
+   * that records sign-ins, and on the auth server's own frontend.
+   */
+  public needsReauthorization(): boolean {
+    const { adapter } = this;
+    if (
+      this.isClientForAuthServer ||
+      !this._authorization_params ||
+      typeof adapter.loadSessionAuthorizationRequest !== "function" ||
+      !this.isAuthenticated
+    ) {
+      return false;
+    }
+    let session: SignInAuthorizationRequest | null;
+    try {
+      session = adapter.loadSessionAuthorizationRequest();
+    } catch (e: unknown) {
+      console.error(
+        "[SchemaVaultsAuthClient] Failed to load the session's sign-in authorization request: ",
+        e,
+      );
+      return false;
+    }
+    return !isSignInAuthorizationRequestCovered(
+      session ?? UNRECORDED_SIGN_IN_AUTHORIZATION_REQUEST,
+      resolveSignInAuthorizationRequest(undefined, this._authorization_params),
+    );
+  } // needsReauthorization()
+
   public consumeNextHref(challenge_time: number): string | null {
     if (
       typeof challenge_time !== "number" ||
@@ -662,6 +759,8 @@ export class SchemaVaultsAuthClient
     ) {
       throw new TypeError("Failed to resolve 'authorize_uri'!");
     }
+    const request: SignInAuthorizationRequest =
+      resolveSignInAuthorizationRequest(opts, this._authorization_params);
     return await authenticateWithRedirect({
       type,
       adapter: this.adapter,
@@ -671,10 +770,11 @@ export class SchemaVaultsAuthClient
       storeOAuth2State: this.storeOAuth2State.bind(this),
       storeOidcNonce: this.storeOidcNonce.bind(this),
       storeNextHref: this.storeNextHref.bind(this),
+      storeAuthorizationRequest: this.storeAuthorizationRequest.bind(this),
       environment: this.environment,
       authorize_uri: this.authorize_uri,
-      scope: opts?.scope,
-      ...(opts?.resource ? { resource: opts.resource } : {}),
+      scope: request.scope,
+      ...(request.resource ? { resource: request.resource } : {}),
       next_href: resolveNextHref(opts?.next_href),
       debug: this.debug,
     });
@@ -904,6 +1004,12 @@ export class SchemaVaultsAuthClient
         environment: this.environment,
         debug: this.DEBUG,
         triggerAuthStateChanged: this.triggerAuthStateChanged.bind(this),
+        ...(isRedirectFlow
+          ? {
+              onSessionEstablished: () =>
+                this.recordSessionAuthorizationRequest(challenge_time),
+            }
+          : {}),
         defaultTokenAudiences: this.defaultTokenAudiences,
       }),
     );
@@ -934,6 +1040,7 @@ export class SchemaVaultsAuthClient
       this.adapter.clearCodeVerifiers() satisfies void;
       (await this.adapter.clearAuthTokens()) satisfies void;
       this.adapter.clearUserData() satisfies void;
+      this.adapter.clearSessionAuthorizationRequest?.();
     } catch (e: unknown) {
       console.error(e);
       const error = new Error("Failed to clear local data for logout", {

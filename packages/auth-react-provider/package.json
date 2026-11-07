@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-react-provider",
   "description": "React hooks and components to make using the @schemavaults/auth-client-sdk a breeze",
-  "version": "0.19.7",
+  "version": "0.20.0",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -33,7 +33,8 @@
     "cleanup:compiled_tests_in_dist_directory": "find ./dist -type f \\( -name \"*.test.js\" -o -name \"*.test.js.map\" -o -name \"*.test.d.ts\" -o -name \"*.test.d.ts.map\" \\) -delete",
     "cleanup": "bun run cleanup:compiled_tests_in_dist_directory",
     "lint": "eslint src --ext .ts,.tsx",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "NODE_ENV=test bun test"
   },
   "devDependencies": {
     "typescript": "6.0.3",

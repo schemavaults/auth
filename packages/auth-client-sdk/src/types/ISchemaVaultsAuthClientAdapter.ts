@@ -1,4 +1,5 @@
 import type { AuthSessionRoutes } from "@/types/AuthSessionRoutes";
+import type { SignInAuthorizationRequest } from "@/types/authorization-params";
 import type {
   AccessToken,
   RefreshToken,
@@ -44,6 +45,28 @@ interface AuthClientNextHrefActions {
   storeNextHref?: (next_href: string, challenge_time: number) => void;
   loadNextHref?: (challenge_time: number) => string | null;
   clearNextHref?: (challenge_time: number) => void;
+}
+
+// The authorization request a sign-in made (its `scope` and `resource`):
+// kept across the authorize redirect under the flow's challenge_time like
+// `next_href`, then recorded as the session's once the flow's code is
+// redeemed, and cleared on logout. `needsReauthorization()` compares the
+// session's with the client's `authorization_params`. Optional: an adapter
+// without them never reports a session as needing re-authorization.
+interface AuthClientSignInAuthorizationRequestActions {
+  storeAuthorizationRequest?: (
+    request: SignInAuthorizationRequest,
+    challenge_time: number,
+  ) => void;
+  loadAuthorizationRequest?: (
+    challenge_time: number,
+  ) => SignInAuthorizationRequest | null;
+  clearAuthorizationRequest?: (challenge_time: number) => void;
+  storeSessionAuthorizationRequest?: (
+    request: SignInAuthorizationRequest,
+  ) => void;
+  loadSessionAuthorizationRequest?: () => SignInAuthorizationRequest | null;
+  clearSessionAuthorizationRequest?: () => void;
 }
 
 interface AuthClientUserDataActions {
@@ -134,6 +157,7 @@ export interface ISchemaVaultsAuthClientAdapter
     AuthClientOAuth2StateActions,
     AuthClientOidcNonceActions,
     AuthClientNextHrefActions,
+    AuthClientSignInAuthorizationRequestActions,
     AuthClientUserDataActions,
     AuthClientAuthTokensActions,
     AuthClientNetworkActions {

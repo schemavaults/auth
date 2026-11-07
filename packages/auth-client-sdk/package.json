@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-client-sdk",
   "description": "TypeScript SDK for interacting with SchemaVaults Auth server or protected resources",
-  "version": "0.30.1",
+  "version": "0.31.0",
   "license": "UNLICENSED",
   "private": false,
   "repository": {

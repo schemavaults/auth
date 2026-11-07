@@ -194,8 +194,15 @@ export function useTradeAuthorizationCodeForTokensEffect(
 
     // Signed in by something other than this page's own exchange (when this
     // page's exchange signed the user in, a re-run awaits it below, so the
-    // redirect still honours its `next_href`).
-    if (auth.isAuthenticated && !exchange) {
+    // redirect still honours its `next_href`). Except for a session whose
+    // sign-in asked for less than the app's `authorization_params`: this
+    // callback is its re-authorization (`useReauthorizeOutdatedSession()`),
+    // and redeeming its code is how the session gets what it lacks. The
+    // code still has to belong to a flow started in this browser (`state`,
+    // PKCE). A callback without a code (the user declined) keeps the session.
+    const reauthorizing: boolean =
+      authorization_code_param !== null && auth.needsReauthorization();
+    if (auth.isAuthenticated && !exchange && !reauthorizing) {
       if (typeof toast === "function") {
         toast({
           variant: "warning",

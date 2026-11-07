@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type AuthorizationParams,
   type AuthSessionRoutes,
   type ISchemaVaultsAuthClient,
   type InitializeAuthClientOptions,
@@ -31,6 +32,8 @@ export interface UseAuthClientInitializationOptions {
   disable_telemetry?: boolean;
   /** The app's same-origin auth session routes (each by its own path). */
   session_routes?: AuthSessionRoutes;
+  /** The authorization request every sign-in makes (scope, resource). */
+  authorization_params?: AuthorizationParams;
   fetch: (url: string, init: RequestInit | undefined) => Promise<Response>;
 }
 
@@ -67,6 +70,8 @@ export function useAuthClientInitialization(
 
   const disable_telemetry: boolean = opts.disable_telemetry === true;
   const session_routes: AuthSessionRoutes | undefined = opts.session_routes;
+  const authorization_params: AuthorizationParams | undefined =
+    opts.authorization_params;
 
   // Auth client initialization side-effect
   useEffect(
@@ -101,6 +106,7 @@ export function useAuthClientInitialization(
             invite_code_required,
             disable_telemetry,
             session_routes,
+            authorization_params,
             fetch: httpFetch,
           });
 
@@ -156,6 +162,7 @@ export function useAuthClientInitialization(
       invite_code_required,
       disable_telemetry,
       session_routes,
+      authorization_params,
       httpFetch,
     ],
   ); // end of auth client initialization side-effect
