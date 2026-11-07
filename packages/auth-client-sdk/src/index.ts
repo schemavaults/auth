@@ -25,6 +25,19 @@ export type {
 } from "@/lib/client-application-service-account";
 export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
 export type { AuthenticateWithRedirectOptions } from "@/types/authenticate-with-redirect-options";
+export type {
+  AuthorizationParams,
+  SignInAuthorizationRequest,
+} from "@/types/authorization-params";
+// The client's default authorization request (`authorization_params`):
+// validation, the per-sign-in merge, and the re-authorization rule (for
+// adapters that store sign-in requests).
+export {
+  isSignInAuthorizationRequestCovered,
+  parseAuthorizationParams,
+  parseSignInAuthorizationRequest,
+  resolveSignInAuthorizationRequest,
+} from "./lib/authorization-params";
 export type { AuthorizeClientApplicationConsent } from "@/lib/send-authorize-client-application-request";
 export type {
   RevokeClientApplicationAuthorizationResult,

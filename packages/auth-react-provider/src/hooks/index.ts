@@ -44,6 +44,8 @@ export { useDefaultAccessTokenAudiences } from "./use-default-access-token-audie
 
 export { useAutoReacquireDefaultAccessTokens } from "./use-auto-reacquire-default-access-tokens";
 
+export { useReauthorizeOutdatedSession } from "./use-reauthorize-outdated-session";
+
 export { useOnLogout } from "./use-on-logout";
 export type * from "./use-on-logout";
 

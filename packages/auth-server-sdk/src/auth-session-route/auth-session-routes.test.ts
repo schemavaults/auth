@@ -154,6 +154,51 @@ describe("auth session routes", () => {
     expect(response.headers.get("Set-Cookie")).toStartWith(`${COOKIE}=refresh-2;`);
   });
 
+  test("a confidential client's grants are authenticated with its secret (client_secret_basic)", async () => {
+    const { calls, fetch } = upstreamAnswering(jsonResponse(200, ISSUED), jsonResponse(200, ISSUED));
+    const POST = createAuthSessionTokenRoute({ ...options(fetch), client_secret: "s3cr:t/+" }).POST;
+    await POST(
+      pageRequest("token", {
+        // A secret the page sends is dropped: only the server's is ever used.
+        body: form({ grant_type: "authorization_code", client_id: APP, code: "c", client_secret: "page" }),
+      }),
+    );
+    await POST(
+      pageRequest("token", {
+        body: form({ grant_type: "refresh_token", client_id: APP }),
+        cookie: `${COOKIE}=refresh-1`,
+      }),
+    );
+    const expected = `Basic ${btoa(`${APP}:${encodeURIComponent("s3cr:t/+")}`)}`;
+    for (const call of calls) {
+      expect(call.headers.get("Authorization")).toBe(expected);
+      expect(new URLSearchParams(call.body ?? "").has("client_secret")).toBe(false);
+    }
+    expect(calls).toHaveLength(2);
+  });
+
+  test("the client secret defaults to SCHEMAVAULTS_CLIENT_SECRET; a public client sends none", async () => {
+    const previous: string | undefined = process.env.SCHEMAVAULTS_CLIENT_SECRET;
+    try {
+      delete process.env.SCHEMAVAULTS_CLIENT_SECRET;
+      const publicClient = upstreamAnswering(jsonResponse(200, ISSUED));
+      await route("token", publicClient.fetch)(
+        pageRequest("token", { body: form({ grant_type: "authorization_code", client_id: APP, code: "c" }) }),
+      );
+      expect(publicClient.calls[0]?.headers.has("Authorization")).toBe(false);
+
+      process.env.SCHEMAVAULTS_CLIENT_SECRET = "from-env";
+      const confidential = upstreamAnswering(jsonResponse(200, ISSUED));
+      await route("token", confidential.fetch)(
+        pageRequest("token", { body: form({ grant_type: "authorization_code", client_id: APP, code: "c" }) }),
+      );
+      expect(confidential.calls[0]?.headers.get("Authorization")).toBe(`Basic ${btoa(`${APP}:from-env`)}`);
+    } finally {
+      if (previous === undefined) delete process.env.SCHEMAVAULTS_CLIENT_SECRET;
+      else process.env.SCHEMAVAULTS_CLIENT_SECRET = previous;
+    }
+  });
+
   test("refresh grant without a session answers invalid_grant without calling the auth server", async () => {
     const { calls, fetch } = upstreamAnswering();
     const response = await route("token", fetch)(

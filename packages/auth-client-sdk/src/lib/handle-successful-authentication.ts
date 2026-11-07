@@ -95,6 +95,12 @@ export interface IHandleSuccessfulAuthenticationOpts {
    * claims only; the platform's full `UserData` comes from here.
    */
   fetchUserData: () => Promise<UserData | null>;
+  /**
+   * Called once the session is stored, before the auth state change is
+   * announced (the client records what the flow's sign-in asked for). An
+   * error it throws is logged and ignored: the sign-in has succeeded.
+   */
+  onSessionEstablished?: () => void;
   triggerAuthStateChanged: () => void;
 }
 
@@ -121,6 +127,7 @@ export async function handleSuccessfulAuthentication({
   storeMultipleAccessTokens,
   exchangeAuthTokens,
   fetchUserData,
+  onSessionEstablished,
   triggerAuthStateChanged,
 }: IHandleSuccessfulAuthenticationOpts) {
   if (debug) {
@@ -634,6 +641,17 @@ export async function handleSuccessfulAuthentication({
   } catch (e: unknown) {
     console.error("Failed to store user data: ", e);
     throw new Error("Failed to store user data");
+  }
+
+  // Best effort: the session is already stored, so a failing hook must not
+  // fail the sign-in (at worst the session is later asked to authorize again).
+  try {
+    onSessionEstablished?.();
+  } catch (e: unknown) {
+    console.error(
+      "[SchemaVaultsAuthClient] onSessionEstablished failed after the session was stored: ",
+      e,
+    );
   }
 
   if (debug) {

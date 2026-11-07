@@ -113,6 +113,48 @@ kept (`resolveNextHref()`), so the param cannot be used as an open redirect.
 The generated `/auth/login`, `/auth/register` and `/auth/authorize` pages
 do all of this for you.
 
+## Asking for API scopes at sign-in (`authorization_params`)
+
+`login({ scope, resource })` / `register(...)` ask the auth server for API
+scopes: `scope` names them (with the OpenID scopes) and `resource` (RFC 8707)
+the API server that defines them. To ask for them at every sign-in, wherever
+it starts (the generated `/auth/login` and `/auth/register` pages, route
+guards, your own `login()` calls), give the client its default authorization
+request instead, e.g. a first-party app whose tokens must carry its own
+API's scopes:
+
+```ts
+new SchemaVaultsAuthClient({
+  // ...
+  default_audiences: ["my-notes-api"],
+  authorization_params: {
+    scope: "openid email profile notes:read notes:write",
+    resource: "my-notes-api",
+  },
+});
+```
+
+A call's own `scope` / `resource` win, each on its own. Naming API scopes
+without a `resource` throws: the auth server would grant none of them. The
+user consents to each API scope (the consent screen lists them, ticked); the
+access tokens acquired for the resource carry those the user granted.
+
+The SDK records what each session's sign-in asked for (the adapter's optional
+`storeAuthorizationRequest` / `loadAuthorizationRequest` /
+`clearAuthorizationRequest` keep it across the redirect under the flow's
+`challenge_time`, like `next_href`; `storeSessionAuthorizationRequest` /
+`loadSessionAuthorizationRequest` / `clearSessionAuthorizationRequest` keep the
+session's, cleared on logout). `needsReauthorization()` is true while a
+session's sign-in asked for less than `authorization_params` name: a session
+from before the app asked for a scope (unrecorded sessions count as having
+asked for the default scope). Such a session cannot get the new scopes with
+a refresh (the refresh grant only narrows); call `login()` to authorize it
+again. While the user's auth server session lasts there is no password
+prompt, and the consent screen lists only the scopes not granted yet.
+Sessions are judged by what their sign-in asked for, not by what was
+granted, so a user who unticked a scope is not asked again. The React
+provider does this for you.
+
 ## Dynamic client registration (RFC 7591)
 
 Auth servers that enable the `allow_dynamic_client_registration` setting

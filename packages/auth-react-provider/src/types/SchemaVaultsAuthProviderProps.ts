@@ -4,6 +4,7 @@ import type {
 } from "@schemavaults/app-definitions";
 import type { AuthMiddlewareRules } from "@schemavaults/auth-common";
 import type {
+  AuthorizationParams,
   AuthSessionRoutes,
   InitializeAuthClientOptions,
 } from "@schemavaults/auth-client-sdk";
@@ -47,6 +48,34 @@ export interface SchemaVaultsAuthProviderProps
   debug?: boolean;
 
   default_audiences?: InitializeAuthClientOptions["default_audiences"];
+
+  /**
+   * The authorization request every sign-in makes (`scope`, RFC 8707
+   * `resource`), wherever it starts: the `/auth/login` and `/auth/register`
+   * pages, the auth middleware, the app's own `login()` / `register()` calls
+   * (whose own `scope` / `resource` win). Set it to ask for your API's scopes
+   * at sign-in, e.g. a first-party app whose tokens must carry the scopes of
+   * its own API:
+   *
+   * ```tsx
+   * <AuthProvider
+   *   default_audiences={["my-notes-api"]}
+   *   authorization_params={{
+   *     scope: "openid email profile notes:read notes:write",
+   *     resource: "my-notes-api",
+   *   }}
+   * />
+   * ```
+   *
+   * A signed-in session whose sign-in asked for less (one that predates the
+   * scopes you list, e.g. after you add one) is sent through the
+   * authorization flow again, once per tab, from the page it is on: the auth
+   * server asks for no password while its own session lasts, and its consent
+   * screen lists only the scopes the user has not granted yet. Keep the value
+   * stable (define it at module level).
+   * @default { scope: "openid email profile" } (no resource)
+   */
+  authorization_params?: AuthorizationParams;
 
   autoreacquire_access_tokens?: boolean;
 

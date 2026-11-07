@@ -1,5 +1,6 @@
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import type { ISchemaVaultsAuthClientAdapter } from "./ISchemaVaultsAuthClientAdapter";
+import type { AuthorizationParams } from "./authorization-params";
 
 export interface IAuthClientConstructorOptions {
   adapter: ISchemaVaultsAuthClientAdapter;
@@ -36,6 +37,17 @@ export interface IAuthClientConstructorOptions {
 
   // A list of API server IDs for which access tokens should be "preloaded" for
   default_audiences?: readonly string[];
+
+  // The authorization request every `login()` / `register()` makes unless the
+  // call passes its own `scope` / `resource` (per parameter): e.g. a
+  // first-party app asking for its own API's scopes at every sign-in,
+  // `{ scope: "openid email profile notes:read", resource: "my-notes-api" }`.
+  // Sign-ins started anywhere (the generated /auth/login and /auth/register
+  // pages, route guards, the app's own `login()` calls) ask for them, and
+  // `needsReauthorization()` tells a session whose sign-in asked for less
+  // (e.g. one signed in before the app named them) from one that did not.
+  // Defaults to DEFAULT_AUTH_SCOPE and no resource.
+  authorization_params?: AuthorizationParams;
 
   // Enable additional logging
   debug?: boolean;

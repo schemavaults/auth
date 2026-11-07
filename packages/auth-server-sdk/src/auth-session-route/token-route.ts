@@ -4,6 +4,7 @@ import {
   getOidcEndpointUrl,
 } from "@schemavaults/auth-common";
 import getStringByteSize from "@/getStringByteSize";
+import { clientSecretBasicAuthorization } from "@/confidential-client/shared";
 import { serializeClearedSessionCookie, serializeSessionCookie } from "./session-cookie";
 import {
   type AuthSessionRouteHandler,
@@ -13,17 +14,33 @@ import {
   json,
 } from "./session-route-context";
 
+export interface AuthSessionTokenRouteOptions extends AuthSessionRouteOptions {
+  /**
+   * The app's client secret, when it is a confidential client (e.g. its
+   * backend exchanges its users' tokens for its agents' delegated tokens):
+   * the route then authenticates the code and refresh grants it forwards
+   * with it (`client_secret_basic`), which the auth server requires of every
+   * token request of an app with a secret. It never reaches the browser.
+   * Default: `SCHEMAVAULTS_CLIENT_SECRET`; unset, the app is a public client.
+   */
+  client_secret?: string;
+}
+
 function oauthError(status: number, error: string, error_description: string): Response {
   return json(status, { error, error_description });
 }
 
-async function handleToken({
-  request,
-  config,
-  cookie,
-  refresh_token,
-  callAuthServer,
-}: SessionRouteRequest): Promise<Response> {
+/** The configured client secret (read per request: env vars may be unset at build time). */
+function resolveClientSecret(options: AuthSessionTokenRouteOptions): string | null {
+  const client_secret: string | undefined =
+    options.client_secret ?? process.env.SCHEMAVAULTS_CLIENT_SECRET;
+  return typeof client_secret === "string" && client_secret.length > 0 ? client_secret : null;
+}
+
+async function handleToken(
+  { request, config, cookie, refresh_token, callAuthServer }: SessionRouteRequest,
+  client_secret: string | null,
+): Promise<Response> {
   const form = new URLSearchParams(await request.text());
   if (form.get("client_id") !== config.client_app_id) {
     return oauthError(400, "invalid_client", "This session route serves another client.");
@@ -50,6 +67,12 @@ async function handleToken({
   });
   const origin: string | null = request.headers.get("origin");
   if (origin) headers.set("Origin", origin);
+  if (client_secret) {
+    headers.set(
+      "Authorization",
+      clientSecretBasicAuthorization({ client_id: config.client_app_id, client_secret }),
+    );
+  }
 
   let upstream: Response;
   let body: Record<string, unknown>;
@@ -98,16 +121,20 @@ async function handleToken({
  * The token session route (`POST`): the SDK's authorization code and refresh grants.
  * Forwarded to the auth server's token endpoint; the refresh token goes into
  * the session cookie (a refresh grant presents the cookie's), never into the
- * response body. In Next.js, `app/auth/session/token/route.ts`:
+ * response body. A confidential client's grants are authenticated with its
+ * client secret (`client_secret`, default `SCHEMAVAULTS_CLIENT_SECRET`). In
+ * Next.js, `app/auth/session/token/route.ts`:
  *
  * ```ts
  * export const { POST } = createAuthSessionTokenRoute();
  * ```
  */
 export function createAuthSessionTokenRoute(
-  options: AuthSessionRouteOptions = {},
+  options: AuthSessionTokenRouteOptions = {},
 ): { POST: AuthSessionRouteHandler } {
-  return { POST: createSessionRoute(options, handleToken) };
+  return {
+    POST: createSessionRoute(options, (route) => handleToken(route, resolveClientSecret(options))),
+  };
 }
 
 export default createAuthSessionTokenRoute;

@@ -3,6 +3,8 @@
 import { useContext, type ReactNode } from "react";
 import type { SchemaVaultsAuthProviderProps } from "@/types/SchemaVaultsAuthProviderProps";
 import useAutoReacquireDefaultAccessTokens from "@/hooks/use-auto-reacquire-default-access-tokens";
+import useReauthorizeOutdatedSession from "@/hooks/use-reauthorize-outdated-session";
+import type { AuthorizationParams } from "@schemavaults/auth-client-sdk";
 import AuthClientMiddlewareManager from "./auth-client-middleware-manager";
 import type { AuthMiddlewareRules } from "@schemavaults/auth-common";
 import SchemaVaultsAuthContext from "@/contexts/auth-client-context";
@@ -18,6 +20,15 @@ export interface AuthSideEffectsProps extends Omit<
 
 function AutoReacquireAccessTokens(): null {
   useAutoReacquireDefaultAccessTokens();
+  return null;
+}
+
+function ReauthorizeOutdatedSession(props: {
+  path: string;
+  authorization_params: AuthorizationParams;
+  debug: boolean;
+}): null {
+  useReauthorizeOutdatedSession(props);
   return null;
 }
 
@@ -49,6 +60,13 @@ export default function AuthProviderSideEffects(
         />
       )}
       {auto_reacquire && <AutoReacquireAccessTokens />}
+      {props.authorization_params && (
+        <ReauthorizeOutdatedSession
+          path={props.path}
+          authorization_params={props.authorization_params}
+          debug={props.debug}
+        />
+      )}
     </>
   );
 }
