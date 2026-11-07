@@ -1,4 +1,5 @@
 export { createAuthSessionTokenRoute } from "./token-route";
+export type { AuthSessionTokenRouteOptions } from "./token-route";
 export { createAuthSessionWhoamiRoute } from "./whoami-route";
 export { createAuthSessionLogoutRoute } from "./logout-route";
 export type {

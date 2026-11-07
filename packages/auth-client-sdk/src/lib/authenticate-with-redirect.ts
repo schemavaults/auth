@@ -9,6 +9,7 @@ import {
   DEFAULT_AUTH_SCOPE,
   PKCE_ProofKeyManager,
 } from "@schemavaults/auth-common";
+import type { SignInAuthorizationRequest } from "@/types/authorization-params";
 import AuthenticateURLEncoder from "./authenticate-url-encoder";
 import { generateOAuth2State } from "./generate-oauth2-state";
 import { generateOidcNonce } from "./generate-oidc-nonce";
@@ -43,6 +44,15 @@ export interface IAuthenticateWithRedirectOpts {
   storeOAuth2State: (state: string, challenge_time: number) => void;
   storeOidcNonce: (nonce: string, challenge_time: number) => void;
   storeNextHref: (next_href: string, challenge_time: number) => void;
+  /**
+   * Keeps the flow's authorization request (scope + resource) under its
+   * challenge_time, so the session can record what its sign-in asked for
+   * once the code is redeemed. Optional; a failure does not abort sign-in.
+   */
+  storeAuthorizationRequest?: (
+    request: SignInAuthorizationRequest,
+    challenge_time: number,
+  ) => void;
 }
 
 export default async function authenticateWithRedirect({
@@ -60,6 +70,7 @@ export default async function authenticateWithRedirect({
   storeOAuth2State,
   storeOidcNonce,
   storeNextHref,
+  storeAuthorizationRequest,
 }: IAuthenticateWithRedirectOpts): Promise<void> {
   if (debug) {
     console.log(
@@ -197,6 +208,20 @@ export default async function authenticateWithRedirect({
       storeNextHref(next_href, code_challenge.challenge_time) satisfies void;
     } catch (e: unknown) {
       console.error("Failed to store next_href: ", e);
+    }
+  }
+
+  // Remember what this sign-in asks for, to record it as the session's
+  // once the code is redeemed. Losing it only means the session may later be
+  // asked to authorize again, so a storage failure does not abort sign-in.
+  if (storeAuthorizationRequest) {
+    try {
+      storeAuthorizationRequest(
+        { scope: scope ?? DEFAULT_AUTH_SCOPE, resource: resource ?? null },
+        code_challenge.challenge_time,
+      ) satisfies void;
+    } catch (e: unknown) {
+      console.error("Failed to store the sign-in authorization request: ", e);
     }
   }
 

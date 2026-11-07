@@ -168,6 +168,15 @@ app's `authorization_code` and `refresh_token` grants.
 The auth server rate-limits refresh grants per IP; proxied through the token
 route, they count against the app server's IP.
 
+An app with a client secret is a confidential client: the auth server then
+refuses every token request of the app that does not authenticate with the
+secret, its users' sign-ins included. Set `SCHEMAVAULTS_CLIENT_SECRET` (or
+pass `client_secret` to `createAuthSessionTokenRoute()`) and the token route
+authenticates the code and refresh grants it forwards with it
+(`client_secret_basic`); the secret never reaches the browser. That is how an
+app whose backend mints delegated tokens for its agents (below) keeps signing
+its users in through these routes.
+
 ## Accepting resource-URL token audiences
 
 Access tokens are normally minted with your API server id as their `aud`.

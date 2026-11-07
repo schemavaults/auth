@@ -1,22 +1,11 @@
+import type { AuthorizationParams } from "@/types/authorization-params";
+
 /**
  * Options of `login()` / `register()`: the authorization request the SDK
- * redirects to the auth server with.
+ * redirects to the auth server with. `scope` and `resource` each fall back to
+ * the client's `authorization_params` when the call leaves them out.
  */
-export interface AuthenticateWithRedirectOptions {
-  /**
-   * Space-delimited scopes to request (RFC 6749 §3.3). Defaults to
-   * DEFAULT_AUTH_SCOPE ("openid email profile").
-   */
-  scope?: string;
-  /**
-   * RFC 8707 resource indicator: the API server id (or the URL of one of
-   * its registered domains) whose API scopes `scope` asks for, e.g.
-   * `{ scope: "openid email profile notes:read", resource: "my-notes-api" }`.
-   * The auth server grants the requested scopes that API server defines;
-   * the access tokens acquired for it carry them. Omit to request OIDC
-   * scopes only.
-   */
-  resource?: string;
+export interface AuthenticateWithRedirectOptions extends AuthorizationParams {
   /**
    * Same-origin path (e.g. `/admin/keys?tab=scopes`) to return the user to
    * once the flow completes, instead of the client's
