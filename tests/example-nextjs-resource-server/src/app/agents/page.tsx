@@ -1,5 +1,6 @@
 import "server-only";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import type { ReactElement } from "react";
 import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@schemavaults/ui";
@@ -14,6 +15,16 @@ export const metadata: Metadata = {
   description: "Agents that act for you, each in its own sandbox, with delegated tokens you control",
 };
 
+function BackToHome(): ReactElement {
+  return (
+    <Button asChild variant="ghost">
+      <Link href="/" data-testid="agents-home-link">
+        ← Back to home
+      </Link>
+    </Button>
+  );
+}
+
 function NotConfigured({ problem }: { problem: string }): ReactElement {
   return (
     <main className="flex grow items-center justify-center p-4">
@@ -25,6 +36,9 @@ function NotConfigured({ problem }: { problem: string }): ReactElement {
         <CardContent className="text-sm" data-testid="agents-configuration-problem">
           {problem}
         </CardContent>
+        <CardFooter>
+          <BackToHome />
+        </CardFooter>
       </Card>
     </main>
   );
@@ -46,7 +60,8 @@ function SignedOut(): ReactElement {
           Signing in asks you to let this app read your email address and your notes; each agent
           session then gets as much of that as you choose.
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-wrap items-center justify-between gap-2">
+          <BackToHome />
           {/* The confidential client's sign-in route (shared with the
               openid-client demo); a plain anchor makes a full document
               navigation to it. */}
@@ -73,7 +88,9 @@ export default async function AgentsPage(): Promise<ReactElement> {
   const signIn = await readAgentsSignIn(await cookies());
   if (!signIn) return <SignedOut />;
   return (
-    <main className="flex h-[100dvh] flex-col">
+    // The viewport below the site header (h-14: 3.5rem), so the workspace's
+    // panes scroll inside it while the page's footer sits below.
+    <main className="flex h-[calc(100dvh-3.5rem)] flex-col">
       <AgentWorkspace
         ownerSub={signIn.sub}
         email={signIn.email}

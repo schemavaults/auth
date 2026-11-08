@@ -12,8 +12,12 @@ each way a third-party app can integrate with the auth server.
 
 ## What's inside
 
+Every page shares a header (the SchemaVaults logo and navigation between the demos) and a footer, both in
+[`src/components/site/`](./src/components/site).
+
 | Path | What it shows |
 | --- | --- |
+| `/` | Every demo, grouped by the client app it signs in as, with the id of each app this deployment uses. It also explains why the public and confidential clients must be separate apps. |
 | `/auth/*`, `/account` | Sign-in with the SchemaVaults SDKs: `@schemavaults/auth-react-provider` in the browser, plus same-origin session routes (`/auth/session/{token,whoami,logout}`) that keep the refresh token in an HttpOnly cookie on this app's own domain. `src/app/auth/` is written at build time by `auth-server-sdk codegen` and is git-ignored. Signs in as the **public client** (`SCHEMAVAULTS_CLIENT_APP_ID`). |
 | `/api/*` | The example API, declared with `@schemavaults/openapi-operations` (an `operation.ts` beside each `route.ts`). Access tokens are verified against the auth server's JWKS. `/api/health` needs no token. |
 | `/api/openapi.json`, `/docs` | The OpenAPI 3.1 document and the API reference pages, generated from those declarations (`@schemavaults/openapi-docs-ui`). |

@@ -12,17 +12,27 @@
 // The signed-in state offers a sign-out button, which POSTs to the
 // variant's /logout route (see ./logout-handler.ts for why it is a form
 // submission rather than a link, and for what RP-local sign-out does
-// and does not clear).
+// and does not clear). Both states link back to the home page.
 
 import "server-only";
+import Link from "next/link";
 import { cookies } from "next/headers";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+} from "@schemavaults/ui";
 import {
   getOpenidClientDemoConfig,
   type OpenidClientDemoConfig,
   type OpenidClientDemoSession,
   type OpenidClientDemoVariant,
 } from "./config";
+import { ProfileClaims } from "./profile-claims";
 
 function parseSession(raw: string | undefined): OpenidClientDemoSession | null {
   if (!raw) {
@@ -43,6 +53,42 @@ function parseSession(raw: string | undefined): OpenidClientDemoSession | null {
   return null;
 }
 
+/** The page around either state: the card, and the way back home. */
+function ProfilePageShell({
+  demo,
+  heading,
+  description,
+  children,
+  actions,
+}: {
+  demo: OpenidClientDemoConfig;
+  heading: string;
+  description: string;
+  children: ReactNode;
+  actions: ReactNode;
+}): ReactElement {
+  return (
+    <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-10">
+      <Card>
+        <CardHeader>
+          {/* The page's heading: an h1, where CardTitle would be an h3. */}
+          <h1 className="text-xl font-semibold leading-tight tracking-tight">{heading}</h1>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">{children}</CardContent>
+        <CardFooter className="flex flex-wrap items-center justify-between gap-2">
+          <Button asChild variant="ghost">
+            <Link href="/" data-testid={`${demo.testIdPrefix}-home-link`}>
+              ← Back to home
+            </Link>
+          </Button>
+          <div className="flex flex-wrap gap-2">{actions}</div>
+        </CardFooter>
+      </Card>
+    </main>
+  );
+}
+
 export async function renderOpenidClientDemoProfilePage(
   variant: OpenidClientDemoVariant,
 ): Promise<ReactElement> {
@@ -51,6 +97,10 @@ export async function renderOpenidClientDemoProfilePage(
     variant === "confidential"
       ? "OpenID Client Profile (confidential client)"
       : "OpenID Client Profile";
+  const description: string =
+    variant === "confidential"
+      ? "Signed in with the openid-client package as the confidential client: the token request presented the app's client secret."
+      : "Signed in with the openid-client package as the public client: PKCE, no client secret.";
 
   const cookieStore = await cookies();
   const session: OpenidClientDemoSession | null = parseSession(
@@ -59,63 +109,43 @@ export async function renderOpenidClientDemoProfilePage(
 
   if (!session) {
     return (
-      <main className="flex flex-col items-center justify-start gap-4 p-4">
-        <h1 className="text-xl font-bold">{heading}</h1>
+      <ProfilePageShell
+        demo={demo}
+        heading={heading}
+        description={description}
+        actions={
+          // A route handler: a plain anchor makes a full document navigation.
+          <a href={demo.loginPath}>
+            <Button>Sign in with openid-client</Button>
+          </a>
+        }
+      >
         <p data-testid={`${demo.testIdPrefix}-signed-out`}>
           Not signed in via openid-client.
         </p>
-        <a className="underline" href={demo.loginPath}>
-          Sign in with openid-client
-        </a>
-      </main>
+      </ProfilePageShell>
     );
   }
 
   return (
-    <main className="flex flex-col items-center justify-start gap-4 p-4">
-      <h1 className="text-xl font-bold">{heading}</h1>
-      <p data-testid={`${demo.testIdPrefix}-signed-in`}>
+    <ProfilePageShell
+      demo={demo}
+      heading={heading}
+      description={description}
+      actions={
+        // A plain form post keeps this page a server component with no
+        // client-side JavaScript, and makes the sign-out a POST.
+        <form method="post" action={demo.logoutPath}>
+          <Button type="submit" variant="outline" data-testid={`${demo.testIdPrefix}-logout-button`}>
+            Log out
+          </Button>
+        </form>
+      }
+    >
+      <p className="font-medium" data-testid={`${demo.testIdPrefix}-signed-in`}>
         Signed in via openid-client!
       </p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-        <dt className="font-semibold">sub</dt>
-        <dd data-testid={`${demo.testIdPrefix}-sub`}>{session.sub}</dd>
-        <dt className="font-semibold">iss</dt>
-        <dd data-testid={`${demo.testIdPrefix}-iss`}>{session.iss}</dd>
-        <dt className="font-semibold">aud</dt>
-        <dd data-testid={`${demo.testIdPrefix}-aud`}>
-          {Array.isArray(session.aud) ? session.aud.join(" ") : session.aud}
-        </dd>
-        <dt className="font-semibold">email</dt>
-        <dd data-testid={`${demo.testIdPrefix}-email`}>
-          {session.userinfo.email ?? ""}
-        </dd>
-        <dt className="font-semibold">email_verified</dt>
-        <dd data-testid={`${demo.testIdPrefix}-email-verified`}>
-          {typeof session.userinfo.email_verified === "boolean"
-            ? String(session.userinfo.email_verified)
-            : ""}
-        </dd>
-        <dt className="font-semibold">name</dt>
-        <dd data-testid={`${demo.testIdPrefix}-name`}>
-          {session.userinfo.name ?? ""}
-        </dd>
-        <dt className="font-semibold">preferred_username</dt>
-        <dd data-testid={`${demo.testIdPrefix}-preferred-username`}>
-          {session.userinfo.preferred_username ?? ""}
-        </dd>
-      </dl>
-      {/* A plain form post keeps this page a server component with no
-          client-side JavaScript, and makes the sign-out a POST. */}
-      <form method="post" action={demo.logoutPath}>
-        <button
-          type="submit"
-          data-testid={`${demo.testIdPrefix}-logout-button`}
-          className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
-        >
-          Log out
-        </button>
-      </form>
-    </main>
+      <ProfileClaims session={session} testIdPrefix={demo.testIdPrefix} />
+    </ProfilePageShell>
   );
 }
