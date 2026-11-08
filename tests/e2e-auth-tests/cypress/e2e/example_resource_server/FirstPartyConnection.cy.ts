@@ -558,10 +558,63 @@ describe("First-party app-to-API connections (implicit consent)", () => {
   });
 
   describe("UI", () => {
-    it("skips the consent screen at the authorize endpoint", () => {
+    function authorizeQuery(challenge: CodeChallengeWithDetails, state: string): string {
+      return new URLSearchParams({
+        client_id: CLIENT_ID,
+        redirect_uri: REDIRECT_URI,
+        response_type: "code",
+        code_challenge: challenge.code_challenge,
+        code_challenge_method: "S256",
+        state,
+        scope: `openid ${BOTH}`,
+        resource: API_SERVER_ID,
+      }).toString();
+    }
+
+    it("sends a signed-in user straight back to the app from the authorize endpoint", () => {
+      // The whole hand-off is server-side redirects (authorize → /auth/login
+      // → the client's callback), which cy.visit() follows itself without
+      // cy.intercept() stubs, so follow them one at a time instead.
       createSignedInUser().then(() => {
+        createPkcePair().then(({ code_verifier, challenge }) => {
+          cy.request({
+            url: `${AUTHORIZE_ENDPOINT}?${authorizeQuery(challenge, "s-signed-in")}`,
+            followRedirect: false,
+            failOnStatusCode: false,
+          }).then((bridged) => {
+            expect(bridged.status, "authorize bridges to the login UI").to.equal(302);
+            const loginPage = new URL(bridged.headers["location"] as string, Cypress.config("baseUrl") ?? undefined);
+            expect(loginPage.pathname, "login UI").to.equal("/auth/login");
+            cy.request({
+              url: loginPage.toString(),
+              followRedirect: false,
+              failOnStatusCode: false,
+            }).then((page) => {
+              // A redirect rather than the consent screen.
+              expect(page.status, "login page redirects").to.be.within(300, 399);
+              const callback = new URL(page.headers["location"] as string);
+              expect(`${callback.origin}${callback.pathname}`, "client callback").to.equal(
+                REDIRECT_URI,
+              );
+              expect(callback.searchParams.get("state"), "state").to.equal("s-signed-in");
+              const code = callback.searchParams.get("code");
+              expect(code, "code").to.be.a("string");
+              redeemForApi({ code: code as string, code_verifier }).then((body) => {
+                expect(body.scope, "scope").to.equal(`openid ${BOTH}`);
+              });
+            });
+          });
+        });
+      });
+    });
+
+    it("skips the consent screen after signing in through the login form", () => {
+      createSignedInUser().then((credentials) => {
+        // Signed out of the auth server, so the login form is shown.
+        cy.logout();
         cy.intercept("POST", `/api/apps/${CLIENT_ID}/authorize`).as("authorizeApp");
-        // Stub the client's callback: the code is redeemed below.
+        // Stub the client's callback (the form navigates there in the
+        // browser): the code is redeemed below.
         cy.intercept(
           { method: "GET", url: `${REDIRECT_URI}*` },
           {
@@ -572,19 +625,16 @@ describe("First-party app-to-API connections (implicit consent)", () => {
         ).as("callback");
 
         createPkcePair().then(({ code_verifier, challenge }) => {
-          const params = new URLSearchParams({
-            client_id: CLIENT_ID,
-            redirect_uri: REDIRECT_URI,
-            response_type: "code",
-            code_challenge: challenge.code_challenge,
-            code_challenge_method: "S256",
-            state: `e2e-first-party-ui-${Date.now()}`,
-            scope: `openid ${BOTH}`,
-            resource: API_SERVER_ID,
-          });
-          cy.visit(`${AUTHORIZE_ENDPOINT}?${params.toString()}`);
+          cy.visit(`${AUTHORIZE_ENDPOINT}?${authorizeQuery(challenge, `e2e-first-party-ui-${Date.now()}`)}`);
+          cy.location("pathname", { timeout: 20000 }).should("equal", "/auth/login");
+          cy.wait_for_page_hydration();
+          cy.get("input[name='email']").should("be.visible").type(credentials.email, { force: true });
+          cy.get("input[name='password']")
+            .should("be.visible")
+            .type(credentials.password, { force: true });
+          cy.get("button[type='submit']").should("not.be.disabled").click();
 
-          cy.wait("@callback", { timeout: 20000 }).then((interception) => {
+          cy.wait("@callback", { timeout: 30000 }).then((interception) => {
             const code = new URL(interception.request.url).searchParams.get("code");
             expect(code, "code").to.be.a("string");
             redeemForApi({ code: code as string, code_verifier }).then((body) => {
