@@ -5,6 +5,7 @@ import { Badge } from "@schemavaults/ui";
 import { Loader2 } from "lucide-react";
 import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import type { SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
+import { WrappableUrl } from "@/lib/WrappableUrl";
 import { useAppCallbackUrls } from "./useAppCallbackUrls";
 
 export interface AppCallbackUrlsListProps {
@@ -78,17 +79,17 @@ function RegisteredCallbackUrls({ app_id }: { app_id: string }): ReactElement {
       Number(b.environment === environment) -
       Number(a.environment === environment),
   );
+  // The minimum width keeps the column from collapsing on narrow screens
+  // (an auto-sized table column shrinks to its content's narrowest width);
+  // each URL wraps at its slashes and dots with its badge flowing after it.
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex min-w-[14rem] flex-col gap-1.5">
       {sorted.map((ref) => (
-        <li
-          key={ref.app_callback_url_ref_id}
-          className="flex items-center gap-2"
-        >
-          <span className="text-foreground break-all">{ref.callback_url}</span>
+        <li key={ref.app_callback_url_ref_id}>
+          <WrappableUrl url={ref.callback_url} className="text-foreground" />{" "}
           <Badge
             variant={ref.environment === environment ? "secondary" : "outline"}
-            className="shrink-0 font-normal"
+            className="whitespace-nowrap align-middle font-normal"
           >
             {ref.environment}
           </Badge>

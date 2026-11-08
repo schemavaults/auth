@@ -9,7 +9,7 @@ import { DynamicClientRegistrationMetadataCard } from "@/components/DynamicClien
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, DynamicClientRegistrationIcon, LocalDateTime, RemoveAppDomainDialog, useAuthUiOwnerOrganizationId } from "@schemavaults/auth-ui";
+import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, DynamicClientRegistrationIcon, LocalDateTime, RemoveAppDomainDialog, useAuthUiOwnerOrganizationId, WrappableUrl } from "@schemavaults/auth-ui";
 import { ExternalLink, Plus, PlugZap, Trash2, Unplug } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -82,17 +82,21 @@ function DomainRow({ domain, dateKey, current_environment, onRemove }: { domain:
   return (
     <div
       key={dateKey}
-      className="flex items-center justify-between rounded-md border p-3"
+      // On a narrow screen the date and buttons wrap below the domain
+      // instead of overflowing the card.
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-md border p-3"
     >
-      <div>
-        <p className="text-sm font-medium">{domain.domain}</p>
+      <div className="min-w-0 flex-auto">
+        <p className="text-sm font-medium">
+          <WrappableUrl url={domain.domain} />
+        </p>
         <p className="text-xs text-muted-foreground">{domain.environment}</p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
         <LocalDateTime
           value={domain.created_at}
           showSeconds={false}
-          className="text-xs text-muted-foreground"
+          className="whitespace-nowrap text-xs text-muted-foreground"
         />
         <LaunchButton domain={domain} disabled={disabled} />
         {onRemove && (
