@@ -16,6 +16,7 @@ import {
   resolveAuthorizationCodeGrant,
   type ResolvedAuthorizationCodeGrant,
 } from "./resolve-authorization-code-grant";
+import { isConsentScreenRequired } from "./api-scope-consent";
 
 export interface DescribeAppConsentStatusOptions {
   dbh: ServerlessDatabase;
@@ -41,7 +42,9 @@ export interface DescribedAppConsentStatus extends AppConsentStatus {
  * granted) the user has not consented to. Requests without API scopes
  * behave exactly as before per-scope consent: consent is needed only for
  * an app the user never authorized. The auth server's own app never needs
- * consent.
+ * consent, and neither does a request for API scopes through a first-party
+ * connection (`resolved.implicit_consent`): minting its code records the
+ * app authorization and the scope consents.
  */
 export async function describeAppConsentStatus({
   dbh,
@@ -98,8 +101,12 @@ export async function describeAppConsentStatus({
   return {
     success: true,
     authorized,
-    consent_required:
-      !is_auth_server_app && (!authorized || pending_api_scopes.length > 0),
+    consent_required: isConsentScreenRequired({
+      is_auth_server_app,
+      implicit_consent: resolved.implicit_consent,
+      authorized,
+      pending_api_scope_count: pending_api_scopes.length,
+    }),
     requested_oidc_scopes: partitionGrantedScopes(resolved.requested_scope).oidc,
     api_server,
     granted_api_scopes,

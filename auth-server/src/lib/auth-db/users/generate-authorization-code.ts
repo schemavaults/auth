@@ -7,6 +7,7 @@ import {
   PKCE_ProofKeyManager,
 } from "@schemavaults/auth-common";
 import { type AuthorizationCodeRecord } from "./authorization-codes-table";
+import { recordImplicitConsentForGrant } from "@/lib/auth-db/api-scope-consents/record-implicit-consent";
 
 /**
  * Grant context bound to every authorization code at issuance:
@@ -23,6 +24,11 @@ import { type AuthorizationCodeRecord } from "./authorization-codes-table";
  *   `resolveAuthorizationCodeGrant()` (`@/lib/oauth2/api-scopes`).
  * A null `nonce` and a null `scope` are both first-class values (the
  * client omitted them).
+ *
+ * A grant whose API scopes come through a FIRST-PARTY app-to-API
+ * connection carries them without the user having consented on the
+ * consent screen: minting its code records that implicit consent (see
+ * `recordImplicitConsentForGrant()`).
  */
 export interface AuthorizationCodeGrantContext {
   nonce: string | null;
@@ -68,6 +74,28 @@ export async function generateAuthorizationCode(
   } catch (e: unknown) {
     console.error("Failed to generate authorization code: ", e);
     throw new Error("Failed to generate authorization code");
+  }
+
+  // A first-party connection's consent is implicit: record it before the
+  // code exists, so the token endpoint finds the app authorized and the
+  // scopes consented when the code is redeemed. A failure fails the mint
+  // (the code could not be redeemed without those records).
+  try {
+    const recorded: boolean = await recordImplicitConsentForGrant(db, {
+      uid,
+      client_app_id,
+      grant,
+    });
+    if (debug && recorded) {
+      console.log(
+        `[generateAuthorizationCode] Recorded the implicit consent of uid "${uid}" to first-party app "${client_app_id}" for API server "${grant.scope_api_server_id}"`,
+      );
+    }
+  } catch (e: unknown) {
+    console.error(e);
+    throw new Error("Failed to record the implicit consent of a first-party connection", {
+      cause: e,
+    });
   }
 
   if (debug) {

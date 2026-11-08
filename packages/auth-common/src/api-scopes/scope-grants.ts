@@ -58,3 +58,28 @@ export const updateAppApiScopePolicyRequestSchema = z
 export type UpdateAppApiScopePolicyRequest = z.infer<
   typeof updateAppApiScopePolicyRequestSchema
 >;
+
+/**
+ * Whether an app-to-API connection is FIRST-PARTY: the app and the API
+ * server belong to the same party, so users signing in to the app for the
+ * API server (the authorization request's RFC 8707 `resource`) consent
+ * implicitly. Such requests get the API scopes they ask for, among those
+ * the app may be granted (`restrict_user_scopes` still applies), without
+ * the consent screen; the app authorization and the scope consents are
+ * recorded as the user signs in. Off by default; only platform
+ * administrators may turn it on.
+ */
+export const appApiConnectionFirstPartySchema = z
+  .object({
+    first_party: z.boolean(),
+  })
+  .strict();
+
+export type AppApiConnectionFirstParty = z.infer<typeof appApiConnectionFirstPartySchema>;
+
+/** Body marking an app-to-API connection first-party, or not. */
+export const updateAppApiConnectionFirstPartyRequestSchema = appApiConnectionFirstPartySchema;
+
+export type UpdateAppApiConnectionFirstPartyRequest = z.infer<
+  typeof updateAppApiConnectionFirstPartyRequestSchema
+>;

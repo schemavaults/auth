@@ -20,6 +20,10 @@ import {
   updateAppApiScopePolicyOperation,
 } from "@/app/api/apis/[api_server_id]/connect_app/[client_app_id]/scopes/operation";
 import {
+  getAppApiConnectionFirstPartyOperation,
+  setAppApiConnectionFirstPartyOperation,
+} from "@/app/api/apis/[api_server_id]/connect_app/[client_app_id]/first-party/operation";
+import {
   generateJwksAccessKey,
   getJwksAccessKeyMetadata,
   regenerateJwksAccessKey,
@@ -56,6 +60,8 @@ export const apisOperations: readonly AnyOperationDefinition[] = [
   disconnectAppFromApiServer,
   getAppApiScopePolicyOperation,
   updateAppApiScopePolicyOperation,
+  getAppApiConnectionFirstPartyOperation,
+  setAppApiConnectionFirstPartyOperation,
   getJwksAccessKeyMetadata,
   generateJwksAccessKey,
   regenerateJwksAccessKey,

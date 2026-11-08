@@ -22,11 +22,15 @@ export {
   apiScopeGranteeSchema,
   appApiScopePolicySchema,
   updateAppApiScopePolicyRequestSchema,
+  appApiConnectionFirstPartySchema,
+  updateAppApiConnectionFirstPartyRequestSchema,
 } from "./scope-grants";
 export type {
   ApiScopeGrantee,
   AppApiScopePolicy,
   UpdateAppApiScopePolicyRequest,
+  AppApiConnectionFirstParty,
+  UpdateAppApiConnectionFirstPartyRequest,
 } from "./scope-grants";
 
 export {

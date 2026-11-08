@@ -12,6 +12,13 @@ export type {
 
 export { listUsableApiScopeValues } from "./usable-api-scopes";
 
+export { decideApiScopeConsent, isConsentScreenRequired } from "./api-scope-consent";
+export type {
+  DecideApiScopeConsentOptions,
+  ApiScopeConsentDecision,
+  IsConsentScreenRequiredOptions,
+} from "./api-scope-consent";
+
 export { describeAppConsentStatus, toAppConsentStatus } from "./consent-status";
 export type {
   DescribeAppConsentStatusOptions,
