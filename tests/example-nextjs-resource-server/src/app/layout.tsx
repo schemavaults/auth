@@ -9,6 +9,8 @@ import {
   getSchemavaultsApiServerId,
   getSchemavaultsClientApplicationId,
 } from "@schemavaults/auth-server-sdk";
+import { SiteFooter } from "@/components/site/site-footer";
+import { SiteHeader } from "@/components/site/site-header";
 import ClientLayout from "./client-layout";
 
 export const metadata: Metadata = {
@@ -47,7 +49,10 @@ export default async function RootLayout({
           api_server_id={getSchemavaultsApiServerId()}
           app_id={getSchemavaultsClientApplicationId()}
         >
-          {children}
+          <SiteHeader />
+          {/* Grows to push the footer to the bottom of short pages. */}
+          <div className="flex grow flex-col">{children}</div>
+          <SiteFooter />
         </ClientLayout>
       </body>
     </html>

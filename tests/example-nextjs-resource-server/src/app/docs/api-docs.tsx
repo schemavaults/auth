@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import Link from "next/link";
 import { createApiDocsPages } from "@schemavaults/openapi-docs-ui/nextjs";
 import { OPENAPI_DOCUMENT_PATH, openApiDocument } from "@/lib/api/openapi-document";
 import { resolvePublicOriginFromRequest } from "@/lib/api/public-origin-next";
@@ -17,14 +16,9 @@ export const apiDocs = createApiDocsPages({
   // SCHEMAVAULTS_EXAMPLE_RESOURCE_SERVER_URL override or the incoming
   // Host / X-Forwarded-* headers (see src/lib/api/public-origin.ts).
   resolveServerUrl: resolvePublicOriginFromRequest,
+  // The site header links home; operation pages carry their own breadcrumb
+  // back to this index.
   wrap: (page: ReactElement): ReactElement => (
-    <main className="flex w-full max-w-5xl flex-col gap-6 self-center p-4">
-      <nav className="text-sm">
-        <Link href="/" className="underline-offset-4 hover:underline">
-          ← @schemavaults/example-nextjs-resource-server
-        </Link>
-      </nav>
-      {page}
-    </main>
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">{page}</main>
   ),
 });
