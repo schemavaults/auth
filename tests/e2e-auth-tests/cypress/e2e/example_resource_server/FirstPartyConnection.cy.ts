@@ -14,6 +14,9 @@
 //   - requests naming none of the API server's scopes behave as before;
 //   - the connection's user allowance still applies;
 //   - turning it off asks again for anything not consented yet;
+//   - only platform administrators may set it: not even the owner of both
+//     the app and the API server (who may connect them, and may view the
+//     flag) can make their own connection first-party;
 //   - the authorize endpoint skips the consent screen, and the flag is
 //     shown and edited on the API server page.
 //
@@ -355,6 +358,108 @@ describe("First-party app-to-API connections (implicit consent)", () => {
       putFirstParty({ first_party: false }).then((response) => {
         expect(response.status, "PUT without a session").to.equal(401);
       });
+    });
+
+    it("refuses the owner of both the app and the API server, who may still view it", () => {
+      const suffix = Math.random().toString(36).slice(2, 12);
+      const organization_id = `e2e-fp-org-${suffix}`;
+      const app_id = `e2e-fp-app-${suffix}`;
+      const api_server_id = `e2e-fp-api-${suffix}`;
+      const url = `/api/apis/${api_server_id}/connect_app/${app_id}/first-party`;
+      const ownership = { owner_type: "organization", owner_organization_id: organization_id };
+
+      // A regular user who owns an organization, and the app and API server
+      // it owns: everything needed to connect them.
+      createSignedInUser().then(() => {
+        cy.create_organization_via_request({
+          organization_id,
+          name: `First-party owner ${suffix}`,
+        });
+        cy.request({
+          method: "POST",
+          url: "/api/apps",
+          body: {
+            app_id,
+            app_name: `First-party owner app ${suffix}`,
+            app_description: "FirstPartyConnection.cy.ts",
+            created_at: Date.now(),
+            public: false,
+            hardcoded: false,
+            web: true,
+            ...ownership,
+          },
+        }).then((response) => expect(response.status, "create app").to.equal(200));
+        cy.request({
+          method: "POST",
+          url: "/api/apis",
+          body: {
+            api_server_id,
+            api_server_name: `First-party owner API ${suffix}`,
+            api_server_description: "FirstPartyConnection.cy.ts",
+            created_at: Date.now(),
+            public: false,
+            hardcoded: false,
+            ...ownership,
+          },
+        }).then((response) => expect(response.status, "create API server").to.equal(200));
+        cy.request({
+          method: "POST",
+          url: `/api/apis/${api_server_id}/connect_app/${app_id}`,
+        }).then((response) => {
+          expect(response.status, "the owner of both may connect them").to.equal(200);
+        });
+
+        cy.request<FirstPartyResponseBody>(url).then((response) => {
+          expect(response.status, "the owner may view the flag").to.equal(200);
+          expect(response.body.first_party, "off by default").to.be.false;
+        });
+        cy.request<FirstPartyResponseBody>({
+          method: "PUT",
+          url,
+          body: { first_party: true },
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(response.status, "the owner may not make it first-party").to.equal(403);
+          expect(response.body.success, "success").to.be.false;
+        });
+        cy.request<FirstPartyResponseBody>(url).then((response) => {
+          expect(response.body.first_party, "still off").to.be.false;
+        });
+      });
+      logoutIfAuthenticated();
+    });
+
+    it("answers 404 for an app that is not connected to the API server", () => {
+      const app_id = `e2e-fp-unconnected-${Math.random().toString(36).slice(2, 12)}`;
+      loginAsSuperuser();
+      cy.request({
+        method: "POST",
+        url: "/api/apps",
+        body: {
+          app_id,
+          app_name: `First-party unconnected ${app_id}`,
+          app_description: "FirstPartyConnection.cy.ts",
+          created_at: Date.now(),
+          public: false,
+          hardcoded: false,
+          web: true,
+        },
+      }).then((response) => expect(response.status, "create app").to.equal(200));
+      cy.request<FirstPartyResponseBody>({
+        method: "PUT",
+        url: `/api/apis/${API_SERVER_ID}/connect_app/${app_id}/first-party`,
+        body: { first_party: true },
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status, "PUT for an unconnected app").to.equal(404);
+      });
+      cy.request({
+        url: `/api/apis/${API_SERVER_ID}/connect_app/${app_id}/first-party`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status, "GET for an unconnected app").to.equal(404);
+      });
+      cy.logout();
     });
   });
 
