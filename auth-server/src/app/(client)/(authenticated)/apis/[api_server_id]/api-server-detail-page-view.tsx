@@ -10,7 +10,7 @@ import {
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { uuidSync } from "@/lib/uuid/uuidSync";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveApiServerDomainDialog, WrappableUrl } from "@schemavaults/auth-ui";
 import { Trash2, KeyRound, ListChecks, Plus, Unplug } from "lucide-react";
 import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
@@ -29,6 +29,8 @@ export interface ConnectedApp {
   client_app_id: string;
   app_name: string;
   created_at: number;
+  /** Whether the connection is first-party (users consent implicitly). */
+  first_party: boolean;
 }
 
 export interface ApiServerDetailPageViewProps {
@@ -242,7 +244,18 @@ export default function ApiServerDetailPageView({
                       className="flex flex-1 items-center justify-between gap-2"
                     >
                       <div>
-                        <p className="text-sm font-medium">{app.app_name}</p>
+                        <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                          {app.app_name}
+                          {app.first_party && (
+                            <Badge
+                              variant="secondary"
+                              title="Users signing in to this app for this API server consent implicitly"
+                              data-testid={`first-party-connection-badge-${app.client_app_id}`}
+                            >
+                              First-party
+                            </Badge>
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground">{app.client_app_id}</p>
                       </div>
                       <LocalDateTime
@@ -335,6 +348,13 @@ export default function ApiServerDetailPageView({
           client_app_id={scopesTarget.client_app_id}
           client_app_name={scopesTarget.app_name}
           scopes={scopes}
+          canChangeFirstParty={isPlatformAdmin}
+          onFirstPartyChange={(first_party: boolean) => {
+            const changedId = scopesTarget.client_app_id;
+            setApps((current) =>
+              current.map((a) => (a.client_app_id === changedId ? { ...a, first_party } : a)),
+            );
+          }}
           open={!!scopesTarget}
           onOpenChange={(open: boolean) => {
             if (!open) setScopesTarget(null);

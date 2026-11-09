@@ -558,6 +558,29 @@ export interface ISchemaVaultsAuthClient {
   ) => Promise<AppApiScopePolicy>;
 
   /**
+   * @name getAppApiConnectionFirstParty
+   * @description Whether an app-to-API connection is first-party: users
+   * signing in to the app for the API server (its RFC 8707 `resource`)
+   * consent implicitly, so the consent screen is not shown. Requires
+   * management access to the API server or the app.
+   */
+  getAppApiConnectionFirstParty: (
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+  ) => Promise<boolean>;
+
+  /**
+   * @name setAppApiConnectionFirstParty
+   * @description Mark an app-to-API connection first-party, or not.
+   * Platform administrators only. Resolves with the new value.
+   */
+  setAppApiConnectionFirstParty: (
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+    first_party: boolean,
+  ) => Promise<boolean>;
+
+  /**
    * @name setApiServerOrganizationMembershipVisibility
    * @description Set which organizations' memberships an API server may look
    * up on the auth server's resource-server endpoints: `owning_organization`

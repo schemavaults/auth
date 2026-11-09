@@ -18,11 +18,14 @@ export type ApiServerScopeRowUpdate = Updateable<ApiServerScopesTable>;
 /**
  * APP_API_SCOPE_POLICIES (migration 00047): whether the scopes users may
  * grant a connected app are restricted. No row = unrestricted.
+ * `first_party` (migration 00053): whether users consent implicitly
+ * (first-party connection). No row = not first-party.
  */
 export interface AppApiScopePoliciesTable {
   client_app_id: string;
   api_server_id: string;
   restrict_user_scopes: Generated<boolean>;
+  first_party: Generated<boolean>;
   updated_at: number;
   updated_by: string | null;
 }

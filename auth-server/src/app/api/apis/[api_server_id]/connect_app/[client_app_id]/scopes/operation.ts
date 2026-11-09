@@ -1,8 +1,4 @@
-import {
-  apiServerIdSchema,
-  appIdSchema,
-  isHardcodedApiServerId,
-} from "@schemavaults/app-definitions";
+import { apiServerIdSchema, appIdSchema } from "@schemavaults/app-definitions";
 import {
   appApiScopePolicySchema,
   updateAppApiScopePolicyRequestSchema,
@@ -17,15 +13,12 @@ import { API_TAGS } from "@/lib/api/tags";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import {
   AppNotConnectedForScopesError,
-  SchemaVaultsApiServerRegistry,
   UnknownApiScopesError,
   getAppApiScopePolicy,
   setAppApiScopePolicy,
 } from "@/lib/auth-db/apis";
-import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
-import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
-import { canUserManageResource } from "@/lib/ownership/resource-access";
+import { checkConnectionPolicyAccess, type ConnectionPolicyAccess } from "../connection-policy-access";
 
 const ROUTE = "/api/apis/{api_server_id}/connect_app/{client_app_id}/scopes";
 
@@ -52,9 +45,7 @@ const UpdateAppApiScopePolicyRequest = withOpenApi(
   },
 );
 
-type ScopePolicyAccess =
-  | { ok: true }
-  | { ok: false; status: 400 | 403 | 404; message: string };
+type ScopePolicyAccess = ConnectionPolicyAccess;
 
 /**
  * Viewing needs management access to either side (the API server decides
@@ -68,38 +59,11 @@ async function checkAccess(
   client_app_id: string,
   access: "view" | "manage",
 ): Promise<ScopePolicyAccess> {
-  const [apiServer, app] = await Promise.all([
-    new SchemaVaultsApiServerRegistry(db).getApiServer(api_server_id),
-    new SchemaVaultsAppRegistry(db).getApp(client_app_id),
-  ]);
-  if (!apiServer) return { ok: false, status: 404, message: "API server not found" };
-  if (!app) return { ok: false, status: 404, message: "App not found" };
-  if (isHardcodedApiServerId(api_server_id)) {
-    return { ok: false, status: 400, message: "Hardcoded API servers define no API scopes" };
-  }
-  if (!user.admin) {
-    const managesApi = await canUserManageResource(db, user, apiServer);
-    const allowed =
-      access === "manage" ? managesApi : managesApi || (await canUserManageResource(db, user, app));
-    if (!allowed) {
-      return {
-        ok: false,
-        status: 403,
-        message:
-          access === "manage"
-            ? "You must be able to manage the API server to change the scopes its connected apps may be granted"
-            : "You must be able to manage the API server or the app to view its scope allowances",
-      };
-    }
-  }
-  const connected = await new SchemaVaultsAppToApiPermissionsRegistry(db).isAllowed(
-    client_app_id,
-    api_server_id,
-  );
-  if (!connected) {
-    return { ok: false, status: 404, message: "The app is not connected to the API server" };
-  }
-  return { ok: true };
+  return await checkConnectionPolicyAccess(db, user, api_server_id, client_app_id, access, {
+    manage:
+      "You must be able to manage the API server to change the scopes its connected apps may be granted",
+    view: "You must be able to manage the API server or the app to view its scope allowances",
+  });
 }
 
 function refuse(ctx: { json: (status: 400 | 403 | 404, body: { success: false; message: string }) => Response }, access: Exclude<ScopePolicyAccess, { ok: true }>): Response {

@@ -6,6 +6,7 @@ import {
 } from "./consent";
 import {
   appApiScopePolicySchema,
+  updateAppApiConnectionFirstPartyRequestSchema,
   updateAppApiScopePolicyRequestSchema,
 } from "./scope-grants";
 
@@ -127,5 +128,21 @@ describe("connectedAppSchema", () => {
         ],
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("updateAppApiConnectionFirstPartyRequestSchema", () => {
+  test("accepts true and false", () => {
+    expect(updateAppApiConnectionFirstPartyRequestSchema.safeParse({ first_party: true }).success).toBe(true);
+    expect(updateAppApiConnectionFirstPartyRequestSchema.safeParse({ first_party: false }).success).toBe(true);
+  });
+
+  test("rejects non-booleans, a missing field and unknown keys", () => {
+    expect(updateAppApiConnectionFirstPartyRequestSchema.safeParse({ first_party: "true" }).success).toBe(false);
+    expect(updateAppApiConnectionFirstPartyRequestSchema.safeParse({}).success).toBe(false);
+    expect(
+      updateAppApiConnectionFirstPartyRequestSchema.safeParse({ first_party: true, restrict_user_scopes: false })
+        .success,
+    ).toBe(false);
   });
 });

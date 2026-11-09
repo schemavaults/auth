@@ -11,6 +11,91 @@ function expectNumber(val: unknown): val is number {
   return true;
 }
 
+interface ConnectResponseBody {
+  success: boolean;
+  message?: string;
+  is_allowed?: boolean;
+}
+
+function randomId(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function signOutIfAuthenticated(): void {
+  cy.is_authenticated().then((authenticated: boolean) => {
+    if (authenticated) {
+      cy.logout_via_request();
+    }
+  });
+}
+
+function loginAsSuperuser(): void {
+  signOutIfAuthenticated();
+  cy.create_and_login_as_superuser_via_request().then((ok: boolean) => {
+    if (!ok) throw new Error("Failed to create and login as superuser");
+  });
+}
+
+/** Signs in as a fresh regular user (no organizations, not an admin). */
+function loginAsFreshRegularUser(): void {
+  signOutIfAuthenticated();
+  cy.generate_random_test_user_credentials()
+    .then((credentials) => cy.create_and_login_as_regular_user_via_request(credentials))
+    .then((ok: boolean) => {
+      expect(ok, "regular user registration + login").to.be.true;
+    });
+}
+
+/**
+ * As the signed-in user (who must own `organization_id` or be an admin),
+ * creates an app and an API server owned by the organization, by request.
+ */
+function createOrganizationOwnedAppAndApi(
+  organization_id: string,
+  app_id: string,
+  api_server_id: string,
+): void {
+  const ownership = { owner_type: "organization", owner_organization_id: organization_id };
+  cy.request({
+    method: "POST",
+    url: "/api/apps",
+    body: {
+      app_id,
+      app_name: `Connect authz app ${app_id}`,
+      app_description: "ConnectAppToApi.cy.ts",
+      created_at: Date.now(),
+      public: false,
+      hardcoded: false,
+      web: true,
+      ...ownership,
+    },
+  }).then((response) => expect(response.status, `create app ${app_id}`).to.eq(200));
+  cy.request({
+    method: "POST",
+    url: "/api/apis",
+    body: {
+      api_server_id,
+      api_server_name: `Connect authz API ${api_server_id}`,
+      api_server_description: "ConnectAppToApi.cy.ts",
+      created_at: Date.now(),
+      public: false,
+      hardcoded: false,
+      ...ownership,
+    },
+  }).then((response) => expect(response.status, `create API server ${api_server_id}`).to.eq(200));
+}
+
+function connect(
+  api_server_id: string,
+  app_id: string,
+): Cypress.Chainable<Cypress.Response<ConnectResponseBody>> {
+  return cy.request<ConnectResponseBody>({
+    method: "POST",
+    url: `/api/apis/${api_server_id}/connect_app/${app_id}`,
+    failOnStatusCode: false,
+  });
+}
+
 describe("Connect App to API Server", () => {
   describe("Admin Success Cases", () => {
     it("admin can connect app to API from admin APIs page", () => {
@@ -547,6 +632,90 @@ describe("Connect App to API Server", () => {
           });
         });
       });
+    });
+  });
+
+  describe("Authorization Failure Cases (outsiders and one-sided owners)", () => {
+    beforeEach(() => {
+      cy.reset_rate_limit();
+    });
+
+    it("a user outside the owning organization cannot connect its app to its API (403)", () => {
+      const organization_id = randomId("e2e-outsider-org");
+      const app_id = randomId("e2e-connect-outsider-app");
+      const api_server_id = randomId("e2e-connect-outsider-api");
+
+      loginAsSuperuser();
+      cy.create_organization_via_request({
+        organization_id,
+        name: `Connect outsider ${organization_id}`,
+      });
+      createOrganizationOwnedAppAndApi(organization_id, app_id, api_server_id);
+
+      // Signed in, but no membership of the organization at all.
+      loginAsFreshRegularUser();
+      connect(api_server_id, app_id).then((response) => {
+        expect(response.status, "connect by an outsider").to.eq(403);
+        expect(response.body.success).to.eq(false);
+      });
+      cy.request({
+        method: "GET",
+        url: `/api/apis/${api_server_id}/connect_app/${app_id}`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status, "connection check by an outsider").to.eq(403);
+      });
+
+      // Nothing was connected.
+      loginAsSuperuser();
+      cy.request<ConnectResponseBody>({
+        method: "GET",
+        url: `/api/apis/${api_server_id}/connect_app/${app_id}`,
+      }).then((response) => {
+        expect(response.body.is_allowed, "still not connected").to.eq(false);
+      });
+      cy.delete_organization({ organization_id });
+      signOutIfAuthenticated();
+    });
+
+    it("owning only the app, or only the API server, is not enough (403)", () => {
+      const suffix = Math.random().toString(36).slice(2, 10);
+      const own_org = `e2e-connect-own-org-${suffix}`;
+      const own_app = `e2e-connect-own-app-${suffix}`;
+      const own_api = `e2e-connect-own-api-${suffix}`;
+      const other_org = `e2e-connect-other-org-${suffix}`;
+      const other_app = `e2e-connect-other-app-${suffix}`;
+      const other_api = `e2e-connect-other-api-${suffix}`;
+
+      // Another user's organization, app and API server.
+      loginAsFreshRegularUser();
+      cy.create_organization_via_request({ organization_id: other_org, name: `Other ${suffix}` });
+      createOrganizationOwnedAppAndApi(other_org, other_app, other_api);
+
+      // This user owns their own organization, app and API server.
+      loginAsFreshRegularUser();
+      cy.create_organization_via_request({ organization_id: own_org, name: `Own ${suffix}` });
+      createOrganizationOwnedAppAndApi(own_org, own_app, own_api);
+
+      connect(other_api, own_app).then((response) => {
+        expect(response.status, "own app to someone else's API server").to.eq(403);
+        expect(response.body.message, "names both sides").to.include("both");
+      });
+      connect(own_api, other_app).then((response) => {
+        expect(response.status, "someone else's app to own API server").to.eq(403);
+        expect(response.body.message, "names the app").to.include("own the app");
+      });
+      // Control: their own app and API server connect fine.
+      connect(own_api, own_app).then((response) => {
+        expect(response.status, "own app to own API server").to.eq(200);
+      });
+      cy.request<ConnectResponseBody>({
+        method: "GET",
+        url: `/api/apis/${own_api}/connect_app/${own_app}`,
+      }).then((response) => {
+        expect(response.body.is_allowed, "own pair connected").to.eq(true);
+      });
+      signOutIfAuthenticated();
     });
   });
 

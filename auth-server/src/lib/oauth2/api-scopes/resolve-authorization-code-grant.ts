@@ -10,10 +10,14 @@ import {
   serializeOidcScopesOrNull,
 } from "@schemavaults/auth-common";
 import type { ServerlessDatabase } from "@/lib/auth-db";
-import { listGrantableApiScopeValues } from "@/lib/auth-db/apis";
+import {
+  isFirstPartyAppApiConnection,
+  listGrantableApiScopeValues,
+} from "@/lib/auth-db/apis";
 import { listConsentedApiScopeValues } from "@/lib/auth-db/api-scope-consents";
 import type { AuthorizationCodeGrantContext } from "@/lib/auth-db/users/generate-authorization-code";
 import { resolveGrantResource } from "./resolve-grant-resource";
+import { decideApiScopeConsent } from "./api-scope-consent";
 
 export interface ResolveAuthorizationCodeGrantOptions {
   dbh: ServerlessDatabase;
@@ -21,7 +25,8 @@ export interface ResolveAuthorizationCodeGrantOptions {
   /**
    * The user the code is minted for, whose per-scope consent the API
    * scopes are filtered by; null before there is one (registration, the
-   * authorize bridge), when no API scope can be granted yet.
+   * authorize bridge), when no API scope can be granted yet — except
+   * through a first-party connection, whose consent is implicit.
    */
   uid: string | null;
   /** The flow's login nonce (bound as-is). */
@@ -38,7 +43,7 @@ export interface ResolvedAuthorizationCodeGrant {
   /**
    * What to bind to the authorization code: the supported OIDC scopes plus
    * the requested API scopes the app may be granted AND the user consented
-   * to.
+   * to (all of them through a first-party connection).
    */
   grant: AuthorizationCodeGrantContext;
   /**
@@ -56,8 +61,18 @@ export interface ResolvedAuthorizationCodeGrant {
   api_server_id: ApiServerId | null;
   /** The requested API scopes the app may be granted. */
   requested_api_scopes: string[];
-  /** Those of them the user has not consented to (all of them without a user). */
+  /**
+   * Those of them the user has not consented to (all of them without a
+   * user; none through a first-party connection).
+   */
   pending_api_scopes: string[];
+  /**
+   * Whether the flow asks for API scopes through a FIRST-PARTY connection
+   * (`APP_API_SCOPE_POLICIES.first_party`): the user's consent to the app
+   * and to those scopes is implicit, so the consent screen is not needed
+   * and minting the code records it (`recordImplicitConsentForGrant()`).
+   */
+  implicit_consent: boolean;
   /**
    * The OIDC part of the granted scope: what the auth server's OWN session
    * cookie may carry (a third-party API's scopes never land on it).
@@ -77,9 +92,11 @@ export interface ResolvedAuthorizationCodeGrant {
  *
  * bound to the API server through `scope_api_server_id`. Requested scopes
  * passing (1) but not (2) are reported as `pending_api_scopes`: the consent
- * screen asks for them. Without a usable resource the result is exactly the
- * OIDC-only grant every flow minted before API scopes existed. Never trusts
- * the requested scope verbatim.
+ * screen asks for them. Through a first-party connection (2) is implicit:
+ * every requested scope passing (1) is granted, with or without a user, and
+ * `implicit_consent` is set. Without a usable resource the result is exactly
+ * the OIDC-only grant every flow minted before API scopes existed. Never
+ * trusts the requested scope verbatim.
  */
 export async function resolveAuthorizationCodeGrant({
   dbh,
@@ -106,29 +123,38 @@ export async function resolveAuthorizationCodeGrant({
         debug,
       })
     : null;
-  const grantable_api_scopes: string[] = bound
-    ? await listGrantableApiScopeValues(dbh.db, {
-        client_app_id,
-        api_server_id: bound.api_server_id,
-        grantee: "user",
-      })
-    : [];
+  const [grantable_api_scopes, first_party]: [string[], boolean] = bound
+    ? await Promise.all([
+        listGrantableApiScopeValues(dbh.db, {
+          client_app_id,
+          api_server_id: bound.api_server_id,
+          grantee: "user",
+        }),
+        isFirstPartyAppApiConnection(dbh.db, client_app_id, bound.api_server_id),
+      ])
+    : [[], false];
   const requested = grantRequestedScopes(requested_scope, grantable_api_scopes);
   const asks_for_api_scopes: boolean = bound !== null && requested.api.length > 0;
 
-  const consented: ReadonlySet<string> = new Set(
-    asks_for_api_scopes && uid !== null
+  // A first-party connection (the app and the API server belong to the
+  // same party) needs no consent records: consent is implicit.
+  const consented_api_scopes: string[] =
+    asks_for_api_scopes && !first_party && uid !== null
       ? await listConsentedApiScopeValues(dbh.db, {
           uid,
           client_app_id,
           api_server_id: bound!.api_server_id,
         })
-      : [],
-  );
+      : [];
+  const decision = decideApiScopeConsent({
+    requested_api_scopes: asks_for_api_scopes ? requested.api : [],
+    consented_api_scopes,
+    first_party,
+  });
+  const granted_api: string[] = decision.granted_api_scopes;
   const granted: string[] = requested.granted.filter(
-    (token) => !requested.api.includes(token) || consented.has(token),
+    (token) => !requested.api.includes(token) || granted_api.includes(token),
   );
-  const granted_api: string[] = requested.api.filter((token) => consented.has(token));
 
   return {
     grant: {
@@ -140,9 +166,8 @@ export async function resolveAuthorizationCodeGrant({
     resource: asks_for_api_scopes ? bound!.resource : null,
     api_server_id: asks_for_api_scopes ? bound!.api_server_id : null,
     requested_api_scopes: asks_for_api_scopes ? [...requested.api] : [],
-    pending_api_scopes: asks_for_api_scopes
-      ? requested.api.filter((token) => !consented.has(token))
-      : [],
+    pending_api_scopes: decision.pending_api_scopes,
+    implicit_consent: decision.implicit_consent,
     session_scope: serializeOidcScopesOrNull(requested.oidc),
   };
 }

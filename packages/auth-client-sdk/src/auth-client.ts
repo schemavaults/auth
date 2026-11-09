@@ -2335,6 +2335,39 @@ export class SchemaVaultsAuthClient
     });
   }
 
+  public async getAppApiConnectionFirstParty(
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+  ): Promise<boolean> {
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.getAppApiConnectionFirstParty,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      client_app_id,
+    });
+  }
+
+  public async setAppApiConnectionFirstParty(
+    api_server_id: ApiServerId,
+    client_app_id: AppId,
+    first_party: boolean,
+  ): Promise<boolean> {
+    this.assertAppAndApiManagementWriteAccess("setAppApiConnectionFirstParty");
+    const fn = await import("@/lib/api-server-scopes").then(
+      (m) => m.setAppApiConnectionFirstParty,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      client_app_id,
+      first_party,
+    });
+  }
+
   public async setApiServerOrganizationMembershipVisibility(
     api_server_id: ApiServerId,
     organization_membership_visibility: OrganizationMembershipVisibility,

@@ -28,6 +28,13 @@ export {
 } from './api-scope-grants';
 export type { SetAppApiScopePolicyOptions } from './api-scope-grants';
 
+export {
+  isFirstPartyAppApiConnection,
+  listFirstPartyConnectedAppIds,
+  setFirstPartyAppApiConnection,
+} from './first-party-connections';
+export type { SetFirstPartyAppApiConnectionOptions } from './first-party-connections';
+
 export { preloadApiServersTable } from './preload-api-servers-table';
 export type { QueryApiServersInputOptions } from './preload-api-servers-table';
 

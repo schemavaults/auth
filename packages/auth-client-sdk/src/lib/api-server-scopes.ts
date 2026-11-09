@@ -10,6 +10,7 @@ import {
   appApiScopePolicySchema,
   createApiServerScopeRequestSchema,
   updateApiServerScopeRequestSchema,
+  updateAppApiConnectionFirstPartyRequestSchema,
   updateAppApiScopePolicyRequestSchema,
   type ApiServerScope,
   type AppApiScopePolicy,
@@ -228,4 +229,73 @@ export async function updateAppApiScopePolicy({
     throw new Error("API scope allowances update response was malformed", { cause: parsed.error });
   }
   return parsed.data.policy;
+}
+
+function firstPartyUrl(auth_server_uri: string, api_server_id: ApiServerId, client_app_id: AppId): string {
+  return `${auth_server_uri}/api/apis/${encodeURIComponent(api_server_id)}/connect_app/${encodeURIComponent(client_app_id)}/first-party`;
+}
+
+const firstPartyResponseSchema = z
+  .object({ success: z.literal(true), first_party: z.boolean() })
+  .loose();
+
+/**
+ * `GET /api/apis/[api_server_id]/connect_app/[client_app_id]/first-party`:
+ * whether a connection is first-party (users signing in to the app for the
+ * API server consent implicitly, without the consent screen). Requires
+ * management access to the API server or the app.
+ */
+export async function getAppApiConnectionFirstParty({
+  adapter,
+  auth_server_uri,
+  api_server_id,
+  client_app_id,
+}: IApiServerScopesRequestOpts & { client_app_id: AppId }): Promise<boolean> {
+  await apiServerIdSchema.parseAsync(api_server_id);
+  await appIdSchema.parseAsync(client_app_id);
+  const response = await adapter.fetch(firstPartyUrl(auth_server_uri, api_server_id, client_app_id), {
+    method: "GET",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    return await readFailureMessage(response, "load whether the connection is first-party");
+  }
+  const parsed = firstPartyResponseSchema.safeParse(await response.json().catch(() => null));
+  if (!parsed.success) {
+    throw new Error("First-party connection response was malformed", { cause: parsed.error });
+  }
+  return parsed.data.first_party;
+}
+
+/**
+ * `PUT /api/apis/[api_server_id]/connect_app/[client_app_id]/first-party`:
+ * marks a connection first-party, or not. Platform administrators only.
+ */
+export async function setAppApiConnectionFirstParty({
+  adapter,
+  auth_server_uri,
+  api_server_id,
+  client_app_id,
+  first_party,
+}: IApiServerScopesRequestOpts & {
+  client_app_id: AppId;
+  first_party: boolean;
+}): Promise<boolean> {
+  await apiServerIdSchema.parseAsync(api_server_id);
+  await appIdSchema.parseAsync(client_app_id);
+  const body = await updateAppApiConnectionFirstPartyRequestSchema.parseAsync({ first_party });
+  const response = await adapter.fetch(firstPartyUrl(auth_server_uri, api_server_id, client_app_id), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    return await readFailureMessage(response, "update whether the connection is first-party");
+  }
+  const parsed = firstPartyResponseSchema.safeParse(await response.json().catch(() => null));
+  if (!parsed.success) {
+    throw new Error("First-party connection update response was malformed", { cause: parsed.error });
+  }
+  return parsed.data.first_party;
 }

@@ -9,7 +9,7 @@ import ApiServerDetailPageView from "./api-server-detail-page-view";
 import { type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefinition, type SchemaVaultsApiServerDomainRef, getAppEnvironment } from "@schemavaults/app-definitions";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
-import { listApiServerScopes, loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
+import { listApiServerScopes, listFirstPartyConnectedAppIds, loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import type { ApiServerScope } from "@schemavaults/auth-common";
 import { accessLevelSatisfies, getUserAccessLevelForResource, type OwnedResourceAccessLevel } from "@/lib/ownership/resource-access";
 import { connection } from "next/server";
@@ -59,7 +59,17 @@ export default async function ApiServerDetailPage(
       const canManage: boolean = accessLevelSatisfies(access, "admin");
 
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
-      const connected_apps = await permissions_registry.listConnectedApps(api_server_id);
+      // First-party connections (users consent implicitly) exist only on
+      // registered API servers: hardcoded ones define no API scopes.
+      const [listed_connected_apps, first_party_app_ids] = await Promise.all([
+        permissions_registry.listConnectedApps(api_server_id),
+        hardcoded ? Promise.resolve([]) : listFirstPartyConnectedAppIds(dbh.db, api_server_id),
+      ]);
+      const first_party_app_id_set = new Set<string>(first_party_app_ids);
+      const connected_apps = listed_connected_apps.map((app) => ({
+        ...app,
+        first_party: first_party_app_id_set.has(app.client_app_id),
+      }));
       const api_server_registry = new SchemaVaultsApiServerRegistry(dbh.db);
       const connected_domains: readonly SchemaVaultsApiServerDomainRef[] = await api_server_registry.getApiServerDomains(api_server_id);
       const scopes: readonly ApiServerScope[] = hardcoded ? [] : await listApiServerScopes(dbh.db, api_server_id);
