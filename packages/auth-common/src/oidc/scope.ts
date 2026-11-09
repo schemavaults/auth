@@ -59,7 +59,22 @@ export function isOidcReservedScope(scope: string): boolean {
  */
 export const DEFAULT_AUTH_SCOPE = "openid email profile" as const;
 
-const MAX_OIDC_SCOPE_LENGTH = 256 as const;
+/**
+ * Upper bound on a `scope` value: the request parameter (authorize, login,
+ * register, token grants) and the `scope` claim of the tokens it grants
+ * (`@schemavaults/jwt`'s payload schema), which never exceeds what was
+ * asked for.
+ *
+ * Room for an API server's whole scope list beside the OIDC scopes (a
+ * resource server with three dozen `area:action` scopes asks for ~600
+ * characters at sign-in), while a refresh token carrying a scope this long
+ * still fits the 4 KB cookie the server SDK keeps it in
+ * (`MaximumBrowserCookieSize`; ~3.7 KB at this length, ~5 KB at twice it).
+ * The same as the longest `scope` a dynamically registered client may
+ * register (`DYNAMIC_CLIENT_SCOPE_MAX_LENGTH`), so such a client can ask
+ * for all of it.
+ */
+export const MAX_OIDC_SCOPE_LENGTH = 1024 as const;
 
 /**
  * RFC 6749 §3.3 wire format for the `scope` parameter:

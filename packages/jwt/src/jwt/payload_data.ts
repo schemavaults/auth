@@ -6,7 +6,7 @@ import {
   type SchemaVaultsAppEnvironment,
   schemaVaultsAppEnvironmentSchema,
 } from "@schemavaults/app-definitions";
-import { createAudienceSchema } from "@schemavaults/auth-common";
+import { createAudienceSchema, MAX_OIDC_SCOPE_LENGTH } from "@schemavaults/auth-common";
 import { createJwtActorClaimSchema } from "./actor-claim";
 
 // Data to hold in the JWT
@@ -47,8 +47,11 @@ export function createJwtPayloadSchema(
       // access/refresh token issued since scopes became first-class;
       // kept optional so tokens issued before then remain decodable
       // until they expire. /api/oidc/userinfo filters its claims by it
-      // and route guards enforce `required_scopes` against it.
-      scope: z.string().max(256).optional(),
+      // and route guards enforce `required_scopes` against it. Bounded
+      // like the `scope` request parameter it was granted from (it never
+      // holds more than was asked for). Decoders before 0.17.2 capped it
+      // at 256 characters and reject a token carrying a longer one.
+      scope: z.string().max(MAX_OIDC_SCOPE_LENGTH).optional(),
       // REFRESH tokens only: the API server whose API scopes `scope`
       // carries (granted for an RFC 8707 `resource` naming it). The OIDC
       // refresh grant stamps those scopes only on access tokens minted for

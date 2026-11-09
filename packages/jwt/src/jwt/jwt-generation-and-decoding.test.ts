@@ -2,7 +2,11 @@ import { describe, it, expect } from "bun:test";
 
 import { type GenerateJWTOptions, generateJWT } from "./generate";
 import { decodeJWT } from "./decode";
-import { type UserData } from "@schemavaults/auth-common";
+import {
+  MAX_OIDC_SCOPE_LENGTH,
+  MaximumBrowserCookieSize,
+  type UserData,
+} from "@schemavaults/auth-common";
 import getRefreshTokenAudience from "./get_refresh_token_audience";
 import {
   getAuthServerUrl,
@@ -322,6 +326,44 @@ describe("JWT Generation & Decoding", () => {
     });
     expect(plain_decoded.scope).toBeUndefined();
   });
+
+  it("decodes a scope claim as long as the scope parameter allows, and no longer", async () => {
+    const user: UserData = new MockUser();
+    const jwt_keys: JWT_Keys = await generateNewJwtKeySet({
+      audience_id: DEFAULT_AUTH_SERVER_APP_ID,
+      environment,
+    });
+    const refreshWithScope = (scope: string) =>
+      generateJWT({
+        type: "refresh",
+        user,
+        audience: getRefreshTokenAudience(env),
+        iat: Date.now(),
+        client_app_id: crypto.randomUUID(),
+        auth_server_url,
+        jwt_keys,
+        env,
+        scope,
+        scope_api_server_id: crypto.randomUUID(),
+      });
+    const decodeRefresh = (jwt: string) =>
+      decodeJWT({ jwt, type: "refresh", jwt_keys, env });
+
+    // An API server's whole scope list: longer than the 256 characters
+    // decoders before 0.17.2 accepted.
+    const longest: string = ("openid " + "a".repeat(MAX_OIDC_SCOPE_LENGTH)).slice(
+      0,
+      MAX_OIDC_SCOPE_LENGTH,
+    );
+    const refresh = await refreshWithScope(longest);
+    expect((await decodeRefresh(refresh.token)).scope).toBe(longest);
+    // The server SDK keeps refresh tokens in one cookie.
+    expect(refresh.token.length).toBeLessThan(MaximumBrowserCookieSize);
+
+    const too_long = await refreshWithScope(`${longest}a`);
+    await expect(decodeRefresh(too_long.token)).rejects.toThrow();
+  });
+
   it("round-trips the API-scope binding claim on refresh tokens only", async () => {
     const user: UserData = new MockUser();
     const now = Date.now();
