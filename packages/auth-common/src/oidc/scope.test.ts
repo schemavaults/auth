@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_AUTH_SCOPE,
+  MAX_OIDC_SCOPE_LENGTH,
   OIDC_RESERVED_SCOPES,
   OIDC_SUPPORTED_SCOPES,
   grantRequestedScopes,
@@ -123,8 +124,25 @@ describe("oidcScopeSchema (RFC 6749 §3.3 wire format)", () => {
     }
   });
 
-  test("rejects scopes longer than 256 chars", () => {
-    expect(oidcScopeSchema.safeParse("openid".repeat(50)).success).toBe(false);
+  test("accepts an API server's whole scope list beside the OIDC scopes", () => {
+    // 36 `area:action` scopes, as a resource server asks for at sign-in:
+    // well over the 256 characters this was once capped at.
+    const areas = ["records", "subjects", "certifications", "quizzes", "external-lms", "scorm"];
+    const actions = ["read", "write", "delete", "grade", "moderate", "archive"];
+    const scope = [
+      "openid profile email",
+      ...areas.flatMap((area) => actions.map((action) => `${area}:${action}`)),
+    ].join(" ");
+    expect(scope.length).toBeGreaterThan(256);
+    expect(oidcScopeSchema.safeParse(scope).success).toBe(true);
+  });
+
+  test(`accepts ${MAX_OIDC_SCOPE_LENGTH} chars and rejects anything longer`, () => {
+    const longest = ("openid " + "a".repeat(MAX_OIDC_SCOPE_LENGTH)).slice(0, MAX_OIDC_SCOPE_LENGTH);
+    expect(longest.length).toBe(MAX_OIDC_SCOPE_LENGTH);
+    expect(oidcScopeSchema.safeParse(longest).success).toBe(true);
+    expect(oidcScopeSchema.safeParse(`${longest}a`).success).toBe(false);
+    expect(oidcScopeSchema.safeParse(`${longest} a`).success).toBe(false);
   });
 });
 

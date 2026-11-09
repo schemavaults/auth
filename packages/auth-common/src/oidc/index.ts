@@ -5,6 +5,7 @@ export {
   isOidcReservedScope,
   DEFAULT_AUTH_SCOPE,
   OIDC_SCOPE_REGEX,
+  MAX_OIDC_SCOPE_LENGTH,
   oidcScopeSchema,
   parseAndGrantScopes,
   grantRequestedScopes,
