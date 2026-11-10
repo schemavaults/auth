@@ -15,6 +15,7 @@ import getAuthenticatedUserDashboardLinks from "./dashboard-links";
 import { useAdmin } from "@schemavaults/auth-react-provider";
 import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 import { OrganizationMfaRequirementBanner } from "@/components/OrganizationMfaRequirement";
+import { DashboardSidebarFooter } from "@/components/DashboardSidebarFooter";
 
 type DashboardSidebarLinkProps = Parameters<DashboardLayoutProps["Link"]>[0];
 
@@ -63,6 +64,7 @@ export default function AuthenticatedAuthServerLayout({
       logo={<Logo width={40} height={40} />}
       topBarTitle={friendlyName}
       sidebarItems={links}
+      sidebarFooterContent={DashboardSidebarFooter}
       usePathname={usePathname}
       printHidden
     >
