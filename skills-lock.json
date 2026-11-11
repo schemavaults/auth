@@ -1,17 +1,17 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "list-email-templates": {
       "source": "schemavaults/send-email",
       "sourceType": "github",
       "skillPath": ".claude/skills/list-email-templates/SKILL.md",
-      "computedHash": "f6373a01cb21f8d48f300ad297e9b750a5169f497ccbc4169d7aca273822d04c"
+      "computedHash": "3691882cbc2cb41d5fbc0a8eff5f4a1c8c851e746c2a50de8859e69362ba59df"
     },
     "send-email-to-mailing-list": {
       "source": "schemavaults/send-email",
       "sourceType": "github",
       "skillPath": ".claude/skills/send-email-to-mailing-list/SKILL.md",
-      "computedHash": "a0868b1223a5666ef2a316520c750c0f1bf7d4e7dde0daf67f1896888a287b7d"
+      "computedHash": "89ed3c1e39e89b97712bacd7998d2fee732000573c049b296c001be00c32b658"
     }
   }
 }
