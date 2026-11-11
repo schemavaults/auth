@@ -134,6 +134,20 @@ export interface ApiDocsSecurityScheme {
   readonly flows: readonly string[];
 }
 
+/**
+ * One OAuth 2.0 scope of the API: from the `x-schemavaults-scopes`
+ * extension (`@schemavaults/openapi-operations`), an `oauth2` scheme's
+ * flows, or an operation that requires it.
+ */
+export interface ApiDocsScope {
+  /** The scope value, as a token's `scope` claim carries it. */
+  readonly scope: string;
+  /** What the scope allows, when the document describes it. */
+  readonly description?: string;
+  /** Slugs of the operations whose required scopes include it, in document order. */
+  readonly requiredBy: readonly string[];
+}
+
 export interface ApiDocsTag {
   readonly name: string;
   readonly description?: string;
@@ -156,6 +170,8 @@ export interface ApiDocsModel {
   /** Every operation in document order. */
   readonly operations: readonly ApiDocsOperation[];
   readonly securitySchemes: readonly ApiDocsSecurityScheme[];
+  /** Every scope the document names, described ones first in document order. */
+  readonly scopes: readonly ApiDocsScope[];
   /** `components.schemas`, for resolving `$ref`s while rendering. */
   readonly schemas: Readonly<Record<string, ApiDocsJsonSchema>>;
 }

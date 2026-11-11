@@ -17,6 +17,7 @@ import {
   type ApiDocsTag,
 } from "./types";
 import { operationSlug } from "./slug";
+import { parseScopes } from "./parse-scopes";
 
 type Json = { readonly [key: string]: unknown };
 
@@ -360,6 +361,7 @@ export function parseOpenApiDocument(input: unknown): ApiDocsModel {
     tags,
     operations,
     securitySchemes: parseSecuritySchemes(document),
+    scopes: parseScopes(document, operations),
     schemas,
   };
 }

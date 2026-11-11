@@ -2,6 +2,7 @@ import { z, requireAuth } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import { userCredentialSchemes } from "@/lib/api/auth-schemes";
 import { errorResponses } from "@/lib/api/schemas";
+import { oidcScopes } from "@/lib/api/scopes";
 
 export const myEmail = defineOperation({
   method: "get",
@@ -10,7 +11,7 @@ export const myEmail = defineOperation({
   description:
     "Only tokens whose `scope` claim includes `email` may read the address; tokens without a scope claim are refused with 403 insufficient_scope.",
   tags: ["Account"],
-  auth: requireAuth({ schemes: userCredentialSchemes, requiredScopes: ["email"] }),
+  auth: requireAuth({ schemes: userCredentialSchemes, requiredScopes: [oidcScopes.email] }),
   responses: {
     200: { description: "The caller's email", schema: z.object({ email: z.string().nullable() }) },
     ...errorResponses,

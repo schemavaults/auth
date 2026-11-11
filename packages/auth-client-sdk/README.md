@@ -134,7 +134,28 @@ new SchemaVaultsAuthClient({
 });
 ```
 
-A call's own `scope` / `resource` win, each on its own. Naming API scopes
+`scope` is either space-delimited or a list of scope values and definitions,
+so the app can sign in for the same catalogue its API's operations require
+(`defineScopes()` / `oidcScopes`, re-exported here from
+`@schemavaults/auth-common/scopes`, which client components can import without
+pulling in zod):
+
+```ts
+import { defineScopes, oidcScopes } from "@schemavaults/auth-client-sdk";
+
+export const notesScopes = defineScopes({
+  read: { scope: "notes:read", description: "Read your notes" },
+  write: { scope: "notes:write", description: "Create and edit your notes" },
+});
+
+authorization_params: {
+  scope: [oidcScopes.openid, oidcScopes.email, oidcScopes.profile, notesScopes.read, notesScopes.write],
+  resource: "my-notes-api",
+},
+```
+
+A list is sent space-delimited (`formatScope()`); so is `sendAuthenticateRequest()`'s
+`scope`. A call's own `scope` / `resource` win, each on its own. Naming API scopes
 without a `resource` throws: the auth server would grant none of them. The
 user consents to each API scope (the consent screen lists them, ticked); the
 access tokens acquired for the resource carry those the user granted.

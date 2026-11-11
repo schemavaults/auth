@@ -1,5 +1,7 @@
 import type { SecuritySchemeObject } from "openapi3-ts/oas31";
 import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
+import { assertScopeRequirements } from "./scopes/assert-scope-requirements";
+import type { ScopeRequirement } from "@schemavaults/auth-common/scopes";
 
 /**
  * What kind of principal a scheme's resolver produces:
@@ -150,11 +152,15 @@ export interface AuthRequirements<
   /** Who may call once authenticated. Defaults to "authenticated". */
   readonly routeGuard?: RouteGuardType;
   /**
-   * Scopes the presented token's `scope` claim must include. A token with no
-   * scope claim grants no scopes, so any non-empty list denies it (403).
-   * There is no admin bypass: scopes describe what the TOKEN was granted.
+   * Scopes the presented token's `scope` claim must ALL include, each a bare
+   * scope value (`"email"`) or a `ScopeDefinition` from `defineScope()`
+   * / `defineScopes()` / `oidcScopes` (`notesScopes.read`), which also
+   * documents what the scope allows (`x-schemavaults-scopes`, the docs UI).
+   * A token with no scope claim grants no scopes, so any non-empty list
+   * denies it (403 `insufficient_scope`). There is no admin bypass: scopes
+   * describe what the TOKEN was granted.
    */
-  readonly requiredScopes?: readonly string[];
+  readonly requiredScopes?: readonly ScopeRequirement[];
   /** Organization membership requirement resolved from a request parameter. */
   readonly organization?: OrganizationRoleRequirement;
   /**
@@ -205,6 +211,7 @@ export function requireAuth<const TSchemes extends readonly AuthSchemeDefinition
     }
     names.add(scheme.name);
   }
+  assertScopeRequirements(requirements.requiredScopes);
   if (
     requirements.delegatedCallers !== undefined &&
     !isDelegatedCallerPolicy(requirements.delegatedCallers)

@@ -60,6 +60,7 @@ import type {
   CreateApiServerScopeRequest,
   UpdateApiServerScopeRequest,
   UpdateAppApiScopePolicyRequest,
+  ScopeInput,
 } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
 import type { OrganizationMembershipVisibility } from "@schemavaults/app-definitions";
@@ -121,7 +122,8 @@ export interface ISchemaVaultsAuthClient {
   //
   // `nonce` (OPTIONAL, OIDC Core §3.1.2.1 — pass `null` when the flow
   // carried none) is the login replay nonce bound to the minted code and
-  // echoed back in the token-exchange response; `scope` (space-delimited)
+  // echoed back in the token-exchange response; `scope` (space-delimited,
+  // or a list of scope values / definitions)
   // defaults to DEFAULT_AUTH_SCOPE when omitted, and `null` sends no
   // scope at all — a plain OAuth 2.1 grant (RFC 6749 §3.3: no id_token,
   // no identity claims) for third-party flows that requested none.
@@ -132,7 +134,7 @@ export interface ISchemaVaultsAuthClient {
     code_challenge: CodeChallengeWithDetails,
     redirect_uri: string | null,
     nonce: string | null,
-    scope?: string | null,
+    scope?: ScopeInput | null,
     resource?: string | null,
   ) => Promise<AuthenticateResult>;
 

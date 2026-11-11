@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_AUTH_SERVER_APP_ID } from "@schemavaults/app-definitions";
-import { DEFAULT_AUTH_SCOPE } from "@schemavaults/auth-common";
+import { DEFAULT_AUTH_SCOPE, defineScopes, oidcScopes } from "@schemavaults/auth-common";
 import { SchemaVaultsAuthClient } from "@/auth-client";
 import type { AuthorizationParams, SignInAuthorizationRequest } from "@/types/authorization-params";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
@@ -116,6 +116,23 @@ describe("authorization_params", () => {
     expect(authorizeParams(redirects[0]).get("resource")).toBe("my-notes-api");
     expect(authorizeParams(redirects[1]).get("scope")).toBe("openid billing:read");
     expect(authorizeParams(redirects[1]).get("resource")).toBe("billing-api");
+  });
+
+  test("scopes can be given as definitions, sent space-delimited", async () => {
+    const notesScopes = defineScopes({
+      read: { scope: "notes:read", description: "Read your notes" },
+      write: { scope: "notes:write", description: "Edit your notes" },
+    });
+    const { client, redirects } = createClient({
+      authorization_params: {
+        scope: [oidcScopes.openid, oidcScopes.email, notesScopes.read],
+        resource: "my-notes-api",
+      },
+    });
+    await client.login();
+    await client.login({ scope: [oidcScopes.openid, notesScopes.write, notesScopes.read] });
+    expect(authorizeParams(redirects[0]).get("scope")).toBe("openid email notes:read");
+    expect(authorizeParams(redirects[1]).get("scope")).toBe("openid notes:write notes:read");
   });
 
   test("without them, sign-ins ask for the default scope and no resource", async () => {

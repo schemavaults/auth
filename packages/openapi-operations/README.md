@@ -26,6 +26,7 @@ import {
   createOperationDefiner,
   requireAuth,
   publicAccess,
+  oidcScopes,
   schemaVaultsAccessTokenBearerScheme,
 } from "@schemavaults/openapi-operations";
 
@@ -44,7 +45,7 @@ export const getApp = defineOperation({
   auth: requireAuth({
     schemes: [schemaVaultsAccessTokenBearerScheme],
     routeGuard: "authenticated", // or "admin"
-    requiredScopes: ["email"],   // token scope claim must include these (OIDC scopes, or API scopes like "notes:read")
+    requiredScopes: [oidcScopes.email], // token scope claim must include these (see "Scopes" below)
     organization: { parameter: "organization_id", roles: ["owner", "admin"] }, // optional
     delegatedCallers: "refused", // optional: refuse credentials an actor (e.g. an agent) holds for the user
   }),
@@ -111,6 +112,78 @@ Request bodies take two extra flags:
   itself. For endpoints whose parsing / error format is mandated by a protocol (the
   OAuth 2.0 token endpoint's `{ error, error_description }`, ...).
 
+### Scopes
+
+`requiredScopes` lists the OAuth 2.0 scopes the presented token's `scope` claim must ALL
+include (403 `insufficient_scope` with `WWW-Authenticate: Bearer error="insufficient_scope"`
+otherwise; administrators get no bypass). Declare each scope once, with what it allows,
+and require the definition rather than repeating its string:
+
+```ts
+// src/lib/api/scopes.ts (client-safe: @schemavaults/auth-common/scopes has no dependencies)
+import { defineScopes } from "@schemavaults/auth-common/scopes";
+
+export const notesScopes = defineScopes({
+  read: { scope: "notes:read", description: "Read your notes" },
+  write: { scope: "notes:write", description: "Create and edit your notes" },
+  readPrivate: { scope: "notes:read.private", description: "Read your private notes" },
+});
+
+// src/app/api/notes/operation.ts
+export const listNotes = defineOperation({
+  // ...
+  auth: requireAuth({ schemes, requiredScopes: [oidcScopes.openid, notesScopes.read] }),
+  handler: (ctx) => {
+    // an optional scope the handler checks itself
+    const notes = hasScopes(ctx.auth, notesScopes.readPrivate) ? all : publicOnly;
+    // ...
+  },
+});
+```
+
+- Scope definitions live in `@schemavaults/auth-common` (its dependency-free `/scopes`
+  entry point), so the client and server SDKs take the same values; this package
+  re-exports them (`defineScope`, `defineScopes`, `oidcScopes`, `formatScope`, ...).
+- `defineScope({ scope, description })` / `defineScopes({ key: { scope, description } })`
+  return frozen `ScopeDefinition`s (exactly `{ scope, description }`, description trimmed)
+  and throw for a value that is not one RFC 6749 scope-token or is longer than 128
+  characters, a description that is blank or longer than 256 characters once trimmed (the
+  auth server's limits for API scopes), or (in `defineScopes`) a value defined twice.
+  `isScopeDefinition()` applies the same rules to any value, and `scopeDefinitionProblem()`
+  says which one it breaks. The literal scope type is kept
+  (`notesScopes.read.scope` is `"notes:read"`).
+- `oidcScopes` defines the OpenID Connect scopes (`openid`, `profile`, `email`, `address`,
+  `phone`, `offline_access`).
+- `requiredScopes` takes definitions and bare strings alike (a string is a scope nobody
+  described). `requireAuth()` refuses an entry that is not a single scope-token (e.g.
+  `"openid email"`: list each scope separately) and a scope listed twice.
+- `hasScopes(ctx.auth, ...scopes)` (all granted? `false` without a principal),
+  `missingScopes(principal, scopes)` and `grantedScopes(principal)` accept either form, for
+  handlers that do more when a token carries an optional scope.
+- In the OpenAPI document, `security` requirements and `x-schemavaults-auth.requiredScopes`
+  carry the scope values, and the document-level `x-schemavaults-scopes` lists every scope
+  the operations require, `[{ scope, description? }]`, so docs can say what each one allows
+  (plain OpenAPI only describes scopes inside `oauth2` flows, which bearer schemes lack).
+  `buildOpenApiDocument({ additionalScopes: Object.values(notesScopes) })` lists scopes no
+  operation requires too (they come first). One scope described two ways across operations
+  throws; `collectScopes(operations, additional)` returns the same list.
+- Import the catalogue in client components from `@schemavaults/auth-common/scopes`
+  (no zod / hono), e.g. to label a scope picker or to sign in for the scopes:
+  `login({ scope: [oidcScopes.openid, notesScopes.read], resource })`.
+
+The SDKs take definitions wherever they take a scope (`formatScope()` turns a list into the
+space-delimited wire form): the client SDK's `login()` / `register()` and
+`authorization_params`, and the server SDK's route guard `required_scopes`,
+`exchangeTokenForDelegatedToken({ scope })` and the scope sync. On SchemaVaults, an API
+server's own scopes must be defined on the auth server before tokens can carry them;
+definitions have the shape of scope manifest entries, so the same catalogue is what a scope
+sync sends:
+
+```ts
+import { syncApiServerScopes } from "@schemavaults/auth-server-sdk/api-scopes";
+await syncApiServerScopes({ scopes: Object.values(notesScopes) }); // never OIDC scopes
+```
+
 ### Auth schemes
 
 An `AuthSchemeDefinition` is a named OpenAPI security scheme plus docs metadata. Built-ins:
@@ -127,7 +200,8 @@ An `AuthSchemeDefinition` is a named OpenAPI security scheme plus docs metadata.
 Schemes describe *how* credentials are transported; verification is a per-host
 `AuthResolver` (below). The OpenAPI document carries the standard `security`
 requirement per operation and an `x-schemavaults-auth` extension with the route guard,
-required scopes and organization role so docs can display them.
+required scopes and organization role so docs can display them (and the scopes'
+descriptions in the document-level `x-schemavaults-scopes`).
 
 #### User-bearing schemes: non-nullable `ctx.auth.user`
 

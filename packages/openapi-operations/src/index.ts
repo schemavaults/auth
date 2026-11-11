@@ -36,6 +36,29 @@ export type {
   RouteGuardType,
 } from "./auth-scheme";
 
+// Scope definitions live in @schemavaults/auth-common (shared with the client
+// and server SDKs); re-exported so operations can be declared from one import.
+export {
+  SCOPE_TOKEN_REGEX,
+  isScopeToken,
+  isScopeDefinition,
+  scopeValue,
+  scopeValues,
+  defineScope,
+  defineScopes,
+  oidcScopes,
+  formatScope,
+  parseScope,
+} from "@schemavaults/auth-common/scopes";
+export type {
+  DefinedScopes,
+  ScopeDefinition,
+  ScopeInput,
+  ScopeRequirement,
+} from "@schemavaults/auth-common/scopes";
+export { assertScopeRequirements, collectScopes } from "./scopes";
+export type { DocumentedScope } from "./scopes";
+
 export {
   defineOperation,
   createOperationDefiner,
@@ -82,10 +105,12 @@ export {
   SCHEMAVAULTS_AUTH_EXTENSION,
   SCHEMAVAULTS_SCHEME_TITLE_EXTENSION,
   SCHEMAVAULTS_SCHEME_CHALLENGE_EXTENSION,
+  SCHEMAVAULTS_SCOPES_EXTENSION,
   toSchemaVaultsAuthExtension,
   isSchemaVaultsAuthExtension,
+  isSchemaVaultsScopesExtension,
 } from "./openapi/extensions";
-export type { SchemaVaultsAuthExtension } from "./openapi/extensions";
+export type { SchemaVaultsAuthExtension, SchemaVaultsScopesExtension } from "./openapi/extensions";
 export {
   extractPathParameterNames,
   openApiPathToHonoPath,

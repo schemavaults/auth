@@ -1,6 +1,13 @@
 import type { Context } from "hono";
 import { schemeResolvesUser, type AuthSchemeDefinition, type OperationAuth } from "../auth-scheme";
 import type { AnyOperationDefinition, AuthPrincipal, UserAuthPrincipal } from "../operation";
+import {
+  missingFromScope,
+  parseScope,
+  scopeIncludes,
+  scopeValues,
+  type ScopeRequirement,
+} from "@schemavaults/auth-common/scopes";
 import { OPERATION_ERROR_CODES, OperationError } from "./errors";
 
 /**
@@ -75,14 +82,34 @@ function assertUserPrincipal<TUser>(
   }
 }
 
+/** The scope values the principal's credential was granted (none without a scope claim). */
 export function grantedScopes(principal: AuthPrincipal): string[] {
-  if (typeof principal.scope !== "string") return [];
-  return principal.scope.split(" ").filter((scope) => scope.length > 0);
+  return parseScope(principal.scope);
 }
 
-export function missingScopes(principal: AuthPrincipal, required: readonly string[]): string[] {
-  const granted = new Set(grantedScopes(principal));
-  return required.filter((scope) => !granted.has(scope));
+/** The values of the `required` scopes the principal was not granted, in order. */
+export function missingScopes(
+  principal: AuthPrincipal,
+  required: readonly ScopeRequirement[],
+): string[] {
+  return missingFromScope(principal.scope, required);
+}
+
+/**
+ * Whether the principal was granted every one of the given scopes (values or
+ * definitions); false without a principal (public operations). For handlers
+ * that do more when a token carries an optional scope:
+ *
+ * ```ts
+ * const notes = hasScopes(ctx.auth, notesScopes.readPrivate) ? all : publicOnly;
+ * ```
+ */
+export function hasScopes(
+  principal: AuthPrincipal | null | undefined,
+  ...scopes: readonly ScopeRequirement[]
+): boolean {
+  if (principal === null || principal === undefined) return false;
+  return scopeIncludes(principal.scope, ...scopes);
 }
 
 /** Whether the principal acts through a delegated credential (it names an RFC 8693 actor). */
@@ -140,7 +167,7 @@ export async function resolveAuth<TUser, TContext = unknown>(
     });
   }
 
-  const required = auth.requiredScopes ?? [];
+  const required = scopeValues(auth.requiredScopes);
   if (required.length > 0) {
     const missing = missingScopes(principal, required);
     if (missing.length > 0) {

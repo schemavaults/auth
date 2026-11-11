@@ -17,6 +17,7 @@ interface OpenApiOperationObject {
 }
 
 interface OpenApiDocumentLike {
+  "x-schemavaults-scopes"?: { scope: string; description?: string }[];
   openapi: string;
   info: { title: string; version: string };
   servers?: { url: string }[];
@@ -76,6 +77,19 @@ describe("OpenApiOperations (example resource server)", () => {
           routeGuard: "authenticated",
           requiredScopes: [],
         });
+
+        // Scopes declared with defineScopes() / oidcScopes: values in the
+        // security requirements, descriptions at the document level.
+        const notes = response.body.paths["/api/me/notes"]?.get;
+        expect(notes?.security).to.deep.eq([
+          { "schemavaults-access-token": ["example:notes.read"] },
+          { "schemavaults-access-token-cookie": ["example:notes.read"] },
+        ]);
+        expect(notes?.["x-schemavaults-auth"]?.requiredScopes).to.deep.eq(["example:notes.read"]);
+        expect(response.body["x-schemavaults-scopes"]).to.deep.eq([
+          { scope: "example:notes.read", description: "Read your notes" },
+          { scope: "email", description: "Read your email address" },
+        ]);
 
         const adminPing = response.body.paths["/api/admin/ping"]?.get;
         expect(adminPing?.["x-schemavaults-auth"]?.routeGuard).to.eq("admin");
@@ -184,6 +198,16 @@ describe("OpenApiOperations (example resource server)", () => {
       cy.contains("Responses").should("be.visible");
       cy.contains("Pong").should("be.visible");
       cy.contains("curl -X POST").should("be.visible");
+
+      // The index lists every scope with its description; an operation
+      // page describes the scopes it requires.
+      cy.visit("/docs");
+      cy.get('[data-testid="api-docs-scope"][data-scope="example:notes.read"]')
+        .should("contain.text", "Read your notes")
+        .and("contain.text", "/api/me/notes");
+      cy.visit("/docs/get-api-me-notes");
+      cy.get('[data-testid="required-scope"][data-scope="example:notes.read"]')
+        .should("contain.text", "Read your notes");
 
       // Admin operation page shows the admin route guard
       cy.visit("/docs/get-api-admin-ping");

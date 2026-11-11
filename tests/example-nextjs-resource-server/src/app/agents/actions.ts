@@ -16,7 +16,7 @@ import {
   type AgentsSignIn,
 } from "@/lib/agents/auth/sign-in-cookie";
 import type { DelegatedTokenGrant } from "@/lib/agents/runtime/types";
-import { delegatedScopeFor } from "@/lib/agents/scopes";
+import { delegatedScopesFor } from "@/lib/agents/scopes";
 import { resolvePublicOriginFromRequest } from "@/lib/api/public-origin-next";
 
 /**
@@ -48,7 +48,7 @@ function describeAuthServerError(error: unknown): string {
 /**
  * Exchanges the signed-in user's access token (RFC 8693, as the confidential
  * client) for a DELEGATED token on which the app's service account acts for
- * them, narrowed to `scopes` (see delegatedScopeFor()), for one agent session.
+ * them, narrowed to `scopes` (see delegatedScopesFor()), for one agent session.
  * Renews the user's token first when it is about to expire.
  */
 export async function mintDelegatedTokenAction(
@@ -73,7 +73,7 @@ export async function mintDelegatedTokenAction(
     const response = await exchangeTokenForDelegatedToken({
       ...agentsClientCredentials(),
       subject_token: fresh.access_token,
-      scope: delegatedScopeFor(Array.isArray(scopes) ? scopes.filter((s) => typeof s === "string") : []),
+      scope: delegatedScopesFor(Array.isArray(scopes) ? scopes.filter((s) => typeof s === "string") : []),
     });
     return {
       ok: true,

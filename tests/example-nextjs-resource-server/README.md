@@ -137,7 +137,8 @@ The origin is `https://<your-domain>` exactly: scheme and host, no path, no trai
      client without callback URLs accepts any path on its domains, so this is optional but tighter;
    - connect it to the same API server.
 5. **Agents** (optional, for `/agents`). On the API server's page, add the scope `example:notes.read` under
-   **Scopes** and switch on **Delegated Access (Agents)**. The confidential app's service account, which agents'
+   **Scopes** (description: "Read your notes", as `src/lib/api/scopes.ts` defines it) and switch on
+   **Delegated Access (Agents)**. The confidential app's service account, which agents'
    tokens name as their actor, is created on first use.
 
 ### 3. Set the environment variables

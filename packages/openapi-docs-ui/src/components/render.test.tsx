@@ -35,6 +35,10 @@ const document = {
       },
     },
   },
+  "x-schemavaults-scopes": [
+    { scope: "email", description: "Read your email address" },
+    { scope: "apps:audit", description: "Read the audit log of your apps" },
+  ],
   paths: {
     "/api/apps/{app_id}": {
       get: {
@@ -108,6 +112,19 @@ describe("ApiDocsIndex", () => {
     expect(html).toContain("no delegated callers");
     expect(html).toContain("Public");
   });
+
+  test("lists every scope with its description and the operations requiring it", () => {
+    expect(html).toContain('id="scope-email"');
+    expect(html).toContain('data-scope="email"');
+    expect(html).toContain("Read your email address");
+    expect(html).toContain("Read the audit log of your apps");
+    expect(html).toContain("No operation requires it.");
+  });
+
+  test("hideScopes leaves the scopes card out", () => {
+    const hidden = renderToStaticMarkup(<ApiDocsIndex model={model} basePath="/docs" hideScopes />);
+    expect(hidden).not.toContain('id="scope-email"');
+  });
 });
 
 describe("ApiOperationPage", () => {
@@ -131,6 +148,13 @@ describe("ApiOperationPage", () => {
     expect(html).toContain("curl -X GET");
     expect(html).toContain("Other methods on this path");
     expect(html).toContain('href="/docs/patch-api-apps-app_id"');
+  });
+
+  test("describes each required scope and links it to the index", () => {
+    expect(html).toContain('data-testid="required-scope"');
+    expect(html).toContain('href="/docs#scope-email"');
+    expect(html).toContain("Read your email address");
+    expect(html).not.toContain("Read the audit log of your apps");
   });
 });
 

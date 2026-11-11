@@ -55,6 +55,30 @@ export type * from "./oidc";
 
 export * from "./api-scopes";
 export type * from "./api-scopes";
+export {
+  SCOPE_TOKEN_REGEX,
+  isScopeToken,
+  isScopeDefinition,
+  scopeDefinitionProblem,
+  MAX_SCOPE_VALUE_LENGTH,
+  MAX_SCOPE_DESCRIPTION_LENGTH,
+  scopeValue,
+  scopeValues,
+  defineScope,
+  defineScopes,
+  oidcScopes,
+  parseScope,
+  formatScope,
+  missingFromScope,
+  scopeIncludes,
+} from "./scopes";
+export type {
+  DefinedScopes,
+  GrantedScopeInput,
+  ScopeDefinition,
+  ScopeInput,
+  ScopeRequirement,
+} from "./scopes";
 
 export { sha256_base64url } from "./sha256_digest";
 

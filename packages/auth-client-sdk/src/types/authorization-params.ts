@@ -1,14 +1,19 @@
+import type { ScopeInput } from "@schemavaults/auth-common";
+
 /**
  * Parameters of the authorization request (RFC 6749 §4.1.1) that `login()`
  * and `register()` send the user to the auth server with.
  */
 export interface AuthorizationParams {
   /**
-   * Space-delimited scopes to request (RFC 6749 §3.3): OpenID scopes and the
-   * API scopes of `resource` alike, e.g. "openid email profile notes:read".
+   * The scopes to request (RFC 6749 §3.3): OpenID scopes and the API scopes
+   * of `resource` alike, either space-delimited ("openid email profile
+   * notes:read") or as a list of scope values and definitions
+   * (`[oidcScopes.openid, oidcScopes.email, notesScopes.read]`, see
+   * `defineScopes()`), sent as the space-delimited string.
    * Defaults to DEFAULT_AUTH_SCOPE ("openid email profile").
    */
-  scope?: string;
+  scope?: ScopeInput;
   /**
    * RFC 8707 resource indicator: the API server id (or the URL of one of its
    * registered domains) whose API scopes `scope` asks for, e.g.

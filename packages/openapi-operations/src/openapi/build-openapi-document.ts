@@ -16,10 +16,13 @@ import type {
 import type { AuthSchemeDefinition } from "../auth-scheme";
 import type { AnyOperationDefinition } from "../operation";
 import { assertUniqueOperations } from "../operation";
+import { collectScopes } from "../scopes/collect-scopes";
+import { scopeValues, type ScopeRequirement } from "@schemavaults/auth-common/scopes";
 import {
   SCHEMAVAULTS_AUTH_EXTENSION,
   SCHEMAVAULTS_SCHEME_CHALLENGE_EXTENSION,
   SCHEMAVAULTS_SCHEME_TITLE_EXTENSION,
+  SCHEMAVAULTS_SCOPES_EXTENSION,
   toSchemaVaultsAuthExtension,
 } from "./extensions";
 import { withRuntimeErrorResponses } from "./runtime-responses";
@@ -33,6 +36,13 @@ export interface BuildOpenApiDocumentOptions {
   readonly externalDocs?: ExternalDocumentationObject;
   /** Schemes to document even when no operation references them. */
   readonly additionalAuthSchemes?: readonly AuthSchemeDefinition[];
+  /**
+   * Scopes to document (in `x-schemavaults-scopes`) even when no operation
+   * requires them, listed first: e.g. `Object.values(myScopes)` for the
+   * API's whole `defineScopes()` catalogue, including scopes only handlers
+   * check (`hasScopes()`).
+   */
+  readonly additionalScopes?: readonly ScopeRequirement[];
   /** Document-level vendor extensions. */
   readonly extensions?: Readonly<Record<`x-${string}`, unknown>>;
   /**
@@ -87,7 +97,7 @@ export function toSecuritySchemeComponent(scheme: AuthSchemeDefinition): Securit
 
 function toSecurityRequirements(operation: AnyOperationDefinition): SecurityRequirementObject[] {
   if (operation.auth.type === "public") return [];
-  const scopes = [...(operation.auth.requiredScopes ?? [])];
+  const scopes = scopeValues(operation.auth.requiredScopes);
   return operation.auth.schemes.map((scheme) => ({ [scheme.name]: scopes }));
 }
 
@@ -142,7 +152,9 @@ export function toRouteConfig(operation: AnyOperationDefinition): RouteConfig {
 /**
  * Builds an OpenAPI 3.1 document from operation definitions using
  * `@asteasolutions/zod-to-openapi`. Zod schemas registered with
- * `.openapi("RefId")` are emitted under `components.schemas`.
+ * `.openapi("RefId")` are emitted under `components.schemas`; the scopes
+ * the operations require (with their descriptions) under the document's
+ * `x-schemavaults-scopes`.
  */
 export function buildOpenApiDocument(options: BuildOpenApiDocumentOptions): OpenAPIObject {
   assertUniqueOperations(options.operations);
@@ -151,6 +163,7 @@ export function buildOpenApiDocument(options: BuildOpenApiDocumentOptions): Open
     ? options.operations.map(withRuntimeErrorResponses)
     : options.operations;
 
+  const scopes = collectScopes(operations, options.additionalScopes);
   for (const scheme of collectAuthSchemes(operations, options.additionalAuthSchemes)) {
     registry.registerComponent("securitySchemes", scheme.name, toSecuritySchemeComponent(scheme));
   }
@@ -173,6 +186,7 @@ export function buildOpenApiDocument(options: BuildOpenApiDocumentOptions): Open
     ...(options.servers ? { servers: [...options.servers] } : {}),
     ...(declaredTags.size > 0 ? { tags: [...declaredTags.values()] } : {}),
     ...(options.externalDocs ? { externalDocs: options.externalDocs } : {}),
+    ...(scopes.length > 0 ? { [SCHEMAVAULTS_SCOPES_EXTENSION]: scopes } : {}),
     ...(options.extensions ?? {}),
   });
 }

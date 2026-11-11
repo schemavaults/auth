@@ -30,7 +30,9 @@ export interface SyncApiServerScopesOptions {
   /**
    * The API server's whole scope list, or the shorthand
    * `{ [scope]: description }` (which keeps every scope's current
-   * `allow_dynamic_clients`).
+   * `allow_dynamic_clients`). Scope definitions are manifest entries, so a
+   * `defineScopes()` catalogue is synced as `Object.values(catalogue)`
+   * (never `oidcScopes`: OpenID Connect scope names are reserved).
    */
   readonly scopes:
     | readonly ApiScopeManifestEntryInput[]

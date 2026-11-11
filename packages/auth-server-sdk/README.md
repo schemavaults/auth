@@ -107,6 +107,25 @@ const result = await syncApiServerScopes({
 // result: { api_server_id, dry_run, created, updated (with `previous`), unchanged, not_in_manifest }
 ```
 
+Scopes declared in code with `defineScopes()` (from `@schemavaults/auth-common/scopes`,
+re-exported by this package and by `@schemavaults/openapi-operations`) are already
+manifest entries, so `syncApiServerScopes({ scopes: Object.values(notesScopes) })` syncs
+the same definitions the API enforces: route guards' `required_scopes` and
+openapi-operations' `requiredScopes` take them too, as does
+`exchangeTokenForDelegatedToken({ scope })`. Never include `oidcScopes` (their names are
+reserved; the sync refuses them locally).
+
+```ts
+import { defineScopes } from "@schemavaults/auth-server-sdk";
+
+export const notesScopes = defineScopes({
+  read: { scope: "notes:read", description: "Read your notes." },
+  write: { scope: "notes:write", description: "Create, edit and delete your notes." },
+});
+
+export const GET = withAuthenticatedApiRouteGuard(handler, undefined, { required_scopes: [notesScopes.read] });
+```
+
 A list that fails the schema throws `InvalidApiScopeManifestError` without calling the
 auth server; any other answer than 200 throws `ApiScopeSyncFailedError` with its
 `status` and `code` (e.g. `validation_error`, `invalid_assertion`, `too_many_scopes`
@@ -338,7 +357,7 @@ const client = {
 const delegated = await exchangeTokenForDelegatedToken({
   ...client,
   subject_token: usersAccessToken, // the user's access token for the API server the agent calls
-  scope: ["notes:read"],           // optional: a subset of its scope (default: all of it)
+  scope: [notesScopes.read],       // optional: a subset of its scope (default: all of it); values or definitions
 });
 delegated.access_token; // give this to the agent
 delegated.expires_in;   // seconds: what the subject token had left. No refresh token: renew the user's token and exchange again

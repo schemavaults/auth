@@ -8,8 +8,14 @@ import {
   schemaVaultsAccessTokenBearerScheme,
   schemaVaultsAccessTokenCookieScheme,
 } from "../auth-scheme";
+import { defineScopes, oidcScopes } from "@schemavaults/auth-common/scopes";
 import { buildOpenApiDocument, collectAuthSchemes } from "./build-openapi-document";
-import { SCHEMAVAULTS_AUTH_EXTENSION, SCHEMAVAULTS_SCHEME_TITLE_EXTENSION } from "./extensions";
+import {
+  SCHEMAVAULTS_AUTH_EXTENSION,
+  SCHEMAVAULTS_SCHEME_TITLE_EXTENSION,
+  SCHEMAVAULTS_SCOPES_EXTENSION,
+  isSchemaVaultsScopesExtension,
+} from "./extensions";
 
 const AppSchema = z
   .object({ app_id: z.string().uuid(), name: z.string() })
@@ -145,5 +151,97 @@ describe("buildOpenApiDocument", () => {
     expect(() =>
       collectAuthSchemes([], [apiKeyHeaderScheme("cron-key", "X-Cron-Key"), other]),
     ).toThrow(/defined twice/);
+  });
+});
+
+describe("buildOpenApiDocument scopes", () => {
+  const notesScopes = defineScopes({
+    read: { scope: "notes:read", description: "Read your notes" },
+    write: { scope: "notes:write", description: "Create and edit your notes" },
+    share: { scope: "notes:share", description: "Share your notes with others" },
+  });
+
+  const readNotes = defineOperation({
+    method: "get",
+    path: "/api/notes",
+    summary: "List notes",
+    auth: requireAuth({
+      schemes: [schemaVaultsAccessTokenBearerScheme],
+      requiredScopes: [oidcScopes.openid, notesScopes.read],
+    }),
+    responses: { 200: { description: "Notes", schema: z.object({ notes: z.array(z.string()) }) } },
+    handler: (ctx) => ctx.json(200, { notes: [] }),
+  });
+
+  const writeNotes = defineOperation({
+    method: "post",
+    path: "/api/notes",
+    summary: "Create a note",
+    auth: requireAuth({ schemes: [schemaVaultsAccessTokenBearerScheme], requiredScopes: [notesScopes.write, "openid"] }),
+    responses: { 201: { description: "Created" } },
+    handler: (ctx) => ctx.empty(201),
+  });
+
+  const doc = buildOpenApiDocument({
+    info: { title: "Notes API", version: "1.0.0" },
+    operations: [readNotes, writeNotes, health],
+    additionalScopes: Object.values(notesScopes),
+  });
+
+  test("security requirements and the auth extension carry scope values", () => {
+    expect(doc.paths?.["/api/notes"]?.get?.security).toEqual([
+      { "schemavaults-access-token": ["openid", "notes:read"] },
+    ]);
+    expect(doc.paths?.["/api/notes"]?.get?.[SCHEMAVAULTS_AUTH_EXTENSION]).toMatchObject({
+      requiredScopes: ["openid", "notes:read"],
+    });
+    expect(doc.paths?.["/api/notes"]?.post?.[SCHEMAVAULTS_AUTH_EXTENSION]).toMatchObject({
+      requiredScopes: ["notes:write", "openid"],
+    });
+  });
+
+  test("the document lists every scope with its description, additional scopes first", () => {
+    const scopes = doc[SCHEMAVAULTS_SCOPES_EXTENSION];
+    expect(isSchemaVaultsScopesExtension(scopes)).toBe(true);
+    expect(scopes).toEqual([
+      { scope: "notes:read", description: "Read your notes" },
+      { scope: "notes:write", description: "Create and edit your notes" },
+      { scope: "notes:share", description: "Share your notes with others" },
+      { scope: "openid", description: "Sign you in with OpenID Connect" },
+    ]);
+  });
+
+  test("bare scope values are listed without a description", () => {
+    const scopes = buildOpenApiDocument({
+      info: { title: "t", version: "1" },
+      operations: [listApps],
+    })[SCHEMAVAULTS_SCOPES_EXTENSION];
+    expect(scopes).toEqual([{ scope: "email" }]);
+  });
+
+  test("no scopes, no extension", () => {
+    const scopeless = buildOpenApiDocument({
+      info: { title: "t", version: "1" },
+      operations: [deleteMember, health],
+    });
+    expect(scopeless).not.toHaveProperty(SCHEMAVAULTS_SCOPES_EXTENSION);
+  });
+
+  test("refuses one scope described two ways", () => {
+    const conflicting = defineOperation({
+      method: "get",
+      path: "/api/notes/{note_id}",
+      summary: "Get a note",
+      auth: requireAuth({
+        schemes: [schemaVaultsAccessTokenBearerScheme],
+        requiredScopes: [{ scope: "notes:read", description: "Read one note" }],
+      }),
+      request: { params: z.object({ note_id: z.string() }) },
+      responses: { 200: { description: "Note", schema: z.object({}) } },
+      handler: (ctx) => ctx.json(200, {}),
+    });
+    expect(() =>
+      buildOpenApiDocument({ info: { title: "t", version: "1" }, operations: [readNotes, conflicting] }),
+    ).toThrow(/defined twice with different descriptions/);
   });
 });

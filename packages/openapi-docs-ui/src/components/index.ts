@@ -10,6 +10,8 @@ export {
   securitySchemeAnchorId,
 } from "./ApiSecuritySchemesCard";
 export type { ApiSecuritySchemesCardProps } from "./ApiSecuritySchemesCard";
+export { ApiScopesCard, scopeAnchorId } from "./ApiScopesCard";
+export type { ApiScopesCardProps } from "./ApiScopesCard";
 export { OperationAuthCard, routeGuardLabel } from "./OperationAuthCard";
 export type { OperationAuthCardProps } from "./OperationAuthCard";
 export { OperationAuthBadges } from "./OperationAuthBadges";

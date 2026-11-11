@@ -25,6 +25,7 @@ export type {
   ApiDocsResponse,
   ApiDocsResponseHeader,
   ApiDocsRouteGuard,
+  ApiDocsScope,
   ApiDocsSecurityRequirement,
   ApiDocsSecurityScheme,
   ApiDocsServer,

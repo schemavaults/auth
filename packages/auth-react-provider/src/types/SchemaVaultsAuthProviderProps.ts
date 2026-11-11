@@ -67,6 +67,10 @@ export interface SchemaVaultsAuthProviderProps
    * />
    * ```
    *
+   * `scope` may also list scope values and definitions (`defineScopes()`),
+   * e.g. `[oidcScopes.openid, oidcScopes.email, notesScopes.read]`: the same
+   * catalogue the API's operations require.
+   *
    * A signed-in session whose sign-in asked for less (one that predates the
    * scopes you list, e.g. after you add one) is sent through the
    * authorization flow again, once per tab, from the page it is on: the auth

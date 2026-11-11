@@ -27,6 +27,8 @@ import {
   isValidErrorId,
   type SchemaVaultsAuthErrorId,
   DEFAULT_AUTH_SCOPE,
+  formatScope,
+  type ScopeInput,
 } from "@schemavaults/auth-common";
 import type { ISchemaVaultsAuthClientAdapter } from "@/types/ISchemaVaultsAuthClientAdapter";
 import type { IAuthClientConstructorOptions } from "@/types/IAuthClientConstructorOptions";
@@ -1429,8 +1431,8 @@ export class SchemaVaultsAuthClient
     nonce: string | null,
     // Optional per RFC 6749 §3.3 — null for a plain OAuth 2.1 grant (no
     // `scope` sent, so no id_token); defaults to the platform's OpenID
-    // scope set.
-    scope: string | null = DEFAULT_AUTH_SCOPE,
+    // scope set. A list of scope values / definitions is sent space-delimited.
+    scope: ScopeInput | null = DEFAULT_AUTH_SCOPE,
     // Optional RFC 8707 resource indicator: grants the requested API
     // scopes of the API server it names (null / omitted: none).
     resource: string | null = null,
@@ -1450,7 +1452,9 @@ export class SchemaVaultsAuthClient
       redirect_uri,
       auth_server_url: this.auth_server_url,
       nonce,
-      scope,
+      // A string goes as given; a list of scope values / definitions is
+      // sent space-delimited.
+      scope: scope === null || typeof scope === "string" ? scope : formatScope(scope),
       resource,
     });
   }

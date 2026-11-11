@@ -9,7 +9,8 @@ import {
 } from "../auth-scheme";
 import { createOperationsApp } from "./create-operations-app";
 import { OperationError } from "./errors";
-import type { AuthResolvers } from "./resolve-auth";
+import { hasScopes, type AuthResolvers } from "./resolve-auth";
+import { defineScopes, oidcScopes } from "@schemavaults/auth-common/scopes";
 import { toNextRouteHandlers } from "../adapters/nextjs";
 import { toVercelHandler } from "../adapters/vercel";
 import { buildOpenApiDocument } from "../openapi/build-openapi-document";
@@ -290,6 +291,57 @@ describe("createOperationsApp", () => {
     });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ grant_type: "authorization_code" });
+  });
+
+  test("required scope definitions are enforced by value", async () => {
+    const notesScopes = defineScopes({
+      read: { scope: "notes:read", description: "Read your notes" },
+      readPrivate: { scope: "notes:read.private", description: "Read your private notes" },
+    });
+    const listNotes = define({
+      method: "get",
+      path: "/api/notes",
+      summary: "Notes",
+      auth: requireAuth({
+        schemes: [schemaVaultsAccessTokenBearerScheme],
+        requiredScopes: [oidcScopes.openid, notesScopes.read],
+      }),
+      responses: { 200: { description: "ok", schema: z.object({ private: z.boolean() }) } },
+      handler: (ctx) => ctx.json(200, { private: hasScopes(ctx.auth, notesScopes.readPrivate) }),
+    });
+    // The token is the granted scope itself (the shared resolver splits on ":").
+    const notesApp = createOperationsApp<Ctx, User>({
+      operations: [listNotes],
+      authResolvers: {
+        "schemavaults-access-token": (c) => {
+          const header = c.req.header("authorization");
+          if (!header?.startsWith("Bearer ")) return null;
+          return principal({ uid: "alice", admin: false }, header.slice("Bearer ".length));
+        },
+      },
+      context: () => ({ now: 42 }),
+    });
+
+    const missing = await notesApp.request("/api/notes", { headers: { authorization: "Bearer openid" } });
+    expect(missing.status).toBe(403);
+    expect(missing.headers.get("www-authenticate")).toBe(
+      'Bearer error="insufficient_scope", scope="openid notes:read"',
+    );
+    expect(await missing.json()).toMatchObject({
+      error: "insufficient_scope",
+      details: { required_scopes: ["openid", "notes:read"], missing_scopes: ["notes:read"] },
+    });
+
+    const granted = await notesApp.request("/api/notes", {
+      headers: { authorization: "Bearer openid notes:read" },
+    });
+    expect(granted.status).toBe(200);
+    expect(await granted.json()).toEqual({ private: false });
+
+    const withOptional = await notesApp.request("/api/notes", {
+      headers: { authorization: "Bearer openid notes:read notes:read.private" },
+    });
+    expect(await withOptional.json()).toEqual({ private: true });
   });
 
   test("required scopes", async () => {

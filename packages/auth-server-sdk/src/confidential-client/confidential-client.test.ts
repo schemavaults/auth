@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { defineScope, oidcScopes } from "@schemavaults/auth-common";
 import { exchangeTokenForDelegatedToken } from "./exchange-token-for-delegated-token";
 import { revokeToken } from "./revoke-token";
 import { OAuthEndpointError } from "./shared";
@@ -96,6 +97,15 @@ describe("exchangeTokenForDelegatedToken", () => {
     expect(first!.get("resource")).toBe("https://mcp.example.com/mcp");
     expect(second!.get("scope")).toBe("notes:read notes:list");
     expect(second!.has("resource")).toBe(false);
+  });
+
+  test("takes the scope as a list of definitions", async () => {
+    const { fetch, requests } = stubFetch(200, DELEGATED_RESPONSE);
+    await exchangeTokenForDelegatedToken({
+      ...exchangeOptions(fetch),
+      scope: [oidcScopes.openid, defineScope({ scope: "notes:read", description: "Read your notes" })],
+    });
+    expect(new URLSearchParams(String(requests[0]?.init?.body)).get("scope")).toBe("openid notes:read");
   });
 
   test("refuses an empty scope instead of sending an ambiguous one", async () => {

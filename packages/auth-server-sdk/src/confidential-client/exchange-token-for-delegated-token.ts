@@ -1,7 +1,9 @@
 import {
+  formatScope,
   getOidcEndpointUrl,
   OAUTH_ACCESS_TOKEN_TYPE,
   OAUTH_TOKEN_EXCHANGE_GRANT_TYPE,
+  type ScopeInput,
 } from "@schemavaults/auth-common";
 import { z } from "zod";
 import {
@@ -19,11 +21,12 @@ export interface IExchangeTokenForDelegatedTokenOptions
    */
   subject_token: string;
   /**
-   * The scope of the delegated token, a subset of the subject token's
-   * (space-delimited, or a list). Omit to keep the subject token's whole
-   * scope. Asking for more answers `invalid_scope`.
+   * The scope of the delegated token, a subset of the subject token's:
+   * space-delimited, or a list of scope values and definitions
+   * (`[oidcScopes.openid, notesScopes.read]`). Omit to keep the subject
+   * token's whole scope. Asking for more answers `invalid_scope`.
    */
-  scope?: string | readonly string[];
+  scope?: ScopeInput;
   /**
    * RFC 8707 resource indicator. Optional: a delegated token is always
    * minted for the subject token's own audience, and any other value
@@ -51,16 +54,14 @@ export const delegatedTokenResponseSchema = z.looseObject({
 
 export type DelegatedTokenResponse = z.infer<typeof delegatedTokenResponseSchema>;
 
-function serializeScope(scope: string | readonly string[]): string {
-  const values: string[] = (typeof scope === "string" ? scope.split(" ") : [...scope])
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-  if (values.length === 0) {
+function serializeScope(scope: ScopeInput): string {
+  const serialized: string = formatScope(scope);
+  if (serialized.length === 0) {
     throw new TypeError(
       "Expected a non-empty 'scope'; omit it to keep the subject token's scope.",
     );
   }
-  return values.join(" ");
+  return serialized;
 }
 
 /**

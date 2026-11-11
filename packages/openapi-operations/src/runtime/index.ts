@@ -18,6 +18,7 @@ export {
   requireUser,
   grantedScopes,
   missingScopes,
+  hasScopes,
   isDelegatedPrincipal,
 } from "./resolve-auth";
 export type { AuthResolver, AuthResolvers } from "./resolve-auth";
