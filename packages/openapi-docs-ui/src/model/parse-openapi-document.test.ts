@@ -169,6 +169,53 @@ describe("parseOpenApiDocument", () => {
     ]);
   });
 
+  test("scopes required by operations without a description", () => {
+    expect(model.scopes).toEqual([{ scope: "email", requiredBy: ["get-api-apps"] }]);
+  });
+
+  test("scopes from x-schemavaults-scopes, oauth2 flows and operations", () => {
+    const scoped = parseOpenApiDocument({
+      openapi: "3.1.0",
+      info: { title: "t", version: "1" },
+      "x-schemavaults-scopes": [
+        { scope: "notes:read", description: "Read your notes" },
+        { scope: "notes:share" },
+        { scope: "" },
+        "malformed",
+      ],
+      components: {
+        securitySchemes: {
+          oauth: {
+            type: "oauth2",
+            flows: {
+              authorizationCode: {
+                authorizationUrl: "https://auth.example.com/authorize",
+                tokenUrl: "https://auth.example.com/token",
+                scopes: { "notes:share": "Share your notes", "notes:write": "Edit your notes" },
+              },
+            },
+          },
+        },
+      },
+      paths: {
+        "/notes": {
+          get: { security: [{ oauth: ["notes:read"] }], responses: {} },
+          post: {
+            security: [{ oauth: ["notes:write", "email"] }],
+            "x-schemavaults-auth": { public: false, schemes: ["oauth"], requiredScopes: ["notes:write", "email"] },
+            responses: {},
+          },
+        },
+      },
+    });
+    expect(scoped.scopes).toEqual([
+      { scope: "notes:read", description: "Read your notes", requiredBy: ["get-notes"] },
+      { scope: "notes:share", description: "Share your notes", requiredBy: [] },
+      { scope: "notes:write", description: "Edit your notes", requiredBy: ["post-notes"] },
+      { scope: "email", requiredBy: ["post-notes"] },
+    ]);
+  });
+
   test("rejects non-objects", () => {
     expect(() => parseOpenApiDocument("nope")).toThrow(TypeError);
   });

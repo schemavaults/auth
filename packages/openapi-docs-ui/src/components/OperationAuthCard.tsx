@@ -14,8 +14,9 @@ import {
   DescriptionTerm,
   cn,
 } from "@schemavaults/ui";
-import type { ApiDocsAuth, ApiDocsSecurityScheme } from "@/model/types";
+import type { ApiDocsAuth, ApiDocsScope, ApiDocsSecurityScheme } from "@/model/types";
 import { describeSecuritySchemeTransport, securitySchemeAnchorId } from "./ApiSecuritySchemesCard";
+import { scopeAnchorId } from "./ApiScopesCard";
 import { OperationAuthBadges } from "./OperationAuthBadges";
 import { DocsText } from "./DocsText";
 import { DOCS_CARD_CONTENT_CLASS, DOCS_CARD_HEADER_CLASS } from "./card-padding";
@@ -26,6 +27,10 @@ export interface OperationAuthCardProps {
   schemes: readonly ApiDocsSecurityScheme[];
   /** Link target of the page that lists every scheme (index page), for the anchors. */
   schemesHref?: string;
+  /** All scopes of the document (`model.scopes`), to describe the required ones. */
+  scopes?: readonly ApiDocsScope[];
+  /** Link target of the page that lists every scope (index page), for the anchors. */
+  scopesHref?: string;
   className?: string;
 }
 
@@ -36,7 +41,14 @@ export function routeGuardLabel(auth: ApiDocsAuth): string {
 }
 
 /** Full "Authentication & permissions" panel for one operation. */
-export function OperationAuthCard({ auth, schemes, schemesHref, className }: OperationAuthCardProps): ReactElement {
+export function OperationAuthCard({
+  auth,
+  schemes,
+  schemesHref,
+  scopes = [],
+  scopesHref,
+  className,
+}: OperationAuthCardProps): ReactElement {
   const accepted = auth.schemeNames
     .map((name) => schemes.find((scheme) => scheme.name === name) ?? null)
     .filter((scheme): scheme is ApiDocsSecurityScheme => scheme !== null);
@@ -102,11 +114,28 @@ export function OperationAuthCard({ auth, schemes, schemesHref, className }: Ope
             <DescriptionItem>
               <DescriptionTerm>Required scopes</DescriptionTerm>
               <DescriptionDetails>
-                <span className="flex flex-wrap gap-1">
-                  {auth.requiredScopes.map((scope) => (
-                    <Badge key={scope} variant="outline" className="font-mono font-normal">{scope}</Badge>
-                  ))}
-                </span>
+                <ul className="flex flex-col gap-1">
+                  {auth.requiredScopes.map((scope) => {
+                    const description = scopes.find((candidate) => candidate.scope === scope)?.description;
+                    const badge = (
+                      <Badge variant="outline" className="font-mono font-normal [overflow-wrap:anywhere]">{scope}</Badge>
+                    );
+                    return (
+                      <li key={scope} data-testid="required-scope" data-scope={scope} className="flex flex-wrap items-center gap-2">
+                        {scopesHref ? (
+                          <a href={`${scopesHref}#${scopeAnchorId(scope)}`} className="underline-offset-4 hover:underline">
+                            {badge}
+                          </a>
+                        ) : (
+                          badge
+                        )}
+                        {description ? (
+                          <span className="text-sm"><DocsText text={description} /></span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
                 <p className="mt-1 text-xs text-muted-foreground">
                   The token&apos;s <code className="font-mono">scope</code> claim must include every scope listed; administrators get no bypass.
                 </p>

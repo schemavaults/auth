@@ -1,4 +1,5 @@
 // NOT server-only: the new-session screen lists these too.
+import { exampleApiScopes, oidcScopes } from "@/lib/api/scopes";
 
 /**
  * What a user can let an agent do, one checkbox each on the new-session
@@ -17,11 +18,19 @@ export interface AgentScopeOption {
 }
 
 /** `GET /api/me/notes` (see src/app/api/me/notes/operation.ts). */
-export const NOTES_READ_SCOPE = "example:notes.read" as const;
+export const NOTES_READ_SCOPE = exampleApiScopes.notesRead.scope;
 
+/**
+ * Labelled with the scopes' own descriptions (src/lib/api/scopes.ts), the
+ * ones the API docs show for the operations requiring them.
+ */
 export const AGENT_SCOPE_OPTIONS: readonly AgentScopeOption[] = [
-  { scope: "email", label: "Read your email address", operation: "GET /api/me/email" },
-  { scope: NOTES_READ_SCOPE, label: "Read your notes", operation: "GET /api/me/notes" },
+  { scope: oidcScopes.email.scope, label: oidcScopes.email.description, operation: "GET /api/me/email" },
+  {
+    scope: exampleApiScopes.notesRead.scope,
+    label: exampleApiScopes.notesRead.description,
+    operation: "GET /api/me/notes",
+  },
 ];
 
 /**

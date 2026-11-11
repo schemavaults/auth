@@ -37,6 +37,20 @@ export type {
 } from "./auth-scheme";
 
 export {
+  SCOPE_TOKEN_REGEX,
+  isScopeToken,
+  isScopeDefinition,
+  scopeValue,
+  scopeValues,
+  defineScope,
+  defineScopes,
+  assertScopeRequirements,
+  collectScopes,
+  oidcScopes,
+} from "./scopes";
+export type { DefinedScopes, DocumentedScope, ScopeDefinition, ScopeRequirement } from "./scopes";
+
+export {
   defineOperation,
   createOperationDefiner,
   defineOperationGroup,
@@ -82,10 +96,12 @@ export {
   SCHEMAVAULTS_AUTH_EXTENSION,
   SCHEMAVAULTS_SCHEME_TITLE_EXTENSION,
   SCHEMAVAULTS_SCHEME_CHALLENGE_EXTENSION,
+  SCHEMAVAULTS_SCOPES_EXTENSION,
   toSchemaVaultsAuthExtension,
   isSchemaVaultsAuthExtension,
+  isSchemaVaultsScopesExtension,
 } from "./openapi/extensions";
-export type { SchemaVaultsAuthExtension } from "./openapi/extensions";
+export type { SchemaVaultsAuthExtension, SchemaVaultsScopesExtension } from "./openapi/extensions";
 export {
   extractPathParameterNames,
   openApiPathToHonoPath,

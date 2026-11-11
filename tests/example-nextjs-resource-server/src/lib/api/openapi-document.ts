@@ -1,5 +1,6 @@
 import { buildOpenApiDocument } from "@schemavaults/openapi-operations";
 import { operations } from "./operations";
+import { exampleApiScopes } from "./scopes";
 // The API version tracks this package's version (tsconfig: resolveJsonModule).
 import packageJson from "../../../package.json";
 
@@ -12,7 +13,8 @@ export const OPENAPI_DOCUMENT_PATH = "/api/openapi.json" as const;
  * /docs pages. Built once at module load: the definitions are static. The
  * responses the runtime produces on its own (400 validation, 401 / 403 on
  * protected operations, 415, 500) are documented too, with the
- * `OperationError` envelope schema.
+ * `OperationError` envelope schema, and so are the scopes the operations
+ * require (`x-schemavaults-scopes`, described in ./scopes.ts).
  */
 export const openApiDocument: ReturnType<typeof buildOpenApiDocument> = buildOpenApiDocument({
   info: {
@@ -29,5 +31,8 @@ export const openApiDocument: ReturnType<typeof buildOpenApiDocument> = buildOpe
     { name: "Organizations", description: "Operations gated on organization membership" },
   ],
   operations,
+  // Every scope the API defines, with its description, under
+  // `x-schemavaults-scopes` (the /docs index lists them), required or not.
+  additionalScopes: Object.values(exampleApiScopes),
   documentRuntimeResponses: true,
 });

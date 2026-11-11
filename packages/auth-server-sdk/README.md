@@ -107,6 +107,11 @@ const result = await syncApiServerScopes({
 // result: { api_server_id, dry_run, created, updated (with `previous`), unchanged, not_in_manifest }
 ```
 
+Scopes declared in code with `defineScopes()` from `@schemavaults/openapi-operations`
+(the catalogue its operations' `requiredScopes` name) are already manifest entries, so
+`syncApiServerScopes({ scopes: Object.values(notesScopes) })` syncs the same definitions
+the operations enforce and the API docs describe (never include `oidcScopes`).
+
 A list that fails the schema throws `InvalidApiScopeManifestError` without calling the
 auth server; any other answer than 200 throws `ApiScopeSyncFailedError` with its
 `status` and `code` (e.g. `validation_error`, `invalid_assertion`, `too_many_scopes`

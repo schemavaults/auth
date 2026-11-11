@@ -6,9 +6,10 @@ every route grouped by tag, and one page per operation showing parameters, reque
 response schemas, and the **authentication scheme + permissions** the caller needs.
 
 Pairs with `@schemavaults/openapi-operations`, whose generated documents carry the
-`x-schemavaults-auth` extension (route guard, required scopes, organization role) that
-this package surfaces. Any other OpenAPI 3.x document works too; auth details then come
-from the standard `security` requirements.
+`x-schemavaults-auth` extension (route guard, required scopes, organization role) and
+the document-level `x-schemavaults-scopes` list (what each scope allows) that this
+package surfaces. Any other OpenAPI 3.x document works too; auth details then come
+from the standard `security` requirements, and scope descriptions from `oauth2` flows.
 
 ## Install
 
@@ -74,10 +75,11 @@ server or client components.
 
 | Export | Renders |
 | --- | --- |
-| `ApiDocsIndex` | header + auth schemes + one card per tag with a method/path/summary/access table |
+| `ApiDocsIndex` | header + auth schemes + scopes + one card per tag with a method/path/summary/access table (`hideAuthentication`, `hideScopes`) |
 | `ApiOperationPage` | breadcrumb, summary, `OperationAuthCard`, parameter tables, request body, responses, curl example |
-| `OperationAuthCard` / `OperationAuthBadges` | accepted credentials, who may call (authenticated / admin), required scopes, organization role, notes |
+| `OperationAuthCard` / `OperationAuthBadges` | accepted credentials, who may call (authenticated / admin), required scopes (with their descriptions when given `scopes`), organization role, notes |
 | `ApiSecuritySchemesCard` | every `components.securitySchemes` entry with how the credential is transported |
+| `ApiScopesCard` | every scope of the API (`model.scopes`): what it allows and the operations requiring it; `scopeAnchorId(scope)` is each entry's anchor |
 | `SchemaViewer` | nested property table for a JSON schema (`$ref`s resolved against `components.schemas`) |
 | `ParametersTable`, `RequestBodySection`, `ResponsesList`, `CurlSnippet`, `ApiDocsHeader` | building blocks used by the pages |
 | `DocsText` | a description string with its CommonMark code spans (`` `name` ``) as inline `<code>`; every description on the pages goes through it |
@@ -85,7 +87,10 @@ server or client components.
 ## Model layer (`@schemavaults/openapi-docs-ui/model`)
 
 `parseOpenApiDocument(doc)` turns a document into an `ApiDocsModel` (operations with
-slugs, parameters, bodies, responses, auth, tags, security schemes, component schemas).
+slugs, parameters, bodies, responses, auth, tags, security schemes, scopes, component
+schemas). `model.scopes` lists the `x-schemavaults-scopes` entries, then the scopes of
+`oauth2` flows, then any other scope an operation requires, each with its description
+(when known) and the slugs of the operations requiring it (`requiredBy`).
 It is framework-free and JSON-serialisable, so it can be built on the server and handed
 to client components. Helpers: `findOperationBySlug`, `operationSlug`,
 `operationDocsHref`, `schemaTypeLabel`, `schemaProperties`, `exampleFromSchema`,

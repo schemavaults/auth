@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { schemeResolvesUser, type AuthSchemeDefinition, type OperationAuth } from "../auth-scheme";
 import type { AnyOperationDefinition, AuthPrincipal, UserAuthPrincipal } from "../operation";
+import { scopeValues, type ScopeRequirement } from "../scopes/scope-definition";
 import { OPERATION_ERROR_CODES, OperationError } from "./errors";
 
 /**
@@ -80,9 +81,30 @@ export function grantedScopes(principal: AuthPrincipal): string[] {
   return principal.scope.split(" ").filter((scope) => scope.length > 0);
 }
 
-export function missingScopes(principal: AuthPrincipal, required: readonly string[]): string[] {
+/** The values of the `required` scopes the principal was not granted, in order. */
+export function missingScopes(
+  principal: AuthPrincipal,
+  required: readonly ScopeRequirement[],
+): string[] {
   const granted = new Set(grantedScopes(principal));
-  return required.filter((scope) => !granted.has(scope));
+  return scopeValues(required).filter((scope) => !granted.has(scope));
+}
+
+/**
+ * Whether the principal was granted every one of the given scopes (values or
+ * definitions); false without a principal (public operations). For handlers
+ * that do more when a token carries an optional scope:
+ *
+ * ```ts
+ * const notes = hasScopes(ctx.auth, notesScopes.readPrivate) ? all : publicOnly;
+ * ```
+ */
+export function hasScopes(
+  principal: AuthPrincipal | null | undefined,
+  ...scopes: readonly ScopeRequirement[]
+): boolean {
+  if (principal === null || principal === undefined) return false;
+  return missingScopes(principal, scopes).length === 0;
 }
 
 /** Whether the principal acts through a delegated credential (it names an RFC 8693 actor). */
@@ -140,7 +162,7 @@ export async function resolveAuth<TUser, TContext = unknown>(
     });
   }
 
-  const required = auth.requiredScopes ?? [];
+  const required = scopeValues(auth.requiredScopes);
   if (required.length > 0) {
     const missing = missingScopes(principal, required);
     if (missing.length > 0) {

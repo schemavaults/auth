@@ -127,7 +127,13 @@ export function ApiOperationPage({
         </div>
       </header>
 
-      <OperationAuthCard auth={operation.auth} schemes={model.securitySchemes} schemesHref={indexHref} />
+      <OperationAuthCard
+        auth={operation.auth}
+        schemes={model.securitySchemes}
+        schemesHref={indexHref}
+        scopes={model.scopes}
+        scopesHref={indexHref}
+      />
 
       {PARAMETER_LOCATIONS.map((location) => {
         const table = <ParametersTable parameters={operation.parameters} schemas={model.schemas} location={location} />;

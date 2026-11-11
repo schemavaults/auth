@@ -2,6 +2,7 @@ import { z, requireAuth } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import { userCredentialSchemes } from "@/lib/api/auth-schemes";
 import { errorResponses } from "@/lib/api/schemas";
+import { exampleApiScopes } from "@/lib/api/scopes";
 
 /**
  * An API scope this resource server defines on the auth server (the E2E
@@ -9,7 +10,7 @@ import { errorResponses } from "@/lib/api/schemas";
  * for it with this API server as the RFC 8707 `resource` of their
  * authorization request.
  */
-export const EXAMPLE_NOTES_READ_SCOPE = "example:notes.read" as const;
+export const EXAMPLE_NOTES_READ_SCOPE = exampleApiScopes.notesRead.scope;
 
 export const myNotes = defineOperation({
   method: "get",
@@ -19,7 +20,7 @@ export const myNotes = defineOperation({
   tags: ["Account"],
   auth: requireAuth({
     schemes: userCredentialSchemes,
-    requiredScopes: [EXAMPLE_NOTES_READ_SCOPE],
+    requiredScopes: [exampleApiScopes.notesRead],
   }),
   responses: {
     200: {

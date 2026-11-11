@@ -24,6 +24,7 @@ import type { ApiDocsModel, ApiDocsOperation, ApiDocsTag } from "@/model/types";
 import { operationDocsHref } from "@/model/slug";
 import { ApiDocsHeader } from "./ApiDocsHeader";
 import { ApiSecuritySchemesCard } from "./ApiSecuritySchemesCard";
+import { ApiScopesCard } from "./ApiScopesCard";
 import { OperationAuthBadges } from "./OperationAuthBadges";
 import { DocsText } from "./DocsText";
 import { DOCS_CARD_CONTENT_CLASS, DOCS_CARD_HEADER_CLASS } from "./card-padding";
@@ -35,6 +36,8 @@ export interface ApiDocsIndexProps {
   openApiDocumentHref?: string;
   /** Hide the security schemes card. */
   hideAuthentication?: boolean;
+  /** Hide the scopes card (shown when the document names any scope). */
+  hideScopes?: boolean;
   /** Only these tags (default: all). */
   tags?: readonly string[];
   className?: string;
@@ -113,14 +116,16 @@ export function TagOperationsCard({ tag, basePath }: TagOperationsCardProps): Re
 }
 
 /**
- * Index page: document header, authentication schemes, and one card per
- * tag listing its operations with method, path, summary and access badges.
+ * Index page: document header, authentication schemes, scopes, and one
+ * card per tag listing its operations with method, path, summary and access
+ * badges.
  */
 export function ApiDocsIndex({
   model,
   basePath,
   openApiDocumentHref,
   hideAuthentication = false,
+  hideScopes = false,
   tags,
   className,
 }: ApiDocsIndexProps): ReactElement {
@@ -142,6 +147,9 @@ export function ApiDocsIndex({
         </nav>
       ) : null}
       {!hideAuthentication ? <ApiSecuritySchemesCard schemes={model.securitySchemes} /> : null}
+      {!hideScopes ? (
+        <ApiScopesCard scopes={model.scopes} operations={model.operations} basePath={basePath} />
+      ) : null}
       {visibleTags.length === 0 ? (
         <EmptyState>
           <EmptyStateTitle>No operations</EmptyStateTitle>

@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/openapi-operations",
   "description": "Define OpenAPI-representable HTTP operations (zod schemas + auth schemes + handlers) and serve them as Hono apps on Vercel functions / Next.js route handlers",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -68,6 +68,11 @@
       "types": "./dist/nextjs/app-router-routes.d.ts",
       "import": "./dist/nextjs/app-router-routes.js",
       "require": "./dist/nextjs/app-router-routes.js"
+    },
+    "./scopes": {
+      "types": "./dist/scopes/index.d.ts",
+      "import": "./dist/scopes/index.js",
+      "require": "./dist/scopes/index.js"
     },
     "./*": {
       "types": "./dist/*",
