@@ -10,8 +10,7 @@ import {
 import { createOperationsApp } from "./create-operations-app";
 import { OperationError } from "./errors";
 import { hasScopes, type AuthResolvers } from "./resolve-auth";
-import { defineScopes } from "../scopes/scope-definition";
-import { oidcScopes } from "../scopes/oidc-scopes";
+import { defineScopes, oidcScopes } from "@schemavaults/auth-common/scopes";
 import { toNextRouteHandlers } from "../adapters/nextjs";
 import { toVercelHandler } from "../adapters/vercel";
 import { buildOpenApiDocument } from "../openapi/build-openapi-document";

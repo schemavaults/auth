@@ -7,8 +7,8 @@ import {
   scopeValue,
   scopeValues,
 } from "./scope-definition";
-import { assertScopeRequirements } from "./assert-scope-requirements";
 import { oidcScopes } from "./oidc-scopes";
+import { OIDC_RESERVED_SCOPES } from "../oidc/scope-names";
 
 describe("isScopeToken", () => {
   test("accepts RFC 6749 scope-tokens", () => {
@@ -80,33 +80,13 @@ describe("scope values", () => {
     expect(isScopeDefinition("email")).toBe(false);
   });
 
-  test("oidcScopes covers the OpenID Connect scopes", () => {
-    expect(Object.values(oidcScopes).map((scope) => scope.scope)).toEqual([
-      "openid",
-      "profile",
-      "email",
-      "address",
-      "phone",
-      "offline_access",
-    ]);
-  });
-});
-
-describe("assertScopeRequirements", () => {
-  test("accepts undefined, values and definitions", () => {
-    expect(() => assertScopeRequirements(undefined)).not.toThrow();
-    expect(() => assertScopeRequirements(["email", oidcScopes.profile])).not.toThrow();
-    expect(() =>
-      assertScopeRequirements([{ scope: "notes:read", description: "hand-written definition" }]),
-    ).not.toThrow();
-  });
-
-  test("refuses a space separated string, repeats and other values", () => {
-    expect(() => assertScopeRequirements(["openid email"])).toThrow(/list each scope separately/);
-    expect(() => assertScopeRequirements(["email", oidcScopes.email])).toThrow(
-      'Required scope "email" listed twice',
-    );
-    expect(() => assertScopeRequirements([{ scope: "email" }])).toThrow(/scope definitions|definitions/);
-    expect(() => assertScopeRequirements("email")).toThrow(/must be a list/);
+  test("oidcScopes defines every OIDC_RESERVED_SCOPES value under its own name", () => {
+    expect(Object.keys(oidcScopes)).toEqual([...OIDC_RESERVED_SCOPES]);
+    for (const [key, definition] of Object.entries(oidcScopes)) {
+      expect(definition.scope as string).toBe(key);
+      expect(definition.description.length).toBeGreaterThan(0);
+    }
+    expect(oidcScopes.email).toEqual({ scope: "email", description: "Read your email address" });
+    expect(Object.isFrozen(oidcScopes)).toBe(true);
   });
 });

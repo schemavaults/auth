@@ -17,7 +17,7 @@ import type { AuthSchemeDefinition } from "../auth-scheme";
 import type { AnyOperationDefinition } from "../operation";
 import { assertUniqueOperations } from "../operation";
 import { collectScopes } from "../scopes/collect-scopes";
-import { scopeValues, type ScopeRequirement } from "../scopes/scope-definition";
+import { scopeValues, type ScopeRequirement } from "@schemavaults/auth-common/scopes";
 import {
   SCHEMAVAULTS_AUTH_EXTENSION,
   SCHEMAVAULTS_SCHEME_CHALLENGE_EXTENSION,

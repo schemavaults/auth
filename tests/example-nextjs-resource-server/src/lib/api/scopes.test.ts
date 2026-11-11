@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { OIDC_RESERVED_SCOPES } from "@schemavaults/auth-common";
-import { collectScopes } from "@schemavaults/openapi-operations/scopes";
+import { collectScopes } from "@schemavaults/openapi-operations";
 import { exampleApiScopes } from "./scopes";
 
 // The operation modules (via ./context) import the `server-only` marker.

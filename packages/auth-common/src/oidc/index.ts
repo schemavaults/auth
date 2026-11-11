@@ -14,6 +14,7 @@ export {
   serializeOidcScopesOrNull,
 } from "./scope";
 export type {
+  OidcReservedScope,
   OidcSupportedScope,
   OidcScope,
   ParsedOidcScopes,

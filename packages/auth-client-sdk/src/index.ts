@@ -37,7 +37,25 @@ export {
   parseAuthorizationParams,
   parseSignInAuthorizationRequest,
   resolveSignInAuthorizationRequest,
+  scopeOptionToString,
 } from "./lib/authorization-params";
+// Scope definitions (from auth-common), so apps can declare the scopes they
+// sign in for (`login({ scope: [oidcScopes.openid, notesScopes.read] })`)
+// without a separate auth-common dependency.
+export {
+  defineScope,
+  defineScopes,
+  oidcScopes,
+  formatScope,
+  parseScope,
+  scopeIncludes,
+} from "@schemavaults/auth-common/scopes";
+export type {
+  DefinedScopes,
+  ScopeDefinition,
+  ScopeInput,
+  ScopeRequirement,
+} from "@schemavaults/auth-common/scopes";
 export type { AuthorizeClientApplicationConsent } from "@/lib/send-authorize-client-application-request";
 export type {
   RevokeClientApplicationAuthorizationResult,

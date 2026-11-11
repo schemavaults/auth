@@ -6,6 +6,7 @@ import {
   jwtVerify,
   sign_verify_alg,
 } from "@schemavaults/jwt";
+import { defineScopes, oidcScopes } from "@schemavaults/auth-common";
 import {
   ApiScopeSyncFailedError,
   InvalidApiScopeManifestError,
@@ -117,6 +118,29 @@ describe("syncApiServerScopes", () => {
     expect(result.dry_run).toBe(true);
     expect(new URL(requests[0]?.url ?? "").searchParams.get("dry_run")).toBe("true");
     expect(requests[0]?.body).toEqual({ scopes: [{ scope: "notes:read", description: "Read your notes." }] });
+  });
+
+  test("syncs a defineScopes() catalogue as it is", async () => {
+    const notesScopes = defineScopes({
+      read: { scope: "notes:read", description: "Read your notes." },
+      write: { scope: "notes:write", description: "Write your notes." },
+    });
+    const { fetch, requests } = stubFetch(200, syncResult());
+    await syncApiServerScopes({ ...options(fetch), scopes: Object.values(notesScopes) });
+    expect(requests[0]?.body).toEqual({
+      scopes: [
+        { scope: "notes:read", description: "Read your notes." },
+        { scope: "notes:write", description: "Write your notes." },
+      ],
+    });
+  });
+
+  test("refuses OIDC scope definitions locally (they are reserved)", async () => {
+    const { fetch, requests } = stubFetch(200, syncResult());
+    await expect(
+      syncApiServerScopes({ ...options(fetch), scopes: [oidcScopes.email] }),
+    ).rejects.toBeInstanceOf(InvalidApiScopeManifestError);
+    expect(requests).toHaveLength(0);
   });
 
   test("refuses an invalid manifest locally, without calling the auth server", async () => {

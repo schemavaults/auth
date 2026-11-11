@@ -1,7 +1,7 @@
 import type { SecuritySchemeObject } from "openapi3-ts/oas31";
 import type { OrganizationMembershipRoleType } from "@schemavaults/auth-common/organizations";
 import { assertScopeRequirements } from "./scopes/assert-scope-requirements";
-import type { ScopeRequirement } from "./scopes/scope-definition";
+import type { ScopeRequirement } from "@schemavaults/auth-common/scopes";
 
 /**
  * What kind of principal a scheme's resolver produces:

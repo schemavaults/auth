@@ -1,6 +1,10 @@
 import {
   OIDC_SUPPORTED_SCOPES,
   apiScopeValueSchema,
+  isScopeDefinition,
+  missingFromScope,
+  scopeValues,
+  type ScopeRequirement,
 } from "@schemavaults/auth-common";
 
 /**
@@ -41,23 +45,26 @@ export type RequiredScopesEvaluation =
  */
 export function evaluateRequiredScopes(
   token_scope: string | undefined,
-  required_scopes: readonly string[],
+  required: readonly ScopeRequirement[],
 ): RequiredScopesEvaluation {
   if (typeof token_scope !== "string" && typeof token_scope !== "undefined") {
     throw new TypeError("Expected 'token_scope' to be a string, if passed.", {
       cause: `Received type ${typeof token_scope}`,
     });
   } else if (
-    !Array.isArray(required_scopes) ||
-    !required_scopes.every((scope) => typeof scope === "string")
+    !Array.isArray(required) ||
+    !required.every(
+      (scope: unknown) => typeof scope === "string" || isScopeDefinition(scope),
+    )
   ) {
     throw new TypeError(
-      "Expected 'required_scopes' to be an array of strings.",
+      "Expected 'required_scopes' to be an array of scope values or scope definitions.",
       {
-        cause: `Received type ${typeof required_scopes}`,
+        cause: `Received type ${typeof required}`,
       },
     );
   }
+  const required_scopes: string[] = scopeValues(required);
 
   const invalid_configured_scopes: string[] = required_scopes.filter(
     (scope: string) => !isValidRequiredScope(scope),
@@ -70,12 +77,7 @@ export function evaluateRequiredScopes(
     };
   }
 
-  const granted_scopes = new Set(
-    (token_scope ?? "").split(" ").filter(Boolean),
-  );
-  const missing_scopes: string[] = required_scopes.filter(
-    (scope) => !granted_scopes.has(scope),
-  );
+  const missing_scopes: string[] = missingFromScope(token_scope, required_scopes);
   if (missing_scopes.length > 0) {
     return { ok: false, reason: "missing_scopes", scopes: missing_scopes };
   }

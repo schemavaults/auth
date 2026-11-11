@@ -8,8 +8,7 @@ import {
   schemaVaultsAccessTokenBearerScheme,
   schemaVaultsAccessTokenCookieScheme,
 } from "../auth-scheme";
-import { defineScopes } from "../scopes/scope-definition";
-import { oidcScopes } from "../scopes/oidc-scopes";
+import { defineScopes, oidcScopes } from "@schemavaults/auth-common/scopes";
 import { buildOpenApiDocument, collectAuthSchemes } from "./build-openapi-document";
 import {
   SCHEMAVAULTS_AUTH_EXTENSION,

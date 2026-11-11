@@ -6,9 +6,12 @@
 
 import {
   DEFAULT_AUTH_SCOPE,
+  formatScope,
   isOidcReservedScope,
+  isScopeDefinition,
   oidcScopeSchema,
   resourceIndicatorSchema,
+  type ScopeInput,
 } from "@schemavaults/auth-common";
 import type {
   AuthorizationParams,
@@ -28,8 +31,27 @@ function scopeTokens(scope: string): string[] {
 }
 
 /**
- * Validates the client's `authorization_params` option. The scope is
- * normalized (single spaces, repeated tokens dropped).
+ * The space-delimited wire form of a `scope` option: a string (normalized:
+ * single spaces, repeated values dropped) or a list of scope values and
+ * definitions. Null when the value is neither.
+ */
+export function scopeOptionToString(scope: unknown): string | null {
+  if (typeof scope === "string") {
+    return formatScope(scope);
+  }
+  if (
+    Array.isArray(scope) &&
+    scope.every((entry: unknown) => typeof entry === "string" || isScopeDefinition(entry))
+  ) {
+    return formatScope(scope as ScopeInput);
+  }
+  return null;
+}
+
+/**
+ * Validates the client's `authorization_params` option. The scope (a string
+ * or a list of scope values / definitions) is normalized to its
+ * space-delimited form (single spaces, repeated tokens dropped).
  * @throws TypeError when it is malformed, or names API scopes without the
  * `resource` they belong to (the auth server would grant none of them).
  */
@@ -48,13 +70,10 @@ export function parseAuthorizationParams(
   const params: AuthorizationParams = {};
 
   if (scope !== undefined) {
-    const normalized: string | null =
-      typeof scope === "string"
-        ? [...new Set(scope.split(/\s+/).filter((t) => t.length > 0))].join(" ")
-        : null;
+    const normalized: string | null = scopeOptionToString(scope);
     if (normalized === null || !oidcScopeSchema.safeParse(normalized).success) {
       throw new TypeError(
-        "Expected 'authorization_params.scope' to be a space-delimited list of RFC 6749 §3.3 scope tokens",
+        "Expected 'authorization_params.scope' to be a space-delimited list of RFC 6749 §3.3 scope tokens, or a non-empty list of scope values / definitions",
       );
     }
     params.scope = normalized;
@@ -73,7 +92,9 @@ export function parseAuthorizationParams(
     params.resource = resource;
   }
 
-  const api_scopes: string[] = scopeTokens(params.scope ?? "").filter(
+  const api_scopes: string[] = scopeTokens(
+    typeof params.scope === "string" ? params.scope : "",
+  ).filter(
     (token) => !isOidcReservedScope(token),
   );
   if (api_scopes.length > 0 && params.resource === undefined) {
@@ -87,14 +108,21 @@ export function parseAuthorizationParams(
 /**
  * The authorization request one sign-in makes: the call's own `scope` and
  * `resource`, each falling back to the client's `authorization_params`; the
- * scope defaults to DEFAULT_AUTH_SCOPE.
+ * scope defaults to DEFAULT_AUTH_SCOPE, and a list of scope values /
+ * definitions becomes its space-delimited form (a string is sent as given).
  */
 export function resolveSignInAuthorizationRequest(
   call: AuthorizationParams | undefined,
   defaults: AuthorizationParams | undefined,
 ): SignInAuthorizationRequest {
+  const scope: ScopeInput | undefined = call?.scope ?? defaults?.scope;
   return {
-    scope: call?.scope ?? defaults?.scope ?? DEFAULT_AUTH_SCOPE,
+    scope:
+      scope === undefined || scope === null
+        ? DEFAULT_AUTH_SCOPE
+        : typeof scope === "string"
+          ? scope
+          : formatScope(scope),
     resource: call?.resource || defaults?.resource || null,
   };
 }

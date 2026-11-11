@@ -6,7 +6,7 @@ import {
   type RouteGuardType,
 } from "../auth-scheme";
 import type { DocumentedScope } from "../scopes/collect-scopes";
-import { scopeValues } from "../scopes/scope-definition";
+import { scopeValues } from "@schemavaults/auth-common/scopes";
 
 /**
  * Vendor extension attached to every operation object so API docs can show

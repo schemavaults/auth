@@ -120,8 +120,8 @@ otherwise; administrators get no bypass). Declare each scope once, with what it 
 and require the definition rather than repeating its string:
 
 ```ts
-// src/lib/api/scopes.ts
-import { defineScopes } from "@schemavaults/openapi-operations/scopes";
+// src/lib/api/scopes.ts (client-safe: @schemavaults/auth-common/scopes has no dependencies)
+import { defineScopes } from "@schemavaults/auth-common/scopes";
 
 export const notesScopes = defineScopes({
   read: { scope: "notes:read", description: "Read your notes" },
@@ -141,6 +141,9 @@ export const listNotes = defineOperation({
 });
 ```
 
+- Scope definitions live in `@schemavaults/auth-common` (its dependency-free `/scopes`
+  entry point), so the client and server SDKs take the same values; this package
+  re-exports them (`defineScope`, `defineScopes`, `oidcScopes`, `formatScope`, ...).
 - `defineScope({ scope, description })` / `defineScopes({ key: { scope, description } })`
   return frozen `ScopeDefinition`s (exactly `{ scope, description }`, description trimmed)
   and throw for a value that is not one RFC 6749 scope-token, a blank description, or (in
@@ -161,13 +164,17 @@ export const listNotes = defineOperation({
   `buildOpenApiDocument({ additionalScopes: Object.values(notesScopes) })` lists scopes no
   operation requires too (they come first). One scope described two ways across operations
   throws; `collectScopes(operations, additional)` returns the same list.
-- `@schemavaults/openapi-operations/scopes` exports the definitions and helpers above
-  (except `hasScopes` / `missingScopes`, which live with the runtime) without zod or hono,
-  so client components can import the same catalogue, e.g. to label a scope picker.
+- Import the catalogue in client components from `@schemavaults/auth-common/scopes`
+  (no zod / hono), e.g. to label a scope picker or to sign in for the scopes:
+  `login({ scope: [oidcScopes.openid, notesScopes.read], resource })`.
 
-On SchemaVaults, an API server's own scopes must also be defined on the auth server before
-tokens can carry them. Definitions have the shape of scope manifest entries, so the same
-catalogue is what a scope sync sends:
+The SDKs take definitions wherever they take a scope (`formatScope()` turns a list into the
+space-delimited wire form): the client SDK's `login()` / `register()` and
+`authorization_params`, and the server SDK's route guard `required_scopes`,
+`exchangeTokenForDelegatedToken({ scope })` and the scope sync. On SchemaVaults, an API
+server's own scopes must be defined on the auth server before tokens can carry them;
+definitions have the shape of scope manifest entries, so the same catalogue is what a scope
+sync sends:
 
 ```ts
 import { syncApiServerScopes } from "@schemavaults/auth-server-sdk/api-scopes";

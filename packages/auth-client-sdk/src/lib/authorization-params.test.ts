@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_AUTH_SCOPE } from "@schemavaults/auth-common";
+import { DEFAULT_AUTH_SCOPE, defineScope, oidcScopes } from "@schemavaults/auth-common";
 import {
   UNRECORDED_SIGN_IN_AUTHORIZATION_REQUEST,
   isSignInAuthorizationRequestCovered,
@@ -23,6 +23,19 @@ describe("parseAuthorizationParams()", () => {
     ).toEqual({ scope: "openid email notes:read", resource: "my-notes-api" });
   });
 
+  test("takes the scope as a list of values and definitions", () => {
+    const notesRead = defineScope({ scope: "notes:read", description: "Read your notes" });
+    expect(
+      parseAuthorizationParams({
+        scope: [oidcScopes.openid, "email", notesRead, notesRead],
+        resource: "my-notes-api",
+      }),
+    ).toEqual({ scope: "openid email notes:read", resource: "my-notes-api" });
+    expect(() => parseAuthorizationParams({ scope: [oidcScopes.openid, notesRead] })).toThrow(
+      /notes:read.*no 'resource'/,
+    );
+  });
+
   test("accepts OIDC scopes without a resource, and a resource alone", () => {
     expect(parseAuthorizationParams({ scope: "openid email" })).toEqual({
       scope: "openid email",
@@ -43,6 +56,9 @@ describe("parseAuthorizationParams()", () => {
       "openid",
       ["openid"],
       { scope: 42 },
+      { scope: [] },
+      { scope: [42] },
+      { scope: [{ scope: "openid" }] },
       { scope: "" },
       { scope: "   " },
       { scope: 'openid "quoted"' },
@@ -79,6 +95,12 @@ describe("resolveSignInAuthorizationRequest()", () => {
         defaults,
       ),
     ).toEqual({ scope: "openid billing:read", resource: "billing-api" });
+  });
+
+  test("formats a scope given as definitions", () => {
+    expect(
+      resolveSignInAuthorizationRequest({ scope: [oidcScopes.openid, oidcScopes.profile] }, defaults),
+    ).toEqual({ scope: "openid profile", resource: "my-notes-api" });
   });
 
   test("falls back to the default scope and no resource", () => {

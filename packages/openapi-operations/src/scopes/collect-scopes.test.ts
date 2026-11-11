@@ -3,8 +3,7 @@ import { z } from "../zod-openapi";
 import { defineOperation } from "../operation";
 import { publicAccess, requireAuth, schemaVaultsAccessTokenBearerScheme } from "../auth-scheme";
 import { collectScopes } from "./collect-scopes";
-import { defineScopes } from "./scope-definition";
-import { oidcScopes } from "./oidc-scopes";
+import { defineScopes, oidcScopes } from "@schemavaults/auth-common/scopes";
 
 const notesScopes = defineScopes({
   read: { scope: "notes:read", description: "Read your notes" },

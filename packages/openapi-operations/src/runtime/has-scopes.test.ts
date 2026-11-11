@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { AuthPrincipal } from "../operation";
-import { defineScope } from "../scopes/scope-definition";
-import { oidcScopes } from "../scopes/oidc-scopes";
+import { defineScope, oidcScopes } from "@schemavaults/auth-common/scopes";
 import { grantedScopes, hasScopes, missingScopes } from "./resolve-auth";
 
 const notesRead = defineScope({ scope: "notes:read", description: "Read your notes" });

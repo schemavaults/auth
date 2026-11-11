@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { AGENTS_SIGN_IN_SCOPE, NOTES_READ_SCOPE, delegatedScopeFor } from "./scopes";
+import { AGENTS_SIGN_IN_SCOPE, NOTES_READ_SCOPE, delegatedScopeFor, delegatedScopesFor } from "./scopes";
 
 mock.module("server-only", () => ({}));
 
@@ -12,6 +12,13 @@ describe("agent scopes", () => {
     expect(delegatedScopeFor(["example:notes.read"])).toBe("openid example:notes.read");
     expect(delegatedScopeFor([])).toBe("openid");
     expect(delegatedScopeFor(["example:notes.read", "email"])).toBe("openid email example:notes.read");
+  });
+
+  test("gives the token exchange the picked scopes as definitions", () => {
+    expect(delegatedScopesFor(["example:notes.read"])).toEqual([
+      { scope: "openid", description: "Sign you in with OpenID Connect" },
+      { scope: "example:notes.read", description: "Read your notes" },
+    ]);
   });
 
   test("ignores scopes the app does not offer", () => {

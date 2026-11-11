@@ -1,9 +1,16 @@
-import { isScopeDefinition, isScopeToken, scopeValue, type ScopeRequirement } from "./scope-definition";
+import {
+  isScopeDefinition,
+  isScopeToken,
+  scopeValue,
+  type ScopeRequirement,
+} from "@schemavaults/auth-common/scopes";
 
 /**
  * Checks an operation's `requiredScopes` when it is declared
  * (`requireAuth()`): a list of scope-tokens or {@link ScopeDefinition}s
  * with no scope value repeated. Throws a `TypeError` naming the problem.
+ * (Definitions themselves are checked by `defineScope()` in
+ * `@schemavaults/auth-common/scopes`.)
  */
 export function assertScopeRequirements(requirements: unknown): void {
   if (requirements === undefined) return;

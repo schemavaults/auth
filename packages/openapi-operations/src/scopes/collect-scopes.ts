@@ -1,5 +1,5 @@
 import type { AnyOperationDefinition } from "../operation";
-import { scopeValue, type ScopeRequirement } from "./scope-definition";
+import { scopeValue, type ScopeRequirement } from "@schemavaults/auth-common/scopes";
 
 /**
  * A scope as the OpenAPI document lists it (`x-schemavaults-scopes`): its

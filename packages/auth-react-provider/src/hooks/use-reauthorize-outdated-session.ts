@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import {
   type AuthorizationParams,
   type ISchemaVaultsAuthClient,
+  formatScope,
   resolveNextHref,
 } from "@schemavaults/auth-client-sdk";
 import useAuth from "@/hooks/use-auth";
@@ -21,8 +22,13 @@ function claimReauthorizationAttempt(
   authorization_params: AuthorizationParams,
 ): boolean {
   const key = `${ATTEMPT_STORAGE_KEY_PREFIX}_${app_id}`;
+  // The scope's wire form, so a list of definitions and the equivalent
+  // string are the same request.
   const value: string = JSON.stringify({
-    scope: authorization_params.scope ?? null,
+    scope:
+      authorization_params.scope === undefined
+        ? null
+        : formatScope(authorization_params.scope),
     resource: authorization_params.resource ?? null,
   });
   try {

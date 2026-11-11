@@ -36,6 +36,8 @@ export type {
   RouteGuardType,
 } from "./auth-scheme";
 
+// Scope definitions live in @schemavaults/auth-common (shared with the client
+// and server SDKs); re-exported so operations can be declared from one import.
 export {
   SCOPE_TOKEN_REGEX,
   isScopeToken,
@@ -44,11 +46,18 @@ export {
   scopeValues,
   defineScope,
   defineScopes,
-  assertScopeRequirements,
-  collectScopes,
   oidcScopes,
-} from "./scopes";
-export type { DefinedScopes, DocumentedScope, ScopeDefinition, ScopeRequirement } from "./scopes";
+  formatScope,
+  parseScope,
+} from "@schemavaults/auth-common/scopes";
+export type {
+  DefinedScopes,
+  ScopeDefinition,
+  ScopeInput,
+  ScopeRequirement,
+} from "@schemavaults/auth-common/scopes";
+export { assertScopeRequirements, collectScopes } from "./scopes";
+export type { DocumentedScope } from "./scopes";
 
 export {
   defineOperation,

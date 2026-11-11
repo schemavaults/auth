@@ -110,6 +110,22 @@ export type {
 // Re-export user data types
 export { userDataSchema } from "@schemavaults/auth-common";
 export type { UserData } from "@schemavaults/auth-common";
+// Scope definitions (from auth-common), for route guards' `required_scopes`,
+// `exchangeTokenForDelegatedToken({ scope })` and scope manifests.
+export {
+  defineScope,
+  defineScopes,
+  oidcScopes,
+  formatScope,
+  parseScope,
+  scopeIncludes,
+} from "@schemavaults/auth-common/scopes";
+export type {
+  DefinedScopes,
+  ScopeDefinition,
+  ScopeInput,
+  ScopeRequirement,
+} from "@schemavaults/auth-common/scopes";
 
 // Re-export organization types
 export {

@@ -1,7 +1,13 @@
 import type { Context } from "hono";
 import { schemeResolvesUser, type AuthSchemeDefinition, type OperationAuth } from "../auth-scheme";
 import type { AnyOperationDefinition, AuthPrincipal, UserAuthPrincipal } from "../operation";
-import { scopeValues, type ScopeRequirement } from "../scopes/scope-definition";
+import {
+  missingFromScope,
+  parseScope,
+  scopeIncludes,
+  scopeValues,
+  type ScopeRequirement,
+} from "@schemavaults/auth-common/scopes";
 import { OPERATION_ERROR_CODES, OperationError } from "./errors";
 
 /**
@@ -76,9 +82,9 @@ function assertUserPrincipal<TUser>(
   }
 }
 
+/** The scope values the principal's credential was granted (none without a scope claim). */
 export function grantedScopes(principal: AuthPrincipal): string[] {
-  if (typeof principal.scope !== "string") return [];
-  return principal.scope.split(" ").filter((scope) => scope.length > 0);
+  return parseScope(principal.scope);
 }
 
 /** The values of the `required` scopes the principal was not granted, in order. */
@@ -86,8 +92,7 @@ export function missingScopes(
   principal: AuthPrincipal,
   required: readonly ScopeRequirement[],
 ): string[] {
-  const granted = new Set(grantedScopes(principal));
-  return scopeValues(required).filter((scope) => !granted.has(scope));
+  return missingFromScope(principal.scope, required);
 }
 
 /**
@@ -104,7 +109,7 @@ export function hasScopes(
   ...scopes: readonly ScopeRequirement[]
 ): boolean {
   if (principal === null || principal === undefined) return false;
-  return missingScopes(principal, scopes).length === 0;
+  return scopeIncludes(principal.scope, ...scopes);
 }
 
 /** Whether the principal acts through a delegated credential (it names an RFC 8693 actor). */

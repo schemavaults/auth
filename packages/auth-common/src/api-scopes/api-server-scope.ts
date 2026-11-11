@@ -16,6 +16,7 @@
 import { z } from "zod";
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
 import { isOidcReservedScope } from "../oidc/scope";
+import { SCOPE_TOKEN_REGEX } from "../scopes/scope-definition";
 
 export const MAX_API_SCOPE_VALUE_LENGTH = 128 as const;
 export const MAX_API_SCOPE_DESCRIPTION_LENGTH = 256 as const;
@@ -24,8 +25,9 @@ export const MAX_API_SCOPES_PER_API_SERVER = 100 as const;
 
 /**
  * One RFC 6749 §3.3 scope-token: printable ASCII except SP, `"` and `\`.
+ * The same rule as `SCOPE_TOKEN_REGEX` (scope definitions).
  */
-export const API_SCOPE_VALUE_REGEX: RegExp = /^[\x21\x23-\x5B\x5D-\x7E]+$/;
+export const API_SCOPE_VALUE_REGEX: RegExp = SCOPE_TOKEN_REGEX;
 
 /**
  * A scope value an API server may define: a single RFC 6749 scope-token

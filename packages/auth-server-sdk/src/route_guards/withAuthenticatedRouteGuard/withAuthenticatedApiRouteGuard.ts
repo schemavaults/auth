@@ -1,3 +1,4 @@
+import type { ScopeRequirement } from "@schemavaults/auth-common/scopes";
 import {
   type ApiServerId,
   type SchemaVaultsAppEnvironment,
@@ -82,9 +83,11 @@ export interface IWithAuthenticatedApiRouteGuardAdditionalOptions<
    * scope claim (issued before scopes became first-class) grants NO
    * scopes and is denied 403 whenever this list is non-empty. Unlike
    * `required_organization`, there is no admin bypass: scopes describe
-   * what the TOKEN was granted, not who the user is.
+   * what the TOKEN was granted, not who the user is. Entries are scope
+   * values or definitions (`defineScopes()` / `oidcScopes`, e.g.
+   * `[notesScopes.read]`).
    */
-  required_scopes?: readonly string[];
+  required_scopes?: readonly ScopeRequirement[];
   additional_token_sources?: PotentiallyValidTokenSource[];
   /**
    * Revocation check run against every presented token that verified

@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { defineScope, oidcScopes } from "@schemavaults/auth-common";
 import { evaluateRequiredScopes } from "./evaluate-required-scopes";
+
+const notesRead = defineScope({ scope: "notes:read", description: "Read your notes" });
 
 describe("evaluateRequiredScopes", () => {
   test("passes when the token grants every required scope", () => {
@@ -13,6 +16,29 @@ describe("evaluateRequiredScopes", () => {
         "profile",
       ]),
     ).toEqual({ ok: true });
+  });
+
+  test("takes scope definitions as well as values", () => {
+    expect(evaluateRequiredScopes("openid email notes:read", [oidcScopes.email, notesRead])).toEqual({
+      ok: true,
+    });
+    expect(evaluateRequiredScopes("openid email", [oidcScopes.email, notesRead])).toEqual({
+      ok: false,
+      reason: "missing_scopes",
+      scopes: ["notes:read"],
+    });
+    // A definition of a value no token can carry is still a configuration error.
+    expect(evaluateRequiredScopes("openid", [oidcScopes.address])).toEqual({
+      ok: false,
+      reason: "invalid_config",
+      scopes: ["address"],
+    });
+  });
+
+  test("throws for entries that are neither values nor definitions", () => {
+    expect(() =>
+      evaluateRequiredScopes("openid", [{ scope: "openid" }] as unknown as string[]),
+    ).toThrow(/scope values or scope definitions/);
   });
 
   test("denies when the token is missing a required scope", () => {

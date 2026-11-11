@@ -1,14 +1,19 @@
 /**
- * OAuth 2.0 scopes as first-class values: an operation names the scopes a
- * token must carry (`requireAuth({ requiredScopes })`) either as bare
- * strings or as {@link ScopeDefinition}s, which also say what the scope
- * allows. Definitions are what the OpenAPI document (`x-schemavaults-scopes`),
- * the docs UI and a SchemaVaults scope manifest (`syncApiServerScopes()`)
- * describe the scope with, so a scope is declared once, in code.
+ * OAuth 2.0 scopes as first-class values: a scope is declared once, as a
+ * {@link ScopeDefinition} saying what it allows, and that definition is
+ * what everything else takes:
  *
- * This module has no runtime dependencies, so client components can import
- * scope definitions (`@schemavaults/openapi-operations/scopes`) without
- * pulling zod or hono into the bundle.
+ * - `@schemavaults/openapi-operations`: `requireAuth({ requiredScopes })`,
+ *   the OpenAPI document's `x-schemavaults-scopes` and the docs UI;
+ * - `@schemavaults/auth-client-sdk`: `login({ scope })` / `register()`, the
+ *   client's `authorization_params.scope`, `sendAuthenticateRequest()`;
+ * - `@schemavaults/auth-server-sdk`: route guards' `required_scopes`,
+ *   `exchangeTokenForDelegatedToken({ scope })`, and a scope manifest
+ *   (`syncApiServerScopes({ scopes })`), whose entries definitions are.
+ *
+ * Bare scope strings are accepted wherever a definition is. This module
+ * (`@schemavaults/auth-common/scopes`) has no runtime dependencies, so
+ * client components can import a scope catalogue without pulling zod in.
  */
 
 /**
