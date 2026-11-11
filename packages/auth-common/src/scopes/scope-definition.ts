@@ -29,6 +29,18 @@ export function isScopeToken(value: unknown): value is string {
 }
 
 /**
+ * Longest scope value a definition may have: the most an API server may
+ * define on the auth server (`MAX_API_SCOPE_VALUE_LENGTH` is this value).
+ */
+export const MAX_SCOPE_VALUE_LENGTH = 128 as const;
+
+/**
+ * Longest description a definition may have, once trimmed: the most a
+ * consent screen shows (`MAX_API_SCOPE_DESCRIPTION_LENGTH` is this value).
+ */
+export const MAX_SCOPE_DESCRIPTION_LENGTH = 256 as const;
+
+/**
  * A scope value plus what it allows. Exactly `{ scope, description }`, the
  * shape of a SchemaVaults scope manifest entry, so a list of definitions can
  * be handed to `syncApiServerScopes({ scopes })` from
@@ -48,10 +60,52 @@ export interface ScopeDefinition<TScope extends string = string> {
 /** A required scope: a bare scope value, or a {@link ScopeDefinition} describing it. */
 export type ScopeRequirement<TScope extends string = string> = TScope | ScopeDefinition<TScope>;
 
+/** A scope value shortened for an error message. */
+function quoteScope(scope: string): string {
+  return scope.length > 64 ? `"${scope.slice(0, 64)}…"` : `"${scope}"`;
+}
+
+/**
+ * Why `value` is not a valid scope definition, or null when it is one: an
+ * object whose `scope` is a single RFC 6749 scope-token of at most
+ * {@link MAX_SCOPE_VALUE_LENGTH} characters and whose `description`, once
+ * trimmed, has 1 to {@link MAX_SCOPE_DESCRIPTION_LENGTH} characters (the
+ * rules the auth server applies to the scopes an API server defines).
+ * `defineScope()` throws this message; {@link isScopeDefinition} is it as a
+ * type guard.
+ */
+export function scopeDefinitionProblem(value: unknown): string | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return "A scope definition must be an object { scope, description }";
+  }
+  const { scope, description } = value as Record<string, unknown>;
+  if (typeof scope !== "string") {
+    return "A scope definition's scope must be a string";
+  }
+  if (!isScopeToken(scope)) {
+    return `Scope ${quoteScope(scope)} is not a single RFC 6749 scope-token (printable ASCII without spaces, '"' or '\\')`;
+  }
+  if (scope.length > MAX_SCOPE_VALUE_LENGTH) {
+    return `Scope ${quoteScope(scope)} is ${scope.length} characters long; a scope is at most ${MAX_SCOPE_VALUE_LENGTH}`;
+  }
+  if (typeof description !== "string" || description.trim().length === 0) {
+    return `Scope "${scope}" needs a non-empty description`;
+  }
+  const trimmed: number = description.trim().length;
+  if (trimmed > MAX_SCOPE_DESCRIPTION_LENGTH) {
+    return `The description of scope "${scope}" is ${trimmed} characters long; a description is at most ${MAX_SCOPE_DESCRIPTION_LENGTH}`;
+  }
+  return null;
+}
+
+/**
+ * Whether `value` is a valid {@link ScopeDefinition}: see
+ * {@link scopeDefinitionProblem} for the rules. Every definition
+ * `defineScope()` returns passes it, and so does a hand-written
+ * `{ scope, description }` that follows the same rules.
+ */
 export function isScopeDefinition(value: unknown): value is ScopeDefinition {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
-  return typeof record.scope === "string" && typeof record.description === "string";
+  return scopeDefinitionProblem(value) === null;
 }
 
 /** The scope value of a requirement. */
@@ -65,9 +119,10 @@ export function scopeValues(requirements: readonly ScopeRequirement[] | undefine
 }
 
 /**
- * Declares one scope. Throws a `TypeError` when the value is not a single
- * RFC 6749 scope-token or the description is blank; the description is
- * stored trimmed.
+ * Declares one scope. Throws a `TypeError` naming the problem when the
+ * definition breaks the rules of {@link scopeDefinitionProblem} (a single
+ * RFC 6749 scope-token of at most 128 characters, a description of 1 to 256
+ * characters once trimmed); the description is stored trimmed.
  *
  * ```ts
  * export const notesRead = defineScope({ scope: "notes:read", description: "Read your notes" });
@@ -76,13 +131,9 @@ export function scopeValues(requirements: readonly ScopeRequirement[] | undefine
 export function defineScope<const TScope extends string>(
   definition: ScopeDefinition<TScope>,
 ): ScopeDefinition<TScope> {
-  if (!isScopeToken(definition.scope)) {
-    throw new TypeError(
-      `Scope "${String(definition.scope)}" is not a single RFC 6749 scope-token (printable ASCII without spaces, '"' or '\\')`,
-    );
-  }
-  if (typeof definition.description !== "string" || definition.description.trim().length === 0) {
-    throw new TypeError(`Scope "${definition.scope}" needs a non-empty description`);
+  const problem: string | null = scopeDefinitionProblem(definition);
+  if (problem !== null) {
+    throw new TypeError(problem);
   }
   return Object.freeze({ scope: definition.scope, description: definition.description.trim() });
 }

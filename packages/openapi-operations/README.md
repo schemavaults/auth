@@ -146,8 +146,11 @@ export const listNotes = defineOperation({
   re-exports them (`defineScope`, `defineScopes`, `oidcScopes`, `formatScope`, ...).
 - `defineScope({ scope, description })` / `defineScopes({ key: { scope, description } })`
   return frozen `ScopeDefinition`s (exactly `{ scope, description }`, description trimmed)
-  and throw for a value that is not one RFC 6749 scope-token, a blank description, or (in
-  `defineScopes`) a value defined twice. The literal scope type is kept
+  and throw for a value that is not one RFC 6749 scope-token or is longer than 128
+  characters, a description that is blank or longer than 256 characters once trimmed (the
+  auth server's limits for API scopes), or (in `defineScopes`) a value defined twice.
+  `isScopeDefinition()` applies the same rules to any value, and `scopeDefinitionProblem()`
+  says which one it breaks. The literal scope type is kept
   (`notesScopes.read.scope` is `"notes:read"`).
 - `oidcScopes` defines the OpenID Connect scopes (`openid`, `profile`, `email`, `address`,
   `phone`, `offline_access`).

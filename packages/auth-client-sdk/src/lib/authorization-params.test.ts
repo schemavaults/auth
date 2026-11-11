@@ -59,6 +59,7 @@ describe("parseAuthorizationParams()", () => {
       { scope: [] },
       { scope: [42] },
       { scope: [{ scope: "openid" }] },
+      { scope: [{ scope: "notes read", description: "Read your notes" }] },
       { scope: "" },
       { scope: "   " },
       { scope: 'openid "quoted"' },

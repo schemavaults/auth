@@ -3,7 +3,6 @@ import {
   apiScopeValueSchema,
   isScopeDefinition,
   missingFromScope,
-  scopeValues,
   type ScopeRequirement,
 } from "@schemavaults/auth-common";
 
@@ -54,7 +53,8 @@ export function evaluateRequiredScopes(
   } else if (
     !Array.isArray(required) ||
     !required.every(
-      (scope: unknown) => typeof scope === "string" || isScopeDefinition(scope),
+      (scope: unknown) =>
+        typeof scope === "string" || (typeof scope === "object" && scope !== null),
     )
   ) {
     throw new TypeError(
@@ -64,11 +64,21 @@ export function evaluateRequiredScopes(
       },
     );
   }
-  const required_scopes: string[] = scopeValues(required);
 
-  const invalid_configured_scopes: string[] = required_scopes.filter(
-    (scope: string) => !isValidRequiredScope(scope),
-  );
+  // Values no token can carry, and definitions that are not valid ones
+  // (`isScopeDefinition`: bad scope-token, too long, blank or too long
+  // description), are the route's misconfiguration.
+  const required_scopes: string[] = [];
+  const invalid_configured_scopes: string[] = [];
+  for (const entry of required as readonly unknown[]) {
+    if (typeof entry === "string") {
+      (isValidRequiredScope(entry) ? required_scopes : invalid_configured_scopes).push(entry);
+    } else if (isScopeDefinition(entry) && isValidRequiredScope(entry.scope)) {
+      required_scopes.push(entry.scope);
+    } else {
+      invalid_configured_scopes.push(String((entry as { scope?: unknown }).scope));
+    }
+  }
   if (invalid_configured_scopes.length > 0) {
     return {
       ok: false,

@@ -35,10 +35,21 @@ describe("evaluateRequiredScopes", () => {
     });
   });
 
-  test("throws for entries that are neither values nor definitions", () => {
-    expect(() =>
+  test("reports malformed definitions as a configuration error", () => {
+    expect(
       evaluateRequiredScopes("openid", [{ scope: "openid" }] as unknown as string[]),
-    ).toThrow(/scope values or scope definitions/);
+    ).toEqual({ ok: false, reason: "invalid_config", scopes: ["openid"] });
+    expect(
+      evaluateRequiredScopes("openid notes:read", [
+        { scope: "notes:read", description: "   " },
+      ]),
+    ).toEqual({ ok: false, reason: "invalid_config", scopes: ["notes:read"] });
+  });
+
+  test("throws for entries that are neither values nor definitions", () => {
+    expect(() => evaluateRequiredScopes("openid", [42] as unknown as string[])).toThrow(
+      /scope values or scope definitions/,
+    );
   });
 
   test("denies when the token is missing a required scope", () => {

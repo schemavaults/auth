@@ -1,6 +1,6 @@
 import {
-  isScopeDefinition,
   isScopeToken,
+  scopeDefinitionProblem,
   scopeValue,
   type ScopeRequirement,
 } from "@schemavaults/auth-common/scopes";
@@ -19,10 +19,13 @@ export function assertScopeRequirements(requirements: unknown): void {
   }
   const seen = new Set<string>();
   for (const requirement of requirements as unknown[]) {
-    if (typeof requirement !== "string" && !isScopeDefinition(requirement)) {
-      throw new TypeError(
-        `requiredScopes entries must be scope values or { scope, description } definitions (got ${JSON.stringify(requirement)})`,
-      );
+    if (typeof requirement !== "string") {
+      const problem: string | null = scopeDefinitionProblem(requirement);
+      if (problem !== null) {
+        throw new TypeError(
+          `requiredScopes entries must be scope values or valid scope definitions: ${problem}`,
+        );
+      }
     }
     const value = scopeValue(requirement as ScopeRequirement);
     if (!isScopeToken(value)) {

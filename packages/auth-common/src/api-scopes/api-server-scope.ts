@@ -16,10 +16,16 @@
 import { z } from "zod";
 import { apiServerIdSchema } from "@schemavaults/app-definitions";
 import { isOidcReservedScope } from "../oidc/scope";
-import { SCOPE_TOKEN_REGEX } from "../scopes/scope-definition";
+import {
+  MAX_SCOPE_DESCRIPTION_LENGTH,
+  MAX_SCOPE_VALUE_LENGTH,
+  SCOPE_TOKEN_REGEX,
+} from "../scopes/scope-definition";
 
-export const MAX_API_SCOPE_VALUE_LENGTH = 128 as const;
-export const MAX_API_SCOPE_DESCRIPTION_LENGTH = 256 as const;
+// The same limits as scope definitions (`defineScope()`), so every
+// definition can be defined on the auth server as it is.
+export const MAX_API_SCOPE_VALUE_LENGTH = MAX_SCOPE_VALUE_LENGTH;
+export const MAX_API_SCOPE_DESCRIPTION_LENGTH = MAX_SCOPE_DESCRIPTION_LENGTH;
 /** Upper bound on the scopes one API server may define. */
 export const MAX_API_SCOPES_PER_API_SERVER = 100 as const;
 
