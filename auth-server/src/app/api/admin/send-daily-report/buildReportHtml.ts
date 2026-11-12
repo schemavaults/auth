@@ -1,6 +1,6 @@
 import "server-only";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
-import type { TopMostActiveUserRow, UserDocument } from "@/lib/auth-db/users";
+import type { TopMostActiveUsers, UserDocument } from "@/lib/auth-db/users";
 import type { ErrorRow } from "@/lib/auth-db/errors";
 import type { TopMostPopularAppRow } from "@/lib/auth-db/apps";
 import type { TopMostPopularApiRow } from "@/lib/auth-db/apis";
@@ -47,7 +47,8 @@ interface BuildReportOpts {
   newUsers: readonly UserDocument[];
   newOrganizations: readonly OrganizationDefinition[];
   newErrors: readonly ErrorRow[];
-  topMostActiveUsers: readonly TopMostActiveUserRow[];
+  /** The most active users (the table) and how many users were active in all (the heading). */
+  mostActiveUsers: TopMostActiveUsers;
   topMostPopularApps: readonly TopMostPopularAppRow[];
   topMostPopularApis: readonly TopMostPopularApiRow[];
   /**
@@ -175,6 +176,13 @@ function countCellHtml(value: number): string {
 /** `1 report`, `1,284 reports`. */
 function pluralize(count: number, singular: string, plural: string = `${singular}s`): string {
   return `${count.toLocaleString("en-US")} ${count === 1 ? singular : plural}`;
+}
+
+/** `+3 more removals not listed`, under a table that lists only part of its rows (empty when it lists them all). */
+function moreNotListedHtml(count: number, singular: string): string {
+  return count > 0
+    ? `\n        <p style="margin:8px 0 0;font-size:12px;color:${MUTED_COLOR};">+${escapeHtml(pluralize(count, `more ${singular}`))} not listed</p>`
+    : "";
 }
 
 /** `value` on one line, cut to `maxLength` characters. */
@@ -427,10 +435,6 @@ function buildOrganizationMfaSection(
       `${linkHtml(accentColor, orgUrl(entry.organization_id), escapeHtml(entry.organization_name))}<div style="margin-top:2px;font-family:monospace;font-size:12px;color:${MUTED_COLOR};">${escapeHtml(entry.organization_id)}</div>`,
     );
   const mutedCell = (value: string): string => cell(escapeHtml(value), `color:${MUTED_COLOR};font-size:13px;`);
-  const moreNote = (count: number, singular: string): string =>
-    count > 0
-      ? `\n        <p style="margin:8px 0 0;font-size:12px;color:${MUTED_COLOR};">+${escapeHtml(pluralize(count, `more ${singular}`))} not listed</p>`
-      : "";
 
   const removalsHtml: string = report.removals_total === 0
     ? `<p style="margin:0;padding:12px;color:${MUTED_COLOR};font-style:italic;">No members were removed in the last 24 hours.</p>`
@@ -457,7 +461,7 @@ ${report.removals
   )
   .join("\n")}
           </tbody>
-        </table>${moreNote(moreRemovals, "removal")}`;
+        </table>${moreNotListedHtml(moreRemovals, "removal")}`;
 
   const upcomingHtml: string = report.upcoming_removals_total === 0
     ? `<p style="margin:0;padding:12px;color:${MUTED_COLOR};font-style:italic;">No grace periods end in the next ${DAILY_REPORT_ORGANIZATION_MFA_UPCOMING_HOURS} hours.</p>`
@@ -482,7 +486,7 @@ ${report.upcoming_removals
   )
   .join("\n")}
           </tbody>
-        </table>${moreNote(moreUpcoming, "upcoming removal")}`;
+        </table>${moreNotListedHtml(moreUpcoming, "upcoming removal")}`;
 
   const html = `<tr>
       <td style="padding:8px 32px 24px;">
@@ -548,13 +552,15 @@ export function buildDailyAdminReport({
   newUsers,
   newOrganizations,
   newErrors,
-  topMostActiveUsers,
+  mostActiveUsers,
   topMostPopularApps,
   topMostPopularApis,
   authServerApiServerId,
   clientErrors,
   organizationMfa,
 }: BuildReportOpts): ReportContent {
+  const { users: topMostActiveUsers, active_users_count: activeUsersCount } = mostActiveUsers;
+  const moreActiveUsers: number = Math.max(0, activeUsersCount - topMostActiveUsers.length);
   const adminUrl = (page: AdminPage): string => `${authServerUri}${ADMIN_PAGES[page].path}`;
   const clientErrorsSection: ReportSection = buildClientErrorsSection(authServerUri, accentColor, clientErrors);
   const organizationMfaSection: ReportSection | null = buildOrganizationMfaSection(
@@ -706,7 +712,7 @@ ${organizationsRows}
     ${organizationMfaSection?.html ?? ""}
     <tr>
       <td style="padding:8px 32px 24px;">
-        ${sectionHeadingHtml(accentColor, `Top most-active users (${topMostActiveUsers.length})`, adminUrl("users"), "All users")}
+        ${sectionHeadingHtml(accentColor, `Top most-active users (${activeUsersCount.toLocaleString("en-US")})`, adminUrl("users"), "All users")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -721,7 +727,7 @@ ${organizationsRows}
           <tbody>
 ${topMostActiveRows}
           </tbody>
-        </table>
+        </table>${moreNotListedHtml(moreActiveUsers, "active user")}
       </td>
     </tr>
     <tr>
@@ -824,7 +830,7 @@ ${errorsRows}
     textLines.push(...organizationMfaSection.text);
     textLines.push("");
   }
-  textLines.push(`Top most-active users (${topMostActiveUsers.length}):`);
+  textLines.push(`Top most-active users (${activeUsersCount.toLocaleString("en-US")}):`);
   textLines.push(`  → All users: ${adminUrl("users")}`);
   if (topMostActiveUsers.length === 0) {
     textLines.push("  (none)");
@@ -834,6 +840,7 @@ ${errorsRows}
         `  ${i + 1}. ${u.email} — ${u.sign_in_count.toLocaleString("en-US")} sign-in(s) — ${u.access_token_count.toLocaleString("en-US")} access / ${u.refresh_token_count.toLocaleString("en-US")} refresh — ${authServerUri}/admin/users/${u.uid}`,
       );
     });
+    if (moreActiveUsers > 0) textLines.push(`  (+${pluralize(moreActiveUsers, "more active user")} not listed)`);
   }
   textLines.push("");
   textLines.push(`Most popular applications (${topMostPopularApps.length}):`);

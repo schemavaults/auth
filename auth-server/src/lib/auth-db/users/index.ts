@@ -9,7 +9,7 @@ export { getUserByUID } from "./get-user-by-uid";
 export { listAllUsers } from "./list-all-users";
 export { listUsersCreatedSince } from "./list-users-created-since";
 export { listTopMostActiveUsersSince } from "./list-top-most-active-users-since";
-export type { TopMostActiveUserRow } from "./list-top-most-active-users-since";
+export type { TopMostActiveUserRow, TopMostActiveUsers } from "./list-top-most-active-users-since";
 export { parseUserDocument } from "./parse-user-document";
 export { getPasswordHash, getPasswordRecord } from "./get-password-hash";
 export { comparePassword } from "./compare-password";

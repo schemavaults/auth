@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { ClientErrorGroupStats, ClientErrorStats } from "@/lib/auth-db/client-errors";
 import type { ClientErrorStorageStatus } from "@/lib/client-errors/row-size";
 import type { OrganizationMfaDailyReport } from "@/lib/auth-db/organization-mfa-requirements";
+import type { TopMostActiveUserRow, TopMostActiveUsers } from "@/lib/auth-db/users";
 import { buildDailyAdminReport, DAILY_REPORT_CLIENT_ERROR_TOP_N, type DailyReportClientErrors } from "./buildReportHtml";
 
 const AUTH_SERVER_URI = "https://auth.example.com";
@@ -65,6 +66,9 @@ const STORAGE: ClientErrorStorageStatus = {
   retention_days: 30,
 };
 
+/** Nobody signed in or was issued a token during the window. */
+const NO_ACTIVE_USERS: TopMostActiveUsers = { users: [], active_users_count: 0 };
+
 /** No organization requires MFA: the section is left out. */
 const NO_ORGANIZATION_MFA: OrganizationMfaDailyReport = {
   organizations_requiring_mfa: 0,
@@ -80,6 +84,7 @@ const NO_ORGANIZATION_MFA: OrganizationMfaDailyReport = {
 function build(
   clientErrors: Partial<DailyReportClientErrors> = {},
   organizationMfa: Partial<OrganizationMfaDailyReport> = {},
+  mostActiveUsers: TopMostActiveUsers = NO_ACTIVE_USERS,
 ) {
   return buildDailyAdminReport({
     authServerUri: AUTH_SERVER_URI,
@@ -90,7 +95,7 @@ function build(
     newUsers: [],
     newOrganizations: [],
     newErrors: [],
-    topMostActiveUsers: [],
+    mostActiveUsers,
     topMostPopularApps: [
       { client_app_id: APP_ID, app_name: "Example App", access_token_count: 5, refresh_token_count: 1 },
     ],
@@ -301,5 +306,43 @@ describe("buildDailyAdminReport organization MFA enforcement", () => {
     });
     expect(html).toContain("+3 more removals not listed");
     expect(text).toContain("    (+3 more removals not listed)");
+  });
+});
+
+describe("buildDailyAdminReport most-active users", () => {
+  function activeUser(i: number): TopMostActiveUserRow {
+    return {
+      uid: `88888888-8888-4888-8888-${String(i).padStart(12, "0")}`,
+      email: `user${i}@example.com`,
+      sign_in_count: 20 - i,
+      access_token_count: 40 - i,
+      refresh_token_count: 1,
+    };
+  }
+  const TOP_TEN: TopMostActiveUserRow[] = Array.from({ length: 10 }, (_, i) => activeUser(i));
+
+  test("the heading counts every active user while the table lists the top ones", () => {
+    const { html, text } = build({}, {}, { users: TOP_TEN, active_users_count: 1234 });
+    expect(html).toContain("Top most-active users (1,234)</h2>");
+    expect(text).toContain("Top most-active users (1,234):");
+    expect(html).toContain(`href="${AUTH_SERVER_URI}/admin/users/${activeUser(9).uid}"`);
+    expect(text).toContain(`  10. user9@example.com — 11 sign-in(s) — 31 access / 1 refresh — ${AUTH_SERVER_URI}/admin/users/${activeUser(9).uid}`);
+    expect(html).toContain("+1,224 more active users not listed</p>");
+    expect(text).toContain("  (+1,224 more active users not listed)");
+  });
+
+  test("leaves the note out when the table lists every active user", () => {
+    const { html, text } = build({}, {}, { users: TOP_TEN.slice(0, 3), active_users_count: 3 });
+    expect(html).toContain("Top most-active users (3)</h2>");
+    expect(text).toContain("Top most-active users (3):");
+    expect(html).not.toContain("more active user");
+    expect(text).not.toContain("more active user");
+  });
+
+  test("says so when nobody was active", () => {
+    const { html, text } = build();
+    expect(html).toContain("Top most-active users (0)</h2>");
+    expect(html).toContain("No user activity in the last 24 hours.");
+    expect(text).toContain("Top most-active users (0):\n  → All users: " + `${AUTH_SERVER_URI}/admin/users\n  (none)`);
   });
 });
