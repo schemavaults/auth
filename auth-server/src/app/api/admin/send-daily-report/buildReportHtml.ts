@@ -2,8 +2,8 @@ import "server-only";
 import type { OrganizationDefinition } from "@schemavaults/auth-common";
 import type { TopMostActiveUsers, UserDocument } from "@/lib/auth-db/users";
 import type { ErrorRow } from "@/lib/auth-db/errors";
-import type { TopMostPopularAppRow } from "@/lib/auth-db/apps";
-import type { TopMostPopularApiRow } from "@/lib/auth-db/apis";
+import type { TopMostPopularApps } from "@/lib/auth-db/apps";
+import type { TopMostPopularApiRow, TopMostPopularApis } from "@/lib/auth-db/apis";
 import type {
   ClientErrorAppStats,
   ClientErrorGroupStats,
@@ -49,8 +49,10 @@ interface BuildReportOpts {
   newErrors: readonly ErrorRow[];
   /** The most active users (the table) and how many users were active in all (the heading). */
   mostActiveUsers: TopMostActiveUsers;
-  topMostPopularApps: readonly TopMostPopularAppRow[];
-  topMostPopularApis: readonly TopMostPopularApiRow[];
+  /** The most popular applications (the table) and how many issued tokens in all (the heading). */
+  mostPopularApps: TopMostPopularApps;
+  /** The most popular APIs (the table) and how many received tokens in all (the heading). */
+  mostPopularApis: TopMostPopularApis;
   /**
    * The auth server's own api server id. Refresh tokens are only ever minted
    * with the auth server itself as their audience, so the refresh-token count
@@ -553,14 +555,18 @@ export function buildDailyAdminReport({
   newOrganizations,
   newErrors,
   mostActiveUsers,
-  topMostPopularApps,
-  topMostPopularApis,
+  mostPopularApps,
+  mostPopularApis,
   authServerApiServerId,
   clientErrors,
   organizationMfa,
 }: BuildReportOpts): ReportContent {
   const { users: topMostActiveUsers, active_users_count: activeUsersCount } = mostActiveUsers;
   const moreActiveUsers: number = Math.max(0, activeUsersCount - topMostActiveUsers.length);
+  const { apps: topMostPopularApps, active_apps_count: activeAppsCount } = mostPopularApps;
+  const morePopularApps: number = Math.max(0, activeAppsCount - topMostPopularApps.length);
+  const { apis: topMostPopularApis, active_apis_count: activeApisCount } = mostPopularApis;
+  const morePopularApis: number = Math.max(0, activeApisCount - topMostPopularApis.length);
   const adminUrl = (page: AdminPage): string => `${authServerUri}${ADMIN_PAGES[page].path}`;
   const clientErrorsSection: ReportSection = buildClientErrorsSection(authServerUri, accentColor, clientErrors);
   const organizationMfaSection: ReportSection | null = buildOrganizationMfaSection(
@@ -732,7 +738,7 @@ ${topMostActiveRows}
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        ${sectionHeadingHtml(accentColor, `Most popular applications (${topMostPopularApps.length})`, adminUrl("apps"), "All applications")}
+        ${sectionHeadingHtml(accentColor, `Most popular applications (${activeAppsCount.toLocaleString("en-US")})`, adminUrl("apps"), "All applications")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -746,12 +752,12 @@ ${topMostActiveRows}
           <tbody>
 ${topPopularAppsRows}
           </tbody>
-        </table>
+        </table>${moreNotListedHtml(morePopularApps, "application")}
       </td>
     </tr>
     <tr>
       <td style="padding:8px 32px 24px;">
-        ${sectionHeadingHtml(accentColor, `Most popular APIs (${topMostPopularApis.length})`, adminUrl("apis"), "All APIs")}
+        ${sectionHeadingHtml(accentColor, `Most popular APIs (${activeApisCount.toLocaleString("en-US")})`, adminUrl("apis"), "All APIs")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <thead>
             <tr>
@@ -765,7 +771,7 @@ ${topPopularAppsRows}
           <tbody>
 ${topPopularApisRows}
           </tbody>
-        </table>
+        </table>${moreNotListedHtml(morePopularApis, "API")}
         <p style="margin:8px 0 0;color:${MUTED_COLOR};font-size:12px;">Refresh tokens are only issued with the auth server itself as their audience, so the refresh-token count is not applicable (&ldquo;N/A&rdquo;) for other APIs.</p>
       </td>
     </tr>
@@ -843,7 +849,7 @@ ${errorsRows}
     if (moreActiveUsers > 0) textLines.push(`  (+${pluralize(moreActiveUsers, "more active user")} not listed)`);
   }
   textLines.push("");
-  textLines.push(`Most popular applications (${topMostPopularApps.length}):`);
+  textLines.push(`Most popular applications (${activeAppsCount.toLocaleString("en-US")}):`);
   textLines.push(`  → All applications: ${adminUrl("apps")}`);
   if (topMostPopularApps.length === 0) {
     textLines.push("  (none)");
@@ -853,9 +859,10 @@ ${errorsRows}
         `  ${i + 1}. ${a.app_name} [${a.client_app_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${a.refresh_token_count.toLocaleString("en-US")} refresh — ${authServerUri}/apps/${a.client_app_id}`,
       );
     });
+    if (morePopularApps > 0) textLines.push(`  (+${pluralize(morePopularApps, "more application")} not listed)`);
   }
   textLines.push("");
-  textLines.push(`Most popular APIs (${topMostPopularApis.length}):`);
+  textLines.push(`Most popular APIs (${activeApisCount.toLocaleString("en-US")}):`);
   textLines.push(`  → All APIs: ${adminUrl("apis")}`);
   if (topMostPopularApis.length === 0) {
     textLines.push("  (none)");
@@ -868,6 +875,7 @@ ${errorsRows}
         `  ${i + 1}. ${a.api_server_name} [${a.api_server_id}] — ${a.access_token_count.toLocaleString("en-US")} access / ${refreshLabel} — ${authServerUri}/apis/${a.api_server_id}`,
       );
     });
+    if (morePopularApis > 0) textLines.push(`  (+${pluralize(morePopularApis, "more API")} not listed)`);
     textLines.push(
       "  (Refresh tokens are only issued with the auth server itself as their audience.)",
     );

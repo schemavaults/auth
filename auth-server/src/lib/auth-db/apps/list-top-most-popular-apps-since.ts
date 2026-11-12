@@ -11,6 +11,17 @@ export interface TopMostPopularAppRow {
   refresh_token_count: number;
 }
 
+/** The applications that issued the most tokens since a given time, and how many issued any. */
+export interface TopMostPopularApps {
+  /** The most popular applications, most popular first, at most `limit` of them. */
+  apps: readonly TopMostPopularAppRow[];
+  /**
+   * Every application that issued a token (access or refresh) in the window,
+   * including those left out of `apps` by the limit.
+   */
+  active_apps_count: number;
+}
+
 /**
  * List the client applications that issued the most tokens since `since_ms`,
  * ranked by total tokens (access + refresh). Both token types carry the real
@@ -20,7 +31,7 @@ export async function listTopMostPopularAppsSince(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   since_ms: number,
   limit: number = 10,
-): Promise<readonly TopMostPopularAppRow[]> {
+): Promise<TopMostPopularApps> {
   const countsByAppId = await countTokensIssuedSinceGroupedByColumn(
     db,
     since_ms,
@@ -45,7 +56,8 @@ export async function listTopMostPopularAppsSince(
     })
     .slice(0, limit);
 
-  if (ranked.length === 0) return [];
+  const active_apps_count: number = countsByAppId.size;
+  if (ranked.length === 0) return { apps: [], active_apps_count };
 
   // Resolve human-readable names for the top apps only.
   const nameById = await resolveAppNames(
@@ -53,12 +65,13 @@ export async function listTopMostPopularAppsSince(
     ranked.map((r) => r.client_app_id),
   );
 
-  return ranked.map((r) => ({
+  const apps: TopMostPopularAppRow[] = ranked.map((r) => ({
     client_app_id: r.client_app_id,
     app_name: nameById.get(r.client_app_id) ?? r.client_app_id,
     access_token_count: r.access,
     refresh_token_count: r.refresh,
   }));
+  return { apps, active_apps_count };
 }
 
 export default listTopMostPopularAppsSince;
