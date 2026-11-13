@@ -21,6 +21,7 @@ import { evaluateMfaProof } from "./evaluate-proof";
 import { RedisCache } from "@/lib/redis";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import {
   EMAIL_VERIFICATION_REQUIRED_MESSAGE,
@@ -117,6 +118,13 @@ export async function handleMfaVerify({
   }
 
   if (!proofValid) {
+    await recordAuditEvent(dbh.db, {
+      event_type: "user.mfa_challenge_failed",
+      subject: { uid: challenge.uid },
+      client_app_id: challenge.client_app_id,
+      request: req,
+      details: { method: proof.type },
+    });
     if (remaining === 0) {
       // Challenge already deleted by consumeAttempt — instruct client to restart.
       return NextResponse.json(
@@ -257,6 +265,15 @@ export async function handleMfaVerify({
       context: { nonFatal: true },
     });
   }
+
+  await recordAuditEvent(dbh.db, {
+    event_type: "user.signed_in",
+    actor: { uid: challenge.uid },
+    subject: { uid: challenge.uid },
+    client_app_id: challenge.client_app_id,
+    request: req,
+    details: { mfa: true, method: proof.type },
+  });
 
   return response;
 }

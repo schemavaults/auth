@@ -29,6 +29,7 @@ import {
   buildCorsHeaders,
 } from "@/lib/cors/cors-for-client-app";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 
 /**
  * POST /api/auth/logout/{client_app_id}: revokes the presented refresh
@@ -118,6 +119,8 @@ export async function handleLogout(req: NextRequest, client_app_id: AppId): Prom
   if (bearer_refresh_token) {
     presented_refresh_tokens.push({ token: bearer_refresh_token, from_bearer: true });
   }
+  // The user whose session ended (the cookie and a Bearer token name the same one).
+  let signed_out_uid: string | null = null;
   for (const { token: refresh_token_value, from_bearer } of presented_refresh_tokens) {
     try {
       const keyset_id = getKeysetIdFromToken(refresh_token_value);
@@ -137,6 +140,7 @@ export async function handleLogout(req: NextRequest, client_app_id: AppId): Prom
         }
         continue;
       }
+      signed_out_uid = decoded.uid;
       if (decoded.jti) {
         const expires_at = Date.now() + refreshTokenExpiry * 1000;
         await revokeToken(dbh.db, decoded.jti, decoded.uid, expires_at);
@@ -193,6 +197,16 @@ export async function handleLogout(req: NextRequest, client_app_id: AppId): Prom
       { message: "Failed to delete your refresh token cookies!", success: false, error: true },
       { headers: corsHeaders, status: 500 },
     );
+  }
+
+  if (signed_out_uid !== null) {
+    await recordAuditEvent(dbh.db, {
+      event_type: "user.signed_out",
+      actor: { uid: signed_out_uid },
+      subject: { uid: signed_out_uid },
+      client_app_id,
+      request: req,
+    });
   }
 
   return logout_success_response;

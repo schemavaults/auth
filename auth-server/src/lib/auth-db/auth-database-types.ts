@@ -45,6 +45,7 @@ import type { ServerTracesTable } from "./server-traces";
 import type { ErrorsTable } from "./errors";
 import type { ClientErrorsTable } from "./client-errors";
 import type { UserEmailLogTable } from "./user-email-log";
+import type { AuditEventsTable } from "./audit-events";
 import type {
   UserMfaFactorsTable,
   UserMfaRecoveryCodesTable,
@@ -72,6 +73,7 @@ export type AuthDatabase = {
   password_reset_tokens: PasswordResetTokensTable;
   email_verification_tokens: EmailVerificationTokensTable;
   user_email_log: UserEmailLogTable;
+  audit_events: AuditEventsTable;
   authorization_codes: AuthorizationCodesTable;
   invite_codes: InviteCodesTable;
   organizations: OrganizationsTable;

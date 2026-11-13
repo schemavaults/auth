@@ -7,6 +7,7 @@ import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { verifyAndConsumeTotpCode } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 import { startOrganizationMfaGracePeriodsForUser } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
@@ -82,6 +83,16 @@ export const removeTotpFactor = defineOperation({
         await mfaRegistry.deleteAllFactorsForUser(user.uid);
       } else {
         await mfaRegistry.deleteFactor({ uid: user.uid, factor_id });
+      }
+      // A pending factor never protected the account: removing it is not an event.
+      if (factor.row.verified) {
+        await recordAuditEvent(db, {
+          event_type: "user.mfa_factor_removed",
+          actor: user,
+          subject: user,
+          request: ctx.request,
+          details: { factor_type: "totp", factor_id, last_factor: isLastVerifiedFactor },
+        });
       }
 
       await sendMfaSecurityAlertEmail({
