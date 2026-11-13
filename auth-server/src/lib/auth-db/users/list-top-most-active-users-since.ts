@@ -11,6 +11,17 @@ export interface TopMostActiveUserRow {
   refresh_token_count: number;
 }
 
+/** The users most active since a given time, and how many were active at all. */
+export interface TopMostActiveUsers {
+  /** The most active users, most active first, at most `limit` of them. */
+  users: readonly TopMostActiveUserRow[];
+  /**
+   * Every user with any activity in the window (a sign-in or an issued token),
+   * including those left out of `users` by the limit.
+   */
+  active_users_count: number;
+}
+
 interface UidActivity {
   sign_in: number;
   access: number;
@@ -31,7 +42,7 @@ export async function listTopMostActiveUsersSince(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   since_ms: number,
   limit: number = 10,
-): Promise<readonly TopMostActiveUserRow[]> {
+): Promise<TopMostActiveUsers> {
   const [signInRows, tokenCountsByUid] = await Promise.all([
     db
       .selectFrom("authorization_codes")
@@ -73,7 +84,8 @@ export async function listTopMostActiveUsersSince(
     })
     .slice(0, limit);
 
-  if (ranked.length === 0) return [];
+  const active_users_count: number = activityByUid.size;
+  if (ranked.length === 0) return { users: [], active_users_count };
 
   const topUids = ranked.map((r) => r.uid);
   const userRows = await db
@@ -86,13 +98,14 @@ export async function listTopMostActiveUsersSince(
     emailByUid.set(row.uid, row.email);
   }
 
-  return ranked.map((r) => ({
+  const users: TopMostActiveUserRow[] = ranked.map((r) => ({
     uid: r.uid,
     email: emailByUid.get(r.uid) ?? "",
     sign_in_count: r.sign_in,
     access_token_count: r.access,
     refresh_token_count: r.refresh,
   }));
+  return { users, active_users_count };
 }
 
 export default listTopMostActiveUsersSince;

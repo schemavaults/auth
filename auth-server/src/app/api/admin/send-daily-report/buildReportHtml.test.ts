@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 import type { ClientErrorGroupStats, ClientErrorStats } from "@/lib/auth-db/client-errors";
 import type { ClientErrorStorageStatus } from "@/lib/client-errors/row-size";
 import type { OrganizationMfaDailyReport } from "@/lib/auth-db/organization-mfa-requirements";
+import type { TopMostActiveUserRow, TopMostActiveUsers } from "@/lib/auth-db/users";
+import type { TopMostPopularAppRow } from "@/lib/auth-db/apps";
+import type { TopMostPopularApiRow } from "@/lib/auth-db/apis";
 import { buildDailyAdminReport, DAILY_REPORT_CLIENT_ERROR_TOP_N, type DailyReportClientErrors } from "./buildReportHtml";
 
 const AUTH_SERVER_URI = "https://auth.example.com";
@@ -65,6 +68,9 @@ const STORAGE: ClientErrorStorageStatus = {
   retention_days: 30,
 };
 
+/** Nobody signed in or was issued a token during the window. */
+const NO_ACTIVE_USERS: TopMostActiveUsers = { users: [], active_users_count: 0 };
+
 /** No organization requires MFA: the section is left out. */
 const NO_ORGANIZATION_MFA: OrganizationMfaDailyReport = {
   organizations_requiring_mfa: 0,
@@ -80,6 +86,7 @@ const NO_ORGANIZATION_MFA: OrganizationMfaDailyReport = {
 function build(
   clientErrors: Partial<DailyReportClientErrors> = {},
   organizationMfa: Partial<OrganizationMfaDailyReport> = {},
+  overrides: Partial<Parameters<typeof buildDailyAdminReport>[0]> = {},
 ) {
   return buildDailyAdminReport({
     authServerUri: AUTH_SERVER_URI,
@@ -90,13 +97,15 @@ function build(
     newUsers: [],
     newOrganizations: [],
     newErrors: [],
-    topMostActiveUsers: [],
-    topMostPopularApps: [
-      { client_app_id: APP_ID, app_name: "Example App", access_token_count: 5, refresh_token_count: 1 },
-    ],
-    topMostPopularApis: [
-      { api_server_id: API_ID, api_server_name: "Example API", access_token_count: 5, refresh_token_count: 0 },
-    ],
+    mostActiveUsers: NO_ACTIVE_USERS,
+    mostPopularApps: {
+      apps: [{ client_app_id: APP_ID, app_name: "Example App", access_token_count: 5, refresh_token_count: 1 }],
+      active_apps_count: 1,
+    },
+    mostPopularApis: {
+      apis: [{ api_server_id: API_ID, api_server_name: "Example API", access_token_count: 5, refresh_token_count: 0 }],
+      active_apis_count: 1,
+    },
     authServerApiServerId: AUTH_SERVER_API_ID,
     clientErrors: {
       stats: stats(),
@@ -105,6 +114,7 @@ function build(
       ...clientErrors,
     },
     organizationMfa: { ...NO_ORGANIZATION_MFA, ...organizationMfa },
+    ...overrides,
   });
 }
 
@@ -301,5 +311,102 @@ describe("buildDailyAdminReport organization MFA enforcement", () => {
     });
     expect(html).toContain("+3 more removals not listed");
     expect(text).toContain("    (+3 more removals not listed)");
+  });
+});
+
+describe("buildDailyAdminReport most-active users", () => {
+  function activeUser(i: number): TopMostActiveUserRow {
+    return {
+      uid: `88888888-8888-4888-8888-${String(i).padStart(12, "0")}`,
+      email: `user${i}@example.com`,
+      sign_in_count: 20 - i,
+      access_token_count: 40 - i,
+      refresh_token_count: 1,
+    };
+  }
+  const TOP_TEN: TopMostActiveUserRow[] = Array.from({ length: 10 }, (_, i) => activeUser(i));
+
+  test("the heading counts every active user while the table lists the top ones", () => {
+    const { html, text } = build({}, {}, { mostActiveUsers: { users: TOP_TEN, active_users_count: 1234 } });
+    expect(html).toContain("Top most-active users (1,234)</h2>");
+    expect(text).toContain("Top most-active users (1,234):");
+    expect(html).toContain(`href="${AUTH_SERVER_URI}/admin/users/${activeUser(9).uid}"`);
+    expect(text).toContain(`  10. user9@example.com — 11 sign-in(s) — 31 access / 1 refresh — ${AUTH_SERVER_URI}/admin/users/${activeUser(9).uid}`);
+    expect(html).toContain("+1,224 more active users not listed</p>");
+    expect(text).toContain("  (+1,224 more active users not listed)");
+  });
+
+  test("leaves the note out when the table lists every active user", () => {
+    const { html, text } = build({}, {}, { mostActiveUsers: { users: TOP_TEN.slice(0, 3), active_users_count: 3 } });
+    expect(html).toContain("Top most-active users (3)</h2>");
+    expect(text).toContain("Top most-active users (3):");
+    expect(html).not.toContain("more active user");
+    expect(text).not.toContain("more active user");
+  });
+
+  test("says so when nobody was active", () => {
+    const { html, text } = build();
+    expect(html).toContain("Top most-active users (0)</h2>");
+    expect(html).toContain("No user activity in the last 24 hours.");
+    expect(text).toContain("Top most-active users (0):\n  → All users: " + `${AUTH_SERVER_URI}/admin/users\n  (none)`);
+  });
+});
+
+describe("buildDailyAdminReport most popular applications and APIs", () => {
+  function app(i: number): TopMostPopularAppRow {
+    return {
+      client_app_id: `99999999-9999-4999-8999-${String(i).padStart(12, "0")}`,
+      app_name: `App ${i}`,
+      access_token_count: 100 - i,
+      refresh_token_count: 2,
+    };
+  }
+  function api(i: number): TopMostPopularApiRow {
+    return {
+      api_server_id: `aaaaaaaa-aaaa-4aaa-8aaa-${String(i).padStart(12, "0")}`,
+      api_server_name: `API ${i}`,
+      access_token_count: 100 - i,
+      refresh_token_count: 0,
+    };
+  }
+  const TEN_APPS = Array.from({ length: 10 }, (_, i) => app(i));
+  const TEN_APIS = Array.from({ length: 10 }, (_, i) => api(i));
+
+  test("the headings count every application and API with tokens while the tables list the top ones", () => {
+    const { html, text } = build({}, {}, {
+      mostPopularApps: { apps: TEN_APPS, active_apps_count: 1001 },
+      mostPopularApis: { apis: TEN_APIS, active_apis_count: 11 },
+    });
+    expect(html).toContain("Most popular applications (1,001)</h2>");
+    expect(text).toContain("Most popular applications (1,001):");
+    expect(html).toContain("+991 more applications not listed</p>");
+    expect(text).toContain(`  10. App 9 [${app(9).client_app_id}] — 91 access / 2 refresh — ${AUTH_SERVER_URI}/apps/${app(9).client_app_id}\n  (+991 more applications not listed)`);
+
+    expect(html).toContain("Most popular APIs (11)</h2>");
+    expect(text).toContain("Most popular APIs (11):");
+    expect(html).toContain("+1 more API not listed</p>");
+    expect(text).toContain(`  10. API 9 [${api(9).api_server_id}] — 91 access / N/A refresh — ${AUTH_SERVER_URI}/apis/${api(9).api_server_id}\n  (+1 more API not listed)`);
+  });
+
+  test("leave the notes out when the tables list every application and API", () => {
+    const { html, text } = build();
+    expect(html).toContain("Most popular applications (1)</h2>");
+    expect(html).toContain("Most popular APIs (1)</h2>");
+    for (const content of [html, text]) {
+      expect(content).not.toContain("more application");
+      expect(content).not.toContain("more API");
+    }
+  });
+
+  test("say so when no tokens were issued", () => {
+    const { html, text } = build({}, {}, {
+      mostPopularApps: { apps: [], active_apps_count: 0 },
+      mostPopularApis: { apis: [], active_apis_count: 0 },
+    });
+    expect(html).toContain("Most popular applications (0)</h2>");
+    expect(html).toContain("No application token activity in the last 24 hours.");
+    expect(html).toContain("Most popular APIs (0)</h2>");
+    expect(text).toContain(`Most popular applications (0):\n  → All applications: ${AUTH_SERVER_URI}/admin/apps\n  (none)`);
+    expect(text).toContain(`Most popular APIs (0):\n  → All APIs: ${AUTH_SERVER_URI}/admin/apis\n  (none)`);
   });
 });

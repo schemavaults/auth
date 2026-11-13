@@ -31,6 +31,8 @@ import getAuthServerEmailAccentColor from "@/lib/config/email-accent-color";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+/** Rows the most-active users, popular applications and popular APIs tables list at most. */
+const DAILY_REPORT_TOP_N = 10;
 const ADMIN_MAILING_LIST_ID = "00000000-0000-0000-0000-000000000000";
 const OP_NAME = "send-daily-admin-report";
 const ROUTE = "/api/admin/send-daily-report";
@@ -54,9 +56,9 @@ export async function sendDailyReportHandler({
       newUsers,
       newOrganizations,
       newErrors,
-      topMostActiveUsers,
-      topMostPopularApps,
-      topMostPopularApis,
+      mostActiveUsers,
+      mostPopularApps,
+      mostPopularApis,
       clientErrorStats,
       clientErrorStorage,
       organizationMfa,
@@ -64,9 +66,9 @@ export async function sendDailyReportHandler({
       listUsersCreatedSince(dbh.db, windowStart.getTime()),
       listOrganizationsCreatedSince(dbh.db, windowStart.getTime()),
       listErrorsCreatedSince(dbh.db, windowStart.getTime()),
-      listTopMostActiveUsersSince(dbh.db, windowStart.getTime(), 10),
-      listTopMostPopularAppsSince(dbh.db, windowStart.getTime(), 10),
-      listTopMostPopularApisSince(dbh.db, windowStart.getTime(), 10),
+      listTopMostActiveUsersSince(dbh.db, windowStart.getTime(), DAILY_REPORT_TOP_N),
+      listTopMostPopularAppsSince(dbh.db, windowStart.getTime(), DAILY_REPORT_TOP_N),
+      listTopMostPopularApisSince(dbh.db, windowStart.getTime(), DAILY_REPORT_TOP_N),
       getClientErrorStats(dbh.db, { since_ms: windowStart.getTime() }, windowEnd.getTime()),
       loadClientErrorStorageStatus(dbh.db, redis.client),
       loadOrganizationMfaDailyReport(dbh.db, {
@@ -103,9 +105,9 @@ export async function sendDailyReportHandler({
       newUsers,
       newOrganizations,
       newErrors,
-      topMostActiveUsers,
-      topMostPopularApps,
-      topMostPopularApis,
+      mostActiveUsers,
+      mostPopularApps,
+      mostPopularApis,
       authServerApiServerId,
       clientErrors: {
         stats: clientErrorStats,
@@ -132,9 +134,12 @@ export async function sendDailyReportHandler({
       users_count: newUsers.length,
       organizations_count: newOrganizations.length,
       errors_count: newErrors.length,
-      top_most_active_users_count: topMostActiveUsers.length,
-      top_most_popular_apps_count: topMostPopularApps.length,
-      top_most_popular_apis_count: topMostPopularApis.length,
+      active_users_count: mostActiveUsers.active_users_count,
+      top_most_active_users_count: mostActiveUsers.users.length,
+      active_apps_count: mostPopularApps.active_apps_count,
+      top_most_popular_apps_count: mostPopularApps.apps.length,
+      active_apis_count: mostPopularApis.active_apis_count,
+      top_most_popular_apis_count: mostPopularApis.apis.length,
       client_errors_count: clientErrorStats.totals.errors,
       client_error_groups_count: clientErrorStats.totals.groups,
       organization_mfa_removals_count: organizationMfa.removals_total,

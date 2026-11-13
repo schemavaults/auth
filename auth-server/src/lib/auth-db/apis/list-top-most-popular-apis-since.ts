@@ -14,6 +14,17 @@ export interface TopMostPopularApiRow {
   refresh_token_count: number;
 }
 
+/** The API servers that received the most tokens since a given time, and how many received any. */
+export interface TopMostPopularApis {
+  /** The most popular API servers, most popular first, at most `limit` of them. */
+  apis: readonly TopMostPopularApiRow[];
+  /**
+   * Every API server (token audience) that received a token (access or
+   * refresh) in the window, including those left out of `apis` by the limit.
+   */
+  active_apis_count: number;
+}
+
 /**
  * List the API servers (token audiences) that received the most tokens since
  * `since_ms`, ranked by access-token count.
@@ -27,7 +38,7 @@ export async function listTopMostPopularApisSince(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   since_ms: number,
   limit: number = 10,
-): Promise<readonly TopMostPopularApiRow[]> {
+): Promise<TopMostPopularApis> {
   const countsByAudience = await countTokensIssuedSinceGroupedByColumn(
     db,
     since_ms,
@@ -51,7 +62,8 @@ export async function listTopMostPopularApisSince(
     })
     .slice(0, limit);
 
-  if (ranked.length === 0) return [];
+  const active_apis_count: number = countsByAudience.size;
+  if (ranked.length === 0) return { apis: [], active_apis_count };
 
   // Resolve human-readable names for the top API servers only.
   const nameById = new Map<string, string>();
@@ -77,12 +89,13 @@ export async function listTopMostPopularApisSince(
     }
   }
 
-  return ranked.map((r) => ({
+  const apis: TopMostPopularApiRow[] = ranked.map((r) => ({
     api_server_id: r.api_server_id,
     api_server_name: nameById.get(r.api_server_id) ?? r.api_server_id,
     access_token_count: r.access,
     refresh_token_count: r.refresh,
   }));
+  return { apis, active_apis_count };
 }
 
 export default listTopMostPopularApisSince;

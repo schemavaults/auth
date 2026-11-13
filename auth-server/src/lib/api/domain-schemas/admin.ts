@@ -153,9 +153,30 @@ export const DailyAdminReportResult = z
     users_count: z.number().int(),
     organizations_count: z.number().int(),
     errors_count: z.number().int(),
-    top_most_active_users_count: z.number().int(),
-    top_most_popular_apps_count: z.number().int(),
-    top_most_popular_apis_count: z.number().int(),
+    active_users_count: z
+      .number()
+      .int()
+      .openapi({ description: "Users with any activity (a sign-in or an issued token) during the window" }),
+    top_most_active_users_count: z
+      .number()
+      .int()
+      .openapi({ description: "Most active users the report lists (at most 10 of `active_users_count`)" }),
+    active_apps_count: z
+      .number()
+      .int()
+      .openapi({ description: "Applications that issued a token (access or refresh) during the window" }),
+    top_most_popular_apps_count: z
+      .number()
+      .int()
+      .openapi({ description: "Most popular applications the report lists (at most 10 of `active_apps_count`)" }),
+    active_apis_count: z
+      .number()
+      .int()
+      .openapi({ description: "API servers (token audiences) that received a token during the window" }),
+    top_most_popular_apis_count: z
+      .number()
+      .int()
+      .openapi({ description: "Most popular APIs the report lists (at most 10 of `active_apis_count`)" }),
     client_errors_count: z.number().int().openapi({ description: "Client error reports received during the window" }),
     client_error_groups_count: z
       .number()
