@@ -11,6 +11,7 @@ import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@
 import { API_TAGS } from "@/lib/api/tags";
 import { UserRegistry, UsernameTakenError, UserNotFoundError, type UserDocument } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 
 const ROUTE = "/api/user/profile";
 
@@ -102,6 +103,12 @@ export const updateUserProfile = defineOperation({
     const { db } = ctx.context;
     try {
       const updated = await new UserRegistry(db).updateUserProfile(user.uid, ctx.body);
+      await recordAuditEvent(db, {
+        event_type: "user.profile_updated",
+        actor: user,
+        subject: user,
+        request: ctx.request,
+      });
       const serialized = serializeProfile(updated);
       if (!serialized.success) {
         await captureServerException(db, serialized.error, {

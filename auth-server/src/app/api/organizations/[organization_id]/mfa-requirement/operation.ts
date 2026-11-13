@@ -20,6 +20,7 @@ import {
   userHasVerifiedMfaFactor,
 } from "@/lib/auth-db/organization-mfa-requirements";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { notifyOrganizationMfaGracePeriods } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 import loadOrganizationMfaRequirementView from "@/lib/organization-mfa-requirements/load-organization-mfa-requirement";
 import { DEFAULT_ORGANIZATION_MFA_GRACE_PERIOD_DAYS } from "@/lib/organization-mfa-requirements/policy";
@@ -209,8 +210,31 @@ export const updateOrganizationMfaRequirementOperation = defineOperation({
         if (newly_required) {
           await notifyOrganizationMfaGracePeriods({ db, redis, now, organization_id, environment });
         }
+        const applied_grace_period_days: number =
+          grace_period_days ?? existing?.grace_period_days ?? DEFAULT_ORGANIZATION_MFA_GRACE_PERIOD_DAYS;
+        // Saving the same settings again changes nothing: not an event.
+        if (newly_required || existing?.grace_period_days !== applied_grace_period_days) {
+          await recordAuditEvent(db, {
+            event_type: newly_required
+              ? "organization.mfa_requirement_enabled"
+              : "organization.mfa_requirement_updated",
+            actor: user,
+            organization_id,
+            request: ctx.request,
+            details: { grace_period_days: applied_grace_period_days },
+          });
+        }
       } else {
+        const was_required: boolean = (await getOrganizationMfaRequirement(db, organization_id)) !== null;
         await deleteOrganizationMfaRequirement(db, organization_id);
+        if (was_required) {
+          await recordAuditEvent(db, {
+            event_type: "organization.mfa_requirement_disabled",
+            actor: user,
+            organization_id,
+            request: ctx.request,
+          });
+        }
       }
 
       const requirement = await loadOrganizationMfaRequirementView(db, {

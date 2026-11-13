@@ -6,6 +6,7 @@ import { adminErrorResponses, ErrorResponse, validationErrorResponse } from "@/l
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry, UserRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 import { startOrganizationMfaGracePeriodsForUser } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
@@ -76,6 +77,12 @@ export const resetUserMfa = defineOperation({
       if (!target) return ctx.json(404, { success: false, message: "User not found" });
 
       await new MfaRegistry(db).deleteAllFactorsForUser(target_uid);
+      await recordAuditEvent(db, {
+        event_type: "user.mfa_reset_by_admin",
+        actor: ctx.auth.user,
+        subject: { uid: target_uid, email: target.email },
+        request: ctx.request,
+      });
 
       await sendMfaSecurityAlertEmail({
         uid: target_uid,

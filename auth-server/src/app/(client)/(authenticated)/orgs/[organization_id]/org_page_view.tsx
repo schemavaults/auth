@@ -22,7 +22,9 @@ import type {
   OrganizationDefinition,
   OrganizationMembershipRoleType,
 } from "@schemavaults/auth-common";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, useToast } from "@schemavaults/ui";
+import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, useToast } from "@schemavaults/ui";
+import { ScrollText } from "lucide-react";
+import Link from "next/link";
 import uuidSync from "@/lib/uuid/uuidSync";
 import { OrganizationMfaRequirementCard } from "@/components/OrganizationMfaRequirement";
 import type { OrganizationMfaRequirementView } from "@/lib/organization-mfa-requirements/types";
@@ -52,6 +54,39 @@ export interface OrgPageViewProps {
   preloaded_mfa_requirement: OrganizationMfaRequirementView | null;
   /** Whether the viewer holds a membership of the organization. */
   viewerIsMember: boolean;
+  /**
+   * Whether the viewer may read the organization's audit log (owners and
+   * platform administrators): shows the link to it.
+   */
+  canViewAuditLog: boolean;
+}
+
+function OrgAuditLogLinkCard({ organization }: Pick<OrgPageViewProps, 'organization'>): ReactElement {
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ScrollText className="h-5 w-5 text-muted-foreground" />
+          Audit log
+        </CardTitle>
+        <CardDescription>
+          Who invited, added or removed members, changed roles, or changed this
+          organization&apos;s MFA requirement, and when.
+        </CardDescription>
+      </CardHeader>
+      <CardFooter>
+        <Button asChild className="flex flex-row gap-2 flex-nowrap">
+          <Link
+            href={`/orgs/${organization.organization_id}/audit-log`}
+            data-testid="view-organization-audit-log-link"
+          >
+            <ScrollText className="h-4 w-4" />
+            View audit log
+          </Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  );
 }
 
 function OrgTitleCard({ organization, userRole }: Pick<OrgPageViewProps, 'organization' | 'userRole'>): ReactElement {
@@ -83,6 +118,7 @@ export default function OrgPageView({
   platform_admin,
   preloaded_mfa_requirement,
   viewerIsMember,
+  canViewAuditLog,
 }: OrgPageViewProps): ReactElement {
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
@@ -222,6 +258,8 @@ export default function OrgPageView({
           viewerIsMember={viewerIsMember}
         />
       )}
+
+      {canViewAuditLog && <OrgAuditLogLinkCard organization={organization} />}
 
       {isOrgOwner && (
         <OrganizationSettingsCard

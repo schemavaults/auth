@@ -11,6 +11,7 @@ import {
 import { API_TAGS } from "@/lib/api/tags";
 import { UserNotFoundError, UserRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { invalidateUserTokensValidAfterCache } from "@/lib/token-revocation";
 
 const ROUTE = "/api/admin/users/{uid}/disable";
@@ -58,6 +59,13 @@ async function setDisabled(ctx: SetDisabledContext, disabled: boolean): Promise<
     });
     return ctx.json(500, { success: false, message: `Failed to ${disabled ? "disable" : "enable"} user` });
   }
+
+  await recordAuditEvent(db, {
+    event_type: disabled ? "user.disabled" : "user.enabled",
+    actor: user,
+    subject: { uid: target_uid },
+    request: ctx.request,
+  });
 
   // setUserDisabled moved the target's tokens_valid_after watermark; drop
   // the route guards' cached copy so the revocation applies immediately,

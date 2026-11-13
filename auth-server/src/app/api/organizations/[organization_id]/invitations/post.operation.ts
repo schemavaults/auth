@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth-db/organizations";
 import { getUserByEmail, getUserByUID } from "@/lib/auth-db/users";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { sendTeamInvitationEmail } from "@/lib/mail/send-team-invitation-emails";
 import { INVITATIONS_ROUTE, isOrganizationOwnerOrPlatformAdmin } from "./shared";
 
@@ -142,6 +143,15 @@ export const createOrganizationInvitationOperation = defineOperation({
           context: { organization_id, invitee_uid, nonFatal: true },
         });
       }
+
+      await recordAuditEvent(db, {
+        event_type: "organization.invitation_sent",
+        actor: user,
+        subject: { uid: invitee_uid },
+        organization_id,
+        request: ctx.request,
+        details: { invitation_id: invitation.invitation_id },
+      });
 
       return ctx.json(201, { success: true, message: "Invitation created successfully", data: { invitation } });
     } catch (e: unknown) {

@@ -21,6 +21,7 @@ import {
   getOrganizationMfaRequirementOperation,
   updateOrganizationMfaRequirementOperation,
 } from "@/app/api/organizations/[organization_id]/mfa-requirement/operation";
+import { listOrganizationAuditLog } from "@/app/api/organizations/[organization_id]/audit-log/operation";
 
 /** Operations of the "organizations" domain, in the order they appear in the docs. */
 export const organizationsOperations: readonly AnyOperationDefinition[] = [
@@ -37,4 +38,5 @@ export const organizationsOperations: readonly AnyOperationDefinition[] = [
   revokeOrganizationInvitation,
   getOrganizationMfaRequirementOperation,
   updateOrganizationMfaRequirementOperation,
+  listOrganizationAuditLog,
 ];

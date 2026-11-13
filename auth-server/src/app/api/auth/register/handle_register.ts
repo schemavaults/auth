@@ -42,6 +42,7 @@ import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCook
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import sendVerificationEmail from "@/lib/mail/send-verification-email";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { RedisCache } from "@/lib/redis";
 import {
   EMAIL_VERIFICATION_REQUIRED_MESSAGE,
@@ -546,6 +547,14 @@ export async function handleRegister({
   if (typeof newUser.uid !== 'string') {
     throw new TypeError("Expected to receive the 'uid' from newly created user document")
   }
+
+  await recordAuditEvent(dbh.db, {
+    event_type: "user.registered",
+    actor: { uid: newUser.uid, email },
+    subject: { uid: newUser.uid, email },
+    client_app_id,
+    request: req,
+  });
 
   // Fire off a verification email so the user can confirm their email address.
   // Wrapped in try/catch so registration never fails due to email-send errors.

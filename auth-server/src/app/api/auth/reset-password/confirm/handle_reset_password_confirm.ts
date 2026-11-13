@@ -10,6 +10,7 @@ import { passwordSchema } from "@schemavaults/auth-common";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { RedisCache } from "@/lib/redis";
 import { invalidateUserTokensValidAfterCache } from "@/lib/token-revocation";
 
@@ -29,6 +30,7 @@ interface HandleResetPasswordConfirmOptions {
 
 export async function handleResetPasswordConfirm({
   body,
+  req,
 }: HandleResetPasswordConfirmOptions): Promise<NextResponse> {
   const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
   const debug: boolean = shouldEnableDebug(appEnv);
@@ -96,6 +98,13 @@ export async function handleResetPasswordConfirm({
     );
     await recordInvalidationFailure(e);
   }
+
+  await recordAuditEvent(dbh.db, {
+    event_type: "user.password_reset",
+    // Whoever holds the e-mailed link; nobody is signed in.
+    subject: { uid: result.uid },
+    request: req,
+  });
 
   return NextResponse.json(
     { success: true, message: "Password has been reset successfully" },

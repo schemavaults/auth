@@ -23,6 +23,7 @@ import { recordApiScopeConsents } from "@/lib/auth-db/api-scope-consents";
 import { resolveAuthorizationCodeGrant } from "@/lib/oauth2/api-scopes";
 import { revokeTokensIssuedToClientApp } from "@/lib/auth-db/token-revocations";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 
 const ROUTE = "/api/apps/{app_id}/authorize";
@@ -132,6 +133,14 @@ export const authorizeApp = defineOperation({
           });
         }
       });
+      await recordAuditEvent(db, {
+        event_type: "user.app_authorized",
+        actor: user,
+        subject: user,
+        client_app_id: app_id,
+        request: ctx.request,
+        details: consentable.length > 0 ? { api_scopes: consentable } : undefined,
+      });
       return ctx.json(200, {
         success: true,
         message: "Successfully authorized frontend application to receive tokens on your behalf",
@@ -188,6 +197,16 @@ export const revokeAppAuthorization = defineOperation({
         console.log(
           `[/api/apps/${app_id}/authorize] DELETE: removed authorization=${was_authorized}, revoked ${revoked_token_count} token(s) for user '${user.uid}'`,
         );
+      }
+      if (was_authorized) {
+        await recordAuditEvent(db, {
+          event_type: "user.app_authorization_revoked",
+          actor: user,
+          subject: user,
+          client_app_id: app_id,
+          request: ctx.request,
+          details: { revoked_token_count },
+        });
       }
       return ctx.json(200, {
         success: true,

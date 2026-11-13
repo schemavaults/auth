@@ -33,5 +33,7 @@ export type * from "./errors";
 
 export type * from "./client-errors";
 
+export type * from "./audit-events";
+
 export * from "./mfa";
 export type * from "./mfa";

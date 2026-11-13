@@ -33,6 +33,7 @@ import shouldEnableDebug from "@/lib/should-enable-debug";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { RedisCache } from "@/lib/redis";
 import { createChallenge } from "@/lib/mfa";
 import { runDummyPasswordVerification } from "@/lib/hash_password";
@@ -263,6 +264,13 @@ export async function handleLogin({
 
   if (!compare_password_matches) {
     console.error("[handleLogin] Invalid credentials");
+    await recordAuditEvent(dbh.db, {
+      event_type: "user.sign_in_failed",
+      subject: { uid, email: user.email },
+      client_app_id,
+      request: req,
+      details: { reason: "wrong_password" },
+    });
     return NextResponse.json(
       {
         kind: "failure",
@@ -279,6 +287,13 @@ export async function handleLogin({
     console.warn(
       `[handleLogin] Blocked login for disabled account (uid: ${uid})`,
     );
+    await recordAuditEvent(dbh.db, {
+      event_type: "user.sign_in_failed",
+      subject: { uid, email: user.email },
+      client_app_id,
+      request: req,
+      details: { reason: "account_disabled" },
+    });
     return NextResponse.json(
       {
         kind: "failure",
@@ -570,6 +585,15 @@ export async function handleLogin({
       context: { nonFatal: true },
     });
   }
+
+  await recordAuditEvent(dbh.db, {
+    event_type: "user.signed_in",
+    actor: { uid, email: user.email },
+    subject: { uid, email: user.email },
+    client_app_id,
+    request: req,
+    details: { mfa: false },
+  });
 
   return response;
 }
