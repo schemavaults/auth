@@ -34,6 +34,7 @@ import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCook
 import { doesRequestHaveValidAuthServerRefreshToken } from "@/lib/doesRequestHaveValidAuthServerRefreshToken";
 import captureServerException from "@/lib/captureServerException";
 import recordAuditEvent from "@/lib/audit-log/record-audit-event";
+import recordAuditEventAfterResponse from "@/lib/audit-log/record-audit-event-after-response";
 import { RedisCache } from "@/lib/redis";
 import { createChallenge } from "@/lib/mfa";
 import { runDummyPasswordVerification } from "@/lib/hash_password";
@@ -264,7 +265,10 @@ export async function handleLogin({
 
   if (!compare_password_matches) {
     console.error("[handleLogin] Invalid credentials");
-    await recordAuditEvent(dbh.db, {
+    // Written after the response is sent: this branch must take as long as
+    // the "no such user" branch above, which records nothing, or the extra
+    // write would reveal which e-mail addresses have an account.
+    recordAuditEventAfterResponse({
       event_type: "user.sign_in_failed",
       subject: { uid, email: user.email },
       client_app_id,

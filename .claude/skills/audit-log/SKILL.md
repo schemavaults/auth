@@ -24,6 +24,8 @@ Call `recordAuditEvent(db, { event_type, actor, subject, organization_id, client
 - Pass a party's `email` when it is at hand (`actor: user` works for `ctx.auth.user`); otherwise it is looked up.
 - Do not pass a transaction that may still roll back, unless the event should roll back with it.
 - Never put secrets, codes or tokens in `details`.
+- `ip_address` only ever holds a syntactically valid IPv4 / IPv6 address (`normalizeClientIp()` in `client-ip.ts`); anything else in the proxy headers is stored as NULL. Where no proxy overwrites `X-Real-IP` / `X-Forwarded-For`, they are whatever the caller sent, and the value is later shown to the account's owner.
+- **Timing:** on a branch an unauthenticated caller could time to learn something, use `recordAuditEventAfterResponse(options)` (`record-audit-event-after-response.ts`) instead. It builds the row at once and writes it after the response is sent (Next.js `after()`), on a database handle of its own. The wrong-password branch of `handle_login.ts` uses it so that it takes as long as the unknown-email branch, which records nothing; an awaited write there would reveal which e-mail addresses have an account. It looks no address up, so pass each party's `email`.
 - Skip no-ops: revoking an authorization that did not exist, or saving unchanged settings, is not an event.
 
 ### Adding an event type

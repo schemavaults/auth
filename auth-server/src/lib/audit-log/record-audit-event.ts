@@ -5,6 +5,7 @@ import { insertAuditEvent, type NewAuditEventRow } from "@/lib/auth-db/audit-eve
 import captureServerException from "@/lib/captureServerException";
 import isValidUuid from "@/lib/is-valid-uuid";
 import { extractClientIp } from "@/lib/rate-limit/extractClientIp";
+import { normalizeClientIp } from "./client-ip";
 import { MAX_AUDIT_EVENT_USER_AGENT_LENGTH, type AuditEventType } from "./event-types";
 
 /** A user an event names. Pass the e-mail when it is at hand: it saves a lookup. */
@@ -72,7 +73,8 @@ export function buildAuditEventRow(
     subject_email: subject.email ?? (subject.uid !== null && subject.uid === actor.uid ? actor.email : null),
     organization_id: options.organization_id ?? null,
     client_app_id: options.client_app_id ?? null,
-    ip_address: options.request ? extractClientIp(options.request) : null,
+    // Proxy headers are caller-controlled where no proxy overwrites them.
+    ip_address: options.request ? normalizeClientIp(extractClientIp(options.request)) : null,
     user_agent: user_agent === null ? null : withoutNul(user_agent).slice(0, MAX_AUDIT_EVENT_USER_AGENT_LENGTH),
     details: detailsToJsonText(options.details),
   };

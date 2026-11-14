@@ -74,6 +74,15 @@ describe("buildAuditEventRow", () => {
     expect(row.user_agent).toHaveLength(512);
   });
 
+  test("stores no address when the proxy header is not one", () => {
+    const row = buildAuditEventRow({
+      event_type: "user.sign_in_failed",
+      subject: { uid: SUBJECT },
+      request: request({ "X-Real-IP": "203.0.113.7 - call 555-0100 to secure your account" }),
+    });
+    expect(row.ip_address).toBeNull();
+  });
+
   test("empty details are stored as null and NUL characters are replaced", () => {
     expect(buildAuditEventRow({ event_type: "user.signed_in", details: {} }).details).toBeNull();
     expect(buildAuditEventRow({ event_type: "user.signed_in", details: { a: undefined } }).details).toBeNull();
