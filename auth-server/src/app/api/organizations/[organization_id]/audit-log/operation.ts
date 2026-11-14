@@ -42,18 +42,20 @@ export const listOrganizationAuditLog = defineOperation({
     const { organization_id } = ctx.params;
     const { limit, cursor, event_type } = ctx.query;
 
-    const after = cursor === undefined ? undefined : parseAuditLogCursor(cursor);
-    if (after === null) {
-      return ctx.json(400, { success: false, message: "Invalid cursor" });
-    }
     try {
-      // The same answer whether or not the organization exists, so the
-      // endpoint does not reveal which organization ids are taken.
+      // Before anything about the request is examined, so a caller who may
+      // not read the log learns nothing else. The same answer whether or
+      // not the organization exists, so the endpoint does not reveal which
+      // organization ids are taken.
       if (!(await isOrganizationOwnerOrPlatformAdmin(db, user, organization_id))) {
         return ctx.json(403, {
           success: false,
           message: "Only organization owners or platform administrators can view the audit log",
         });
+      }
+      const after = cursor === undefined ? undefined : parseAuditLogCursor(cursor);
+      if (after === null) {
+        return ctx.json(400, { success: false, message: "Invalid cursor" });
       }
       const page = await listAuditEventsForOrganization(db, organization_id, {
         limit: limit ?? DEFAULT_AUDIT_LOG_PAGE_SIZE,

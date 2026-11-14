@@ -157,6 +157,10 @@ describe("Audit log API", () => {
             organizationAuditLog(organization_id).then((response) => {
               expect(response.status, "outsider").to.eq(403);
             });
+            // The role is checked before the cursor: no 400 for a caller who may not read the log.
+            organizationAuditLog(organization_id, "?cursor=nope").then((response) => {
+              expect(response.status, "outsider with a bad cursor").to.eq(403);
+            });
             // No user reads another user's log through their own.
             auditLog("/api/me/audit-log").then((response) => {
               for (const entry of entriesOf(response)) {
