@@ -154,3 +154,50 @@ export const CLIENT_ERROR_REPORT_APP_RATE_LIMIT: RateLimitConfig = {
   windowSeconds: 60 * 60,
   keySource: "client_app_id",
 };
+
+/**
+ * RFC 8628 device authorization requests at POST
+ * /api/oidc/device_authorization, per IP. Each one stores a pending request
+ * the user may never complete, so the budget bounds how many a caller can
+ * pile up (a device needs one per sign-in).
+ */
+export const DEVICE_AUTHORIZATION_RATE_LIMIT: RateLimitConfig = {
+  name: "device-authorization",
+  maxAttempts: 30,
+  windowSeconds: 10 * 60,
+  keySource: "ip",
+};
+
+/**
+ * Device code polls of the token endpoint (grant_type=device_code), per IP.
+ * A device polls every 5 seconds or slower (the token endpoint answers
+ * faster polls with `slow_down`), so this leaves room for a few devices
+ * behind one address while bounding a client that ignores `slow_down`.
+ */
+export const DEVICE_CODE_RATE_LIMIT: RateLimitConfig = {
+  name: "device-code",
+  maxAttempts: 120,
+  windowSeconds: 60,
+  keySource: "ip",
+};
+
+/**
+ * Unknown user codes entered on the /device verification page, per
+ * account and per IP: only misses count, so a user typing their code is
+ * never slowed down, while guessing someone else's pending code (RFC 8628
+ * §5.1) stops after a handful of tries. With 20^8 possible codes and a
+ * 15-minute lifetime, these budgets make a guess hopeless.
+ */
+export const DEVICE_USER_CODE_MISS_UID_RATE_LIMIT: RateLimitConfig = {
+  name: "device-user-code-miss-uid",
+  maxAttempts: 10,
+  windowSeconds: 15 * 60,
+  keySource: "uid",
+};
+
+export const DEVICE_USER_CODE_MISS_IP_RATE_LIMIT: RateLimitConfig = {
+  name: "device-user-code-miss-ip",
+  maxAttempts: 30,
+  windowSeconds: 15 * 60,
+  keySource: "ip",
+};

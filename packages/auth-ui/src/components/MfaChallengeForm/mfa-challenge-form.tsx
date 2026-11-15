@@ -24,11 +24,18 @@ import type {
 } from "@schemavaults/auth-common";
 import { ShieldCheck } from "lucide-react";
 import { MfaFactorPicker } from "@/components/MfaFactorPicker";
+import { FlowExpiryCountdown } from "@/components/FlowExpiryCountdown";
 
 export interface MfaChallengeFormProps {
   challenge_id: string;
   client_app_id: string;
+  /** When the challenge expires (Unix epoch ms): a countdown ring shows the time left. */
   expires_at?: number;
+  /**
+   * The challenge's whole lifetime in ms (a full ring). Omit when unknown:
+   * the ring then starts full at what was left when the form mounted.
+   */
+  challenge_duration_ms?: number;
   // Factor list and recovery-code availability for this challenge. The
   // login form stashes these from the `mfa_required` response into
   // sessionStorage; the page that renders this form reads them back out
@@ -62,6 +69,7 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
   challenge_id,
   client_app_id,
   expires_at,
+  challenge_duration_ms,
   available_factors,
   recovery_codes_available,
   onAuthenticated,
@@ -79,6 +87,8 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // The challenge timed out: the server would refuse every proof now.
+  const [expired, setExpired] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -132,10 +142,6 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
     }
   };
 
-  const expiresLabel =
-    typeof expires_at === "number"
-      ? `Expires ${new Date(expires_at).toLocaleTimeString()}`
-      : null;
 
   const selectedFactor =
     available_factors.find((f) => f.factor_id === selectedFactorId) ?? null;
@@ -150,6 +156,7 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
 
   const canSubmit =
     !submitting &&
+    !expired &&
     !usePasskey &&
     value.length > 0 &&
     (useRecovery || selectedFactorId.length > 0);
@@ -164,12 +171,40 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle>Verify it&apos;s you</CardTitle>
-        <CardDescription>
-          {promptText}
-          {expiresLabel ? (
-            <span suppressHydrationWarning>{` ${expiresLabel}.`}</span>
-          ) : null}
-        </CardDescription>
+        <CardDescription>{promptText}</CardDescription>
+        {typeof expires_at === "number" ? (
+          <FlowExpiryCountdown
+            expires_at={expires_at}
+            duration_ms={challenge_duration_ms}
+            subject="This verification step"
+            size="sm"
+            onExpired={() => setExpired(true)}
+            className="pt-2"
+            expiredContent={
+              <div
+                className="flex flex-col gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3"
+                role="alert"
+                data-testid="mfa-challenge-expired"
+              >
+                <p className="text-sm text-destructive">
+                  This verification step has expired. Sign in again to get a new one.
+                </p>
+                {onChallengeExpired ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="self-start"
+                    onClick={onChallengeExpired}
+                    data-testid="mfa-challenge-expired-sign-in-again"
+                  >
+                    Sign in again
+                  </Button>
+                ) : null}
+              </div>
+            }
+          />
+        ) : null}
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-3">
@@ -186,12 +221,14 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
             />
           ) : null}
           {usePasskey ? (
-            <div data-testid="mfa-challenge-passkey-action">
-              {renderPasskeyAction?.({
-                factor_id: selectedFactorId,
-                onError: (message) => setError(message),
-              })}
-            </div>
+            expired ? null : (
+              <div data-testid="mfa-challenge-passkey-action">
+                {renderPasskeyAction?.({
+                  factor_id: selectedFactorId,
+                  onError: (message) => setError(message),
+                })}
+              </div>
+            )
           ) : (
             <Input
               inputMode={useRecovery ? "text" : "numeric"}
@@ -205,6 +242,7 @@ export const MfaChallengeForm: FC<MfaChallengeFormProps> = ({
                 )
               }
               placeholder={useRecovery ? "abcde-fghij" : "123456"}
+              disabled={expired}
               data-testid="mfa-challenge-input"
             />
           )}

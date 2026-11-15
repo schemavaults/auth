@@ -4,7 +4,7 @@ import { useState, type ReactElement } from "react";
 import { isDynamicallyRegisteredClient, isHardcodedApiServerId, type SchemaVaultsApp, type SchemaVaultsAppCallbackUrlRef, type SchemaVaultsAppDomainRef, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
-import { AppCallbackUrlsCard, AppClientSecretCard, AppServiceAccountCard } from "@/components/AppOAuthSecurity";
+import { AppCallbackUrlsCard, AppClientSecretCard, AppDeviceAuthorizationCard, AppServiceAccountCard } from "@/components/AppOAuthSecurity";
 import { DynamicClientRegistrationMetadataCard } from "@/components/DynamicClientRegistrationMetadata";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
@@ -43,6 +43,8 @@ export interface AppDetailPageViewProps {
   service_account: AppServiceAccountProps | null;
   /** Whether the service account is a member of the organization that owns the app. */
   service_account_organization_membership: ServiceAccountOrganizationMembershipSummary;
+  /** Whether the app may use the device authorization grant (RFC 8628). */
+  device_authorization: { enabled: boolean; enabled_at: number | null };
   hardcoded: boolean;
   isOrgOwner: boolean;
   current_environment: SchemaVaultsAppEnvironment;
@@ -124,6 +126,7 @@ export default function AppDetailPageView({
   client_secret_metadata,
   service_account,
   service_account_organization_membership,
+  device_authorization,
   hardcoded,
   isOrgOwner,
   current_environment,
@@ -293,6 +296,16 @@ export default function AppDetailPageView({
           service_account={service_account}
           organization_membership={service_account_organization_membership}
           has_client_secret={client_secret_metadata.has_client_secret}
+          dynamically_registered={dynamicallyRegistered}
+          canManage={isOrgOwner}
+        />
+      )}
+
+      {!hardcoded && (
+        <AppDeviceAuthorizationCard
+          app_id={app.app_id}
+          enabled={device_authorization.enabled}
+          enabled_at={device_authorization.enabled_at}
           dynamically_registered={dynamicallyRegistered}
           canManage={isOrgOwner}
         />

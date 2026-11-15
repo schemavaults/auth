@@ -20,8 +20,9 @@ export const PUBLIC_PAGE_PATHS = [
  * Path prefixes a production robots.txt asks crawlers to skip: the JSON API,
  * the signed-in dashboard (every page under src/app/(client)/(authenticated)/,
  * plus the legacy /org/* redirects), auth flow steps that only make sense
- * mid-flow, and login / register URLs carrying a client app's authorization
- * request (the bare pages stay crawlable).
+ * mid-flow (and the device sign-in page, /device), and login / register URLs
+ * carrying a client app's authorization request (the bare pages stay
+ * crawlable).
  */
 export const CRAWLER_DISALLOWED_PATH_PREFIXES = [
   "/api/",
@@ -39,6 +40,7 @@ export const CRAWLER_DISALLOWED_PATH_PREFIXES = [
   "/auth/reset-password",
   "/auth/verify-email",
   "/close_window",
+  "/device",
   "/error",
 ] as const;
 

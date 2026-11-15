@@ -43,9 +43,13 @@ export const OidcTokenRequest = z
       description:
         "`refresh_token`: requested scope, which may only narrow the originally granted scope. `client_credentials`: requested OIDC scopes (API scopes are not granted to service accounts). Token exchange: the delegated token's scope, which may only narrow the subject token's (default: the subject token's scope).",
     }),
+    device_code: z.string().optional().openapi({
+      description:
+        "`urn:ietf:params:oauth:grant-type:device_code` (RFC 8628 §3.4): the `device_code` of the device authorization response (`POST /api/oidc/device_authorization`). Poll every `interval` seconds until the user decides.",
+    }),
     subject_token: z.string().optional().openapi({
       description:
-        "Token exchange (RFC 8693): the access token a user holds for an API server, issued to this client. The delegated token is minted for the same user, client and API server. Token exchange only, like every RFC 8693 parameter (`subject_token_type`, `requested_token_type`, `actor_token`, `actor_token_type`): any other grant refuses a request carrying one with `invalid_request`. Conversely, a token exchange refuses the other grants' parameters (`code`, `code_verifier`, `redirect_uri`, `refresh_token`, `refresh_token_delivery`) with `invalid_request`.",
+        "Token exchange (RFC 8693): the access token a user holds for an API server, issued to this client. The delegated token is minted for the same user, client and API server. Token exchange only, like every RFC 8693 parameter (`subject_token_type`, `requested_token_type`, `actor_token`, `actor_token_type`): any other grant refuses a request carrying one with `invalid_request`. Conversely, a token exchange refuses the other grants' parameters (`code`, `code_verifier`, `redirect_uri`, `refresh_token`, `device_code`, `refresh_token_delivery`) with `invalid_request`.",
     }),
     subject_token_type: z.literal(ACCESS_TOKEN_TYPE).optional().openapi({
       description: "Token exchange only: REQUIRED; only access tokens are exchanged.",
@@ -81,7 +85,7 @@ export const OidcTokenResponse = z
         "Scope of the issued access token: the granted OIDC scopes, plus the grant's API scopes when the access token is minted for the API server that defines them. Omitted when it holds nothing (plain OAuth 2.1 grant).",
     }),
     id_token: z.string().optional().openapi({
-      description: "RS256-signed id_token; only on an `authorization_code` grant whose scope includes `openid`.",
+      description: "RS256-signed id_token; only on an `authorization_code` or device code grant whose scope includes `openid`.",
     }),
     issued_token_type: z.literal(ACCESS_TOKEN_TYPE).optional().openapi({
       description: "Token exchange only (RFC 8693 §2.2.1): the type of the issued token.",
@@ -95,9 +99,9 @@ export const postOidcToken = defineOperation({
   path: ROUTE,
   summary: "Token endpoint",
   description:
-    "The OAuth 2.0 / OIDC token endpoint (RFC 6749 §3.2, form-encoded). Four grants: `authorization_code` (PKCE `code_verifier` required, `redirect_uri` must match; mints an id_token when the grant's scope includes `openid`), `refresh_token` (rotates the refresh token; the previous one is revoked), `client_credentials` (confidential clients only; mints a machine-to-machine access token for the app's service account, no refresh token), and RFC 8693 token exchange (`urn:ietf:params:oauth:grant-type:token-exchange`; confidential clients only: swaps a user's access token for an API server for a delegated access token on which the app's service account acts for that user (`act` claim), for the same API server, with at most the same scope; the API server must accept delegated tokens, else `invalid_target`; no refresh token). " +
+    "The OAuth 2.0 / OIDC token endpoint (RFC 6749 §3.2, form-encoded). Five grants: `authorization_code` (PKCE `code_verifier` required, `redirect_uri` must match; mints an id_token when the grant's scope includes `openid`), `refresh_token` (rotates the refresh token; the previous one is revoked), `client_credentials` (confidential clients only; mints a machine-to-machine access token for the app's service account, no refresh token), and RFC 8693 token exchange (`urn:ietf:params:oauth:grant-type:token-exchange`; confidential clients only: swaps a user's access token for an API server for a delegated access token on which the app's service account acts for that user (`act` claim), for the same API server, with at most the same scope; the API server must accept delegated tokens, else `invalid_target`; no refresh token), and the RFC 8628 device grant (`urn:ietf:params:oauth:grant-type:device_code`; redeems the `device_code` of a device authorization request once the user approved it on the `/device` page, answering `authorization_pending` until the user decides, `slow_down` when polled faster than the request's interval (which then grows by 5 seconds), `access_denied` once the user denied it and `expired_token` once it expired; mints access + refresh tokens, plus an id_token when the approved scope includes `openid`; only for apps whose managers enabled the grant, else `unauthorized_client`). " +
     "@schemavaults/auth-server extensions: the RFC 8707 `resource` parameter mints the access token for a registered API server, and `refresh_token_delivery=http_only_cookie` delivers the refresh token as an HTTP-only cookie (`Set-Cookie`) instead of in the body; every response with a refresh token carries `refresh_token_expires_in`. " +
-    "Browser callers (with an `Origin` header) must come from one of the client app's registered origins and then receive a credentialed CORS allowance; other callers get `Access-Control-Allow-Origin: *`. `refresh_token`, `client_credentials` and token exchange requests are rate limited per IP. Responses carry `Cache-Control: no-store`.",
+    "Browser callers (with an `Origin` header) must come from one of the client app's registered origins and then receive a credentialed CORS allowance; other callers get `Access-Control-Allow-Origin: *`. `refresh_token`, `client_credentials`, token exchange and device code requests are rate limited per IP. Responses carry `Cache-Control: no-store`.",
   tags: [API_TAGS.oidc],
   auth: publicAccess(
     "Client authentication per RFC 6749 §2.3: public clients send `client_id` only (PKCE is the security boundary); confidential clients (apps with a registered client secret) must authenticate with `client_secret_basic` (HTTP Basic `Authorization` header) or `client_secret_post` (`client_secret` form field). The handler performs this itself.",
@@ -122,7 +126,7 @@ export const postOidcToken = defineOperation({
     },
     400: {
       description:
-        "OAuth error (`invalid_request`, `unsupported_grant_type`, `invalid_grant`, `invalid_scope`, `invalid_target`, `unauthorized_client`, ...), or the client IP could not be determined for rate limiting (`{ success: false, message }`).",
+        "OAuth error (`invalid_request`, `unsupported_grant_type`, `invalid_grant`, `invalid_scope`, `invalid_target`, `unauthorized_client`, and the device grant's `authorization_pending`, `slow_down`, `access_denied` and `expired_token`), or the client IP could not be determined for rate limiting (`{ success: false, message }`).",
       schema: z.union([OAuthErrorResponse, ErrorResponse]),
     },
     401: {
@@ -134,7 +138,7 @@ export const postOidcToken = defineOperation({
       description: "The request came from an origin the client application has not registered (`invalid_request`)",
       schema: OAuthErrorResponse,
     },
-    429: { description: "Rate limited (`refresh_token` / `client_credentials` / token exchange grants)", schema: RateLimitedResponse },
+    429: { description: "Rate limited (`refresh_token` / `client_credentials` / token exchange / device code grants)", schema: RateLimitedResponse },
     500: { description: "The token request could not be processed", schema: OAuthErrorResponse },
   },
   handler: (ctx) => handleOidcTokenRequest(toNextRequest(ctx.request)),

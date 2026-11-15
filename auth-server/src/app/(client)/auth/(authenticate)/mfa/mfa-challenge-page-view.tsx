@@ -28,6 +28,8 @@ export interface MfaChallengePageViewProps {
   challenge_id: string;
   client_app_id: string;
   expires_at?: number;
+  /** The challenge's whole lifetime (ms), for its countdown ring. */
+  challenge_duration_ms?: number;
   on_successful_authenticate: OnSuccessfulAuthenticateAction;
   redirect_uri: string | null;
   // The flow's PKCE code challenge (third-party flows only; forwarded by
@@ -111,6 +113,7 @@ export default function MfaChallengePageView({
   challenge_id,
   client_app_id,
   expires_at,
+  challenge_duration_ms,
   on_successful_authenticate,
   redirect_uri,
   code_challenge,
@@ -574,6 +577,7 @@ export default function MfaChallengePageView({
           challenge_id={challenge_id}
           client_app_id={client_app_id}
           expires_at={expires_at}
+          challenge_duration_ms={challenge_duration_ms}
           available_factors={payload.available_factors}
           recovery_codes_available={payload.recovery_codes_available}
           onAuthenticated={async (authorization_code) => {

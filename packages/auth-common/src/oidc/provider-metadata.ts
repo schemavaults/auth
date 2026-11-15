@@ -18,6 +18,7 @@
 import { getOidcEndpointUrl } from "./endpoints";
 import { OIDC_SUPPORTED_SCOPES } from "./scope";
 import { OAUTH_TOKEN_EXCHANGE_GRANT_TYPE } from "./token-exchange";
+import { OAUTH_DEVICE_CODE_GRANT_TYPE } from "./device-authorization/constants";
 
 /**
  * The advertised metadata. List fields are plain mutable arrays because
@@ -34,6 +35,11 @@ export type OidcProviderMetadata = {
   introspection_endpoint: string;
   /** RFC 7009 token revocation endpoint (RFC 8414 §2). */
   revocation_endpoint: string;
+  /**
+   * RFC 8628 §4 device authorization endpoint, where a device (a CLI, a TV
+   * app) starts the device authorization grant.
+   */
+  device_authorization_endpoint: string;
   jwks_uri: string;
   response_types_supported: string[];
   response_modes_supported: string[];
@@ -101,6 +107,10 @@ export function buildOidcProviderMetadata(
       "introspection",
     ),
     revocation_endpoint: getOidcEndpointUrl(normalized_issuer, "revocation"),
+    device_authorization_endpoint: getOidcEndpointUrl(
+      normalized_issuer,
+      "device_authorization",
+    ),
     jwks_uri: getOidcEndpointUrl(normalized_issuer, "jwks"),
     response_types_supported: ["code"],
     response_modes_supported: ["query"],
@@ -109,12 +119,15 @@ export function buildOidcProviderMetadata(
     // machine-to-machine access tokens for the app's service account.
     // The RFC 8693 token exchange is restricted to them too: it swaps one
     // of their users' access tokens for a delegated token on which the
-    // app's service account acts for the user (e.g. an agent).
+    // app's service account acts for the user (e.g. an agent). The RFC 8628
+    // device grant signs a user in on a device that cannot show the login
+    // page (a CLI, a TV app); only apps whose managers enabled it may use it.
     grant_types_supported: [
       "authorization_code",
       "refresh_token",
       "client_credentials",
       OAUTH_TOKEN_EXCHANGE_GRANT_TYPE,
+      OAUTH_DEVICE_CODE_GRANT_TYPE,
     ],
     subject_types_supported: ["public"],
     id_token_signing_alg_values_supported: ["RS256"],

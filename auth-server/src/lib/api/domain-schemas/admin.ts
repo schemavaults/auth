@@ -107,7 +107,7 @@ export const AdminIssuedToken = z
     client_app_id: z.string(),
     audience: z.string().openapi({ description: "API server id or resource URL the token was minted for" }),
     grant_type: z.enum(ISSUED_TOKEN_GRANT_TYPES).openapi({
-      description: "The grant that minted the token (`token_exchange`: an RFC 8693 delegated token)",
+      description: "The grant that minted the token (`token_exchange`: an RFC 8693 delegated token; `device_code`: the RFC 8628 device authorization grant)",
     }),
     issued_at: epochMillisecondsColumn,
     expires_at: epochMillisecondsColumn,

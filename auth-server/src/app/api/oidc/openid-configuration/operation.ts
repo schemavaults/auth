@@ -23,6 +23,10 @@ export const OidcProviderMetadata = z
     userinfo_endpoint: endpointUrl("The userinfo endpoint", "/api/oidc/userinfo"),
     introspection_endpoint: endpointUrl("RFC 7662 token introspection endpoint", "/api/oidc/introspect"),
     revocation_endpoint: endpointUrl("RFC 7009 token revocation endpoint", "/api/oidc/revoke"),
+    device_authorization_endpoint: endpointUrl(
+      "RFC 8628 device authorization endpoint, where a device (a CLI, a TV app) starts the device authorization grant",
+      "/api/oidc/device_authorization",
+    ),
     jwks_uri: endpointUrl("Public RS256 id_token verification keys", "/api/oidc/jwks"),
     registration_endpoint: endpointUrl(
       "RFC 7591 dynamic client registration endpoint. Present only while the `allow_dynamic_client_registration` server setting is on.",
@@ -38,6 +42,7 @@ export const OidcProviderMetadata = z
           "refresh_token",
           "client_credentials",
           "urn:ietf:params:oauth:grant-type:token-exchange",
+          "urn:ietf:params:oauth:grant-type:device_code",
         ],
       }),
     subject_types_supported: z.array(z.string()).openapi({ example: ["public"] }),

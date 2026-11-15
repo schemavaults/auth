@@ -9,8 +9,6 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  Checkbox,
-  Label,
   cn,
   useToast,
 } from "@schemavaults/ui";
@@ -22,7 +20,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { OnSuccessfulAuthenticateAction } from "@/lib/authentication_outcome_type";
 import { successRedirect } from "@/components/AuthForm/success-redirect";
 import { closeWindowRedirect } from "@/components/AuthForm/close-window-redirect";
-import { Check, Loader2, ShieldCheck, X } from "lucide-react";
+import { Loader2, ShieldCheck, X } from "lucide-react";
+import { ConsentPermissions } from "./ConsentPermissions";
+import { PkceFlowExpiryCountdown } from "@/components/PkceFlowExpiry";
 import type { PendingAuthorizationState } from "@/components/AuthForm/handle-auth-form-submit";
 import { isPkceChallengeExpired } from "@schemavaults/auth-common/pkce/is_pkce_challenge_expired.js";
 import {
@@ -67,13 +67,6 @@ export interface AppAuthorizationConsentScreenProps {
   debug?: boolean;
 }
 
-/** What each OpenID Connect scope lets the app do, in the user's words. */
-const OIDC_SCOPE_PERMISSIONS: Readonly<Record<string, string>> = {
-  openid: "Sign you in and confirm who you are",
-  email: "See your email address",
-  profile: "See your name and profile details",
-};
-
 export function AppAuthorizationConsentScreen({
   app_id,
   app_name,
@@ -93,6 +86,8 @@ export function AppAuthorizationConsentScreen({
   const appEnv = useAppEnvironment();
   const friendly_name: string = useAuthServerFriendlyName();
   const [submitting, startSubmitting] = useTransition();
+  // The flow's PKCE challenge expired: authorizing could no longer complete it.
+  const [flowExpired, setFlowExpired] = useState<boolean>(false);
   const redirect_destination: string | null =
     formatRedirectDestination(redirect_uri);
   // The screen is server-rendered on the already-signed-in authorize path
@@ -103,7 +98,6 @@ export function AppAuthorizationConsentScreen({
   const authClientReady: boolean = auth.ready && auth.client.current !== null;
 
   const pending_api_scopes = consent?.pending_api_scopes ?? [];
-  const granted_api_scopes = consent?.granted_api_scopes ?? [];
   // Every pending API scope starts approved; the user may untick any.
   const [approved, setApproved] = useState<ReadonlySet<string>>(
     () => new Set(pending_api_scopes.map((s) => s.scope)),
@@ -372,13 +366,6 @@ export function AppAuthorizationConsentScreen({
     }
   }
 
-  // What the request asks for, in the user's words. Without the consent
-  // details (an unknown request) the generic sign-in permissions are shown.
-  const oidc_permissions: string[] = consent
-    ? consent.requested_oidc_scopes.flatMap((scope) =>
-        OIDC_SCOPE_PERMISSIONS[scope] ? [OIDC_SCOPE_PERMISSIONS[scope]] : [],
-      )
-    : ["Verify your identity", "Access your account information"];
   const asks_additional_access: boolean =
     consent?.authorized === true && pending_api_scopes.length > 0;
   const api_server_name: string | null = consent?.api_server?.api_server_name ?? null;
@@ -407,6 +394,9 @@ export function AppAuthorizationConsentScreen({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        {onSuccessfulAuthenticate !== "account-page" ? (
+          <PkceFlowExpiryCountdown app_name={app_name} onExpired={() => setFlowExpired(true)} />
+        ) : null}
         {app_description.length > 0 ? (
           <p
             className="text-sm text-muted-foreground break-words"
@@ -435,82 +425,12 @@ export function AppAuthorizationConsentScreen({
             </p>
           )}
         </div>
-        <div className="rounded-md border p-3 bg-muted/50">
-          <p className="text-sm font-medium">This application will be able to:</p>
-          {oidc_permissions.length > 0 ? (
-            <ul
-              className="list-disc list-inside text-sm text-muted-foreground mt-1"
-              data-testid="consent-oidc-permissions"
-            >
-              {oidc_permissions.map((permission) => (
-                <li key={permission}>{permission}</li>
-              ))}
-            </ul>
-          ) : pending_api_scopes.length === 0 && granted_api_scopes.length === 0 ? (
-            <p className="text-sm text-muted-foreground mt-1">
-              Act on your behalf with access tokens it requests.
-            </p>
-          ) : null}
-          {api_server_name && (pending_api_scopes.length > 0 || granted_api_scopes.length > 0) ? (
-            <div className="mt-3 space-y-2" data-testid="consent-api-scopes">
-              <p className="text-sm font-medium break-words">
-                Access <span className="font-semibold">{api_server_name}</span> on your behalf:
-              </p>
-              {pending_api_scopes.map((scope) => {
-                const id = `consent-api-scope-${scope.api_server_scope_id}`;
-                return (
-                  <div key={scope.api_server_scope_id} className="flex items-start gap-2">
-                    <Checkbox
-                      id={id}
-                      checked={approved.has(scope.scope)}
-                      disabled={submitting}
-                      onCheckedChange={(checked) => {
-                        setApproved((current) => {
-                          const next = new Set(current);
-                          if (checked === true) next.add(scope.scope);
-                          else next.delete(scope.scope);
-                          return next;
-                        });
-                      }}
-                      data-testid="consent-api-scope-checkbox"
-                      data-scope={scope.scope}
-                    />
-                    <Label htmlFor={id} className="flex flex-col gap-0.5 font-normal">
-                      <span className="text-sm break-words">{scope.description}</span>
-                      <span className="text-xs font-mono text-muted-foreground break-all">
-                        {scope.scope}
-                      </span>
-                    </Label>
-                  </div>
-                );
-              })}
-              {granted_api_scopes.map((scope) => (
-                <div
-                  key={scope.api_server_scope_id}
-                  className="flex items-start gap-2"
-                  data-testid="consent-granted-api-scope"
-                  data-scope={scope.scope}
-                >
-                  <Check className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm text-muted-foreground break-words">
-                      {scope.description} (already granted)
-                    </span>
-                    <span className="text-xs font-mono text-muted-foreground break-all">
-                      {scope.scope}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {pending_api_scopes.length > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Untick anything you do not want to allow. You can withdraw
-                  access later from your account&apos;s third-party access page.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+        <ConsentPermissions
+          consent={consent}
+          approved={approved}
+          onApprovedChange={setApproved}
+          disabled={submitting}
+        />
         <p className="text-xs text-muted-foreground">
           The application name and description
           {api_server_name ? ", and the descriptions of the permissions," : ""} are
@@ -538,7 +458,7 @@ export function AppAuthorizationConsentScreen({
               await handleAuthorize();
             });
           }}
-          disabled={submitting || !authClientReady}
+          disabled={submitting || !authClientReady || flowExpired}
           data-testid="consent-authorize-button"
         >
           {submitting ? (

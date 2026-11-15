@@ -23,6 +23,8 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   "user.app_authorized": "Application authorized",
   "user.app_authorization_revoked": "Application access revoked",
   "user.app_scope_consent_revoked": "Application permission withdrawn",
+  "user.device_authorized": "Device sign-in approved",
+  "user.device_authorization_denied": "Device sign-in denied",
   "user.disabled": "Account disabled",
   "user.enabled": "Account re-enabled",
   "user.promoted_to_admin": "Promoted to administrator",
@@ -46,6 +48,7 @@ const WARNING_EVENT_TYPES: ReadonlySet<AuditEventType> = new Set<AuditEventType>
   "user.mfa_challenge_failed",
   "user.mfa_factor_removed",
   "user.mfa_reset_by_admin",
+  "user.device_authorization_denied",
   "user.disabled",
   "organization.deleted",
   "organization.member_removed",
@@ -134,6 +137,10 @@ export function describeAuditEvent(entry: AuditLogEntry, viewer_uid?: string): s
       const scope = detail(entry, "scope");
       return `${actor} withdrew ${scope ? `the '${scope}' permission` : "a permission"} from ${app ?? "an application"}.`;
     }
+    case "user.device_authorized":
+      return `${actor} approved a sign-in request from a device using ${app ?? "an application"}.`;
+    case "user.device_authorization_denied":
+      return `${actor} denied a sign-in request from a device using ${app ?? "an application"}.`;
     case "user.disabled":
       return `${actor} disabled ${account} and signed out its sessions.`;
     case "user.enabled":

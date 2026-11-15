@@ -23,6 +23,7 @@ export type {
   CreatedClientApplicationServiceAccount,
   UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
+export type { ClientApplicationDeviceAuthorizationPolicy } from "@/lib/client-application-device-authorization";
 export type { ISendAuthenticateRequestOptions } from "@/types/ISendAuthenticateRequestOptions";
 export type { AuthenticateWithRedirectOptions } from "@/types/authenticate-with-redirect-options";
 export type {
@@ -145,6 +146,33 @@ export {
   resolveLoginErrorPage,
 } from "./lib/login-error-page";
 export type { LoginErrorPageTarget } from "./lib/login-error-page";
+
+// RFC 8628 device authorization grant: signInWithDeviceAuthorization() on
+// the client runs the whole sign-in; these lower-level steps also serve
+// plain OAuth 2.0 grants (no `openid`) that keep the token response to
+// themselves.
+export {
+  requestDeviceAuthorization,
+  pollDeviceAuthorization,
+  buildDeviceAuthorizationRequestParameters,
+} from "./lib/device-authorization";
+export type {
+  DeviceAuthorizationPrompt,
+  DeviceAuthorizationRequestOptions,
+  IPollDeviceAuthorizationOpts,
+  IRequestDeviceAuthorizationOpts,
+  SignInWithDeviceAuthorizationOptions,
+} from "./lib/device-authorization";
+export {
+  OAUTH_DEVICE_CODE_GRANT_TYPE,
+  DEVICE_ACCESS_TOKEN_ERRORS,
+  isDeviceAccessTokenError,
+  formatUserCode,
+} from "@schemavaults/auth-common";
+export type {
+  DeviceAuthorizationResponse,
+  DeviceAccessTokenError,
+} from "@schemavaults/auth-common";
 
 // RFC 7591 dynamic client registration helper (see registerDynamicClient on
 // the client) and the API server dynamic-client policy update shape.

@@ -35,5 +35,9 @@ export type * from "./client-errors";
 
 export type * from "./audit-events";
 
+// Only export types from device-authorizations to avoid pulling in server-only code
+// For server-side functions, import directly from "@/lib/auth-db/device-authorizations"
+export type * from "./device-authorizations/device-authorizations-table";
+
 export * from "./mfa";
 export type * from "./mfa";

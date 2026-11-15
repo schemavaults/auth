@@ -10,6 +10,9 @@ import { requestPasswordReset } from "@/app/api/auth/reset-password/request/oper
 import { confirmPasswordReset } from "@/app/api/auth/reset-password/confirm/operation";
 import { requestEmailVerification } from "@/app/api/auth/verify-email/request/operation";
 import { confirmEmailVerification } from "@/app/api/auth/verify-email/confirm/operation";
+import { lookupDeviceAuthorization } from "@/app/api/auth/device/lookup/operation";
+import { approveDeviceAuthorizationOperation } from "@/app/api/auth/device/approve/operation";
+import { denyDeviceAuthorization } from "@/app/api/auth/device/deny/operation";
 
 /** Operations of the "authentication" domain, in the order they appear in the docs. */
 export const authenticationOperations: readonly AnyOperationDefinition[] = [
@@ -24,4 +27,7 @@ export const authenticationOperations: readonly AnyOperationDefinition[] = [
   confirmPasswordReset,
   requestEmailVerification,
   confirmEmailVerification,
+  lookupDeviceAuthorization,
+  approveDeviceAuthorizationOperation,
+  denyDeviceAuthorization,
 ];

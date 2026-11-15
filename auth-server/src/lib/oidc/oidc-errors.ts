@@ -33,6 +33,14 @@ export type OidcTokenErrorCode =
   // RFC 7009 §2.2.1: the revocation endpoint cannot revoke this kind of
   // token (access tokens minted for an API server).
   | "unsupported_token_type"
+  // RFC 8628 §3.5 device access token errors: the user has not decided yet
+  // (`authorization_pending`, or `slow_down` when the device polls too
+  // fast), denied the request (`access_denied`), or the device code expired
+  // (`expired_token`).
+  | "authorization_pending"
+  | "slow_down"
+  | "access_denied"
+  | "expired_token"
   // Unexpected failure (500). RFC 6749 §5.2 defines no code for it; this
   // borrows the authorization endpoint's `server_error` (§4.1.2.1), which
   // /api/oidc/register already answers with.

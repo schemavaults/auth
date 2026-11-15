@@ -50,6 +50,9 @@ export {
 } from "./token-exchange";
 export type { OidcEndpointName } from "./endpoints";
 
+export * from "./device-authorization";
+export type * from "./device-authorization";
+
 export {
   OIDC_TOKEN_RESOURCE_PARAM,
   OIDC_TOKEN_REFRESH_TOKEN_DELIVERY_PARAM,

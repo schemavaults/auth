@@ -23,6 +23,9 @@ describe("buildOidcProviderMetadata", () => {
       `${ISSUER}${OIDC_ENDPOINT_PATHS.revocation}`,
     );
     expect(md.jwks_uri).toBe(`${ISSUER}${OIDC_ENDPOINT_PATHS.jwks}`);
+    expect(md.device_authorization_endpoint).toBe(
+      `${ISSUER}${OIDC_ENDPOINT_PATHS.device_authorization}`,
+    );
   });
 
   test("advertises the platform's protocol surface", () => {
@@ -34,6 +37,8 @@ describe("buildOidcProviderMetadata", () => {
       "client_credentials",
       // RFC 8693 token exchange (delegated tokens for a client's agents)
       "urn:ietf:params:oauth:grant-type:token-exchange",
+      // RFC 8628 device authorization grant
+      "urn:ietf:params:oauth:grant-type:device_code",
     ]);
     expect(md.code_challenge_methods_supported).toEqual(["S256"]);
     expect(md.id_token_signing_alg_values_supported).toEqual(["RS256"]);

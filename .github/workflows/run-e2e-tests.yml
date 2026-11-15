@@ -356,6 +356,18 @@ jobs:
       test-suite-name: misc
       skip-docker-build: true
 
+  Run-Device-Authorization-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: device_authorization
+      skip-docker-build: true
+
   Run-Admin-Functionality-E2E-Tests:
     name: Run-Admin-Functionality-E2E-Tests (shard ${{ matrix.shard }}/2)
     needs:

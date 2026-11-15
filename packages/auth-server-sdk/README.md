@@ -386,6 +386,50 @@ await revokeToken({ ...client, token: delegated.access_token });
   resolves for tokens the auth server does not know.
 - Keep the client secret out of the agent's sandbox: only the delegated token goes in.
 
+## Signing users in on devices (confidential clients)
+
+A confidential client's backend that drives a device without a browser (a TV
+app, a kiosk, an appliance) signs its user in with the RFC 8628 device
+authorization grant, authenticating with its client secret. The app's
+managers must enable **Device sign-in** on its page first (else
+`OAuthEndpointError` `error: "unauthorized_client"`).
+
+```ts
+import {
+  startDeviceAuthorization,
+  pollDeviceAuthorization,
+  OAuthEndpointError,
+} from "@schemavaults/auth-server-sdk/confidential-client";
+
+const authorization = await startDeviceAuthorization({
+  ...client,                     // auth_server_url, client_id, client_secret
+  scope: [oidcScopes.openid, oidcScopes.email],
+});
+showOnDevice(authorization.user_code, authorization.verification_uri);
+
+try {
+  const tokens = await pollDeviceAuthorization({
+    ...client,
+    device_code: authorization.device_code, // keep it on the backend
+    interval: authorization.interval,
+  });
+  tokens.access_token; tokens.refresh_token; tokens.id_token; // id_token with openid
+} catch (e) {
+  if (e instanceof OAuthEndpointError && e.error === "access_denied") { /* the user said no */ }
+  if (e instanceof OAuthEndpointError && e.error === "expired_token") { /* start over */ }
+  throw e;
+}
+```
+
+- The user enters the code on the auth server's `/device` page, signs in and
+  approves or denies the request; the codes expire after 15 minutes.
+- `pollDeviceAuthorization()` waits `interval` seconds between polls and 5 more
+  after every `slow_down`. A backend that schedules polls itself calls
+  `requestDeviceAccessToken()` once per poll instead: it resolves with
+  `{ status: "authorization_pending" | "slow_down" }` or `{ status: "tokens", tokens }`.
+- Public clients (CLIs) use `client.signInWithDeviceAuthorization()` in
+  `@schemavaults/auth-client-sdk`.
+
 ## `UserData.sub`
 
 `UserData.sub` is the OIDC subject `<auth_server_app_id>|<uid>` (the value the
