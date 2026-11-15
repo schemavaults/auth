@@ -190,6 +190,7 @@ describe("OAuth2 client credentials grant (RFC 6749 §4.4)", () => {
         "refresh_token",
         "client_credentials",
         "urn:ietf:params:oauth:grant-type:token-exchange",
+        "urn:ietf:params:oauth:grant-type:device_code",
       ]);
     });
   });

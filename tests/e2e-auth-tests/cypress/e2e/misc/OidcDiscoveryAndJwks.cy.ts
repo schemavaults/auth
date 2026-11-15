@@ -14,6 +14,7 @@ interface DiscoveryDocument {
   userinfo_endpoint: string;
   introspection_endpoint: string;
   revocation_endpoint: string;
+  device_authorization_endpoint: string;
   jwks_uri: string;
   response_types_supported: string[];
   response_modes_supported: string[];
@@ -63,11 +64,13 @@ describe("GET /api/oidc/openid-configuration", () => {
       expect(doc.userinfo_endpoint).to.eq(`${issuer}/api/oidc/userinfo`);
       expect(doc.introspection_endpoint).to.eq(`${issuer}/api/oidc/introspect`);
       expect(doc.revocation_endpoint).to.eq(`${issuer}/api/oidc/revoke`);
+      expect(doc.device_authorization_endpoint).to.eq(`${issuer}/api/oidc/device_authorization`);
       expect(doc.grant_types_supported).to.deep.equal([
         "authorization_code",
         "refresh_token",
         "client_credentials",
         "urn:ietf:params:oauth:grant-type:token-exchange",
+        "urn:ietf:params:oauth:grant-type:device_code",
       ]);
       expect(doc.response_modes_supported).to.deep.equal(["query"]);
       expect(doc.subject_types_supported).to.deep.equal(["public"]);
