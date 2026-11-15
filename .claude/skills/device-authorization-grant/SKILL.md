@@ -64,8 +64,10 @@ the token endpoint.
   It mints access + refresh tokens (+ id_token with `openid`); issued tokens record
   `grant_type: "device_code"`. Rate limited per IP (`DEVICE_CODE_RATE_LIMIT`).
 - `GET`/`PUT /api/apps/{app_id}/device-authorization` (management access,
-  `loadAppForManagement`): the opt-in; `PUT` answers 409 for dynamically registered
-  clients. UI: `AppDeviceAuthorizationCard` on the app page.
+  `loadAppForManagement`): the opt-in. After the permission check, `PUT` re-asserts that
+  `enabled` is a boolean (400 otherwise) and answers 409 for every request about a
+  dynamically registered client, enabling or disabling. UI: `AppDeviceAuthorizationCard`
+  on the app page.
 
 ## The `/device` page (`src/app/(client)/device/`, `src/components/DeviceVerification/`)
 
