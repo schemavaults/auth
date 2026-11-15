@@ -10,6 +10,7 @@ import {
 import { API_TAGS } from "@/lib/api/tags";
 import { UserRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 
 const ROUTE = "/api/admin/promote/{uid}";
 
@@ -50,6 +51,13 @@ export const promoteUserToAdmin = defineOperation({
       });
       return ctx.json(500, { success: false, message: "Failed to set user as superuser" });
     }
+
+    await recordAuditEvent(db, {
+      event_type: "user.promoted_to_admin",
+      actor: user,
+      subject: { uid: new_superuser_uid },
+      request: ctx.request,
+    });
 
     return ctx.json(200, {
       success: true,

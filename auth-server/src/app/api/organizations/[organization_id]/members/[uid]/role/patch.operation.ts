@@ -12,6 +12,7 @@ import {
 import { API_TAGS } from "@/lib/api/tags";
 import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { MEMBER_ROLE_ROUTE, memberRoleParams } from "./shared";
 
 export const updateOrganizationMemberRole = defineOperation({
@@ -101,6 +102,15 @@ export const updateOrganizationMemberRole = defineOperation({
       });
       return ctx.json(500, { success: false, message: "Failed to update member role!" });
     }
+
+    await recordAuditEvent(db, {
+      event_type: "organization.member_role_changed",
+      actor: user,
+      subject: { uid: target_uid },
+      organization_id,
+      request: ctx.request,
+      details: { role: new_role },
+    });
 
     return ctx.json(200, { success: true, message: `Successfully updated member role to '${new_role}'!` });
   },

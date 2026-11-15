@@ -21,6 +21,7 @@ import {
   hasUserExceededMaximumOrgMemberships,
 } from "@/lib/auth-db/organizations";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import adminOnlyOrganizationCreation from "@/lib/config/admin-only-organization-creation";
 import { ConflictError } from "@/lib/error/ConflictError";
 
@@ -110,6 +111,14 @@ export const createOrganizationOperation = defineOperation({
       });
       return ctx.json(500, { success: false, message: "Failed to create new organization" });
     }
+
+    await recordAuditEvent(db, {
+      event_type: "organization.created",
+      actor: user,
+      organization_id,
+      request: ctx.request,
+      details: { name: newOrganization.name },
+    });
 
     return ctx.json(200, {
       success: true,

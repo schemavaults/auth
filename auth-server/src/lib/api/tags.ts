@@ -37,7 +37,7 @@ export const API_TAG_DESCRIPTIONS: readonly { name: ApiTag; description: string 
   },
   {
     name: API_TAGS.account,
-    description: "The signed-in user's own profile, organization memberships and invitations.",
+    description: "The signed-in user's own profile, organization memberships, invitations, connected apps and audit log.",
   },
   {
     name: API_TAGS.apps,
@@ -51,7 +51,7 @@ export const API_TAG_DESCRIPTIONS: readonly { name: ApiTag; description: string 
   },
   {
     name: API_TAGS.organizations,
-    description: "Organizations, their members and invitations.",
+    description: "Organizations, their members, invitations, MFA requirement and audit log.",
   },
   {
     name: API_TAGS.admin,

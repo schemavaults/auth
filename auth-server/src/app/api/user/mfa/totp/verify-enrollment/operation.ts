@@ -7,6 +7,7 @@ import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { decryptSecret, issueRecoveryCodesIfNeeded, verifyAndConsumeTotpCode } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 import { clearOrganizationMfaGracePeriodsAfterEnrollment } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
@@ -80,6 +81,14 @@ export const verifyTotpEnrollment = defineOperation({
       if (!flipped) {
         return ctx.json(409, { success: false, message: "Factor was not in a verifiable state" });
       }
+
+      await recordAuditEvent(db, {
+        event_type: "user.mfa_factor_added",
+        actor: user,
+        subject: user,
+        request: ctx.request,
+        details: { factor_type: "totp", factor_id },
+      });
 
       // Recovery codes are minted only for the user's first verified factor;
       // if they already have a passkey (and thus recovery codes), enrolling

@@ -1,4 +1,5 @@
 import "server-only";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import {
   getAppEnvironment,
   type SchemaVaultsAppEnvironment,
@@ -204,6 +205,17 @@ export async function enforceOrganizationMfaRequirements({
   const removed = await db
     .transaction()
     .execute((trx) => removeMembersPastOrganizationMfaGracePeriod(trx, now));
+  // The server removed them (no actor). Recorded after the commit;
+  // recordAuditEvent never throws.
+  for (const removal of removed) {
+    await recordAuditEvent(db, {
+      event_type: "organization.member_removed",
+      subject: { uid: removal.uid },
+      organization_id: removal.organization_id,
+      now,
+      details: { reason: "mfa_requirement_grace_period_ended", role: removal.role },
+    });
+  }
   const started = await startMissingOrganizationMfaGracePeriods(db, { now });
   const notifications = await notifyOrganizationMfaGracePeriods({ db, redis, now, environment });
   return {

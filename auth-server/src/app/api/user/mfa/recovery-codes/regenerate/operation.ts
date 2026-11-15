@@ -7,6 +7,7 @@ import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { generateRecoveryCodes, verifyAndConsumeTotpCode } from "@/lib/mfa";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 
@@ -69,6 +70,12 @@ export const regenerateRecoveryCodes = defineOperation({
       }
       const recovery_codes = generateRecoveryCodes();
       await mfaRegistry.replaceRecoveryCodes({ uid: user.uid, codes: recovery_codes });
+      await recordAuditEvent(db, {
+        event_type: "user.mfa_recovery_codes_regenerated",
+        actor: user,
+        subject: user,
+        request: ctx.request,
+      });
 
       // Awaited (it never throws): the request's db / redis are released
       // once the response is produced, which would cut a detached send off.

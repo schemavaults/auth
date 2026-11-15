@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth-db/organizations";
 import { wouldJoiningViolateOrganizationMfaRequirement } from "@/lib/auth-db/organization-mfa-requirements";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { sendTeamInvitationAcceptedEmail } from "@/lib/mail/send-team-invitation-emails";
 import { INVITATION_ROUTE, invitationParams } from "./shared";
 
@@ -95,6 +96,15 @@ export const respondToOrganizationInvitation = defineOperation({
       if (!result.success) {
         return ctx.json(400, { success: false, message: result.message });
       }
+
+      await recordAuditEvent(db, {
+        event_type: action === "accept" ? "organization.invitation_accepted" : "organization.invitation_declined",
+        actor: user,
+        subject: user,
+        organization_id,
+        request: ctx.request,
+        details: { invitation_id },
+      });
 
       if (action === "accept") {
         try {

@@ -12,6 +12,7 @@ import {
 import { API_TAGS } from "@/lib/api/tags";
 import { OrganizationsRegistry } from "@/lib/auth-db/organizations";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 
 const ROUTE = "/api/organizations/{organization_id}";
 
@@ -80,6 +81,14 @@ export const deleteOrganization = defineOperation({
         }
         return ctx.json(400, { success: false, message: result.message });
       }
+      // The organization's own log went with it (its rows are detached by a
+      // trigger); this entry stays in the log of the user who deleted it.
+      await recordAuditEvent(db, {
+        event_type: "organization.deleted",
+        actor: user,
+        request: ctx.request,
+        details: { organization_id },
+      });
       return ctx.json(200, { success: true, message: result.message });
     } catch (e: unknown) {
       await captureServerException(db, e, {

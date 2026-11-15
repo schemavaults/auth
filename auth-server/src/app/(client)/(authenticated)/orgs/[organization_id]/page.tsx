@@ -182,6 +182,7 @@ async function PreloadedOrgPage(
       can_create_personal_resources={can_create_personal_resources}
       preloaded_mfa_requirement={preloaded_mfa_requirement}
       viewerIsMember={viewerIsMember}
+      canViewAuditLog={user.admin === true || userRole === "owner"}
       platform_admin={
         user.admin === true
           ? { uid: user.uid, email: user.email }

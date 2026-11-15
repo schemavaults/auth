@@ -26,7 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@schemavaults/ui";
-import { ShieldCheck, Unplug } from "lucide-react";
+import { ScrollText, ShieldCheck, Unplug } from "lucide-react";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import { UserProfileCard } from "@/components/UserProfile";
@@ -146,6 +146,32 @@ export default function AccountPageView({
             <Link href="/account/connected-apps" data-testid="manage-connected-apps-link">
               <Unplug className="h-4 w-4" />
               Manage access
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
+      <Card className={cardsClassName}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ScrollText className="h-5 w-5 text-muted-foreground" />
+            Audit log
+          </CardTitle>
+          <CardDescription>
+            Review the sign-ins and security changes recorded for your
+            account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Sign-ins and refused attempts, password and MFA changes, and the
+            applications you authorized.
+          </p>
+        </CardContent>
+        <CardFooter>
+          <Button asChild className="flex flex-row gap-2 flex-nowrap">
+            <Link href="/account/audit-log" data-testid="view-account-audit-log-link">
+              <ScrollText className="h-4 w-4" />
+              View audit log
             </Link>
           </Button>
         </CardFooter>

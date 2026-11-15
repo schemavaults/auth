@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavaults/app-definitions";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 
 const ROUTE = "/api/auth/verify-email/confirm";
 
@@ -25,6 +26,7 @@ interface HandleVerifyEmailConfirmOptions {
 
 export async function handleVerifyEmailConfirm({
   body,
+  req,
 }: HandleVerifyEmailConfirmOptions): Promise<NextResponse> {
   const appEnv: SchemaVaultsAppEnvironment = getAppEnvironment();
   const debug: boolean = shouldEnableDebug(appEnv);
@@ -67,6 +69,12 @@ export async function handleVerifyEmailConfirm({
   if (debug) {
     console.log(`[handleVerifyEmailConfirm] Email verified for uid: ${result.uid}`);
   }
+
+  await recordAuditEvent(dbh.db, {
+    event_type: "user.email_verified",
+    subject: { uid: result.uid },
+    request: req,
+  });
 
   return NextResponse.json(
     { success: true, message: "Email has been verified successfully" },

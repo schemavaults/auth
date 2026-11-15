@@ -6,6 +6,7 @@ import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@
 import { API_TAGS } from "@/lib/api/tags";
 import { lookupInvitation, revokeInvitation } from "@/lib/auth-db/organizations";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { INVITATION_ROUTE, invitationParams, isOrganizationOwnerOrPlatformAdmin } from "./shared";
 
 export const revokeOrganizationInvitation = defineOperation({
@@ -58,6 +59,14 @@ export const revokeOrganizationInvitation = defineOperation({
       if (!result.success) {
         return ctx.json(400, { success: false, message: result.message });
       }
+      await recordAuditEvent(db, {
+        event_type: "organization.invitation_revoked",
+        actor: user,
+        subject: { uid: invitation.invitee_uid },
+        organization_id,
+        request: ctx.request,
+        details: { invitation_id },
+      });
       return ctx.json(200, { success: true, message: result.message, data: { invitation: result.invitation } });
     } catch (e: unknown) {
       await captureServerException(db, e, {

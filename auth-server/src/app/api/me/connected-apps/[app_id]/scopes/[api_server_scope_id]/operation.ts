@@ -7,6 +7,7 @@ import { API_TAGS } from "@/lib/api/tags";
 import { revokeApiScopeConsent } from "@/lib/auth-db/api-scope-consents";
 import { revokeAccessTokensIssuedToClientAppForAudience } from "@/lib/auth-db/token-revocations";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 
 const ROUTE = "/api/me/connected-apps/{app_id}/scopes/{api_server_scope_id}";
 
@@ -64,6 +65,16 @@ export const revokeMyAppScopeConsent = defineOperation({
           : 0;
         return { revoked, revoked_token_count };
       });
+      if (revoked) {
+        await recordAuditEvent(db, {
+          event_type: "user.app_scope_consent_revoked",
+          actor: user,
+          subject: user,
+          client_app_id: app_id,
+          request: ctx.request,
+          details: { scope: revoked.scope, api_server_id: revoked.api_server_id },
+        });
+      }
       return ctx.json(200, {
         success: true,
         message: revoked

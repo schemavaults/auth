@@ -1,4 +1,5 @@
 import type { AnyOperationDefinition } from "@schemavaults/openapi-operations";
+import { listMyAuditLog } from "@/app/api/me/audit-log/operation";
 import { listMyInvitations } from "@/app/api/me/invitations/operation";
 import { listMyOrganizationMfaRequirements } from "@/app/api/me/organization-mfa-requirements/operation";
 import { listMyConnectedApps } from "@/app/api/me/connected-apps/operation";
@@ -19,4 +20,5 @@ export const accountOperations: readonly AnyOperationDefinition[] = [
   listMyOrganizationMfaRequirements,
   listMyConnectedApps,
   revokeMyAppScopeConsent,
+  listMyAuditLog,
 ];

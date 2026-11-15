@@ -20,6 +20,7 @@ import {
 import { getUserByEmail, getUserByUID, type UserDocument } from "@/lib/auth-db/users";
 import { wouldJoiningViolateOrganizationMfaRequirement } from "@/lib/auth-db/organization-mfa-requirements";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { MEMBERS_ROUTE } from "./shared";
 
 const AssignOrganizationMemberRequest = z
@@ -188,6 +189,14 @@ export const assignOrganizationMember = defineOperation({
     }
 
     const { membership, revoked_invitation_ids } = result;
+    await recordAuditEvent(db, {
+      event_type: "organization.member_added",
+      actor: user,
+      subject: { uid: assignee_uid, email: assignee.email },
+      organization_id,
+      request: ctx.request,
+      details: { role, ...(revoked_invitation_ids.length > 0 ? { revoked_invitation_ids } : {}) },
+    });
     return ctx.json(201, {
       success: true,
       message: `Added ${assignee.email} to the organization as ${role}`,

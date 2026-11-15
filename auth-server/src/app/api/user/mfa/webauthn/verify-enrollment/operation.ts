@@ -14,6 +14,7 @@ import {
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
+import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import {
   deleteRegChallenge,
   getRegChallenge,
@@ -125,6 +126,14 @@ export const verifyPasskeyEnrollment = defineOperation({
       if (!flipped) {
         return ctx.json(409, { success: false, message: "Factor was not in a verifiable state" });
       }
+
+      await recordAuditEvent(db, {
+        event_type: "user.mfa_factor_added",
+        actor: user,
+        subject: user,
+        request: ctx.request,
+        details: { factor_type: "webauthn", factor_id, ...(label ? { label } : {}) },
+      });
 
       // Recovery codes are only minted for the user's first verified factor;
       // enrolling a passkey alongside existing TOTP must not rotate them.
