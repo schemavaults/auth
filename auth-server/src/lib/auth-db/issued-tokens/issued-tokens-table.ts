@@ -31,6 +31,16 @@ export interface IssuedTokensTable {
    * recorded before the column existed.
    */
   refresh_jti: string | null;
+  /**
+   * The session the token belongs to (migration 00056): the jti of the
+   * first refresh token of its rotation chain, carried forward by every
+   * refresh. Shared by the chain's refresh tokens, the access tokens minted
+   * with them and the delegated tokens exchanged for those, so ending the
+   * session revokes them all (`revokeTokensIssuedWithRefreshToken`). NULL
+   * for tokens of no session (client_credentials) and for rows that had
+   * expired when the column was added.
+   */
+  session_id: string | null;
 }
 
 export type IssuedTokenRow = Selectable<IssuedTokensTable>;

@@ -17,6 +17,7 @@ import { RefreshTokenCookieName } from "@schemavaults/auth-server-sdk/RefreshTok
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import {
   UserRegistry,
+  getIssuedTokenSession,
   getUserTokensValidAfter,
   isTokenIatRevoked,
   isTokenRevoked,
@@ -336,6 +337,15 @@ export async function handleOidcRefreshTokenGrant({
     access_token_api_server_id: access_token_audience_api_server_id ?? null,
   });
 
+  // The replacement tokens stay in the presented token's session, so ending
+  // it (logout, RFC 7009 revocation) revokes the tokens of every refresh of
+  // the rotation chain. A refresh token with no session on record (the auth
+  // server's own sign-in cookie, tokens minted before sessions were
+  // recorded) starts it.
+  const session_id: string | null = decoded.jti
+    ? ((await getIssuedTokenSession(dbh.db, decoded.jti, decoded.uid))?.session_id ?? decoded.jti)
+    : null;
+
   const issued = await issueOidcTokens({
     dbh,
     user,
@@ -349,6 +359,7 @@ export async function handleOidcRefreshTokenGrant({
     environment,
     // OIDC Core §12.2 permits omitting the id_token on refresh.
     include_id_token: false,
+    session_id,
     access_token_audience,
     access_token_audience_api_server_id,
     // Refresh token rotation: the presented token is single-use — its

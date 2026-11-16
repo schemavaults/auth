@@ -34,7 +34,7 @@ import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 /**
  * POST /api/auth/logout/{client_app_id}: revokes the presented refresh
  * token(s) — the app's cookie and/or a Bearer refresh token issued to the
- * app — and the access tokens minted with them when they verify, then
+ * app — and every other token of their sessions when they verify, then
  * clears the client app's refresh token cookies. Behaviour predates the
  * operations runtime and is kept as-is (the runtime validates the id).
  */
@@ -98,7 +98,9 @@ export async function handleLogout(req: NextRequest, client_app_id: AppId): Prom
   // Revoke THIS session server-side before clearing cookies:
   //  1. the presented refresh token's jti, so it can never be redeemed (or
   //     presented to a route guard) again;
-  //  2. the access token(s) minted alongside it (issued_tokens.refresh_jti),
+  //  2. every other token of its session (issued_tokens.session_id): the
+  //     access tokens minted with it and with the earlier refresh tokens of
+  //     its rotation chain, and the delegated tokens exchanged for them,
   //     which have their own jti and would otherwise outlive the logout.
   // Deliberately NOT the user's tokens_valid_after watermark: that is the
   // password-reset remedy and would end the user's sessions in every other
@@ -151,7 +153,7 @@ export async function handleLogout(req: NextRequest, client_app_id: AppId): Prom
         );
         if (debug) {
           console.log(
-            `[/api/auth/logout/${client_app_id}] Revoked refresh token jti '${decoded.jti}' (from ${from_bearer ? "Bearer" : "cookie"}) and ${siblings_revoked} access token(s) issued with it for user '${decoded.uid}'`,
+            `[/api/auth/logout/${client_app_id}] Revoked refresh token jti '${decoded.jti}' (from ${from_bearer ? "Bearer" : "cookie"}) and ${siblings_revoked} other token(s) of its session for user '${decoded.uid}'`,
           );
         }
       }

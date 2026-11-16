@@ -121,6 +121,15 @@ export interface IssueOidcTokensOptions {
    * token's session. Null / omitted: the access token stands alone.
    */
   session_refresh_jti?: string | null;
+  /**
+   * The session the issued tokens are recorded in (`issued_tokens.
+   * session_id`), which logout / RFC 7009 revocation of any of its refresh
+   * tokens ends as a whole. The refresh grant passes the presented refresh
+   * token's session and the token exchange its subject token's. Null /
+   * omitted: a minted refresh token starts a new session; an access token
+   * minted without one belongs to none.
+   */
+  session_id?: string | null;
   debug?: boolean;
 }
 
@@ -189,6 +198,7 @@ export async function issueOidcTokens({
   actor,
   access_token_expires_at,
   session_refresh_jti = null,
+  session_id = null,
   debug = false,
 }: IssueOidcTokensOptions): Promise<IssuedOidcTokens> {
   // A delegated token only ever reaches an API server that accepts it:
@@ -242,6 +252,7 @@ export async function issueOidcTokens({
         grant_type,
         revoke_rotated_refresh_token,
         session_refresh_jti,
+        session_id,
       },
     });
   if (!tokenGenerationResult.success || tokenGenerationResult.error) {

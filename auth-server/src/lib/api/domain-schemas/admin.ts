@@ -115,6 +115,14 @@ export const AdminIssuedToken = z
       .string()
       .nullable()
       .openapi({ description: "For access tokens: the jti of the refresh token minted in the same grant; null otherwise" }),
+    session_id: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({
+        description:
+          "The session the token belongs to: the jti of the first refresh token of its rotation chain, shared by every token issued in the session. Signing out or revoking any of its refresh tokens revokes them all; null for tokens of no session",
+      }),
   })
   .openapi("AdminIssuedToken");
 

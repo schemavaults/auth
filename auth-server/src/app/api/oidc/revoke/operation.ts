@@ -33,7 +33,7 @@ export const postOidcRevoke = defineOperation({
   summary: "Token revocation",
   description:
     "The OAuth 2.0 token revocation endpoint (RFC 7009), advertised as `revocation_endpoint`. A client POSTs a token issued to it and the token stops working: " +
-    "a refresh token can no longer be redeemed, and the access tokens minted alongside it (in the same token response) are revoked with it; " +
+    "a refresh token can no longer be redeemed, and every other token of its session is revoked with it (the access tokens issued with it and with the earlier refresh tokens it was rotated from, and the delegated tokens exchanged for them); " +
     "an `oidc-userinfo` access token is refused by `/api/oidc/userinfo` and reported inactive by introspection; " +
     "a delegated access token (RFC 8693 `act`, from the token exchange grant) is reported inactive by its API server's introspection, so a client ends an agent's access when the agent's session ends. " +
     "Other access tokens minted for an API server (an RFC 8707 `resource`) are answered with `unsupported_token_type`: revoke the refresh token they were issued with. " +

@@ -57,6 +57,15 @@ export interface ITokenIssuanceTracking {
    * freshly minted refresh token, which is the access tokens' session.
    */
   session_refresh_jti?: string | null;
+  /**
+   * The session the minted tokens are recorded in (`issued_tokens.
+   * session_id`): ending it revokes them. The refresh grant passes the
+   * presented refresh token's session, so every refresh of a rotation chain
+   * stays in one session; the token exchange passes its subject token's.
+   * Omitted / null: a freshly minted refresh token starts a new session
+   * (its own jti), and tokens minted without one belong to none.
+   */
+  session_id?: string | null;
 }
 
 export interface IGenerateTokensForAuthenticatedUserOpts {
@@ -217,6 +226,7 @@ export default async function generateTokensForAuthenticatedUser({
         "'session_refresh_jti' links tokens minted without a refresh token; this grant minted one",
       );
     }
+    const session_id: string | null = tracking.session_id ?? refresh_token?.jti ?? null;
     const rows: NewIssuedTokenRow[] = [];
     if (refresh_token && refresh_token.jti) {
       rows.push({
@@ -229,6 +239,7 @@ export default async function generateTokensForAuthenticatedUser({
         issued_at: refresh_token.iat,
         expires_at: refresh_token.exp,
         refresh_jti: null,
+        session_id,
       });
     }
     for (const [token_audience, access] of Object.entries(access_tokens)) {
@@ -250,6 +261,7 @@ export default async function generateTokensForAuthenticatedUser({
         // grant minting none, the session the caller names) so logging
         // that session out revokes its access tokens too.
         refresh_jti: refresh_token?.jti ?? tracking.session_refresh_jti ?? null,
+        session_id,
       });
     }
 

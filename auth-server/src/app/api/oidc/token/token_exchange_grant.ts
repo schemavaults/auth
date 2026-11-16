@@ -226,6 +226,7 @@ export async function handleOidcTokenExchangeGrant({
       actor,
       access_token_expires_at: expiry.expires_at,
       session_refresh_jti: subject.session_refresh_jti,
+      session_id: subject.session_id,
       debug,
     });
   } catch (e: unknown) {
