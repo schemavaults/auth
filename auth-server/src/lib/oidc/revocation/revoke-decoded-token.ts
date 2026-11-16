@@ -11,20 +11,19 @@ import type { VerifiedRevocableToken } from "./types";
 export interface RevokedTokens {
   /** Whether the presented token's own `jti` was revoked (false for legacy tokens without one). */
   revoked: boolean;
-  /** Unexpired access tokens minted alongside a revoked refresh token. */
+  /** Other unexpired tokens of a revoked refresh token's session, revoked with it. */
   sibling_access_tokens: number;
 }
 
 /**
  * Revokes a verified token issued to the requesting client, by `jti`:
  *
- *  - a refresh token together with the access tokens minted alongside it
- *    and the delegated tokens exchanged for them (`issued_tokens.
- *    refresh_jti`, as logout does), in one transaction:
- *    RFC 7009 §2.1 says the server SHOULD also invalidate the access tokens
- *    of the same grant. Access tokens minted with an earlier refresh token
- *    of the rotation chain are not linked to this one and run until they
- *    expire.
+ *  - a refresh token together with every other token of its session
+ *    (`issued_tokens.session_id`, as logout does), in one transaction: the
+ *    access tokens minted with it and with the earlier refresh tokens of
+ *    its rotation chain, and the delegated tokens exchanged for any of
+ *    them. RFC 7009 §2.1 says the server SHOULD also invalidate the access
+ *    tokens of the same grant.
  *  - an access token on its own: its `jti`, which /api/oidc/userinfo and
  *    introspection check.
  *

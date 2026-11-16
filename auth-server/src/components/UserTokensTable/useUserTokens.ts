@@ -19,6 +19,9 @@ const issuedTokenRowSchema = z.object({
   // Refresh token this access token was issued alongside (migration
   // 00039); absent/null on refresh tokens and pre-migration rows.
   refresh_jti: z.string().nullable().optional(),
+  // Session the token belongs to (migration 00056); absent/null on tokens
+  // of no session and on rows that had expired when the column was added.
+  session_id: z.string().nullable().optional(),
 });
 
 export interface UseUserTokensOptions {
@@ -76,6 +79,7 @@ export function useUserTokens({
       return parsed.data.map((token) => ({
         ...token,
         refresh_jti: token.refresh_jti ?? null,
+        session_id: token.session_id ?? null,
       }));
     },
   );

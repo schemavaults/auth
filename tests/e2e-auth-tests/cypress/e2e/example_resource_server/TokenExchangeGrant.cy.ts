@@ -15,7 +15,8 @@
 //     audience, with at most the subject token's scope, expiring when the
 //     subject token does;
 //   - end the delegated token with the user's session its subject token
-//     was issued in (revoking that session's refresh token, as logout does);
+//     was issued in (revoking that session's refresh token, as logout does),
+//     whichever refresh of the session minted the subject token;
 //   - name the client's service account as the actor, as seen by the API
 //     server's introspection and by a resource server's route guards (the
 //     example resource server's /api/whoami reports the actor, and its
@@ -669,6 +670,119 @@ describe("RFC 8693 token exchange (delegated tokens for agents)", () => {
           active: false,
         });
         introspectAsOwnApiServer(delegated).should("deep.equal", { active: false });
+      });
+    });
+  });
+
+  describe("ends with the user's session when the session's refresh token has rotated since", () => {
+    /** Redeems (and rotates) a refresh token of the confidential client. */
+    function refresh(refresh_token: string): Cypress.Chainable<TokenResponseBody> {
+      return postTokenRequest({
+        grant_type: "refresh_token",
+        refresh_token,
+        resource: ownApiServerId,
+      }).then((response) => {
+        expect(response.status, `refresh grant (${JSON.stringify(response.body)})`).to.equal(200);
+        return response.body;
+      });
+    }
+
+    function delegatedTokenFor(subject: TokenResponseBody): Cypress.Chainable<string> {
+      return exchange({ subject_token: subject.access_token as string }).then((response) => {
+        expect(response.status, `exchange (${JSON.stringify(response.body)})`).to.equal(200);
+        return response.body.access_token as string;
+      });
+    }
+
+    /**
+     * A session refreshed twice, with a delegated token exchanged for the
+     * access token of each of the first two refresh cycles, next to a second
+     * session of the same user in the same app. `endSession` gets the
+     * session's CURRENT refresh token; afterwards no token of any of its
+     * refresh cycles may be usable, and the other session must be.
+     */
+    function expectWholeSessionEnded(
+      endSession: (current_refresh_token: string) => void,
+    ): void {
+      createUserAuthorizedForApps().then((credentials) => {
+        signIn(confidentialClientId, ownApiServerId, credentials).then((first) => {
+          delegatedTokenFor(first).then((first_delegated) => {
+            refresh(first.refresh_token as string).then((second) => {
+              delegatedTokenFor(second).then((second_delegated) => {
+                refresh(second.refresh_token as string).then((third) => {
+                  signIn(confidentialClientId, ownApiServerId, credentials).then((other) => {
+                    const session_tokens: Record<string, string> = {
+                      "the code grant's access token": first.access_token as string,
+                      "the delegated token exchanged for it": first_delegated,
+                      "the first refresh's access token": second.access_token as string,
+                      "the delegated token exchanged for that one": second_delegated,
+                      "the second refresh's access token": third.access_token as string,
+                    };
+                    for (const [name, token] of Object.entries(session_tokens)) {
+                      introspectAsOwnApiServer(token)
+                        .its("active")
+                        .should("equal", true, `${name} is active before the session ends`);
+                    }
+
+                    endSession(third.refresh_token as string);
+
+                    for (const [name, token] of Object.entries(session_tokens)) {
+                      introspectAsOwnApiServer(token).should(
+                        "deep.equal",
+                        { active: false },
+                        `${name} is inactive once the session ended`,
+                      );
+                    }
+                    // An access token of an earlier refresh cycle buys no
+                    // new delegated token either.
+                    for (const subject of [first, second, third]) {
+                      exchange({ subject_token: subject.access_token as string }).then((response) =>
+                        expectTokenError(response, 400, "invalid_request"),
+                      );
+                    }
+                    // None of the session's refresh tokens is redeemable.
+                    for (const subject of [first, second, third]) {
+                      postTokenRequest({
+                        grant_type: "refresh_token",
+                        refresh_token: subject.refresh_token as string,
+                      }).then((response) => expectTokenError(response, 400, "invalid_grant"));
+                    }
+                    // The user's other session is untouched.
+                    introspectAsOwnApiServer(other.access_token as string)
+                      .its("active")
+                      .should("equal", true);
+                    refresh(other.refresh_token as string);
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    }
+
+    it("by revoking its current refresh token (RFC 7009)", () => {
+      expectWholeSessionEnded((current_refresh_token) => {
+        cy.request({
+          method: "POST",
+          url: REVOCATION_ENDPOINT,
+          form: true,
+          headers: { Authorization: CONFIDENTIAL_CLIENT_AUTH() },
+          body: { token: current_refresh_token },
+        }).its("status").should("equal", 200);
+      });
+    });
+
+    it("by signing out with its current refresh token", () => {
+      expectWholeSessionEnded((current_refresh_token) => {
+        cy.request({
+          method: "POST",
+          url: `/api/auth/logout/${confidentialClientId}`,
+          headers: {
+            Authorization: `Bearer ${current_refresh_token}`,
+            Origin: exampleAppOrigin,
+          },
+        }).its("status").should("equal", 200);
       });
     });
   });

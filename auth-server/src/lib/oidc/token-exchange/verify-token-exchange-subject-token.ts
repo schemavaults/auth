@@ -5,7 +5,7 @@ import type {
   SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
 import { getAudienceFromToken, type CustomJWTPayload } from "@schemavaults/jwt";
-import { getAccessTokenSessionRefreshJti, type ServerlessDatabase } from "@/lib/auth-db";
+import { getIssuedTokenSession, type IssuedTokenSession, type ServerlessDatabase } from "@/lib/auth-db";
 import UnresolvableTokenResourceError from "@/lib/error/UnresolvableTokenResourceError";
 import {
   decodeIntrospectableToken,
@@ -36,12 +36,17 @@ export type VerifiedTokenExchangeSubjectToken =
       /** The API server that audience belongs to (its keyset owner). */
       api_server_id: ApiServerId;
       /**
-       * The user's session the subject token was issued in (the `jti` of
-       * the refresh token minted alongside it), or null when it has none on
-       * record. The delegated token joins it: ending the session (logout,
-       * revoking that refresh token) revokes the agent's token too.
+       * The refresh token minted alongside the subject token (its `jti`),
+       * or null when it has none on record.
        */
       session_refresh_jti: string | null;
+      /**
+       * The user's session the subject token was issued in (shared by every
+       * refresh of its rotation chain), or null when it has none on record.
+       * The delegated token joins it: ending the session (logout, revoking
+       * any of its refresh tokens) revokes the agent's token too.
+       */
+      session_id: string | null;
     }
   | { ok: false; error: OidcTokenRequestError };
 
@@ -136,8 +141,8 @@ export async function verifyTokenExchangeSubjectToken({
     return invalid(INVALID_SUBJECT_TOKEN);
   }
 
-  const session_refresh_jti: string | null = payload.jti
-    ? await getAccessTokenSessionRefreshJti(dbh.db, payload.jti, payload.uid)
+  const session: IssuedTokenSession | null = payload.jti
+    ? await getIssuedTokenSession(dbh.db, payload.jti, payload.uid)
     : null;
 
   return {
@@ -145,7 +150,8 @@ export async function verifyTokenExchangeSubjectToken({
     payload,
     token_audience: payload.aud,
     api_server_id: resolved.api_server_id,
-    session_refresh_jti,
+    session_refresh_jti: session?.refresh_jti ?? null,
+    session_id: session?.session_id ?? null,
   };
 }
 

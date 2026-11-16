@@ -1,5 +1,5 @@
 import "server-only";
-import type { Kysely } from "@schemavaults/dbh";
+import type { Kysely, Transaction } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { ISSUED_TOKEN_GRANT_TYPES, type NewIssuedTokenRow } from "./issued-tokens-table";
 import isValidUuid from "@/lib/is-valid-uuid";
@@ -34,13 +34,16 @@ function validateRow(row: NewIssuedTokenRow): void {
   if (row.refresh_jti !== null && !isValidUuid(row.refresh_jti)) {
     throw new TypeError("Invalid refresh_jti: expected a valid UUID or null");
   }
+  if (row.session_id !== null && !isValidUuid(row.session_id)) {
+    throw new TypeError("Invalid session_id: expected a valid UUID or null");
+  }
   if (row.token_type === "refresh" && row.refresh_jti !== null) {
     throw new TypeError("A refresh token row must not carry a refresh_jti");
   }
 }
 
 export async function recordIssuedTokens(
-  db: Kysely<AuthDatabase>,
+  db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   rows: readonly NewIssuedTokenRow[],
 ): Promise<void> {
   if (rows.length === 0) return;
