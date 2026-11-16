@@ -103,7 +103,7 @@ export const postOidcDeviceAuthorization = defineOperation({
     },
     401: {
       description:
-        "No or a malformed `client_id`, an unknown client, a confidential client without its secret or with a wrong one, or a secret sent for a public client (`invalid_client`)",
+        "No or a malformed `client_id`, HTTP Basic credentials naming another client than the form's `client_id`, an unknown client, a confidential client without its secret or with a wrong one, or a secret sent for a public client (`invalid_client`)",
       schema: OAuthErrorResponse,
       headers: wwwAuthenticateHeaders,
     },

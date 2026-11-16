@@ -74,8 +74,24 @@ export async function parseDeviceAuthorizationRequest(
     return refuse("invalid_request", "Malformed Basic Authorization header.");
   }
 
+  // A client identifies itself once: the form's `client_id` and the HTTP
+  // Basic credentials may both be present (RFC 6749 §2.3.1 allows it), but
+  // must then name the same client. RFC 6749 §5.2: failed client
+  // authentication is `invalid_client`.
+  const form_client_id: string | null = param("client_id");
+  if (
+    form_client_id !== null &&
+    basic_credentials !== null &&
+    form_client_id !== basic_credentials.client_id
+  ) {
+    return refuse(
+      "invalid_client",
+      "The Authorization header credentials do not match the request's client_id.",
+    );
+  }
+
   const parsed_client_id = appIdSchema.safeParse(
-    param("client_id") ?? basic_credentials?.client_id ?? null,
+    form_client_id ?? basic_credentials?.client_id ?? null,
   );
   if (!parsed_client_id.success) {
     return refuse("invalid_client", "Missing or malformed 'client_id' parameter.");

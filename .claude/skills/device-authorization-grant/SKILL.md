@@ -50,7 +50,9 @@ the token endpoint.
 
 - `POST /api/oidc/device_authorization` (`src/app/api/oidc/device_authorization/`):
   form-encoded `client_id`, optional `scope` and RFC 8707 `resource`; clients
-  authenticate as at the token endpoint. `invalid_client` (401) for an unknown app,
+  authenticate as at the token endpoint. A form `client_id` that differs from the
+  HTTP Basic credentials' is refused with `invalid_client` while parsing
+  (`parseDeviceAuthorizationRequest()`). `invalid_client` (401) for an unknown app,
   `unauthorized_client` until the grant is enabled; rate limited per IP
   (`DEVICE_AUTHORIZATION_RATE_LIMIT`). What is granted is decided at approval.
 - `POST /api/oidc/token` with `grant_type=urn:ietf:params:oauth:grant-type:device_code`
