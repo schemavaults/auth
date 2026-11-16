@@ -176,6 +176,47 @@ Sessions are judged by what their sign-in asked for, not by what was
 granted, so a user who unticked a scope is not asked again. The React
 provider does this for you.
 
+## Signing in on a device (RFC 8628 device authorization grant)
+
+A client that cannot show the login page (a command-line tool, a TV app)
+signs its user in with the device authorization grant: it shows a short
+code, the user enters it on the auth server's `/device` page (on their
+phone or laptop) and approves the request, and the client receives the
+user's tokens. The app's managers must first turn on **Device sign-in** on
+the app's page (`client.setClientApplicationDeviceAuthorization(app_id,
+true)`); until then the auth server refuses with `unauthorized_client`.
+Dynamically registered clients can never use it.
+
+```ts
+await client.signInWithDeviceAuthorization({
+  scope: [oidcScopes.openid, oidcScopes.email], // default: the client's sign-in scope; must include openid
+  onUserCode: ({ user_code, verification_uri, verification_uri_complete, expires_at }) => {
+    console.log(`Open ${verification_uri} and enter ${user_code}`);
+    // or render verification_uri_complete as a QR code (still show user_code)
+  },
+  signal, // optional: stop waiting (e.g. the user pressed Ctrl+C)
+});
+// Signed in: tokens and user data are stored as after a browser sign-in.
+```
+
+- The client polls the token endpoint (every `interval` seconds, slower
+  after a `slow_down`) until the user decides. Codes expire after 15
+  minutes.
+- Refusals throw `TokenEndpointRequestFailedError`: `oauth_error` is
+  `access_denied` when the user denied the request, `expired_token` when the
+  code expired first (start over), `unauthorized_client` when the grant is
+  not enabled for the app. Denials and expiries are not reported as errors.
+- The access token is minted for the client's first default audience, as on
+  a browser sign-in; API scopes (`scope` + `resource`) are approved by the
+  user on the device page like on the consent screen.
+- For a plain OAuth 2.0 grant (no `openid`, so no session is stored), use
+  the lower-level `requestDeviceAuthorization()` and
+  `pollDeviceAuthorization()`, which return the device authorization and the
+  token response.
+- A confidential backend driving a device uses
+  `startDeviceAuthorization()` / `pollDeviceAuthorization()` from
+  `@schemavaults/auth-server-sdk/confidential-client` instead.
+
 ## Dynamic client registration (RFC 7591)
 
 Auth servers that enable the `allow_dynamic_client_registration` setting

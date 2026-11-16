@@ -8,16 +8,18 @@ import {
 } from "./client-grant-types";
 
 const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
+const DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code";
 
 const ALL_GRANTS: readonly TokenEndpointGrantType[] = TOKEN_ENDPOINT_GRANT_TYPES;
 
 describe("parseTokenEndpointGrantType", () => {
-  test("recognizes the four grants the token endpoint implements", () => {
+  test("recognizes the five grants the token endpoint implements", () => {
     expect([...TOKEN_ENDPOINT_GRANT_TYPES]).toEqual([
       "authorization_code",
       "refresh_token",
       "client_credentials",
       TOKEN_EXCHANGE,
+      DEVICE_CODE,
     ]);
     for (const grant_type of TOKEN_ENDPOINT_GRANT_TYPES) {
       expect(parseTokenEndpointGrantType(grant_type)).toBe(grant_type);
@@ -32,7 +34,7 @@ describe("parseTokenEndpointGrantType", () => {
       "implicit",
       "token_exchange",
       "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      "urn:ietf:params:oauth:grant-type:device_code",
+      "device_code",
     ]) {
       expect(parseTokenEndpointGrantType(value)).toBeNull();
     }
@@ -117,6 +119,18 @@ describe("isGrantTypeAllowedForClientApp", () => {
       isGrantTypeAllowedForClientApp(
         dynamicClient([TOKEN_EXCHANGE] as unknown as ClientAppGrantTypePolicyFields["grant_types"]),
         TOKEN_EXCHANGE,
+      ),
+    ).toBe(false);
+  });
+
+  test("dynamically registered clients may never use the device authorization grant", () => {
+    // Whoever starts a device flow picks the user who is shown the code:
+    // only apps whose managers opted in may use it.
+    expect(isGrantTypeAllowedForClientApp(dynamicClient(null), DEVICE_CODE)).toBe(false);
+    expect(
+      isGrantTypeAllowedForClientApp(
+        dynamicClient([DEVICE_CODE] as unknown as ClientAppGrantTypePolicyFields["grant_types"]),
+        DEVICE_CODE,
       ),
     ).toBe(false);
   });

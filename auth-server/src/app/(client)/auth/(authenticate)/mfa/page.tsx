@@ -1,4 +1,5 @@
 import "server-only";
+import { MFA_CHALLENGE_TTL_SECONDS } from "@/lib/mfa/challenge-store";
 import type { ReactElement } from "react";
 import type { ServerRuntime } from "next/types";
 import { connection } from "next/server";
@@ -155,6 +156,7 @@ export default async function MfaChallengePage(props: {
           ? expires_at_num
           : undefined
       }
+      challenge_duration_ms={MFA_CHALLENGE_TTL_SECONDS * 1000}
       on_successful_authenticate={on_successful_authenticate}
       redirect_uri={redirect_uri}
       code_challenge={code_challenge}

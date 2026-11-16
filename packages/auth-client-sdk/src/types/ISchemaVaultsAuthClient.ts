@@ -47,6 +47,8 @@ import type {
   UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
 import type { AuthorizeClientApplicationConsent } from "@/lib/send-authorize-client-application-request";
+import type { ClientApplicationDeviceAuthorizationPolicy } from "@/lib/client-application-device-authorization";
+import type { SignInWithDeviceAuthorizationOptions } from "@/lib/device-authorization/sign-in-with-device-authorization";
 import type {
   RevokeClientApplicationAuthorizationResult,
   RevokeMyAppScopeConsentResult,
@@ -84,6 +86,23 @@ export interface ISchemaVaultsAuthClient {
   // Authenticate the user. `scope` (space-delimited, RFC 6749 §3.3)
   // defaults to DEFAULT_AUTH_SCOPE ("openid email profile").
   login: (opts?: AuthenticateWithRedirectOptions) => Promise<void>;
+
+  /**
+   * @name signInWithDeviceAuthorization
+   * @description Sign the user in on a device that cannot show the login
+   * page (a CLI, a TV app) with the OAuth 2.0 device authorization grant
+   * (RFC 8628): requests a code, hands it to `onUserCode` to show the user
+   * with the auth server's `/device` page, waits until the user approves it
+   * there, then stores the session as a browser sign-in does. The scope
+   * (default: the client's sign-in scope) must include `openid`. The app's
+   * managers must have enabled the grant on the auth server.
+   * @throws TokenEndpointRequestFailedError when the auth server refuses the
+   * request, or the user denies it (`oauth_error: "access_denied"`) or lets
+   * it expire (`"expired_token"`).
+   */
+  signInWithDeviceAuthorization: (
+    options: SignInWithDeviceAuthorizationOptions,
+  ) => Promise<void>;
   register: (opts?: AuthenticateWithRedirectOptions) => Promise<void>;
 
   successful_logout_redirect_uri: string | undefined;
@@ -610,6 +629,29 @@ export interface ISchemaVaultsAuthClient {
     api_server_id: ApiServerId,
     accept_delegated_tokens: boolean,
   ) => Promise<SchemaVaultsApiServerDefinition>;
+
+  /**
+   * @name getClientApplicationDeviceAuthorization
+   * @description Whether a client application may use the OAuth 2.0 device
+   * authorization grant (RFC 8628). Off until its managers enable it.
+   * @argument app_id The unique ID of the client application
+   */
+  getClientApplicationDeviceAuthorization: (
+    app_id: AppId,
+  ) => Promise<ClientApplicationDeviceAuthorizationPolicy>;
+
+  /**
+   * @name setClientApplicationDeviceAuthorization
+   * @description Enable or disable the device authorization grant for a
+   * client application. Disabling discards its device sign-in requests that
+   * were not redeemed yet. Dynamically registered clients can never enable it.
+   * @argument app_id The unique ID of the client application
+   * @argument enabled Whether the app may use the grant
+   */
+  setClientApplicationDeviceAuthorization: (
+    app_id: AppId,
+    enabled: boolean,
+  ) => Promise<ClientApplicationDeviceAuthorizationPolicy>;
 
   /**
    * @name registerDynamicClient

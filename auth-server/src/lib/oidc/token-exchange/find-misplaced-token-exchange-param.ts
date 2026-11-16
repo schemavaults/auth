@@ -23,7 +23,8 @@ export const TOKEN_EXCHANGE_ONLY_PARAMS = [
 /**
  * The other grants' parameters a token exchange request may not carry: the
  * authorization_code grant's (`code`, `code_verifier`, `redirect_uri`), the
- * refresh_token grant's (`refresh_token`), and the refresh token delivery
+ * refresh_token grant's (`refresh_token`), the device grant's
+ * (`device_code`), and the refresh token delivery
  * extension (a token exchange issues no refresh token). The parameters
  * every grant shares (`client_id`, `client_secret`, `scope`, `resource`)
  * stay allowed.
@@ -33,6 +34,7 @@ export const PARAMS_NOT_ALLOWED_WITH_TOKEN_EXCHANGE = [
   "code_verifier",
   "redirect_uri",
   "refresh_token",
+  "device_code",
   OIDC_TOKEN_REFRESH_TOKEN_DELIVERY_PARAM,
 ] as const;
 

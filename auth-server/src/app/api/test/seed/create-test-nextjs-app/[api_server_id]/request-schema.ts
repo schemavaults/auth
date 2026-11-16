@@ -36,6 +36,11 @@ export const CreateTestNextjsAppRequest = z
     // matched against its domain (`exact` | `prefix`).
     allow_dynamic_clients: z.boolean().optional(),
     resource_url_match_mode: resourceUrlMatchModeSchema.optional(),
+    // Optional: let the seeded app use the RFC 8628 device authorization
+    // grant (off for every app until its managers enable it).
+    enable_device_authorization: z.boolean().optional().openapi({
+      description: "Enable the device authorization grant (RFC 8628) for the seeded app",
+    }),
   })
   .required({
     url: true,

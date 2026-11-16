@@ -7,7 +7,10 @@ import {
   type SchemaVaultsApp,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
-import type { OidcRefreshTokenDeliveryMode } from "@schemavaults/auth-common";
+import {
+  OAUTH_DEVICE_CODE_GRANT_TYPE,
+  type OidcRefreshTokenDeliveryMode,
+} from "@schemavaults/auth-common";
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import { ServerlessDatabase } from "@/lib/auth-db";
 import { getApp } from "@/lib/auth-db/apps";
@@ -42,12 +45,14 @@ import {
   ipRequiredResponse,
   rateLimitResponse,
   CLIENT_CREDENTIALS_RATE_LIMIT,
+  DEVICE_CODE_RATE_LIMIT,
   REFRESH_TOKEN_RATE_LIMIT,
   TOKEN_EXCHANGE_RATE_LIMIT,
   type RateLimitConfig,
 } from "@/lib/rate-limit";
 import handleOidcAuthorizationCodeGrant from "./authorization_code_grant";
 import handleOidcClientCredentialsGrant from "./client_credentials_grant";
+import handleOidcDeviceCodeGrant from "./device_code_grant";
 import handleOidcRefreshTokenGrant, {
   isRefreshTokenPresentedViaCookie,
 } from "./refresh_token_grant";
@@ -96,7 +101,9 @@ function unhandledGrantType(grant_type: never): never {
  * replayed without user interaction are budgeted, so a stolen refresh
  * token (or leaked client secret) cannot turn into an unbounded minting
  * loop; each has its own bucket so M2M traffic never starves browser
- * refreshes. An authorization code is single-use and needs none.
+ * refreshes. An authorization code is single-use and needs none. Device
+ * code polls are budgeted too: each device paces itself (`slow_down`), and
+ * the per-IP bucket bounds a client that ignores it.
  */
 function getGrantRateLimit(
   grant_type: TokenEndpointGrantType,
@@ -110,6 +117,8 @@ function getGrantRateLimit(
       return CLIENT_CREDENTIALS_RATE_LIMIT;
     case TOKEN_EXCHANGE_GRANT_TYPE:
       return TOKEN_EXCHANGE_RATE_LIMIT;
+    case OAUTH_DEVICE_CODE_GRANT_TYPE:
+      return DEVICE_CODE_RATE_LIMIT;
     default:
       return unhandledGrantType(grant_type);
   }
@@ -129,6 +138,8 @@ async function handleOidcGrant(
       return await handleOidcClientCredentialsGrant(ctx);
     case TOKEN_EXCHANGE_GRANT_TYPE:
       return await handleOidcTokenExchangeGrant(ctx);
+    case OAUTH_DEVICE_CODE_GRANT_TYPE:
+      return await handleOidcDeviceCodeGrant(ctx);
     default:
       return unhandledGrantType(grant_type);
   }
@@ -142,7 +153,8 @@ async function handleOidcGrant(
  * clients, mints a machine-to-machine access token for the app's
  * service account (grant_type=client_credentials) or a delegated access
  * token on which that service account acts for one of the app's users
- * (RFC 8693 token exchange). Scope/nonce are
+ * (RFC 8693 token exchange), or redeems the device code of a device
+ * authorization the user approved (RFC 8628 device grant). Scope/nonce are
  * first-class on every login flow, so any code is redeemable here
  * regardless of which surface initiated the login (PKCE + client +
  * redirect_uri binding are the security boundary, plus client-secret
@@ -159,8 +171,8 @@ async function handleOidcGrant(
  * grant_type dispatch, client_id validation, CORS, client
  * authentication, rate limiting, token delivery, exception capture);
  * the per-grant logic lives in ./authorization_code_grant.ts,
- * ./refresh_token_grant.ts, ./client_credentials_grant.ts and
- * ./token_exchange_grant.ts. The
+ * ./refresh_token_grant.ts, ./client_credentials_grant.ts,
+ * ./token_exchange_grant.ts and ./device_code_grant.ts. The
  * operation in ./operation.ts mounts it.
  */
 export async function handleOidcTokenRequest(request: NextRequest): Promise<NextResponse> {
@@ -191,7 +203,7 @@ export async function handleOidcTokenRequest(request: NextRequest): Promise<Next
     return applyOidcTokenCors(
       oidcTokenErrorResponse(
         "unsupported_grant_type",
-        "grant_type must be 'authorization_code', 'refresh_token', 'client_credentials', or 'urn:ietf:params:oauth:grant-type:token-exchange'.",
+        "grant_type must be 'authorization_code', 'refresh_token', 'client_credentials', 'urn:ietf:params:oauth:grant-type:token-exchange', or 'urn:ietf:params:oauth:grant-type:device_code'.",
       ),
       null,
     );

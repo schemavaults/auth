@@ -44,13 +44,19 @@ describe("findMisplacedTokenExchangeParam", () => {
       "code_verifier",
       "redirect_uri",
       "refresh_token",
+      "device_code",
       "refresh_token_delivery",
     ]);
   });
 
   describe("on the other grants", () => {
     test("names any RFC 8693 parameter", () => {
-      expect(OTHER_GRANTS).toEqual(["authorization_code", "refresh_token", "client_credentials"]);
+      expect(OTHER_GRANTS).toEqual([
+        "authorization_code",
+        "refresh_token",
+        "client_credentials",
+        "urn:ietf:params:oauth:grant-type:device_code",
+      ]);
       for (const grant_type of OTHER_GRANTS) {
         for (const name of TOKEN_EXCHANGE_ONLY_PARAMS) {
           expect(findMisplacedTokenExchangeParam(grant_type, param({ [name]: "x" }))).toEqual({

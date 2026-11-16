@@ -13,6 +13,7 @@ import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { accessLevelSatisfies, getUserAccessLevelForResource, type OwnedResourceAccessLevel } from "@/lib/ownership/resource-access";
 import { summarizeServiceAccountOrganizationMembership } from "@/lib/ownership/service-account-organization-membership";
+import { getAppDeviceAuthorizationPolicy } from "@/lib/auth-db/device-authorizations";
 import type { ServerRuntime } from "next/types";
 import { connection } from "next/server";
 
@@ -72,6 +73,7 @@ export default async function AppDetailPage(
       const service_account_organization_role = hardcoded
         ? null
         : await app_registry.getServiceAccountOrganizationRole(client_app_id);
+      const device_authorization = await getAppDeviceAuthorizationPolicy(dbh.db, client_app_id);
 
       const current_environment = getAppEnvironment();
 
@@ -104,6 +106,10 @@ export default async function AppDetailPage(
             app,
             service_account_organization_role,
           )}
+          device_authorization={{
+            enabled: device_authorization.enabled,
+            enabled_at: device_authorization.enabled_at,
+          }}
           hardcoded={hardcoded}
           isOrgOwner={canManage}
           current_environment={current_environment}

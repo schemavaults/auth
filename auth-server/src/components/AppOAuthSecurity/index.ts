@@ -4,3 +4,5 @@ export { AppCallbackUrlsCard } from "./AppCallbackUrlsCard";
 export type { AppCallbackUrlsCardProps } from "./AppCallbackUrlsCard";
 export { AppServiceAccountCard } from "./AppServiceAccountCard";
 export type { AppServiceAccountCardProps } from "./AppServiceAccountCard";
+export { AppDeviceAuthorizationCard } from "./AppDeviceAuthorizationCard";
+export type { AppDeviceAuthorizationCardProps } from "./AppDeviceAuthorizationCard";

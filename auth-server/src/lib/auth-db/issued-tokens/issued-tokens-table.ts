@@ -1,12 +1,16 @@
 import type { Insertable, Selectable } from "@schemavaults/dbh";
 
 export type IssuedTokenType = "access" | "refresh";
-/** The grants recorded as `grant_type` (`token_exchange`: RFC 8693, delegated tokens). */
+/**
+ * The grants recorded as `grant_type` (`token_exchange`: RFC 8693, delegated
+ * tokens; `device_code`: RFC 8628, the device authorization grant).
+ */
 export const ISSUED_TOKEN_GRANT_TYPES = [
   "refresh_token",
   "authorization_code",
   "client_credentials",
   "token_exchange",
+  "device_code",
 ] as const;
 export type IssuedTokenGrantType = (typeof ISSUED_TOKEN_GRANT_TYPES)[number];
 

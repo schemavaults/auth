@@ -60,6 +60,8 @@ import type {
   UpdatedClientApplicationServiceAccountOrganizationMembership,
 } from "@/lib/client-application-service-account";
 import type { AuthorizeClientApplicationConsent } from "@/lib/send-authorize-client-application-request";
+import type { ClientApplicationDeviceAuthorizationPolicy } from "@/lib/client-application-device-authorization";
+import type { SignInWithDeviceAuthorizationOptions } from "@/lib/device-authorization/sign-in-with-device-authorization";
 import type {
   RevokeClientApplicationAuthorizationResult,
   RevokeMyAppScopeConsentResult,
@@ -804,6 +806,73 @@ export class SchemaVaultsAuthClient
       throw new Error("Failed to authenticate with redirect to login!");
     }
   } // login()
+
+  public async signInWithDeviceAuthorization(
+    options: SignInWithDeviceAuthorizationOptions,
+  ): Promise<void> {
+    if (this.isClientForAuthServer) {
+      throw new Error(
+        "The auth server's own client signs in on its login page, not with the device authorization grant",
+      );
+    }
+    // The same scope / resource defaults as login() (`authorization_params`).
+    const request: SignInAuthorizationRequest = resolveSignInAuthorizationRequest(
+      {
+        ...(options.scope !== undefined ? { scope: options.scope } : {}),
+        ...(options.resource !== undefined ? { resource: options.resource } : {}),
+      },
+      this._authorization_params,
+    );
+    const signIn = await import("@/lib/device-authorization/sign-in-with-device-authorization").then(
+      (m) => m.signInWithDeviceAuthorization,
+    );
+    // An abort is the app's own decision: rethrown, never reported.
+    let aborted: { reason: unknown } | null = null;
+    await this.withErrorReporting("signInWithDeviceAuthorization", async () => {
+      try {
+        await signIn({
+          options: {
+            ...options,
+            scope: request.scope,
+            ...(request.resource ? { resource: request.resource } : {}),
+          },
+          default_scope: request.scope,
+          defaultTokenAudiences: this.defaultTokenAudiences,
+          auth_server_url: this.auth_server_uri,
+          client_app_id: this.app_id,
+          environment: this.environment,
+          adapter: this.adapter,
+          auth_server_app_id: this._auth_server_app_id,
+          debug: this.DEBUG,
+          storeRefreshToken: this.storeRefreshToken.bind(this),
+          storeMultipleAccessTokens: this.storeMultipleAccessTokens.bind(this),
+          exchangeAuthTokens: this.exchangeAuthTokens.bind(this),
+          fetchUserData: this.fetchUserDataFromServer.bind(this),
+          storeUserData: this.storeUserData.bind(this),
+          onSessionEstablished: () => {
+            try {
+              this.adapter.storeSessionAuthorizationRequest?.(request);
+            } catch (e: unknown) {
+              console.error(
+                "[SchemaVaultsAuthClient] Failed to record the session's sign-in authorization request: ",
+                e,
+              );
+            }
+          },
+          triggerAuthStateChanged: this.triggerAuthStateChanged.bind(this),
+        });
+      } catch (e: unknown) {
+        if (options.signal?.aborted) {
+          aborted = { reason: e };
+          return;
+        }
+        throw e;
+      }
+    });
+    if (aborted !== null) {
+      throw (aborted as { reason: unknown }).reason;
+    }
+  } // signInWithDeviceAuthorization()
 
   public async register(opts?: AuthenticateWithRedirectOptions): Promise<void> {
     if (this.isClientForAuthServer) {
@@ -2403,6 +2472,37 @@ export class SchemaVaultsAuthClient
       auth_server_uri: this.auth_server_uri,
       api_server_id,
       accept_delegated_tokens,
+    });
+  }
+
+  public async getClientApplicationDeviceAuthorization(
+    app_id: AppId,
+  ): Promise<ClientApplicationDeviceAuthorizationPolicy> {
+    const fn = await import("@/lib/client-application-device-authorization").then(
+      (m) => m.getClientApplicationDeviceAuthorization,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+    });
+  }
+
+  public async setClientApplicationDeviceAuthorization(
+    app_id: AppId,
+    enabled: boolean,
+  ): Promise<ClientApplicationDeviceAuthorizationPolicy> {
+    this.assertAppAndApiManagementWriteAccess(
+      "setClientApplicationDeviceAuthorization",
+    );
+    const fn = await import("@/lib/client-application-device-authorization").then(
+      (m) => m.setClientApplicationDeviceAuthorization,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      app_id,
+      enabled,
     });
   }
 

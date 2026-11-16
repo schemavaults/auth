@@ -21,6 +21,8 @@ export const OIDC_ENDPOINT_PATHS = {
   introspection: "/api/oidc/introspect",
   // RFC 7009 token revocation.
   revocation: "/api/oidc/revoke",
+  // RFC 8628 device authorization (the device grant's first leg).
+  device_authorization: "/api/oidc/device_authorization",
   jwks: "/api/oidc/jwks",
   // RFC 7591 dynamic client registration; advertised in the discovery
   // document only when the server setting enabling it is on.

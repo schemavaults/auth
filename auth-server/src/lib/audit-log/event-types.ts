@@ -27,6 +27,8 @@ export const auditEventTypes = [
   "user.app_authorized",
   "user.app_authorization_revoked",
   "user.app_scope_consent_revoked",
+  "user.device_authorized",
+  "user.device_authorization_denied",
   "user.disabled",
   "user.enabled",
   "user.promoted_to_admin",

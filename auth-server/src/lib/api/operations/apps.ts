@@ -25,6 +25,10 @@ import {
   deleteAppServiceAccountOrganizationMembership,
   setAppServiceAccountOrganizationMembership,
 } from "@/app/api/apps/[app_id]/service-account/organization-membership/operation";
+import {
+  getAppDeviceAuthorizationPolicyOperation,
+  setAppDeviceAuthorizationPolicyOperation,
+} from "@/app/api/apps/[app_id]/device-authorization/operation";
 
 /** Operations of the "apps" domain, in the order they appear in the docs. */
 export const appsOperations: readonly AnyOperationDefinition[] = [
@@ -50,4 +54,6 @@ export const appsOperations: readonly AnyOperationDefinition[] = [
   deleteAppServiceAccount,
   setAppServiceAccountOrganizationMembership,
   deleteAppServiceAccountOrganizationMembership,
+  getAppDeviceAuthorizationPolicyOperation,
+  setAppDeviceAuthorizationPolicyOperation,
 ];

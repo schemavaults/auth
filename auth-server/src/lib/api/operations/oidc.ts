@@ -1,5 +1,6 @@
 import type { AnyOperationDefinition } from "@schemavaults/openapi-operations";
 import { oidcAuthorize } from "@/app/api/oidc/authorize/operation";
+import { postOidcDeviceAuthorization } from "@/app/api/oidc/device_authorization/operation";
 import { postOidcIntrospect } from "@/app/api/oidc/introspect/operation";
 import { getOidcJwks } from "@/app/api/oidc/jwks/operation";
 import { getOpenIdConfiguration } from "@/app/api/oidc/openid-configuration/operation";
@@ -13,6 +14,7 @@ export const oidcOperations: readonly AnyOperationDefinition[] = [
   getOpenIdConfiguration,
   getOidcJwks,
   oidcAuthorize,
+  postOidcDeviceAuthorization,
   postOidcToken,
   getOidcUserinfo,
   postOidcUserinfo,

@@ -17,6 +17,7 @@ import { ArrowRight, Loader2, Mail, MailCheck } from "lucide-react";
 import { Wordmark } from "@/components/Wordmark";
 import { ThemedPageBackground } from "@/components/ThemedPageBackground";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
+import { PkceFlowExpiryCountdown } from "@/components/PkceFlowExpiry";
 
 export interface EmailVerificationRequiredViewProps {
   /** The third-party client app waiting for the user (name shown as inert text). */
@@ -57,9 +58,14 @@ export function EmailVerificationRequiredView({
   const [sending, startSending] = useTransition();
   const [continuing, setContinuing] = useState<boolean>(false);
   const hasResumed = useRef<boolean>(false);
+  // Once the parked flow's PKCE challenge has expired, resuming it could only
+  // end on the "sign-in request expired" error page: the user goes back to
+  // the app instead (verifying the address is still worth finishing).
+  const [flowExpired, setFlowExpired] = useState<boolean>(false);
+  const flowExpiredRef = useRef<boolean>(false);
 
   function resumeFlow(): void {
-    if (hasResumed.current) return;
+    if (hasResumed.current || flowExpiredRef.current) return;
     hasResumed.current = true;
     setContinuing(true);
     if (debug) {
@@ -79,7 +85,7 @@ export function EmailVerificationRequiredView({
     const endpoint: string = `/api/auth/whoami/${encodeURIComponent(auth_server_app_id)}`;
 
     async function poll(): Promise<void> {
-      if (cancelled || hasResumed.current) return;
+      if (cancelled || hasResumed.current || flowExpiredRef.current) return;
       if (Date.now() - startedAt > VERIFICATION_POLL_MAX_DURATION_MS) return;
       try {
         const response = await fetch(endpoint, {
@@ -177,6 +183,14 @@ export function EmailVerificationRequiredView({
             </strong>
             , please verify your email address.
           </CardDescription>
+          <PkceFlowExpiryCountdown
+            app_name={app.app_name}
+            onExpired={() => {
+              flowExpiredRef.current = true;
+              setFlowExpired(true);
+            }}
+            className="pt-2"
+          />
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col items-center justify-center gap-2 py-2">
@@ -220,7 +234,7 @@ export function EmailVerificationRequiredView({
           <Button
             type="button"
             onClick={resumeFlow}
-            disabled={continuing}
+            disabled={continuing || flowExpired}
             className="bg-green-500 hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
             data-testid="continue-after-email-verification-button"
           >

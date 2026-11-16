@@ -47,6 +47,10 @@ import type { ClientErrorsTable } from "./client-errors";
 import type { UserEmailLogTable } from "./user-email-log";
 import type { AuditEventsTable } from "./audit-events";
 import type {
+  AppDeviceAuthorizationPoliciesTable,
+  DeviceAuthorizationsTable,
+} from "./device-authorizations/device-authorizations-table";
+import type {
   UserMfaFactorsTable,
   UserMfaRecoveryCodesTable,
   UserWebauthnCredentialsTable,
@@ -75,6 +79,8 @@ export type AuthDatabase = {
   user_email_log: UserEmailLogTable;
   audit_events: AuditEventsTable;
   authorization_codes: AuthorizationCodesTable;
+  device_authorizations: DeviceAuthorizationsTable;
+  app_device_authorization_policies: AppDeviceAuthorizationPoliciesTable;
   invite_codes: InviteCodesTable;
   organizations: OrganizationsTable;
   organization_membership_roles: OrganizationMembershipRolesTable;

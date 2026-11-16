@@ -18,6 +18,7 @@ import {
 import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { hashClientSecret } from "@/lib/oauth2/client-secret";
 import { CreateTestNextjsAppRequest } from "./request-schema";
+import { setAppDeviceAuthorizationEnabled } from "@/lib/auth-db/device-authorizations";
 
 /**
  * Seeds the app + API server pair the example Next.js resource server
@@ -71,6 +72,7 @@ export const createTestNextjsApp = defineOperation({
       connect_to_api_server_ids,
       allow_dynamic_clients,
       resource_url_match_mode,
+      enable_device_authorization,
     } = ctx.body;
 
     const now: number = Date.now();
@@ -137,6 +139,10 @@ export const createTestNextjsApp = defineOperation({
       for (const other_api_server_id of connect_to_api_server_ids ?? []) {
         if (other_api_server_id === api_server_id) continue;
         await appToApiRegistry.allow(api_server_id, other_api_server_id, null);
+      }
+
+      if (enable_device_authorization === true) {
+        await setAppDeviceAuthorizationEnabled(db, api_server_id, true, null);
       }
 
       for (const callback_url of callback_urls ?? []) {

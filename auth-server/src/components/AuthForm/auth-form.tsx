@@ -50,6 +50,7 @@ import { authPasswordRequirements } from "./password-requirements";
 import type { PartialAppInfo } from "@/lib/PartialAppInfo";
 import { AppAuthorizationConsentScreen } from "@/components/AppAuthorizationConsentScreen";
 import resolveNextHref from "@/lib/next-href";
+import { PkceFlowExpiryCountdown } from "@/components/PkceFlowExpiry";
 
 
 interface AuthFormProps<T extends "login" | "register">
@@ -158,6 +159,9 @@ export function AuthForm<T extends "login" | "register">({
   const router = useRouter();
 
   const [pendingAuthorization, setPendingAuthorization] = useState<PendingAuthorizationState | null>(null);
+  // A third-party sign-in request expires with its PKCE challenge: once it
+  // has, the form can no longer complete it.
+  const [flowExpired, setFlowExpired] = useState<boolean>(false);
 
   // `fresh_authorization_code`: minted by the consent screen when the user
   // approved API scopes the code minted at sign-in did not hold.
@@ -282,6 +286,13 @@ export function AuthForm<T extends "login" | "register">({
         <CardHeader>
           <AuthFormCardTitle type={type} />
           <AuthFormCardDescription type={type} />
+          {onSuccessfulAuthenticate !== "account-page" ? (
+            <PkceFlowExpiryCountdown
+              app_name={props.app?.app_name ?? null}
+              onExpired={() => setFlowExpired(true)}
+              className="pt-2"
+            />
+          ) : null}
         </CardHeader>
         <form
           onSubmit={form.handleSubmit(
@@ -428,7 +439,7 @@ export function AuthForm<T extends "login" | "register">({
             <Button
               type="submit"
               className="bg-green-500 hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-md transition-colors duration-200 ease-in-out"
-              disabled={submitting}
+              disabled={submitting || flowExpired}
             >
               {submitting ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" role="status" />
