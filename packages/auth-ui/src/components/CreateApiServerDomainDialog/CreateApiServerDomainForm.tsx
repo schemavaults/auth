@@ -110,6 +110,10 @@ export function CreateApiServerDomainForm({
 
     const domain: SchemaVaultsApiServerDomainRef = {
       ...values,
+      // A fresh id for every submission, so a retry within the same dialog
+      // open (after a refused or interrupted request) never re-sends an id
+      // the server may already hold for another domain.
+      api_server_domain_ref_id: uuid(),
       created_at: Date.now(),
       api_server_id: values.api_server_id,
     };

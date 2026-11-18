@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/example-nextjs-resource-server",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -18,7 +18,7 @@
     "@schemavaults/sandbox-management-sdk": "0.1.1",
     "@schemavaults/theme": "0.30.0",
     "@schemavaults/ui": "0.119.0",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "openid-client": "6.8.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",

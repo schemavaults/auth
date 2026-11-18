@@ -121,6 +121,12 @@ export function CreateAppDomainDialog({
 
     const domain: SchemaVaultsAppDomainRef = {
       ...values,
+      // A fresh id for every submission. This dialog (and its form) stays
+      // mounted between opens, so the default id minted when the form was
+      // created would otherwise be sent again with the next domain added
+      // (e.g. `https://www.example.com` after `https://example.com`), which
+      // the server refuses with a 409 because the id is already taken.
+      app_domain_ref_id: uuid(),
       created_at: Date.now(),
       app_id: values.app_id,
     };

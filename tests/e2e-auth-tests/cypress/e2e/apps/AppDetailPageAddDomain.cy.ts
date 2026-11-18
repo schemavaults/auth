@@ -7,6 +7,10 @@
 //      organization-owned app, clicks "Add domain" in the Connected Domains
 //      card, submits the create-app-domain dialog, and sees the new domain
 //      listed on the page (and returned by GET /api/apps/:app_id/domains).
+//      Reopening the dialog on the same page (no reload: the dialog stays
+//      mounted) then adds the domain's www. subdomain, which must be accepted
+//      as a separate domain — the dialog once re-sent the first domain's
+//      app_domain_ref_id here and got a 409.
 //   2. A regular MEMBER of the owner organization (role === "member") can
 //      view the same detail page but must not see the "Add domain" button
 //      nor the dialog — the same read-only gate the /apps table applies to
@@ -108,6 +112,7 @@ describe("Adding a domain from the app detail page (/apps/:app_id)", () => {
                 const app_id: string = generateV4Uuid();
                 const app_name = `App Detail Domain ${randomCode}`;
                 const domain = `https://detail-${lowerCode}.example.test`;
+                const wwwDomain = `https://www.detail-${lowerCode}.example.test`;
 
                 cy.create_organization_via_request({
                   organization_id,
@@ -195,6 +200,44 @@ describe("Adding a domain from the app detail page (/apps/:app_id)", () => {
                       "No domains are registered for the current environment",
                     ).should("not.exist");
 
+                    // Add the www. subdomain through the same (still
+                    // mounted) dialog: a separate domain, accepted with its
+                    // own app_domain_ref_id.
+                    cy.open_dialog_with_button(
+                      "add-app-domain-button",
+                      "create-app-domain-dialog-content",
+                    );
+                    cy.get(dialogContentSelector).should("be.visible");
+
+                    typeDomainIntoDialog(wwwDomain, 3);
+
+                    cy.intercept({
+                      method: "POST",
+                      url: `**/api/apps/${app_id}/domains`,
+                      times: 1,
+                    }).as("createWwwAppDomainRequest");
+
+                    cy.get(submitButtonSelector)
+                      .should("exist")
+                      .should("not.be.disabled")
+                      .click();
+
+                    cy.wait("@createWwwAppDomainRequest", {
+                      timeout: 20000,
+                      requestTimeout: 20000,
+                    }).then((interception) => {
+                      cy.wrap(interception.response?.statusCode).should(
+                        "eq",
+                        200,
+                        "Adding the www. subdomain should return 200, not a 409",
+                      );
+                    });
+
+                    cy.get(dialogContentSelector).should("not.exist");
+                    cy.contains("p", wwwDomain, { timeout: 20000 })
+                      .scrollIntoView()
+                      .should("be.visible");
+
                     cy.request<ListAppDomainsResponseBody>(
                       `/api/apps/${app_id}/domains`,
                     ).then((listResponse) => {
@@ -209,6 +252,13 @@ describe("Adding a domain from the app detail page (/apps/:app_id)", () => {
                             d.domain === domain && d.environment === "test",
                         ),
                         "the list endpoint should return the domain added from the detail page",
+                      ).to.be.true;
+                      expect(
+                        listResponse.body.list.some(
+                          (d) =>
+                            d.domain === wwwDomain && d.environment === "test",
+                        ),
+                        "the list endpoint should return the www. subdomain as a separate domain",
                       ).to.be.true;
                     });
 

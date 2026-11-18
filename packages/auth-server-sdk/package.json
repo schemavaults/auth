@@ -1,7 +1,7 @@
 {
   "name": "@schemavaults/auth-server-sdk",
   "description": "TypeScript SDK for building authenticated endpoints/middlewares for the Auth Server and Resource Servers",
-  "version": "0.44.0",
+  "version": "0.44.2",
   "license": "UNLICENSED",
   "private": false,
   "repository": {
@@ -39,7 +39,7 @@
     "bun-types": "1.4.4",
     "@types/react": "19.3.0",
     "tsc-alias": "1.9.0",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "eslint": "9.39.1",
     "@eslint/js": "9.39.1",
     "globals": "16.5.0",

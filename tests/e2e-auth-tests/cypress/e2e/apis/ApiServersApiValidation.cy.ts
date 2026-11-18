@@ -9,6 +9,9 @@
 //   GET/POST   /api/apis/[api_server_id]/domains -> 404 unknown, 403 non-member,
 //                                              400 body/path id mismatch,
 //                                              409 duplicate domain + environment
+//                                              or reused api_server_domain_ref_id
+//                                              (an apex domain and its www.
+//                                              subdomain are separate domains)
 //   GET/POST   /api/apis/[api_server_id]/jwks-access-key -> `key_metadata: false`
 //                                              before a key exists, 409 on a
 //                                              second POST, 400 malformed id
@@ -183,6 +186,40 @@ describe("API servers API validation", () => {
       domainBody("dup-api.example", environment === "test" ? "development" : "test"),
       "same domain in another environment",
     );
+
+    // An apex domain and its www. subdomain are separate domains, and a 409
+    // says which clash it is: the domain itself, or a reused id.
+    const apexBody = domainBody("https://apex-api.example");
+    expectStatus("POST", `/api/apis/${api_server_id}/domains`, 200, apexBody, "apex domain");
+    expectStatus(
+      "POST",
+      `/api/apis/${api_server_id}/domains`,
+      200,
+      domainBody("https://www.apex-api.example"),
+      "www. subdomain of the apex domain",
+    );
+    cy.request<ApiResponseBody>({
+      method: "POST",
+      url: `/api/apis/${api_server_id}/domains`,
+      body: domainBody("https://apex-api.example"),
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status, "apex domain again").to.eq(409);
+      expect(response.body.message).to.eq(
+        `"https://apex-api.example" is already registered for this API server in the ${environment} environment.`,
+      );
+    });
+    cy.request<ApiResponseBody>({
+      method: "POST",
+      url: `/api/apis/${api_server_id}/domains`,
+      body: { ...apexBody, domain: "https://docs.apex-api.example" },
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status, "another domain under a used api_server_domain_ref_id").to.eq(409);
+      expect(response.body.message).to.contain(
+        `api_server_domain_ref_id "${apexBody.api_server_domain_ref_id}"`,
+      );
+    });
     expectStatus(
       "POST",
       `/api/apis/${api_server_id}/domains`,

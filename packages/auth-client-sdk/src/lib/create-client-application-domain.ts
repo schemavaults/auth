@@ -25,8 +25,17 @@ export async function createClientApplicationDomain({
   );
 
   if (!response.ok) {
+    // Surface the server's explanation (e.g. which conflict a 409 is)
+    // rather than only the status code.
+    const body: unknown = await response.json().catch(() => null);
+    const message: unknown =
+      body && typeof body === "object" && "message" in body
+        ? (body as { message: unknown }).message
+        : undefined;
     throw new Error(
-      `Failed to create client application domain: ${response.status}`,
+      typeof message === "string" && message.length > 0
+        ? message
+        : `Failed to create client application domain: ${response.status}`,
     );
   }
 
