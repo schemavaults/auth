@@ -22,6 +22,11 @@ import shouldEnableDebug from "@/lib/should-enable-debug";
 import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations/list-user-organization-memberships";
 import { ConflictError } from "@/lib/error/ConflictError";
 import {
+  API_SERVER_DOMAIN_REGISTRATION_OWNER,
+  assertDomainRegistrationAvailable,
+  domainRefIdInUseError,
+} from "@/lib/auth-db/domain-registrations/registration-conflicts";
+import {
   isHardcodedApiServerId,
   isValidApiServerId,
   organizationMembershipVisibilitySchema,
@@ -509,16 +514,22 @@ export class SchemaVaultsApiServerRegistry {
 
     // The same domain may only be registered once per API server +
     // environment (the primary key is the ref id, so check explicitly).
+    // Domains compare exactly: an apex domain and its www. subdomain are
+    // separate registrations.
     const existing = await this.getApiServerDomains(api_server_id);
-    const duplicate = existing.some(
-      (ref) =>
-        ref.environment === domain.environment && ref.domain === domain.domain,
+    assertDomainRegistrationAvailable(
+      API_SERVER_DOMAIN_REGISTRATION_OWNER,
+      existing.map((ref) => ({
+        ref_id: ref.api_server_domain_ref_id,
+        domain: ref.domain,
+        environment: ref.environment,
+      })),
+      {
+        ref_id: domain.api_server_domain_ref_id,
+        domain: domain.domain,
+        environment: domain.environment,
+      },
     );
-    if (duplicate) {
-      throw new ConflictError(
-        "This domain is already registered for this API server and environment",
-      );
-    }
 
     try {
       const result = await this.db
@@ -528,7 +539,11 @@ export class SchemaVaultsApiServerRegistry {
         .executeTakeFirst();
 
       if (result.numInsertedOrUpdatedRows === BigInt(0)) {
-        throw new ConflictError("This API server domain already exists");
+        // The ref id belongs to a domain of another API server
+        throw domainRefIdInUseError(
+          API_SERVER_DOMAIN_REGISTRATION_OWNER,
+          domain.api_server_domain_ref_id,
+        );
       }
     } catch (e: unknown) {
       if (e instanceof ConflictError) throw e;

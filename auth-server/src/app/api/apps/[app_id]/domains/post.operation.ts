@@ -36,7 +36,11 @@ export const createAppDomain = defineOperation({
     200: { description: "The domain was added", schema: ResourceCreationResponse },
     ...validationErrorResponse,
     ...sessionErrorResponses,
-    409: { description: "The domain is already registered for this app and environment", schema: ErrorResponse },
+    409: {
+      description:
+        "The domain is already registered for this app in that environment, or the body's `app_domain_ref_id` is already used by another domain (send a new UUID for each domain). `message` says which. Domains compare exactly, so `https://example.com` and `https://www.example.com` are separate domains.",
+      schema: ErrorResponse,
+    },
     500: { description: "Failed to add the domain", schema: ErrorResponse },
   },
   handler: async (ctx) => {

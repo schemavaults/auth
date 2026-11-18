@@ -10,6 +10,9 @@
 //   GET/POST   /api/apps/[app_id]/domains -> 404 unknown, 403 non-member,
 //                                            400 body/path id mismatch,
 //                                            409 duplicate domain + environment
+//                                            or reused app_domain_ref_id (an
+//                                            apex domain and its www.
+//                                            subdomain are separate domains)
 //   GET  /api/apps/[app_id]/check-authorization + POST/DELETE /api/apps/[app_id]/authorize
 //                                         -> the false -> authorize -> true
 //                                            -> revoke -> false round trip,
@@ -274,6 +277,54 @@ describe("Apps API validation", () => {
         domainBody("dup.example", environment === "test" ? "development" : "test"),
         "same domain in another environment",
       );
+
+      // An apex domain and its www. subdomain are separate domains, and a
+      // 409 says which clash it is: the domain itself, or a reused id.
+      const apexBody = domainBody("https://apex.example");
+      expectStatus("POST", `/api/apps/${app_id}/domains`, 200, apexBody, "apex domain");
+      expectStatus(
+        "POST",
+        `/api/apps/${app_id}/domains`,
+        200,
+        domainBody("https://www.apex.example"),
+        "www. subdomain of the apex domain",
+      );
+      cy.request<ApiResponseBody>({
+        method: "POST",
+        url: `/api/apps/${app_id}/domains`,
+        body: domainBody("https://apex.example"),
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status, "apex domain again").to.eq(409);
+        expect(response.body.message).to.eq(
+          `"https://apex.example" is already registered for this app in the ${environment} environment.`,
+        );
+      });
+      cy.request<ApiResponseBody>({
+        method: "POST",
+        url: `/api/apps/${app_id}/domains`,
+        body: { ...apexBody, domain: "https://shop.apex.example" },
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status, "another domain under a used app_domain_ref_id").to.eq(409);
+        expect(response.body.message).to.contain(
+          `app_domain_ref_id "${apexBody.app_domain_ref_id}"`,
+        );
+      });
+      // Ref ids are unique across apps too
+      const other_app_id = randomAppId();
+      expectStatus("POST", "/api/apps", 200, appBody(other_app_id), "second app");
+      cy.request<ApiResponseBody>({
+        method: "POST",
+        url: `/api/apps/${other_app_id}/domains`,
+        body: { ...apexBody, app_id: other_app_id, domain: "https://other.example" },
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status, "another app's app_domain_ref_id").to.eq(409);
+        expect(response.body.message).to.contain(
+          `app_domain_ref_id "${apexBody.app_domain_ref_id}"`,
+        );
+      });
       expectStatus(
         "POST",
         `/api/apps/${app_id}/domains`,

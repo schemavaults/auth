@@ -27,6 +27,11 @@ import type { NewApp } from "./apps-table";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { ConflictError } from "@/lib/error/ConflictError";
+import {
+  APP_DOMAIN_REGISTRATION_OWNER,
+  assertDomainRegistrationAvailable,
+  domainRefIdInUseError,
+} from "@/lib/auth-db/domain-registrations/registration-conflicts";
 import listApps from "./list-apps";
 import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations/list-user-organization-memberships";
 import parseAppDefinitionDatabaseRow from "./parse-app-definition-database-row";
@@ -546,17 +551,22 @@ export class SchemaVaultsAppRegistry {
 
     // The same domain may only be registered once per app + environment
     // (the primary key is the ref id, so this has to be checked explicitly).
+    // Domains compare exactly: an apex domain and its www. subdomain are
+    // separate registrations.
     const existing = await this.getAppDomains(app_id);
-    const duplicate = existing.some(
-      (ref) =>
-        ref.environment === app_domain.environment &&
-        ref.domain === app_domain.domain,
+    assertDomainRegistrationAvailable(
+      APP_DOMAIN_REGISTRATION_OWNER,
+      existing.map((ref) => ({
+        ref_id: ref.app_domain_ref_id,
+        domain: ref.domain,
+        environment: ref.environment,
+      })),
+      {
+        ref_id: app_domain.app_domain_ref_id,
+        domain: app_domain.domain,
+        environment: app_domain.environment,
+      },
     );
-    if (duplicate) {
-      throw new ConflictError(
-        "This domain is already registered for this app and environment",
-      );
-    }
 
     try {
       const result = await this.db
@@ -566,7 +576,11 @@ export class SchemaVaultsAppRegistry {
         .executeTakeFirst();
 
       if (result.numInsertedOrUpdatedRows === BigInt(0)) {
-        throw new ConflictError("This app domain already exists");
+        // The ref id belongs to a domain of another app
+        throw domainRefIdInUseError(
+          APP_DOMAIN_REGISTRATION_OWNER,
+          app_domain.app_domain_ref_id,
+        );
       }
     } catch (e: unknown) {
       if (e instanceof ConflictError) throw e;
