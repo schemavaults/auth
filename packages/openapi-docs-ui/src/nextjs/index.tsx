@@ -1,11 +1,17 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { parseOpenApiDocument } from "@/model/parse-openapi-document";
 import { findOperationBySlug } from "@/model/slug";
 import { withServerUrl } from "@/model/server-url";
-import type { ApiDocsModel } from "@/model/types";
+import type { ApiDocsModel, ApiDocsOperation } from "@/model/types";
 import { ApiDocsIndex, type ApiDocsIndexProps } from "@/components/ApiDocsIndex";
 import { ApiOperationPage, type ApiOperationPageProps } from "@/components/ApiOperationPage";
+import type { ApiDocsBackLinkTarget } from "@/components/ApiDocsNavigation";
+
+/** The page a `navigation` function renders for. */
+export type ApiDocsNavigationContext =
+  | { readonly page: "index"; readonly model: ApiDocsModel }
+  | { readonly page: "operation"; readonly model: ApiDocsModel; readonly operation: ApiDocsOperation };
 
 export interface CreateApiDocsPagesOptions {
   /**
@@ -30,9 +36,29 @@ export interface CreateApiDocsPagesOptions {
    * request scope.
    */
   readonly resolveServerUrl?: () => Promise<string | undefined> | string | undefined;
-  /** Extra props forwarded to the index component. */
+  /**
+   * A link out of the docs, back to the app's own pages, shown at the top of
+   * the index and of every operation page, e.g.
+   * `{ href: "/dashboard", label: "Back to dashboard" }`.
+   */
+  readonly backLink?: ApiDocsBackLinkTarget;
+  /**
+   * The app's own navigation UI (links, a menu, a logo), shown at the top of
+   * the index and of every operation page, after the back link. A function
+   * receives the page being rendered, so the navigation can differ per page;
+   * it is called on the server while the page renders, and may return server
+   * or client components.
+   */
+  readonly navigation?: ReactNode | ((context: ApiDocsNavigationContext) => ReactNode);
+  /**
+   * Extra props forwarded to the index component. Its `backLink` /
+   * `navigation` take precedence over the options above.
+   */
   readonly indexProps?: Omit<ApiDocsIndexProps, "model" | "basePath" | "openApiDocumentHref">;
-  /** Extra props forwarded to the operation page component. */
+  /**
+   * Extra props forwarded to the operation page component. Its `backLink` /
+   * `navigation` take precedence over the options above.
+   */
   readonly operationProps?: Omit<ApiOperationPageProps, "model" | "operation" | "basePath">;
   /** Wraps each page (layout chrome, containers). */
   readonly wrap?: (page: ReactElement) => ReactElement;
@@ -111,6 +137,9 @@ export function createApiDocsPages(options: CreateApiDocsPagesOptions): ApiDocsP
     return url ? withServerUrl(model, url) : model;
   };
 
+  const renderNavigation = (context: ApiDocsNavigationContext): ReactNode =>
+    typeof options.navigation === "function" ? options.navigation(context) : options.navigation;
+
   const resolveSlug = async (props: ApiDocsOperationPageProps): Promise<string | null> => {
     const params = await props.params;
     const raw = params[slugParam];
@@ -123,6 +152,8 @@ export function createApiDocsPages(options: CreateApiDocsPagesOptions): ApiDocsP
       const model = await loadRenderModel();
       return wrap(
         <ApiDocsIndex
+          backLink={options.backLink}
+          navigation={renderNavigation({ page: "index", model })}
           {...options.indexProps}
           model={model}
           basePath={options.basePath}
@@ -137,6 +168,8 @@ export function createApiDocsPages(options: CreateApiDocsPagesOptions): ApiDocsP
       if (!operation) notFound();
       return wrap(
         <ApiOperationPage
+          backLink={options.backLink}
+          navigation={renderNavigation({ page: "operation", model, operation })}
           {...options.operationProps}
           model={model}
           operation={operation}

@@ -154,7 +154,8 @@ per-route `operation.ts` / `route.ts` files and the catalogue agree. Request bod
 
 `packages/openapi-docs-ui` renders such a document: `parseOpenApiDocument()` (framework-free model),
 `ApiDocsIndex` / `ApiOperationPage` components, and `createApiDocsPages()` from the `nextjs` sub-export which
-produces the `app/docs/page.tsx` + `app/docs/[slug]/page.tsx` pages (with `generateStaticParams`). See each
+produces the `app/docs/page.tsx` + `app/docs/[slug]/page.tsx` pages (with `generateStaticParams`); its `backLink` /
+`navigation` options put a way back into the host app at the top of every docs page. See each
 package's README for usage.
 
 #### The auth server's API (`auth-server/src/lib/api/`)

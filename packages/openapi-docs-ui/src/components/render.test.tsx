@@ -125,6 +125,28 @@ describe("ApiDocsIndex", () => {
     const hidden = renderToStaticMarkup(<ApiDocsIndex model={model} basePath="/docs" hideScopes />);
     expect(hidden).not.toContain('id="scope-email"');
   });
+
+  test("renders no navigation row unless given a back link or navigation", () => {
+    expect(html).not.toContain('data-testid="api-docs-navigation"');
+    expect(html).not.toContain('data-testid="api-docs-back-link"');
+  });
+
+  test("renders the back link and custom navigation above the header", () => {
+    const withNavigation = renderToStaticMarkup(
+      <ApiDocsIndex
+        model={model}
+        basePath="/docs"
+        backLink={{ href: "/dashboard", label: "Back to dashboard" }}
+        navigation={<nav aria-label="App"><a href="/settings">Settings</a></nav>}
+      />,
+    );
+    const backLink = withNavigation.indexOf('data-testid="api-docs-back-link"');
+    expect(backLink).toBeGreaterThan(-1);
+    expect(withNavigation).toContain('href="/dashboard"');
+    expect(withNavigation).toContain("Back to dashboard");
+    expect(withNavigation.indexOf('href="/settings"')).toBeGreaterThan(backLink);
+    expect(withNavigation.indexOf("<header")).toBeGreaterThan(withNavigation.indexOf('href="/settings"'));
+  });
 });
 
 describe("ApiOperationPage", () => {
@@ -148,6 +170,17 @@ describe("ApiOperationPage", () => {
     expect(html).toContain("curl -X GET");
     expect(html).toContain("Other methods on this path");
     expect(html).toContain('href="/docs/patch-api-apps-app_id"');
+  });
+
+  test("renders the back link above the breadcrumb, labelled Back by default", () => {
+    const withBackLink = renderToStaticMarkup(
+      <ApiOperationPage model={model} operation={operation} basePath="/docs" backLink={{ href: "/" }} />,
+    );
+    const link = withBackLink.match(/<a [^>]*data-testid="api-docs-back-link"[^>]*>.*?<\/a>/)?.[0] ?? "";
+    expect(link).toContain('href="/"');
+    expect(link).toEndWith("Back</a>");
+    expect(withBackLink.indexOf('data-testid="api-docs-back-link"')).toBeLessThan(withBackLink.indexOf("<nav"));
+    expect(html).not.toContain('data-testid="api-docs-navigation"');
   });
 
   test("describes each required scope and links it to the index", () => {

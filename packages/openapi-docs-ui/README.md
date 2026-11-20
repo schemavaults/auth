@@ -46,6 +46,8 @@ export const apiDocs = createApiDocsPages({
     const h = await headers(); // from "next/headers"
     return `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
   },
+  // Optional: a way back into the app from every docs page (see below).
+  backLink: { href: "/dashboard", label: "Back to dashboard" },
   wrap: (page) => <main className="container py-8">{page}</main>, // optional
 });
 ```
@@ -65,6 +67,36 @@ export const generateMetadata = apiDocs.generateOperationMetadata;
 export default apiDocs.OperationPage;
 ```
 
+### Navigation back into the app
+
+Docs pages often live outside the app's own layout, so the factory can put a way
+back at the top of the index and of every operation page (above the header /
+breadcrumb):
+
+- `backLink: { href, label? }` renders an "← label" link (`label` defaults to
+  `"Back"`).
+- `navigation` renders the app's own navigation UI after the back link: any React
+  node (server or client components, e.g. a logo and the app's main links), or a
+  function of the page being rendered (`{ page: "index", model }` or
+  `{ page: "operation", model, operation }`) for navigation that differs per page.
+
+```tsx
+createApiDocsPages({
+  // ...
+  backLink: { href: "/projects", label: "Back to projects" },
+  navigation: (
+    <nav aria-label="App" className="flex gap-4">
+      <Link href="/projects">Projects</Link>
+      <Link href="/settings">Settings</Link>
+    </nav>
+  ),
+});
+```
+
+Both are also props of `ApiDocsIndex` and `ApiOperationPage` (where `indexProps` /
+`operationProps` set them, those win over the shared options). For chrome around the
+whole page (a site header and footer), use `wrap` instead.
+
 Slugs are derived from method + path (`GET /api/apps/{app_id}` → `get-api-apps-app_id`)
 and stay stable across regenerations. Unknown slugs call `notFound()`.
 
@@ -75,12 +107,13 @@ server or client components.
 
 | Export | Renders |
 | --- | --- |
-| `ApiDocsIndex` | header + auth schemes + scopes + one card per tag with a method/path/summary/access table (`hideAuthentication`, `hideScopes`) |
-| `ApiOperationPage` | breadcrumb, summary, `OperationAuthCard`, parameter tables, request body, responses, curl example |
+| `ApiDocsIndex` | back link / navigation + header + auth schemes + scopes + one card per tag with a method/path/summary/access table (`hideAuthentication`, `hideScopes`, `backLink`, `navigation`) |
+| `ApiOperationPage` | back link / navigation (`backLink`, `navigation`), breadcrumb, summary, `OperationAuthCard`, parameter tables, request body, responses, curl example |
 | `OperationAuthCard` / `OperationAuthBadges` | accepted credentials, who may call (authenticated / admin), required scopes (with their descriptions when given `scopes`), organization role, notes |
 | `ApiSecuritySchemesCard` | every `components.securitySchemes` entry with how the credential is transported |
 | `ApiScopesCard` | every scope of the API (`model.scopes`): what it allows and the operations requiring it; `scopeAnchorId(scope)` is each entry's anchor |
 | `SchemaViewer` | nested property table for a JSON schema (`$ref`s resolved against `components.schemas`) |
+| `ApiDocsNavigation` / `ApiDocsBackLink` | the row at the top of the pages leading back into the app: an "← Back" link and / or custom navigation (renders nothing without either) |
 | `ParametersTable`, `RequestBodySection`, `ResponsesList`, `CurlSnippet`, `ApiDocsHeader` | building blocks used by the pages |
 | `DocsText` | a description string with its CommonMark code spans (`` `name` ``) as inline `<code>`; every description on the pages goes through it |
 

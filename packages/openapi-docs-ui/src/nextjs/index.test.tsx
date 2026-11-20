@@ -64,6 +64,44 @@ describe("createApiDocsPages", () => {
     ).rejects.toThrow();
   });
 
+  test("renders the back link and per-page navigation on both pages", async () => {
+    const withNavigation = createApiDocsPages({
+      loadDocument: () => document,
+      basePath: "/docs",
+      backLink: { href: "/home", label: "Back to the app" },
+      navigation: (context) => (
+        <span data-page={context.page}>
+          {context.page === "operation" ? context.operation.summary : context.model.title}
+        </span>
+      ),
+    });
+    const index = renderToStaticMarkup(await withNavigation.IndexPage());
+    expect(index).toContain('href="/home"');
+    expect(index).toContain("Back to the app");
+    expect(index).toContain('<span data-page="index">Factory API</span>');
+    const operation = renderToStaticMarkup(
+      await withNavigation.OperationPage({ params: Promise.resolve({ slug: "post-api-ping" }) }),
+    );
+    expect(operation).toContain('href="/home"');
+    expect(operation).toContain('<span data-page="operation">Ping</span>');
+  });
+
+  test("indexProps / operationProps override the shared back link", async () => {
+    const overridden = createApiDocsPages({
+      loadDocument: () => document,
+      basePath: "/docs",
+      backLink: { href: "/home", label: "Home" },
+      indexProps: { backLink: { href: "/elsewhere", label: "Elsewhere" } },
+    });
+    const index = renderToStaticMarkup(await overridden.IndexPage());
+    expect(index).toContain('href="/elsewhere"');
+    expect(index).not.toContain('href="/home"');
+    const operation = renderToStaticMarkup(
+      await overridden.OperationPage({ params: Promise.resolve({ slug: "get-api-health" }) }),
+    );
+    expect(operation).toContain('href="/home"');
+  });
+
   test("apiReferenceTitle does not double a trailing API", () => {
     expect(apiReferenceTitle("Factory API")).toBe("Factory API reference");
     expect(apiReferenceTitle("Acme Identity")).toBe("Acme Identity API reference");
