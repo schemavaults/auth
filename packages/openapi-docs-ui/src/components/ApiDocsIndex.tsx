@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -23,6 +23,7 @@ import {
 import type { ApiDocsModel, ApiDocsOperation, ApiDocsTag } from "@/model/types";
 import { operationDocsHref } from "@/model/slug";
 import { ApiDocsHeader } from "./ApiDocsHeader";
+import { ApiDocsNavigation, type ApiDocsBackLinkTarget } from "./ApiDocsNavigation";
 import { ApiSecuritySchemesCard } from "./ApiSecuritySchemesCard";
 import { ApiScopesCard } from "./ApiScopesCard";
 import { OperationAuthBadges } from "./OperationAuthBadges";
@@ -40,6 +41,10 @@ export interface ApiDocsIndexProps {
   hideScopes?: boolean;
   /** Only these tags (default: all). */
   tags?: readonly string[];
+  /** A link back to the app's own pages, shown above the header. */
+  backLink?: ApiDocsBackLinkTarget;
+  /** The app's own navigation UI, shown above the header (after the back link). */
+  navigation?: ReactNode;
   className?: string;
 }
 
@@ -116,9 +121,9 @@ export function TagOperationsCard({ tag, basePath }: TagOperationsCardProps): Re
 }
 
 /**
- * Index page: document header, authentication schemes, scopes, and one
- * card per tag listing its operations with method, path, summary and access
- * badges.
+ * Index page: the way back into the app (`backLink` / `navigation`, when
+ * given), document header, authentication schemes, scopes, and one card per
+ * tag listing its operations with method, path, summary and access badges.
  */
 export function ApiDocsIndex({
   model,
@@ -127,11 +132,14 @@ export function ApiDocsIndex({
   hideAuthentication = false,
   hideScopes = false,
   tags,
+  backLink,
+  navigation,
   className,
 }: ApiDocsIndexProps): ReactElement {
   const visibleTags = tags ? model.tags.filter((tag) => tags.includes(tag.name)) : model.tags;
   return (
     <div className={cn("flex w-full flex-col gap-6", className)}>
+      <ApiDocsNavigation backLink={backLink} navigation={navigation} />
       <ApiDocsHeader model={model} openApiDocumentHref={openApiDocumentHref} />
       {visibleTags.length > 1 ? (
         <nav aria-label="API sections" className="flex flex-wrap gap-2 text-sm">

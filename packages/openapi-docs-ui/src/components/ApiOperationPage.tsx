@@ -19,6 +19,7 @@ import {
 } from "@schemavaults/ui";
 import type { ApiDocsModel, ApiDocsOperation, ApiDocsParameterLocation } from "@/model/types";
 import { operationDocsHref } from "@/model/slug";
+import { ApiDocsNavigation, type ApiDocsBackLinkTarget } from "./ApiDocsNavigation";
 import { OperationAuthCard } from "./OperationAuthCard";
 import { OperationAuthBadges } from "./OperationAuthBadges";
 import { PARAMETER_LOCATION_LABELS, ParametersTable } from "./ParametersTable";
@@ -41,6 +42,13 @@ export interface ApiOperationPageProps {
   curlBaseUrl?: string;
   /** Show generated example values next to schemas (default true). */
   showExamples?: boolean;
+  /**
+   * A link back to the app's own pages, shown above the breadcrumb (which
+   * itself leads back to the docs index).
+   */
+  backLink?: ApiDocsBackLinkTarget;
+  /** The app's own navigation UI, shown above the breadcrumb (after the back link). */
+  navigation?: ReactNode;
   className?: string;
 }
 
@@ -64,6 +72,8 @@ export function ApiOperationPage({
   hideCurl = false,
   curlBaseUrl,
   showExamples = true,
+  backLink,
+  navigation,
   className,
 }: ApiOperationPageProps): ReactElement {
   const indexHref = basePath.replace(/\/+$/, "") || "/";
@@ -72,6 +82,7 @@ export function ApiOperationPage({
   );
   return (
     <article className={cn("flex w-full flex-col gap-6", className)}>
+      <ApiDocsNavigation backLink={backLink} navigation={navigation} />
       <Breadcrumb size="sm">
         <BreadcrumbList>
           <BreadcrumbItem>

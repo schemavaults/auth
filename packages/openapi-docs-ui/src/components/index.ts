@@ -4,6 +4,8 @@ export { ApiOperationPage } from "./ApiOperationPage";
 export type { ApiOperationPageProps } from "./ApiOperationPage";
 export { ApiDocsHeader } from "./ApiDocsHeader";
 export type { ApiDocsHeaderProps } from "./ApiDocsHeader";
+export { ApiDocsNavigation, ApiDocsBackLink } from "./ApiDocsNavigation";
+export type { ApiDocsNavigationProps, ApiDocsBackLinkProps, ApiDocsBackLinkTarget } from "./ApiDocsNavigation";
 export {
   ApiSecuritySchemesCard,
   describeSecuritySchemeTransport,
