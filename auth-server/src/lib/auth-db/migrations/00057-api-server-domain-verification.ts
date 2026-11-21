@@ -14,8 +14,9 @@
 // domains); with the setting on they never do.
 //
 // - verification_token TEXT NOT NULL: random per registration. Its owner
-//   publishes it as a DNS TXT record (`_auth-domain-verification.<host>` =
-//   `auth-domain-verification=<token>`, see `lib/api-server-domain-verification/`)
+//   publishes it as a DNS TXT record (`_<app id>-domain-verification.<host>` =
+//   `<app id>-domain-verification=<token>`, with the deployment's own app id,
+//   e.g. `schemavaults-auth`; see `lib/api-server-domain-verification/`)
 //   and asks the auth server to check it. Backfilled for existing rows.
 // - verified_at BIGINT (epoch ms) + verification_method TEXT: set together
 //   when the registration was verified, NULL while it is pending.

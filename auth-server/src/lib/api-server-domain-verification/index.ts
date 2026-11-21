@@ -1,6 +1,7 @@
 export {
-  DOMAIN_VERIFICATION_TXT_LABEL,
-  DOMAIN_VERIFICATION_TXT_VALUE_PREFIX,
+  DOMAIN_VERIFICATION_RECORD_SUFFIX,
+  MAX_DOMAIN_VERIFICATION_APP_ID_LENGTH,
+  getDomainVerificationRecordPrefix,
   getDnsVerifiableHostname,
   buildDomainVerificationTxtRecord,
   getDomainVerificationTxtRecord,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { apiServerDomainVerificationSchema } from "@schemavaults/app-definitions";
+import { apiServerDomainVerificationSchema, getAuthServerAppId } from "@schemavaults/app-definitions";
 import { toApiServerDomainVerification } from "./to-api-server-domain-verification";
 
 const REF = "6f1c1f4e-8a39-4c43-9b3e-2f0d6a1d6a10";
@@ -20,8 +20,8 @@ describe("toApiServerDomainVerification", () => {
       verified_at: null,
       verification_method: null,
       dns_txt_record: {
-        name: "_auth-domain-verification.api.example.com",
-        value: `auth-domain-verification=${TOKEN}`,
+        name: `_${getAuthServerAppId()}-domain-verification.api.example.com`,
+        value: `${getAuthServerAppId()}-domain-verification=${TOKEN}`,
       },
     });
     expect(apiServerDomainVerificationSchema.parse(verification)).toEqual(verification);

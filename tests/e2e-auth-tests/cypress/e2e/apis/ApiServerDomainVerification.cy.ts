@@ -7,7 +7,8 @@
 //
 //   1. A regular user's new API server domain starts unverified: the POST
 //      response and GET /api/apis/:id/domains (`verifications`) name the
-//      DNS TXT record to publish (`_auth-domain-verification.<host>`).
+//      DNS TXT record to publish (`_<app id>-domain-verification.<host>`, after the
+//      deployment's own app id).
 //   2. Without that record, POST .../verify answers 422
 //      `verification_record_not_found` (hosts under the special-use
 //      `.invalid` TLD never exist, so no real DNS is involved); a host DNS
@@ -23,6 +24,10 @@
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 
 const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
+
+// The verification record's value starts with the deployment's own app id
+// (`[a-z0-9_-]`, so it needs no escaping), followed by a 128-bit hex token.
+const TXT_RECORD_VALUE = new RegExp(`^${AUTH_APP_ID}-domain-verification=[0-9a-f]{32}$`);
 
 interface DomainVerification {
   api_server_domain_ref_id: string;
@@ -160,8 +165,8 @@ describe("API server domain ownership verification", () => {
               expect(verification?.api_server_domain_ref_id).to.eq(dnsRef);
               expect(verification?.verified, "new domain verified").to.eq(false);
               expect(verification?.verified_at).to.eq(null);
-              expect(verification?.dns_txt_record?.name).to.eq(`_auth-domain-verification.${dnsHost}`);
-              expect(verification?.dns_txt_record?.value).to.match(/^auth-domain-verification=[0-9a-f]{32}$/);
+              expect(verification?.dns_txt_record?.name).to.eq(`_${AUTH_APP_ID}-domain-verification.${dnsHost}`);
+              expect(verification?.dns_txt_record?.value).to.match(TXT_RECORD_VALUE);
             });
             addDomain(api_server_id, localhostRef, "http://localhost:4321").then((response) => {
               expect(response.status, "add localhost domain").to.eq(200);
@@ -170,7 +175,7 @@ describe("API server domain ownership verification", () => {
             listVerifications(api_server_id).then((verifications) => {
               const byRef = new Map(verifications.map((v) => [v.api_server_domain_ref_id, v]));
               expect(byRef.get(dnsRef)?.verified, "listed DNS domain verified").to.eq(false);
-              expect(byRef.get(dnsRef)?.dns_txt_record?.name).to.eq(`_auth-domain-verification.${dnsHost}`);
+              expect(byRef.get(dnsRef)?.dns_txt_record?.name).to.eq(`_${AUTH_APP_ID}-domain-verification.${dnsHost}`);
               expect(byRef.get(localhostRef)?.verified, "listed localhost domain verified").to.eq(false);
             });
 
@@ -207,11 +212,11 @@ describe("API server domain ownership verification", () => {
             cy.get("#verify-api-server-domain-dialog-content").within(() => {
               cy.get('[data-testid="api-server-domain-txt-record-name"]').should(
                 "have.text",
-                `_auth-domain-verification.${dnsHost}`,
+                `_${AUTH_APP_ID}-domain-verification.${dnsHost}`,
               );
               cy.get('[data-testid="api-server-domain-txt-record-value"]')
                 .invoke("text")
-                .should("match", /^auth-domain-verification=[0-9a-f]{32}$/);
+                .should("match", TXT_RECORD_VALUE);
               cy.get("button#attest-api-server-domain-button").should("not.exist");
               cy.get("button#check-api-server-domain-dns-button").click();
               cy.get('[data-testid="verify-api-server-domain-problem"]').should("contain.text", "No TXT record");

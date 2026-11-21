@@ -26,7 +26,10 @@ export const apiServerDomainVerificationMethodSchema = z.enum(
 
 /** The DNS TXT record that proves control of a registered domain's host. */
 export const apiServerDomainVerificationTxtRecordSchema = z.object({
-  /** Fully qualified record name, e.g. `_auth-domain-verification.api.example.com` */
+  /**
+   * Fully qualified record name, after the auth server deployment's own app
+   * id, e.g. `_schemavaults-auth-domain-verification.api.example.com`
+   */
   name: z.string().min(1),
   /** Exact record value to publish. */
   value: z.string().min(1),

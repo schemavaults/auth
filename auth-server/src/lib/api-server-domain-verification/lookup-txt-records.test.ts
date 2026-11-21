@@ -10,14 +10,14 @@ function failingWith(code: string): TxtResolver {
 describe("lookupTxtRecords", () => {
   test("joins each record's character-strings", async () => {
     const queried: string[] = [];
-    const result = await lookupTxtRecords("_auth-domain-verification.API.example.com.", async (name) => {
+    const result = await lookupTxtRecords("_schemavaults-auth-domain-verification.API.example.com.", async (name) => {
       queried.push(name);
-      return [["auth-domain-verification=", "abc"], ["v=spf1 -all"]];
+      return [["schemavaults-auth-domain-verification=", "abc"], ["v=spf1 -all"]];
     });
-    expect(queried).toEqual(["_auth-domain-verification.api.example.com"]);
+    expect(queried).toEqual(["_schemavaults-auth-domain-verification.api.example.com"]);
     expect(result).toEqual({
       kind: "records",
-      records: ["auth-domain-verification=abc", "v=spf1 -all"],
+      records: ["schemavaults-auth-domain-verification=abc", "v=spf1 -all"],
     });
   });
 
@@ -49,7 +49,7 @@ describe("lookupTxtRecords", () => {
       queried = true;
       return [["unexpected"]];
     };
-    expect(await lookupTxtRecords("_auth-domain-verification.api.squat.invalid", resolve)).toEqual({
+    expect(await lookupTxtRecords("_schemavaults-auth-domain-verification.api.squat.invalid", resolve)).toEqual({
       kind: "no_records",
     });
     expect(queried).toBe(false);

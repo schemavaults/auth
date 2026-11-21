@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { DEFAULT_AUTH_SERVER_APP_ID, getAuthServerAppId } from "@schemavaults/app-definitions";
 import {
+  MAX_DOMAIN_VERIFICATION_APP_ID_LENGTH,
   buildDomainVerificationTxtRecord,
   getDnsVerifiableHostname,
+  getDomainVerificationRecordPrefix,
   getDomainVerificationTxtRecord,
   isDomainVerificationValuePublished,
 } from "./dns-txt-record";
@@ -44,31 +47,66 @@ describe("getDnsVerifiableHostname", () => {
   });
 });
 
+describe("getDomainVerificationRecordPrefix", () => {
+  test("starts with the deployment's app id", () => {
+    expect(getDomainVerificationRecordPrefix(DEFAULT_AUTH_SERVER_APP_ID)).toBe(
+      "schemavaults-auth-domain-verification",
+    );
+    expect(getDomainVerificationRecordPrefix("acme-auth")).toBe("acme-auth-domain-verification");
+    expect(getDomainVerificationRecordPrefix("acme_auth")).toBe("acme_auth-domain-verification");
+    expect(getDomainVerificationRecordPrefix()).toBe(
+      `${getAuthServerAppId()}-domain-verification`,
+    );
+  });
+
+  test("shortens a long app id so the record name stays one DNS label", () => {
+    const long_app_id = `${"a".repeat(MAX_DOMAIN_VERIFICATION_APP_ID_LENGTH - 1)}-${"b".repeat(20)}`;
+    const prefix = getDomainVerificationRecordPrefix(long_app_id);
+    expect(`_${prefix}`.length).toBeLessThanOrEqual(63);
+    // Cut right after the hyphen, which is dropped too.
+    expect(prefix).toBe(`${"a".repeat(MAX_DOMAIN_VERIFICATION_APP_ID_LENGTH - 1)}-domain-verification`);
+    const longest = getDomainVerificationRecordPrefix("c".repeat(64));
+    expect(`_${longest}`.length).toBe(63);
+  });
+});
+
 describe("buildDomainVerificationTxtRecord", () => {
-  test("names an underscored record under the host and carries the token", () => {
-    expect(buildDomainVerificationTxtRecord("api.example.com", TOKEN)).toEqual({
-      name: "_auth-domain-verification.api.example.com",
-      value: `auth-domain-verification=${TOKEN}`,
+  test("names an underscored record under the host after the app id, and carries the token", () => {
+    expect(buildDomainVerificationTxtRecord("api.example.com", TOKEN, "schemavaults-auth")).toEqual({
+      name: "_schemavaults-auth-domain-verification.api.example.com",
+      value: `schemavaults-auth-domain-verification=${TOKEN}`,
     });
+    expect(buildDomainVerificationTxtRecord("api.example.com", TOKEN, "acme-auth")).toEqual({
+      name: "_acme-auth-domain-verification.api.example.com",
+      value: `acme-auth-domain-verification=${TOKEN}`,
+    });
+  });
+
+  test("uses this deployment's app id by default", () => {
+    expect(buildDomainVerificationTxtRecord("api.example.com", TOKEN)).toEqual(
+      buildDomainVerificationTxtRecord("api.example.com", TOKEN, getAuthServerAppId()),
+    );
   });
 
   test("getDomainVerificationTxtRecord is null for hosts DNS cannot verify", () => {
     expect(getDomainVerificationTxtRecord("http://localhost:3000", TOKEN)).toBeNull();
-    expect(getDomainVerificationTxtRecord("https://api.example.com:8443", TOKEN)?.name).toBe(
-      "_auth-domain-verification.api.example.com",
+    expect(getDomainVerificationTxtRecord("https://api.example.com:8443", TOKEN, "acme-auth")?.name).toBe(
+      "_acme-auth-domain-verification.api.example.com",
     );
   });
 });
 
 describe("isDomainVerificationValuePublished", () => {
-  const expected = `auth-domain-verification=${TOKEN}`;
+  const expected = `acme-auth-domain-verification=${TOKEN}`;
 
   test("finds the exact value among other records, ignoring surrounding whitespace", () => {
     expect(isDomainVerificationValuePublished(["v=spf1 -all", ` ${expected} `], expected)).toBe(true);
   });
 
   test("does not accept another token, a prefix of it, or an empty RRset", () => {
-    expect(isDomainVerificationValuePublished([`auth-domain-verification=${"f".repeat(32)}`], expected)).toBe(false);
+    expect(isDomainVerificationValuePublished([`acme-auth-domain-verification=${"f".repeat(32)}`], expected)).toBe(false);
+    // The same token published for another deployment does not count.
+    expect(isDomainVerificationValuePublished([`schemavaults-auth-domain-verification=${TOKEN}`], expected)).toBe(false);
     expect(isDomainVerificationValuePublished([expected.slice(0, -1)], expected)).toBe(false);
     expect(isDomainVerificationValuePublished([`${expected}x`], expected)).toBe(false);
     expect(isDomainVerificationValuePublished([], expected)).toBe(false);

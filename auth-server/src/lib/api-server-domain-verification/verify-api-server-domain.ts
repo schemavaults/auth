@@ -58,8 +58,9 @@ async function reload(
  * controls it, so RFC 8707 resource URLs on the domain may resolve to the
  * API server.
  *
- * Through DNS, the registration's record (`_auth-domain-verification.<host>`
- * TXT `auth-domain-verification=<token>`) must be published. Every
+ * Through DNS, the registration's record (`_<app id>-domain-verification.<host>`
+ * TXT `<app id>-domain-verification=<token>`, with this deployment's own app
+ * id, e.g. `schemavaults-auth`) must be published. Every
  * authoritative answer also re-checks the host's other DNS verifications
  * and revokes those whose record is gone, the checked registration's own
  * included (see `planDnsVerification()`); a failed lookup changes nothing.
