@@ -12,9 +12,9 @@ import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveApiServerDomainDialog, WrappableUrl } from "@schemavaults/auth-ui";
+import { ApiServerDomainVerificationBadge, CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveApiServerDomainDialog, WrappableUrl } from "@schemavaults/auth-ui";
 import { Trash2, KeyRound, ListChecks, Plus, ShieldCheck, Unplug } from "lucide-react";
-import { ApiServerDomainVerificationBadge, VerifyApiServerDomainDialog } from "@/components/ApiServerDomainVerification";
+import { VerifyApiServerDomainDialog } from "@/components/ApiServerDomainVerification";
 import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
 import { ApiServerScopesCard, AppScopeAllowancesDialog } from "@/components/ApiServerScopes";
 import type { ApiServerScope } from "@schemavaults/auth-common";
@@ -76,15 +76,15 @@ function DomainRow({ domain, dateKey, verification, verificationRequired, onVeri
       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-md border p-3"
     >
       <div className="min-w-0 flex-auto">
-        <p className="text-sm font-medium">
-          <WrappableUrl url={domain.domain} />
-        </p>
-        <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {domain.environment}
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+          <span className="min-w-0">
+            <WrappableUrl url={domain.domain} />
+          </span>
           {verification && (
             <ApiServerDomainVerificationBadge verification={verification} verificationRequired={verificationRequired} />
           )}
         </p>
+        <p className="text-xs text-muted-foreground">{domain.environment}</p>
       </div>
       <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
         <LocalDateTime

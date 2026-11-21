@@ -15,5 +15,11 @@ export {
   useApiServerDomains,
 } from "./useApiServerDomains";
 
+export {
+  getUseApiServerDomainVerificationsKey,
+  isApiServerDomainsCacheKey,
+  useApiServerDomainVerifications,
+} from "./useApiServerDomainVerifications";
+
 export { ApiServersTableConfigContext } from "./ApiServersTableConfigContext";
 export type { ApiServersTableConfig } from "./ApiServersTableConfigContext";

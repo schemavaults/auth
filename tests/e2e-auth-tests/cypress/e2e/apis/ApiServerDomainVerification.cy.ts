@@ -13,8 +13,9 @@
 //      `.invalid` TLD never exist, so no real DNS is involved); a host DNS
 //      cannot verify (localhost) answers 422 `domain_not_dns_verifiable`
 //      with no TXT record; the administrator attestation is refused (403).
-//   3. The API server page shows the domain as unverified, and its Verify
-//      dialog shows the record and the failed check.
+//   3. The /apis table and the API server page badge the domains as
+//      unverified, and the page's Verify dialog shows the record and the
+//      failed check.
 //   4. Another user cannot verify the domain (403).
 //   5. The superuser attests the domain (`method: "administrator"`), and
 //      it is reported verified.
@@ -190,7 +191,12 @@ describe("API server domain ownership verification", () => {
               expect(response.status, "unknown domain").to.eq(404);
             });
 
-            // 3. The page shows the pending domain and how to verify it.
+            // 3. The /apis table and the API server page badge the pending
+            //    domains, and the page shows how to verify one.
+            cy.visit("/apis");
+            cy.wait_for_page_hydration();
+            cy.get(`[data-testid="api-server-domain-unverified-${dnsRef}"]`).should("be.visible");
+            cy.get(`[data-testid="api-server-domain-unverified-${localhostRef}"]`).should("be.visible");
             cy.visit(`/apis/${api_server_id}`);
             cy.wait_for_page_hydration();
             cy.get(`[data-testid="api-server-domain-unverified-${dnsRef}"]`).should("be.visible");

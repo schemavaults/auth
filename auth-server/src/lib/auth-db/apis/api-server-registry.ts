@@ -12,12 +12,14 @@ import {
   getHardcodedSchemaVaultsApis,
   getHardcodedApiDomains,
   type ResourceOwnership,
+  type ApiServerDomainVerification,
 } from "@schemavaults/app-definitions";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { ownershipFieldsFromDatabaseRow, toOwnershipDatabaseColumns } from "@/lib/ownership/ownership-columns";
 import type { NewApiServer } from "./apis-table";
 import { API_SERVER_DOMAIN_REF_COLUMNS } from "./api-domains-table";
 import { generateDomainVerificationToken } from "@/lib/auth-db/api-server-domain-verifications/generate-domain-verification-token";
+import { listApiServerDomainVerifications } from "@/lib/api-server-domain-verification/list-api-server-domain-verifications";
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
@@ -170,6 +172,17 @@ export class SchemaVaultsApiServerRegistry {
       }
       return parsed.data;
     });
+  }
+
+  /**
+   * @description The ownership verification state of each of the API
+   * server's domains (none for hardcoded API servers); see
+   * `listApiServerDomainVerifications()`.
+   */
+  public async getApiServerDomainVerifications(
+    api_server_id: ApiServerId,
+  ): Promise<readonly ApiServerDomainVerification[]> {
+    return await listApiServerDomainVerifications(this.db, api_server_id);
   }
 
   public async registerApiServer({

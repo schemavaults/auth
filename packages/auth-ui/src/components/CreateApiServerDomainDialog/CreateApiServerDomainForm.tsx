@@ -41,7 +41,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EarthLock } from "lucide-react";
 import { CreateApiServerDomainDialogOpenContext } from "./CreateApiServerDomainDialogOpenContext";
-import { getUseApiServerDomainsListEndpoint } from "@/components/ApiServersTable";
+import { isApiServerDomainsCacheKey } from "@/components/ApiServersTable";
 
 export interface CreateApiServerDomainFormProps {
   uuid: () => string;
@@ -142,8 +142,7 @@ export function CreateApiServerDomainForm({
           "Verify its ownership on the API server's page, so resource URLs on it keep resolving to the API server once the deployment requires verified domains.",
       });
       mutate(
-        (key) =>
-          key === getUseApiServerDomainsListEndpoint(values.api_server_id),
+        (key) => isApiServerDomainsCacheKey(key, values.api_server_id),
         undefined,
         { revalidate: true },
       );

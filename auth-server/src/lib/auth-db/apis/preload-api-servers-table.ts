@@ -2,6 +2,7 @@ import type { OrganizationID, UserData } from "@schemavaults/auth-common";
 import type { PreloadedApiServersTableDataWithDomainRefs } from "@schemavaults/auth-ui";
 import type { SchemaVaultsApiServerRegistry } from "./api-server-registry";
 import type {
+  ApiServerDomainVerification,
   ApiServerId,
   ListApiServersQueryType,
   SchemaVaultsApiServerDefinition,
@@ -52,14 +53,29 @@ async function loadDomainsForApiServers(
   >;
 }
 
+/** Each API server's domain verification states, for the table's badges. */
+async function loadDomainVerificationsForApiServers(
+  api_servers: readonly SchemaVaultsApiServerDefinition[],
+  apiServerRegistry: SchemaVaultsApiServerRegistry,
+): Promise<Record<ApiServerId, readonly ApiServerDomainVerification[]>> {
+  const ids: readonly ApiServerId[] = [
+    ...new Set<ApiServerId>(api_servers.map((api_server) => api_server.api_server_id)),
+  ];
+  const verifications = await Promise.all(
+    ids.map((id) => apiServerRegistry.getApiServerDomainVerifications(id)),
+  );
+  return Object.fromEntries(ids.map((id, index) => [id, verifications[index] ?? []]));
+}
+
 async function returnApiServersWithDomains(
   api_servers: readonly SchemaVaultsApiServerDefinition[],
   apiServerRegistry: SchemaVaultsApiServerRegistry,
 ): Promise<PreloadedApiServersTableDataWithDomainRefs> {
-  return {
-    api_servers,
-    domains: await loadDomainsForApiServers(api_servers, apiServerRegistry),
-  };
+  const [domains, domain_verifications] = await Promise.all([
+    loadDomainsForApiServers(api_servers, apiServerRegistry),
+    loadDomainVerificationsForApiServers(api_servers, apiServerRegistry),
+  ]);
+  return { api_servers, domains, domain_verifications };
 }
 
 export async function preloadApiServersTable(
