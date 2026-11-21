@@ -192,14 +192,17 @@ describe("API server domain ownership verification", () => {
             });
 
             // 3. The /apis table and the API server page badge the pending
-            //    domains, and the page shows how to verify one.
+            //    domains, and the page shows how to verify one. (The table's
+            //    Domains column can sit outside its scroll area at narrow
+            //    viewports, and the domain rows near the page's fold, so
+            //    each badge is scrolled into view before it is checked.)
             cy.visit("/apis");
             cy.wait_for_page_hydration();
-            cy.get(`[data-testid="api-server-domain-unverified-${dnsRef}"]`).should("be.visible");
-            cy.get(`[data-testid="api-server-domain-unverified-${localhostRef}"]`).should("be.visible");
+            cy.get(`[data-testid="api-server-domain-unverified-${dnsRef}"]`).scrollIntoView().should("be.visible");
+            cy.get(`[data-testid="api-server-domain-unverified-${localhostRef}"]`).scrollIntoView().should("be.visible");
             cy.visit(`/apis/${api_server_id}`);
             cy.wait_for_page_hydration();
-            cy.get(`[data-testid="api-server-domain-unverified-${dnsRef}"]`).should("be.visible");
+            cy.get(`[data-testid="api-server-domain-unverified-${dnsRef}"]`).scrollIntoView().should("be.visible");
             cy.get(`button#verify-api-server-domain-button-${dnsRef}`).click();
             cy.get("#verify-api-server-domain-dialog-content").within(() => {
               cy.get('[data-testid="api-server-domain-txt-record-name"]').should(
@@ -242,7 +245,7 @@ describe("API server domain ownership verification", () => {
             });
             cy.visit(`/apis/${api_server_id}`);
             cy.wait_for_page_hydration();
-            cy.get(`[data-testid="api-server-domain-verified-${localhostRef}"]`).should("be.visible");
+            cy.get(`[data-testid="api-server-domain-verified-${localhostRef}"]`).scrollIntoView().should("be.visible");
             cy.get(`button#verify-api-server-domain-button-${localhostRef}`).should("not.exist");
 
             cy.request({ method: "DELETE", url: `/api/apis/${api_server_id}` }).then((response) => {

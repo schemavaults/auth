@@ -203,10 +203,8 @@ export default function ApiServerDetailPageView({
       <Card>
         <CardHeader>
           <CardTitle>Connected Domains</CardTitle>
-          <CardDescription data-testid="api-server-domains-verification-notice">
-            {domain_verification_required
-              ? "Registered domains for this API server. RFC 8707 resource URLs resolve to it only through domains whose ownership is verified."
-              : "Registered domains for this API server. Verify each domain's ownership: a verified domain takes precedence over other API servers' registrations of it, and unverified domains will stop resolving RFC 8707 resource URLs once this deployment requires verification."}
+          <CardDescription>
+            Registered domains for this API server.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -232,6 +230,17 @@ export default function ApiServerDetailPageView({
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+          )}
+          {/* Below the list, so the card's header and empty state keep their place. */}
+          {connected_domains.length > 0 && !hardcoded && (
+            <p
+              className="mt-4 text-xs text-muted-foreground"
+              data-testid="api-server-domains-verification-notice"
+            >
+              {domain_verification_required
+                ? "RFC 8707 resource URLs resolve to this API server only through domains whose ownership is verified."
+                : "Verify each domain's ownership: a verified domain takes precedence over other API servers' registrations of it, and unverified domains will stop resolving RFC 8707 resource URLs once this deployment requires verification."}
+            </p>
           )}
           {canManageDomains && (
             <Button
