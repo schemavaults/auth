@@ -3,12 +3,14 @@
   "skills": {
     "list-email-templates": {
       "source": "schemavaults/send-email",
+      "commit": "f6ed568b81aff8e74a0dd672d3fa51b836b97958",
       "sourceType": "github",
       "skillPath": ".claude/skills/list-email-templates/SKILL.md",
       "computedHash": "3691882cbc2cb41d5fbc0a8eff5f4a1c8c851e746c2a50de8859e69362ba59df"
     },
     "send-email-to-mailing-list": {
       "source": "schemavaults/send-email",
+      "commit": "f6ed568b81aff8e74a0dd672d3fa51b836b97958",
       "sourceType": "github",
       "skillPath": ".claude/skills/send-email-to-mailing-list/SKILL.md",
       "computedHash": "89ed3c1e39e89b97712bacd7998d2fee732000573c049b296c001be00c32b658"
