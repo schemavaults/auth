@@ -8,6 +8,7 @@ import type { ReactElement } from "react";
 import ApiServerDetailPageView from "./api-server-detail-page-view";
 import { type ApiServerDomainVerification, type ApiServerId, apiServerIdSchema, type SchemaVaultsApiServerDefinition, type SchemaVaultsApiServerDomainRef, getAppEnvironment } from "@schemavaults/app-definitions";
 import { listApiServerDomainVerifications } from "@/lib/api-server-domain-verification";
+import requireApiServerDomainVerification from "@/lib/config/require-api-server-domain-verification";
 import { isHardcodedApiServerId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
 import { listApiServerScopes, listFirstPartyConnectedAppIds, loadApiServerDefinitionFromDatabase, SchemaVaultsAppToApiPermissionsRegistry, SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
@@ -79,6 +80,7 @@ export default async function ApiServerDetailPage(
         api_server_registry.getApiServerDomains(api_server_id),
         listApiServerDomainVerifications(dbh.db, api_server_id),
       ]);
+      const domain_verification_required: boolean = await requireApiServerDomainVerification(dbh.db);
       const scopes: readonly ApiServerScope[] = hardcoded ? [] : await listApiServerScopes(dbh.db, api_server_id);
 
       const current_environment = getAppEnvironment();
@@ -89,6 +91,7 @@ export default async function ApiServerDetailPage(
           connected_apps={connected_apps}
           connected_domains={connected_domains}
           domain_verifications={domain_verifications}
+          domain_verification_required={domain_verification_required}
           scopes={scopes}
           hardcoded={hardcoded}
           isOrgOwner={canManage}

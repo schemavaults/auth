@@ -7,6 +7,8 @@ import { ShieldAlert, ShieldCheck } from "lucide-react";
 
 export interface ApiServerDomainVerificationBadgeProps {
   verification: ApiServerDomainVerification;
+  /** Whether unverified domains have stopped resolving resource URLs. */
+  verificationRequired: boolean;
 }
 
 function describeMethod(verification: ApiServerDomainVerification): string {
@@ -21,11 +23,13 @@ function describeMethod(verification: ApiServerDomainVerification): string {
 }
 
 /**
- * Whether a registered domain's ownership is verified. Only verified
- * domains resolve RFC 8707 resource URLs to their API server.
+ * Whether a registered domain's ownership is verified. Verified domains
+ * take precedence in RFC 8707 resource-URL resolution; unverified ones stop
+ * resolving once the deployment requires verification.
  */
 export const ApiServerDomainVerificationBadge: FC<ApiServerDomainVerificationBadgeProps> = ({
   verification,
+  verificationRequired,
 }): ReactElement => {
   if (verification.verified) {
     return (
@@ -44,7 +48,11 @@ export const ApiServerDomainVerificationBadge: FC<ApiServerDomainVerificationBad
     <Badge
       variant="outline"
       className="gap-1 text-amber-700 dark:text-amber-400"
-      title="Resource URLs on this domain do not resolve to the API server until its ownership is verified"
+      title={
+        verificationRequired
+          ? "Resource URLs on this domain do not resolve to the API server until its ownership is verified"
+          : "Ownership not verified: resource URLs on this domain still resolve for now, but stop once the deployment requires verification"
+      }
       data-testid={`api-server-domain-unverified-${verification.api_server_domain_ref_id}`}
     >
       <ShieldAlert className="h-3 w-3" />

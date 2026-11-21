@@ -1,7 +1,10 @@
 // A user registering another tenant's domain on their own API server can
-// neither break nor capture RFC 8707 resource-URL resolution: only domains
-// whose ownership is verified (migration 00057) resolve resource URLs.
+// neither break nor capture RFC 8707 resource-URL resolution: domains whose
+// ownership is verified (migration 00057) take precedence over unverified
+// registrations, and once the `require_api_server_domain_verification`
+// server setting is on, unverified registrations never resolve.
 //
+// "neither breaks nor captures" (setting off, the default):
 //   1. A squatter creates a user-owned API server, registers the example
 //      resource server's domain on it with `prefix` matching and dynamic
 //      clients allowed, and cannot verify it: the host is not one DNS can
@@ -15,6 +18,12 @@
 //      token request is refused as `invalid_target` (ambiguous): it is the
 //      verification, not the registration, that takes part in resolution.
 //      Deleting the squatter's API server restores resolution.
+//
+// "only falls back to unverified registrations while verification is not
+// required": an API server whose only (unverified) domain matches a
+// resource URL keeps resolving it while the setting is off, as before
+// domains could be verified, and stops once an administrator turns it on;
+// the example resource server's verified domain resolves either way.
 //
 // The domain verification endpoint itself is covered by
 // apis/ApiServerDomainVerification.cy.ts.
@@ -30,6 +39,7 @@ const AUTH_APP_ID = getAuthServerAppIdFromCypressEnv();
 
 describe("Resource-URL resolution ignores unverified (squatted) API server domains", () => {
   const SETTING_KEY = "allow_dynamic_client_registration";
+  const REQUIRE_VERIFICATION_SETTING_KEY = "require_api_server_domain_verification";
   const TOKEN_ENDPOINT = "/api/oidc/token";
   const REDIRECT_URI = "http://127.0.0.1:41234/callback";
 
@@ -45,7 +55,8 @@ describe("Resource-URL resolution ignores unverified (squatted) API server domai
     error?: string;
   }
 
-  let squatter_api_server_id: string | null = null;
+  /** API servers this spec created; deleted (as the superuser) afterwards. */
+  const created_api_server_ids: string[] = [];
 
   // crypto.randomUUID() is unavailable in the spec's browser context.
   function generateV4Uuid(): string {
@@ -65,31 +76,102 @@ describe("Resource-URL resolution ignores unverified (squatted) API server domai
     });
   }
 
-  function setRegistrationEnabled(enabled: boolean): void {
+  function setBooleanSetting(key: string, enabled: boolean): void {
     loginAsSuperuser();
     cy.request({
       method: "PATCH",
-      url: `/api/admin/settings/${SETTING_KEY}`,
+      url: `/api/admin/settings/${key}`,
       body: { value: enabled },
     }).then((response) => {
-      expect(response.status, `set ${SETTING_KEY}=${enabled}`).to.equal(200);
+      expect(response.status, `set ${key}=${enabled}`).to.equal(200);
     });
     cy.logout();
   }
 
-  function deleteSquatterApiServer(): void {
-    if (!squatter_api_server_id) return;
-    const api_server_id = squatter_api_server_id;
+  function setRegistrationEnabled(enabled: boolean): void {
+    setBooleanSetting(SETTING_KEY, enabled);
+  }
+
+  function setVerificationRequired(required: boolean): void {
+    setBooleanSetting(REQUIRE_VERIFICATION_SETTING_KEY, required);
+  }
+
+  function deleteCreatedApiServers(): void {
+    if (created_api_server_ids.length === 0) return;
     loginAsSuperuser();
-    cy.request({
-      method: "DELETE",
-      url: `/api/apis/${api_server_id}`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      expect([200, 404], "delete the squatter's API server").to.include(response.status);
-      squatter_api_server_id = null;
-    });
+    for (const api_server_id of created_api_server_ids.splice(0)) {
+      cy.request({
+        method: "DELETE",
+        url: `/api/apis/${api_server_id}`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect([200, 404], `delete API server ${api_server_id}`).to.include(response.status);
+      });
+    }
     cy.logout();
+  }
+
+  /**
+   * Signs a fresh user in and creates an API server owned by them with one
+   * (unverified) domain, matched by prefix and open to dynamic clients.
+   */
+  function createUserOwnedApiServerWithDomain(
+    domain: string,
+  ): Cypress.Chainable<{ api_server_id: string; api_server_domain_ref_id: string }> {
+    const api_server_id: string = generateV4Uuid();
+    const api_server_domain_ref_id: string = generateV4Uuid();
+    return cy.generate_random_test_user_credentials().then((credentials) => {
+      cy.create_and_login_as_regular_user_via_request(credentials).then((created: boolean) => {
+        expect(created, "API server owner creation").to.be.true;
+      });
+      cy.request<{ user?: { uid: string } }>({
+        method: "GET",
+        url: `/api/auth/whoami/${AUTH_APP_ID}`,
+      }).then((whoami) => {
+        const owner_uid = whoami.body.user?.uid;
+        if (typeof owner_uid !== "string") throw new Error("Expected the owner's uid");
+        cy.request({
+          method: "POST",
+          url: "/api/apis",
+          body: {
+            api_server_id,
+            api_server_name: "Unverified Domain API",
+            api_server_description: "Registers a domain without verifying it",
+            created_at: Date.now(),
+            public: false,
+            hardcoded: false,
+            owner_type: "user",
+            owner_uid,
+          },
+        }).then((response) => {
+          expect(response.status, "API server creation").to.equal(200);
+          created_api_server_ids.push(api_server_id);
+        });
+      });
+      cy.request({
+        method: "POST",
+        url: `/api/apis/${api_server_id}/domains`,
+        body: {
+          api_server_domain_ref_id,
+          api_server_id,
+          domain,
+          environment: "test",
+          created_at: Date.now(),
+          hardcoded: false,
+        },
+      }).then((response) => {
+        expect(response.status, "the domain registration itself is accepted").to.equal(200);
+        expect(response.body.verification.verified, "but it is unverified").to.equal(false);
+      });
+      cy.request({
+        method: "PATCH",
+        url: `/api/apis/${api_server_id}`,
+        body: { allow_dynamic_clients: true, resource_url_match_mode: "prefix" },
+      }).then((response) => {
+        expect(response.status, "dynamic-client policy").to.equal(200);
+      });
+      return cy.wrap({ api_server_id, api_server_domain_ref_id }, { log: false });
+    });
   }
 
   function registerPublicClient(): Cypress.Chainable<DynamicClientRegistrationResponse> {
@@ -145,10 +227,11 @@ describe("Resource-URL resolution ignores unverified (squatted) API server domai
     );
   }
 
-  /** Mints a code and redeems it for a token whose `resource` is RESOURCE_URL. */
+  /** Mints a code and redeems it for a token whose `resource` is `resource` (RESOURCE_URL by default). */
   function requestResourceUrlToken(
     client_id: string,
     user: { email: string; password: string },
+    resource: string = RESOURCE_URL,
   ): Cypress.Chainable<Cypress.Response<OidcTokenResponseBody>> {
     return createPkcePair().then(({ code_verifier, challenge }) =>
       cy
@@ -177,7 +260,7 @@ describe("Resource-URL resolution ignores unverified (squatted) API server domai
               code: body.authorization_code as string,
               code_verifier,
               redirect_uri: REDIRECT_URI,
-              resource: RESOURCE_URL,
+              resource,
             },
             failOnStatusCode: false,
           });
@@ -209,7 +292,8 @@ describe("Resource-URL resolution ignores unverified (squatted) API server domai
   });
 
   after(() => {
-    deleteSquatterApiServer();
+    deleteCreatedApiServers();
+    setVerificationRequired(false);
     setRegistrationEnabled(false);
   });
 
@@ -217,58 +301,7 @@ describe("Resource-URL resolution ignores unverified (squatted) API server domai
     setRegistrationEnabled(true);
 
     // 1. The squatter's registration of the example resource server's domain.
-    const api_server_id: string = generateV4Uuid();
-    const api_server_domain_ref_id: string = generateV4Uuid();
-    cy.generate_random_test_user_credentials().then((squatterCredentials) => {
-      cy.create_and_login_as_regular_user_via_request(squatterCredentials).then((created: boolean) => {
-        expect(created, "squatter creation").to.be.true;
-      });
-      cy.request<{ user?: { uid: string } }>({
-        method: "GET",
-        url: `/api/auth/whoami/${AUTH_APP_ID}`,
-      }).then((whoami) => {
-        const owner_uid = whoami.body.user?.uid;
-        if (typeof owner_uid !== "string") throw new Error("Expected the squatter's uid");
-        cy.request({
-          method: "POST",
-          url: "/api/apis",
-          body: {
-            api_server_id,
-            api_server_name: "Squatter API",
-            api_server_description: "Registers someone else's domain",
-            created_at: Date.now(),
-            public: false,
-            hardcoded: false,
-            owner_type: "user",
-            owner_uid,
-          },
-        }).then((response) => {
-          expect(response.status, "squatter API server creation").to.equal(200);
-          squatter_api_server_id = api_server_id;
-        });
-      });
-      cy.request({
-        method: "POST",
-        url: `/api/apis/${api_server_id}/domains`,
-        body: {
-          api_server_domain_ref_id,
-          api_server_id,
-          domain: exampleAppUrl,
-          environment: "test",
-          created_at: Date.now(),
-          hardcoded: false,
-        },
-      }).then((response) => {
-        expect(response.status, "the domain registration itself is accepted").to.equal(200);
-        expect(response.body.verification.verified, "but it is unverified").to.equal(false);
-      });
-      cy.request({
-        method: "PATCH",
-        url: `/api/apis/${api_server_id}`,
-        body: { allow_dynamic_clients: true, resource_url_match_mode: "prefix" },
-      }).then((response) => {
-        expect(response.status, "squatter policy").to.equal(200);
-      });
+    createUserOwnedApiServerWithDomain(exampleAppUrl).then(({ api_server_id, api_server_domain_ref_id }) => {
       for (const body of [{ method: "dns_txt" }, { method: "administrator" }]) {
         cy.request({
           method: "POST",
@@ -281,44 +314,79 @@ describe("Resource-URL resolution ignores unverified (squatted) API server domai
         });
       }
       cy.logout();
+
+      registerPublicClient().then((client) => {
+        // 2. The resource URL still resolves to the example API server alone.
+        createUserAuthorizedForClient(client.client_id).then((user) => {
+          requestResourceUrlToken(client.client_id, user).then((response) => {
+            expectTokenAcceptedByExampleResourceServer(response, "with an unverified squat");
+          });
+          cy.logout();
+
+          // 3. Verified, the squatter's registration takes part in
+          //    resolution (here: making the URL ambiguous).
+          loginAsSuperuser();
+          cy.request({
+            method: "POST",
+            url: `/api/apis/${api_server_id}/domains/${api_server_domain_ref_id}/verify`,
+            body: { method: "administrator" },
+          }).then((response) => {
+            expect(response.status, "administrator attestation").to.equal(200);
+          });
+          cy.logout();
+          requestResourceUrlToken(client.client_id, user).then((response) => {
+            expect(response.status, "with a verified second match").to.equal(400);
+            expect(response.body.error).to.equal("invalid_target");
+          });
+          cy.logout();
+
+          deleteCreatedApiServers();
+          requestResourceUrlToken(client.client_id, user).then((response) => {
+            expectTokenAcceptedByExampleResourceServer(response, "after the squat is removed");
+          });
+          cy.logout();
+        });
+      });
     });
+  });
 
-    registerPublicClient().then((client) => {
-      // 2. The resource URL still resolves to the example API server alone.
-      createUserAuthorizedForClient(client.client_id).then((user) => {
-        requestResourceUrlToken(client.client_id, user).then((response) => {
-          expectTokenAcceptedByExampleResourceServer(response, "with an unverified squat");
-        });
-        cy.logout();
+  it("only falls back to unverified registrations while verification is not required", () => {
+    setRegistrationEnabled(true);
+    setVerificationRequired(false);
 
-        // 3. Verified, the squatter's registration would take part in
-        //    resolution (here: making the URL ambiguous).
-        loginAsSuperuser();
-        cy.request({
-          method: "POST",
-          url: `/api/apis/${api_server_id}/domains/${api_server_domain_ref_id}/verify`,
-          body: { method: "administrator" },
-        }).then((response) => {
-          expect(response.status, "administrator attestation").to.equal(200);
-        });
-        cy.logout();
-        cy.login_via_request(user.email, user.password).then((ok: boolean) => {
-          expect(ok, "user login").to.be.true;
-        });
-        requestResourceUrlToken(client.client_id, user).then((response) => {
-          expect(response.status, "with a verified second match").to.equal(400);
-          expect(response.body.error).to.equal("invalid_target");
-        });
-        cy.logout();
+    cy.generate_random_code(10).then((randomCode: string) => {
+      const unverifiedOrigin = `https://api-${randomCode.toLowerCase()}.transition.invalid`;
+      const unverifiedResource = `${unverifiedOrigin}/mcp`;
+      createUserOwnedApiServerWithDomain(unverifiedOrigin);
+      cy.logout();
 
-        deleteSquatterApiServer();
-        cy.login_via_request(user.email, user.password).then((ok: boolean) => {
-          expect(ok, "user login").to.be.true;
+      registerPublicClient().then((client) => {
+        createUserAuthorizedForClient(client.client_id).then((user) => {
+          // Not required (the default): the unverified domain is the only
+          // match, so it resolves as it did before domains could be verified.
+          requestResourceUrlToken(client.client_id, user, unverifiedResource).then((response) => {
+            expect(response.status, "unverified sole match while not required").to.equal(200);
+            expect(response.body.access_token, "access token").to.be.a("string").and.not.be.empty;
+          });
+          cy.logout();
+
+          // Required: unverified registrations never resolve...
+          setVerificationRequired(true);
+          requestResourceUrlToken(client.client_id, user, unverifiedResource).then((response) => {
+            expect(response.status, "unverified sole match once required").to.equal(400);
+            expect(response.body.error).to.equal("invalid_target");
+          });
+          cy.logout();
+
+          // ...while the example resource server's verified domain still does.
+          requestResourceUrlToken(client.client_id, user).then((response) => {
+            expectTokenAcceptedByExampleResourceServer(response, "verified domain once required");
+          });
+          cy.logout();
+
+          setVerificationRequired(false);
+          deleteCreatedApiServers();
         });
-        requestResourceUrlToken(client.client_id, user).then((response) => {
-          expectTokenAcceptedByExampleResourceServer(response, "after the squat is removed");
-        });
-        cy.logout();
       });
     });
   });

@@ -20,7 +20,7 @@ export type ApiServerDomainVerificationError =
 
 /** The auth server's answer to a domain verification attempt. */
 export interface ApiServerDomainVerificationAttempt {
-  /** Whether the domain is verified (RFC 8707 resource URLs on it resolve). */
+  /** Whether the domain's ownership is verified. */
   verified: boolean;
   /** Why it is not (absent when verified). */
   error?: ApiServerDomainVerificationError;
@@ -68,8 +68,9 @@ export interface IVerifyApiServerDomainOpts {
 /**
  * @description `POST /api/apis/[api_server_id]/domains/[api_server_domain_ref_id]/verify`
  * — asks the auth server to verify that the API server's managers control a
- * registered domain. RFC 8707 resource URLs resolve to an API server only
- * through its verified domains. Publish the TXT record the domain's
+ * registered domain. Verified domains take precedence in RFC 8707
+ * resource-URL resolution, and are the only ones that resolve once the auth
+ * server requires verification. Publish the TXT record the domain's
  * verification state names (`verification.dns_txt_record`) first, and keep it
  * published. A domain left unverified (record not published yet, a host DNS
  * cannot verify, DNS not answering) is a normal outcome, returned with

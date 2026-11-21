@@ -1,8 +1,9 @@
 // Domain ownership verification of API server domains (migration 00057).
-// RFC 8707 resource URLs resolve to an API server only through its VERIFIED
-// domains, so registering someone else's domain gets a squatter nothing
-// (dynamic_client_registration/ResourceUrlDomainSquatting.cy.ts drives the
-// resolution itself).
+// Verified domains take precedence in RFC 8707 resource-URL resolution and,
+// once the `require_api_server_domain_verification` server setting is on,
+// are the only ones that resolve, so registering someone else's domain gets
+// a squatter nothing (dynamic_client_registration/ResourceUrlDomainSquatting.cy.ts
+// drives the resolution itself).
 //
 //   1. A regular user's new API server domain starts unverified: the POST
 //      response and GET /api/apis/:id/domains (`verifications`) name the

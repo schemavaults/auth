@@ -6,8 +6,12 @@
 // API server and register any domain on it, so an unverified registration let
 // one tenant claim another's origin: resource-URL resolution became ambiguous
 // for the victim (every token request for it failed), or, registered first,
-// resolved to the squatter's API server. From now on only VERIFIED domains
-// take part in resource-URL resolution.
+// resolved to the squatter's API server. From now on VERIFIED domains take
+// precedence in resource-URL resolution: when one matches, unverified
+// registrations are ignored. Unverified registrations only still resolve
+// as a fallback while the `require_api_server_domain_verification` server
+// setting is off (its default, so nothing breaks while owners verify their
+// domains); with the setting on they never do.
 //
 // - verification_token TEXT NOT NULL: random per registration. Its owner
 //   publishes it as a DNS TXT record (`_auth-domain-verification.<host>` =
@@ -22,8 +26,8 @@
 // `administrator`: only platform administrators can create such API servers
 // or add domains to them, so their registrations were already attested by
 // one. Every other existing row starts unverified, including any squatted
-// one: its owner verifies it before resource URLs on it resolve again (API
-// server ids as `resource` keep working meanwhile).
+// one. They keep resolving as before while the setting above is off; their
+// owners verify them before an administrator turns it on.
 //
 // The partial index serves the resolution query (verified rows of one
 // environment whose domain starts with the resource URL's origin).

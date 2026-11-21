@@ -16,7 +16,7 @@ export const listApiServerDomains = defineOperation({
   path: ROUTE,
   summary: "List an API server's domains",
   description:
-    "Lists the domains registered for an API server across app environments, with the ownership verification state of each (`verifications`): RFC 8707 `resource` URLs resolve to the API server only through its verified domains. A pending domain's entry names the DNS TXT record that verifies it.",
+    "Lists the domains registered for an API server across app environments, with the ownership verification state of each (`verifications`). Verified domains take precedence: when one of them matches a resource URL, other API servers' unverified registrations are ignored. Unverified registrations only resolve as a fallback while the `require_api_server_domain_verification` server setting is off (the default during the transition to domain verification); once it is on, they never resolve. A pending domain's entry names the DNS TXT record that verifies it.",
   tags: [API_TAGS.apis],
   auth: requireAuth({
     schemes: sessionSchemes,

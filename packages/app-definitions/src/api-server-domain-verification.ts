@@ -2,8 +2,10 @@ import { z } from "zod";
 
 /**
  * How the ownership of a domain registered for an API server was verified.
- * RFC 8707 `resource` URLs resolve only to API servers through VERIFIED
- * domains, so one tenant cannot claim another's origin.
+ * VERIFIED domains take precedence when RFC 8707 `resource` URLs are resolved
+ * to API servers, and once the auth server requires verification (its
+ * `require_api_server_domain_verification` setting) they are the only ones
+ * that resolve, so one tenant cannot claim another's origin.
  *
  * - `dns_txt`: the auth server found the registration's token in a DNS TXT
  *   record on the domain's host.
@@ -43,7 +45,12 @@ export type ApiServerDomainVerificationTxtRecord = z.infer<
  */
 export const apiServerDomainVerificationSchema = z.object({
   api_server_domain_ref_id: z.guid(),
-  /** Whether RFC 8707 `resource` URLs on the domain resolve to the API server. */
+  /**
+   * Whether the domain's ownership is verified: it then takes precedence
+   * over other API servers' unverified registrations of it, and keeps
+   * resolving RFC 8707 `resource` URLs once the auth server requires
+   * verification.
+   */
   verified: z.boolean(),
   /** When the domain was verified (epoch ms); null while pending. */
   verified_at: z.number().nonnegative().nullable(),

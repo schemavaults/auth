@@ -887,8 +887,9 @@ export interface ISchemaVaultsAuthClient {
    * @description The ownership verification state of each domain registered
    * for an API server (matched to `listApiServerDomains()` by
    * `api_server_domain_ref_id`), including the DNS TXT record that verifies
-   * a pending one. RFC 8707 resource URLs resolve to an API server only
-   * through its verified domains.
+   * a pending one. Verified domains take precedence in RFC 8707
+   * resource-URL resolution, and are the only ones that resolve once the
+   * auth server requires verification.
    * @argument api_server_id The unique ID of the API server
    */
   listApiServerDomainVerifications: (

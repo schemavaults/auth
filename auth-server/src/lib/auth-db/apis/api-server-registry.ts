@@ -521,8 +521,8 @@ export class SchemaVaultsApiServerRegistry {
     // environment (the primary key is the ref id, so check explicitly).
     // Domains compare exactly: an apex domain and its www. subdomain are
     // separate registrations. Other API servers may register the same
-    // domain: registrations are inert until verified, and only the host's
-    // owner can verify one.
+    // domain: a verified registration (only the host's owner can verify
+    // one) takes precedence over unverified ones.
     const existing = await this.getApiServerDomains(api_server_id);
     assertDomainRegistrationAvailable(
       API_SERVER_DOMAIN_REGISTRATION_OWNER,
@@ -539,9 +539,10 @@ export class SchemaVaultsApiServerRegistry {
     );
 
     try {
-      // Every registration starts unverified, with its own token: RFC 8707
-      // resource URLs on the domain resolve to this API server only once
-      // its owner proves control of the host (see
+      // Every registration starts unverified, with its own token: its owner
+      // proves control of the host to make it take precedence in RFC 8707
+      // resource-URL resolution, and to keep it resolving once the
+      // require_api_server_domain_verification server setting is on (see
       // lib/api-server-domain-verification/).
       const result = await this.db
         .insertInto("api_server_domains")

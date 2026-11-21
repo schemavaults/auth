@@ -139,7 +139,7 @@ export function CreateApiServerDomainForm({
         variant: "default",
         title: "Created new API server domain successfully",
         description:
-          "Verify its ownership on the API server's page: resource URLs on an unverified domain do not resolve to the API server.",
+          "Verify its ownership on the API server's page, so resource URLs on it keep resolving to the API server once the deployment requires verified domains.",
       });
       mutate(
         (key) =>

@@ -16,7 +16,9 @@ import type { Insertable, Selectable, Updateable } from "@schemavaults/dbh";
  * - `verified_at` (epoch ms; BIGINT, so it may come back as a string) and
  *   `verification_method` are both NULL while the registration is pending
  *   and both set once it is verified (a CHECK constraint keeps them in step).
- *   Only verified rows take part in RFC 8707 resource-URL resolution.
+ *   Verified rows take precedence in RFC 8707 resource-URL resolution;
+ *   unverified ones are only a fallback while the
+ *   `require_api_server_domain_verification` server setting is off.
  */
 export type ApiServerDomainsTable = SchemaVaultsApiServerDomainRef & {
   verification_token: string;

@@ -18,7 +18,7 @@ export const addApiServerDomain = defineOperation({
   path: ROUTE,
   summary: "Add a domain to an API server",
   description:
-    "Registers a domain for the API server in one app environment. The body's `api_server_id` must equal the path parameter. The same domain may be registered once per environment. The domain starts unverified: RFC 8707 `resource` URLs on it resolve to the API server only once its ownership is verified (`verification.dns_txt_record` names the DNS TXT record to publish, then call `POST /api/apis/{api_server_id}/domains/{api_server_domain_ref_id}/verify`). Other API servers may register the same domain; only a verified registration takes effect.",
+    "Registers a domain for the API server in one app environment. The body's `api_server_id` must equal the path parameter. The same domain may be registered once per environment. The domain starts unverified; verify its ownership (`verification.dns_txt_record` names the DNS TXT record to publish, then call `POST /api/apis/{api_server_id}/domains/{api_server_domain_ref_id}/verify`). Other API servers may register the same domain. Verified domains take precedence: when one of them matches a resource URL, other API servers' unverified registrations are ignored. Unverified registrations only resolve as a fallback while the `require_api_server_domain_verification` server setting is off (the default during the transition to domain verification); once it is on, they never resolve.",
   tags: [API_TAGS.apis],
   auth: requireAuth({
     schemes: sessionSchemes,

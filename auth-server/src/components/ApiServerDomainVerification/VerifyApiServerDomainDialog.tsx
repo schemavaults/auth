@@ -24,6 +24,8 @@ export interface VerifyApiServerDomainDialogProps {
   verification: ApiServerDomainVerification;
   /** Platform administrators may also attest the domain without DNS. */
   canAttest: boolean;
+  /** Whether unverified domains have stopped resolving resource URLs. */
+  verificationRequired: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Called once the domain is verified. */
@@ -65,6 +67,7 @@ export const VerifyApiServerDomainDialog: FC<VerifyApiServerDomainDialogProps> =
   domain,
   verification,
   canAttest,
+  verificationRequired,
   open,
   onOpenChange,
   onVerified,
@@ -107,9 +110,20 @@ export const VerifyApiServerDomainDialog: FC<VerifyApiServerDomainDialogProps> =
         <DialogHeader>
           <DialogTitle>Verify domain ownership</DialogTitle>
           <DialogDescription>
-            Resource URLs on <span className="font-medium break-all">{domain.domain}</span> (
-            {domain.environment}) resolve to this API server only once you prove you control
-            the domain, so nobody else can claim it.
+            {verificationRequired ? (
+              <>
+                Resource URLs on <span className="font-medium break-all">{domain.domain}</span> (
+                {domain.environment}) resolve to this API server only once you prove you control
+                the domain, so nobody else can claim it.
+              </>
+            ) : (
+              <>
+                Prove you control <span className="font-medium break-all">{domain.domain}</span> (
+                {domain.environment}): a verified domain takes precedence over anyone else&apos;s
+                registration of it, and keeps resolving resource URLs to this API server once
+                this deployment requires verification.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 

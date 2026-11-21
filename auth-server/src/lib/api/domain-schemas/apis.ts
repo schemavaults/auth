@@ -58,7 +58,7 @@ export const ApiServerDomainVerification = withOpenApi(
   "ApiServerDomainVerification",
   {
     description:
-      "Whether the ownership of a registered domain is verified. RFC 8707 `resource` URLs resolve to an API server only through its verified domains. To verify through DNS, publish `dns_txt_record` (a TXT record named `name` with the value `value`) and keep it published, then call `POST /api/apis/{api_server_id}/domains/{api_server_domain_ref_id}/verify`. `dns_txt_record` is null for hosts DNS cannot verify (loopback and IP-literal hosts, single-label names), which only a platform administrator can verify.",
+      "Whether the ownership of a registered domain is verified. Verified domains take precedence: when one of them matches a resource URL, other API servers' unverified registrations are ignored. Unverified registrations only resolve as a fallback while the `require_api_server_domain_verification` server setting is off (the default during the transition to domain verification); once it is on, they never resolve. To verify through DNS, publish `dns_txt_record` (a TXT record named `name` with the value `value`) and keep it published, then call `POST /api/apis/{api_server_id}/domains/{api_server_domain_ref_id}/verify`. `dns_txt_record` is null for hosts DNS cannot verify (loopback and IP-literal hosts, single-label names), which only a platform administrator can verify.",
   },
 );
 
