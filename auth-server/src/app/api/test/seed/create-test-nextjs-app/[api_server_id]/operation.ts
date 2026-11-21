@@ -19,6 +19,7 @@ import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { hashClientSecret } from "@/lib/oauth2/client-secret";
 import { CreateTestNextjsAppRequest } from "./request-schema";
 import { setAppDeviceAuthorizationEnabled } from "@/lib/auth-db/device-authorizations";
+import { markApiServerDomainVerified } from "@/lib/auth-db/api-server-domain-verifications";
 
 /**
  * Seeds the app + API server pair the example Next.js resource server
@@ -32,7 +33,7 @@ export const createTestNextjsApp = defineOperation({
   path: "/api/test/seed/create-test-nextjs-app/{api_server_id}",
   summary: "Seed the example resource server's app and API",
   description:
-    "Registers a client application and an API server sharing the given id (both platform-owned and connected to each other), adds `url` as their test-environment domain, stores `jwks_access_public_key` as the API server's active JWKS access key and, optionally, a client secret, an explicit callback URL allowlist, extra API server connections and the API server's dynamic-client policy. The Cypress suite calls this once before running against the example Next.js resource server.",
+    "Registers a client application and an API server sharing the given id (both platform-owned and connected to each other), adds `url` as their test-environment domain (verified for the API server, so RFC 8707 resource URLs on it resolve), stores `jwks_access_public_key` as the API server's active JWKS access key and, optionally, a client secret, an explicit callback URL allowlist, extra API server connections and the API server's dynamic-client policy. The Cypress suite calls this once before running against the example Next.js resource server.",
   tags: [API_TAGS.testEnvironment],
   auth: publicAccess(TEST_ENVIRONMENT_ONLY_NOTE),
   request: {
@@ -114,6 +115,10 @@ export const createTestNextjsApp = defineOperation({
         environment,
         domain: url,
       });
+      // The seeded API server is platform-owned, so an administrator attests
+      // its domain (the example resource server's host is a container name
+      // DNS cannot verify): RFC 8707 resource URLs on it resolve.
+      await markApiServerDomainVerified(db, api_server_id, "administrator", now);
       await appToApiRegistry.allow(api_server_id, api_server_id, null);
 
       if (allow_dynamic_clients !== undefined || resource_url_match_mode !== undefined) {

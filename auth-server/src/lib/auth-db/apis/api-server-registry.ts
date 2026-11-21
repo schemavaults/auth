@@ -16,6 +16,8 @@ import {
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { ownershipFieldsFromDatabaseRow, toOwnershipDatabaseColumns } from "@/lib/ownership/ownership-columns";
 import type { NewApiServer } from "./apis-table";
+import { API_SERVER_DOMAIN_REF_COLUMNS } from "./api-domains-table";
+import { generateDomainVerificationToken } from "@/lib/auth-db/api-server-domain-verifications/generate-domain-verification-token";
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
@@ -130,11 +132,14 @@ export class SchemaVaultsApiServerRegistry {
       return getHardcodedApiDomains(api_server_id);
     }
 
+    // Only the ref's columns: the verification columns (migration 00057)
+    // are not part of the strict ref schema; see
+    // listApiServerDomainVerifications() for them.
     const queryApiServers = this.db
       .selectFrom("api_server_domains")
       .where("api_server_id", "=", api_server_id)
       .limit(50)
-      .selectAll();
+      .select(API_SERVER_DOMAIN_REF_COLUMNS);
     const rows = await queryApiServers.execute();
     const parsed_domains = await Promise.all(
       rows.map((row) => {
@@ -515,7 +520,9 @@ export class SchemaVaultsApiServerRegistry {
     // The same domain may only be registered once per API server +
     // environment (the primary key is the ref id, so check explicitly).
     // Domains compare exactly: an apex domain and its www. subdomain are
-    // separate registrations.
+    // separate registrations. Other API servers may register the same
+    // domain: registrations are inert until verified, and only the host's
+    // owner can verify one.
     const existing = await this.getApiServerDomains(api_server_id);
     assertDomainRegistrationAvailable(
       API_SERVER_DOMAIN_REGISTRATION_OWNER,
@@ -532,9 +539,18 @@ export class SchemaVaultsApiServerRegistry {
     );
 
     try {
+      // Every registration starts unverified, with its own token: RFC 8707
+      // resource URLs on the domain resolve to this API server only once
+      // its owner proves control of the host (see
+      // lib/api-server-domain-verification/).
       const result = await this.db
         .insertInto("api_server_domains")
-        .values(domain)
+        .values({
+          ...domain,
+          verification_token: generateDomainVerificationToken(),
+          verified_at: null,
+          verification_method: null,
+        })
         .onConflict((oc) => oc.column("api_server_domain_ref_id").doNothing())
         .executeTakeFirst();
 

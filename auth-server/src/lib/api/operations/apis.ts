@@ -10,6 +10,7 @@ import {
   listApiServerDomains,
 } from "@/app/api/apis/[api_server_id]/domains/operation";
 import { deleteApiServerDomain } from "@/app/api/apis/[api_server_id]/domains/[api_server_domain_ref_id]/operation";
+import { verifyApiServerDomainOperation } from "@/app/api/apis/[api_server_id]/domains/[api_server_domain_ref_id]/verify/operation";
 import {
   connectAppToApiServer,
   disconnectAppFromApiServer,
@@ -50,6 +51,7 @@ export const apisOperations: readonly AnyOperationDefinition[] = [
   deleteApiServer,
   listApiServerDomains,
   addApiServerDomain,
+  verifyApiServerDomainOperation,
   deleteApiServerDomain,
   listApiServerScopes,
   createApiServerScope,

@@ -60,15 +60,18 @@ function escapeLikePattern(value: string): string {
 }
 
 /**
- * @description Finds the API server that registered a domain matching an
- * RFC 8707 resource URL in the given environment, honouring each API
- * server's `resource_url_match_mode`. Registered domains are origins
+ * @description Finds the API server that registered a VERIFIED domain
+ * matching an RFC 8707 resource URL in the given environment, honouring each
+ * API server's `resource_url_match_mode`. Registrations whose ownership was
+ * not verified (`lib/api-server-domain-verification/`) are ignored, so
+ * nobody can claim another tenant's origin. Registered domains are origins
  * (`https://api.example.com`), so candidates are pre-filtered by the
  * resource's origin in SQL and then matched exactly (or by path prefix
  * for servers that opted into `prefix` matching) in code.
  *
  * @throws UnresolvableTokenResourceError when no API server matches, or
- * when more than one does (the resource would be ambiguous).
+ * when more than one does (the resource would be ambiguous; only the
+ * domain's verified owner can cause that).
  */
 export async function resolveResourceUrlToApiServer(
   db: Kysely<AuthDatabase>,
@@ -94,6 +97,12 @@ export async function resolveResourceUrlToApiServer(
       "api_server_domains.api_server_id",
     )
     .where("api_server_domains.environment", "=", environment)
+    // Only domains whose ownership was verified (migration 00057): anyone
+    // may register any domain on an API server they create, so an
+    // unverified registration must neither make a resource ambiguous nor
+    // capture it.
+    .where("api_server_domains.verified_at", "is not", null)
+    .where("api_server_domains.verification_method", "is not", null)
     .where("api_server_domains.domain", "like", `${escapeLikePattern(origin)}%`)
     .select([
       "api_server_domains.api_server_id as api_server_id",

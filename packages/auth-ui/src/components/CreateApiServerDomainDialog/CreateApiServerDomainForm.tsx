@@ -138,6 +138,8 @@ export function CreateApiServerDomainForm({
       toast({
         variant: "default",
         title: "Created new API server domain successfully",
+        description:
+          "Verify its ownership on the API server's page: resource URLs on an unverified domain do not resolve to the API server.",
       });
       mutate(
         (key) =>

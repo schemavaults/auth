@@ -91,6 +91,20 @@ export const DYNAMIC_CLIENT_REGISTRATION_RATE_LIMIT: RateLimitConfig = {
   keySource: "ip",
 };
 
+/**
+ * Domain ownership checks at POST
+ * /api/apis/{api_server_id}/domains/{api_server_domain_ref_id}/verify, per
+ * account and IP. Each check queries DNS for a name the caller chose, so
+ * the budget bounds lookups an account can trigger; an owner waiting for
+ * their record to propagate retries a few times.
+ */
+export const API_SERVER_DOMAIN_VERIFICATION_RATE_LIMIT: RateLimitConfig = {
+  name: "api-server-domain-verification",
+  maxAttempts: 20,
+  windowSeconds: 60 * 60,
+  keySource: "ip+uid",
+};
+
 // Caps cross-challenge MFA verify abuse from a single IP. Per-challenge
 // attempts are independently capped at 5 by challenge-store.ts; this
 // limiter exists to prevent a bot from rotating challenge_ids to evade

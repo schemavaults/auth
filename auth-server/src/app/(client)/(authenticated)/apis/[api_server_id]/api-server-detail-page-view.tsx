@@ -3,6 +3,7 @@
 import { useState, type ReactElement } from "react";
 import {
   isHardcodedAppId,
+  type ApiServerDomainVerification,
   type SchemaVaultsApiServerDefinition,
   type SchemaVaultsApiServerDomainRef,
   type SchemaVaultsAppEnvironment
@@ -12,7 +13,8 @@ import { DetailRow } from "@/components/DetailRow";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveApiServerDomainDialog, WrappableUrl } from "@schemavaults/auth-ui";
-import { Trash2, KeyRound, ListChecks, Plus, Unplug } from "lucide-react";
+import { Trash2, KeyRound, ListChecks, Plus, ShieldCheck, Unplug } from "lucide-react";
+import { ApiServerDomainVerificationBadge, VerifyApiServerDomainDialog } from "@/components/ApiServerDomainVerification";
 import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
 import { ApiServerScopesCard, AppScopeAllowancesDialog } from "@/components/ApiServerScopes";
 import type { ApiServerScope } from "@schemavaults/auth-common";
@@ -37,6 +39,11 @@ export interface ApiServerDetailPageViewProps {
   api_server: SchemaVaultsApiServerDefinition;
   connected_apps: readonly ConnectedApp[];
   connected_domains: readonly SchemaVaultsApiServerDomainRef[];
+  /**
+   * Ownership verification state of each domain (matched by
+   * `api_server_domain_ref_id`); none for hardcoded API servers.
+   */
+  domain_verifications: readonly ApiServerDomainVerification[];
   /** The API scopes the API server defines (none for hardcoded ones). */
   scopes: readonly ApiServerScope[];
   hardcoded: boolean;
@@ -46,7 +53,15 @@ export interface ApiServerDetailPageViewProps {
   current_environment: SchemaVaultsAppEnvironment;
 }
 
-function DomainRow({ domain, dateKey, onRemove }: { domain: SchemaVaultsApiServerDomainRef; dateKey: string; onRemove?: () => void }) {
+interface DomainRowProps {
+  domain: SchemaVaultsApiServerDomainRef;
+  dateKey: string;
+  verification?: ApiServerDomainVerification;
+  onVerify?: () => void;
+  onRemove?: () => void;
+}
+
+function DomainRow({ domain, dateKey, verification, onVerify, onRemove }: DomainRowProps) {
   return (
     <div
       key={dateKey}
@@ -58,7 +73,10 @@ function DomainRow({ domain, dateKey, onRemove }: { domain: SchemaVaultsApiServe
         <p className="text-sm font-medium">
           <WrappableUrl url={domain.domain} />
         </p>
-        <p className="text-xs text-muted-foreground">{domain.environment}</p>
+        <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {domain.environment}
+          {verification && <ApiServerDomainVerificationBadge verification={verification} />}
+        </p>
       </div>
       <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
         <LocalDateTime
@@ -66,6 +84,18 @@ function DomainRow({ domain, dateKey, onRemove }: { domain: SchemaVaultsApiServe
           showSeconds={false}
           className="whitespace-nowrap text-xs text-muted-foreground"
         />
+        {onVerify && verification && !verification.verified && (
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label={`Verify domain ${domain.domain}`}
+            id={`verify-api-server-domain-button-${domain.api_server_domain_ref_id}`}
+            onClick={onVerify}
+          >
+            <ShieldCheck className="h-4 w-4 mr-1" />
+            Verify
+          </Button>
+        )}
         {onRemove && (
           <Button
             variant="ghost"
@@ -87,6 +117,7 @@ export default function ApiServerDetailPageView({
   api_server,
   connected_apps,
   connected_domains,
+  domain_verifications,
   scopes,
   hardcoded,
   isOrgOwner,
@@ -96,6 +127,7 @@ export default function ApiServerDetailPageView({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addDomainDialogOpen, setAddDomainDialogOpen] = useState(false);
   const [removeDomainTarget, setRemoveDomainTarget] = useState<SchemaVaultsApiServerDomainRef | null>(null);
+  const [verifyDomainTarget, setVerifyDomainTarget] = useState<SchemaVaultsApiServerDomainRef | null>(null);
   const [apps, setApps] = useState<readonly ConnectedApp[]>(connected_apps);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApp | null>(null);
   const [scopesTarget, setScopesTarget] = useState<ConnectedApp | null>(null);
@@ -107,6 +139,23 @@ export default function ApiServerDetailPageView({
   // environment rather than a database row. The server enforces this on
   // POST and DELETE regardless.
   const canManageDomains: boolean = !hardcoded && isOrgOwner;
+
+  const verificationsByRefId = new Map<string, ApiServerDomainVerification>(
+    domain_verifications.map((v) => [v.api_server_domain_ref_id, v]),
+  );
+  const verifyDomainTargetVerification: ApiServerDomainVerification | undefined = verifyDomainTarget
+    ? verificationsByRefId.get(verifyDomainTarget.api_server_domain_ref_id)
+    : undefined;
+  const renderDomainRow = (domain: SchemaVaultsApiServerDomainRef): ReactElement => (
+    <DomainRow
+      key={domain.api_server_domain_ref_id}
+      domain={domain}
+      dateKey={domain.api_server_domain_ref_id}
+      verification={verificationsByRefId.get(domain.api_server_domain_ref_id)}
+      onVerify={canManageDomains ? () => setVerifyDomainTarget(domain) : undefined}
+      onRemove={canManageDomains ? () => setRemoveDomainTarget(domain) : undefined}
+    />
+  );
 
   const activeDomains = connected_domains.filter((d) => d.environment === current_environment);
   const inactiveDomains = connected_domains.filter((d) => d.environment !== current_environment);
@@ -145,7 +194,8 @@ export default function ApiServerDetailPageView({
         <CardHeader>
           <CardTitle>Connected Domains</CardTitle>
           <CardDescription>
-            Registered domains for this API server.
+            Registered domains for this API server. RFC 8707 resource URLs
+            resolve to it only through domains whose ownership is verified.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -155,9 +205,7 @@ export default function ApiServerDetailPageView({
             </p>
           ) : (
             <div className="space-y-3">
-              {activeDomains.map((domain) => (
-                <DomainRow key={domain.api_server_domain_ref_id} domain={domain} dateKey={domain.api_server_domain_ref_id} onRemove={canManageDomains ? () => setRemoveDomainTarget(domain) : undefined} />
-              ))}
+              {activeDomains.map(renderDomainRow)}
             </div>
           )}
           {inactiveDomains.length > 0 && (
@@ -168,9 +216,7 @@ export default function ApiServerDetailPageView({
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-3">
-                    {inactiveDomains.map((domain) => (
-                      <DomainRow key={domain.api_server_domain_ref_id} domain={domain} dateKey={domain.api_server_domain_ref_id} onRemove={canManageDomains ? () => setRemoveDomainTarget(domain) : undefined} />
-                    ))}
+                    {inactiveDomains.map(renderDomainRow)}
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -199,6 +245,21 @@ export default function ApiServerDetailPageView({
           // the server component to show the new row.
           onCreated={() => router.refresh()}
           uuid={uuidSync}
+        />
+      )}
+
+      {canManageDomains && verifyDomainTarget && verifyDomainTargetVerification && (
+        <VerifyApiServerDomainDialog
+          key={verifyDomainTarget.api_server_domain_ref_id}
+          domain={verifyDomainTarget}
+          verification={verifyDomainTargetVerification}
+          canAttest={isPlatformAdmin}
+          open={!!verifyDomainTarget}
+          onOpenChange={(open: boolean) => {
+            if (!open) setVerifyDomainTarget(null);
+          }}
+          // Verification states come from server-side props as well.
+          onVerified={() => router.refresh()}
         />
       )}
 
