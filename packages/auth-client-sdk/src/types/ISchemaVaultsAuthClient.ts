@@ -66,6 +66,7 @@ import type {
 } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
 import type { ApiServerDomainVerificationAttempt } from "@/lib/api-server-domain-verification";
+import type { ConnectAppToApiServerOptions } from "@/lib/connect-app-to-api-server";
 import type {
   ApiServerDomainVerification,
   ApiServerDomainVerificationMethod,
@@ -933,11 +934,13 @@ export interface ISchemaVaultsAuthClient {
    * @description Connect a frontend client application to an API server, allowing it to request access tokens for that API
    * @argument api_server_id The unique ID of the API server
    * @argument client_app_id The unique ID of the client application
+   * @argument options `first_party: true` also marks the new connection first-party (users consent implicitly; platform administrators only, not for hardcoded API servers)
    * @returns A promise resolving if the connection succeeds
    */
   connectAppToApiServer: (
     api_server_id: ApiServerId,
     client_app_id: AppId,
+    options?: ConnectAppToApiServerOptions,
   ) => Promise<void>;
 
   /**

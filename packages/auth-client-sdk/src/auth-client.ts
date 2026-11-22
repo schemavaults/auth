@@ -78,6 +78,7 @@ import type {
 } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
 import type { ApiServerDomainVerificationAttempt } from "@/lib/api-server-domain-verification";
+import type { ConnectAppToApiServerOptions } from "@/lib/connect-app-to-api-server";
 import type {
   ApiServerDomainVerification,
   ApiServerDomainVerificationMethod,
@@ -2580,6 +2581,7 @@ export class SchemaVaultsAuthClient
   public async connectAppToApiServer(
     api_server_id: ApiServerId,
     client_app_id: AppId,
+    options?: ConnectAppToApiServerOptions,
   ): Promise<void> {
     this.assertAppAndApiManagementWriteAccess("connectAppToApiServer");
     const fn = await import("@/lib/connect-app-to-api-server").then(
@@ -2590,6 +2592,7 @@ export class SchemaVaultsAuthClient
       auth_server_uri: this.auth_server_uri,
       api_server_id,
       client_app_id,
+      first_party: options?.first_party,
     });
   }
 
