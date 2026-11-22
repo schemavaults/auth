@@ -113,6 +113,11 @@ export function getApiServersTableColumns(
                 ? preloaded.domains[api_server_id]
                 : undefined
             }
+            preloaded_domain_verifications={
+              typeof preloaded === "object" && !!preloaded
+                ? preloaded.domain_verifications?.[api_server_id]
+                : undefined
+            }
           />
         );
       },

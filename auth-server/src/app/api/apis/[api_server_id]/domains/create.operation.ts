@@ -1,17 +1,14 @@
 import { requireAuth } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import { sessionSchemes } from "@/lib/api/auth-schemes";
-import { ApiServerDomainRef, apiServerParams } from "@/lib/api/domain-schemas/apis";
-import {
-  ErrorResponse,
-  ResourceCreationResponse,
-  sessionErrorResponses,
-  validationErrorResponse,
-} from "@/lib/api/schemas";
+import { AddApiServerDomainResponse, ApiServerDomainRef, apiServerParams } from "@/lib/api/domain-schemas/apis";
+import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import captureServerException from "@/lib/captureServerException";
 import { ConflictError } from "@/lib/error/ConflictError";
+import { getApiServerDomainVerificationRow } from "@/lib/auth-db/api-server-domain-verifications";
+import { toApiServerDomainVerification } from "@/lib/api-server-domain-verification";
 import { canUserManageResource } from "@/lib/ownership/resource-access";
 
 const ROUTE = "/api/apis/{api_server_id}/domains";
@@ -21,7 +18,7 @@ export const addApiServerDomain = defineOperation({
   path: ROUTE,
   summary: "Add a domain to an API server",
   description:
-    "Registers a domain for the API server in one app environment. The body's `api_server_id` must equal the path parameter. The same domain may be registered once per environment.",
+    "Registers a domain for the API server in one app environment. The body's `api_server_id` must equal the path parameter. The same domain may be registered once per environment. The domain starts unverified; verify its ownership (`verification.dns_txt_record` names the DNS TXT record to publish, then call `POST /api/apis/{api_server_id}/domains/{api_server_domain_ref_id}/verify`). Other API servers may register the same domain. Verified domains take precedence: when one of them matches a resource URL, other API servers' unverified registrations are ignored. Unverified registrations only resolve as a fallback while the `require_api_server_domain_verification` server setting is off (the default during the transition to domain verification); once it is on, they never resolve.",
   tags: [API_TAGS.apis],
   auth: requireAuth({
     schemes: sessionSchemes,
@@ -38,8 +35,9 @@ export const addApiServerDomain = defineOperation({
   },
   responses: {
     200: {
-      description: "The domain was added; `resource_id` is the API server id",
-      schema: ResourceCreationResponse,
+      description:
+        "The domain was added; `resource_id` is the API server id and `verification` the new domain's (pending) verification state",
+      schema: AddApiServerDomainResponse,
     },
     // 400: malformed body, or its api_server_id differs from the path
     ...validationErrorResponse,
@@ -96,8 +94,17 @@ export const addApiServerDomain = defineOperation({
       });
     }
 
+    let verificationRow: Awaited<ReturnType<typeof getApiServerDomainVerificationRow>>;
     try {
       await apiServerRegistry.addApiServerDomain(newResource.api_server_id, newResource);
+      verificationRow = await getApiServerDomainVerificationRow(
+        db,
+        newResource.api_server_id,
+        newResource.api_server_domain_ref_id,
+      );
+      if (!verificationRow) {
+        throw new Error("The new API server domain was not found after it was added");
+      }
     } catch (e: unknown) {
       if (e instanceof ConflictError) {
         return ctx.json(409, { success: false, message: e.message });
@@ -115,6 +122,7 @@ export const addApiServerDomain = defineOperation({
       success: true,
       message: "Successfully added domain to API server",
       resource_id: newResource.api_server_id,
+      verification: toApiServerDomainVerification(verificationRow),
     });
   },
 });

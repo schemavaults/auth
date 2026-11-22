@@ -72,6 +72,13 @@ export const SERVER_SETTING_DEFINITIONS = {
     description:
       "Whether anonymous OAuth 2.0 Dynamic Client Registration (RFC 7591) is enabled at POST /api/oidc/register, e.g. for MCP clients. Registered clients have no owner and are managed by administrators only; the discovery document advertises registration_endpoint only while this is on.",
   },
+  require_api_server_domain_verification: {
+    valueType: "boolean" as const,
+    defaultValue: false,
+    schema: z.boolean(),
+    description:
+      "Whether RFC 8707 resource URLs resolve to API servers only through domains whose ownership was verified (DNS TXT record or administrator attestation). A verified domain always takes precedence over other API servers' unverified registrations of it. While off (the default, for the transition to domain verification), a resource URL that matches no verified domain still resolves through unverified registrations as before, so existing integrations keep working. Turn it on once API server owners have verified their domains: unverified registrations then never resolve, so nobody can claim another tenant's domain.",
+  },
   dynamic_client_registration_allow_localhost_redirect_uris: {
     valueType: "boolean" as const,
     defaultValue: true,

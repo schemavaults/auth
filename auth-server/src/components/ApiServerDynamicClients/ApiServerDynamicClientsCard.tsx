@@ -127,7 +127,8 @@ export const ApiServerDynamicClientsCard: FC<ApiServerDynamicClientsCardProps> =
           <p className="font-medium">Resource URL matching</p>
           <p className="text-sm text-muted-foreground">
             How a token request&apos;s <code>resource</code> URL is matched
-            against this server&apos;s registered domains. <strong>Exact</strong>{" "}
+            against this server&apos;s registered domains (verified domains
+            take precedence; see Connected Domains). <strong>Exact</strong>{" "}
             requires the URL to equal a registered domain;{" "}
             <strong>Prefix</strong> also accepts any URL under one (for
             example <code>https://api.example.com/mcp</code>). The issued

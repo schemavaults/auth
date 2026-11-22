@@ -2,12 +2,9 @@ import "server-only";
 import { z } from "zod";
 import {
   apiServerIdSchema,
-  doesResourceUrlMatchApiServerDomain,
   getApiServerIdForTokenAudience,
   getAppEnvironment,
-  resourceUrlMatchModeSchema,
   type ApiServerId,
-  type ResourceUrlMatchMode,
   type SchemaVaultsApiServerDefinition,
   type SchemaVaultsAppEnvironment,
 } from "@schemavaults/app-definitions";
@@ -17,6 +14,8 @@ import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import getAuthServerAppId from "@/lib/config/auth-server-app-id";
 import UnresolvableTokenResourceError from "@/lib/error/UnresolvableTokenResourceError";
+import requireApiServerDomainVerification from "@/lib/config/require-api-server-domain-verification";
+import { findApiServersMatchingResourceUrl } from "./find-api-servers-matching-resource-url";
 
 /**
  * A token audience resolved to the API server that will verify tokens
@@ -49,23 +48,18 @@ export type ResolvedTokenAudience =
     };
 
 /**
- * Largest number of domain rows considered for one resource URL; a
- * deployment with more registered domains under one origin is not a
- * realistic configuration.
- */
-const MAX_CANDIDATE_DOMAIN_ROWS = 200;
-
-function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-/**
- * @description Finds the API server that registered a domain matching an
- * RFC 8707 resource URL in the given environment, honouring each API
- * server's `resource_url_match_mode`. Registered domains are origins
- * (`https://api.example.com`), so candidates are pre-filtered by the
- * resource's origin in SQL and then matched exactly (or by path prefix
- * for servers that opted into `prefix` matching) in code.
+ * @description Finds the API server whose registered domain matches an RFC
+ * 8707 resource URL in the given environment, honouring each API server's
+ * `resource_url_match_mode` (see `findApiServersMatchingResourceUrl()`).
+ *
+ * Domain registrations whose ownership is VERIFIED
+ * (`lib/api-server-domain-verification/`) come first: when any API server
+ * has a verified domain matching the URL, unverified registrations are
+ * ignored, so a registration of someone else's domain can neither make it
+ * ambiguous nor capture it. Only when no verified domain matches, and while
+ * the `require_api_server_domain_verification` server setting is off (the
+ * transition default), the URL falls back to every registration, as before
+ * domains could be verified; with the setting on it does not resolve.
  *
  * @throws UnresolvableTokenResourceError when no API server matches, or
  * when more than one does (the resource would be ambiguous).
@@ -86,42 +80,28 @@ export async function resolveResourceUrlToApiServer(
     throw new UnresolvableTokenResourceError(resource_url, "unknown");
   }
 
-  const rows = await db
-    .selectFrom("api_server_domains")
-    .innerJoin(
-      "api_servers",
-      "api_servers.api_server_id",
-      "api_server_domains.api_server_id",
-    )
-    .where("api_server_domains.environment", "=", environment)
-    .where("api_server_domains.domain", "like", `${escapeLikePattern(origin)}%`)
-    .select([
-      "api_server_domains.api_server_id as api_server_id",
-      "api_server_domains.domain as domain",
-      "api_servers.resource_url_match_mode as resource_url_match_mode",
-    ])
-    .limit(MAX_CANDIDATE_DOMAIN_ROWS)
-    .execute();
-
-  const matched_api_server_ids = new Set<ApiServerId>();
-  for (const row of rows) {
-    const mode_parsed = resourceUrlMatchModeSchema.safeParse(
-      row.resource_url_match_mode,
-    );
-    const mode: ResourceUrlMatchMode = mode_parsed.success
-      ? mode_parsed.data
-      : "exact";
-    if (doesResourceUrlMatchApiServerDomain(resource_url, row.domain, mode)) {
-      const id = apiServerIdSchema.safeParse(row.api_server_id);
-      if (id.success) {
-        matched_api_server_ids.add(id.data);
-      }
+  let matched_api_server_ids: Set<ApiServerId> = await findApiServersMatchingResourceUrl(db, {
+    resource_url,
+    origin,
+    environment,
+    registrations: "verified",
+  });
+  let matched_through: "verified" | "any" = "verified";
+  if (matched_api_server_ids.size === 0) {
+    if (!(await requireApiServerDomainVerification(db))) {
+      matched_api_server_ids = await findApiServersMatchingResourceUrl(db, {
+        resource_url,
+        origin,
+        environment,
+        registrations: "any",
+      });
+      matched_through = "any";
     }
   }
 
   if (debug) {
     console.log(
-      `[resolveResourceUrlToApiServer] '${resource_url}' (${environment}) matched API servers: `,
+      `[resolveResourceUrlToApiServer] '${resource_url}' (${environment}) matched API servers through ${matched_through} domains: `,
       [...matched_api_server_ids],
     );
   }

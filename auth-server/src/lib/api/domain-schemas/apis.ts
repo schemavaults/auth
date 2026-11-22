@@ -1,5 +1,7 @@
 import { z, withOpenApi } from "@schemavaults/openapi-operations";
 import {
+  apiServerDomainVerificationMethodSchema,
+  apiServerDomainVerificationSchema,
   apiServerIdSchema,
   schemaVaultsApiServerDefinitionSchema,
   schemaVaultsApiServerDomainRefSchema,
@@ -50,13 +52,61 @@ export const apiServerDomainParams = apiServerParams.extend({
   api_server_domain_ref_id: z.guid().openapi({ description: "The API server domain reference id" }),
 });
 
+/** Ownership verification state of a domain registered for an API server (migration 00057). */
+export const ApiServerDomainVerification = withOpenApi(
+  apiServerDomainVerificationSchema,
+  "ApiServerDomainVerification",
+  {
+    description:
+      "Whether the ownership of a registered domain is verified. Verified domains take precedence: when one of them matches a resource URL, other API servers' unverified registrations are ignored. Unverified registrations only resolve as a fallback while the `require_api_server_domain_verification` server setting is off (the default during the transition to domain verification); once it is on, they never resolve. To verify through DNS, publish `dns_txt_record` (a TXT record named `name` with the value `value`) and keep it published, then call `POST /api/apis/{api_server_id}/domains/{api_server_domain_ref_id}/verify`. `dns_txt_record` is null for hosts DNS cannot verify (loopback and IP-literal hosts, single-label names), which only a platform administrator can verify.",
+  },
+);
+
 export const ListApiServerDomainsResponse = z
   .object({
     success: z.literal(true),
     message: z.string(),
     list: z.array(ApiServerDomainRef).readonly(),
+    verifications: z.array(ApiServerDomainVerification).readonly().openapi({
+      description:
+        "The verification state of each domain in `list`, matched by `api_server_domain_ref_id`. Empty for hardcoded API servers, whose domains come from the server's configuration and never resolve resource URLs.",
+    }),
   })
   .openapi("ListApiServerDomainsResponse");
+
+/** Response of `POST /api/apis/{api_server_id}/domains`. */
+export const AddApiServerDomainResponse = z
+  .object({
+    success: z.literal(true),
+    message: z.string(),
+    resource_id: z.string().openapi({ description: "The API server id" }),
+    verification: ApiServerDomainVerification,
+  })
+  .openapi("AddApiServerDomainResponse");
+
+/** Body of `POST /api/apis/{api_server_id}/domains/{api_server_domain_ref_id}/verify`. */
+export const VerifyApiServerDomainRequest = z
+  .object({
+    method: apiServerDomainVerificationMethodSchema.optional().openapi({
+      description:
+        "`dns_txt` (default): look up the domain's TXT record. `administrator`: attest the domain without DNS (platform administrators only).",
+    }),
+  })
+  .strict()
+  .openapi("VerifyApiServerDomainRequest");
+
+/** Answer of a verification attempt, successful or not. */
+export const VerifyApiServerDomainResponse = z
+  .object({
+    success: z.boolean(),
+    error: z
+      .enum(["verification_record_not_found", "domain_not_dns_verifiable", "dns_lookup_failed"])
+      .optional()
+      .openapi({ description: "Why the domain is not verified (absent on success)" }),
+    message: z.string(),
+    verification: ApiServerDomainVerification,
+  })
+  .openapi("VerifyApiServerDomainResponse");
 
 /** A scope an API server defines (an "API scope"). */
 export const ApiServerScope = withOpenApi(apiServerScopeSchema, "ApiServerScope", {

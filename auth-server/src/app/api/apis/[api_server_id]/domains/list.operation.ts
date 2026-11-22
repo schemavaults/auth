@@ -7,6 +7,7 @@ import { API_TAGS } from "@/lib/api/tags";
 import { SchemaVaultsApiServerRegistry } from "@/lib/auth-db/apis";
 import captureServerException from "@/lib/captureServerException";
 import hasUserAccessToApiServer from "@/lib/isUserInApiOwnerOrganization";
+import { listApiServerDomainVerifications } from "@/lib/api-server-domain-verification";
 
 const ROUTE = "/api/apis/{api_server_id}/domains";
 
@@ -14,7 +15,8 @@ export const listApiServerDomains = defineOperation({
   method: "get",
   path: ROUTE,
   summary: "List an API server's domains",
-  description: "Lists the domains registered for an API server across app environments.",
+  description:
+    "Lists the domains registered for an API server across app environments, with the ownership verification state of each (`verifications`). Verified domains take precedence: when one of them matches a resource URL, other API servers' unverified registrations are ignored. Unverified registrations only resolve as a fallback while the `require_api_server_domain_verification` server setting is off (the default during the transition to domain verification); once it is on, they never resolve. A pending domain's entry names the DNS TXT record that verifies it.",
   tags: [API_TAGS.apis],
   auth: requireAuth({
     schemes: sessionSchemes,
@@ -67,8 +69,16 @@ export const listApiServerDomains = defineOperation({
     }
 
     try {
-      const domains = await apiServerRegistry.getApiServerDomains(api_server_id);
-      return ctx.json(200, { success: true, message: "Domains successfully listed", list: domains });
+      const [domains, verifications] = await Promise.all([
+        apiServerRegistry.getApiServerDomains(api_server_id),
+        listApiServerDomainVerifications(db, api_server_id),
+      ]);
+      return ctx.json(200, {
+        success: true,
+        message: "Domains successfully listed",
+        list: domains,
+        verifications,
+      });
     } catch (e: unknown) {
       await captureServerException(db, e, {
         op_name: "GET_list_api_server_domains.getApiServerDomains",

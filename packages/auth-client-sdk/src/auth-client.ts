@@ -77,6 +77,11 @@ import type {
   UpdateAppApiScopePolicyRequest,
 } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
+import type { ApiServerDomainVerificationAttempt } from "@/lib/api-server-domain-verification";
+import type {
+  ApiServerDomainVerification,
+  ApiServerDomainVerificationMethod,
+} from "@schemavaults/app-definitions";
 import type { OrganizationMembershipVisibility } from "@schemavaults/app-definitions";
 import type {
   DynamicClientRegistrationRequest,
@@ -2278,6 +2283,37 @@ export class SchemaVaultsAuthClient
       adapter: this.adapter,
       auth_server_uri: this.auth_server_uri,
       api_server_id,
+    });
+  }
+
+  public async listApiServerDomainVerifications(
+    api_server_id: ApiServerId,
+  ): Promise<ApiServerDomainVerification[]> {
+    const fn = await import("@/lib/api-server-domain-verification").then(
+      (m) => m.listApiServerDomainVerifications,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+    });
+  }
+
+  public async verifyApiServerDomain(
+    api_server_id: ApiServerId,
+    api_server_domain_ref_id: string,
+    method?: ApiServerDomainVerificationMethod,
+  ): Promise<ApiServerDomainVerificationAttempt> {
+    this.assertAppAndApiManagementWriteAccess("verifyApiServerDomain");
+    const fn = await import("@/lib/api-server-domain-verification").then(
+      (m) => m.verifyApiServerDomain,
+    );
+    return await fn({
+      adapter: this.adapter,
+      auth_server_uri: this.auth_server_uri,
+      api_server_id,
+      api_server_domain_ref_id,
+      ...(method ? { method } : {}),
     });
   }
 

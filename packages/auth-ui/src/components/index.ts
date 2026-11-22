@@ -262,6 +262,8 @@ export { RemoveAppDomainDialog } from "./RemoveAppDomainDialog";
 export type { RemoveAppDomainDialogProps } from "./RemoveAppDomainDialog";
 
 export { RemoveApiServerDomainDialog } from "./RemoveApiServerDomainDialog";
+export { ApiServerDomainVerificationBadge } from "./ApiServerDomainVerificationBadge";
+export type { ApiServerDomainVerificationBadgeProps } from "./ApiServerDomainVerificationBadge";
 export type { RemoveApiServerDomainDialogProps } from "./RemoveApiServerDomainDialog";
 
 export * from "./FlowExpiryCountdown";

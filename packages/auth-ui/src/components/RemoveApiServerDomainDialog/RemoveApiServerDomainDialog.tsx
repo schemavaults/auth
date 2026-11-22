@@ -15,7 +15,7 @@ import { Trash2 } from "lucide-react";
 import { useAuth } from "@schemavaults/auth-react-provider";
 import { useSWRConfig } from "swr";
 import type { SchemaVaultsApiServerDomainRef } from "@schemavaults/app-definitions";
-import { getUseApiServerDomainsListEndpoint } from "@/components/ApiServersTable";
+import { isApiServerDomainsCacheKey } from "@/components/ApiServersTable";
 
 export interface RemoveApiServerDomainDialogProps {
   /** The domain to detach from its API server. */
@@ -69,8 +69,7 @@ export function RemoveApiServerDomainDialog({
 
       toast({ variant: "default", title: "Domain removed" });
       mutate(
-        (key) =>
-          key === getUseApiServerDomainsListEndpoint(domain.api_server_id),
+        (key) => isApiServerDomainsCacheKey(key, domain.api_server_id),
         undefined,
         { revalidate: true },
       );

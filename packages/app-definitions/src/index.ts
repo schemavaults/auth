@@ -83,6 +83,18 @@ export {
 } from "./api-server-definition";
 export type * from "./api-server-definition";
 
+export {
+  API_SERVER_DOMAIN_VERIFICATION_METHODS,
+  apiServerDomainVerificationMethodSchema,
+  apiServerDomainVerificationTxtRecordSchema,
+  apiServerDomainVerificationSchema,
+} from "./api-server-domain-verification";
+export type {
+  ApiServerDomainVerificationMethod,
+  ApiServerDomainVerificationTxtRecord,
+  ApiServerDomainVerification,
+} from "./api-server-domain-verification";
+
 export * from "./list-registry-api-servers-query-params";
 export type * from "./list-registry-api-servers-query-params";
 

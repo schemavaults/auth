@@ -12,10 +12,14 @@ import {
   getHardcodedSchemaVaultsApis,
   getHardcodedApiDomains,
   type ResourceOwnership,
+  type ApiServerDomainVerification,
 } from "@schemavaults/app-definitions";
 import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
 import { ownershipFieldsFromDatabaseRow, toOwnershipDatabaseColumns } from "@/lib/ownership/ownership-columns";
 import type { NewApiServer } from "./apis-table";
+import { API_SERVER_DOMAIN_REF_COLUMNS } from "./api-domains-table";
+import { generateDomainVerificationToken } from "@/lib/auth-db/api-server-domain-verifications/generate-domain-verification-token";
+import { listApiServerDomainVerifications } from "@/lib/api-server-domain-verification/list-api-server-domain-verifications";
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
@@ -130,11 +134,14 @@ export class SchemaVaultsApiServerRegistry {
       return getHardcodedApiDomains(api_server_id);
     }
 
+    // Only the ref's columns: the verification columns (migration 00057)
+    // are not part of the strict ref schema; see
+    // listApiServerDomainVerifications() for them.
     const queryApiServers = this.db
       .selectFrom("api_server_domains")
       .where("api_server_id", "=", api_server_id)
       .limit(50)
-      .selectAll();
+      .select(API_SERVER_DOMAIN_REF_COLUMNS);
     const rows = await queryApiServers.execute();
     const parsed_domains = await Promise.all(
       rows.map((row) => {
@@ -165,6 +172,17 @@ export class SchemaVaultsApiServerRegistry {
       }
       return parsed.data;
     });
+  }
+
+  /**
+   * @description The ownership verification state of each of the API
+   * server's domains (none for hardcoded API servers); see
+   * `listApiServerDomainVerifications()`.
+   */
+  public async getApiServerDomainVerifications(
+    api_server_id: ApiServerId,
+  ): Promise<readonly ApiServerDomainVerification[]> {
+    return await listApiServerDomainVerifications(this.db, api_server_id);
   }
 
   public async registerApiServer({
@@ -515,7 +533,9 @@ export class SchemaVaultsApiServerRegistry {
     // The same domain may only be registered once per API server +
     // environment (the primary key is the ref id, so check explicitly).
     // Domains compare exactly: an apex domain and its www. subdomain are
-    // separate registrations.
+    // separate registrations. Other API servers may register the same
+    // domain: a verified registration (only the host's owner can verify
+    // one) takes precedence over unverified ones.
     const existing = await this.getApiServerDomains(api_server_id);
     assertDomainRegistrationAvailable(
       API_SERVER_DOMAIN_REGISTRATION_OWNER,
@@ -532,9 +552,19 @@ export class SchemaVaultsApiServerRegistry {
     );
 
     try {
+      // Every registration starts unverified, with its own token: its owner
+      // proves control of the host to make it take precedence in RFC 8707
+      // resource-URL resolution, and to keep it resolving once the
+      // require_api_server_domain_verification server setting is on (see
+      // lib/api-server-domain-verification/).
       const result = await this.db
         .insertInto("api_server_domains")
-        .values(domain)
+        .values({
+          ...domain,
+          verification_token: generateDomainVerificationToken(),
+          verified_at: null,
+          verification_method: null,
+        })
         .onConflict((oc) => oc.column("api_server_domain_ref_id").doNothing())
         .executeTakeFirst();
 

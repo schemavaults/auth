@@ -65,6 +65,11 @@ import type {
   ScopeInput,
 } from "@schemavaults/auth-common";
 import type { ApiServerDynamicClientPolicyUpdate } from "@/lib/update-api-server-dynamic-client-policy";
+import type { ApiServerDomainVerificationAttempt } from "@/lib/api-server-domain-verification";
+import type {
+  ApiServerDomainVerification,
+  ApiServerDomainVerificationMethod,
+} from "@schemavaults/app-definitions";
 import type { OrganizationMembershipVisibility } from "@schemavaults/app-definitions";
 import type {
   DynamicClientRegistrationRequest,
@@ -876,6 +881,36 @@ export interface ISchemaVaultsAuthClient {
   listApiServerDomains: (
     api_server_id: ApiServerId,
   ) => Promise<SchemaVaultsApiServerDomainRef[]>;
+
+  /**
+   * @name listApiServerDomainVerifications
+   * @description The ownership verification state of each domain registered
+   * for an API server (matched to `listApiServerDomains()` by
+   * `api_server_domain_ref_id`), including the DNS TXT record that verifies
+   * a pending one. Verified domains take precedence in RFC 8707
+   * resource-URL resolution, and are the only ones that resolve once the
+   * auth server requires verification.
+   * @argument api_server_id The unique ID of the API server
+   */
+  listApiServerDomainVerifications: (
+    api_server_id: ApiServerId,
+  ) => Promise<ApiServerDomainVerification[]>;
+
+  /**
+   * @name verifyApiServerDomain
+   * @description Ask the auth server to verify a domain registered for an
+   * API server: with `dns_txt` (default) it looks up the domain's TXT record
+   * (publish it first, and keep it published); `administrator` attests the
+   * domain without DNS (platform administrators only). An unverified outcome
+   * resolves with `verified: false` and the reason in `error`.
+   * @argument api_server_id The unique ID of the API server
+   * @argument api_server_domain_ref_id The unique ID of the domain entry
+   */
+  verifyApiServerDomain: (
+    api_server_id: ApiServerId,
+    api_server_domain_ref_id: string,
+    method?: ApiServerDomainVerificationMethod,
+  ) => Promise<ApiServerDomainVerificationAttempt>;
 
   /**
    * @name deleteClientApplication
