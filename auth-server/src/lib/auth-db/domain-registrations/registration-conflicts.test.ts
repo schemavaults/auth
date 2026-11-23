@@ -6,6 +6,7 @@ import {
   assertDomainRegistrationAvailable,
   type DomainRegistration,
   domainRefIdInUseError,
+  domainRefIdUsedError,
 } from "./registration-conflicts";
 
 const APEX: DomainRegistration = {
@@ -86,5 +87,13 @@ describe("assertDomainRegistrationAvailable", () => {
     expect(
       domainRefIdInUseError(API_SERVER_DOMAIN_REGISTRATION_OWNER, APEX.ref_id).message,
     ).toContain(`api_server_domain_ref_id "${APEX.ref_id}"`);
+  });
+
+  test("says that a used API server domain ref id stays used once its domain is removed", () => {
+    const conflict = domainRefIdUsedError(API_SERVER_DOMAIN_REGISTRATION_OWNER, APEX.ref_id);
+    expect(conflict).toBeInstanceOf(ConflictError);
+    expect(conflict.message).toContain(`api_server_domain_ref_id "${APEX.ref_id}"`);
+    expect(conflict.message).toContain("ids are never reused");
+    expect(conflict.message).toContain("generate a new UUID");
   });
 });

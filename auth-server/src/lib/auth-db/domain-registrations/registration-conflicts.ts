@@ -78,3 +78,19 @@ export function domainRefIdInUseError(
     `Another domain is already registered with ${owner.ref_id_field} "${ref_id}". Each domain needs its own ${owner.ref_id_field}: generate a new UUID and retry.`,
   );
 }
+
+/**
+ * @description The conflict of an API server domain registration whose ref
+ * id was ever used: by a live domain of any API server, or by one that has
+ * since been removed. API server domain ref ids are never registered twice
+ * (migration 00058), so whatever names a registration by its id keeps
+ * naming the same domain.
+ */
+export function domainRefIdUsedError(
+  owner: DomainRegistrationOwner,
+  ref_id: string,
+): ConflictError {
+  return new ConflictError(
+    `The ${owner.ref_id_field} "${ref_id}" is already used by another domain, or was used by a domain that has been removed (ids are never reused). Each domain needs its own ${owner.ref_id_field}: generate a new UUID and retry.`,
+  );
+}
