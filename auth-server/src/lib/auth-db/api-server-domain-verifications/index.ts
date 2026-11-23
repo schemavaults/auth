@@ -10,4 +10,5 @@ export { listDnsVerifiedDomainRowsOnHost } from "./list-dns-verified-domain-rows
 export {
   markApiServerDomainVerified,
   revokeDnsDomainVerifications,
+  type ApiServerDomainRegistrationIdentity,
 } from "./set-api-server-domain-verification";

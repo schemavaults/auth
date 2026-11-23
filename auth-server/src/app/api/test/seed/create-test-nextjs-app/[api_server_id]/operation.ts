@@ -19,7 +19,7 @@ import { JwksAccessKeysRegistry } from "@/lib/auth-db/jwks-access-keys";
 import { hashClientSecret } from "@/lib/oauth2/client-secret";
 import { CreateTestNextjsAppRequest } from "./request-schema";
 import { setAppDeviceAuthorizationEnabled } from "@/lib/auth-db/device-authorizations";
-import { markApiServerDomainVerified } from "@/lib/auth-db/api-server-domain-verifications";
+import { verifyApiServerDomain } from "@/lib/api-server-domain-verification";
 
 /**
  * Seeds the app + API server pair the example Next.js resource server
@@ -118,7 +118,15 @@ export const createTestNextjsApp = defineOperation({
       // The seeded API server is platform-owned, so an administrator attests
       // its domain (the example resource server's host is a container name
       // DNS cannot verify): RFC 8707 resource URLs on it resolve.
-      await markApiServerDomainVerified(db, api_server_id, "administrator", now);
+      const attestation = await verifyApiServerDomain(db, {
+        api_server_id,
+        api_server_domain_ref_id: api_server_id,
+        method: "administrator",
+        now,
+      });
+      if (attestation.kind !== "verified") {
+        throw new Error(`Failed to attest the seeded API server's domain (${attestation.kind})`);
+      }
       await appToApiRegistry.allow(api_server_id, api_server_id, null);
 
       if (allow_dynamic_clients !== undefined || resource_url_match_mode !== undefined) {

@@ -26,6 +26,18 @@ export type ApiServerDomainsTable = SchemaVaultsApiServerDomainRef & {
   verification_method: ApiServerDomainVerificationMethod | null;
 };
 
+/**
+ * Every `api_server_domain_ref_id` ever registered (migration 00058), live or
+ * removed. Never deleted from: the `api_server_domains_claim_ref_id` trigger
+ * claims a row's id here on insert, so an id is never registered twice, not
+ * even after its domain (or API server) was removed.
+ */
+export type UsedApiServerDomainRefIdsTable = {
+  api_server_domain_ref_id: string;
+  /** Epoch ms (BIGINT, so it may come back as a string). */
+  used_at: number | string;
+};
+
 export type ApiServerDomain = Selectable<ApiServerDomainsTable>;
 export type NewApiServerDomain = Insertable<ApiServerDomainsTable>;
 export type ApiServerDomainUpdate = Updateable<ApiServerDomainsTable>;

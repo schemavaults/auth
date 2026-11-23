@@ -57,6 +57,11 @@ export const verifyApiServerDomainOperation = defineOperation({
       description: "No such API server, or no domain with the given id for this API server",
       schema: ErrorResponse,
     },
+    409: {
+      description:
+        "`registration_changed`: the domain registration kept changing while it was being verified (removed, or verified or revoked concurrently); nothing was verified. Retry.",
+      schema: ErrorResponse,
+    },
     422: {
       description:
         "The domain is not verified: its TXT record is not published (`verification_record_not_found`), or its host cannot be verified through DNS (`domain_not_dns_verifiable`). `verification` is the domain's current state.",
@@ -145,6 +150,12 @@ export const verifyApiServerDomainOperation = defineOperation({
           return ctx.json(404, {
             success: false,
             message: "No domain found with the given id for this API server",
+          });
+        case "changed":
+          return ctx.json(409, {
+            success: false,
+            error: "registration_changed",
+            message: "The domain registration changed while it was being verified. Try again.",
           });
         case "verified":
           return ctx.json(200, {

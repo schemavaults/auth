@@ -11,7 +11,9 @@
 //                                              409 duplicate domain + environment
 //                                              or reused api_server_domain_ref_id
 //                                              (an apex domain and its www.
-//                                              subdomain are separate domains)
+//                                              subdomain are separate domains;
+//                                              a removed domain's id is never
+//                                              registered again, migration 00058)
 //   GET/POST   /api/apis/[api_server_id]/jwks-access-key -> `key_metadata: false`
 //                                              before a key exists, 409 on a
 //                                              second POST, 400 malformed id
@@ -245,6 +247,68 @@ describe("API servers API validation", () => {
     cy.logout();
     loginAsFreshRegularUser();
     expectStatus("GET", `/api/apis/${api_server_id}/domains`, 403);
+  });
+
+  it("never registers a removed domain's api_server_domain_ref_id again, for any API server", () => {
+    const api_server_id = randomApiServerId();
+    const other_api_server_id = randomApiServerId();
+    const environment: string =
+      Cypress.env("SCHEMAVAULTS_APP_ENVIRONMENT") ?? "test";
+    expectStatus("POST", "/api/apis", 200, apiServerBody(api_server_id));
+    expectStatus("POST", "/api/apis", 200, apiServerBody(other_api_server_id));
+
+    const ref_id: string = generateV4Uuid();
+    const domainBody = (owner: string, domain: string, id: string = ref_id) => ({
+      api_server_domain_ref_id: id,
+      api_server_id: owner,
+      domain,
+      environment,
+      created_at: Date.now(),
+      hardcoded: false,
+    });
+    expectStatus(
+      "POST",
+      `/api/apis/${api_server_id}/domains`,
+      200,
+      domainBody(api_server_id, "https://reused-ref-api.example"),
+      "first registration",
+    );
+    expectStatus(
+      "DELETE",
+      `/api/apis/${api_server_id}/domains/${ref_id}`,
+      200,
+      undefined,
+      "remove the domain",
+    );
+
+    // Whatever names a registration by its id (verify, attest, cached UI
+    // rows) must keep naming the domain it meant.
+    const reuses: Array<[string, string, string]> = [
+      [api_server_id, "https://reused-ref-api.example", "the same domain again"],
+      [api_server_id, "https://victim-api.example", "another domain"],
+      [other_api_server_id, "https://victim-api.example", "another API server's domain"],
+    ];
+    for (const [owner, domain, label] of reuses) {
+      cy.request<ApiResponseBody>({
+        method: "POST",
+        url: `/api/apis/${owner}/domains`,
+        body: domainBody(owner, domain),
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status, `removed id reused for ${label}`).to.eq(409);
+        expect(response.body.message).to.contain(`api_server_domain_ref_id "${ref_id}"`);
+        expect(response.body.message).to.contain("ids are never reused");
+      });
+    }
+
+    // A fresh id registers the removed domain again.
+    expectStatus(
+      "POST",
+      `/api/apis/${api_server_id}/domains`,
+      200,
+      domainBody(api_server_id, "https://reused-ref-api.example", generateV4Uuid()),
+      "the removed domain under a fresh id",
+    );
   });
 
   it("reports no JWKS access key metadata until one is generated, then refuses a second POST", () => {
