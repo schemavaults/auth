@@ -6,10 +6,11 @@ import type {
 } from "@schemavaults/app-definitions";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { SchemaVaultsAppRegistry, type RegisterAppOptions } from "./app-registry";
+import { SchemaVaultsAppRegistry } from "./app-registry";
+import type { RegisterAppOptions } from "./register-app";
 
 export interface RegisterAppWithRedirectTargetsOptions {
-  /** The app row to insert (see `SchemaVaultsAppRegistry.registerApp`). */
+  /** The app row to insert (see `registerApp()`). */
   app: RegisterAppOptions;
   /** Domains (http(s) origins) to register with the app. */
   initial_domains?: readonly InitialAppDomain[];
