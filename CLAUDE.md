@@ -297,6 +297,7 @@ The sections below used to live in this file. Each now lives in a Claude Code sk
 | `e2e-auth-tests` | writing, debugging, or running the Cypress suite |
 | `verify` | booting and driving the auth-server locally to verify a change |
 | `commit-changes` | committing (package version bumps and the `<package>:<version> - <summary>` subject convention) |
+| `rate-limiting` | adding or changing a rate limit or lockout (`auth-server/src/lib/rate-limit/`), any endpoint that verifies a guessable secret (password, TOTP / recovery code), sends e-mail, or creates rows for anonymous callers, the login and MFA proof lockouts, client IP extraction and the proxy headers per-IP limits trust, the `rate_limiting` E2E suite |
 | `small-modules` | writing new code or refactoring: keeping modules under ~200–300 lines, and splitting a large file the way the repo does (one export per file, `shared.ts`, `types.ts`, `index.ts` barrel) |
 
 ## NextJS Documentation
