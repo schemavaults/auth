@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   DISABLED_USER_TOKENS_VALID_AFTER,
   isTokenIatRevoked,
+  tokensValidAfterRevokingAt,
 } from "./is-token-iat-revoked";
 
 describe("isTokenIatRevoked", () => {
@@ -20,8 +21,7 @@ describe("isTokenIatRevoked", () => {
   });
 
   test("returns false when iat equals watermark", () => {
-    // Tokens minted in the same second as the password reset are
-    // accepted — strict less-than semantics.
+    // The watermark is the first second whose tokens are valid.
     expect(isTokenIatRevoked(1_700_000_000, 1_700_000_000)).toBe(false);
   });
 
@@ -73,5 +73,28 @@ describe("DISABLED_USER_TOKENS_VALID_AFTER", () => {
     expect(migration).toContain(
       "const DISABLED_USER_TOKENS_VALID_AFTER = String(Number.MAX_SAFE_INTEGER);",
     );
+  });
+});
+
+describe("tokensValidAfterRevokingAt", () => {
+  test("revokes tokens minted in the revocation's own second, before and after it", () => {
+    const reset_at_ms = 1_700_000_000_400;
+    const watermark = tokensValidAfterRevokingAt(reset_at_ms);
+    expect(watermark).toBe(1_700_000_001);
+    // A refresh that raced the reset (or followed it) in the same second.
+    expect(isTokenIatRevoked(1_700_000_000, watermark)).toBe(true);
+    expect(isTokenIatRevoked(1_699_999_999, watermark)).toBe(true);
+    // A sign-in from the next second on is valid.
+    expect(isTokenIatRevoked(1_700_000_001, watermark)).toBe(false);
+  });
+
+  test("takes the whole second even at its very start", () => {
+    expect(tokensValidAfterRevokingAt(1_700_000_000_000)).toBe(1_700_000_001);
+    expect(tokensValidAfterRevokingAt(1_700_000_000_999)).toBe(1_700_000_001);
+  });
+
+  test("rejects a timestamp that is not a positive finite number", () => {
+    expect(() => tokensValidAfterRevokingAt(0)).toThrow(TypeError);
+    expect(() => tokensValidAfterRevokingAt(Number.NaN)).toThrow(TypeError);
   });
 });

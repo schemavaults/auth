@@ -111,7 +111,8 @@ export async function handleOidcAuthorizationCodeGrant({
   // tokens_valid_after watermark, logout does too — the code must not be
   // redeemable: the tokens it would mint carry a fresh `iat` past the
   // watermark and would launder the dead session into a fully valid one.
-  // Same strict less-than / unix-seconds semantics as the refresh grant.
+  // Same watermark semantics as the refresh grant: a code minted in the
+  // revoking second itself is refused too.
   const tokens_valid_after: number = await getUserTokensValidAfter(
     dbh.db,
     consumed.uid,

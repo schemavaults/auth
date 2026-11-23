@@ -26,7 +26,7 @@ function redeemRefreshToken(capturedRefreshToken: string) {
 }
 
 describe("Password Reset Revokes Refresh Tokens", () => {
-  it("rejects captured refresh tokens after rotation and after a password reset", () => {
+  it("rejects captured refresh tokens after rotation and after a password reset, and accepts a sign-in right after it", () => {
     const newPassword = "RotatedAfterReset123!@#";
 
     cy.generate_random_test_user_credentials().then((credentials) => {
@@ -86,18 +86,11 @@ describe("Password Reset Revokes Refresh Tokens", () => {
                 // semantics with proper timing.)
                 cy.clearCookies();
 
-                // The tokens_valid_after watermark has one-second
-                // granularity and uses strict less-than (see
-                // is-token-iat-revoked.ts): a token minted in the same
-                // unix second as the watermark bump stays valid — by
-                // design. Wait out the second boundary so the rotated
-                // token's iat lands strictly before the watermark set by
-                // the reset confirm below; without this the final 400
-                // assertion is a wall-clock coin toss. The wait MUST come
-                // before the confirm — once iat equals the watermark the
-                // token is valid forever, so delaying the final request
-                // instead would not help.
-                cy.wait(2000);
+                // No wait before the reset: the rotated token was most
+                // likely minted in the same unix second as the reset below.
+                // iat has whole seconds only, so the reset's watermark takes
+                // its whole second (see tokensValidAfterRevokingAt in
+                // is-token-iat-revoked.ts) and such a token is revoked too.
 
                 // Request a password reset token through the test-only
                 // endpoint.
@@ -137,6 +130,47 @@ describe("Password Reset Revokes Refresh Tokens", () => {
                         );
                       },
                     );
+                    cy.clearCookies();
+
+                    // The reset revokes tokens minted in its own second,
+                    // but it answers only once that second is over: a
+                    // sign-in with the new password straight after the
+                    // response gets a session that works.
+                    cy.login_via_request(credentials.email, newPassword).then(
+                      (ok: boolean) => {
+                        expect(ok, "login with the new password").to.be.true;
+                      },
+                    );
+                    cy.request({
+                      method: "GET",
+                      url: "/api/user/profile",
+                      failOnStatusCode: false,
+                    }).then((profileResponse) => {
+                      expect(
+                        profileResponse.status,
+                        "guarded route with the post-reset session",
+                      ).to.eq(200);
+                    });
+                    cy.getCookie(REFRESH_TOKEN_COOKIE)
+                      .should("exist")
+                      .then((freshCookie) => {
+                        if (!freshCookie || !freshCookie.value) {
+                          throw new Error(
+                            "Refresh token cookie not found after the post-reset login",
+                          );
+                        }
+                        redeemRefreshToken(freshCookie.value).then(
+                          (freshResponse) => {
+                            expect(
+                              freshResponse.status,
+                              "refreshing the post-reset session",
+                            ).to.eq(200);
+                            expect(freshResponse.body.access_token).to.be.a(
+                              "string",
+                            );
+                          },
+                        );
+                      });
                   });
                 });
               });

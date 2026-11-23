@@ -11,8 +11,12 @@ import { getAppEnvironment, type SchemaVaultsAppEnvironment } from "@schemavault
 import shouldEnableDebug from "@/lib/should-enable-debug";
 import captureServerException from "@/lib/captureServerException";
 import recordAuditEvent from "@/lib/audit-log/record-audit-event";
+import type { ConsumedPasswordResetToken } from "@/lib/auth-db/users";
 import { RedisCache } from "@/lib/redis";
-import { invalidateUserTokensValidAfterCache } from "@/lib/token-revocation";
+import {
+  invalidateUserTokensValidAfterCache,
+  waitUntilTokensValidAfter,
+} from "@/lib/token-revocation";
 
 const ROUTE = "/api/auth/reset-password/confirm";
 
@@ -49,7 +53,7 @@ export async function handleResetPasswordConfirm({
 
   const userRegistry = new UserRegistry(dbh.db, debug);
 
-  let result: { uid: string } | null;
+  let result: ConsumedPasswordResetToken | null;
   try {
     result = await userRegistry.validateAndConsumePasswordResetToken(
       token,
@@ -105,6 +109,13 @@ export async function handleResetPasswordConfirm({
     subject: { uid: result.uid },
     request: req,
   });
+
+  // The new watermark revokes every token minted in the reset's own second
+  // (iat has whole seconds only), so a sign-in in that second would be
+  // revoked as soon as it succeeds. Answer only once the next second has
+  // begun (at most a second from now): the user's sign-in with the new
+  // password follows this response, so its tokens are valid.
+  await waitUntilTokensValidAfter(result.tokens_valid_after);
 
   return NextResponse.json(
     { success: true, message: "Password has been reset successfully" },

@@ -41,7 +41,10 @@ import {
 } from "./delete-user";
 import { createUser as createUserFn } from "./create-user";
 import { createPasswordResetToken as createPasswordResetTokenFn } from "./create-password-reset-token";
-import { validateAndConsumePasswordResetToken as validateAndConsumePasswordResetTokenFn } from "./validate-and-consume-password-reset-token";
+import {
+  validateAndConsumePasswordResetToken as validateAndConsumePasswordResetTokenFn,
+  type ConsumedPasswordResetToken,
+} from "./validate-and-consume-password-reset-token";
 import { createEmailVerificationToken as createEmailVerificationTokenFn } from "./create-email-verification-token";
 import { validateAndConsumeEmailVerificationToken as validateAndConsumeEmailVerificationTokenFn } from "./validate-and-consume-email-verification-token";
 
@@ -227,7 +230,7 @@ export class UserRegistry {
   public async validateAndConsumePasswordResetToken(
     rawToken: string,
     newPassword: string,
-  ): Promise<{ uid: string } | null> {
+  ): Promise<ConsumedPasswordResetToken | null> {
     return validateAndConsumePasswordResetTokenFn(
       this.db,
       rawToken,

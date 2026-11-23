@@ -30,8 +30,32 @@ function redeemRefreshToken(refreshToken: string) {
   });
 }
 
+interface AuditLogResponseBody {
+  data?: {
+    entries?: {
+      event_type: string;
+      client_app_id: string | null;
+      details: Record<string, unknown> | null;
+    }[];
+  };
+}
+
+// Captures the refresh token the last redemption rotated into the session
+// cookie, then drops every cookie so later requests carry only the token
+// they present explicitly.
+function takeRotatedRefreshToken(): Cypress.Chainable<string> {
+  return cy.getCookie(REFRESH_TOKEN_COOKIE).then((cookie) => {
+    if (!cookie || !cookie.value) {
+      throw new Error("Rotated refresh token cookie not found after redemption");
+    }
+    const token: string = cookie.value;
+    cy.clearCookies();
+    return cy.wrap(token, { log: false });
+  });
+}
+
 describe("Refresh Token Rotation", () => {
-  it("rotates the refresh token on every redemption, tolerates reuse within the grace window, and rejects it afterwards", () => {
+  it("rotates the refresh token on every redemption, tolerates reuse within the grace window, and ends the whole session on reuse afterwards", () => {
     cy.generate_random_test_user_credentials().then((credentials) => {
       cy.create_and_login_as_regular_user(credentials).then((success) => {
         expect(
@@ -57,42 +81,40 @@ describe("Refresh Token Rotation", () => {
               );
             });
 
-            cy.getCookie(REFRESH_TOKEN_COOKIE)
-              .should("exist")
-              .then((rotatedCookie) => {
-                if (!rotatedCookie || !rotatedCookie.value) {
-                  throw new Error(
-                    "Rotated refresh token cookie not found after redemption",
-                  );
-                }
-                const rotatedToken: string = rotatedCookie.value;
+            takeRotatedRefreshToken().then((rotatedToken) => {
+              expect(
+                rotatedToken,
+                "Redemption must rotate the refresh token cookie",
+              ).to.not.eq(originalToken);
+
+              // Within the reuse grace window, replaying the just-used
+              // token is tolerated — this is what keeps benign concurrent
+              // refreshes (parallel tabs) from killing the session.
+              redeemRefreshToken(originalToken).then((graceReplay) => {
                 expect(
-                  rotatedToken,
-                  "Redemption must rotate the refresh token cookie",
-                ).to.not.eq(originalToken);
+                  graceReplay.status,
+                  "Reuse within the grace window should be tolerated",
+                ).to.eq(200);
+                expect(graceReplay.body.access_token).to.be.a("string");
+              });
+              // The grace redemption rotated again and set a new cookie.
+              cy.clearCookies();
 
-                // Drop the rotated session cookie so the requests below
-                // only ever carry the token they present explicitly.
-                cy.clearCookies();
+              // A rotated-to token that was never redeemed stays valid —
+              // rotation only kills tokens upon use. Redeeming it moves the
+              // chain on: its replacement is the session's live token, the
+              // one a thief who rotated first would now hold.
+              redeemRefreshToken(rotatedToken).then((unusedRedemption) => {
+                expect(
+                  unusedRedemption.status,
+                  "An unused rotated token must remain redeemable",
+                ).to.eq(200);
+                expect(unusedRedemption.body.access_token).to.be.a("string");
+              });
 
-                // Within the reuse grace window, replaying the just-used
-                // token is tolerated — this is what keeps benign
-                // concurrent refreshes (parallel tabs) from killing the
-                // session.
-                redeemRefreshToken(originalToken).then((graceReplay) => {
-                  expect(
-                    graceReplay.status,
-                    "Reuse within the grace window should be tolerated",
-                  ).to.eq(200);
-                  expect(graceReplay.body.access_token).to.be.a("string");
-                });
-
-                // The grace redemption above rotated again and set a new
-                // cookie — clear it so later requests stay cookie-free.
-                cy.clearCookies();
-
+              takeRotatedRefreshToken().then((liveToken) => {
                 // Once the grace window has elapsed, the used token is
-                // dead: replaying it must be rejected as revoked.
+                // dead: replaying it is rejected as revoked...
                 cy.wait(WAIT_PAST_GRACE_MS);
                 redeemRefreshToken(originalToken).then((lateReplay) => {
                   expect(
@@ -105,17 +127,42 @@ describe("Refresh Token Rotation", () => {
                   );
                   expect(lateReplay.body).to.not.have.property("access_token");
                 });
+                cy.clearCookies();
 
-                // A rotated-to token that was never redeemed stays valid —
-                // rotation only kills tokens upon use.
-                redeemRefreshToken(rotatedToken).then((unusedRedemption) => {
+                // ...and signals that two parties held it, so the whole
+                // session is ended (RFC 9700 §4.14.2): the chain's live
+                // refresh token, never redeemed, stops working too.
+                redeemRefreshToken(liveToken).then((afterReuse) => {
                   expect(
-                    unusedRedemption.status,
-                    "An unused rotated token must remain redeemable",
-                  ).to.eq(200);
-                  expect(unusedRedemption.body.access_token).to.be.a("string");
+                    afterReuse.status,
+                    "Reuse must revoke the session's live refresh token",
+                  ).to.eq(400);
+                  expect(afterReuse.body.error).to.eq("invalid_grant");
+                  expect(afterReuse.body.error_description).to.include(
+                    "revoked",
+                  );
+                  expect(afterReuse.body).to.not.have.property("access_token");
+                });
+                cy.clearCookies();
+
+                // A fresh sign-in starts a new session, and the account's
+                // audit log says why the old one ended.
+                cy.login_via_request(credentials.email, credentials.password).then(
+                  (ok: boolean) => {
+                    expect(ok, "a fresh login after the reuse").to.be.true;
+                  },
+                );
+                cy.request<AuditLogResponseBody>(
+                  "/api/me/audit-log?event_type=user.refresh_token_reused",
+                ).then((response) => {
+                  expect(response.status).to.eq(200);
+                  const entries = response.body.data?.entries ?? [];
+                  expect(entries, "one reuse event").to.have.length(1);
+                  expect(entries[0].client_app_id).to.eq(APP_ID);
+                  expect(entries[0].details?.revoked_tokens).to.be.a("number");
                 });
               });
+            });
           });
       });
     });

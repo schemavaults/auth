@@ -4,10 +4,11 @@ import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import isValidUuid from "@/lib/is-valid-uuid";
 
 /**
- * Bumps the per-user `tokens_valid_after` watermark. The refresh-token
- * grant handler rejects any refresh token whose `iat` claim is strictly
- * less than this value, so calling this with `Math.floor(Date.now() /
- * 1000)` invalidates every refresh token previously issued for the user.
+ * Bumps the per-user `tokens_valid_after` watermark. Every surface that
+ * consults it (route guards, the token grants, introspection, userinfo)
+ * rejects a token whose `iat` claim is strictly less than this value, so
+ * calling this with `tokensValidAfterRevokingAt(Date.now())` invalidates
+ * every token issued for the user up to and including the current second.
  *
  * `valid_after` is in unix **seconds**, matching the JWT `iat` claim
  * produced by jose's `setIssuedAt`.

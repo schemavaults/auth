@@ -136,12 +136,9 @@ describe("Password Reset Revokes Session At Route Guards", () => {
                   // the *password reset* is what revokes the session).
                   cy.clearCookies();
 
-                  // The tokens_valid_after watermark has one-second
-                  // granularity and uses strict less-than: wait out the
-                  // second boundary so the captured token's iat (and the
-                  // code's created_at) land strictly before the watermark
-                  // the reset confirm sets below.
-                  cy.wait(2000);
+                  // No wait before the reset: the captured token and the
+                  // code are most likely from the same unix second as the
+                  // reset below, which the reset's watermark takes whole.
 
                   cy.request({
                     method: "GET",

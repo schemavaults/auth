@@ -5,8 +5,8 @@
 // so a refresh-token cookie minted before the disable would otherwise keep
 // full API and dashboard access until it expired. Disabling pins the user's
 // tokens_valid_after watermark, so the pre-disable session is rejected at
-// once (no second-boundary wait, unlike a password reset) and stays dead
-// after the account is re-enabled; a fresh login then works again.
+// once and stays dead after the account is re-enabled; a fresh login then
+// works again.
 
 import { getAuthServerAppIdFromCypressEnv } from "@schemavaults/cypress-e2e-auth-tests-helper-commands";
 import { RefreshTokenCookieName } from "@schemavaults/auth-common";
