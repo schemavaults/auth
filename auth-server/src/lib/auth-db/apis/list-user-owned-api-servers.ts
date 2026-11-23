@@ -28,7 +28,7 @@ export async function listUserOwnedApiServers(
       .execute();
   } catch (e: unknown) {
     console.error(`Failed to list API servers owned by user '${uid}':`, e);
-    throw new Error("Failed to list API servers owned by user");
+    throw new Error("Failed to list API servers owned by user", { cause: e });
   }
 
   return await parseApiServerDefinitionsFromDbRows(rows);

@@ -29,8 +29,14 @@ export async function setApiServerOrganizationMembershipVisibility(
   if (isHardcodedApiServerId(api_server_id)) {
     throw new Error("Cannot update the organization membership visibility of a hardcoded API server");
   }
+  const parsed_visibility = organizationMembershipVisibilitySchema.safeParse(visibility);
+  if (!parsed_visibility.success) {
+    throw new TypeError("Received invalid 'organization_membership_visibility'!", {
+      cause: parsed_visibility.error,
+    });
+  }
   const organization_membership_visibility: OrganizationMembershipVisibility =
-    organizationMembershipVisibilitySchema.parse(visibility);
+    parsed_visibility.data;
   await db
     .updateTable("api_servers")
     .set({ organization_membership_visibility })

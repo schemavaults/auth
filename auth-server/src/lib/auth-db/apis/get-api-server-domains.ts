@@ -63,7 +63,9 @@ export async function getApiServerDomains(
         "\nRaw row:",
         JSON.stringify(rows[index], null, 2),
       );
-      throw new Error("Failed to parse API server domains from database");
+      throw new Error("Failed to parse API server domains from database", {
+        cause: parsed.error,
+      });
     }
     return parsed.data;
   });

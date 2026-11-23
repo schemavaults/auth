@@ -59,7 +59,7 @@ export async function listApiServersAccessibleToUser(
       .execute();
   } catch (e: unknown) {
     console.error(`Failed to list API servers accessible to user '${user.uid}':`, e);
-    throw new Error("Failed to list API servers accessible to user");
+    throw new Error("Failed to list API servers accessible to user", { cause: e });
   }
 
   return await parseApiServerDefinitionsFromDbRows(rows);

@@ -45,11 +45,13 @@ export async function registerApiServer(
     );
   }
 
-  if (
-    ownership.owner_type === "organization" &&
-    !organizationIdSchema.safeParse(ownership.owner_organization_id).success
-  ) {
-    throw new TypeError("Received invalid organization ID to register API server to!")
+  if (ownership.owner_type === "organization") {
+    const parsed_organization_id = organizationIdSchema.safeParse(ownership.owner_organization_id);
+    if (!parsed_organization_id.success) {
+      throw new TypeError("Received invalid organization ID to register API server to!", {
+        cause: parsed_organization_id.error,
+      });
+    }
   }
 
   // Hardcoded API server ids (the auth server's own id, the reserved
@@ -75,7 +77,9 @@ export async function registerApiServer(
     } satisfies SchemaVaultsApiServerDefinition);
   if (!parsed_api_server.success) {
     console.error(parsed_api_server.error.issues);
-    throw new Error("Failed to parse API server definition");
+    throw new TypeError("Failed to parse API server definition", {
+      cause: parsed_api_server.error,
+    });
   }
   const api_server: SchemaVaultsApiServerDefinition = parsed_api_server.data;
 

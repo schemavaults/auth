@@ -35,7 +35,11 @@ export async function parseApiServerDefinitionsFromDbRows(rows: unknown[]): Prom
         };
       }),
     );
-  if (!parsed.success) throw parsed.error;
+  if (!parsed.success) {
+    throw new Error("Failed to parse API server definitions from database rows", {
+      cause: parsed.error,
+    });
+  }
   return parsed.data;
 }
 

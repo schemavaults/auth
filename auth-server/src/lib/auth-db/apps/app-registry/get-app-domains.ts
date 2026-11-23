@@ -32,7 +32,9 @@ async function parseAppDomainFromDb(
     } as const);
   if (!parsed_app_domain.success) {
     console.error(parsed_app_domain.error);
-    throw new Error("Failed to parse app domain from database!");
+    throw new Error("Failed to parse app domain from database!", {
+      cause: parsed_app_domain.error,
+    });
   }
   return parsed_app_domain.data satisfies SchemaVaultsAppDomainRef;
 }
@@ -45,10 +47,11 @@ export async function getAppDomains(
   db: Kysely<AuthDatabase> | Transaction<AuthDatabase>,
   app_id: AppId,
 ): Promise<readonly SchemaVaultsAppDomainRef[]> {
-  const isValidAppId: boolean = (await appIdSchema.safeParseAsync(app_id))
-    .success;
-  if (!isValidAppId) {
-    throw new Error("Invalid app ID to list domains for!");
+  const parsed_app_id = await appIdSchema.safeParseAsync(app_id);
+  if (!parsed_app_id.success) {
+    throw new TypeError("Invalid app ID to list domains for!", {
+      cause: parsed_app_id.error,
+    });
   }
 
   if (isHardcodedAppId(app_id)) {

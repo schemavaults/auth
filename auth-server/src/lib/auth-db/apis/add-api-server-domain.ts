@@ -29,12 +29,14 @@ export async function addApiServerDomain(
   const parsed =
     await schemaVaultsApiServerDomainRefSchema.safeParseAsync(new_domain);
   if (!parsed.success) {
-    throw new Error("Received invalid API server domain to associate with API server");
+    throw new TypeError("Received invalid API server domain to associate with API server", {
+      cause: parsed.error,
+    });
   }
   const domain = parsed.data;
 
   if (api_server_id !== domain.api_server_id) {
-    throw new Error("API server ID mismatch");
+    throw new TypeError("API server ID mismatch");
   }
 
   // The same domain may only be registered once per API server +
@@ -85,7 +87,7 @@ export async function addApiServerDomain(
   } catch (e: unknown) {
     if (e instanceof ConflictError) throw e;
     console.error("Failed to add new API server domain; db insert failed: ", e);
-    throw new Error("Failed to add new API server domain; db insert failed");
+    throw new Error("Failed to add new API server domain; db insert failed", { cause: e });
   }
 }
 

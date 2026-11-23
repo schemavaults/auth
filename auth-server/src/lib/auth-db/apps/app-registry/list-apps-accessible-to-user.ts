@@ -62,7 +62,7 @@ export async function listAppsAccessibleToUser(
       .execute();
   } catch (e: unknown) {
     console.error(`Failed to list apps accessible to user '${user.uid}':`, e);
-    throw new Error("Failed to list apps accessible to user");
+    throw new Error("Failed to list apps accessible to user", { cause: e });
   }
 
   return rows.map((row) => parseAppDefinitionDatabaseRow(row));

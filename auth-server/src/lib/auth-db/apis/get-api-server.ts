@@ -76,7 +76,9 @@ export async function getApiServer(
     });
   if (!parsed_api_server.success) {
     console.error(parsed_api_server.error.issues);
-    throw new Error("Failed to parse API server from database");
+    throw new Error("Failed to parse API server from database", {
+      cause: parsed_api_server.error,
+    });
   }
   const output: SchemaVaultsApiServerDefinition = parsed_api_server.data;
 

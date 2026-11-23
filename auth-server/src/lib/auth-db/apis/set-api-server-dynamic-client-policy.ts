@@ -41,9 +41,15 @@ export async function setApiServerDynamicClientPolicy(
     update.allow_dynamic_clients = policy.allow_dynamic_clients;
   }
   if (policy.resource_url_match_mode !== undefined) {
-    update.resource_url_match_mode = resourceUrlMatchModeSchema.parse(
+    const parsed_match_mode = resourceUrlMatchModeSchema.safeParse(
       policy.resource_url_match_mode,
     );
+    if (!parsed_match_mode.success) {
+      throw new TypeError("Received invalid 'resource_url_match_mode'!", {
+        cause: parsed_match_mode.error,
+      });
+    }
+    update.resource_url_match_mode = parsed_match_mode.data;
   }
   if (Object.keys(update).length === 0) {
     throw new TypeError("No dynamic-client policy fields to update");

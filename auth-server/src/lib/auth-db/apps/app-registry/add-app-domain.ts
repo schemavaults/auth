@@ -27,12 +27,14 @@ export async function addAppDomain(
   const parsed =
     await schemaVaultsAppDomainRefSchema.safeParseAsync(new_app_domain);
   if (!parsed.success) {
-    throw new Error("Received invalid app domain to associate with app");
+    throw new TypeError("Received invalid app domain to associate with app", {
+      cause: parsed.error,
+    });
   }
   const app_domain = parsed.data;
 
   if (app_id !== app_domain.app_id) {
-    throw new Error("App ID mismatch");
+    throw new TypeError("App ID mismatch");
   }
 
   // The same domain may only be registered once per app + environment
@@ -71,7 +73,7 @@ export async function addAppDomain(
   } catch (e: unknown) {
     if (e instanceof ConflictError) throw e;
     console.error("Failed to add new app domain; db insert failed: ", e);
-    throw new Error("Failed to add new app domain; db insert failed");
+    throw new Error("Failed to add new app domain; db insert failed", { cause: e });
   }
 }
 

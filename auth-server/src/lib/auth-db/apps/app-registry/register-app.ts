@@ -71,11 +71,13 @@ export async function registerApp(
     throw new TypeError("Expected 'web' to be a boolean!")
   }
 
-  if (
-    ownership.owner_type === "organization" &&
-    !organizationIdSchema.safeParse(ownership.owner_organization_id).success
-  ) {
-    throw new TypeError("Received invalid organization ID to register application to!")
+  if (ownership.owner_type === "organization") {
+    const parsed_organization_id = organizationIdSchema.safeParse(ownership.owner_organization_id);
+    if (!parsed_organization_id.success) {
+      throw new TypeError("Received invalid organization ID to register application to!", {
+        cause: parsed_organization_id.error,
+      });
+    }
   }
 
   // Hardcoded app ids (the auth server's own id) have no database row, so
@@ -99,7 +101,7 @@ export async function registerApp(
   } satisfies SchemaVaultsApp);
   if (!parsed_app.success) {
     console.error(parsed_app.error.issues);
-    throw new Error("Failed to parse app");
+    throw new TypeError("Failed to parse app", { cause: parsed_app.error });
   }
   const app: SchemaVaultsApp = parsed_app.data;
 

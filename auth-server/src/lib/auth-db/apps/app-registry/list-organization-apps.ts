@@ -21,8 +21,11 @@ export async function listOrganizationApps(
   debug: boolean = false,
 ): Promise<readonly SchemaVaultsApp[]> {
 
-  if (!organizationIdSchema.safeParse(org_id).success) {
-    throw new TypeError("Invalid organization ID to list apps for!");
+  const parsed_org_id = organizationIdSchema.safeParse(org_id);
+  if (!parsed_org_id.success) {
+    throw new TypeError("Invalid organization ID to list apps for!", {
+      cause: parsed_org_id.error,
+    });
   }
 
   if (!user) {
@@ -61,7 +64,7 @@ export async function listOrganizationApps(
       `Failed to list apps for organization with ID '${org_id}':`,
       e,
     );
-    throw new Error(`Failed to list apps for organization with ID: '${org_id}'`);
+    throw new Error(`Failed to list apps for organization with ID: '${org_id}'`, { cause: e });
   }
 
   if (!Array.isArray(result)) {
@@ -84,6 +87,7 @@ export async function listOrganizationApps(
     console.error(e);
     throw new Error(
       "Failed to parse the apps data received from database for organization",
+      { cause: e },
     );
   }
 

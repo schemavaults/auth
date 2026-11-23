@@ -19,7 +19,7 @@ async function listAllApiServersFromDatabase(
       .execute();
   } catch (e: unknown) {
     console.error(e);
-    throw new Error("Failed to list all API servers from database");
+    throw new Error("Failed to list all API servers from database", { cause: e });
   }
 
   try {
@@ -28,6 +28,7 @@ async function listAllApiServersFromDatabase(
     console.error(e);
     throw new Error(
       "Failed to parse the API servers data received from database",
+      { cause: e },
     );
   }
 }

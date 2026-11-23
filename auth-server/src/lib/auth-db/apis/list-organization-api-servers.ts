@@ -20,8 +20,11 @@ export async function listOrganizationApiServers(
   user: UserData,
 ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
 
-  if (!organizationIdSchema.safeParse(org_id).success) {
-    throw new TypeError("Invalid organization ID to list API servers for!")
+  const parsed_org_id = organizationIdSchema.safeParse(org_id);
+  if (!parsed_org_id.success) {
+    throw new TypeError("Invalid organization ID to list API servers for!", {
+      cause: parsed_org_id.error,
+    })
   }
 
   if (!user) {
@@ -52,7 +55,7 @@ export async function listOrganizationApiServers(
         .execute();
     } catch (e: unknown) {
       console.error(`Failed to list API servers for organization with ID '${organization_id}':`, e);
-      throw new Error(`Failed to list API servers for organization with ID: '${organization_id}'`);
+      throw new Error(`Failed to list API servers for organization with ID: '${organization_id}'`, { cause: e });
     }
 
     return await parseApiServerDefinitionsFromDbRows(rows);
@@ -66,6 +69,7 @@ export async function listOrganizationApiServers(
     console.error(e);
     throw new Error(
       "Failed to parse the API servers data received from database",
+      { cause: e },
     );
   }
 

@@ -30,7 +30,7 @@ export async function listUserOwnedApps(
       .execute();
   } catch (e: unknown) {
     console.error(`Failed to list apps owned by user '${uid}':`, e);
-    throw new Error("Failed to list apps owned by user");
+    throw new Error("Failed to list apps owned by user", { cause: e });
   }
 
   return rows.map((row) => parseAppDefinitionDatabaseRow(row));

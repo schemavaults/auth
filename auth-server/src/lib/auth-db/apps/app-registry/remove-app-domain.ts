@@ -19,8 +19,11 @@ export async function removeAppDomain(
   app_id: AppId,
   app_domain_ref_id: string,
 ): Promise<boolean> {
-  if (!(await appIdSchema.safeParseAsync(app_id)).success) {
-    throw new Error("Invalid app ID to remove a domain from!");
+  const parsed_app_id = await appIdSchema.safeParseAsync(app_id);
+  if (!parsed_app_id.success) {
+    throw new TypeError("Invalid app ID to remove a domain from!", {
+      cause: parsed_app_id.error,
+    });
   }
   if (isHardcodedAppId(app_id)) {
     throw new Error("Cannot remove a domain from a hardcoded app");
