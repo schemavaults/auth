@@ -82,7 +82,7 @@ describe("Rate Limiting", () => {
     });
   });
 
-  describe("POST /api/auth/reset-password/request (3/hour per email)", () => {
+  describe("POST /api/auth/reset-password/request (3/hour per email, 20/hour per IP)", () => {
     it("returns 429 after 3 requests for the same email", () => {
       const body = { email: "rate-limit-reset-pwd-request@example.com" };
 
@@ -142,6 +142,64 @@ describe("Rate Limiting", () => {
         );
       });
     });
+
+    it("returns 429 after 20 requests from one IP across addresses", () => {
+      for (let i = 1; i <= 20; i++) {
+        cy.request({
+          method: "POST",
+          url: "/api/auth/reset-password/request",
+          body: { email: `rate-limit-reset-ip-${i}@example.com` },
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(
+            response.status,
+            `request ${i} should not be rate-limited`,
+          ).to.not.eq(429);
+        });
+      }
+
+      cy.request({
+        method: "POST",
+        url: "/api/auth/reset-password/request",
+        body: { email: "rate-limit-reset-ip-21@example.com" },
+        failOnStatusCode: false,
+      }).then((response) => {
+        expectRateLimitedResponse(response, 20);
+      });
+    });
+  });
+
+  describe("POST /api/auth/verify-email/request (3/hour per email, 20/hour per IP)", () => {
+    it("returns 429 after 3 requests for one address, whatever its case", () => {
+      for (let i = 1; i <= 3; i++) {
+        cy.request({
+          method: "POST",
+          url: "/api/auth/verify-email/request",
+          body: { email: "rate-limit-verify-email@example.com" },
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(response.status, `request ${i} is accepted`).to.eq(200);
+        });
+      }
+
+      cy.request({
+        method: "POST",
+        url: "/api/auth/verify-email/request",
+        body: { email: "Rate-Limit-Verify-Email@Example.com" },
+        failOnStatusCode: false,
+      }).then((response) => {
+        expectRateLimitedResponse(response, 3);
+      });
+
+      cy.request({
+        method: "POST",
+        url: "/api/auth/verify-email/request",
+        body: { email: "rate-limit-verify-email-other@example.com" },
+        failOnStatusCode: false,
+      }).then((response) => {
+        expect(response.status, "another address is not rate-limited").to.eq(200);
+      });
+    });
   });
 
   describe("POST /api/auth/login (5/15min per IP+email)", () => {
@@ -171,6 +229,46 @@ describe("Rate Limiting", () => {
         method: "POST",
         url: "/api/auth/login",
         body,
+        failOnStatusCode: false,
+      }).then((response) => {
+        expectRateLimitedResponse(response, 5);
+      });
+    });
+
+    it("counts every spelling of one address in the same budget", () => {
+      // The login handler trims and lowercases the address before looking
+      // the account up, so these all try the same account's password: each
+      // must spend the same budget rather than get a fresh one.
+      const spellings = [
+        "rate-limit-login-spellings@example.com",
+        " rate-limit-login-spellings@example.com",
+        "Rate-Limit-Login-Spellings@Example.com ",
+        "\trate-limit-login-spellings@example.com",
+        "rate-limit-login-spellings@example.com\n",
+      ];
+      spellings.forEach((email, index) => {
+        cy.request({
+          method: "POST",
+          url: "/api/auth/login",
+          body: { credentials: { email, password: "not-a-real-password" } },
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(
+            response.status,
+            `spelling ${index + 1} should not be rate-limited`,
+          ).to.not.eq(429);
+        });
+      });
+
+      cy.request({
+        method: "POST",
+        url: "/api/auth/login",
+        body: {
+          credentials: {
+            email: "  RATE-LIMIT-LOGIN-SPELLINGS@example.com  ",
+            password: "not-a-real-password",
+          },
+        },
         failOnStatusCode: false,
       }).then((response) => {
         expectRateLimitedResponse(response, 5);

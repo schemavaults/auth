@@ -1,7 +1,7 @@
 import "server-only";
 import { toNextRequest } from "@/lib/api/next-request";
 import { NextRequest, NextResponse } from "next/server";
-import type { AuthenticateResult } from "@schemavaults/auth-common";
+import { normalizedEmailSchema, type AuthenticateResult } from "@schemavaults/auth-common";
 import { publicAccess, z } from "@schemavaults/openapi-operations";
 import { defineOperation } from "@/lib/api/context";
 import captureServerException from "@/lib/captureServerException";
@@ -16,13 +16,14 @@ import { ErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
 import {
   checkRateLimit,
-  checkRateLimitCount,
+  checkRateLimitCounts,
   extractClientIp,
-  incrementRateLimitCounter,
+  incrementRateLimitCounters,
   ipRequiredResponse,
-  LOGIN_LOCKOUT,
   LOGIN_RATE_LIMIT,
+  loginLockoutChecks,
   rateLimitResponse,
+  type RateLimitCheck,
 } from "@/lib/rate-limit";
 import { withServerTrace } from "@/lib/withServerTrace";
 import handleLogin from "./handle_login";
@@ -35,12 +36,26 @@ const rateLimitEmailSchema = z
   })
   .passthrough();
 
+/**
+ * The address a login attempt is counted under: the body's e-mail address
+ * normalized exactly as `handleLogin` reads it (trimmed, lowercased), so
+ * spellings of one account (`" Jane@Example.com"`) share its budgets. Null
+ * when there is none to count: such a body fails validation (400) before
+ * any password is checked.
+ */
+function loginRateLimitEmail(body: unknown): string | null {
+  const raw = rateLimitEmailSchema.safeParse(body);
+  if (!raw.success) return null;
+  const email = normalizedEmailSchema.safeParse(raw.data.credentials.email);
+  return email.success ? email.data : null;
+}
+
 export const login = defineOperation({
   method: "post",
   path: ROUTE,
   summary: "Log in with email and password",
   description:
-    "Verifies the credentials and starts a PKCE authorization-code grant for `client_app_id`: on success the authorization code is bound to the code challenge, the `redirect_uri`, the granted scopes and the nonce, and the auth server's HTTP-only session cookie is set. Accounts with a verified second factor get an `mfa_required` challenge instead (complete it at `POST /api/auth/mfa/verify`). A third-party `client_app_id` gets `email_verification_required` (session cookie set, no code) while the account's e-mail address is unverified and the `require_email_verification_for_third_party_apps` server setting is on. Wrong credentials and unknown accounts answer the same 401. Rate limited per IP + e-mail (a sliding window plus a lockout counter of failed attempts).",
+    "Verifies the credentials and starts a PKCE authorization-code grant for `client_app_id`: on success the authorization code is bound to the code challenge, the `redirect_uri`, the granted scopes and the nonce, and the auth server's HTTP-only session cookie is set. Accounts with a verified second factor get an `mfa_required` challenge instead (complete it at `POST /api/auth/mfa/verify`). A third-party `client_app_id` gets `email_verification_required` (session cookie set, no code) while the account's e-mail address is unverified and the `require_email_verification_for_third_party_apps` server setting is on. Wrong credentials and unknown accounts answer the same 401. Rate limited (429): 5 attempts per IP + e-mail address per 15 minutes, and failed attempts lock out the IP + address pair (10 per 30 minutes), the address from every IP (30 per hour) and the IP across every address (100 per hour). A completed password reset ends the address's lockouts.",
   tags: [API_TAGS.authentication],
   auth: publicAccess(
     "Credentials travel in the body. An existing auth server session cookie is only used to refuse signing in as a different user.",
@@ -106,21 +121,18 @@ export const login = defineOperation({
       return ipRequiredResponse();
     }
 
-    const emailParse = rateLimitEmailSchema.safeParse(body_json);
-    const email: string | undefined = emailParse.success
-      ? emailParse.data.credentials.email
-      : undefined;
+    const email: string | null = loginRateLimitEmail(body_json);
+    const lockouts: RateLimitCheck[] = email ? loginLockoutChecks({ ip, email }) : [];
 
     if (email) {
       const redis = ctx.context.redis.client;
-      const identifiers = { ip, email };
 
-      const lockout = await checkRateLimitCount(redis, LOGIN_LOCKOUT, identifiers);
-      if (!lockout.allowed) {
+      const lockout = await checkRateLimitCounts(redis, lockouts);
+      if (lockout) {
         return rateLimitResponse(lockout);
       }
 
-      const windowCheck = await checkRateLimit(redis, LOGIN_RATE_LIMIT, identifiers);
+      const windowCheck = await checkRateLimit(redis, LOGIN_RATE_LIMIT, { ip, email });
       if (!windowCheck.allowed) {
         return rateLimitResponse(windowCheck);
       }
@@ -136,9 +148,9 @@ export const login = defineOperation({
 
       // Both the "no such user" and "wrong password" branches in handleLogin
       // return 401 with a constant body, so a single 401 check covers both
-      // negative cases for the lockout-counter increment.
-      if (email && response.status === 401) {
-        await incrementRateLimitCounter(ctx.context.redis.client, LOGIN_LOCKOUT, { ip, email });
+      // negative cases for the lockout-counter increments.
+      if (response.status === 401) {
+        await incrementRateLimitCounters(ctx.context.redis.client, lockouts);
       }
 
       return response;

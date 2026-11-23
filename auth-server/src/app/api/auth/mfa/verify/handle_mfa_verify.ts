@@ -18,6 +18,10 @@ import {
   getChallenge,
 } from "@/lib/mfa";
 import { evaluateMfaProof } from "./evaluate-proof";
+import {
+  mfaProofFailureLockoutResponse,
+  recordMfaProofFailure,
+} from "@/lib/mfa/proof-failure-lockout";
 import { RedisCache } from "@/lib/redis";
 import setAuthServerRefreshTokenCookie from "@/lib/setAuthServerRefreshTokenCookie";
 import captureServerException from "@/lib/captureServerException";
@@ -74,6 +78,11 @@ export async function handleMfaVerify({
     );
   }
 
+  // Failed proofs are also capped per account, across every challenge and
+  // IP: checked before the challenge spends an attempt.
+  const lockedOut = await mfaProofFailureLockoutResponse(redis.client, challenge.uid);
+  if (lockedOut) return lockedOut;
+
   // Decrement attempts BEFORE evaluating the proof so a wrong code costs
   // an attempt regardless of which proof type the caller chose.
   const { remaining, existed } = await consumeAttempt(
@@ -118,6 +127,7 @@ export async function handleMfaVerify({
   }
 
   if (!proofValid) {
+    await recordMfaProofFailure(redis.client, challenge.uid);
     await recordAuditEvent(dbh.db, {
       event_type: "user.mfa_challenge_failed",
       subject: { uid: challenge.uid },

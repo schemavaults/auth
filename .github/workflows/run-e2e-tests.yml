@@ -237,6 +237,18 @@ jobs:
       test-suite-name: reset_password
       skip-docker-build: true
 
+  Run-Rate-Limiting-E2E-Tests:
+    needs:
+      - Build-Auth-Server-Test-Docker-Image
+      - Build-Postgres-DB-Docker-Image
+      - Build-E2E-Auth-Tests-Docker-Image
+      - Build-E2E-Auth-Tests-CLI
+    uses: ./.github/workflows/run-e2e-test-suite.yml
+    with:
+      BUN_VERSION: ${{ inputs.BUN_VERSION }}
+      test-suite-name: rate_limiting
+      skip-docker-build: true
+
   Run-Refresh-Token-Rotation-E2E-Tests:
     needs:
       - Build-Auth-Server-Test-Docker-Image

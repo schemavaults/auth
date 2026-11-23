@@ -3,13 +3,17 @@ import { mfaProofSchema } from "@schemavaults/auth-common";
 import { evaluateMfaProof } from "@/app/api/auth/mfa/verify/evaluate-proof";
 import { defineOperation } from "@/lib/api/context";
 import { sessionSchemes } from "@/lib/api/auth-schemes";
-import { MfaFactorRemoved, mfaFactorIdParam } from "@/lib/api/domain-schemas/mfa";
+import { MfaFactorRemoved, mfaFactorIdParam, mfaProofLockedOutResponse } from "@/lib/api/domain-schemas/mfa";
 import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
 import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { deleteStepUpChallenge, getStepUpChallenge } from "@/lib/mfa";
+import {
+  mfaProofFailureLockoutResponse,
+  recordMfaProofFailure,
+} from "@/lib/mfa/proof-failure-lockout";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 import { startOrganizationMfaGracePeriodsForUser } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
@@ -35,7 +39,7 @@ export const removePasskey = defineOperation({
   path: ROUTE,
   summary: "Remove a passkey",
   description:
-    "Deletes one of the caller's passkeys. The request must carry a step-up proof of a current factor (any TOTP code, a fresh passkey assertion, or a recovery code); a passkey assertion consumes the step-up challenge whatever the outcome. Removing the last verified factor also discards the account's recovery codes. A security alert e-mail is sent.",
+    "Deletes one of the caller's passkeys. The request must carry a step-up proof of a current factor (any TOTP code, a fresh passkey assertion, or a recovery code); a passkey assertion consumes the step-up challenge whatever the outcome. Removing the last verified factor also discards the account's recovery codes. A security alert e-mail is sent. Failed proofs also count against a per-account budget shared with every other MFA proof (10 per hour); while it is spent the answer is 429.",
   tags: [API_TAGS.mfa],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {
@@ -51,6 +55,7 @@ export const removePasskey = defineOperation({
     },
     403: sessionErrorResponses[403],
     404: { description: "No such passkey for the caller", schema: ErrorResponse },
+    ...mfaProofLockedOutResponse,
     500: { description: "Failed to remove the passkey", schema: ErrorResponse },
   },
   handler: async (ctx) => {
@@ -66,6 +71,8 @@ export const removePasskey = defineOperation({
       if (!factor || factor.factor_type !== "webauthn") {
         return ctx.json(404, { success: false, message: "Passkey not found" });
       }
+      const lockedOut = await mfaProofFailureLockoutResponse(redis.client, user.uid);
+      if (lockedOut) return lockedOut;
 
       // For a webauthn step-up proof, consume the per-user assertion challenge
       // issued by /webauthn/authenticate-options (one-shot).
@@ -82,6 +89,7 @@ export const removePasskey = defineOperation({
         webauthnChallenge,
       });
       if (!proofValid) {
+        await recordMfaProofFailure(redis.client, user.uid);
         return ctx.json(401, { success: false, message: "Invalid verification" });
       }
 

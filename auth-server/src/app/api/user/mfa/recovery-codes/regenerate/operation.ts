@@ -2,13 +2,17 @@ import { requireAuth, withOpenApi } from "@schemavaults/openapi-operations";
 import { mfaTotpProofBodySchema } from "@schemavaults/auth-common";
 import { defineOperation } from "@/lib/api/context";
 import { sessionSchemes } from "@/lib/api/auth-schemes";
-import { MfaVerifyEnrollmentResult } from "@/lib/api/domain-schemas/mfa";
+import { MfaVerifyEnrollmentResult, mfaProofLockedOutResponse } from "@/lib/api/domain-schemas/mfa";
 import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
 import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { generateRecoveryCodes, verifyAndConsumeTotpCode } from "@/lib/mfa";
+import {
+  mfaProofFailureLockoutResponse,
+  recordMfaProofFailure,
+} from "@/lib/mfa/proof-failure-lockout";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 
 const ROUTE = "/api/user/mfa/recovery-codes/regenerate";
@@ -18,7 +22,7 @@ export const regenerateRecoveryCodes = defineOperation({
   path: ROUTE,
   summary: "Regenerate my recovery codes",
   description:
-    "Replaces the caller's recovery codes with a fresh set, invalidating every previous code. The request must carry a current code from one of the caller's verified authenticator-app factors (`factor_id`). The response always has `recovery_codes_issued: true`; a security alert e-mail is sent.",
+    "Replaces the caller's recovery codes with a fresh set, invalidating every previous code. The request must carry a current code from one of the caller's verified authenticator-app factors (`factor_id`). The response always has `recovery_codes_issued: true`; a security alert e-mail is sent. Failed proofs also count against a per-account budget shared with every other MFA proof (10 per hour); while it is spent the answer is 429.",
   tags: [API_TAGS.mfa],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {
@@ -40,6 +44,7 @@ export const regenerateRecoveryCodes = defineOperation({
       schema: ErrorResponse,
     },
     403: sessionErrorResponses[403],
+    ...mfaProofLockedOutResponse,
     500: { description: "Failed to regenerate the recovery codes", schema: ErrorResponse },
   },
   handler: async (ctx) => {
@@ -57,6 +62,8 @@ export const regenerateRecoveryCodes = defineOperation({
       if (!factor) {
         return ctx.json(400, { success: false, message: "Unknown or unverified MFA factor" });
       }
+      const lockedOut = await mfaProofFailureLockoutResponse(redis.client, user.uid);
+      if (lockedOut) return lockedOut;
       // A code this factor already accepted is refused as a replay.
       const isValid = await verifyAndConsumeTotpCode({
         mfaRegistry,
@@ -66,6 +73,7 @@ export const regenerateRecoveryCodes = defineOperation({
         code,
       });
       if (!isValid) {
+        await recordMfaProofFailure(redis.client, user.uid);
         return ctx.json(401, { success: false, message: "Invalid TOTP code" });
       }
       const recovery_codes = generateRecoveryCodes();

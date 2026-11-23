@@ -13,6 +13,7 @@ import captureServerException from "@/lib/captureServerException";
 import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import type { ConsumedPasswordResetToken } from "@/lib/auth-db/users";
 import { RedisCache } from "@/lib/redis";
+import { clearLoginLockouts, extractClientIp } from "@/lib/rate-limit";
 import {
   invalidateUserTokensValidAfterCache,
   waitUntilTokensValidAfter,
@@ -101,6 +102,24 @@ export async function handleResetPasswordConfirm({
       e,
     );
     await recordInvalidationFailure(e);
+  }
+
+  // The reset proves control of the address, so it ends the account's
+  // login lockouts: a user locked out by someone failing sign-ins in their
+  // name can always get back in. Best effort, like the counters.
+  try {
+    const user = await userRegistry.getUserByUID(result.uid);
+    if (user) {
+      await using redis = RedisCache.createConnection();
+      await clearLoginLockouts(redis.client, { ip: extractClientIp(req), email: user.email });
+    }
+  } catch (e: unknown) {
+    await captureServerException(dbh.db, e, {
+      op_name: "handleResetPasswordConfirm.clearLoginLockouts",
+      route: ROUTE,
+      uid: result.uid,
+      context: { nonFatal: true },
+    });
   }
 
   await recordAuditEvent(dbh.db, {

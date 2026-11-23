@@ -2,80 +2,44 @@ import "server-only";
 
 import type Redis from "ioredis";
 import reportServerException from "@/lib/reportServerException";
+import { buildRateLimitKey } from "./rate-limit-key";
 import type {
   RateLimitConfig,
   RateLimitIdentifiers,
   RateLimitResult,
 } from "./types";
 
-function buildKey(
-  config: RateLimitConfig,
-  identifiers: RateLimitIdentifiers,
-): string {
-  const prefix = `rl:${config.name}`;
-  switch (config.keySource) {
-    case "ip": {
-      if (!identifiers.ip) {
-        throw new Error(`Rate limit '${config.name}' requires ip`);
-      }
-      return `${prefix}:${identifiers.ip}`;
-    }
-    case "email": {
-      if (!identifiers.email) {
-        throw new Error(`Rate limit '${config.name}' requires email`);
-      }
-      return `${prefix}:${identifiers.email.toLowerCase()}`;
-    }
-    case "ip+email": {
-      if (!identifiers.ip) {
-        throw new Error(`Rate limit '${config.name}' requires ip`);
-      }
-      if (!identifiers.email) {
-        throw new Error(`Rate limit '${config.name}' requires email`);
-      }
-      return `${prefix}:${identifiers.ip}:${identifiers.email.toLowerCase()}`;
-    }
-    case "uid": {
-      if (!identifiers.uid) {
-        throw new Error(`Rate limit '${config.name}' requires uid`);
-      }
-      return `${prefix}:${identifiers.uid}`;
-    }
-    case "ip+uid": {
-      if (!identifiers.uid) {
-        throw new Error(`Rate limit '${config.name}' requires uid`);
-      }
-      // IP is best-effort here: when it can't be determined we still bucket
-      // per-uid so the per-account cap always applies.
-      const ipPart = identifiers.ip ?? "unknown-ip";
-      return `${prefix}:${ipPart}:${identifiers.uid}`;
-    }
-    case "client_app_id": {
-      if (!identifiers.client_app_id) {
-        throw new Error(`Rate limit '${config.name}' requires client_app_id`);
-      }
-      return `${prefix}:${identifiers.client_app_id}`;
-    }
-  }
-}
-
+/**
+ * Fixed-window counter: INCR, and arm the window's expiry whenever the key
+ * has none. Checking the TTL (rather than `current == 1`) also re-arms a
+ * counter that somehow lost its expiry, which would otherwise refuse its
+ * subject forever with `Retry-After: 0`.
+ */
 const CHECK_AND_INCREMENT_SCRIPT = `
 local current = redis.call('INCR', KEYS[1])
-if current == 1 then
-  redis.call('EXPIRE', KEYS[1], tonumber(ARGV[1]))
-end
 local ttl = redis.call('TTL', KEYS[1])
+if ttl < 0 then
+  ttl = tonumber(ARGV[1])
+  redis.call('EXPIRE', KEYS[1], ttl)
+end
 return {current, ttl}
 `;
 
+/**
+ * `current` is either the count including the request being checked
+ * (`counted`: checkRateLimit, allowed while it is within the budget) or
+ * the count so far (a failure-counted limit's peek: allowed while room is
+ * left for one more, so a budget of N allows exactly N failures).
+ */
 function toResult(
   current: number,
   ttl: number,
   config: RateLimitConfig,
+  counted: boolean,
 ): RateLimitResult {
   const retryAfterSeconds = Math.max(ttl, 0);
   return {
-    allowed: current <= config.maxAttempts,
+    allowed: counted ? current <= config.maxAttempts : current < config.maxAttempts,
     remaining: Math.max(0, config.maxAttempts - current),
     resetAt: Math.floor(Date.now() / 1000) + retryAfterSeconds,
     limit: config.maxAttempts,
@@ -116,7 +80,7 @@ export async function checkRateLimit(
   identifiers: RateLimitIdentifiers,
 ): Promise<RateLimitResult> {
   try {
-    const key = buildKey(config, identifiers);
+    const key = buildRateLimitKey(config, identifiers);
     const result = (await redis.eval(
       CHECK_AND_INCREMENT_SCRIPT,
       1,
@@ -124,7 +88,7 @@ export async function checkRateLimit(
       String(config.windowSeconds),
     )) as [number, number];
     const [current, ttl] = result;
-    return toResult(current, ttl, config);
+    return toResult(current, ttl, config, true);
   } catch (e: unknown) {
     console.error(`[rate-limit] Redis error during checkRateLimit for '${config.name}':`, e);
     await recordRedisFailure("checkRateLimit", config, e);
@@ -138,13 +102,13 @@ export async function checkRateLimitCount(
   identifiers: RateLimitIdentifiers,
 ): Promise<RateLimitResult> {
   try {
-    const key = buildKey(config, identifiers);
+    const key = buildRateLimitKey(config, identifiers);
     const [countStr, ttl] = await Promise.all([
       redis.get(key),
       redis.ttl(key),
     ]);
     const current = countStr ? parseInt(countStr, 10) : 0;
-    return toResult(current, ttl, config);
+    return toResult(current, ttl, config, false);
   } catch (e: unknown) {
     console.error(`[rate-limit] Redis error during checkRateLimitCount for '${config.name}':`, e);
     await recordRedisFailure("checkRateLimitCount", config, e);
@@ -158,7 +122,7 @@ export async function incrementRateLimitCounter(
   identifiers: RateLimitIdentifiers,
 ): Promise<void> {
   try {
-    const key = buildKey(config, identifiers);
+    const key = buildRateLimitKey(config, identifiers);
     await redis.eval(
       CHECK_AND_INCREMENT_SCRIPT,
       1,
@@ -168,5 +132,23 @@ export async function incrementRateLimitCounter(
   } catch (e: unknown) {
     console.error(`[rate-limit] Redis error during incrementRateLimitCounter for '${config.name}':`, e);
     await recordRedisFailure("incrementRateLimitCounter", config, e);
+  }
+}
+
+/**
+ * Deletes a limit's counter for the given identifiers, ending its window
+ * early (e.g. a completed password reset ends the account's login lockout).
+ * Best effort, like the counters themselves.
+ */
+export async function clearRateLimitCounter(
+  redis: Redis,
+  config: RateLimitConfig,
+  identifiers: RateLimitIdentifiers,
+): Promise<void> {
+  try {
+    await redis.del(buildRateLimitKey(config, identifiers));
+  } catch (e: unknown) {
+    console.error(`[rate-limit] Redis error during clearRateLimitCounter for '${config.name}':`, e);
+    await recordRedisFailure("clearRateLimitCounter", config, e);
   }
 }

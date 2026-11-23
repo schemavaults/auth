@@ -35,7 +35,7 @@ export const verifyMfaChallenge = defineOperation({
   path: ROUTE,
   summary: "Complete a login MFA challenge",
   description:
-    "Second step of a login that answered `mfa_required`: presents a TOTP code, a passkey assertion or a recovery code for the pending challenge. Each wrong proof costs one of the challenge's attempts; when they run out (or the challenge expired) the answer is 410 and the user must log in again. On success the challenge is deleted and the same authorization code + session cookie a password-only login would have produced are issued — including the `email_verification_required` outcome for a third-party `client_app_id` while the account's e-mail address is unverified. Rate limited per IP.",
+    "Second step of a login that answered `mfa_required`: presents a TOTP code, a passkey assertion or a recovery code for the pending challenge. Each wrong proof costs one of the challenge's attempts; when they run out (or the challenge expired) the answer is 410 and the user must log in again. On success the challenge is deleted and the same authorization code + session cookie a password-only login would have produced are issued — including the `email_verification_required` outcome for a third-party `client_app_id` while the account's e-mail address is unverified. Rate limited per IP (20 per hour), and failed proofs count against a per-account budget shared with the step-up proofs (10 per hour, across every IP and challenge): while it is spent the answer is 429.",
   tags: [API_TAGS.authentication],
   auth: publicAccess("The challenge id issued by `POST /api/auth/login` is the credential."),
   request: {

@@ -2,6 +2,10 @@ import "server-only";
 
 import type { RateLimitConfig } from "./types";
 
+/**
+ * Sign-in attempts at POST /api/auth/login, per IP + e-mail address,
+ * whatever their outcome.
+ */
 export const LOGIN_RATE_LIMIT: RateLimitConfig = {
   name: "login",
   maxAttempts: 5,
@@ -9,11 +13,48 @@ export const LOGIN_RATE_LIMIT: RateLimitConfig = {
   keySource: "ip+email",
 };
 
+/**
+ * The login lockouts below count failed sign-ins only (wrong password or
+ * unknown account), are checked before the password is, and refuse every
+ * attempt while spent, the right password included.
+ *
+ * Failed sign-ins per IP + e-mail address: one caller guessing one
+ * account's password.
+ */
 export const LOGIN_LOCKOUT: RateLimitConfig = {
   name: "login-lockout",
   maxAttempts: 10,
   windowSeconds: 30 * 60,
   keySource: "ip+email",
+};
+
+/**
+ * Failed sign-ins per e-mail address, from every IP: a guessing attack
+ * spread over many addresses (a botnet, rotating proxies, an IPv6 range)
+ * still gets only this many guesses an hour at one account (NIST SP
+ * 800-63B §5.2.2). A user behind one IP is held by LOGIN_LOCKOUT long
+ * before reaching it. The cost: anyone can lock an account out of password
+ * sign-in for up to an hour by failing this many times. A completed
+ * password reset clears it (POST /api/auth/reset-password/confirm), so a
+ * user who can read their mail always has a way back in.
+ */
+export const LOGIN_ACCOUNT_LOCKOUT: RateLimitConfig = {
+  name: "login-account-lockout",
+  maxAttempts: 30,
+  windowSeconds: 60 * 60,
+  keySource: "email",
+};
+
+/**
+ * Failed sign-ins per IP, across every e-mail address: password spraying
+ * and credential stuffing (a few guesses at each of many accounts) from one
+ * address. Generous enough for a shared NAT of mistyping users.
+ */
+export const LOGIN_IP_LOCKOUT: RateLimitConfig = {
+  name: "login-ip-lockout",
+  maxAttempts: 100,
+  windowSeconds: 60 * 60,
+  keySource: "ip",
 };
 
 export const REGISTER_RATE_LIMIT: RateLimitConfig = {
@@ -23,11 +64,27 @@ export const REGISTER_RATE_LIMIT: RateLimitConfig = {
   keySource: "ip",
 };
 
+/**
+ * Password reset e-mails per address (POST /api/auth/reset-password/request),
+ * whether or not an account exists for it: bounds the mail one address
+ * receives.
+ */
 export const RESET_PASSWORD_REQUEST_RATE_LIMIT: RateLimitConfig = {
   name: "reset-pwd-req",
   maxAttempts: 3,
   windowSeconds: 60 * 60,
   keySource: "email",
+};
+
+/**
+ * Password reset requests per IP, across addresses: one caller cannot mail
+ * a long list of addresses (or probe the mail server) three times each.
+ */
+export const RESET_PASSWORD_REQUEST_IP_RATE_LIMIT: RateLimitConfig = {
+  name: "reset-pwd-req-ip",
+  maxAttempts: 20,
+  windowSeconds: 60 * 60,
+  keySource: "ip",
 };
 
 export const RESET_PASSWORD_CONFIRM_RATE_LIMIT: RateLimitConfig = {
@@ -44,6 +101,26 @@ export const VERIFY_EMAIL_CONFIRM_RATE_LIMIT: RateLimitConfig = {
   keySource: "ip",
 };
 
+/**
+ * Verification e-mails per address (POST /api/auth/verify-email/request),
+ * counted whether or not an unverified account exists for it, like the
+ * password reset request.
+ */
+export const VERIFY_EMAIL_REQUEST_RATE_LIMIT: RateLimitConfig = {
+  name: "verify-email-req",
+  maxAttempts: 3,
+  windowSeconds: 60 * 60,
+  keySource: "email",
+};
+
+/** Verification e-mail requests per IP, across addresses. */
+export const VERIFY_EMAIL_REQUEST_IP_RATE_LIMIT: RateLimitConfig = {
+  name: "verify-email-req-ip",
+  maxAttempts: 20,
+  windowSeconds: 60 * 60,
+  keySource: "ip",
+};
+
 export const REFRESH_TOKEN_RATE_LIMIT: RateLimitConfig = {
   name: "refresh-token",
   maxAttempts: 30,
@@ -53,9 +130,11 @@ export const REFRESH_TOKEN_RATE_LIMIT: RateLimitConfig = {
 
 /**
  * OAuth2 client_credentials grants at /api/oidc/token, per IP. Bounds
- * both client-secret guessing and runaway M2M minting loops; a
- * well-behaved service caches its access token for most of its
- * lifetime, so this budget is generous for legitimate traffic.
+ * runaway M2M minting loops; a well-behaved service caches its access
+ * token for most of its lifetime, so this budget is generous for
+ * legitimate traffic. Requests are counted once the client has
+ * authenticated, so failed client authentication is not: client secrets
+ * carry 256 bits of entropy (`client-secret.ts`), so they cannot be guessed.
  */
 export const CLIENT_CREDENTIALS_RATE_LIMIT: RateLimitConfig = {
   name: "client-credentials",
@@ -106,7 +185,7 @@ export const API_SERVER_DOMAIN_VERIFICATION_RATE_LIMIT: RateLimitConfig = {
 };
 
 // Caps cross-challenge MFA verify abuse from a single IP. Per-challenge
-// attempts are independently capped at 5 by challenge-store.ts; this
+// attempts are independently capped at 3 by challenge-store.ts; this
 // limiter exists to prevent a bot from rotating challenge_ids to evade
 // the per-challenge cap.
 export const MFA_VERIFY_RATE_LIMIT: RateLimitConfig = {
@@ -116,13 +195,31 @@ export const MFA_VERIFY_RATE_LIMIT: RateLimitConfig = {
   keySource: "ip",
 };
 
+/**
+ * Failed MFA proofs per account, from every IP and every endpoint that
+ * takes one: the login challenge (POST /api/auth/mfa/verify) and the
+ * step-up proofs of recovery code regeneration and factor removal. Counts
+ * failures only and refuses every proof while spent. Without it, a 6-digit
+ * TOTP code (3 valid codes in 10^6 at any moment) falls to an attacker who
+ * holds the password and many IPs, or a stolen session (which needs no
+ * challenge at all), in hours; with it, an attacker gets 240 guesses a day.
+ * Room for three failed login challenges (3 attempts each) and then some,
+ * so a user fumbling their codes is not locked out.
+ */
+export const MFA_PROOF_FAILURE_LOCKOUT: RateLimitConfig = {
+  name: "mfa-proof-failures",
+  maxAttempts: 10,
+  windowSeconds: 60 * 60,
+  keySource: "uid",
+};
+
 // Caps enrollment churn so an attacker who obtains a valid session
-// cannot rapidly cycle through factors.
+// cannot rapidly cycle through factors. Per account.
 export const MFA_ENROLL_RATE_LIMIT: RateLimitConfig = {
   name: "mfa-enroll",
   maxAttempts: 10,
   windowSeconds: 60 * 60,
-  keySource: "ip",
+  keySource: "uid",
 };
 
 // Authenticated WebAuthn/passkey management routes. Keyed by ip+uid so each

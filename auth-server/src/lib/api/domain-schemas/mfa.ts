@@ -11,6 +11,7 @@ import {
   webauthnCredentialListResponseSchema,
   webauthnEnrollOptionsResponseSchema,
 } from "@schemavaults/auth-common";
+import { RateLimitedResponse } from "@/lib/api/schemas";
 
 /**
  * Response schemas of the signed-in user's MFA management operations
@@ -75,3 +76,15 @@ export const MfaWebauthnStepUpOptions = withOpenApi(webauthnAuthenticationOption
       "The `PublicKeyCredentialRequestOptionsJSON` to hand to `navigator.credentials.get()` verbatim for a step-up passkey assertion.",
   },
 );
+
+/**
+ * The 429 of every operation that checks an MFA proof: failed proofs are
+ * capped per account across all of them (`MFA_PROOF_FAILURE_LOCKOUT`).
+ */
+export const mfaProofLockedOutResponse = {
+  429: {
+    description:
+      "Too many failed MFA proofs for this account (10 per hour, counted across the login challenge and every step-up proof); `Retry-After` says when to retry",
+    schema: RateLimitedResponse,
+  },
+} as const;

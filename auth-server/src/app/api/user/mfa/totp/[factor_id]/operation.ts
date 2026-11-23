@@ -2,13 +2,17 @@ import { z, requireAuth, withOpenApi } from "@schemavaults/openapi-operations";
 import { mfaCodeOnlyBodySchema } from "@schemavaults/auth-common";
 import { defineOperation } from "@/lib/api/context";
 import { sessionSchemes } from "@/lib/api/auth-schemes";
-import { MfaFactorRemoved, mfaFactorIdParam } from "@/lib/api/domain-schemas/mfa";
+import { MfaFactorRemoved, mfaFactorIdParam, mfaProofLockedOutResponse } from "@/lib/api/domain-schemas/mfa";
 import { ErrorResponse, sessionErrorResponses, validationErrorResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
 import { MfaRegistry } from "@/lib/auth-db";
 import captureServerException from "@/lib/captureServerException";
 import recordAuditEvent from "@/lib/audit-log/record-audit-event";
 import { verifyAndConsumeTotpCode } from "@/lib/mfa";
+import {
+  mfaProofFailureLockoutResponse,
+  recordMfaProofFailure,
+} from "@/lib/mfa/proof-failure-lockout";
 import { sendMfaSecurityAlertEmail } from "@/lib/mfa/send-mfa-security-alert-email";
 import { startOrganizationMfaGracePeriodsForUser } from "@/lib/organization-mfa-requirements/organization-mfa-requirement-actions";
 
@@ -19,7 +23,7 @@ export const removeTotpFactor = defineOperation({
   path: ROUTE,
   summary: "Remove a TOTP factor",
   description:
-    "Deletes one of the caller's authenticator-app factors (verified or still pending). The request must carry a current code from that very factor as proof of control. Removing the last verified factor also discards the account's recovery codes. A security alert e-mail is sent.",
+    "Deletes one of the caller's authenticator-app factors (verified or still pending). The request must carry a current code from that very factor as proof of control. Removing the last verified factor also discards the account's recovery codes. A security alert e-mail is sent. Failed proofs also count against a per-account budget shared with every other MFA proof (10 per hour); while it is spent the answer is 429.",
   tags: [API_TAGS.mfa],
   auth: requireAuth({ schemes: sessionSchemes }),
   request: {
@@ -39,6 +43,7 @@ export const removeTotpFactor = defineOperation({
     },
     403: sessionErrorResponses[403],
     404: { description: "No such factor for the caller", schema: ErrorResponse },
+    ...mfaProofLockedOutResponse,
     500: { description: "Failed to remove the factor", schema: ErrorResponse },
   },
   handler: async (ctx) => {
@@ -59,6 +64,8 @@ export const removeTotpFactor = defineOperation({
       if (!factor) {
         return ctx.json(404, { success: false, message: "Factor not found" });
       }
+      const lockedOut = await mfaProofFailureLockoutResponse(redis.client, user.uid);
+      if (lockedOut) return lockedOut;
       // A code this factor already accepted (e.g. one observed at login)
       // is refused as a replay.
       const isValid = await verifyAndConsumeTotpCode({
@@ -69,6 +76,7 @@ export const removeTotpFactor = defineOperation({
         code,
       });
       if (!isValid) {
+        await recordMfaProofFailure(redis.client, user.uid);
         return ctx.json(401, { success: false, message: "Invalid TOTP code" });
       }
 

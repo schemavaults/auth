@@ -8,9 +8,13 @@ import { authRateLimitedResponse } from "@/lib/api/domain-schemas/authentication
 import { ErrorResponse, SuccessMessageResponse } from "@/lib/api/schemas";
 import { API_TAGS } from "@/lib/api/tags";
 import {
-  checkRateLimit,
+  checkRateLimits,
+  extractClientIp,
+  ipRequiredResponse,
   rateLimitResponse,
+  RESET_PASSWORD_REQUEST_IP_RATE_LIMIT,
   RESET_PASSWORD_REQUEST_RATE_LIMIT,
+  type RateLimitCheck,
 } from "@/lib/rate-limit";
 import { withServerTrace } from "@/lib/withServerTrace";
 import handleResetPasswordRequest from "./handle_reset_password_request";
@@ -31,7 +35,7 @@ export const requestPasswordReset = defineOperation({
   path: ROUTE,
   summary: "Request a password reset e-mail",
   description:
-    "E-mails a single-use password reset link (valid for one hour) to the address when an account exists for it. The response is the same whether or not the account exists, so addresses cannot be enumerated; service accounts are silently ignored. Rate limited per e-mail address.",
+    "E-mails a single-use password reset link (valid for one hour) to the address when an account exists for it. The response is the same whether or not the account exists, so addresses cannot be enumerated; service accounts are silently ignored. Rate limited (429) per IP (20 per hour) and per e-mail address (3 per hour), whether or not the account exists.",
   tags: [API_TAGS.authentication],
   auth: publicAccess(),
   request: {
@@ -47,7 +51,10 @@ export const requestPasswordReset = defineOperation({
       description: "Accepted (whether or not an account exists for the address)",
       schema: SuccessMessageResponse,
     },
-    400: { description: "Invalid JSON or a body that fails schema validation", schema: ErrorResponse },
+    400: {
+      description: "Invalid JSON, a body that fails schema validation, or the client IP could not be determined",
+      schema: ErrorResponse,
+    },
     ...authRateLimitedResponse,
     500: { description: "Unexpected failure", schema: ErrorResponse },
   },
@@ -66,16 +73,23 @@ export const requestPasswordReset = defineOperation({
       return NextResponse.json({ success: false, message: "Invalid body JSON" }, { status: 400 });
     }
 
+    const ip = extractClientIp(req);
+    if (!ip) {
+      return ipRequiredResponse();
+    }
+
+    // Per IP first, so requests refused for an address still spend the
+    // caller's budget across addresses.
     const emailParse = rateLimitEmailSchema.safeParse(body_json);
-    if (emailParse.success) {
-      const result = await checkRateLimit(
-        ctx.context.redis.client,
-        RESET_PASSWORD_REQUEST_RATE_LIMIT,
-        { ip: "", email: emailParse.data.email },
-      );
-      if (!result.allowed) {
-        return rateLimitResponse(result);
-      }
+    const checks: RateLimitCheck[] = [
+      { config: RESET_PASSWORD_REQUEST_IP_RATE_LIMIT, identifiers: { ip } },
+      ...(emailParse.success
+        ? [{ config: RESET_PASSWORD_REQUEST_RATE_LIMIT, identifiers: { email: emailParse.data.email } }]
+        : []),
+    ];
+    const refused = await checkRateLimits(ctx.context.redis.client, checks);
+    if (refused) {
+      return rateLimitResponse(refused);
     }
 
     try {

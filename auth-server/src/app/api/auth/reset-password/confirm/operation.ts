@@ -33,7 +33,7 @@ export const confirmPasswordReset = defineOperation({
   path: ROUTE,
   summary: "Reset the password with an e-mailed token",
   description:
-    "Consumes a password reset token and sets the new password. Every session and token issued before the reset is invalidated (the user's `tokens_valid_after` watermark moves), so the user has to log in again everywhere. Rate limited per IP.",
+    "Consumes a password reset token and sets the new password. Every session and token issued before the reset is invalidated (the user's `tokens_valid_after` watermark moves), so the user has to log in again everywhere. It also ends the account's login lockouts (failed sign-ins counted for the address from every IP, and from the resetting IP). Rate limited per IP.",
   tags: [API_TAGS.authentication],
   auth: publicAccess("The single-use reset token is the credential."),
   request: {

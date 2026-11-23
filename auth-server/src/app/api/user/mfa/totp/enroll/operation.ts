@@ -42,8 +42,8 @@ export const enrollTotp = defineOperation({
     const ip = extractClientIp(new NextRequest(ctx.url, { headers: ctx.request.headers }));
     if (!ip) return ipRequiredResponse();
     try {
-      const ipResult = await checkRateLimit(redis.client, MFA_ENROLL_RATE_LIMIT, { ip: user.uid });
-      if (!ipResult.allowed) return rateLimitResponse(ipResult);
+      const rate = await checkRateLimit(redis.client, MFA_ENROLL_RATE_LIMIT, { uid: user.uid });
+      if (!rate.allowed) return rateLimitResponse(rate);
 
       const mfaRegistry = new MfaRegistry(db);
       if (await mfaRegistry.hasVerifiedFactor(user.uid)) {
