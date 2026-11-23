@@ -1,44 +1,35 @@
 import "server-only";
-import {
-  type SchemaVaultsApp,
-  type ListAppsQueryType,
-  type SchemaVaultsAppDomainRef,
-  type SchemaVaultsAppCallbackUrlRef,
-  schemaVaultsAppDefinitionSchema,
-  schemaVaultsAppDomainRefSchema,
-  appIdSchema,
-  type SchemaVaultsAppEnvironment,
-  getAppEnvironment,
-  isHardcodedAppId,
-  getHardcodedSchemaVaultsApps,
-  getHardcodedAppDomains,
-  type AppId,
-  type ResourceOwnership,
-  type DynamicClientRegistrationMetadataFields,
+import type {
+  SchemaVaultsApp,
+  ListAppsQueryType,
+  SchemaVaultsAppDomainRef,
+  SchemaVaultsAppCallbackUrlRef,
+  SchemaVaultsAppEnvironment,
+  AppId,
 } from "@schemavaults/app-definitions";
+import { getAppEnvironment } from "@schemavaults/app-definitions";
 import type { AppClientSecret } from "./app-client-secrets-table";
 import type { AppServiceAccountOrganizationRole } from "./app-service-account-organization-roles-table";
 import type { GetOrCreateAppServiceAccountResult } from "./app-service-accounts";
 import type { UserDocument } from "@/lib/auth-db/users";
-import { organizationIdSchema, type AssignableOrganizationMembershipRole, type OrganizationID, type UserData } from "@schemavaults/auth-common";
-import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
-import { toOwnershipDatabaseColumns } from "@/lib/ownership/ownership-columns";
-import type { NewApp } from "./apps-table";
+import type { AssignableOrganizationMembershipRole, OrganizationID, UserData } from "@schemavaults/auth-common";
 import type { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
-import { ConflictError } from "@/lib/error/ConflictError";
-import {
-  APP_DOMAIN_REGISTRATION_OWNER,
-  assertDomainRegistrationAvailable,
-  domainRefIdInUseError,
-} from "@/lib/auth-db/domain-registrations/registration-conflicts";
 import listApps from "./list-apps";
-import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations/list-user-organization-memberships";
-import parseAppDefinitionDatabaseRow from "./parse-app-definition-database-row";
+import { getAppDomains } from "./get-app-domains";
+import { registerApp, type RegisterAppOptions } from "./register-app";
+import { listAppsAccessibleToUser } from "./list-apps-accessible-to-user";
+import { listUserOwnedApps } from "./list-user-owned-apps";
+import { listOrganizationApps } from "./list-organization-apps";
+import { addAppDomain } from "./add-app-domain";
+import { removeAppDomain } from "./remove-app-domain";
 
 /**
  * @name SchemaVaultsAppRegistry
- * @description Manage available frontend client applications which can access SchemaVaults APIs
+ * @description Manage available frontend client applications which can access SchemaVaults APIs.
+ * A facade over this folder's query functions (one per module, each taking
+ * the database handle first): it binds them to a database handle and holds
+ * no logic of its own.
  * @see AuthorizedAppsRegistry To manage which apps a user has actually authorized
  * @see SchemaVaultsApiServerRegistry Backend API servers which frontend applications can actually access
  */
@@ -46,265 +37,42 @@ export class SchemaVaultsAppRegistry {
   private readonly env: SchemaVaultsAppEnvironment;
   private readonly debug: boolean;
 
+  public constructor(protected readonly db: Kysely<AuthDatabase>) {
+    this.env = getAppEnvironment();
+    this.debug =
+      this.env === "development" ||
+      this.env === "staging" ||
+      this.env === "test";
+  }
+
   public async getApp(app_id: string): Promise<SchemaVaultsApp | null> {
     const getApp = await import("./get-app").then(mod => mod.default)
     return await getApp(this.db, app_id, this.debug);
   }
 
-  private static async parseAppDomainFromDb(
-    row: object,
-  ): Promise<SchemaVaultsAppDomainRef> {
-    if (!Object.hasOwn(row, "created_at") || !("created_at" in row)) {
-      throw new Error("Missing app domain creation time");
-    }
-
-    const created_at: number =
-      typeof row.created_at === "string"
-        ? parseInt(row.created_at)
-        : Number(row.created_at);
-    if (isNaN(created_at)) {
-      throw new Error("Failed to parse app creation time from database");
-    }
-
-    const parsed_app_domain =
-      await schemaVaultsAppDomainRefSchema.safeParseAsync({
-        ...row,
-        created_at,
-      } as const);
-    if (!parsed_app_domain.success) {
-      console.error(parsed_app_domain.error);
-      throw new Error("Failed to parse app domain from database!");
-    }
-    return parsed_app_domain.data satisfies SchemaVaultsAppDomainRef;
-  }
-
+  /** @see getAppDomains */
   public async getAppDomains(
     app_id: AppId,
   ): Promise<readonly SchemaVaultsAppDomainRef[]> {
-    const isValidAppId: boolean = (await appIdSchema.safeParseAsync(app_id))
-      .success;
-    if (!isValidAppId) {
-      throw new Error("Invalid app ID to list domains for!");
-    }
-
-    if (isHardcodedAppId(app_id)) {
-      return getHardcodedAppDomains(app_id);
-    }
-
-    const query = this.db
-      .selectFrom("app_domains")
-      .where("app_id", "=", app_id)
-      .limit(50)
-      .selectAll();
-    const rows = await query.execute();
-
-    const parse_domains_promises: Promise<SchemaVaultsAppDomainRef>[] =
-      rows.map(SchemaVaultsAppRegistry.parseAppDomainFromDb);
-
-    const parsed_domains: SchemaVaultsAppDomainRef[] = await Promise.all(
-      parse_domains_promises,
-    );
-
-    return parsed_domains;
+    return await getAppDomains(this.db, app_id);
   }
 
-  public async registerApp({
-    app_id,
-    app_name,
-    app_description,
-    publicly_listed,
-    ownership,
-    web,
-    created_by = null,
-    dynamic_client_metadata,
-  }: RegisterAppOptions): Promise<void> {
-
-    if (typeof publicly_listed !== 'boolean') {
-      throw new TypeError("Expected 'publicly_listed' to be a boolean!")
-    }
-
-    if (typeof web !== 'boolean') {
-      throw new TypeError("Expected 'web' to be a boolean!")
-    }
-
-    if (
-      ownership.owner_type === "organization" &&
-      !organizationIdSchema.safeParse(ownership.owner_organization_id).success
-    ) {
-      throw new TypeError("Received invalid organization ID to register application to!")
-    }
-
-    // Hardcoded app ids (the auth server's own id) have no database row, so
-    // the insert's uniqueness conflict cannot protect them. Reject them here.
-    if (isHardcodedAppId(app_id)) {
-      throw new ConflictError(`App ID '${app_id}' is reserved by the platform`);
-    }
-
-    // Validate the API-facing shape first (id/name/description limits, etc.)
-    const parsed_app = await schemaVaultsAppDefinitionSchema.safeParseAsync({
-      app_id,
-      app_name,
-      app_description,
-      created_at: Date.now(),
-      public: publicly_listed ?? false,
-      hardcoded: false,
-      web,
-      ...ownership,
-      created_by,
-      ...(dynamic_client_metadata ?? {}),
-    } satisfies SchemaVaultsApp);
-    if (!parsed_app.success) {
-      console.error(parsed_app.error.issues);
-      throw new Error("Failed to parse app");
-    }
-    const app: SchemaVaultsApp = parsed_app.data;
-
-    if (
-      (ownership.owner_type === "dynamic-client-registration") !==
-      (dynamic_client_metadata !== undefined)
-    ) {
-      throw new TypeError(
-        "RFC 7591 client metadata is stored for (and only for) dynamically registered clients",
-      );
-    }
-
-    const row: NewApp = {
-      app_id: app.app_id,
-      app_name: app.app_name,
-      app_description: app.app_description,
-      created_at: app.created_at,
-      public: app.public,
-      hardcoded: false,
-      web: app.web,
-      ...toOwnershipDatabaseColumns(ownership),
-      created_by,
-      // JSONB columns: Kysely/pg serialize arrays as JSON when passed as
-      // JSON text; stringify explicitly so a string[] is not bound as a
-      // Postgres array literal.
-      ...(dynamic_client_metadata
-        ? {
-            client_uri: dynamic_client_metadata.client_uri ?? null,
-            logo_uri: dynamic_client_metadata.logo_uri ?? null,
-            tos_uri: dynamic_client_metadata.tos_uri ?? null,
-            policy_uri: dynamic_client_metadata.policy_uri ?? null,
-            contacts: toJsonbColumnValue(dynamic_client_metadata.contacts),
-            grant_types: toJsonbColumnValue(dynamic_client_metadata.grant_types),
-            response_types: toJsonbColumnValue(
-              dynamic_client_metadata.response_types,
-            ),
-            token_endpoint_auth_method:
-              dynamic_client_metadata.token_endpoint_auth_method ?? null,
-            software_id: dynamic_client_metadata.software_id ?? null,
-            software_version: dynamic_client_metadata.software_version ?? null,
-            registered_scope: dynamic_client_metadata.registered_scope ?? null,
-            client_id_issued_at:
-              dynamic_client_metadata.client_id_issued_at ?? null,
-          }
-        : {}),
-    };
-
-    const result = await this.db
-      .insertInto("apps")
-      .values(row)
-      .onConflict((oc) => oc.column("app_id").doNothing())
-      .executeTakeFirst();
-
-    if (result.numInsertedOrUpdatedRows === BigInt(0)) {
-      throw new ConflictError("An app with this ID already exists");
-    }
+  /** @see registerApp */
+  public async registerApp(options: RegisterAppOptions): Promise<void> {
+    return await registerApp(this.db, options);
   }
 
-  /**
-   * @description Lists every app the user can reach by ownership: apps owned
-   * by their own account, apps owned by organizations they belong to (any
-   * role), and — for global admins — every app including platform-owned and
-   * hardcoded ones. Backs the `/apps` page.
-   */
+  /** @see listAppsAccessibleToUser */
   public async listAppsAccessibleToUser(
     user: UserData,
   ): Promise<SchemaVaultsApp[]> {
-    if (!user) {
-      throw new Error("You must be logged in to list apps");
-    }
-    if (user.admin === true) {
-      return await this.listApps("all", user);
-    }
-
-    const memberships = await listUserOrganizationMemberships(
-      this.db,
-      user.uid,
-      false,
-    );
-    const organization_ids: string[] = [
-      ...new Set(memberships.map((m) => m.organization_id)),
-    ];
-
-    const MAX_PAGE_SIZE: number = 100;
-
-    let rows: unknown[];
-    try {
-      rows = await this.db
-        .selectFrom("apps")
-        .where((eb) =>
-          eb.or([
-            eb.and([
-              eb("owner_type", "=", "user"),
-              eb("owner_uid", "=", user.uid),
-            ]),
-            ...(organization_ids.length > 0
-              ? [
-                  eb.and([
-                    eb("owner_type", "=", "organization"),
-                    eb("owner_organization_id", "in", organization_ids),
-                  ]),
-                ]
-              : []),
-          ]),
-        )
-        .orderBy("created_at", "desc")
-        .limit(MAX_PAGE_SIZE)
-        .selectAll()
-        .execute();
-    } catch (e: unknown) {
-      console.error(`Failed to list apps accessible to user '${user.uid}':`, e);
-      throw new Error("Failed to list apps accessible to user");
-    }
-
-    return rows.map(this.parseAppDefinitionDatabaseRow);
+    return await listAppsAccessibleToUser(this.db, user, this.debug);
   }
 
-  /**
-   * @description Lists the apps owned directly by a user account
-   * (`owner_type = 'user'`), independent of any organization membership.
-   */
+  /** @see listUserOwnedApps */
   public async listUserOwnedApps(uid: string): Promise<SchemaVaultsApp[]> {
-    if (typeof uid !== "string" || uid.length === 0) {
-      throw new TypeError("Invalid user ID to list owned apps for!");
-    }
-
-    const MAX_PAGE_SIZE: number = 50;
-
-    let rows: unknown[];
-    try {
-      rows = await this.db
-        .selectFrom("apps")
-        .where("owner_type", "=", "user")
-        .where("owner_uid", "=", uid)
-        .orderBy("created_at", "desc")
-        .limit(MAX_PAGE_SIZE)
-        .selectAll()
-        .execute();
-    } catch (e: unknown) {
-      console.error(`Failed to list apps owned by user '${uid}':`, e);
-      throw new Error("Failed to list apps owned by user");
-    }
-
-    return rows.map(this.parseAppDefinitionDatabaseRow);
+    return await listUserOwnedApps(this.db, uid);
   }
-
-  private parseAppDefinitionDatabaseRow(row: unknown): SchemaVaultsApp {
-    return parseAppDefinitionDatabaseRow(row);
-  } // end of parseAppDefinitionDatabaseRow()
 
   public async listApps(
     type: Exclude<ListAppsQueryType, "authorized">,
@@ -313,92 +81,12 @@ export class SchemaVaultsAppRegistry {
     return await listApps(this.db, type, user, this.debug);
   }
 
+  /** @see listOrganizationApps */
   public async listOrganizationApps(
     org_id: OrganizationID,
     user: UserData,
   ): Promise<readonly SchemaVaultsApp[]> {
-
-    if (!organizationIdSchema.safeParse(org_id).success) {
-      throw new TypeError("Invalid organization ID to list apps for!");
-    }
-
-    if (!user) {
-      throw new Error("You must be logged in to list apps");
-    }
-
-    if (this.debug) {
-      console.log(
-        `[SchemaVaultsAppRegistry] Attempting to list apps for organization: ${org_id}`,
-      );
-    }
-
-    const MAX_PAGE_SIZE: number = 50;
-    const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
-
-    let result: unknown[];
-    try {
-      // The platform's virtual organization "owns" the platform-owned rows
-      // (owner_type = 'platform'); user-owned rows also have a NULL owner
-      // organization, so the discriminant — not the NULL — selects them.
-      result = await this.db
-        .selectFrom("apps")
-        .where((eb) =>
-          org_id === ownerOrganizationId
-            ? eb("owner_type", "=", "platform")
-            : eb.and([
-                eb("owner_type", "=", "organization"),
-                eb("owner_organization_id", "=", org_id),
-              ])
-        )
-        .limit(MAX_PAGE_SIZE)
-        .selectAll()
-        .execute();
-    } catch (e: unknown) {
-      console.error(
-        `Failed to list apps for organization with ID '${org_id}':`,
-        e,
-      );
-      throw new Error(`Failed to list apps for organization with ID: '${org_id}'`);
-    }
-
-    if (!Array.isArray(result)) {
-      throw new Error("Expected database query result to be an array of rows");
-    }
-
-    const app_definitions: SchemaVaultsApp[] = [];
-
-    try {
-      const parsed = await schemaVaultsAppDefinitionSchema
-        .array()
-        .safeParseAsync(
-          result.map(this.parseAppDefinitionDatabaseRow),
-        );
-      if (!parsed.success) {
-        throw parsed.error;
-      }
-      app_definitions.push(...parsed.data)
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error(
-        "Failed to parse the apps data received from database for organization",
-      );
-    }
-
-    if (org_id === ownerOrganizationId) {
-      app_definitions.push(...getHardcodedSchemaVaultsApps().filter(
-        s => s.owner_organization_id === ownerOrganizationId
-      ));
-    }
-
-    return app_definitions
-  }
-
-  public constructor(protected readonly db: Kysely<AuthDatabase>) {
-    this.env = getAppEnvironment();
-    this.debug =
-      this.env === "development" ||
-      this.env === "staging" ||
-      this.env === "test";
+    return await listOrganizationApps(this.db, org_id, user, this.debug);
   }
 
   public async deleteApp(app_id: string) {
@@ -533,118 +221,21 @@ export class SchemaVaultsAppRegistry {
     return await fn(this.db, app_id);
   }
 
+  /** @see addAppDomain */
   public async addAppDomain(
     app_id: string,
     new_app_domain: SchemaVaultsAppDomainRef,
-  ) {
-
-    const parsed =
-      await schemaVaultsAppDomainRefSchema.safeParseAsync(new_app_domain);
-    if (!parsed.success) {
-      throw new Error("Received invalid app domain to associate with app");
-    }
-    const app_domain = parsed.data;
-
-    if (app_id !== app_domain.app_id) {
-      throw new Error("App ID mismatch");
-    }
-
-    // The same domain may only be registered once per app + environment
-    // (the primary key is the ref id, so this has to be checked explicitly).
-    // Domains compare exactly: an apex domain and its www. subdomain are
-    // separate registrations.
-    const existing = await this.getAppDomains(app_id);
-    assertDomainRegistrationAvailable(
-      APP_DOMAIN_REGISTRATION_OWNER,
-      existing.map((ref) => ({
-        ref_id: ref.app_domain_ref_id,
-        domain: ref.domain,
-        environment: ref.environment,
-      })),
-      {
-        ref_id: app_domain.app_domain_ref_id,
-        domain: app_domain.domain,
-        environment: app_domain.environment,
-      },
-    );
-
-    try {
-      const result = await this.db
-        .insertInto("app_domains")
-        .values(app_domain)
-        .onConflict((oc) => oc.column("app_domain_ref_id").doNothing())
-        .executeTakeFirst();
-
-      if (result.numInsertedOrUpdatedRows === BigInt(0)) {
-        // The ref id belongs to a domain of another app
-        throw domainRefIdInUseError(
-          APP_DOMAIN_REGISTRATION_OWNER,
-          app_domain.app_domain_ref_id,
-        );
-      }
-    } catch (e: unknown) {
-      if (e instanceof ConflictError) throw e;
-      console.error("Failed to add new app domain; db insert failed: ", e);
-      throw new Error("Failed to add new app domain; db insert failed");
-    }
+  ): Promise<void> {
+    return await addAppDomain(this.db, app_id, new_app_domain);
   }
 
-  /**
-   * @description Detaches a domain from an app. Its origin stops being
-   * accepted for CORS and, in environments without explicit callback URLs,
-   * as a `redirect_uri` origin. Hardcoded apps take their domains from the
-   * server's environment and cannot be changed.
-   * @returns Whether a row was deleted (false: no such domain on this app)
-   */
+  /** @see removeAppDomain */
   public async removeAppDomain(
     app_id: AppId,
     app_domain_ref_id: string,
   ): Promise<boolean> {
-    if (!(await appIdSchema.safeParseAsync(app_id)).success) {
-      throw new Error("Invalid app ID to remove a domain from!");
-    }
-    if (isHardcodedAppId(app_id)) {
-      throw new Error("Cannot remove a domain from a hardcoded app");
-    }
-
-    const result = await this.db
-      .deleteFrom("app_domains")
-      .where("app_id", "=", app_id)
-      .where("app_domain_ref_id", "=", app_domain_ref_id)
-      .executeTakeFirst();
-
-    return result.numDeletedRows > BigInt(0);
+    return await removeAppDomain(this.db, app_id, app_domain_ref_id);
   }
-}
-
-export interface RegisterAppOptions {
-  app_id: string;
-  app_name: string;
-  app_description: string;
-  publicly_listed: boolean;
-  /** Who the app belongs to; see `resolveRequestedOwnershipForCreation`. */
-  ownership: ResourceOwnership;
-  web: boolean;
-  /** The creating user's uid, for the audit trail (null when unknown). */
-  created_by?: string | null;
-  /**
-   * RFC 7591 metadata to persist; required for (and only allowed with)
-   * `dynamic-client-registration` ownership. See
-   * `dynamicClientRegistrationMetadataFieldsShape`.
-   */
-  dynamic_client_metadata?: DynamicClientRegistrationMetadataFields;
-}
-
-/**
- * JSONB column values are bound as JSON text so that Postgres stores the
- * JSON array itself (binding a JS array would be sent as a Postgres array
- * literal, which JSONB rejects). `undefined`/`null` store SQL NULL.
- */
-function toJsonbColumnValue<T>(value: readonly T[] | null | undefined): string | null {
-  if (value === undefined || value === null) {
-    return null;
-  }
-  return JSON.stringify(value);
 }
 
 export default SchemaVaultsAppRegistry;

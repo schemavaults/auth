@@ -1,47 +1,37 @@
 import "server-only";
 
-import { z } from "zod";
-
-import { organizationIdSchema, type OrganizationID, type UserData } from "@schemavaults/auth-common";
-import {
-  schemaVaultsApiServerDefinitionSchema,
-  type SchemaVaultsApiServerDefinition,
-  schemaVaultsApiServerDomainRefSchema,
-  type SchemaVaultsApiServerDomainRef,
-  type ApiServerId,
-  getHardcodedSchemaVaultsApis,
-  getHardcodedApiDomains,
-  type ResourceOwnership,
-  type ApiServerDomainVerification,
+import type { OrganizationID, UserData } from "@schemavaults/auth-common";
+import type {
+  SchemaVaultsApiServerDefinition,
+  SchemaVaultsApiServerDomainRef,
+  ApiServerId,
+  ApiServerDomainVerification,
+  OrganizationMembershipVisibility,
+  ResourceUrlMatchMode,
 } from "@schemavaults/app-definitions";
-import { getAuthServerOwnerOrganizationId } from "@/lib/config/auth-server-owner-organization";
-import { ownershipFieldsFromDatabaseRow, toOwnershipDatabaseColumns } from "@/lib/ownership/ownership-columns";
-import type { NewApiServer } from "./apis-table";
-import { API_SERVER_DOMAIN_REF_COLUMNS } from "./api-domains-table";
-import { generateDomainVerificationToken } from "@/lib/auth-db/api-server-domain-verifications/generate-domain-verification-token";
 import { listApiServerDomainVerifications } from "@/lib/api-server-domain-verification/list-api-server-domain-verifications";
 import { Kysely } from "@schemavaults/dbh";
 import type { AuthDatabase } from "@/lib/auth-db/auth-database-types";
 import shouldEnableDebug from "@/lib/should-enable-debug";
-import { listUserOrganizationMemberships } from "@/lib/auth-db/organizations/list-user-organization-memberships";
-import { ConflictError } from "@/lib/error/ConflictError";
-import {
-  API_SERVER_DOMAIN_REGISTRATION_OWNER,
-  assertDomainRegistrationAvailable,
-  domainRefIdInUseError,
-} from "@/lib/auth-db/domain-registrations/registration-conflicts";
-import {
-  isHardcodedApiServerId,
-  isValidApiServerId,
-  organizationMembershipVisibilitySchema,
-  resourceUrlMatchModeSchema,
-  type OrganizationMembershipVisibility,
-  type ResourceUrlMatchMode,
-} from "@schemavaults/app-definitions";
+import { getApiServer } from "./get-api-server";
+import { getApiServerDomains } from "./get-api-server-domains";
+import { registerApiServer, type RegisterApiServerOptions } from "./register-api-server";
+import { listApiServersAccessibleToUser } from "./list-api-servers-accessible-to-user";
+import { listUserOwnedApiServers } from "./list-user-owned-api-servers";
+import { listAllApiServers } from "./list-all-api-servers";
+import { listOrganizationApiServers } from "./list-organization-api-servers";
+import { setApiServerDynamicClientPolicy } from "./set-api-server-dynamic-client-policy";
+import { setApiServerOrganizationMembershipVisibility } from "./set-api-server-organization-membership-visibility";
+import { setApiServerDelegatedTokenPolicy } from "./set-api-server-delegated-token-policy";
+import { addApiServerDomain } from "./add-api-server-domain";
+import { removeApiServerDomain } from "./remove-api-server-domain";
 
 /**
  * @name SchemaVaultsApiServerRegistry
- * @description Manage backend application servers
+ * @description Manage backend application servers. A facade over this
+ * folder's query functions (one per module, each taking the database
+ * handle first): it binds them to a database handle and holds no logic of
+ * its own.
  * @see SchemaVaultsAppRegistry To manage the list of frontend applications
  * @see AuthorizedAppsRegistry To manage which frontend apps a user has actually authorized
  */
@@ -52,126 +42,18 @@ export class SchemaVaultsApiServerRegistry {
     this.debug = debug;
   }
 
+  /** @see getApiServer */
   public async getApiServer(
     api_server_id: ApiServerId,
   ): Promise<SchemaVaultsApiServerDefinition | null> {
-    if (this.debug) {
-      console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}')`)
-    }
-
-    const hardcoded_api_server: SchemaVaultsApiServerDefinition | undefined = getHardcodedSchemaVaultsApis().find(hardcoded_api => {
-      return hardcoded_api.api_server_id === api_server_id
-    })
-    if (hardcoded_api_server) {
-      if (hardcoded_api_server.owner_organization_id !== getAuthServerOwnerOrganizationId()) {
-        throw new Error("Expected hardcoded API servers to be owned by the configured owner organization!")
-      }
-      if (this.debug) {
-        console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}') -> Found hardcoded API: `, hardcoded_api_server)
-      }
-      return hardcoded_api_server satisfies SchemaVaultsApiServerDefinition;
-    }
-
-    const getApiServerQuery = this.db
-      .selectFrom("api_servers")
-      .where("api_server_id", "=", api_server_id)
-      .selectAll()
-      .limit(1);
-
-    const rows = await getApiServerQuery.execute();
-    if (rows.length === 0) {
-      return null;
-    } else if (rows.length > 1) {
-      throw new Error("Multiple API servers found with the same api_server_id");
-    }
-
-    if (rows.length !== 1 || !rows[0] || typeof rows[0] !== 'object') {
-      throw new Error("Expected there to be exactly one API server row retrieved from the database if this point was reached!");
-    }
-
-    const first_row = rows[0];
-    if (!Object.hasOwn(first_row, "created_at")) {
-      throw new Error("Missing creation time in row data");
-    }
-
-    const createdAt: number =
-      typeof first_row.created_at === "string"
-        ? parseInt(first_row.created_at)
-        : first_row.created_at;
-    if (isNaN(createdAt)) {
-      throw new Error("Failed to parse created_at from database");
-    }
-
-    const parsed_api_server =
-      await schemaVaultsApiServerDefinitionSchema.safeParseAsync({
-        ...first_row,
-        created_at: createdAt,
-        hardcoded: false,
-        ...ownershipFieldsFromDatabaseRow(first_row),
-      });
-    if (!parsed_api_server.success) {
-      console.error(parsed_api_server.error.issues);
-      throw new Error("Failed to parse API server from database");
-    }
-    const output: SchemaVaultsApiServerDefinition = parsed_api_server.data;
-
-    if (this.debug) {
-      console.log(`[SchemaVaultsApiServerRegistry] getApiServer('${api_server_id}') -> Loaded API from DB: `, output)
-    }
-
-    return output;
+    return await getApiServer(this.db, api_server_id, this.debug);
   }
 
+  /** @see getApiServerDomains */
   public async getApiServerDomains(
     api_server_id: ApiServerId,
   ): Promise<readonly SchemaVaultsApiServerDomainRef[]> {
-
-    if (this.debug) {
-      console.log(`[SchemaVaultsApiServerRegistry] getApiServerDomains('${api_server_id}')`)
-    }
-
-    if (isHardcodedApiServerId(api_server_id)) {
-      return getHardcodedApiDomains(api_server_id);
-    }
-
-    // Only the ref's columns: the verification columns (migration 00057)
-    // are not part of the strict ref schema; see
-    // listApiServerDomainVerifications() for them.
-    const queryApiServers = this.db
-      .selectFrom("api_server_domains")
-      .where("api_server_id", "=", api_server_id)
-      .limit(50)
-      .select(API_SERVER_DOMAIN_REF_COLUMNS);
-    const rows = await queryApiServers.execute();
-    const parsed_domains = await Promise.all(
-      rows.map((row) => {
-        const createdAt: number =
-          typeof row.created_at === "string"
-            ? parseInt(row.created_at)
-            : row.created_at;
-        if (isNaN(createdAt)) {
-          throw new Error(
-            "Failed to parse created_at for API server domain from database",
-          );
-        }
-        return schemaVaultsApiServerDomainRefSchema.safeParseAsync({
-          ...row,
-          created_at: createdAt,
-        });
-      }),
-    );
-    return parsed_domains.map((parsed, index) => {
-      if (!parsed.success) {
-        console.error(
-          `Failed to parse API server domain from database (row ${index}):`,
-          JSON.stringify(z.treeifyError(parsed.error), null, 2),
-          "\nRaw row:",
-          JSON.stringify(rows[index], null, 2),
-        );
-        throw new Error("Failed to parse API server domains from database");
-      }
-      return parsed.data;
-    });
+    return await getApiServerDomains(this.db, api_server_id, this.debug);
   }
 
   /**
@@ -185,242 +67,31 @@ export class SchemaVaultsApiServerRegistry {
     return await listApiServerDomainVerifications(this.db, api_server_id);
   }
 
-  public async registerApiServer({
-    api_server_id,
-    api_server_name,
-    api_server_description,
-    publicly_listed,
-    ownership,
-    created_by = null,
-  }: RegisterApiServerOptions): Promise<void> {
-    if (!isValidApiServerId(api_server_id)) {
-      throw new TypeError(
-        "Received invalid API server ID!",
-      );
-    }
-
-    if (
-      ownership.owner_type === "organization" &&
-      !organizationIdSchema.safeParse(ownership.owner_organization_id).success
-    ) {
-      throw new TypeError("Received invalid organization ID to register API server to!")
-    }
-
-    // Hardcoded API server ids (the auth server's own id, the reserved
-    // OIDC userinfo audience) have no database row, so the insert's
-    // uniqueness conflict cannot protect them — and a colliding row
-    // would make listAllApiServers() throw. Reject them here.
-    if (isHardcodedApiServerId(api_server_id)) {
-      throw new ConflictError(
-        `API server ID '${api_server_id}' is reserved by the platform`,
-      );
-    }
-
-    const parsed_api_server =
-      await schemaVaultsApiServerDefinitionSchema.safeParseAsync({
-        api_server_id,
-        api_server_name,
-        api_server_description,
-        created_at: Date.now(),
-        public: publicly_listed ?? false,
-        hardcoded: false,
-        ...ownership,
-        created_by,
-      } satisfies SchemaVaultsApiServerDefinition);
-    if (!parsed_api_server.success) {
-      console.error(parsed_api_server.error.issues);
-      throw new Error("Failed to parse API server definition");
-    }
-    const api_server: SchemaVaultsApiServerDefinition = parsed_api_server.data;
-
-    const row: NewApiServer = {
-      api_server_id: api_server.api_server_id,
-      api_server_name: api_server.api_server_name,
-      api_server_description: api_server.api_server_description,
-      created_at: api_server.created_at,
-      public: api_server.public,
-      hardcoded: false,
-      ...toOwnershipDatabaseColumns(ownership),
-      created_by,
-    };
-
-    const result = await this.db
-      .insertInto("api_servers")
-      .values(row)
-      .onConflict((oc) => oc.column("api_server_id").doNothing())
-      .executeTakeFirst();
-
-    if (result.numInsertedOrUpdatedRows === BigInt(0)) {
-      throw new ConflictError("An API server with this ID already exists");
-    }
+  /** @see registerApiServer */
+  public async registerApiServer(options: RegisterApiServerOptions): Promise<void> {
+    return await registerApiServer(this.db, options);
   }
 
-  /**
-   * @description Lists every API server the user can reach by ownership:
-   * those owned by their own account, those owned by organizations they
-   * belong to (any role), and — for global admins — every API server
-   * including platform-owned and hardcoded ones. Backs the `/apis` page.
-   */
+  /** @see listApiServersAccessibleToUser */
   public async listApiServersAccessibleToUser(
     user: UserData,
   ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
-    if (!user) {
-      throw new Error("You must be logged in to list API servers");
-    }
-    if (user.admin === true) {
-      return await this.listAllApiServers();
-    }
-
-    const memberships = await listUserOrganizationMemberships(
-      this.db,
-      user.uid,
-      false,
-    );
-    const organization_ids: string[] = [
-      ...new Set(memberships.map((m) => m.organization_id)),
-    ];
-
-    let rows: unknown[];
-    try {
-      rows = await this.db
-        .selectFrom("api_servers")
-        .where((eb) =>
-          eb.or([
-            eb.and([
-              eb("owner_type", "=", "user"),
-              eb("owner_uid", "=", user.uid),
-            ]),
-            ...(organization_ids.length > 0
-              ? [
-                  eb.and([
-                    eb("owner_type", "=", "organization"),
-                    eb("owner_organization_id", "in", organization_ids),
-                  ]),
-                ]
-              : []),
-          ]),
-        )
-        .orderBy("created_at", "desc")
-        .limit(100)
-        .selectAll()
-        .execute();
-    } catch (e: unknown) {
-      console.error(`Failed to list API servers accessible to user '${user.uid}':`, e);
-      throw new Error("Failed to list API servers accessible to user");
-    }
-
-    return await this.parseApiServerDefinitionsFromDbRows(rows);
+    return await listApiServersAccessibleToUser(this.db, user);
   }
 
-  /**
-   * @description Lists the API servers owned directly by a user account
-   * (`owner_type = 'user'`), independent of any organization membership.
-   */
+  /** @see listUserOwnedApiServers */
   public async listUserOwnedApiServers(
     uid: string,
   ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
-    if (typeof uid !== "string" || uid.length === 0) {
-      throw new TypeError("Invalid user ID to list owned API servers for!");
-    }
-
-    let rows: unknown[];
-    try {
-      rows = await this.db
-        .selectFrom("api_servers")
-        .where("owner_type", "=", "user")
-        .where("owner_uid", "=", uid)
-        .orderBy("created_at", "desc")
-        .limit(100)
-        .selectAll()
-        .execute();
-    } catch (e: unknown) {
-      console.error(`Failed to list API servers owned by user '${uid}':`, e);
-      throw new Error("Failed to list API servers owned by user");
-    }
-
-    return await this.parseApiServerDefinitionsFromDbRows(rows);
+    return await listUserOwnedApiServers(this.db, uid);
   }
 
-  private async parseApiServerDefinitionsFromDbRows(rows: unknown[]): Promise<readonly SchemaVaultsApiServerDefinition[]> {
-    const parsed = await schemaVaultsApiServerDefinitionSchema
-      .array()
-      .safeParseAsync(
-        rows.map((row) => {
-          if (typeof row !== "object" || !row)
-            throw new Error("Expected row to be an object");
-          if (!Object.hasOwn(row, "created_at")) {
-            throw new Error("Missing api server creation time ('created_at')");
-          }
-          const created_at: number = parseInt(
-            (row as { created_at: string }).created_at,
-          );
-          if (isNaN(created_at)) {
-            throw new TypeError("Failed to parse 'created_at' from database");
-          }
-
-          return {
-            ...row,
-            created_at,
-            hardcoded: false,
-            ...ownershipFieldsFromDatabaseRow(row),
-          };
-        }),
-      );
-    if (!parsed.success) throw parsed.error;
-    return parsed.data;
-  }
-
-  private async listAllApiServersFromDatabase(): Promise<readonly SchemaVaultsApiServerDefinition[]> {
-    let rows: unknown[];
-    try {
-      rows = await this.db
-        .selectFrom("api_servers")
-        .limit(100)
-        .selectAll()
-        .execute();
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error("Failed to list all API servers from database");
-    }
-
-    try {
-      return await this.parseApiServerDefinitionsFromDbRows(rows);
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error(
-        "Failed to parse the API servers data received from database",
-      );
-    }
-  }
-
-  private listAllHardcodedApiServers(): readonly SchemaVaultsApiServerDefinition[] {
-    return getHardcodedSchemaVaultsApis();
-  }
-
+  /** @see listAllApiServers */
   public async listAllApiServers(): Promise<readonly SchemaVaultsApiServerDefinition[]> {
-    const all_api_servers: SchemaVaultsApiServerDefinition[] = []
-
-    const hardcoded_api_servers: readonly SchemaVaultsApiServerDefinition[] = this.listAllHardcodedApiServers()
-    const hardcodedApiServerIds: Set<string> = new Set(hardcoded_api_servers.map(srv => srv.api_server_id));
-
-    const api_servers_from_db: readonly SchemaVaultsApiServerDefinition[] = await this.listAllApiServersFromDatabase()
-    if (api_servers_from_db.some(db_api_server => hardcodedApiServerIds.has(db_api_server.api_server_id))) {
-      throw new Error("API server ID from database conflicts with hardcoded API server definition!")
-    }
-
-    // Combine hardcoded + DB API servers
-    all_api_servers.push(...hardcoded_api_servers);
-    all_api_servers.push(...api_servers_from_db);
-    return all_api_servers;
+    return await listAllApiServers(this.db);
   }
 
-  /**
-   * @description Updates the API server's dynamic-client policy (migration
-   * 00040): whether RFC 7591 dynamically registered clients may request
-   * tokens for it without an explicit connection, and how an RFC 8707
-   * `resource` URL is matched against its registered domains. Hardcoded
-   * API servers have no row and cannot be updated.
-   */
+  /** @see setApiServerDynamicClientPolicy */
   public async setApiServerDynamicClientPolicy(
     api_server_id: ApiServerId,
     policy: {
@@ -428,86 +99,23 @@ export class SchemaVaultsApiServerRegistry {
       resource_url_match_mode?: ResourceUrlMatchMode;
     },
   ): Promise<SchemaVaultsApiServerDefinition | null> {
-    if (!isValidApiServerId(api_server_id)) {
-      throw new TypeError("Received invalid API server ID!");
-    }
-    if (isHardcodedApiServerId(api_server_id)) {
-      throw new Error("Cannot update the dynamic-client policy of a hardcoded API server");
-    }
-    const update: {
-      allow_dynamic_clients?: boolean;
-      resource_url_match_mode?: ResourceUrlMatchMode;
-    } = {};
-    if (typeof policy.allow_dynamic_clients === "boolean") {
-      update.allow_dynamic_clients = policy.allow_dynamic_clients;
-    }
-    if (policy.resource_url_match_mode !== undefined) {
-      update.resource_url_match_mode = resourceUrlMatchModeSchema.parse(
-        policy.resource_url_match_mode,
-      );
-    }
-    if (Object.keys(update).length === 0) {
-      throw new TypeError("No dynamic-client policy fields to update");
-    }
-    await this.db
-      .updateTable("api_servers")
-      .set(update)
-      .where("api_server_id", "=", api_server_id)
-      .execute();
-    return await this.getApiServer(api_server_id);
+    return await setApiServerDynamicClientPolicy(this.db, api_server_id, policy, this.debug);
   }
 
-  /**
-   * @description Sets which organizations' memberships the API server may
-   * look up on the resource-server endpoints (migration 00045). Only
-   * platform administrators may call the route that uses this; hardcoded
-   * API servers have no row and cannot be updated.
-   */
+  /** @see setApiServerOrganizationMembershipVisibility */
   public async setApiServerOrganizationMembershipVisibility(
     api_server_id: ApiServerId,
     visibility: OrganizationMembershipVisibility,
   ): Promise<SchemaVaultsApiServerDefinition | null> {
-    if (!isValidApiServerId(api_server_id)) {
-      throw new TypeError("Received invalid API server ID!");
-    }
-    if (isHardcodedApiServerId(api_server_id)) {
-      throw new Error("Cannot update the organization membership visibility of a hardcoded API server");
-    }
-    const organization_membership_visibility: OrganizationMembershipVisibility =
-      organizationMembershipVisibilitySchema.parse(visibility);
-    await this.db
-      .updateTable("api_servers")
-      .set({ organization_membership_visibility })
-      .where("api_server_id", "=", api_server_id)
-      .execute();
-    return await this.getApiServer(api_server_id);
+    return await setApiServerOrganizationMembershipVisibility(this.db, api_server_id, visibility, this.debug);
   }
 
-  /**
-   * @description Sets whether the API server accepts delegated access tokens,
-   * whose RFC 8693 `act` claim names someone acting on behalf of the user
-   * (migration 00052). Its managers may call the route that uses this;
-   * hardcoded API servers have no row and cannot be updated.
-   */
+  /** @see setApiServerDelegatedTokenPolicy */
   public async setApiServerDelegatedTokenPolicy(
     api_server_id: ApiServerId,
     accept_delegated_tokens: boolean,
   ): Promise<SchemaVaultsApiServerDefinition | null> {
-    if (!isValidApiServerId(api_server_id)) {
-      throw new TypeError("Received invalid API server ID!");
-    }
-    if (isHardcodedApiServerId(api_server_id)) {
-      throw new Error("Cannot update the delegated-token policy of a hardcoded API server");
-    }
-    if (typeof accept_delegated_tokens !== "boolean") {
-      throw new TypeError("'accept_delegated_tokens' must be a boolean");
-    }
-    await this.db
-      .updateTable("api_servers")
-      .set({ accept_delegated_tokens })
-      .where("api_server_id", "=", api_server_id)
-      .execute();
-    return await this.getApiServer(api_server_id);
+    return await setApiServerDelegatedTokenPolicy(this.db, api_server_id, accept_delegated_tokens, this.debug);
   }
 
   public async deleteApiServer(api_server_id: ApiServerId) {
@@ -515,170 +123,29 @@ export class SchemaVaultsApiServerRegistry {
     return await fn(this.db, api_server_id);
   }
 
+  /** @see addApiServerDomain */
   public async addApiServerDomain(
     api_server_id: string,
     new_domain: SchemaVaultsApiServerDomainRef,
   ): Promise<void> {
-    const parsed =
-      await schemaVaultsApiServerDomainRefSchema.safeParseAsync(new_domain);
-    if (!parsed.success) {
-      throw new Error("Received invalid API server domain to associate with API server");
-    }
-    const domain = parsed.data;
-
-    if (api_server_id !== domain.api_server_id) {
-      throw new Error("API server ID mismatch");
-    }
-
-    // The same domain may only be registered once per API server +
-    // environment (the primary key is the ref id, so check explicitly).
-    // Domains compare exactly: an apex domain and its www. subdomain are
-    // separate registrations. Other API servers may register the same
-    // domain: a verified registration (only the host's owner can verify
-    // one) takes precedence over unverified ones.
-    const existing = await this.getApiServerDomains(api_server_id);
-    assertDomainRegistrationAvailable(
-      API_SERVER_DOMAIN_REGISTRATION_OWNER,
-      existing.map((ref) => ({
-        ref_id: ref.api_server_domain_ref_id,
-        domain: ref.domain,
-        environment: ref.environment,
-      })),
-      {
-        ref_id: domain.api_server_domain_ref_id,
-        domain: domain.domain,
-        environment: domain.environment,
-      },
-    );
-
-    try {
-      // Every registration starts unverified, with its own token: its owner
-      // proves control of the host to make it take precedence in RFC 8707
-      // resource-URL resolution, and to keep it resolving once the
-      // require_api_server_domain_verification server setting is on (see
-      // lib/api-server-domain-verification/).
-      const result = await this.db
-        .insertInto("api_server_domains")
-        .values({
-          ...domain,
-          verification_token: generateDomainVerificationToken(),
-          verified_at: null,
-          verification_method: null,
-        })
-        .onConflict((oc) => oc.column("api_server_domain_ref_id").doNothing())
-        .executeTakeFirst();
-
-      if (result.numInsertedOrUpdatedRows === BigInt(0)) {
-        // The ref id belongs to a domain of another API server
-        throw domainRefIdInUseError(
-          API_SERVER_DOMAIN_REGISTRATION_OWNER,
-          domain.api_server_domain_ref_id,
-        );
-      }
-    } catch (e: unknown) {
-      if (e instanceof ConflictError) throw e;
-      console.error("Failed to add new API server domain; db insert failed: ", e);
-      throw new Error("Failed to add new API server domain; db insert failed");
-    }
+    return await addApiServerDomain(this.db, api_server_id, new_domain, this.debug);
   }
 
-  /**
-   * @description Detaches a domain from an API server: RFC 8707 `resource`
-   * URLs on it stop resolving to the API server. Hardcoded API servers take
-   * their domains from the server's environment and cannot be changed.
-   * @returns Whether a row was deleted (false: no such domain on this API server)
-   */
+  /** @see removeApiServerDomain */
   public async removeApiServerDomain(
     api_server_id: ApiServerId,
     api_server_domain_ref_id: string,
   ): Promise<boolean> {
-    if (!isValidApiServerId(api_server_id)) {
-      throw new TypeError("Received invalid API server ID!");
-    }
-    if (isHardcodedApiServerId(api_server_id)) {
-      throw new Error("Cannot remove a domain from a hardcoded API server");
-    }
-
-    const result = await this.db
-      .deleteFrom("api_server_domains")
-      .where("api_server_id", "=", api_server_id)
-      .where("api_server_domain_ref_id", "=", api_server_domain_ref_id)
-      .executeTakeFirst();
-
-    return result.numDeletedRows > BigInt(0);
+    return await removeApiServerDomain(this.db, api_server_id, api_server_domain_ref_id);
   }
 
+  /** @see listOrganizationApiServers */
   public async listOrganizationApiServers(
     org_id: OrganizationID,
     user: UserData,
   ): Promise<readonly SchemaVaultsApiServerDefinition[]> {
-
-    if (!organizationIdSchema.safeParse(org_id).success) {
-      throw new TypeError("Invalid organization ID to list API servers for!")
-    }
-
-    if (!user) {
-      throw new Error("You must be logged in to list API servers");
-    }
-
-
-    const ownerOrganizationId: OrganizationID = getAuthServerOwnerOrganizationId();
-
-    const loadOrgApiServerDefinitionsFromDb = async (organization_id: OrganizationID): Promise<readonly SchemaVaultsApiServerDefinition[]> => {
-      let rows: unknown[];
-      try {
-        // The platform's virtual organization "owns" the platform-owned rows
-        // (owner_type = 'platform'); user-owned rows also have a NULL owner
-        // organization, so the discriminant — not the NULL — selects them.
-        rows = await this.db
-          .selectFrom("api_servers")
-          .where((eb) =>
-            organization_id === ownerOrganizationId
-              ? eb("owner_type", "=", "platform")
-              : eb.and([
-                  eb("owner_type", "=", "organization"),
-                  eb("owner_organization_id", "=", organization_id),
-                ])
-          )
-          .limit(100)
-          .selectAll()
-          .execute();
-      } catch (e: unknown) {
-        console.error(`Failed to list API servers for organization with ID '${organization_id}':`, e);
-        throw new Error(`Failed to list API servers for organization with ID: '${organization_id}'`);
-      }
-
-      return await this.parseApiServerDefinitionsFromDbRows(rows);
-    }
-
-    const api_server_definitions: SchemaVaultsApiServerDefinition[] = []
-
-    try {
-      api_server_definitions.push(...await loadOrgApiServerDefinitionsFromDb(org_id))
-    } catch (e: unknown) {
-      console.error(e);
-      throw new Error(
-        "Failed to parse the API servers data received from database",
-      );
-    }
-
-    if (org_id === ownerOrganizationId) {
-      api_server_definitions.push(...getHardcodedSchemaVaultsApis().filter(s => s.owner_organization_id === ownerOrganizationId))
-    }
-
-    return api_server_definitions;
+    return await listOrganizationApiServers(this.db, org_id, user);
   }
-}
-
-export interface RegisterApiServerOptions {
-  api_server_id: string;
-  api_server_name: string;
-  api_server_description: string;
-  publicly_listed: boolean;
-  /** Who the API server belongs to; see `resolveRequestedOwnershipForCreation`. */
-  ownership: ResourceOwnership;
-  /** The creating user's uid, for the audit trail (null when unknown). */
-  created_by?: string | null;
 }
 
 export default SchemaVaultsApiServerRegistry;
