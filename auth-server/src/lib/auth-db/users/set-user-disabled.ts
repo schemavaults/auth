@@ -73,8 +73,12 @@ export async function setUserDisabled(
       }
 
       if (!disabled) {
-        // Unpin the watermark. Strict less-than keeps a token minted in the
-        // same second as (right after) the re-enable valid.
+        // Unpin the watermark to the re-enable second: the first second
+        // whose tokens are valid, so a token minted right after the
+        // re-enable, in the same second, is valid. Unlike a revocation, this
+        // second is not taken: the pinned watermark revoked everything
+        // minted up to now, and a disabled account mints nothing (only a
+        // request racing the disable could, in the disable's own second).
         await trx
           .updateTable("users")
           .set({ tokens_valid_after: Math.floor(Date.now() / 1000) })

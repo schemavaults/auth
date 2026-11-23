@@ -13,6 +13,7 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   "user.sign_in_failed": "Sign-in refused",
   "user.mfa_challenge_failed": "MFA challenge failed",
   "user.signed_out": "Signed out",
+  "user.refresh_token_reused": "Session ended: refresh token reused",
   "user.password_reset": "Password reset",
   "user.email_verified": "Email verified",
   "user.profile_updated": "Profile updated",
@@ -46,6 +47,7 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
 const WARNING_EVENT_TYPES: ReadonlySet<AuditEventType> = new Set<AuditEventType>([
   "user.sign_in_failed",
   "user.mfa_challenge_failed",
+  "user.refresh_token_reused",
   "user.mfa_factor_removed",
   "user.mfa_reset_by_admin",
   "user.device_authorization_denied",
@@ -115,6 +117,8 @@ export function describeAuditEvent(entry: AuditLogEntry, viewer_uid?: string): s
       return `A wrong multi-factor authentication proof was presented while signing in to ${account}.`;
     case "user.signed_out":
       return `${actor} signed out${app ? ` of ${app}` : ""}.`;
+    case "user.refresh_token_reused":
+      return `A sign-in token of ${account}${app ? ` for ${app}` : ""} that had already been used was presented again, a sign it may have been stolen, so the session it belongs to was signed out.`;
     case "user.password_reset":
       return `The password of ${account} was reset with an emailed link, which signed out every session.`;
     case "user.email_verified":

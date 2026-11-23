@@ -52,6 +52,7 @@ const AUDIT_EVENT_ICONS: Record<AuditEventType, LucideIcon> = {
   "user.sign_in_failed": ShieldAlert,
   "user.mfa_challenge_failed": ShieldAlert,
   "user.signed_out": LogOut,
+  "user.refresh_token_reused": ShieldAlert,
   "user.password_reset": KeyRound,
   "user.email_verified": MailCheck,
   "user.profile_updated": UserCog,

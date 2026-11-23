@@ -43,6 +43,7 @@ import type {
   OidcGrantOutcome,
   OidcTokenFormParam,
 } from "./token-response";
+import { endRotationChainOnReuse } from "./refresh_token_reuse";
 
 /**
  * Locates the refresh token presented with the grant: the standard
@@ -215,6 +216,18 @@ export async function handleOidcRefreshTokenGrant({
       rotationReuseGraceMs: REFRESH_TOKEN_ROTATION_REUSE_GRACE_MS,
     }))
   ) {
+    // A rotated-away token presented after the grace window is a reuse:
+    // whoever holds the chain's live refresh token got it from a token two
+    // parties held. End the whole session (RFC 9700 §4.14.2). A failure
+    // propagates (500): answering invalid_grant would leave the chain live.
+    await endRotationChainOnReuse({
+      dbh,
+      request,
+      jti: decoded.jti,
+      uid: decoded.uid,
+      client_app_id,
+      debug,
+    });
     return fail(
       oidcTokenErrorResponse(
         "invalid_grant",

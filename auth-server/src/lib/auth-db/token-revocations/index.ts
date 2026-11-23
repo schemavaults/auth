@@ -7,6 +7,11 @@ export {
 export { cleanupExpiredRevocations } from "./cleanup-expired-revocations";
 export { revokeTokensIssuedWithRefreshToken } from "./revoke-tokens-issued-with-refresh-token";
 export {
+  endSessionOfReusedRefreshToken,
+  type EndSessionOfReusedRefreshTokenOptions,
+  type EndedReusedRefreshTokenSession,
+} from "./end-session-of-reused-refresh-token";
+export {
   revokeTokensIssuedToClientApp,
   revokeAccessTokensIssuedToClientAppForAudience,
 } from "./revoke-tokens-issued-to-client-app";

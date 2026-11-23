@@ -17,6 +17,7 @@ export const auditEventTypes = [
   "user.sign_in_failed",
   "user.mfa_challenge_failed",
   "user.signed_out",
+  "user.refresh_token_reused",
   "user.password_reset",
   "user.email_verified",
   "user.profile_updated",

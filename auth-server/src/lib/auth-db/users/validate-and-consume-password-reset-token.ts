@@ -5,6 +5,17 @@ import { validatePasswordResetToken } from "./validate-password-reset-token";
 import { consumePasswordResetToken } from "./consume-password-reset-token";
 import { updateUserPassword } from "./update-user-password";
 import { invalidateAllTokensForUser } from "./invalidate-all-tokens-for-user";
+import { tokensValidAfterRevokingAt } from "./is-token-iat-revoked";
+
+export interface ConsumedPasswordResetToken {
+  uid: string;
+  /**
+   * The user's new `tokens_valid_after` watermark (unix seconds): the first
+   * second whose tokens are valid. Tokens minted before it, in the reset's
+   * own second included, are revoked.
+   */
+  tokens_valid_after: number;
+}
 
 /**
  * Atomically validates a password reset token, marks it consumed, and
@@ -17,15 +28,15 @@ import { invalidateAllTokensForUser } from "./invalidate-all-tokens-for-user";
  * the password write fails, the transaction rolls back and the token
  * remains valid for a legitimate retry.
  *
- * Returns `{ uid }` on success, `null` for every reject case (token not
- * found, expired, already consumed, or lost-race).
+ * Returns `{ uid, tokens_valid_after }` on success, `null` for every
+ * reject case (token not found, expired, already consumed, or lost-race).
  */
 export async function validateAndConsumePasswordResetToken(
   db: Kysely<AuthDatabase>,
   rawToken: string,
   newPlaintextPassword: string,
   debug: boolean = false,
-): Promise<{ uid: string } | null> {
+): Promise<ConsumedPasswordResetToken | null> {
   return await db.transaction().execute(async (trx) => {
     const valid = await validatePasswordResetToken(trx, rawToken, debug);
     if (!valid) return null;
@@ -42,14 +53,16 @@ export async function validateAndConsumePasswordResetToken(
 
     await updateUserPassword(trx, valid.uid, newPlaintextPassword, debug);
 
-    // Revoke every refresh token previously issued for this uid by bumping
-    // the per-user `tokens_valid_after` watermark. Inside the same
-    // transaction as the password write so a stolen refresh token cannot
-    // outlive the password change.
-    const valid_after_seconds: number = Math.floor(Date.now() / 1000);
-    await invalidateAllTokensForUser(trx, valid.uid, valid_after_seconds, debug);
+    // Revoke every token previously issued for this uid by bumping the
+    // per-user `tokens_valid_after` watermark. Inside the same transaction
+    // as the password write so a stolen refresh token cannot outlive the
+    // password change. The watermark is past the current second: a token
+    // minted in it (e.g. by a refresh racing this transaction) is revoked
+    // too, since `iat` cannot tell whether it came before the reset.
+    const tokens_valid_after: number = tokensValidAfterRevokingAt(Date.now());
+    await invalidateAllTokensForUser(trx, valid.uid, tokens_valid_after, debug);
 
-    return { uid: valid.uid };
+    return { uid: valid.uid, tokens_valid_after };
   });
 }
 
