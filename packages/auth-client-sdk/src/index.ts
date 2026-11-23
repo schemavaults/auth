@@ -193,6 +193,10 @@ export type {
 } from "./lib/update-api-server-dynamic-client-policy";
 export type { ISetApiServerOrganizationMembershipVisibilityOpts } from "./lib/set-api-server-organization-membership-visibility";
 export type { ISetApiServerDelegatedTokenPolicyOpts } from "./lib/set-api-server-delegated-token-policy";
+export type {
+  ConnectAppToApiServerOptions,
+  IConnectAppToApiServerOpts,
+} from "./lib/connect-app-to-api-server";
 export { API_SERVER_DOMAIN_VERIFICATION_ERRORS } from "./lib/api-server-domain-verification";
 export type {
   ApiServerDomainVerificationAttempt,

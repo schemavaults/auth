@@ -10,9 +10,11 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Label,
+  Switch,
   useToast,
 } from "@schemavaults/ui";
-import { type ReactElement, useEffect, useMemo } from "react";
+import { type ReactElement, useEffect, useMemo, useState } from "react";
 
 import {
   Dialog,
@@ -23,7 +25,7 @@ import {
   DialogTitle,
   useForm,
 } from "@schemavaults/ui";
-import { useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
+import { useAdmin, useAppEnvironment, useAuth } from "@schemavaults/auth-react-provider";
 import {
   type AppToApiPermission,
   appToApiPermissionSchema,
@@ -33,6 +35,7 @@ import { isAppAlreadyConnectedToApiServerError } from "@schemavaults/auth-common
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlugZap } from "lucide-react";
 import { useAuthUiFriendlyName } from "@/components/FriendlyNameProvider";
+import { canOfferFirstPartyConnection } from "./first-party-option";
 
 export interface ConnectAppToApiDialogProps {
   open: boolean;
@@ -54,8 +57,12 @@ export interface ConnectAppToApiDialogProps {
   onConnected?: (connection: {
     api_server_id: string;
     client_app_id: string;
+    /** Whether the connection was also marked first-party. */
+    first_party: boolean;
   }) => void;
 }
+
+const FIRST_PARTY_SWITCH_ID = "connect-app-to-api-first-party-switch";
 
 export function ConnectAppToApiDialog({
   open,
@@ -80,6 +87,23 @@ export function ConnectAppToApiDialog({
   });
   const environment: SchemaVaultsAppEnvironment = useAppEnvironment();
   const auth = useAuth();
+  // Marking a connection first-party waives every user's consent screen
+  // for it, which only platform administrators may do (the server refuses
+  // anyone else); hardcoded API servers define no API scopes to consent to.
+  const admin: boolean = useAdmin();
+  const apiServerIdValue: string = form.watch("api_server_id") ?? "";
+  const canMarkFirstParty: boolean = canOfferFirstPartyConnection(
+    admin,
+    apiServerIdValue,
+  );
+  const [firstParty, setFirstParty] = useState<boolean>(false);
+  // Every opening starts with the switch off (the dialog stays mounted
+  // between openings in the tables that host it).
+  const [wasOpen, setWasOpen] = useState<boolean>(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setFirstParty(false);
+  }
 
   useEffect(() => {
     if (open && (preselectedApiServerId || preselectedClientAppId)) {
@@ -102,6 +126,8 @@ export function ConnectAppToApiDialog({
       });
     }
 
+    const first_party: boolean =
+      firstParty && canOfferFirstPartyConnection(admin, values.api_server_id);
     try {
       const authClient = auth.ready ? auth.client.current : undefined;
       if (!authClient) {
@@ -110,6 +136,7 @@ export function ConnectAppToApiDialog({
       await authClient.connectAppToApiServer(
         values.api_server_id,
         values.client_app_id,
+        first_party ? { first_party: true } : undefined,
       );
     } catch (e: unknown) {
       if (isAppAlreadyConnectedToApiServerError(e)) {
@@ -133,13 +160,17 @@ export function ConnectAppToApiDialog({
     toast({
       variant: "default",
       title: "Connected app to API server successfully!",
-      description: "It can now send the API server authenticated requests.",
+      description: first_party
+        ? "It can now send the API server authenticated requests. First-party connection: its users consent implicitly."
+        : "It can now send the API server authenticated requests.",
     });
     onConnected?.({
       api_server_id: values.api_server_id,
       client_app_id: values.client_app_id,
+      first_party,
     });
     form.reset();
+    setFirstParty(false);
     onOpenChange(false);
     return;
   }
@@ -220,6 +251,30 @@ export function ConnectAppToApiDialog({
                 </FormItem>
               )}
             />
+
+            {canMarkFirstParty && (
+              <div className="flex flex-row items-start justify-between gap-4 rounded-md border p-3">
+                <div className="space-y-1">
+                  <Label htmlFor={FIRST_PARTY_SWITCH_ID} className="font-medium">
+                    First-party connection
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    The app and the API server belong to the same party:
+                    users signing in to the app for this API server consent
+                    implicitly, without the consent screen. Platform
+                    administrators only; it can be changed later from the
+                    API server&apos;s scope allowances.
+                  </p>
+                </div>
+                <Switch
+                  id={FIRST_PARTY_SWITCH_ID}
+                  checked={firstParty}
+                  disabled={form.formState.isSubmitting}
+                  onCheckedChange={(checked: boolean) => setFirstParty(checked)}
+                  data-testid={FIRST_PARTY_SWITCH_ID}
+                />
+              </div>
+            )}
 
             <DialogFooter>
               <Button type="submit">

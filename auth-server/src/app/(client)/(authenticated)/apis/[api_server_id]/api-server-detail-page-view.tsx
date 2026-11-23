@@ -12,8 +12,8 @@ import PageContainer from "@/components/PageContainer";
 import { DetailRow } from "@/components/DetailRow";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
-import { ApiServerDomainVerificationBadge, CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveApiServerDomainDialog, WrappableUrl } from "@schemavaults/auth-ui";
-import { Trash2, KeyRound, ListChecks, Plus, ShieldCheck, Unplug } from "lucide-react";
+import { ApiServerDomainVerificationBadge, ConnectAppToApiDialog, CreateApiServerDomainDialog, DeleteApiServerDialog, DisconnectAppToApiDialog, LocalDateTime, RemoveApiServerDomainDialog, WrappableUrl } from "@schemavaults/auth-ui";
+import { Trash2, KeyRound, ListChecks, Plus, PlugZap, ShieldCheck, Unplug } from "lucide-react";
 import { VerifyApiServerDomainDialog } from "@/components/ApiServerDomainVerification";
 import { ApiServerDynamicClientsCard } from "@/components/ApiServerDynamicClients";
 import { ApiServerScopesCard, AppScopeAllowancesDialog } from "@/components/ApiServerScopes";
@@ -138,6 +138,16 @@ export default function ApiServerDetailPageView({
   const [removeDomainTarget, setRemoveDomainTarget] = useState<SchemaVaultsApiServerDomainRef | null>(null);
   const [verifyDomainTarget, setVerifyDomainTarget] = useState<SchemaVaultsApiServerDomainRef | null>(null);
   const [apps, setApps] = useState<readonly ConnectedApp[]>(connected_apps);
+  // Disconnecting and first-party changes update rows locally; connecting
+  // refreshes the server component, whose new connected_apps list replaces
+  // the local one.
+  const [renderedConnectedApps, setRenderedConnectedApps] =
+    useState<readonly ConnectedApp[]>(connected_apps);
+  if (renderedConnectedApps !== connected_apps) {
+    setRenderedConnectedApps(connected_apps);
+    setApps(connected_apps);
+  }
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [disconnectTarget, setDisconnectTarget] = useState<ConnectedApp | null>(null);
   const [scopesTarget, setScopesTarget] = useState<ConnectedApp | null>(null);
   const router = useRouter();
@@ -148,6 +158,11 @@ export default function ApiServerDetailPageView({
   // environment rather than a database row. The server enforces this on
   // POST and DELETE regardless.
   const canManageDomains: boolean = !hardcoded && isOrgOwner;
+  // Same gate as the "Connect App to this API" row action on the /apis
+  // table: managing the API server (the server also requires managing the
+  // app on submit). Hardcoded API servers reach this page for platform
+  // administrators only, who may connect apps to them.
+  const canConnectApp: boolean = isOrgOwner;
 
   const verificationsByRefId = new Map<string, ApiServerDomainVerification>(
     domain_verifications.map((v) => [v.api_server_domain_ref_id, v]),
@@ -382,8 +397,31 @@ export default function ApiServerDetailPageView({
               })}
             </div>
           )}
+          {canConnectApp && (
+            <Button
+              variant="outline"
+              className="mt-4"
+              id="connect-app-to-this-api-server-button"
+              onClick={() => setConnectDialogOpen(true)}
+            >
+              <PlugZap className="h-4 w-4 mr-2" />
+              Connect application
+            </Button>
+          )}
         </CardContent>
       </Card>
+
+      {canConnectApp && (
+        <ConnectAppToApiDialog
+          open={connectDialogOpen}
+          onOpenChange={setConnectDialogOpen}
+          preselectedApiServerId={api_server.api_server_id}
+          // Connected applications (and their first-party badges) on this
+          // page come from server-side props, so re-render the server
+          // component to show the new row.
+          onConnected={() => router.refresh()}
+        />
+      )}
 
       {!hardcoded && (
         <ApiServerScopesCard

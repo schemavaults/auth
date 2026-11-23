@@ -65,6 +65,27 @@ export async function listFirstPartyConnectedAppIds(
   return rows.map((row) => row.client_app_id as AppId);
 }
 
+/**
+ * The ids of the API servers whose connection from `client_app_id` is
+ * first-party (the other side of {@link listFirstPartyConnectedAppIds}).
+ */
+export async function listFirstPartyConnectedApiServerIds(
+  db: Db,
+  client_app_id: AppId,
+): Promise<ApiServerId[]> {
+  if (!appIdSchema.safeParse(client_app_id).success) {
+    throw new TypeError("Invalid client app ID!");
+  }
+  const rows = await db
+    .selectFrom("app_api_scope_policies")
+    .where("client_app_id", "=", client_app_id)
+    .where("first_party", "=", true)
+    .orderBy("api_server_id", "asc")
+    .select(["api_server_id"])
+    .execute();
+  return rows.map((row) => row.api_server_id as ApiServerId);
+}
+
 export interface SetFirstPartyAppApiConnectionOptions {
   client_app_id: AppId;
   api_server_id: ApiServerId;
@@ -79,14 +100,17 @@ export interface SetFirstPartyAppApiConnectionOptions {
  * (they can withdraw it on their third-party access page) and are asked
  * for anything new.
  *
+ * Joins the caller's transaction when given one (e.g. to mark a connection
+ * first-party in the transaction that creates it).
+ *
  * @throws AppNotConnectedForScopesError when the app is not connected.
  */
 export async function setFirstPartyAppApiConnection(
-  db: Kysely<AuthDatabase>,
+  db: Db,
   { client_app_id, api_server_id, first_party, updated_by }: SetFirstPartyAppApiConnectionOptions,
 ): Promise<boolean> {
   assertIds(client_app_id, api_server_id);
-  return await db.transaction().execute(async (trx) => {
+  const set = async (trx: Db): Promise<boolean> => {
     const connection = await trx
       .selectFrom("apps_to_apis_permissions")
       .where("client_app_id", "=", client_app_id)
@@ -109,5 +133,10 @@ export async function setFirstPartyAppApiConnection(
       )
       .execute();
     return await isFirstPartyAppApiConnection(trx, client_app_id, api_server_id);
-  });
+  };
+  // Kysely refuses nested transactions; join the caller's when there is one.
+  if (db.isTransaction) {
+    return await set(db);
+  }
+  return await db.transaction().execute(set);
 }

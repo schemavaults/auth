@@ -30,6 +30,7 @@ export type { SetAppApiScopePolicyOptions } from './api-scope-grants';
 
 export {
   isFirstPartyAppApiConnection,
+  listFirstPartyConnectedApiServerIds,
   listFirstPartyConnectedAppIds,
   setFirstPartyAppApiConnection,
 } from './first-party-connections';

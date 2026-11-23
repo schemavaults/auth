@@ -8,7 +8,7 @@ import { AppCallbackUrlsCard, AppClientSecretCard, AppDeviceAuthorizationCard, A
 import { DynamicClientRegistrationMetadataCard } from "@/components/DynamicClientRegistrationMetadata";
 import { uuidSync } from "@/lib/uuid/uuidSync";
 import type { ServiceAccountOrganizationMembershipSummary } from "@/lib/ownership/service-account-organization-membership";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@schemavaults/ui";
 import { ConnectAppToApiDialog, CreateAppDomainDialog, DeleteAppDialog, DisconnectAppToApiDialog, DynamicClientRegistrationIcon, LocalDateTime, RemoveAppDomainDialog, useAuthUiOwnerOrganizationId, WrappableUrl } from "@schemavaults/auth-ui";
 import { ExternalLink, Plus, PlugZap, Trash2, Unplug } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,8 @@ export interface ConnectedApiServer {
   api_server_id: string;
   api_server_name: string;
   created_at: number;
+  /** Whether the connection is first-party (users consent implicitly). */
+  first_party: boolean;
 }
 
 export interface AppClientSecretMetadataProps {
@@ -339,7 +341,18 @@ export default function AppDetailPageView({
                       className="flex flex-1 items-center justify-between gap-2"
                     >
                       <div>
-                        <p className="text-sm font-medium">{server.api_server_name}</p>
+                        <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                          {server.api_server_name}
+                          {server.first_party && (
+                            <Badge
+                              variant="secondary"
+                              title="Users signing in to this app for this API server consent implicitly"
+                              data-testid={`first-party-connection-badge-${server.api_server_id}`}
+                            >
+                              First-party
+                            </Badge>
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground">{server.api_server_id}</p>
                       </div>
                       <LocalDateTime

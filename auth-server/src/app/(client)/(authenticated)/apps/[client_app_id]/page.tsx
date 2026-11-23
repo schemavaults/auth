@@ -9,7 +9,7 @@ import AppDetailPageView from "./app-detail-page-view";
 import { type AppId, appIdSchema, type SchemaVaultsApp, type SchemaVaultsAppCallbackUrlRef, type SchemaVaultsAppDomainRef, getAppEnvironment } from "@schemavaults/app-definitions";
 import { isHardcodedAppId } from "@schemavaults/app-definitions";
 import redirectWithError from "@/lib/redirect-with-error";
-import { SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
+import { listFirstPartyConnectedApiServerIds, SchemaVaultsAppToApiPermissionsRegistry } from "@/lib/auth-db/apis";
 import { SchemaVaultsAppRegistry } from "@/lib/auth-db/apps";
 import { accessLevelSatisfies, getUserAccessLevelForResource, type OwnedResourceAccessLevel } from "@/lib/ownership/resource-access";
 import { summarizeServiceAccountOrganizationMembership } from "@/lib/ownership/service-account-organization-membership";
@@ -65,7 +65,18 @@ export default async function AppDetailPage(
       const canManage: boolean = accessLevelSatisfies(access, "admin");
 
       const permissions_registry = new SchemaVaultsAppToApiPermissionsRegistry(dbh.db);
-      const connected_api_servers = await permissions_registry.listConnectedApiServers(client_app_id);
+      // First-party connections (users consent implicitly) exist only to
+      // registered API servers; hardcoded apps list only their compiled-in
+      // hardcoded ones.
+      const [listed_connected_api_servers, first_party_api_server_ids] = await Promise.all([
+        permissions_registry.listConnectedApiServers(client_app_id),
+        hardcoded ? Promise.resolve([]) : listFirstPartyConnectedApiServerIds(dbh.db, client_app_id),
+      ]);
+      const first_party_api_server_id_set = new Set<string>(first_party_api_server_ids);
+      const connected_api_servers = listed_connected_api_servers.map((server) => ({
+        ...server,
+        first_party: first_party_api_server_id_set.has(server.api_server_id),
+      }));
       const connected_domains: readonly SchemaVaultsAppDomainRef[] = await app_registry.getAppDomains(client_app_id);
       const callback_urls: readonly SchemaVaultsAppCallbackUrlRef[] = await app_registry.getAppCallbackUrls(client_app_id);
       const client_secret_record = hardcoded ? null : await app_registry.getClientSecretRecord(client_app_id);
