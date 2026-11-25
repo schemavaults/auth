@@ -11,6 +11,15 @@ Use the [Bun](https://bun.sh) package manager:
 bun install
 ```
 
+## `@schemavaults/ui` version
+
+`@schemavaults/ui` is a peer dependency with a wide range (`>=0.119.0 <1.0.0`), so an
+app can upgrade `@schemavaults/ui` without waiting for a new `@schemavaults/auth-ui`.
+The pinned `devDependencies` entry is only the version this package is built and
+tested against in the monorepo: when upgrading `@schemavaults/ui`, bump that entry and
+leave the peer range alone. Raise the range's lower bound only when this package
+starts using something a newer `@schemavaults/ui` added.
+
 ## Build package
 ```bash
 bun run build

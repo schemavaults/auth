@@ -1,6 +1,6 @@
 {
   "name": "@schemavaults/auth-ui",
-  "version": "0.27.0",
+  "version": "0.27.1",
   "private": false,
   "license": "UNLICENSED",
   "description": "React.js UI components for authentication/authorization shared between different SchemaVaults apps",
@@ -16,7 +16,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "next": "^16.4.6",
-    "@schemavaults/ui": "^0.119.0",
+    "@schemavaults/ui": ">=0.119.0 <1.0.0",
     "@schemavaults/auth-react-provider": "workspace:*",
     "@schemavaults/app-definitions": "workspace:*",
     "@schemavaults/auth-common": "workspace:*",
@@ -26,6 +26,7 @@
     "tailwindcss": "3.4.17"
   },
   "devDependencies": {
+    "@schemavaults/ui": "0.125.0",
     "typescript": "6.0.3",
     "tsc-alias": "1.9.0",
     "@types/react": "19.3.0",
