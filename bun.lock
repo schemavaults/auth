@@ -239,7 +239,7 @@
         "@schemavaults/app-definitions": "workspace:*",
         "@schemavaults/auth-common": "workspace:*",
         "@schemavaults/auth-react-provider": "workspace:*",
-        "@schemavaults/ui": ">=0.119.0 <1.0.0",
+        "@schemavaults/ui": ">=0.125.0 <1.0.0",
         "lucide-react": "0.575.0",
         "next": "^16.4.6",
         "postcss": "8.5.28",
@@ -289,7 +289,7 @@
         "typescript": "6.0.3",
       },
       "peerDependencies": {
-        "@schemavaults/ui": ">=0.119.0 <1.0.0",
+        "@schemavaults/ui": ">=0.125.0 <1.0.0",
         "next": "^16.4.6",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",

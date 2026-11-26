@@ -13,7 +13,7 @@ bun install
 
 ## `@schemavaults/ui` version
 
-`@schemavaults/ui` is a peer dependency with a wide range (`>=0.119.0 <1.0.0`), so an
+`@schemavaults/ui` is a peer dependency with a wide range (`>=0.125.0 <1.0.0`), so an
 app can upgrade `@schemavaults/ui` without waiting for a new `@schemavaults/auth-ui`.
 The pinned `devDependencies` entry is only the version this package is built and
 tested against in the monorepo: when upgrading `@schemavaults/ui`, bump that entry and

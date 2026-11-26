@@ -221,7 +221,7 @@ Every `auth-server/src/app/api/**/route.ts` is served by `@schemavaults/openapi-
 
 All user interfaces should be built using `@schemavaults/ui` and `@schemavaults/theme`. Most shadcn & radixui components are available from here.
 
-`@schemavaults/auth-ui` and `@schemavaults/openapi-docs-ui` peer-depend on `@schemavaults/ui` with a wide range (`>=0.119.0 <1.0.0`) and pin the version they are built and tested against in `devDependencies`. When upgrading `@schemavaults/ui`, bump that devDependency (and the apps' pins), not the peer range; raise the range's floor only when one of them starts using an API a newer `@schemavaults/ui` added.
+`@schemavaults/auth-ui` and `@schemavaults/openapi-docs-ui` peer-depend on `@schemavaults/ui` with a wide range (`>=0.125.0 <1.0.0`) and pin the version they are built and tested against in `devDependencies`. When upgrading `@schemavaults/ui`, bump that devDependency (and the apps' pins), not the peer range; raise the range's floor only when one of them starts using an API a newer `@schemavaults/ui` added.
 
 ### UI Components
 

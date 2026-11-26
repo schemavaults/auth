@@ -18,7 +18,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "next": "^16.4.6",
-    "@schemavaults/ui": ">=0.119.0 <1.0.0"
+    "@schemavaults/ui": ">=0.125.0 <1.0.0"
   },
   "devDependencies": {
     "@schemavaults/ui": "0.125.0",
