@@ -18,6 +18,11 @@ bun add @schemavaults/openapi-docs-ui
 # peer deps: react, react-dom, next, @schemavaults/ui, lucide-react
 ```
 
+The `@schemavaults/ui` peer range is wide (`>=0.125.0 <1.0.0`), so apps upgrade it on
+their own schedule. Monorepo upgrades bump only the pinned `devDependencies` entry (the
+version this package is built and tested against); raise the peer range's lower bound
+only when this package starts using something a newer `@schemavaults/ui` added.
+
 `@schemavaults/ui` is styled with Tailwind via `@schemavaults/theme`; make sure your
 Tailwind config includes this package's `dist/` in `content` (as for
 `@schemavaults/auth-ui`).
