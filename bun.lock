@@ -11,7 +11,7 @@
     },
     "auth-server": {
       "name": "@schemavaults/auth-server",
-      "version": "0.72.5",
+      "version": "0.72.6",
       "dependencies": {
         "@hookform/resolvers": "5.9.1",
         "@schemavaults/app-definitions": "workspace:*",
